@@ -1,5 +1,4 @@
 <?php
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
@@ -146,5 +145,16 @@ Route::prefix('v1')->group(function () {
                 'response_format' => 'JSend Specification'
             ]
         ]);
+    });
+});
+
+// File management routes
+Route::middleware(['auth:api'])->group(function () {
+    Route::prefix('files')->group(function () {
+        Route::post('/upload', [\Src\Foundation\Controllers\FileController::class, 'upload']);
+        Route::delete('/delete', [\Src\Foundation\Controllers\FileController::class, 'delete']);
+        Route::get('/info', [\Src\Foundation\Controllers\FileController::class, 'info']);
+        Route::get('/download/{disk}/{path}', [\Src\Foundation\Controllers\FileController::class, 'download'])
+            ->name('files.download');
     });
 });

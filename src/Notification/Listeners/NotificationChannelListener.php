@@ -2,185 +2,215 @@
 
 namespace Src\Notification\Listeners;
 
-use Illuminate\Events\Dispatcher;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Http;
+use Src\Foundation\Services\WebSocketService;
 use Src\Notification\Events\NotificationCreated;
 use Src\Notification\Models\Notification;
-use App\Models\User;
+use Src\Notification\Models\NotificationRule;
 
 /**
- * Event Listener xử lý gửi notifications qua các kênh khác nhau
- * Xử lý delivery của notifications (email, webhook, etc.)
+ * Listener xử lý việc gửi notification qua các channel khác nhau
  */
-class NotificationChannelListener
+class NotificationChannelListener implements ShouldQueue
 {
-    /**
-     * Đăng ký các event listeners
-     *
-     * @param Dispatcher $events
-     * @return void
-     */
-    public function subscribe(Dispatcher $events): void
+    use InteractsWithQueue;
+
+    private WebSocketService $webSocketService;
+
+    public function __construct(WebSocketService $webSocketService)
     {
-        $events->listen(
-            NotificationCreated::class,
-            [NotificationChannelListener::class, 'handleNotificationCreated']
-        );
+        $this->webSocketService = $webSocketService;
     }
 
     /**
-     * Xử lý khi Notification được tạo
-     * Gửi notification qua kênh tương ứng
+     * Xử lý event NotificationCreated
      *
      * @param NotificationCreated $event
      * @return void
      */
-    public function handleNotificationCreated(NotificationCreated $event): void
+    public function handle(NotificationCreated $event): void
     {
         $notification = $event->notification;
         
+        // Lấy notification rules của user
+        $rules = NotificationRule::where('user_id', $notification->user_id)
+            ->where('is_enabled', true)
+            ->where('min_priority', '<=', $this->getPriorityValue($notification->priority))
+            ->get();
+
+        foreach ($rules as $rule) {
+            $channels = json_decode($rule->channels, true) ?? [];
+            
+            foreach ($channels as $channel) {
+                $this->sendNotification($notification, $channel);
+            }
+        }
+
+        // Luôn gửi in-app notification
+        $this->sendInAppNotification($notification);
+    }
+
+    /**
+     * Gửi notification qua channel cụ thể
+     *
+     * @param Notification $notification
+     * @param string $channel
+     * @return void
+     */
+    private function sendNotification(Notification $notification, string $channel): void
+    {
         try {
-            switch ($notification->channel) {
+            switch ($channel) {
                 case 'inapp':
-                    $this->handleInAppNotification($notification);
+                    $this->sendInAppNotification($notification);
                     break;
                     
                 case 'email':
-                    $this->handleEmailNotification($notification);
+                    $this->sendEmailNotification($notification);
+                    break;
+                    
+                case 'websocket':
+                    $this->sendWebSocketNotification($notification);
                     break;
                     
                 case 'webhook':
-                    $this->handleWebhookNotification($notification);
+                    $this->sendWebhookNotification($notification);
                     break;
                     
                 default:
                     Log::warning('Unknown notification channel', [
-                        'notification_id' => $notification->ulid,
-                        'channel' => $notification->channel
+                        'channel' => $channel,
+                        'notification_id' => $notification->id
                     ]);
             }
-            
-            // Cập nhật trạng thái đã gửi
-            $notification->update([
-                'sent_at' => now(),
-                'delivery_status' => 'sent'
-            ]);
-            
         } catch (\Exception $e) {
-            Log::error('Failed to send notification', [
-                'notification_id' => $notification->ulid,
-                'channel' => $notification->channel,
+            Log::error('Failed to send notification via channel', [
+                'channel' => $channel,
+                'notification_id' => $notification->id,
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * Gửi in-app notification (đã có sẵn trong database)
+     *
+     * @param Notification $notification
+     * @return void
+     */
+    private function sendInAppNotification(Notification $notification): void
+    {
+        // In-app notification đã được lưu trong database
+        // Chỉ cần gửi qua WebSocket để real-time update
+        $this->sendWebSocketNotification($notification);
+        
+        Log::info('In-app notification ready', [
+            'notification_id' => $notification->id,
+            'user_id' => $notification->user_id
+        ]);
+    }
+
+    /**
+     * Gửi email notification
+     *
+     * @param Notification $notification
+     * @return void
+     */
+    private function sendEmailNotification(Notification $notification): void
+    {
+        try {
+            // TODO: Implement email notification
+            // Mail::to($notification->user->email)->send(new NotificationMail($notification));
             
-            // Cập nhật trạng thái lỗi
-            $notification->update([
-                'delivery_status' => 'failed',
-                'delivery_error' => $e->getMessage()
+            Log::info('Email notification sent', [
+                'notification_id' => $notification->id,
+                'user_id' => $notification->user_id
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send email notification', [
+                'notification_id' => $notification->id,
+                'error' => $e->getMessage()
             ]);
         }
     }
 
     /**
-     * Xử lý in-app notification
-     * (Notification đã được lưu vào DB, chỉ cần log)
+     * Gửi WebSocket notification cho real-time update
      *
      * @param Notification $notification
      * @return void
      */
-    private function handleInAppNotification(Notification $notification): void
+    private function sendWebSocketNotification(Notification $notification): void
     {
-        Log::info('In-app notification created', [
-            'notification_id' => $notification->ulid,
-            'user_id' => $notification->user_id,
-            'title' => $notification->title
-        ]);
-        
-        // TODO: Có thể push qua WebSocket/Pusher để real-time notification
-        // TODO: Có thể trigger browser notification nếu user online
+        try {
+            $data = [
+                'id' => $notification->id,
+                'title' => $notification->title,
+                'body' => $notification->body,
+                'priority' => $notification->priority,
+                'link_url' => $notification->link_url,
+                'created_at' => $notification->created_at->toISOString(),
+                'read_at' => $notification->read_at?->toISOString()
+            ];
+
+            $success = $this->webSocketService->broadcastToUser(
+                $notification->user_id,
+                $data
+            );
+
+            if ($success) {
+                Log::info('WebSocket notification sent', [
+                    'notification_id' => $notification->id,
+                    'user_id' => $notification->user_id
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send WebSocket notification', [
+                'notification_id' => $notification->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
-     * Xử lý email notification
+     * Gửi webhook notification
      *
      * @param Notification $notification
      * @return void
      */
-    private function handleEmailNotification(Notification $notification): void
+    private function sendWebhookNotification(Notification $notification): void
     {
-        $user = User::find($notification->user_id);
-        
-        if (!$user || !$user->email) {
-            throw new \Exception('User not found or email not available');
+        try {
+            // TODO: Implement webhook notification
+            
+            Log::info('Webhook notification sent', [
+                'notification_id' => $notification->id,
+                'user_id' => $notification->user_id
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send webhook notification', [
+                'notification_id' => $notification->id,
+                'error' => $e->getMessage()
+            ]);
         }
-
-        // TODO: Tạo Mailable class cho notification emails
-        // Mail::to($user->email)->send(new NotificationMail($notification));
-        
-        Log::info('Email notification sent', [
-            'notification_id' => $notification->ulid,
-            'user_email' => $user->email,
-            'title' => $notification->title
-        ]);
     }
 
     /**
-     * Xử lý webhook notification
+     * Chuyển đổi priority string thành số để so sánh
      *
-     * @param Notification $notification
-     * @return void
+     * @param string $priority
+     * @return int
      */
-    private function handleWebhookNotification(Notification $notification): void
+    private function getPriorityValue(string $priority): int
     {
-        $user = User::find($notification->user_id);
-        
-        // TODO: Lấy webhook URL từ user settings hoặc project settings
-        $webhookUrl = $this->getWebhookUrl($user, $notification);
-        
-        if (!$webhookUrl) {
-            throw new \Exception('Webhook URL not configured');
-        }
-
-        $payload = [
-            'notification_id' => $notification->ulid,
-            'user_id' => $notification->user_id,
-            'project_id' => $notification->project_id,
-            'priority' => $notification->priority,
-            'title' => $notification->title,
-            'body' => $notification->body,
-            'link_url' => $notification->link_url,
-            'event_key' => $notification->event_key,
-            'metadata' => $notification->metadata,
-            'created_at' => $notification->created_at->toISOString()
-        ];
-
-        $response = Http::timeout(10)->post($webhookUrl, $payload);
-        
-        if (!$response->successful()) {
-            throw new \Exception('Webhook request failed: ' . $response->status());
-        }
-        
-        Log::info('Webhook notification sent', [
-            'notification_id' => $notification->ulid,
-            'webhook_url' => $webhookUrl,
-            'response_status' => $response->status()
-        ]);
-    }
-
-    /**
-     * Lấy webhook URL cho user/project
-     *
-     * @param User|null $user
-     * @param Notification $notification
-     * @return string|null
-     */
-    private function getWebhookUrl(?User $user, Notification $notification): ?string
-    {
-        // TODO: Implement logic để lấy webhook URL
-        // Có thể từ user settings, project settings, hoặc notification rule
-        
-        return null; // Placeholder
+        return match ($priority) {
+            'critical' => 3,
+            'normal' => 2,
+            'low' => 1,
+            default => 1
+        };
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Src\Notification\Events;
 
+use App\Services\WebSocketClient;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
@@ -9,82 +10,81 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
-/**
- * Event để broadcast notification đến một user cụ thể
- * Sử dụng kênh private-user.{user_id}
- */
 class NotificationBroadcast implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    /**
-     * ID của user nhận notification
-     */
-    public int $userId;
+    public int|string $userId;
+    public ?int $projectId;
+    public array $notification;
 
     /**
-     * Dữ liệu notification
+     * Create a new event instance.
      */
-    public array $notificationData;
-
-    /**
-     * Tạo instance mới của event
-     *
-     * @param int|string $userId ID của user (sẽ được cast thành int)
-     * @param array $notificationData Dữ liệu notification
-     */
-    public function __construct(int|string $userId, array $notificationData)
+    public function __construct(int|string $userId, array $notification, ?int $projectId = null)
     {
-        // Cast userId thành int để tránh lỗi type
-        $this->userId = (int) $userId;
-        $this->notificationData = $notificationData;
+        $this->userId = is_string($userId) ? (int) $userId : $userId;
+        $this->projectId = $projectId;
+        $this->notification = $notification;
+        
+        // Gửi đến WebSocket server
+        $this->sendToWebSocket();
     }
 
     /**
-     * Định nghĩa kênh broadcast
-     *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * Get the channels the event should broadcast on.
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('user.' . $this->userId),
-        ];
+        $channels = [];
+        
+        // User-specific channel
+        $channels[] = new PrivateChannel('user.' . $this->userId);
+        
+        // Project-specific channel if projectId is provided
+        if ($this->projectId) {
+            $channels[] = new PrivateChannel('project.' . $this->projectId);
+        }
+        
+        return $channels;
     }
-
+    
     /**
-     * Tên event được broadcast
-     *
-     * @return string
-     */
-    public function broadcastAs(): string
-    {
-        return 'user.notification';
-    }
-
-    /**
-     * Dữ liệu được broadcast
-     *
-     * @return array<string, mixed>
+     * Get the data to broadcast.
      */
     public function broadcastWith(): array
     {
         return [
-            'user_id' => $this->userId,
-            'notification' => $this->notificationData,
-            'timestamp' => now()->toISOString(),
+            'notification' => $this->notification,
+            'timestamp' => now()->toISOString()
         ];
     }
-
+    
     /**
-     * Điều kiện để broadcast event
-     *
-     * @return bool
+     * Gửi notification đến WebSocket server
      */
-    public function broadcastWhen(): bool
+    private function sendToWebSocket(): void
     {
-        // Chỉ broadcast khi có dữ liệu notification
-        return !empty($this->notificationData);
+        try {
+            $wsClient = new WebSocketClient();
+            
+            // Gửi đến user cụ thể
+            $wsClient->sendToUser($this->userId, $this->notification);
+            
+            // Gửi đến project nếu có
+            if ($this->projectId) {
+                $wsClient->sendToProject($this->projectId, $this->notification);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send notification to WebSocket server', [
+                'error' => $e->getMessage(),
+                'userId' => $this->userId,
+                'projectId' => $this->projectId,
+                'notification' => $this->notification
+            ]);
+        }
     }
 }

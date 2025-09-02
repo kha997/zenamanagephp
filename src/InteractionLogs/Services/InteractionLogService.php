@@ -2,12 +2,13 @@
 
 namespace Src\InteractionLogs\Services;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Src\InteractionLogs\Models\InteractionLog;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
 use Src\Foundation\Events\EventBus;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -52,7 +53,7 @@ class InteractionLogService
                 'tag_path' => $data['tag_path'] ?? null,
                 'visibility' => $data['visibility'] ?? InteractionLog::VISIBILITY_INTERNAL,
                 'client_approved' => false, // Mặc định chưa approve
-                'created_by' => Auth::id() ?? $data['created_by']
+                'created_by' => AuthHelper::id() ?? $data['created_by']
             ];
             
             // Tạo interaction log
@@ -96,7 +97,7 @@ class InteractionLogService
         $this->validateLogData($data, true);
         
         // Kiểm tra quyền cập nhật (chỉ người tạo hoặc admin mới được cập nhật)
-        if ($log->created_by !== Auth::id() && !$this->hasAdminPermission()) {
+        if ($log->created_by !== AuthHelper::id() && !$this->hasAdminPermission()) {
             throw new \Exception('Không có quyền cập nhật interaction log này');
         }
         
@@ -132,7 +133,7 @@ class InteractionLogService
                     'changed_fields' => array_keys($updateData),
                     'old_data' => $oldData,
                     'new_data' => $log->fresh()->toArray(),
-                    'actor_id' => Auth::id(),
+                    'actor_id' => AuthHelper::id(),
                     'timestamp' => now()
                 ]);
             }
@@ -159,7 +160,7 @@ class InteractionLogService
         $log = InteractionLog::findOrFail($id);
         
         // Kiểm tra quyền xóa
-        if ($log->created_by !== Auth::id() && !$this->hasAdminPermission()) {
+        if ($log->created_by !== AuthHelper::id() && !$this->hasAdminPermission()) {
             throw new \Exception('Không có quyền xóa interaction log này');
         }
         
@@ -171,7 +172,7 @@ class InteractionLogService
                 'project_id' => $log->project_id,
                 'linked_task_id' => $log->linked_task_id,
                 'type' => $log->type,
-                'actor_id' => Auth::id(),
+                'actor_id' => AuthHelper::id(),
                 'timestamp' => now()
             ]);
             
@@ -217,7 +218,7 @@ class InteractionLogService
                 'log_id' => $log->id,
                 'project_id' => $log->project_id,
                 'linked_task_id' => $log->linked_task_id,
-                'approved_by' => Auth::id(),
+                'approved_by' => AuthHelper::id(),
                 'timestamp' => now()
             ]);
             
@@ -256,7 +257,7 @@ class InteractionLogService
                 'log_id' => $log->id,
                 'project_id' => $log->project_id,
                 'linked_task_id' => $log->linked_task_id,
-                'revoked_by' => Auth::id(),
+                'revoked_by' => AuthHelper::id(),
                 'timestamp' => now()
             ]);
             
@@ -505,7 +506,7 @@ class InteractionLogService
         $this->validateLogData($data, true);
         
         // Kiểm tra quyền cập nhật (chỉ người tạo hoặc admin mới được cập nhật)
-        if ($log->created_by !== Auth::id() && !$this->hasAdminPermission()) {
+        if ($log->created_by !== AuthHelper::id() && !$this->hasAdminPermission()) {
             throw new \Exception('Không có quyền cập nhật interaction log này');
         }
         
@@ -541,7 +542,7 @@ class InteractionLogService
                     'changed_fields' => array_keys($updateData),
                     'old_data' => $oldData,
                     'new_data' => $log->fresh()->toArray(),
-                    'actor_id' => Auth::id(),
+                    'actor_id' => AuthHelper::id(),
                     'timestamp' => now()
                 ]);
             }
@@ -565,7 +566,7 @@ class InteractionLogService
     public function deleteLogInstance(InteractionLog $log): bool
     {
         // Kiểm tra quyền xóa
-        if ($log->created_by !== Auth::id() && !$this->hasAdminPermission()) {
+        if ($log->created_by !== AuthHelper::id() && !$this->hasAdminPermission()) {
             throw new \Exception('Không có quyền xóa interaction log này');
         }
         
@@ -577,7 +578,7 @@ class InteractionLogService
                 'project_id' => $log->project_id,
                 'linked_task_id' => $log->linked_task_id,
                 'type' => $log->type,
-                'actor_id' => Auth::id(),
+                'actor_id' => AuthHelper::id(),
                 'timestamp' => now()
             ]);
             
@@ -620,7 +621,7 @@ class InteractionLogService
                 'log_id' => $log->id,
                 'project_id' => $log->project_id,
                 'linked_task_id' => $log->linked_task_id,
-                'approved_by' => Auth::id(),
+                'approved_by' => AuthHelper::id(),
                 'timestamp' => now()
             ]);
             

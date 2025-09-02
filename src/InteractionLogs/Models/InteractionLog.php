@@ -206,4 +206,12 @@ class InteractionLog extends Model
 
         return explode('/', $this->tag_path);
     }
+
+    /**
+     * Tạo factory instance mới cho model
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\InteractionLogFactory::new();
+    }
 }

@@ -25,7 +25,8 @@ class UserController extends Controller
      */
     public function __construct()
     {
-        $this->middleware(RBACMiddleware::class);
+        // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
+        // $this->middleware(RBACMiddleware::class);
     }
 
     /**

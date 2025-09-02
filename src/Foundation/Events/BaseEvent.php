@@ -2,7 +2,10 @@
 
 namespace Src\Foundation\Events;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Base class cho tất cả các events trong hệ thống
@@ -94,5 +97,23 @@ abstract class BaseEvent {
             'eventId' => $this->eventId,
             'eventName' => $this->getEventName()
         ];
+    }
+    
+    /**
+     * Resolve actor ID với fallback an toàn
+     * 
+     * @return string
+     */
+    protected function resolveActorId(): string
+    {
+        try {
+            return AuthHelper::idOrSystem();
+        } catch (\Exception $e) {
+            Log::warning('Failed to resolve actor ID in BaseEvent', [
+                'error' => $e->getMessage(),
+                'event_class' => static::class
+            ]);
+            return 'system';
+        }
     }
 }

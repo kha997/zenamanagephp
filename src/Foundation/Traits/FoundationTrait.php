@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace Src\Foundation\Traits;
 
+use Src\Foundation\Helpers\AuthHelper;
+
+use Illuminate\Support\Facades\Log;
 use Src\Foundation\Foundation;
 
 /**
@@ -18,6 +21,23 @@ trait FoundationTrait {
                 $model->id = Foundation::generateUlid();
             }
         });
+    }
+    
+    /**
+     * Giải quyết ID của actor hiện tại
+     *
+     * @return string
+     */
+    private function resolveActorId(): string
+    {
+        try {
+            return AuthHelper::idOrSystem();
+        } catch (\Throwable $e) {
+            Log::warning('Could not resolve actor ID in FoundationTrait', [
+                'error' => $e->getMessage()
+            ]);
+            return 'system';
+        }
     }
     
     /**
@@ -55,7 +75,7 @@ trait FoundationTrait {
         $payload = Foundation::createEventPayload(
             $this->id,
             $this->project_id ?? null,
-            auth()->id() ?? 'system',
+            $this->resolveActorId(),
             $changedFields,
             $this->tenant_id ?? null
         );

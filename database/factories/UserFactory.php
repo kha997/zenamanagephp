@@ -34,7 +34,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
             'remember_token' => \Illuminate\Support\Str::random(10),
-            'tenant_id' => Tenant::factory(), // Sử dụng factory thay vì hardcode
+            'tenant_id' => Tenant::factory(), // Laravel sẽ tự động tạo ULID
             'is_active' => true,
             'profile_data' => '{}',
         ];

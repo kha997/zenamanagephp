@@ -2,6 +2,8 @@
 
 namespace Src\ChangeRequest\Controllers;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -78,7 +80,7 @@ class ChangeRequestController extends Controller
             $changeRequest = $this->changeRequestService->createChangeRequest(
                 $projectId,
                 $request->validated(),
-                auth()->id()
+                $this->resolveActorId()
             );
 
             return JSendResponse::success(
@@ -131,7 +133,7 @@ class ChangeRequestController extends Controller
             $changeRequest = $this->changeRequestService->updateChangeRequest(
                 $id,
                 $request->validated(),
-                auth()->id()
+                $this->resolveActorId()
             );
 
             return JSendResponse::success(
@@ -191,7 +193,7 @@ class ChangeRequestController extends Controller
         try {
             $changeRequest = $this->changeRequestService->submitForApproval(
                 $id,
-                auth()->id()
+                $this->resolveActorId()
             );
 
             return JSendResponse::success(
@@ -216,7 +218,7 @@ class ChangeRequestController extends Controller
         try {
             $changeRequest = $this->changeRequestService->approveChangeRequest(
                 $id,
-                auth()->id(),
+                $this->resolveActorId(),
                 $request->get('decision_note')
             );
 
@@ -242,7 +244,7 @@ class ChangeRequestController extends Controller
         try {
             $changeRequest = $this->changeRequestService->rejectChangeRequest(
                 $id,
-                auth()->id(),
+                $this->resolveActorId(),
                 $request->get('decision_note')
             );
 
@@ -307,5 +309,32 @@ class ChangeRequestController extends Controller
         } catch (Exception $e) {
             return JSendResponse::error('Không thể quản lý liên kết: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Resolve the current actor ID for audit trails
+     * Uses Auth facade instead of auth() helper for better testability
+     *
+     * @return string|int The actor ID or 'system' as fallback
+     */
+    private function resolveActorId()
+    {
+        try {
+            // Check if user is authenticated using Auth facade
+            if (AuthHelper::check()) {
+                return AuthHelper::idOrSystem();
+            }
+        } catch (\Throwable $e) {
+            // Log the error for debugging in non-production environments
+            if (config('app.debug')) {
+                \Log::warning('Controller: Unable to resolve actor ID', [
+                    'error' => $e->getMessage(),
+                    'controller' => static::class
+                ]);
+            }
+        }
+        
+        // Fallback to 'system' for test environments or when auth is unavailable
+        return 'system';
     }
 }

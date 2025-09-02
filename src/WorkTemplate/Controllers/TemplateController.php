@@ -5,6 +5,7 @@ namespace Src\WorkTemplate\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 use Src\WorkTemplate\Models\Template;
 use Src\WorkTemplate\Models\TemplateVersion;
 use Src\WorkTemplate\Requests\CreateTemplateRequest;
@@ -34,6 +35,18 @@ class TemplateController extends Controller
     public function __construct(TemplateService $templateService)
     {
         $this->templateService = $templateService;
+    }
+
+    /**
+     * Lấy ID người dùng hiện tại một cách an toàn
+     * 
+     * @param Request $request
+     * @return int|null
+     */
+    protected function getUserId(Request $request): ?int
+    {
+        $user = $request->user('api');
+        return $user ? $user->id : null;
     }
 
     /**
@@ -86,7 +99,7 @@ class TemplateController extends Controller
         try {
             $template = $this->templateService->createTemplate(
                 $request->validated(),
-                $request->user()->id
+                $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
             return JSendResponse::success([
@@ -111,7 +124,7 @@ class TemplateController extends Controller
         $template = Template::with(['versions', 'latestVersion'])->find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template not found', 404);
+            return JSendResponse::error('Template không tồn tại', 404);
         }
         
         return JSendResponse::success([
@@ -131,14 +144,14 @@ class TemplateController extends Controller
         $template = Template::find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template not found', 404);
+            return JSendResponse::error('Template không tồn tại', 404);
         }
         
         try {
             $updatedTemplate = $this->templateService->updateTemplate(
                 $template,
                 $request->validated(),
-                $request->user()->id
+                $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
             return JSendResponse::success([
@@ -155,21 +168,27 @@ class TemplateController extends Controller
     /**
      * Xóa template (soft delete)
      * 
+     * @param Request $request
      * @param string $id
      * @return JsonResponse
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
+        $userId = $this->getUserId($request);
+        if (!$userId) {
+            return JSendResponse::error('Unauthorized', 401);
+        }
+
         $template = Template::find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template not found', 404);
+            return JSendResponse::error('Template không tồn tại', 404);
         }
         
         try {
             $template->update([
                 'is_active' => false,
-                'updated_by' => auth()->id()
+                'updated_by' => $userId
             ]);
             
             $template->delete();
@@ -198,7 +217,7 @@ class TemplateController extends Controller
         $template = Template::with(['latestVersion'])->find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template not found', 404);
+            return JSendResponse::error('Template không tồn tại', 404);
         }
         
         if (!$template->is_active) {
@@ -210,7 +229,7 @@ class TemplateController extends Controller
                 $template,
                 $request->get('project_id'),
                 $request->get('conditional_tags', []),
-                $request->user()->id
+                $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
             return JSendResponse::success(
@@ -236,7 +255,7 @@ class TemplateController extends Controller
         $template = Template::find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template not found', 404);
+            return JSendResponse::error('Template không tồn tại', 404);
         }
         
         $versions = $template->versions()

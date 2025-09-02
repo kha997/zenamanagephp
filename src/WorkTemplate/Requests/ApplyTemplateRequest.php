@@ -5,6 +5,7 @@ namespace Src\WorkTemplate\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\Project;
+use Illuminate\Support\Facades\Log;
 
 /**
  * ApplyTemplateRequest
@@ -38,7 +39,7 @@ class ApplyTemplateRequest extends FormRequest
                 'string',
                 Rule::exists('projects', 'id')->where(function ($query) {
                     // Chỉ cho phép apply vào projects mà user có quyền
-                    $query->where('tenant_id', auth()->user()->tenant_id);
+                    $query->where('tenant_id', $this->getTenantId());
                 })
             ],
             
@@ -285,6 +286,35 @@ class ApplyTemplateRequest extends FormRequest
                 'phase_mapping',
                 'Không được map nhiều giai đoạn template tới một giai đoạn dự án.'
             );
+        }
+    }
+
+    /**
+     * Lấy tenant_id một cách an toàn
+     *
+     * @return string|null
+     */
+    private function getTenantId(): ?string
+    {
+        try {
+            $user = $this->user();
+            if ($user && isset($user->tenant_id)) {
+                return $user->tenant_id;
+            }
+            
+            Log::warning('ApplyTemplateRequest: Không thể lấy tenant_id từ user', [
+                'user_id' => $user?->id ?? 'null',
+                'request_path' => $this->path()
+            ]);
+            
+            return null;
+        } catch (\Exception $e) {
+            Log::error('ApplyTemplateRequest: Lỗi khi lấy tenant_id', [
+                'error' => $e->getMessage(),
+                'request_path' => $this->path()
+            ]);
+            
+            return null;
         }
     }
 }

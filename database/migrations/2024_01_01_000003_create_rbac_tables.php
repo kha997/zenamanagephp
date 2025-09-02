@@ -17,7 +17,7 @@ class CreateRbacTables extends Migration
     {
         // Bảng roles - Quản lý các vai trò
         Schema::create('roles', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Thay đổi từ id() sang ulid()
+            $table->ulid('id')->primary();
             $table->string('name', 100)->index();
             $table->enum('scope', ['system', 'custom', 'project'])->index();
             $table->boolean('allow_override')->default(false)->comment('Cho phép ghi đè quyền');
@@ -30,7 +30,7 @@ class CreateRbacTables extends Migration
 
         // Bảng permissions - Quản lý các quyền hạn
         Schema::create('permissions', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Thay đổi từ id() sang ulid()
+            $table->ulid('id')->primary();
             $table->string('code', 100)->unique()->index()->comment('Mã quyền dạng module.action');
             $table->string('module', 50)->index()->comment('Module/chức năng');
             $table->string('action', 50)->index()->comment('Hành động');
@@ -40,8 +40,8 @@ class CreateRbacTables extends Migration
 
         // Bảng role_permissions - Liên kết role và permission
         Schema::create('role_permissions', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Thay đổi từ id() sang ulid()
-            $table->foreignUlid('role_id')->constrained('roles')->onDelete('cascade'); // Thay đổi từ foreignId sang foreignUlid
+            $table->ulid('id')->primary();
+            $table->foreignUlid('role_id')->constrained('roles')->onDelete('cascade');
             $table->string('permission_code', 100);
             $table->timestamps();
             
@@ -52,28 +52,18 @@ class CreateRbacTables extends Migration
             $table->unique(['role_id', 'permission_code']);
         });
 
-        // Bảng user_roles_system - Vai trò hệ thống
-        Schema::create('user_roles_system', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Thay đổi từ id() sang ulid()
-            $table->foreignUlid('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignUlid('role_id')->constrained('roles')->onDelete('cascade'); // Thay đổi từ foreignId sang foreignUlid
-            $table->timestamps();
-            
-            // Unique constraint
-            $table->unique(['user_id', 'role_id']);
-        });
-
         // Bảng user_roles_custom - Vai trò tùy chỉnh áp dụng trên nhiều dự án
         Schema::create('user_roles_custom', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Thay đổi từ id() sang ulid()
+            $table->ulid('id')->primary();
             $table->foreignUlid('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignUlid('role_id')->constrained('roles')->onDelete('cascade'); // Thay đổi từ foreignId sang foreignUlid
+            $table->foreignUlid('role_id')->constrained('roles')->onDelete('cascade');
             $table->timestamps();
             
             // Unique constraint
             $table->unique(['user_id', 'role_id']);
         });
 
+        // Loại bỏ bảng user_roles_system - đã được tạo trong migration riêng với tên system_user_roles
         // Loại bỏ bảng user_roles_project - sẽ tạo trong migration riêng
     }
 
@@ -82,10 +72,15 @@ class CreateRbacTables extends Migration
      */
     public function down(): void
     {
+        // Tạm thời tắt foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        
         Schema::dropIfExists('user_roles_custom');
-        Schema::dropIfExists('user_roles_system');
         Schema::dropIfExists('role_permissions');
         Schema::dropIfExists('permissions');
         Schema::dropIfExists('roles');
+        
+        // Bật lại foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
 }

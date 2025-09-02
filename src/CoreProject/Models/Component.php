@@ -2,7 +2,10 @@
 
 namespace Src\CoreProject\Models;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory; // Thêm import
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -10,6 +13,8 @@ use Src\Foundation\Traits\HasTimestamps;
 use Src\Foundation\Traits\HasOwnership;
 use Src\Foundation\Traits\HasAuditLog;
 use Src\Foundation\Events\EventBus;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth; // Thêm import Auth facade
 
 /**
  * Model Component - Quản lý thành phần dự án
@@ -24,7 +29,7 @@ use Src\Foundation\Events\EventBus;
  */
 class Component extends Model
 {
-    use HasUlids, HasTimestamps, HasOwnership, HasAuditLog;
+    use HasFactory, HasUlids, HasTimestamps, HasOwnership, HasAuditLog; // Thêm HasFactory
 
     protected $table = 'components';
     
@@ -112,7 +117,7 @@ class Component extends Model
             'unit' => $unit,
             'description' => $description,
             'measured_date' => now()->toDateString(),
-            'created_by' => auth()->id(),
+            'created_by' => $this->resolveActorId(),
         ]);
     }
 
@@ -128,7 +133,7 @@ class Component extends Model
         EventBus::dispatch('Project.Component.ProgressUpdated', [
             'entityId' => $this->id,
             'projectId' => $this->project_id,
-            'actorId' => auth()->id() ?? 'system',
+            'actorId' => $this->resolveActorId(),
             'changedFields' => [
                 'progress_percent' => [
                     'old' => $oldProgress,
@@ -151,7 +156,7 @@ class Component extends Model
         EventBus::dispatch('Project.Component.CostUpdated', [
             'entityId' => $this->id,
             'projectId' => $this->project_id,
-            'actorId' => auth()->id() ?? 'system',
+            'actorId' => AuthHelper::idOrSystem(), // Thay đổi từ auth()->id()
             'changedFields' => [
                 'actual_cost' => [
                     'old' => $oldCost,
@@ -211,5 +216,31 @@ class Component extends Model
     public function scopeRootComponents($query)
     {
         return $query->whereNull('parent_component_id');
+    }
+
+    /**
+     * Tạo factory instance mới cho model
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\ComponentFactory::new();
+    }
+    
+    /**
+     * Lấy ID của actor hiện tại một cách an toàn
+     * 
+     * @return string ID của user hiện tại hoặc 'system' nếu không có auth context
+     */
+    private function resolveActorId(): string
+    {
+        try {
+            return AuthHelper::idOrSystem(); // Thay đổi từ auth()->id()
+        } catch (\Exception $e) {
+            Log::warning('Cannot resolve actor ID in Component context', [
+                'component_id' => $this->id ?? 'unknown',
+                'error' => $e->getMessage()
+            ]);
+            return 'system';
+        }
     }
 }

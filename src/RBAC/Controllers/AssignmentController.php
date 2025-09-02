@@ -28,15 +28,15 @@ class AssignmentController
     {
         $errors = [];
         
-        $userId = (int) $request->get('user_id');
-        $roleId = (int) $request->get('role_id');
+        $userId = $request->get('user_id');
+        $roleId = $request->get('role_id');
         
-        if ($userId <= 0) {
-            $errors['user_id'] = 'User ID không hợp lệ';
+        if (empty($userId)) {
+            $errors['user_id'] = 'User ID không được để trống';
         }
         
-        if ($roleId <= 0) {
-            $errors['role_id'] = 'Role ID không hợp lệ';
+        if (empty($roleId)) {
+            $errors['role_id'] = 'Role ID không được để trống';
         }
         
         // Kiểm tra role có scope system không
@@ -76,15 +76,15 @@ class AssignmentController
     {
         $errors = [];
         
-        $userId = (int) $request->get('user_id');
-        $roleId = (int) $request->get('role_id');
+        $userId = $request->get('user_id');
+        $roleId = $request->get('role_id');
         
-        if ($userId <= 0) {
-            $errors['user_id'] = 'User ID không hợp lệ';
+        if (empty($userId)) {
+            $errors['user_id'] = 'User ID không được để trống';
         }
         
-        if ($roleId <= 0) {
-            $errors['role_id'] = 'Role ID không hợp lệ';
+        if (empty($roleId)) {
+            $errors['role_id'] = 'Role ID không được để trống';
         }
         
         // Kiểm tra role có scope custom không
@@ -124,20 +124,20 @@ class AssignmentController
     {
         $errors = [];
         
-        $userId = (int) $request->get('user_id');
-        $roleId = (int) $request->get('role_id');
-        $projectId = (int) $request->get('project_id');
+        $userId = $request->get('user_id');
+        $roleId = $request->get('role_id');
+        $projectId = $request->get('project_id');
         
-        if ($userId <= 0) {
-            $errors['user_id'] = 'User ID không hợp lệ';
+        if (empty($userId)) {
+            $errors['user_id'] = 'User ID không được để trống';
         }
         
-        if ($roleId <= 0) {
-            $errors['role_id'] = 'Role ID không hợp lệ';
+        if (empty($roleId)) {
+            $errors['role_id'] = 'Role ID không được để trống';
         }
         
-        if ($projectId <= 0) {
-            $errors['project_id'] = 'Project ID không hợp lệ';
+        if (empty($projectId)) {
+            $errors['project_id'] = 'Project ID không được để trống';
         }
         
         // Kiểm tra role có scope project không

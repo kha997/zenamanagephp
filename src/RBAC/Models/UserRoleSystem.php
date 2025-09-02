@@ -5,10 +5,10 @@ namespace Src\RBAC\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Src\Foundation\Traits\HasTimestamps;
-use Src\Foundation\Traits\HasAuditLog;
+use Src\Foundation\Traits\HasSoftDeletes;
 
 /**
- * Model UserRoleSystem - Quản lý vai trò hệ thống của user
+ * Model UserRoleSystem - Model cho bảng system_user_roles
  * 
  * @property string $user_id ID người dùng (ULID)
  * @property string $role_id ID vai trò (ULID)
@@ -17,23 +17,13 @@ use Src\Foundation\Traits\HasAuditLog;
  */
 class UserRoleSystem extends Model
 {
-    use HasTimestamps, HasAuditLog;
+    use HasTimestamps, HasSoftDeletes;
 
-    protected $table = 'system_user_roles';
+    protected $table = 'system_user_roles'; // Thay đổi từ 'user_roles_system'
     
-    /**
-     * Composite primary key
-     */
+    // Không sử dụng ULID primary key vì bảng này sử dụng composite primary key
     protected $primaryKey = ['user_id', 'role_id'];
-    
-    /**
-     * Tắt auto increment vì sử dụng composite key
-     */
     public $incrementing = false;
-    
-    /**
-     * Kiểu dữ liệu của khóa chính
-     */
     protected $keyType = 'string';
     
     protected $fillable = [
@@ -45,37 +35,6 @@ class UserRoleSystem extends Model
         'created_at' => 'datetime:c',
         'updated_at' => 'datetime:c'
     ];
-
-    /**
-     * Override getKeyName để hỗ trợ composite key
-     */
-    public function getKeyName()
-    {
-        return $this->primaryKey;
-    }
-
-    /**
-     * Override getKey để hỗ trợ composite key
-     */
-    public function getKey()
-    {
-        $keys = [];
-        foreach ($this->getKeyName() as $key) {
-            $keys[$key] = $this->getAttribute($key);
-        }
-        return $keys;
-    }
-
-    /**
-     * Override setKeysForSaveQuery để hỗ trợ composite key
-     */
-    protected function setKeysForSaveQuery($query)
-    {
-        foreach ($this->getKeyName() as $key) {
-            $query->where($key, '=', $this->getAttribute($key));
-        }
-        return $query;
-    }
 
     /**
      * Relationship: Thuộc về user
@@ -94,18 +53,51 @@ class UserRoleSystem extends Model
     }
 
     /**
-     * Scope: Lọc theo user
+     * Scope: Chỉ lấy records active (không bị soft delete)
      */
-    public function scopeForUser($query, string $userId)
+    public function scopeActive($query)
     {
-        return $query->where('user_id', $userId);
+        return $query->whereNull('deleted_at');
     }
 
     /**
-     * Scope: Lọc theo role
+     * Override getKeyName để hỗ trợ composite primary key
      */
-    public function scopeForRole($query, string $roleId)
+    public function getKeyName()
     {
-        return $query->where('role_id', $roleId);
+        return $this->primaryKey;
+    }
+
+    /**
+     * Override setKeysForSaveQuery để hỗ trợ composite primary key
+     */
+    protected function setKeysForSaveQuery($query)
+    {
+        $keys = $this->getKeyName();
+        if (!is_array($keys)) {
+            return parent::setKeysForSaveQuery($query);
+        }
+
+        foreach ($keys as $keyName) {
+            $query->where($keyName, '=', $this->getKeyForSaveQuery($keyName));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Override getKeyForSaveQuery để hỗ trợ composite primary key
+     */
+    protected function getKeyForSaveQuery($keyName = null)
+    {
+        if (is_null($keyName)) {
+            $keyName = $this->getKeyName();
+        }
+
+        if (isset($this->original[$keyName])) {
+            return $this->original[$keyName];
+        }
+
+        return $this->getAttribute($keyName);
     }
 }

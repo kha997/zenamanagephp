@@ -40,7 +40,7 @@ class Kernel extends HttpKernel
 
         'api' => [
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            'throttle:api',
+            // 'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
@@ -52,7 +52,7 @@ class Kernel extends HttpKernel
      *
      * @var array<string, class-string|string>
      */
-    protected $routeMiddleware = [
+    protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
         'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
@@ -65,4 +65,16 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'rbac' => \Src\RBAC\Middleware\RBACMiddleware::class,
     ];
+    
+    // Comment hoặc xóa method này
+    /*
+    protected function sendRequestThroughRouter($request)
+    {
+        \Log::info('Middleware stack:', [
+            'middlewares' => $this->app['router']->getMiddleware()
+        ]);
+        
+        return parent::sendRequestThroughRouter($request);
+    }
+    */
 }

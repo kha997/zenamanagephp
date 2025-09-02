@@ -4,6 +4,7 @@ namespace Src\DocumentManagement\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Src\DocumentManagement\Models\Document;
 use Src\DocumentManagement\Services\DocumentService;
 use Src\DocumentManagement\Resources\DocumentResource;
@@ -24,6 +25,22 @@ class DocumentController
         private DocumentService $documentService
     ) {
         $this->middleware(RBACMiddleware::class);
+    }
+
+    /**
+     * Lấy ID người dùng hiện tại một cách an toàn
+     * 
+     * @param Request $request
+     * @return string
+     */
+    private function getUserId(Request $request): string
+    {
+        try {
+            // Sử dụng $request->user('api') thay vì Auth facade để tránh lỗi AuthManager
+            return $request->user('api') ? (string) $request->user('api')->id : 'system';
+        } catch (\Exception $e) {
+            return 'system';
+        }
     }
 
     /**
@@ -60,10 +77,10 @@ class DocumentController
     /**
      * Lấy thông tin chi tiết document
      *
-     * @param int $id
+     * @param string $id
      * @return JsonResponse
      */
-    public function show(int $id): JsonResponse
+    public function show(string $id): JsonResponse
     {
         try {
             $document = $this->documentService->getDocumentById($id);
@@ -92,9 +109,9 @@ class DocumentController
             $document = $this->documentService->createDocument(
                 $request->validated(),
                 $request->file('file'),
-                $request->user()->id
+                $request->user('api')->id  // Sửa từ $request->user()->id
             );
-
+    
             return JSendResponse::success([
                 'document' => new DocumentResource($document)
             ], 'Document created successfully', 201);
@@ -107,22 +124,22 @@ class DocumentController
      * Cập nhật thông tin document
      *
      * @param UpdateDocumentRequest $request
-     * @param int $id
+     * @param string $id
      * @return JsonResponse
      */
-    public function update(UpdateDocumentRequest $request, int $id): JsonResponse
+    public function update(UpdateDocumentRequest $request, string $id): JsonResponse
     {
         try {
             $document = $this->documentService->updateDocument(
                 $id,
                 $request->validated(),
-                $request->user()->id
+                $request->user('api')->id  // Sửa từ $request->user()->id
             );
-
+    
             if (!$document) {
                 return JSendResponse::error('Document not found', 404);
             }
-
+    
             return JSendResponse::success([
                 'document' => new DocumentResource($document)
             ], 'Document updated successfully');
@@ -134,13 +151,14 @@ class DocumentController
     /**
      * Xóa document
      *
-     * @param int $id
+     * @param Request $request
+     * @param string $id
      * @return JsonResponse
      */
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         try {
-            $result = $this->documentService->deleteDocument($id, auth()->id());
+            $result = $this->documentService->deleteDocument($id, $this->getUserId($request));
             
             if (!$result) {
                 return JSendResponse::error('Document not found', 404);
@@ -156,10 +174,10 @@ class DocumentController
      * Tạo version mới cho document
      *
      * @param Request $request
-     * @param int $id
+     * @param string $id
      * @return JsonResponse
      */
-    public function createVersion(Request $request, int $id): JsonResponse
+    public function createVersion(Request $request, string $id): JsonResponse
     {
         try {
             $request->validate([
@@ -190,10 +208,10 @@ class DocumentController
      * Revert document về version cũ
      *
      * @param Request $request
-     * @param int $id
+     * @param string $id
      * @return JsonResponse
      */
-    public function revertVersion(Request $request, int $id): JsonResponse
+    public function revertVersion(Request $request, string $id): JsonResponse
     {
         try {
             $request->validate([
@@ -223,13 +241,14 @@ class DocumentController
     /**
      * Phê duyệt document cho client
      *
-     * @param int $id
+     * @param Request $request
+     * @param string $id
      * @return JsonResponse
      */
-    public function approveForClient(int $id): JsonResponse
+    public function approveForClient(Request $request, string $id): JsonResponse
     {
         try {
-            $document = $this->documentService->approveForClient($id, auth()->id());
+            $document = $this->documentService->approveForClient($id, $this->getUserId($request));
             
             if (!$document) {
                 return JSendResponse::error('Document not found', 404);
@@ -246,11 +265,11 @@ class DocumentController
     /**
      * Download file của document version
      *
-     * @param int $documentId
+     * @param string $documentId
      * @param int $versionNumber
      * @return mixed
      */
-    public function downloadVersion(int $documentId, int $versionNumber = null)
+    public function downloadVersion(string $documentId, int $versionNumber = null)
     {
         try {
             return $this->documentService->downloadVersion($documentId, $versionNumber);
@@ -262,10 +281,10 @@ class DocumentController
     /**
      * Lấy thống kê documents theo project
      *
-     * @param int $projectId
+     * @param string $projectId
      * @return JsonResponse
      */
-    public function getStatistics(int $projectId): JsonResponse
+    public function getStatistics(string $projectId): JsonResponse
     {
         try {
             $stats = $this->documentService->getDocumentStatistics($projectId);

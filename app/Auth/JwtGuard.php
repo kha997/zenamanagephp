@@ -45,6 +45,18 @@ class JwtGuard implements Guard
         return false;
     }
 
+    /**
+     * Log a user into the application and return a JWT token.
+     *
+     * @param \Illuminate\Contracts\Auth\Authenticatable $user
+     * @return string
+     */
+    public function login($user): string
+    {
+        $this->setUser($user);
+        return $this->authService->createTokenForUser($user); // Sửa từ createToken thành createTokenForUser
+    }
+
     protected function getTokenFromRequest(): ?string
     {
         $header = $this->request->header('Authorization');

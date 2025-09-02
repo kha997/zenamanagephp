@@ -1,0 +1,59 @@
+<?php declare(strict_types=1);
+
+/**
+ * Script test RBAC middleware đơn giản
+ */
+
+require_once __DIR__ . '/bootstrap.php';
+
+echo "🧪 Test RBAC middleware...\n\n";
+
+try {
+    // Đọc file routes/api.php hiện tại
+    $apiRoutesPath = __DIR__ . '/routes/api.php';
+    $currentContent = file_get_contents($apiRoutesPath);
+
+    // Backup file gốc
+    $backupPath = $apiRoutesPath . '.backup_' . date('Y-m-d_H-i-s');
+    file_put_contents($backupPath, $currentContent);
+    echo "📁 Backup: {$backupPath}\n";
+
+    // Tạo test route đơn giản
+    $testRoute = "\n\n// RBAC Test Route\n";
+    $testRoute .= "Route::prefix('v1')->middleware(['auth:api', 'rbac:project.view'])->get('rbac-test', function (Request \$request) {\n";
+    $testRoute .= "    return response()->json([\n";
+    $testRoute .= "        'status' => 'success',\n";
+    $testRoute .= "        'message' => 'RBAC OK',\n";
+    $testRoute .= "        'user_id' => \$request->user('api')?->id,\n";
+    $testRoute .= "        'timestamp' => now()->toIso8601String()\n";
+    $testRoute .= "    ]);\n";
+    $testRoute .= "});\n";
+
+    // Thêm vào cuối file
+    $newContent = rtrim($currentContent);
+    if (substr($newContent, -2) === '?>') {
+        $newContent = substr($newContent, 0, -2) . $testRoute . "\n?>";
+    } else {
+        $newContent .= $testRoute;
+    }
+
+    file_put_contents($apiRoutesPath, $newContent);
+    echo "✅ Đã thêm test route\n";
+
+    // Clear cache
+    echo "\n🔄 Clearing cache...\n";
+    $output = [];
+    exec('cd ' . escapeshellarg(__DIR__) . ' && php artisan route:clear 2>&1', $output);
+    echo implode("\n", $output) . "\n";
+
+    echo "\n📋 Test với:\n";
+    echo "GET /api/v1/rbac-test\n";
+    echo "Header: Authorization: Bearer YOUR_JWT_TOKEN\n";
+    echo "\n🗑️  Restore: cp {$backupPath} {$apiRoutesPath}\n";
+
+} catch (Exception $e) {
+    echo "❌ Lỗi: " . $e->getMessage() . "\n";
+    exit(1);
+}
+
+echo "\n✅ Hoàn thành!\n";

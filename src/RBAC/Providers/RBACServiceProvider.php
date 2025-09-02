@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Src\RBAC\Services\AuthService;
 use Src\RBAC\Services\RBACManager;
 use Src\RBAC\Services\PermissionMatrixService;
+use Src\Foundation\EventBus;
 
 /**
  * Service Provider cho module RBAC
@@ -23,7 +24,7 @@ class RBACServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(RBACManager::class, function ($app) {
-            return new RBACManager();
+            return new RBACManager(new EventBus());
         });
 
         $this->app->singleton(PermissionMatrixService::class, function ($app) {

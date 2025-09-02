@@ -2,6 +2,8 @@
 
 namespace Src\Notification\Requests;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -82,15 +84,37 @@ class StoreNotificationRequest extends FormRequest
     }
 
     /**
+     * Lấy ID của user hiện tại một cách an toàn
+     * 
+     * @return int|null
+     */
+    private function getUserId(): ?int
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+        } catch (\Exception $e) {
+            // Log error nếu cần thiết
+            // Log::warning('Cannot get user ID: ' . $e->getMessage());
+        }
+        
+        return null;
+    }
+
+    /**
      * Chuẩn bị dữ liệu cho validation
      */
     protected function prepareForValidation(): void
     {
         // Nếu không có user_id, sử dụng user hiện tại
-        if (!$this->has('user_id') && auth()->check()) {
-            $this->merge([
-                'user_id' => auth()->id()
-            ]);
+        if (!$this->has('user_id')) {
+            $userId = $this->getUserId();
+            if ($userId !== null) {
+                $this->merge([
+                    'user_id' => $userId
+                ]);
+            }
         }
 
         // Mặc định channel là inapp nếu không được chỉ định

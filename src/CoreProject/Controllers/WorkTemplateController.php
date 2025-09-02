@@ -23,7 +23,8 @@ class WorkTemplateController
      */
     public function __construct()
     {
-        $this->middleware(RBACMiddleware::class);
+        // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
+        // $this->middleware(RBACMiddleware::class);
     }
 
     /**
@@ -103,10 +104,10 @@ class WorkTemplateController
     /**
      * Lấy thông tin chi tiết một work template
      *
-     * @param int $templateId
+     * @param string $templateId
      * @return JsonResponse
      */
-    public function show(int $templateId): JsonResponse
+    public function show(string $templateId): JsonResponse
     {
         try {
             $template = WorkTemplate::findOrFail($templateId);
@@ -125,10 +126,10 @@ class WorkTemplateController
      * Cập nhật thông tin work template
      *
      * @param UpdateWorkTemplateRequest $request
-     * @param int $templateId
+     * @param string $templateId
      * @return JsonResponse
      */
-    public function update(UpdateWorkTemplateRequest $request, int $templateId): JsonResponse
+    public function update(UpdateWorkTemplateRequest $request, string $templateId): JsonResponse
     {
         try {
             $template = WorkTemplate::findOrFail($templateId);
@@ -159,10 +160,10 @@ class WorkTemplateController
     /**
      * Xóa work template
      *
-     * @param int $templateId
+     * @param string $templateId
      * @return JsonResponse
      */
-    public function destroy(int $templateId): JsonResponse
+    public function destroy(string $templateId): JsonResponse
     {
         try {
             $template = WorkTemplate::findOrFail($templateId);
@@ -184,10 +185,10 @@ class WorkTemplateController
     /**
      * Tạo bản sao của work template với version mới
      *
-     * @param int $templateId
+     * @param string $templateId
      * @return JsonResponse
      */
-    public function duplicate(int $templateId): JsonResponse
+    public function duplicate(string $templateId): JsonResponse
     {
         try {
             $originalTemplate = WorkTemplate::findOrFail($templateId);
@@ -235,10 +236,10 @@ class WorkTemplateController
      * Áp dụng work template vào project
      *
      * @param Request $request
-     * @param int $templateId
+     * @param string $templateId
      * @return JsonResponse
      */
-    public function applyToProject(Request $request, int $templateId): JsonResponse
+    public function applyToProject(Request $request, string $templateId): JsonResponse
     {
         try {
             $request->validate([

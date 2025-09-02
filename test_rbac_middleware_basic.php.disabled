@@ -1,0 +1,78 @@
+<?php declare(strict_types=1);
+
+/**
+ * Script test chức năng cơ bản của RBAC middleware
+ * Tạo route test đơn giản và kiểm tra RBAC hoạt động
+ */
+
+require_once __DIR__ . '/bootstrap.php';
+
+echo "🧪 Test chức năng cơ bản RBAC middleware...\n\n";
+
+try {
+    // Đoạn route test dùng FQCN (không cần use), có prefix v1, guard api, và nullsafe cho user
+    $testRouteContent = <<<'PHP'
+
+// Test route cho RBAC middleware
+\Illuminate\Support\Facades\Route::prefix('v1')
+    ->middleware(['auth:api', 'rbac:project.view'])
+    ->get('rbac-test', function (\Illuminate\Http\Request $request) {
+        return response()->json([
+            'status' => 'success',
+            'message' => 'RBAC middleware hoạt động bình thường!',
+            'user_id' => $request->user('api')?->id,
+            'permissions' => $request->get('user_permissions', []),
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    });
+PHP;
+
+    // Đọc file routes/api.php hiện tại
+    $apiRoutesPath = __DIR__ . '/routes/api.php';
+    $currentContent = file_get_contents($apiRoutesPath);
+
+    // Backup file gốc
+    $backupPath = $apiRoutesPath . '.backup_rbac_test_' . date('Y-m-d_H-i-s');
+    file_put_contents($backupPath, $currentContent);
+    echo "📁 Đã backup routes/api.php -> {$backupPath}\n";
+
+    // Thêm test route vào cuối file (trước dấu ?> nếu có)
+    $newContent = rtrim($currentContent);
+    if (substr($newContent, -2) === '?>') {
+        $newContent = substr($newContent, 0, -2) . "\n" . $testRouteContent . "\n?>";
+    } else {
+        $newContent .= "\n" . $testRouteContent . "\n";
+    }
+
+    file_put_contents($apiRoutesPath, $newContent);
+    echo "✅ Đã thêm test route vào routes/api.php\n";
+
+    // Clear route cache
+    echo "\n🔄 Clearing route cache...\n";
+    $cmd = 'cd ' . escapeshellarg(__DIR__) . ' && php artisan route:clear 2>&1';
+    exec($cmd, $output, $returnCode);
+
+    if ($returnCode === 0) {
+        echo "✅ Route cache cleared successfully\n";
+    } else {
+        echo "⚠️  Route cache clear warning:\n" . implode("\n", $output) . "\n";
+    }
+
+    echo "\n📋 Hướng dẫn test:\n";
+    echo "1) Tạo JWT token cho user có quyền project.view\n";
+    echo "2) Gọi: GET /api/v1/rbac-test với header Authorization: Bearer <token>\n";
+    echo "3) Response sẽ chứa user_id, permissions\n";
+
+    echo "\n🔧 Lệnh test mẫu:\n";
+    echo "curl -X GET http://localhost/zenamanage/public/api/v1/rbac-test \\\n";
+    echo "  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\\n";
+    echo "  -H 'Content-Type: application/json'\n";
+
+    echo "\n🗑️  Xóa test route khi xong:\n";
+    echo "cp {$backupPath} {$apiRoutesPath} && php artisan route:clear\n";
+
+} catch (Exception $e) {
+    echo "❌ Lỗi khi tạo test route: " . $e->getMessage() . "\n";
+    echo "📍 File: " . $e->getFile() . " (dòng " . $e->getLine() . ")\n";
+    exit(1);
+}

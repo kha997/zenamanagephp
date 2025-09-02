@@ -5,14 +5,13 @@ namespace Src\CoreProject\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Src\Foundation\Traits\HasTimestamps;
 use Src\Compensation\Models\TaskCompensation;
 
 /**
  * Model TaskAssignment - Quản lý phân công công việc
  * 
- * @property string $id ULID của assignment (primary key)
+ * @property int $id ID của assignment (primary key)
  * @property string $task_id ID task (ULID)
  * @property string $user_id ID user được assign (ULID)
  * @property float $split_percent Phần trăm phân chia công việc (đã đổi tên từ split_percentage)
@@ -20,13 +19,9 @@ use Src\Compensation\Models\TaskCompensation;
  */
 class TaskAssignment extends Model
 {
-    use HasUlids, HasTimestamps;
+    use HasTimestamps;
 
     protected $table = 'task_assignments';
-    
-    // Cấu hình ULID primary key
-    protected $keyType = 'string';
-    public $incrementing = false;
     
     protected $fillable = [
         'task_id',

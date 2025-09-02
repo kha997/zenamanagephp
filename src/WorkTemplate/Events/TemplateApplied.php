@@ -2,11 +2,14 @@
 
 namespace Src\WorkTemplate\Events;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Src\WorkTemplate\Models\Template;
 use Src\CoreProject\Models\Project;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 /**
@@ -76,7 +79,7 @@ class TemplateApplied
      * @param array $options
      */
     public function __construct(
-        Template $template,
+        WorkTemplate $template,
         Project $project,
         array $appliedPhases,
         array $appliedTasks,
@@ -87,8 +90,25 @@ class TemplateApplied
         $this->appliedPhases = $appliedPhases;
         $this->appliedTasks = $appliedTasks;
         $this->options = $options;
-        $this->actorId = auth()->id();
+        $this->actorId = $this->resolveActorId();
         $this->timestamp = Carbon::now();
+    }
+    
+    /**
+     * Resolve actor ID với fallback an toàn
+     * 
+     * @return string
+     */
+    protected function resolveActorId(): string
+    {
+        try {
+            return AuthHelper::idOrSystem();
+        } catch (\Exception $e) {
+            Log::warning('Failed to resolve actor ID in TemplateApplied', [
+                'error' => $e->getMessage()
+            ]);
+            return 'system';
+        }
     }
 
     /**

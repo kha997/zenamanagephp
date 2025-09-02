@@ -2,6 +2,8 @@
 
 namespace Src\CoreProject\Listeners;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Src\CoreProject\Models\Task;
 use Src\CoreProject\Services\TaskService;
@@ -18,6 +20,23 @@ class TaskScheduleListener
     public function __construct(TaskService $taskService)
     {
         $this->taskService = $taskService;
+    }
+    
+    /**
+     * Giải quyết ID của actor hiện tại
+     *
+     * @return string
+     */
+    private function resolveActorId(): string
+    {
+        try {
+            return AuthHelper::idOrSystem();
+        } catch (\Throwable $e) {
+            Log::warning('Could not resolve actor ID in TaskScheduleListener', [
+                'error' => $e->getMessage()
+            ]);
+            return 'system';
+        }
     }
 
     /**
@@ -138,7 +157,7 @@ class TaskScheduleListener
             EventBus::publish('Project.Schedule.CriticalPathUpdated', [
                 'entityId' => $projectId,
                 'projectId' => $projectId,
-                'actorId' => auth()->id() ?? 'system',
+                'actorId' => $this->resolveActorId(),
                 'changedFields' => ['critical_path' => $criticalPath],
                 'timestamp' => now()->toISOString(),
                 'eventId' => uniqid('event_', true)

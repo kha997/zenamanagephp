@@ -3,6 +3,7 @@
 namespace Src\WorkTemplate\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -26,7 +27,7 @@ use Src\Foundation\Traits\HasAuditFields;
  */
 class ProjectPhase extends Model
 {
-    use HasUlids, HasAuditFields, SoftDeletes;
+    use HasFactory, HasUlids, HasAuditFields, SoftDeletes;
 
     protected $table = 'project_phases';
     protected $keyType = 'string';

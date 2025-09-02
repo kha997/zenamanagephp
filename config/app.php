@@ -167,12 +167,11 @@ return [
          */
         Laravel\Sanctum\SanctumServiceProvider::class,
 
-        /*
-         * Application Service Providers...
+        /*         * Application Service Providers...
          */
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
-        App\Providers\JwtAuthServiceProvider::class, // Thêm dòng này
+        // App\Providers\JwtAuthServiceProvider::class, // Xóa dòng này để tránh duplicate
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,

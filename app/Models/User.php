@@ -14,6 +14,8 @@ use Src\Foundation\Traits\HasTimestamps;
 use Src\Foundation\Traits\HasSoftDeletes;
 use Src\Foundation\Traits\HasAuditLog;
 use Src\RBAC\Traits\HasRBACContext;
+// Thêm import cho JWTSubject
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
 /**
  * Model User - Quản lý người dùng với RBAC và Multi-tenancy
@@ -31,9 +33,11 @@ use Src\RBAC\Traits\HasRBACContext;
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at Soft delete timestamp
  */
-class User extends Authenticatable
+class User extends Authenticatable implements JWTSubject
 {
-    use HasApiTokens, HasFactory, Notifiable, HasTimestamps, HasUlids, HasSoftDeletes, HasAuditLog, HasRBACContext;
+    use HasApiTokens, HasFactory, Notifiable, HasUlids;
+    
+    use HasTimestamps, HasSoftDeletes, HasAuditLog, HasRBACContext;
 
     /**
      * Cấu hình ULID primary key
@@ -80,10 +84,10 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(
             \Src\RBAC\Models\Role::class,
-            'user_roles_system',
+            'system_user_roles', // Thay đổi từ 'user_roles_system'
             'user_id',
             'role_id'
-        )->withTimestamps();
+        )->withTimestamps(); // Bỏ using() vì bảng system_user_roles sử dụng composite primary key
     }
 
     /**
@@ -174,5 +178,29 @@ class User extends Authenticatable
     public function scopeForTenant($query, string $tenantId)
     {
         return $query->where('tenant_id', $tenantId);
+    }
+
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     *
+     * @return array
+     */
+    public function getJWTCustomClaims()
+    {
+        return [
+            'user_id' => $this->id,
+            'tenant_id' => $this->tenant_id,
+            'is_active' => $this->is_active,
+        ];
     }
 }

@@ -1,5 +1,9 @@
 <?php declare(strict_types=1);
 
+use Monolog\Handler\NullHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Handler\SyslogUdpHandler;
+
 return [
     'default' => env('LOG_CHANNEL', 'stack'),
 
@@ -8,7 +12,10 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            'channels' => array_filter([
+                'single',
+                env('LOG_SLACK_WEBHOOK_URL') ? 'slack' : null
+            ]),
             'ignore_exceptions' => false,
         ],
 
@@ -25,23 +32,31 @@ return [
             'days' => 14,
         ],
 
-        'slack' => [
+        'slack' => env('LOG_SLACK_WEBHOOK_URL') ? [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
-            'username' => 'Laravel Log',
+            'username' => 'Z.E.N.A Bot',
             'emoji' => ':boom:',
             'level' => env('LOG_LEVEL', 'critical'),
+        ] : [
+            'driver' => 'monolog',
+            'handler' => NullHandler::class,
         ],
 
         'papertrail' => [
-            'driver' => 'syslog',
+            'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => SyslogUdpHandler::class,
+            'handler_with' => [
+                'host' => env('PAPERTRAIL_URL'),
+                'port' => env('PAPERTRAIL_PORT'),
+            ],
         ],
 
         'stderr' => [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
-            'handler' => Monolog\Handler\StreamHandler::class,
+            'handler' => StreamHandler::class,
             'formatter' => env('LOG_STDERR_FORMATTER'),
             'with' => [
                 'stream' => 'php://stderr',
@@ -60,11 +75,33 @@ return [
 
         'null' => [
             'driver' => 'monolog',
-            'handler' => Monolog\Handler\NullHandler::class,
+            'handler' => NullHandler::class,
         ],
 
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
+        ],
+        
+        // Custom channels cho Z.E.N.A
+        'websocket' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/websocket.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 7,
+        ],
+        
+        'api' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/api.log'),
+            'level' => env('LOG_LEVEL', 'info'),
+            'days' => 30,
+        ],
+        
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'warning',
+            'days' => 90,
         ],
     ],
 ];

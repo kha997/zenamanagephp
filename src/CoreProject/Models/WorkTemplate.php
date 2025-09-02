@@ -2,13 +2,15 @@
 
 namespace Src\CoreProject\Models;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Src\Foundation\Traits\HasTimestamps;
 use Src\Foundation\Traits\HasOwnership;
 use Src\Foundation\Traits\HasTags;
 use Src\Foundation\Events\EventBus;
-
+use Illuminate\Support\Facades\Log;
 /**
  * Model WorkTemplate - Mẫu công việc
  * 
@@ -110,7 +112,7 @@ class WorkTemplate extends Model
             'project_id' => $project->ulid,
             'component_id' => $component?->ulid,
             'tasks_created' => count($createdTasks),
-            'actor_id' => auth()->id() ?? 'system'
+            'actor_id' => $this->resolveActorId()
         ]);
         
         return $createdTasks;
@@ -160,5 +162,26 @@ class WorkTemplate extends Model
         return $query->where('name', $name)
                     ->orderBy('version', 'desc')
                     ->limit(1);
+    }
+
+    /**
+     * Resolve actor ID từ Auth facade với fallback an toàn
+     * 
+     * @return string|int
+     */
+    private function resolveActorId()
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+            return 'system';
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from Auth facade', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return 'system';
+        }
     }
 }

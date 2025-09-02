@@ -2,6 +2,8 @@
 
 namespace Src\CoreProject\Services;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Src\CoreProject\Models\Task;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Component;
@@ -10,12 +12,32 @@ use Src\Foundation\Events\EventBus;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth; // Thêm import Auth facade
 
 /**
  * Service xử lý logic nghiệp vụ cho Tasks
  */
 class TaskService
 {
+    /**
+     * Resolve actor ID từ auth helper với fallback an toàn
+     * 
+     * @return string|int
+     */
+    private function resolveActorId()
+    {
+        try {
+            return AuthHelper::idOrSystem(); // Thay thế auth()->id() bằng AuthHelper::id()
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from auth helper', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return 'system';
+        }
+    }
+
     /**
      * Tạo task mới
      * 
@@ -49,7 +71,7 @@ class TaskService
                 'start_date' => $data['start_date'] ?? null,
                 'end_date' => $data['end_date'] ?? null,
                 'status' => $data['status'] ?? Task::STATUS_PENDING,
-                'priority' => $data['priority'] ?? Task::PRIORITY_NORMAL,
+                'priority' => $data['priority'] ?? Task::PRIORITY_MEDIUM, // Thay từ PRIORITY_NORMAL
                 'dependencies' => $data['dependencies'] ?? [],
                 'conditional_tag' => $data['conditional_tag'] ?? null,
                 'is_hidden' => $data['is_hidden'] ?? false,
@@ -74,7 +96,7 @@ class TaskService
                 'task_id' => $task->ulid,
                 'project_id' => $project->ulid,
                 'component_id' => $task->component?->ulid,
-                'actor_id' => auth()->id() ?? 'system',
+                'actor_id' => $this->resolveActorId(),
                 'task_data' => $task->toArray()
             ]);
             
@@ -130,7 +152,7 @@ class TaskService
                 'task_id' => $task->ulid,
                 'project_id' => $task->project->ulid,
                 'component_id' => $task->component?->ulid,
-                'actor_id' => auth()->id() ?? 'system',
+                'actor_id' => $this->resolveActorId(),
                 'old_data' => $oldData,
                 'new_data' => $task->fresh()->toArray(),
                 'changed_fields' => array_keys($updateFields)
@@ -167,7 +189,7 @@ class TaskService
                 'task_id' => $task->ulid,
                 'project_id' => $task->project->ulid,
                 'component_id' => $task->component?->ulid,
-                'actor_id' => auth()->id() ?? 'system',
+                'actor_id' => $this->resolveActorId(),
                 'task_data' => $taskData
             ]);
             
@@ -273,7 +295,7 @@ class TaskService
             'component_id' => $task->component?->ulid,
             'old_status' => $oldStatus,
             'new_status' => $status,
-            'actor_id' => auth()->id() ?? 'system'
+            'actor_id' => $this->resolveActorId()
         ]);
         
         return $task->fresh();
@@ -365,13 +387,13 @@ class TaskService
         $totalPercentage = 0;
         
         foreach ($assignments as $assignment) {
-            $percentage = $assignment['split_percentage'] ?? 100.0;
+            $percentage = $assignment['split_percent'] ?? 100.0;
             $totalPercentage += $percentage;
             
             TaskAssignment::create([
                 'task_id' => $task->id,
                 'user_id' => $assignment['user_id'],
-                'split_percentage' => $percentage,
+                'split_percent' => $percentage,
                 'role' => $assignment['role'] ?? null
             ]);
         }

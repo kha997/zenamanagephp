@@ -263,15 +263,22 @@ class RBACManager
         $role = Role::where('id', $roleId)
             ->where('scope', Role::SCOPE_SYSTEM)
             ->first();
-
+    
         if (!$role) {
             return false;
         }
-
-        UserRoleSystem::firstOrCreate([
-            'user_id' => $userId,
-            'role_id' => $roleId
-        ]);
+    
+        // Thay thế firstOrCreate() bằng exists() check và create() riêng biệt
+        $exists = UserRoleSystem::where('user_id', $userId)
+            ->where('role_id', $roleId)
+            ->exists();
+            
+        if (!$exists) {
+            UserRoleSystem::create([
+                'user_id' => $userId,
+                'role_id' => $roleId
+            ]);
+        }
 
         // Xóa cache
         $this->clearUserPermissionsCache($userId);

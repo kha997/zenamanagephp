@@ -6,52 +6,108 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Src\Foundation\Traits\HasTimestamps;
-use Src\Foundation\Traits\HasSoftDeletes;
-use Src\Foundation\Traits\HasAuditLog;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 /**
- * Model Tenant - Quản lý công ty/tổ chức trong hệ thống multi-tenant
+ * Tenant Model - Represents an organization/company in the multi-tenant system
  * 
  * @property string $id ULID primary key
- * @property string $name Tên công ty
- * @property string|null $domain Domain của công ty
- * @property string|null $database_name Tên database riêng (nếu có)
- * @property array|null $settings Cài đặt riêng của tenant
- * @property bool $is_active Trạng thái hoạt động
+ * @property string $name
+ * @property string $slug
+ * @property string|null $domain
+ * @property string|null $database_name
+ * @property array|null $settings
+ * @property string $status
+ * @property bool $is_active
+ * @property \Carbon\Carbon|null $trial_ends_at
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at
  */
 class Tenant extends Model
 {
-    use HasFactory, HasUlids, HasTimestamps, HasSoftDeletes, HasAuditLog;
+    use HasFactory, HasUlids, SoftDeletes;
 
     /**
-     * Cấu hình ULID cho primary key
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
      */
-    public $incrementing = false;
-    protected $keyType = 'string';
-
     protected $fillable = [
         'name',
+        'slug',
         'domain',
         'database_name',
         'settings',
-        'is_active'
-    ];
-
-    protected $casts = [
-        'settings' => 'array',
-        'is_active' => 'boolean'
-    ];
-
-    protected $attributes = [
-        'is_active' => true
+        'status',
+        'is_active',
+        'trial_ends_at',
     ];
 
     /**
-     * Relationship: Tenant có nhiều users
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'settings' => 'array',
+        'is_active' => 'boolean',
+        'trial_ends_at' => 'datetime',
+    ];
+
+    /**
+     * Default attribute values.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_active' => true,
+        'status' => 'trial',
+    ];
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+        
+        // Tự động tạo slug từ name khi tạo mới
+        static::creating(function ($tenant) {
+            if (empty($tenant->slug)) {
+                $tenant->slug = Str::slug($tenant->name);
+                
+                // Đảm bảo slug là duy nhất
+                $originalSlug = $tenant->slug;
+                $counter = 1;
+                while (static::where('slug', $tenant->slug)->exists()) {
+                    $tenant->slug = $originalSlug . '-' . $counter;
+                    $counter++;
+                }
+            }
+        });
+        
+        // Cập nhật slug khi name thay đổi
+        static::updating(function ($tenant) {
+            if ($tenant->isDirty('name') && empty($tenant->slug)) {
+                $tenant->slug = Str::slug($tenant->name);
+                
+                // Đảm bảo slug là duy nhất (trừ chính nó)
+                $originalSlug = $tenant->slug;
+                $counter = 1;
+                while (static::where('slug', $tenant->slug)->where('id', '!=', $tenant->id)->exists()) {
+                    $tenant->slug = $originalSlug . '-' . $counter;
+                    $counter++;
+                }
+            }
+        });
+    }
+
+    /**
+     * Get all users belonging to this tenant
+     *
+     * @return HasMany
      */
     public function users(): HasMany
     {
@@ -59,44 +115,32 @@ class Tenant extends Model
     }
 
     /**
-     * Relationship: Tenant có nhiều projects
+     * Get all projects belonging to this tenant
+     *
+     * @return HasMany
      */
     public function projects(): HasMany
     {
-        return $this->hasMany(\Src\CoreProject\Models\Project::class);
+        return $this->hasMany(Project::class);
     }
 
     /**
-     * Kiểm tra tenant có active không
+     * Check if tenant is active
+     *
+     * @return bool
      */
     public function isActive(): bool
     {
-        return $this->is_active;
+        return $this->status === 'active';
     }
 
     /**
-     * Lấy setting theo key
+     * Check if tenant trial has expired
+     *
+     * @return bool
      */
-    public function getSetting(string $key, $default = null)
+    public function isTrialExpired(): bool
     {
-        return data_get($this->settings, $key, $default);
-    }
-
-    /**
-     * Cập nhật setting
-     */
-    public function updateSetting(string $key, $value): void
-    {
-        $settings = $this->settings ?? [];
-        data_set($settings, $key, $value);
-        $this->update(['settings' => $settings]);
-    }
-
-    /**
-     * Scope: Chỉ lấy tenants active
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
+        return $this->trial_ends_at && $this->trial_ends_at->isPast();
     }
 }

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Tenant;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 /**
  * Tenant Seeder
@@ -23,7 +24,9 @@ class TenantSeeder extends Seeder
             ['domain' => 'zena.local'], // Điều kiện tìm kiếm
             [
                 'name' => 'ZENA Company',
+                'slug' => 'zena-company',
                 'is_active' => true,
+                'status' => 'active',
                 'settings' => [
                     'timezone' => 'Asia/Ho_Chi_Minh',
                     'currency' => 'VND',

@@ -23,18 +23,19 @@ class TaskAssignmentController
      */
     public function __construct()
     {
-        $this->middleware(RBACMiddleware::class);
+        // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
+        // $this->middleware(RBACMiddleware::class);
     }
 
     /**
      * Lấy danh sách assignments của một task
      *
      * @param Request $request
-     * @param int $projectId
-     * @param int $taskId
+     * @param string $projectId
+     * @param string $taskId
      * @return JsonResponse
      */
-    public function index(Request $request, int $projectId, int $taskId): JsonResponse
+    public function index(Request $request, string $projectId, string $taskId): JsonResponse
     {
         try {
             $assignments = TaskAssignment::where('task_id', $taskId)
@@ -42,7 +43,7 @@ class TaskAssignmentController
                     $query->where('project_id', $projectId);
                 })
                 ->with(['task', 'user'])
-                ->orderBy('split_percentage', 'desc')
+                ->orderBy('split_percent', 'desc')
                 ->get();
 
             return JSendResponse::success([
@@ -57,19 +58,19 @@ class TaskAssignmentController
      * Tạo assignment mới
      *
      * @param StoreTaskAssignmentRequest $request
-     * @param int $projectId
-     * @param int $taskId
+     * @param string $projectId
+     * @param string $taskId
      * @return JsonResponse
      */
-    public function store(StoreTaskAssignmentRequest $request, int $projectId, int $taskId): JsonResponse
+    public function store(StoreTaskAssignmentRequest $request, string $projectId, string $taskId): JsonResponse
     {
         try {
             $assignmentData = $request->validated();
             $assignmentData['task_id'] = $taskId;
 
-            // Kiểm tra tổng split_percentage không vượt quá 100%
-            $currentTotal = TaskAssignment::where('task_id', $taskId)->sum('split_percentage');
-            if ($currentTotal + $assignmentData['split_percentage'] > 100) {
+            // Kiểm tra tổng split_percent không vượt quá 100%
+            $currentTotal = TaskAssignment::where('task_id', $taskId)->sum('split_percent');
+            if ($currentTotal + $assignmentData['split_percent'] > 100) {
                 return JSendResponse::error(
                     'Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại: ' . $currentTotal . '%',
                     400
@@ -94,12 +95,12 @@ class TaskAssignmentController
     /**
      * Lấy thông tin chi tiết một assignment
      *
-     * @param int $projectId
-     * @param int $taskId
-     * @param int $assignmentId
+     * @param string $projectId
+     * @param string $taskId
+     * @param string $assignmentId
      * @return JsonResponse
      */
-    public function show(int $projectId, int $taskId, int $assignmentId): JsonResponse
+    public function show(string $projectId, string $taskId, string $assignmentId): JsonResponse
     {
         try {
             $assignment = TaskAssignment::where('id', $assignmentId)
@@ -124,12 +125,12 @@ class TaskAssignmentController
      * Cập nhật thông tin assignment
      *
      * @param UpdateTaskAssignmentRequest $request
-     * @param int $projectId
-     * @param int $taskId
-     * @param int $assignmentId
+     * @param string $projectId
+     * @param string $taskId
+     * @param string $assignmentId
      * @return JsonResponse
      */
-    public function update(UpdateTaskAssignmentRequest $request, int $projectId, int $taskId, int $assignmentId): JsonResponse
+    public function update(UpdateTaskAssignmentRequest $request, string $projectId, string $taskId, string $assignmentId): JsonResponse
     {
         try {
             $assignment = TaskAssignment::where('id', $assignmentId)
@@ -141,13 +142,13 @@ class TaskAssignmentController
 
             $assignmentData = $request->validated();
 
-            // Kiểm tra tổng split_percentage không vượt quá 100%
-            if (isset($assignmentData['split_percentage'])) {
+            // Kiểm tra tổng split_percent không vượt quá 100%
+            if (isset($assignmentData['split_percent'])) {
                 $currentTotal = TaskAssignment::where('task_id', $taskId)
                     ->where('id', '!=', $assignmentId)
-                    ->sum('split_percentage');
+                    ->sum('split_percent');
                     
-                if ($currentTotal + $assignmentData['split_percentage'] > 100) {
+                if ($currentTotal + $assignmentData['split_percent'] > 100) {
                     return JSendResponse::error(
                         'Tổng phần trăm phân chia không được vượt quá 100%. Hiện tại (không bao gồm assignment này): ' . $currentTotal . '%',
                         400
@@ -175,12 +176,12 @@ class TaskAssignmentController
     /**
      * Xóa assignment
      *
-     * @param int $projectId
-     * @param int $taskId
-     * @param int $assignmentId
+     * @param string $projectId
+     * @param string $taskId
+     * @param string $assignmentId
      * @return JsonResponse
      */
-    public function destroy(int $projectId, int $taskId, int $assignmentId): JsonResponse
+    public function destroy(string $projectId, string $taskId, string $assignmentId): JsonResponse
     {
         try {
             $assignment = TaskAssignment::where('id', $assignmentId)
@@ -208,11 +209,11 @@ class TaskAssignmentController
     /**
      * Lấy thống kê assignments của user trong project
      *
-     * @param int $projectId
-     * @param int $userId
+     * @param string $projectId
+     * @param string $userId
      * @return JsonResponse
      */
-    public function userStats(int $projectId, int $userId): JsonResponse
+    public function userStats(string $projectId, string $userId): JsonResponse
     {
         try {
             $assignments = TaskAssignment::whereHas('task', function ($query) use ($projectId) {
@@ -224,7 +225,7 @@ class TaskAssignmentController
 
             $stats = [
                 'total_assignments' => $assignments->count(),
-                'total_workload_percentage' => $assignments->sum('split_percentage'),
+                'total_workload_percentage' => $assignments->sum('split_percent'),
                 'tasks_by_status' => $assignments->groupBy('task.status')->map->count(),
                 'assignments' => TaskAssignmentResource::collection($assignments)
             ];

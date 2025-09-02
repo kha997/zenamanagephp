@@ -86,12 +86,12 @@ function eventBus(): \Src\Foundation\EventBus {
 }
 
 /**
- * Helper function để lấy config value
+ * Helper function để lấy env value (đổi tên để tránh xung đột với Laravel)
  * 
  * @param string $key
  * @param mixed $default
  * @return mixed
  */
-function config(string $key, $default = null) {
+function env_config(string $key, $default = null) {
     return $_ENV[$key] ?? $default;
 }

@@ -2,6 +2,7 @@
 
 namespace Src\RBAC\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -18,7 +19,7 @@ use Src\Foundation\Traits\HasTimestamps;
  */
 class Permission extends Model
 {
-    use HasUlids, HasTimestamps;
+    use HasFactory, HasUlids, HasTimestamps;
 
     protected $table = 'permissions';
     protected $primaryKey = 'id';

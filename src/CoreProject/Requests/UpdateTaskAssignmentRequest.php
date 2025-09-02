@@ -22,7 +22,7 @@ class UpdateTaskAssignmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'split_percentage' => [
+            'split_percent' => [
                 'sometimes',
                 'required',
                 'numeric',
@@ -45,9 +45,9 @@ class UpdateTaskAssignmentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'split_percentage.required' => 'Phần trăm phân chia là bắt buộc.',
-            'split_percentage.min' => 'Phần trăm phân chia phải lớn hơn 0.',
-            'split_percentage.max' => 'Phần trăm phân chia không được vượt quá 100%.',
+            'split_percent.required' => 'Phần trăm phân chia là bắt buộc.',
+            'split_percent.min' => 'Phần trăm phân chia phải lớn hơn 0.',
+            'split_percent.max' => 'Phần trăm phân chia không được vượt quá 100%.',
             'role.required' => 'Vai trò là bắt buộc.',
             'role.in' => 'Vai trò không hợp lệ.'
         ];
@@ -60,7 +60,7 @@ class UpdateTaskAssignmentRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $assignmentId = $this->route('taskAssignment');
-            $newSplitPercentage = $this->input('split_percentage');
+            $newSplitPercentage = $this->input('split_percent');
             
             // Kiểm tra tổng phần trăm không vượt quá 100% khi cập nhật
             if ($assignmentId && $newSplitPercentage !== null) {
@@ -68,11 +68,11 @@ class UpdateTaskAssignmentRequest extends FormRequest
                 if ($assignment) {
                     $currentTotal = TaskAssignment::where('task_id', $assignment->task_id)
                         ->where('id', '!=', $assignmentId)
-                        ->sum('split_percentage');
+                        ->sum('split_percent');
                         
                     if (($currentTotal + $newSplitPercentage) > 100) {
                         $validator->errors()->add(
-                            'split_percentage',
+                            'split_percent',
                             'Tổng phần trăm phân chia cho task này sẽ vượt quá 100%. ' .
                             'Hiện tại (không tính assignment này): ' . $currentTotal . '%, ' .
                             'cập nhật thành: ' . $newSplitPercentage . '%'

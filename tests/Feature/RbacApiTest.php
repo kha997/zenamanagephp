@@ -26,6 +26,9 @@ class RbacApiTest extends TestCase
     {
         parent::setUp();
         
+        // Đảm bảo middleware được đăng ký trong test
+        $this->app['router']->aliasMiddleware('rbac', \Src\RBAC\Middleware\RBACMiddleware::class);
+        
         $this->tenant = Tenant::factory()->create([
             'id' => 1,
             'name' => 'Test Company',
@@ -259,4 +262,84 @@ class RbacApiTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(
+                 ->assertJson([
+                     'status' => 'success',
+                     'data' => [
+                         'message' => 'Vai trò đã được gán thành công'
+                     ]
+                 ]);
+
+        $this->assertDatabaseHas('system_user_roles', [
+            'user_id' => $targetUser->id,
+            'role_id' => $role->id
+        ]);
+    }
+
+    /**
+     * Test remove role from user
+     */
+    public function test_can_remove_role_from_user()
+    {
+        $targetUser = User::factory()->create([
+            'tenant_id' => $this->tenant->id
+        ]);
+        
+        $role = Role::factory()->create();
+        $targetUser->systemRoles()->attach($role->id);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->deleteJson("/api/v1/rbac/user-roles/{$targetUser->id}/{$role->id}");
+
+        $response->assertStatus(200)
+                 ->assertJson([
+                     'status' => 'success',
+                     'data' => [
+                         'message' => 'Vai trò đã được gỡ bỏ thành công'
+                     ]
+                 ]);
+
+        $this->assertDatabaseMissing('system_user_roles', [
+            'user_id' => $targetUser->id,
+            'role_id' => $role->id
+        ]);
+    }
+
+    /**
+     * Test unauthorized access returns 401
+     */
+    public function test_unauthorized_access_returns_401()
+    {
+        $response = $this->getJson('/api/v1/rbac/roles');
+        $response->assertStatus(401);
+    }
+
+    /**
+     * Test forbidden access without permissions
+     */
+    public function test_forbidden_access_without_permissions()
+    {
+        // Tạo user không có quyền
+        $userWithoutPermissions = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'password' => Hash::make('password123')
+        ]);
+        
+        $loginResponse = $this->postJson('/api/v1/auth/login', [
+            'email' => $userWithoutPermissions->email,
+            'password' => 'password123',
+        ]);
+        
+        $tokenWithoutPermissions = $loginResponse->json('data.token');
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $tokenWithoutPermissions,
+        ])->postJson('/api/v1/rbac/roles', [
+            'name' => 'Test Role',
+            'scope' => 'custom',
+            'description' => 'Test Description'
+        ]);
+
+        $response->assertStatus(403);
+    }
+}

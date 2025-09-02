@@ -2,6 +2,8 @@
 
 namespace Src\Notification\Controllers;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Src\Notification\Models\Notification;
@@ -31,8 +33,26 @@ class NotificationController
      */
     public function __construct(NotificationService $notificationService)
     {
-        $this->middleware(RBACMiddleware::class);
+        // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
+        // $this->middleware(RBACMiddleware::class);
         $this->notificationService = $notificationService;
+    }
+
+    /**
+     * Lấy ID người dùng hiện tại một cách an toàn
+     *
+     * @return int|null
+     */
+    private function getUserId(): ?int
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+            return null;
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     /**
@@ -44,24 +64,19 @@ class NotificationController
     public function index(Request $request): JsonResponse
     {
         try {
-            $userId = auth()->id();
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $filters = [
                 'priority' => $request->get('priority'),
                 'channel' => $request->get('channel'),
-                'read_status' => $request->get('read_status'),
-                'project_id' => $request->get('project_id'),
-                'event_key' => $request->get('event_key'),
-                'date_from' => $request->get('date_from'),
-                'date_to' => $request->get('date_to')
+                'read' => $request->get('read'),
+                'limit' => $request->get('limit', 20)
             ];
-            
-            $perPage = $request->get('per_page', 15);
-            
-            $notifications = $this->notificationService->getUserNotifications(
-                $userId,
-                $filters,
-                $perPage
-            );
+
+            $notifications = $this->notificationService->getUserNotifications($userId, $filters);
 
             return JSendResponse::success(
                 new NotificationCollection($notifications)
@@ -104,8 +119,9 @@ class NotificationController
     {
         try {
             $notification = $this->notificationService->getNotificationById($ulid);
+            $currentUserId = $this->getUserId();
 
-            if (!$notification || $notification->user_id !== auth()->id()) {
+            if (!$notification || !$currentUserId || $notification->user_id !== $currentUserId) {
                 return JSendResponse::error('Thông báo không tồn tại', 404);
             }
 
@@ -150,13 +166,7 @@ class NotificationController
     public function destroy(string $ulid): JsonResponse
     {
         try {
-            $notification = Notification::where('ulid', $ulid)->first();
-
-            if (!$notification) {
-                return JSendResponse::error('Thông báo không tồn tại', 404);
-            }
-
-            $notification->delete();
+            $this->notificationService->deleteNotification($ulid);
 
             return JSendResponse::success(
                 null,
@@ -176,7 +186,12 @@ class NotificationController
     public function markAsRead(string $ulid): JsonResponse
     {
         try {
-            $notification = $this->notificationService->markAsRead($ulid, auth()->id());
+            $currentUserId = $this->getUserId();
+            if (!$currentUserId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+
+            $notification = $this->notificationService->markAsRead($ulid, $currentUserId);
 
             return JSendResponse::success(
                 new NotificationResource($notification),
@@ -196,7 +211,12 @@ class NotificationController
     public function markAsUnread(string $ulid): JsonResponse
     {
         try {
-            $notification = $this->notificationService->markAsUnread($ulid, auth()->id());
+            $currentUserId = $this->getUserId();
+            if (!$currentUserId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+
+            $notification = $this->notificationService->markAsUnread($ulid, $currentUserId);
 
             return JSendResponse::success(
                 new NotificationResource($notification),
@@ -210,18 +230,21 @@ class NotificationController
     /**
      * Đánh dấu tất cả notifications đã đọc
      *
-     * @param Request $request
      * @return JsonResponse
      */
-    public function markAllAsRead(Request $request): JsonResponse
+    public function markAllAsRead(): JsonResponse
     {
         try {
-            $projectId = $request->get('project_id');
-            $count = $this->notificationService->markAllAsRead(auth()->id(), $projectId);
+            $currentUserId = $this->getUserId();
+            if (!$currentUserId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+
+            $count = $this->notificationService->markAllAsRead($currentUserId);
 
             return JSendResponse::success(
                 ['marked_count' => $count],
-                "Đã đánh dấu {$count} thông báo là đã đọc"
+                'Tất cả thông báo đã được đánh dấu đã đọc'
             );
         } catch (Exception $e) {
             return JSendResponse::error('Không thể đánh dấu thông báo: ' . $e->getMessage());
@@ -229,22 +252,25 @@ class NotificationController
     }
 
     /**
-     * Lấy thống kê notifications
+     * Lấy số lượng notifications chưa đọc
      *
-     * @param Request $request
      * @return JsonResponse
      */
-    public function getStatistics(Request $request): JsonResponse
+    public function getUnreadCount(): JsonResponse
     {
         try {
-            $userId = auth()->id();
-            $projectId = $request->get('project_id');
-            
-            $stats = $this->notificationService->getNotificationStatistics($userId, $projectId);
+            $currentUserId = $this->getUserId();
+            if (!$currentUserId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
 
-            return JSendResponse::success($stats);
+            $count = $this->notificationService->getUnreadCount($currentUserId);
+
+            return JSendResponse::success(
+                ['unread_count' => $count]
+            );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy thống kê thông báo: ' . $e->getMessage());
+            return JSendResponse::error('Không thể lấy số lượng thông báo: ' . $e->getMessage());
         }
     }
 
@@ -282,28 +308,6 @@ class NotificationController
             );
         } catch (Exception $e) {
             return JSendResponse::error('Không thể gửi thông báo test: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Lấy số lượng thông báo chưa đọc
-     *
-     * @param Request $request
-     * @return JsonResponse
-     */
-    public function getUnreadCount(Request $request): JsonResponse
-    {
-        try {
-            $userId = auth()->id();
-            $projectId = $request->get('project_id');
-            
-            $count = $this->notificationService->getUnreadCount($userId, $projectId);
-
-            return JSendResponse::success([
-                'unread_count' => $count
-            ]);
-        } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy số lượng thông báo chưa đọc: ' . $e->getMessage());
         }
     }
 }

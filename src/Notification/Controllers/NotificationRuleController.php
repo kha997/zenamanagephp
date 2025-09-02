@@ -2,6 +2,8 @@
 
 namespace Src\Notification\Controllers;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Src\Notification\Models\NotificationRule;
@@ -31,8 +33,26 @@ class NotificationRuleController
      */
     public function __construct(NotificationRuleService $notificationRuleService)
     {
-        $this->middleware(RBACMiddleware::class);
+        // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
+        // $this->middleware(RBACMiddleware::class);
         $this->notificationRuleService = $notificationRuleService;
+    }
+
+    /**
+     * Lấy ID người dùng hiện tại một cách an toàn
+     *
+     * @return int|null
+     */
+    private function getUserId(): ?int
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+            return null;
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     /**
@@ -44,7 +64,11 @@ class NotificationRuleController
     public function index(Request $request): JsonResponse
     {
         try {
-            $userId = auth()->id();
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $projectId = $request->get('project_id');
             $eventKey = $request->get('event_key');
             $isEnabled = $request->get('is_enabled');
@@ -73,8 +97,13 @@ class NotificationRuleController
     public function store(StoreNotificationRuleRequest $request): JsonResponse
     {
         try {
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $data = $request->validated();
-            $data['user_id'] = auth()->id();
+            $data['user_id'] = $userId;
             
             $rule = $this->notificationRuleService->createRule($data);
 
@@ -97,9 +126,14 @@ class NotificationRuleController
     public function show(string $ulid): JsonResponse
     {
         try {
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $rule = $this->notificationRuleService->getRuleById($ulid);
 
-            if (!$rule || $rule->user_id !== auth()->id()) {
+            if (!$rule || $rule->user_id !== $userId) {
                 return JSendResponse::error('Quy tắc thông báo không tồn tại', 404);
             }
 
@@ -121,10 +155,15 @@ class NotificationRuleController
     public function update(UpdateNotificationRuleRequest $request, string $ulid): JsonResponse
     {
         try {
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $rule = $this->notificationRuleService->updateRule(
                 $ulid,
                 $request->validated(),
-                auth()->id()
+                $userId
             );
 
             return JSendResponse::success(
@@ -145,8 +184,13 @@ class NotificationRuleController
     public function destroy(string $ulid): JsonResponse
     {
         try {
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $rule = NotificationRule::where('ulid', $ulid)
-                ->where('user_id', auth()->id())
+                ->where('user_id', $userId)
                 ->first();
 
             if (!$rule) {
@@ -173,7 +217,12 @@ class NotificationRuleController
     public function toggle(string $ulid): JsonResponse
     {
         try {
-            $rule = $this->notificationRuleService->toggleRule($ulid, auth()->id());
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
+            $rule = $this->notificationRuleService->toggleRule($ulid, $userId);
 
             $status = $rule->is_enabled ? 'bật' : 'tắt';
             return JSendResponse::success(
@@ -194,12 +243,17 @@ class NotificationRuleController
     public function createDefaults(Request $request): JsonResponse
     {
         try {
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $request->validate([
                 'project_id' => 'nullable|integer|exists:projects,id'
             ]);
             
             $rules = $this->notificationRuleService->createDefaultRules(
-                auth()->id(),
+                $userId,
                 $request->get('project_id')
             );
 
@@ -227,9 +281,14 @@ class NotificationRuleController
                 'priority' => 'required|in:critical,normal,low'
             ]);
             
+            $currentUserId = $this->getUserId();
+            if (!$currentUserId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $result = $this->notificationRuleService->testRule(
                 $ulid,
-                auth()->id(),
+                $currentUserId,
                 $request->get('event_data'),
                 $request->get('priority')
             );
@@ -270,8 +329,13 @@ class NotificationRuleController
     public function getByProject(int $projectId): JsonResponse
     {
         try {
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+            }
+            
             $rules = $this->notificationRuleService->getRulesByProject(
-                auth()->id(),
+                $userId,
                 $projectId
             );
 

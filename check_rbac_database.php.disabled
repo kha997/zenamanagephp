@@ -1,0 +1,117 @@
+<?php declare(strict_types=1);
+
+/**
+ * Script kiểm tra cấu trúc database RBAC
+ * Xác minh các bảng cần thiết đã được tạo và có đúng cấu trúc
+ */
+
+require_once __DIR__ . '/bootstrap.php';
+
+echo "🔍 Kiểm tra cấu trúc database RBAC...\n\n";
+
+try {
+    $db = db();
+    $schema = $db->getSchemaBuilder();
+    
+    // Danh sách các bảng RBAC cần kiểm tra
+    $requiredTables = [
+        'roles',
+        'permissions', 
+        'role_permissions',
+        'system_user_roles',
+        'custom_user_roles',
+        'project_user_roles'
+    ];
+    
+    $missingTables = [];
+    $existingTables = [];
+    
+    echo "📋 Kiểm tra sự tồn tại của các bảng RBAC:\n";
+    
+    foreach ($requiredTables as $table) {
+        if ($schema->hasTable($table)) {
+            $existingTables[] = $table;
+            echo "✅ Bảng '{$table}' đã tồn tại\n";
+        } else {
+            $missingTables[] = $table;
+            echo "❌ Bảng '{$table}' chưa tồn tại\n";
+        }
+    }
+    
+    echo "\n📊 Tổng kết:\n";
+    echo "- Bảng đã tồn tại: " . count($existingTables) . "/" . count($requiredTables) . "\n";
+    echo "- Bảng còn thiếu: " . count($missingTables) . "\n";
+    
+    if (!empty($missingTables)) {
+        echo "\n⚠️  Các bảng còn thiếu: " . implode(', ', $missingTables) . "\n";
+        echo "\n💡 Gợi ý: Chạy migration để tạo các bảng còn thiếu:\n";
+        echo "   php artisan migrate\n";
+        echo "   hoặc chạy: php migrate.php\n";
+    }
+    
+    // Kiểm tra cấu trúc các bảng đã tồn tại
+    if (!empty($existingTables)) {
+        echo "\n🔍 Kiểm tra cấu trúc các bảng đã tồn tại:\n";
+        
+        foreach ($existingTables as $table) {
+            echo "\n📋 Cấu trúc bảng '{$table}':\n";
+            
+            $columns = $schema->getColumnListing($table);
+            foreach ($columns as $column) {
+                echo "  - {$column}\n";
+            }
+        }
+    }
+    
+    // Kiểm tra dữ liệu mẫu
+    if (in_array('roles', $existingTables)) {
+        echo "\n📊 Kiểm tra dữ liệu trong bảng 'roles':\n";
+        $rolesCount = $db->table('roles')->count();
+        echo "  - Tổng số roles: {$rolesCount}\n";
+        
+        if ($rolesCount > 0) {
+            $roles = $db->table('roles')->select('name', 'scope')->get();
+            foreach ($roles as $role) {
+                echo "  - {$role->name} ({$role->scope})\n";
+            }
+        }
+    }
+    
+    if (in_array('permissions', $existingTables)) {
+        echo "\n📊 Kiểm tra dữ liệu trong bảng 'permissions':\n";
+        $permissionsCount = $db->table('permissions')->count();
+        echo "  - Tổng số permissions: {$permissionsCount}\n";
+        
+        if ($permissionsCount > 0) {
+            $permissions = $db->table('permissions')
+                ->select('code', 'module', 'action')
+                ->orderBy('module')
+                ->orderBy('action')
+                ->get();
+            
+            $groupedPermissions = [];
+            foreach ($permissions as $permission) {
+                $groupedPermissions[$permission->module][] = $permission->code;
+            }
+            
+            foreach ($groupedPermissions as $module => $codes) {
+                echo "  - Module '{$module}': " . count($codes) . " permissions\n";
+                foreach ($codes as $code) {
+                    echo "    * {$code}\n";
+                }
+            }
+        }
+    }
+    
+    if (count($missingTables) === 0) {
+        echo "\n🎉 Tất cả bảng RBAC đã được tạo đầy đủ!\n";
+        echo "✅ Database RBAC đã sẵn sàng để sử dụng.\n";
+    } else {
+        echo "\n⚠️  Database RBAC chưa hoàn chỉnh. Cần tạo thêm " . count($missingTables) . " bảng.\n";
+    }
+    
+} catch (Exception $e) {
+    echo "❌ Lỗi khi kiểm tra database: " . $e->getMessage() . "\n";
+    echo "📍 File: " . $e->getFile() . " (dòng " . $e->getLine() . ")\n";
+    exit(1);
+}

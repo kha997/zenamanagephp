@@ -15,17 +15,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Sử dụng ULID làm primary key
-            $table->foreignUlid('tenant_id')->constrained('tenants')->onDelete('cascade'); // Khóa ngoại đến tenants
+            $table->ulid('id')->primary();
+            $table->foreignUlid('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->boolean('is_active')->default(true); // Thêm cột is_active từ model
-            $table->json('profile_data')->nullable(); // Thêm cột profile_data từ model
+            $table->boolean('is_active')->default(true);
+            $table->json('profile_data')->nullable();
             $table->rememberToken();
             $table->timestamps();
-            $table->softDeletes(); // Thêm cột deleted_at cho SoftDeletes
+            $table->softDeletes();
             
             $table->engine = 'InnoDB';
             $table->charset = 'utf8mb4';

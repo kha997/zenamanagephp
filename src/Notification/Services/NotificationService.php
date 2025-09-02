@@ -280,6 +280,17 @@ class NotificationService
     }
 
     /**
+     * Tạo thông báo mới (alias cho createNotification)
+     * 
+     * @param array $data Dữ liệu thông báo
+     * @return Notification
+     */
+    public function create(array $data): Notification
+    {
+        return $this->createNotification($data);
+    }
+    
+    /**
      * Xóa thông báo cũ (cleanup)
      * 
      * @param int $daysOld Số ngày cũ

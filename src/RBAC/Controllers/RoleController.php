@@ -5,6 +5,9 @@ namespace Src\RBAC\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Models\Role;
+use Src\RBAC\Models\Permission;
+use Src\RBAC\Resources\RoleResource;
+use Src\RBAC\Resources\RoleCollection;
 use Src\RBAC\Services\RBACManager;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\ValidationHelper;
@@ -47,7 +50,7 @@ class RoleController
         return response()->json([
             'status' => 'success',
             'data' => [
-                'roles' => $roles->items(),
+                'roles' => RoleCollection::make($roles->items()),
                 'pagination' => [
                     'current_page' => $roles->currentPage(),
                     'per_page' => $roles->perPage(),
@@ -110,7 +113,7 @@ class RoleController
 
         return response()->json([
             'status' => 'success',
-            'data' => ['role' => $role]
+            'data' => ['role' => RoleResource::make($role)]
         ], 201);
     }
 
@@ -118,7 +121,7 @@ class RoleController
      * Lấy thông tin role cụ thể
      * GET /api/v1/rbac/roles/{id}
      */
-    public function show(int $id): JsonResponse
+    public function show(string $id): JsonResponse
     {
         $role = Role::with('permissions')->find($id);
         
@@ -131,7 +134,7 @@ class RoleController
 
         return response()->json([
             'status' => 'success',
-            'data' => ['role' => $role]
+            'data' => ['role' => RoleResource::make($role)]
         ]);
     }
 
@@ -139,7 +142,7 @@ class RoleController
      * Cập nhật role
      * PUT /api/v1/rbac/roles/{id}
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(Request $request, string $id): JsonResponse
     {
         $role = Role::find($id);
         
@@ -190,7 +193,7 @@ class RoleController
 
         return response()->json([
             'status' => 'success',
-            'data' => ['role' => $role->fresh()]
+            'data' => ['role' => RoleResource::make($role->fresh()->load('permissions'))]
         ]);
     }
 
@@ -198,7 +201,7 @@ class RoleController
      * Xóa role
      * DELETE /api/v1/rbac/roles/{id}
      */
-    public function destroy(Request $request, int $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $role = Role::find($id);
         
@@ -242,7 +245,7 @@ class RoleController
      * Sync permissions cho role
      * POST /api/v1/rbac/roles/{id}/permissions:sync
      */
-    public function syncPermissions(Request $request, int $id): JsonResponse
+    public function syncPermissions(Request $request, string $id): JsonResponse
     {
         $role = Role::find($id);
         
@@ -290,7 +293,7 @@ class RoleController
         return response()->json([
             'status' => 'success',
             'data' => [
-                'role' => $role->fresh()->load('permissions'),
+                'role' => RoleResource::make($role->fresh()->load('permissions')),
                 'synced_permissions' => $newPermissions
             ]
         ]);

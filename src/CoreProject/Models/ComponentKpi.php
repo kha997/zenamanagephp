@@ -27,6 +27,10 @@ class ComponentKpi extends Model
     use HasUlids;
 
     protected $table = 'component_kpis';
+    
+    // Cấu hình ULID primary key
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
         'component_id',

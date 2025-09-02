@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zena_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./storage:/var/www/html/storage
+      - ./public/uploads:/var/www/html/public/uploads
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    depends_on:
+      - db
+      - redis
+    networks:
+      - zena_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: zena_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./public:/var/www/html/public
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/ssl:/etc/nginx/ssl
+    depends_on:
+      - app
+    networks:
+      - zena_network
+
+  db:
+    image: mysql:8.0
+    container_name: zena_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - zena_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: zena_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - zena_network
+
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket
+    container_name: zena_websocket
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - redis
+    networks:
+      - zena_network
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zena_queue
+    restart: unless-stopped
+    command: php artisan queue:work --sleep=3 --tries=3
+    volumes:
+      - ./storage:/var/www/html/storage
+    depends_on:
+      - db
+      - redis
+    networks:
+      - zena_network
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  zena_network:
+    driver: bridge

@@ -2,24 +2,29 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The Laravel Framework.",
-    "keywords": ["framework", "laravel"],
+    "keywords": [
+        "framework",
+        "laravel"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.0.2",
         "doctrine/dbal": "^3.10",
         "firebase/php-jwt": "^6.11",
         "guzzlehttp/guzzle": "^7.2",
-        "laravel/framework": "^9.19",
+        "laravel/framework": "*",
         "laravel/sanctum": "^3.0",
         "laravel/tinker": "^2.7",
         "pusher/pusher-php-server": "^7.2",
         "ramsey/uuid": "^4.9",
         "ratchet/pawl": "^0.4.3",
         "ratchet/rfc6455": "^0.4.0",
-        "react/socket": "^1.16"
+        "react/socket": "^1.16",
+        "tymon/jwt-auth": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
+        "laravel/dusk": "^7.13",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.0.1",
         "mockery/mockery": "^1.4.4",
@@ -58,7 +63,9 @@
     },
     "extra": {
         "laravel": {
-            "dont-discover": []
+            "dont-discover": [
+                "tymon/jwt-auth"
+            ]
         }
     },
     "config": {
@@ -67,6 +74,10 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true
+        },
+        "discover-packages": false,
+        "platform": {
+            "php": "8.2.29"
         }
     },
     "minimum-stability": "stable",

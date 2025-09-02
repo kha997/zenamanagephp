@@ -13,6 +13,8 @@ class AuthTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
+    private Tenant $tenant;
+
     /**
      * Setup method để tạo tenant mặc định
      */
@@ -21,8 +23,7 @@ class AuthTest extends TestCase
         parent::setUp();
         
         // Tạo tenant mặc định cho test
-        Tenant::factory()->create([
-            'id' => 1,
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'domain' => 'test.com'
         ]);
@@ -82,7 +83,7 @@ class AuthTest extends TestCase
     public function test_user_can_login()
     {
         $password = 'password123';
-        $user = User::factory()->create([
+        $user = User::factory()->forTenant($this->tenant->id)->create([
             'password' => Hash::make($password),
         ]);
 
@@ -114,7 +115,7 @@ class AuthTest extends TestCase
      */
     public function test_user_cannot_login_with_invalid_credentials()
     {
-        $user = User::factory()->create([
+        $user = User::factory()->forTenant($this->tenant->id)->create([
             'password' => Hash::make('correct_password'),
         ]);
 
@@ -140,7 +141,7 @@ class AuthTest extends TestCase
     public function test_user_can_get_profile_with_valid_token()
     {
         $password = 'password123';
-        $user = User::factory()->create([
+        $user = User::factory()->forTenant($this->tenant->id)->create([
             'password' => Hash::make($password),
         ]);
 

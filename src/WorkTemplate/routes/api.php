@@ -14,7 +14,7 @@ use Src\WorkTemplate\Controllers\ProjectTaskController;
 |
 */
 
-Route::prefix('v1/work-template')->middleware(['auth:api', 'rbac'])->group(function () {
+Route::prefix('v1/work-template')->middleware(['auth:api'])->group(function () {
     
     /*
     |--------------------------------------------------------------------------
@@ -22,37 +22,42 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'rbac'])->group(funct
     |--------------------------------------------------------------------------
     */
     
-    // CRUD operations cho templates
-    Route::apiResource('templates', TemplateController::class);
+    // CRUD operations cho templates với RBAC permissions
+    Route::get('templates', [TemplateController::class, 'index'])->middleware('rbac:template.view');
+    Route::post('templates', [TemplateController::class, 'store'])->middleware('rbac:template.create');
+    Route::get('templates/{template}', [TemplateController::class, 'show'])->middleware('rbac:template.view');
+    Route::put('templates/{template}', [TemplateController::class, 'update'])->middleware('rbac:template.edit');
+    Route::patch('templates/{template}', [TemplateController::class, 'update'])->middleware('rbac:template.edit');
+    Route::delete('templates/{template}', [TemplateController::class, 'destroy'])->middleware('rbac:template.delete');
     
     // Template specific actions
     Route::prefix('templates')->group(function () {
         // Áp dụng template vào project
-        Route::post('{templateId}/apply', [TemplateController::class, 'applyToProject']);
+        Route::post('{templateId}/apply', [TemplateController::class, 'applyToProject'])->middleware('rbac:template.apply');
         
         // Duplicate template
-        Route::post('{templateId}/duplicate', [TemplateController::class, 'duplicate']);
+        Route::post('{templateId}/duplicate', [TemplateController::class, 'duplicate'])->middleware('rbac:template.create');
         
         // Template versions management
-        Route::get('{templateId}/versions', [TemplateController::class, 'getVersions']);
-        Route::post('{templateId}/versions', [TemplateController::class, 'createVersion']);
-        Route::get('{templateId}/versions/{versionId}', [TemplateController::class, 'getVersion']);
-        Route::put('{templateId}/versions/{versionId}/activate', [TemplateController::class, 'activateVersion']);
+        Route::get('{templateId}/versions', [TemplateController::class, 'getVersions'])->middleware('rbac:template.view');
+        Route::post('{templateId}/versions', [TemplateController::class, 'createVersion'])->middleware('rbac:template.edit');
+        Route::get('{templateId}/versions/{versionId}', [TemplateController::class, 'getVersion'])->middleware('rbac:template.view');
+        Route::put('{templateId}/versions/{versionId}/activate', [TemplateController::class, 'activateVersion'])->middleware('rbac:template.edit');
         
         // Template preview và validation
-        Route::post('{templateId}/preview', [TemplateController::class, 'previewApplication']);
-        Route::post('{templateId}/validate', [TemplateController::class, 'validateTemplate']);
+        Route::post('{templateId}/preview', [TemplateController::class, 'previewApplication'])->middleware('rbac:template.view');
+        Route::post('{templateId}/validate', [TemplateController::class, 'validateTemplate'])->middleware('rbac:template.view');
         
         // Import/Export templates
-        Route::post('import', [TemplateController::class, 'importTemplate']);
-        Route::get('{templateId}/export', [TemplateController::class, 'exportTemplate']);
+        Route::post('import', [TemplateController::class, 'importTemplate'])->middleware('rbac:template.create');
+        Route::get('{templateId}/export', [TemplateController::class, 'exportTemplate'])->middleware('rbac:template.view');
     });
     
     // Template metadata routes
     Route::prefix('templates/meta')->group(function () {
-        Route::get('categories', [TemplateController::class, 'getCategories']);
-        Route::get('conditional-tags', [TemplateController::class, 'getConditionalTags']);
-        Route::get('statistics', [TemplateController::class, 'getStatistics']);
+        Route::get('categories', [TemplateController::class, 'getCategories'])->middleware('rbac:template.view');
+        Route::get('conditional-tags', [TemplateController::class, 'getConditionalTags'])->middleware('rbac:template.view');
+        Route::get('statistics', [TemplateController::class, 'getStatistics'])->middleware('rbac:template.view');
     });
     
     /*
@@ -64,53 +69,53 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'rbac'])->group(funct
     // Project tasks với filtering và pagination
     Route::prefix('projects/{projectId}')->group(function () {
         // Lấy danh sách tasks của project
-        Route::get('tasks', [ProjectTaskController::class, 'index']);
+        Route::get('tasks', [ProjectTaskController::class, 'index'])->middleware('rbac:task.view');
         
         // Task operations
         Route::prefix('tasks')->group(function () {
             // CRUD operations
-            Route::post('/', [ProjectTaskController::class, 'store']);
-            Route::get('{taskId}', [ProjectTaskController::class, 'show']);
-            Route::put('{taskId}', [ProjectTaskController::class, 'update']);
-            Route::delete('{taskId}', [ProjectTaskController::class, 'destroy']);
+            Route::post('/', [ProjectTaskController::class, 'store'])->middleware('rbac:task.create');
+            Route::get('{taskId}', [ProjectTaskController::class, 'show'])->middleware('rbac:task.view');
+            Route::put('{taskId}', [ProjectTaskController::class, 'update'])->middleware('rbac:task.edit');
+            Route::delete('{taskId}', [ProjectTaskController::class, 'destroy'])->middleware('rbac:task.delete');
             
             // Task specific actions
-            Route::put('{taskId}/progress', [ProjectTaskController::class, 'updateProgress']);
-            Route::put('{taskId}/status', [ProjectTaskController::class, 'updateStatus']);
-            Route::post('{taskId}/toggle-conditional', [ProjectTaskController::class, 'toggleConditionalVisibility']);
+            Route::put('{taskId}/progress', [ProjectTaskController::class, 'updateProgress'])->middleware('rbac:task.edit');
+            Route::put('{taskId}/status', [ProjectTaskController::class, 'updateStatus'])->middleware('rbac:task.edit');
+            Route::post('{taskId}/toggle-conditional', [ProjectTaskController::class, 'toggleConditionalVisibility'])->middleware('rbac:task.edit');
             
             // Bulk operations
-            Route::post('bulk-update', [ProjectTaskController::class, 'bulkUpdate']);
-            Route::post('bulk-toggle-conditional', [ProjectTaskController::class, 'bulkToggleConditional']);
+            Route::post('bulk-update', [ProjectTaskController::class, 'bulkUpdate'])->middleware('rbac:task.edit');
+            Route::post('bulk-toggle-conditional', [ProjectTaskController::class, 'bulkToggleConditional'])->middleware('rbac:task.edit');
         });
         
         // Project phases management
         Route::prefix('phases')->group(function () {
-            Route::get('/', [ProjectTaskController::class, 'getPhases']);
-            Route::get('{phaseId}/tasks', [ProjectTaskController::class, 'getPhaseTask']);
-            Route::put('{phaseId}/reorder', [ProjectTaskController::class, 'reorderPhase']);
+            Route::get('/', [ProjectTaskController::class, 'getPhases'])->middleware('rbac:task.view');
+            Route::get('{phaseId}/tasks', [ProjectTaskController::class, 'getPhaseTask'])->middleware('rbac:task.view');
+            Route::put('{phaseId}/reorder', [ProjectTaskController::class, 'reorderPhase'])->middleware('rbac:task.edit');
         });
         
         // Conditional tags management
         Route::prefix('conditional-tags')->group(function () {
-            Route::get('/', [ProjectTaskController::class, 'getConditionalTags']);
-            Route::get('statistics', [ProjectTaskController::class, 'getConditionalTagStats']);
-            Route::post('{tag}/toggle', [ProjectTaskController::class, 'toggleConditionalTag']);
-            Route::post('bulk-toggle', [ProjectTaskController::class, 'bulkToggleConditionalTags']);
+            Route::get('/', [ProjectTaskController::class, 'getConditionalTags'])->middleware('rbac:task.view');
+            Route::get('statistics', [ProjectTaskController::class, 'getConditionalTagStats'])->middleware('rbac:task.view');
+            Route::post('{tag}/toggle', [ProjectTaskController::class, 'toggleConditionalTag'])->middleware('rbac:task.edit');
+            Route::post('bulk-toggle', [ProjectTaskController::class, 'bulkToggleConditionalTags'])->middleware('rbac:task.edit');
         });
         
         // Project template sync
         Route::prefix('template-sync')->group(function () {
-            Route::post('partial', [ProjectTaskController::class, 'partialSync']);
-            Route::get('diff', [ProjectTaskController::class, 'getTemplateDiff']);
-            Route::post('apply-diff', [ProjectTaskController::class, 'applyTemplateDiff']);
+            Route::post('partial', [ProjectTaskController::class, 'partialSync'])->middleware('rbac:template.apply');
+            Route::get('diff', [ProjectTaskController::class, 'getTemplateDiff'])->middleware('rbac:template.view');
+            Route::post('apply-diff', [ProjectTaskController::class, 'applyTemplateDiff'])->middleware('rbac:template.apply');
         });
         
         // Project statistics và reports
         Route::prefix('reports')->group(function () {
-            Route::get('progress', [ProjectTaskController::class, 'getProgressReport']);
-            Route::get('tasks-summary', [ProjectTaskController::class, 'getTasksSummary']);
-            Route::get('conditional-usage', [ProjectTaskController::class, 'getConditionalUsageReport']);
+            Route::get('progress', [ProjectTaskController::class, 'getProgressReport'])->middleware('rbac:task.view');
+            Route::get('tasks-summary', [ProjectTaskController::class, 'getTasksSummary'])->middleware('rbac:task.view');
+            Route::get('conditional-usage', [ProjectTaskController::class, 'getConditionalUsageReport'])->middleware('rbac:task.view');
         });
     });
     
@@ -122,11 +127,11 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'rbac'])->group(funct
     
     // Global search và discovery
     Route::prefix('search')->group(function () {
-        Route::get('templates', [TemplateController::class, 'searchTemplates']);
-        Route::get('tasks', [ProjectTaskController::class, 'searchTasks']);
+        Route::get('templates', [TemplateController::class, 'searchTemplates'])->middleware('rbac:template.view');
+        Route::get('tasks', [ProjectTaskController::class, 'searchTasks'])->middleware('rbac:task.view');
     });
     
-    // System health check và monitoring
+    // System health check và monitoring (không cần RBAC)
     Route::prefix('system')->group(function () {
         Route::get('health', function () {
             return response()->json([
@@ -145,7 +150,7 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'rbac'])->group(funct
             ]);
         });
         
-        Route::get('statistics', [TemplateController::class, 'getSystemStatistics']);
+        Route::get('statistics', [TemplateController::class, 'getSystemStatistics'])->middleware('rbac:template.view');
     });
     
     /*
@@ -154,6 +159,7 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'rbac'])->group(funct
     |--------------------------------------------------------------------------
     */
     
+    // API info không cần RBAC
     Route::get('api-info', function () {
         return response()->json([
             'status' => 'success',

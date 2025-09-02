@@ -2,101 +2,87 @@
 
 namespace Src\WorkTemplate\Services;
 
-use Src\WorkTemplate\Models\Template;
-use Src\WorkTemplate\Models\TemplateVersion;
-use Src\WorkTemplate\Models\ProjectPhase;
-use Src\WorkTemplate\Models\ProjectTask;
-use Src\CoreProject\Models\Project;
-use Src\WorkTemplate\Events\TemplateApplied;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Str;
+use Src\Foundation\Helpers\AuthHelper;
+
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\ProjectPhase;
+use Src\CoreProject\Models\ProjectTask;
+use Src\WorkTemplate\Models\Template;
 
 /**
- * Service class for handling template application logic
- * Manages partial sync and conditional tags functionality
+ * Template Service for managing work templates and applying them to projects
  */
 class TemplateService
 {
     /**
-     * Apply a template to a project with partial sync support
+     * Apply a template to a project
      *
-     * @param string $templateId Template ULID
-     * @param string $projectId Project ULID
-     * @param array $options Application options
-     * @return array Applied phases and tasks data
-     * @throws \Exception
+     * @param string $templateId
+     * @param string $projectId
+     * @param array $options
+     * @return array
      */
     public function applyTemplate(string $templateId, string $projectId, array $options = []): array
     {
-        return DB::transaction(function () use ($templateId, $projectId, $options) {
-            // Load template with latest version
-            $template = Template::with('latestVersion')->findOrFail($templateId);
-            $project = Project::findOrFail($projectId);
+        $template = Template::findOrFail($templateId);
+        $project = Project::findOrFail($projectId);
+        
+        $conditionalTags = $options['conditional_tags'] ?? [];
+        $partialSync = $options['partial_sync'] ?? false;
+        $baseStartDate = isset($options['start_date']) 
+            ? Carbon::parse($options['start_date']) 
+            : Carbon::now();
+        
+        $templateData = $template->template_data;
+        
+        if (!isset($templateData['phases']) || !is_array($templateData['phases'])) {
+            throw new \InvalidArgumentException('Template data must contain phases array');
+        }
+        
+        $createdPhases = [];
+        $createdTasks = [];
+        
+        foreach ($templateData['phases'] as $phaseIndex => $phaseData) {
+            // Create phase
+            $phase = $this->createPhaseFromTemplate(
+                $project,
+                $template,
+                $phaseData,
+                $phaseIndex + 1,
+                $partialSync
+            );
             
-            // Get template data from latest version or template itself
-            $templateData = $template->latestVersion?->json_body ?? $template->json_body;
+            $createdPhases[] = $phase;
             
-            if (empty($templateData) || !isset($templateData['phases'])) {
-                throw new \Exception('Template data is invalid or missing phases');
-            }
-            
-            // Parse options
-            $partialSync = $options['partial_sync'] ?? false;
-            $conditionalTags = $options['conditional_tags'] ?? [];
-            $startDate = isset($options['start_date']) ? Carbon::parse($options['start_date']) : Carbon::now();
-            
-            $appliedPhases = [];
-            $appliedTasks = [];
-            
-            // Apply phases from template
-            foreach ($templateData['phases'] as $phaseIndex => $phaseData) {
-                $phase = $this->createPhaseFromTemplate(
-                    $project,
-                    $template,
-                    $phaseData,
-                    $phaseIndex,
-                    $partialSync
-                );
-                
-                $appliedPhases[] = $phase;
-                
-                // Apply tasks for this phase
-                if (isset($phaseData['tasks']) && is_array($phaseData['tasks'])) {
-                    foreach ($phaseData['tasks'] as $taskIndex => $taskData) {
-                        $task = $this->createTaskFromTemplate(
-                            $project,
-                            $phase,
-                            $template,
-                            $taskData,
-                            $taskIndex,
-                            $conditionalTags,
-                            $startDate,
-                            $partialSync
-                        );
-                        
-                        $appliedTasks[] = $task;
-                    }
+            // Create tasks for this phase
+            if (isset($phaseData['tasks']) && is_array($phaseData['tasks'])) {
+                foreach ($phaseData['tasks'] as $taskIndex => $taskData) {
+                    $task = $this->createTaskFromTemplate(
+                        $project,
+                        $phase,
+                        $template,
+                        $taskData,
+                        $taskIndex + 1,
+                        $conditionalTags,
+                        $baseStartDate,
+                        $partialSync
+                    );
+                    
+                    $createdTasks[] = $task;
                 }
             }
-            
-            // Dispatch template applied event
-            Event::dispatch(new TemplateApplied(
-                $template,
-                $project,
-                $appliedPhases,
-                $appliedTasks,
-                $options
-            ));
-            
-            return [
-                'phases' => $appliedPhases,
-                'tasks' => $appliedTasks,
-                'template' => $template,
-                'project' => $project
-            ];
-        });
+        }
+        
+        return [
+            'template_id' => $templateId,
+            'project_id' => $projectId,
+            'phases' => $createdPhases,
+            'tasks' => $createdTasks,
+            'conditional_tags' => $conditionalTags
+        ];
     }
     
     /**
@@ -127,7 +113,7 @@ class TemplateService
                 $existingPhase->update([
                     'name' => $phaseData['name'] ?? $existingPhase->name,
                     'order' => $order,
-                    'updated_by' => auth()->id()
+                    'updated_by' => $this->resolveActorId() // Sử dụng resolveActorId()
                 ]);
                 
                 return $existingPhase;
@@ -142,8 +128,8 @@ class TemplateService
             'order' => $order,
             'template_id' => $template->id,
             'template_phase_id' => $phaseData['id'] ?? null,
-            'created_by' => auth()->id(),
-            'updated_by' => auth()->id()
+            'created_by' => $this->resolveActorId(), // Sử dụng resolveActorId()
+            'updated_by' => $this->resolveActorId() // Sử dụng resolveActorId()
         ]);
     }
     
@@ -186,7 +172,7 @@ class TemplateService
                     'order' => $order,
                     'is_hidden' => $isHidden,
                     'conditional_tag' => $taskData['conditional_tag'] ?? null,
-                    'updated_by' => auth()->id()
+                    'updated_by' => $this->resolveActorId() // Sử dụng resolveActorId()
                 ]);
                 
                 return $existingTask;
@@ -219,8 +205,8 @@ class TemplateService
             'is_hidden' => $isHidden,
             'template_id' => $template->id,
             'template_task_id' => $taskData['id'] ?? null,
-            'created_by' => auth()->id(),
-            'updated_by' => auth()->id()
+            'created_by' => $this->resolveActorId(), // Sử dụng resolveActorId()
+            'updated_by' => $this->resolveActorId() // Sử dụng resolveActorId()
         ]);
     }
     
@@ -304,7 +290,7 @@ class TemplateService
             ->where('conditional_tag', $conditionalTag)
             ->update([
                 'is_hidden' => !$isVisible,
-                'updated_by' => auth()->id(),
+                'updated_by' => $this->resolveActorId(), // Sử dụng resolveActorId()
                 'updated_at' => now()
             ]);
     }
@@ -321,8 +307,6 @@ class TemplateService
             ->whereNotNull('conditional_tag')
             ->distinct()
             ->pluck('conditional_tag')
-            ->filter()
-            ->values()
             ->toArray();
     }
     
@@ -334,14 +318,190 @@ class TemplateService
      */
     public function getConditionalTagStats(string $projectId): array
     {
-        $stats = ProjectTask::where('project_id', $projectId)
+        $tasks = ProjectTask::where('project_id', $projectId)
             ->whereNotNull('conditional_tag')
-            ->selectRaw('conditional_tag, COUNT(*) as total_tasks, SUM(CASE WHEN is_hidden = 0 THEN 1 ELSE 0 END) as visible_tasks')
-            ->groupBy('conditional_tag')
-            ->get()
-            ->keyBy('conditional_tag')
-            ->toArray();
+            ->get();
             
-        return $stats;
+        $stats = [];
+        
+        foreach ($tasks as $task) {
+            $tag = $task->conditional_tag;
+            
+            if (!isset($stats[$tag])) {
+                $stats[$tag] = [
+                    'tag' => $tag,
+                    'total_tasks' => 0,
+                    'visible_tasks' => 0,
+                    'hidden_tasks' => 0
+                ];
+            }
+            
+            $stats[$tag]['total_tasks']++;
+            
+            if ($task->is_hidden) {
+                $stats[$tag]['hidden_tasks']++;
+            } else {
+                $stats[$tag]['visible_tasks']++;
+            }
+        }
+        
+        return array_values($stats);
+    }
+
+    /**
+     * Apply template to project (wrapper for backward compatibility)
+     *
+     * @param Template $template
+     * @param string $projectId
+     * @param string $mode
+     * @param array $conditionalTags
+     * @param array|null $phaseMapping
+     * @param array|null $selectedItems
+     * @param string $userId
+     * @return array
+     */
+    public function applyToProject(
+        Template $template,
+        string $projectId,
+        string $mode,
+        array $conditionalTags = [],
+        ?array $phaseMapping = null,
+        ?array $selectedItems = null,
+        string $userId = 'system'
+    ): array {
+        $options = [
+            'conditional_tags' => $conditionalTags,
+            'mode' => $mode,
+            'phase_mapping' => $phaseMapping,
+            'selected_items' => $selectedItems,
+            'user_id' => $userId
+        ];
+        
+        $result = $this->applyTemplate($template->id, $projectId, $options);
+        
+        // Transform result to match expected format
+        return [
+            'project_id' => $projectId,
+            'template_id' => $template->id,
+            'mode' => $mode,
+            'phases_created' => count($result['phases']),
+            'tasks_created' => count(array_filter($result['tasks'], fn($task) => !$task->is_hidden)),
+            'tasks_hidden' => count(array_filter($result['tasks'], fn($task) => $task->is_hidden)),
+            'conditional_tags' => $conditionalTags
+        ];
+    }
+    
+    /**
+     * Validate conditional tags against template data
+     *
+     * @param array $jsonBody
+     * @param array $validTags
+     * @return bool
+     */
+    public function validateConditionalTags(array $jsonBody, array $validTags): bool
+    {
+        $templateTags = $this->extractConditionalTags($jsonBody);
+        
+        foreach ($templateTags as $tag) {
+            if (!in_array($tag, $validTags)) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Extract all conditional tags from template JSON body
+     *
+     * @param array $jsonBody
+     * @return array
+     */
+    public function extractConditionalTags(array $jsonBody): array
+    {
+        $tags = [];
+        
+        if (!isset($jsonBody['phases']) || !is_array($jsonBody['phases'])) {
+            return $tags;
+        }
+        
+        foreach ($jsonBody['phases'] as $phase) {
+            if (!isset($phase['tasks']) || !is_array($phase['tasks'])) {
+                continue;
+            }
+            
+            foreach ($phase['tasks'] as $task) {
+                if (!empty($task['conditional_tag'])) {
+                    $tags[] = $task['conditional_tag'];
+                }
+            }
+        }
+        
+        return array_unique($tags);
+    }
+    
+    /**
+     * Calculate estimated duration from template JSON body
+     *
+     * @param array $jsonBody
+     * @return int Total duration in days
+     */
+    public function calculateEstimatedDuration(array $jsonBody): int
+    {
+        $totalDuration = 0;
+        
+        if (!isset($jsonBody['phases']) || !is_array($jsonBody['phases'])) {
+            return $totalDuration;
+        }
+        
+        foreach ($jsonBody['phases'] as $phase) {
+            if (!isset($phase['tasks']) || !is_array($phase['tasks'])) {
+                continue;
+            }
+            
+            $phaseDuration = 0;
+            foreach ($phase['tasks'] as $task) {
+                $taskDuration = $task['duration_days'] ?? 1;
+                $phaseDuration = max($phaseDuration, $taskDuration);
+            }
+            
+            $totalDuration += $phaseDuration;
+        }
+        
+        return $totalDuration;
+    }
+    
+    /**
+     * Check if project has active tasks
+     *
+     * @param string $projectId
+     * @return bool
+     */
+    public function isProjectBusy(string $projectId): bool
+    {
+        return ProjectTask::where('project_id', $projectId)
+            ->where('status', 'in_progress')
+            ->exists();
+    }
+    
+    /**
+     * Resolve actor ID từ Auth facade với fallback an toàn
+     * 
+     * @return string|int
+     */
+    private function resolveActorId()
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+            return 'system';
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from Auth facade', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return 'system';
+        }
     }
 }

@@ -2,6 +2,8 @@
 
 namespace Src\Compensation\Services;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Src\Compensation\Models\TaskCompensation;
 use Src\Compensation\Models\Contract;
 use Src\CoreProject\Models\Task;
@@ -29,6 +31,20 @@ use Carbon\Carbon;
 class CompensationService
 {
     /**
+     * Lấy ID người dùng hiện tại một cách an toàn
+     * 
+     * @return int|null
+     * @throws \Illuminate\Auth\AuthenticationException
+     */
+    protected function resolveActorId(): ?int
+    {
+        if (!AuthHelper::check()) {
+            throw new \Illuminate\Auth\AuthenticationException('User not authenticated');
+        }
+        return AuthHelper::id();
+    }
+
+    /**
      * Đồng bộ task assignments với compensation
      * Tạo TaskCompensation records cho các assignments chưa có
      *
@@ -37,7 +53,12 @@ class CompensationService
      */
     public function syncTaskAssignments(string $projectId): array
     {
-        return DB::transaction(function () use ($projectId) {
+        $actorId = $this->resolveActorId();
+        if (!$actorId) {
+            throw new \Exception('User not authenticated');
+        }
+
+        return DB::transaction(function () use ($projectId, $actorId) {
             // Lấy tất cả tasks của project
             $tasks = Task::where('project_id', $projectId)
                         ->with(['assignments'])
@@ -61,8 +82,8 @@ class CompensationService
                             'base_contract_value_percent' => $assignment->split_percent,
                             'effective_contract_value_percent' => $assignment->split_percent,
                             'status' => TaskCompensation::STATUS_PENDING,
-                            'created_by' => auth()->id(),
-                            'updated_by' => auth()->id(),
+                            'created_by' => $actorId,
+                            'updated_by' => $actorId,
                         ]);
                         
                         $syncedCount++;
@@ -96,6 +117,11 @@ class CompensationService
      */
     public function previewCompensation(string $projectId, string $contractId, array $taskIds = []): array
     {
+        $actorId = $this->resolveActorId();
+        if (!$actorId) {
+            throw new \Exception('User not authenticated');
+        }
+
         // Validate contract
         $contract = Contract::where('id', $contractId)
                            ->where('project_id', $projectId)
@@ -146,7 +172,7 @@ class CompensationService
             'contract_id' => $contractId,
             'preview_data' => $previewData,
             'total_value' => $totalValue,
-            'actor_id' => auth()->id(),
+            'actor_id' => $actorId,
             'timestamp' => Carbon::now()
         ]));
         
@@ -173,10 +199,13 @@ class CompensationService
      * @param string $contractId
      * @param array $compensationIds
      * @return array
+     * @throws \Illuminate\Auth\AuthenticationException
      */
     public function applyContract(string $projectId, string $contractId, array $compensationIds): array
     {
-        return DB::transaction(function () use ($projectId, $contractId, $compensationIds) {
+        $actorId = $this->resolveActorId();
+    
+        return DB::transaction(function () use ($projectId, $contractId, $compensationIds, $actorId) {
             // Validate contract
             $contract = Contract::where('id', $contractId)
                                ->where('project_id', $projectId)
@@ -202,8 +231,8 @@ class CompensationService
             $totalValue = 0;
             
             foreach ($compensations as $compensation) {
-                // Lock compensation với contract
-                $compensation->lockWithContract($contract, auth()->id());
+                // Lock compensation với contract - sử dụng actorId thay vì auth()->id()
+                $compensation->lockWithContract($contract, $actorId);
                 $appliedCount++;
                 
                 $totalValue += $compensation->calculateCurrentValue($contract->total_value);
@@ -216,7 +245,7 @@ class CompensationService
                 'compensation_ids' => $compensationIds,
                 'applied_count' => $appliedCount,
                 'total_value' => $totalValue,
-                'actor_id' => auth()->id(),
+                'actor_id' => $actorId,
                 'timestamp' => Carbon::now()
             ]));
             
@@ -245,7 +274,12 @@ class CompensationService
      */
     public function updateEffectivePercent(string $compensationId, float $newPercent, ?string $notes = null): TaskCompensation
     {
-        return DB::transaction(function () use ($compensationId, $newPercent, $notes) {
+        $actorId = $this->resolveActorId();
+        if (!$actorId) {
+            throw new \Exception('User not authenticated');
+        }
+
+        return DB::transaction(function () use ($compensationId, $newPercent, $notes, $actorId) {
             $compensation = TaskCompensation::findOrFail($compensationId);
             
             if (!$compensation->canBeUpdated()) {
@@ -266,7 +300,7 @@ class CompensationService
                 'old_percent' => $oldPercent,
                 'new_percent' => $newPercent,
                 'notes' => $notes,
-                'updated_by' => auth()->id()
+                'updated_by' => $actorId
             ]);
             
             return $compensation->fresh();

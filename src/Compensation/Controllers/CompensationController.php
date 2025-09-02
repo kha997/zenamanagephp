@@ -2,6 +2,8 @@
 
 namespace Src\Compensation\Controllers;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -67,7 +69,7 @@ class CompensationController extends Controller
             $assignments = $this->compensationService->syncTaskAssignments(
                 $taskId,
                 $request->validated()['assignments'],
-                auth()->id()
+                $this->resolveActorId()
             );
 
             return JSendResponse::success(
@@ -109,7 +111,7 @@ class CompensationController extends Controller
             $preview = $this->compensationService->previewCompensation(
                 $projectId,
                 $contractId,
-                auth()->id()
+                $this->resolveActorId()
             );
 
             return JSendResponse::success(
@@ -154,7 +156,7 @@ class CompensationController extends Controller
             $result = $this->compensationService->applyContract(
                 $contractId,
                 $request->validated(),
-                auth()->id()
+                $this->resolveActorId()
             );
 
             return JSendResponse::success(
@@ -254,7 +256,7 @@ class CompensationController extends Controller
             $compensation = $this->compensationService->updateTaskCompensation(
                 $taskId,
                 $request->validated(),
-                auth()->id()
+                $this->resolveActorId()
             );
 
             return JSendResponse::success(
@@ -282,5 +284,32 @@ class CompensationController extends Controller
         } catch (Exception $e) {
             return JSendResponse::error('Không thể lấy thống kê compensation: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Resolve the current actor ID for audit trails
+     * Uses Auth facade instead of auth() helper for better testability
+     *
+     * @return string|int The actor ID or 'system' as fallback
+     */
+    private function resolveActorId()
+    {
+        try {
+            // Check if user is authenticated using Auth facade
+            if (AuthHelper::check()) {
+                return AuthHelper::idOrSystem();
+            }
+        } catch (\Throwable $e) {
+            // Log the error for debugging in non-production environments
+            if (config('app.debug')) {
+                \Log::warning('Controller: Unable to resolve actor ID', [
+                    'error' => $e->getMessage(),
+                    'controller' => static::class
+                ]);
+            }
+        }
+        
+        // Fallback to 'system' for test environments or when auth is unavailable
+        return 'system';
     }
 }

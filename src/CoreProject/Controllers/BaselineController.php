@@ -26,7 +26,8 @@ class BaselineController
     
     public function __construct(BaselineService $baselineService)
     {
-        $this->middleware(RBACMiddleware::class);
+        // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
+        // $this->middleware(RBACMiddleware::class);
         $this->baselineService = $baselineService;
     }
     

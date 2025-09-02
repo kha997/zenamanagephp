@@ -29,10 +29,27 @@ class RouteServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         $this->routes(function () {
+            // Main API routes
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
+            // RBAC Module routes (Auth + RBAC management)
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('src/RBAC/routes/api.php'));
+
+            // Document Management Module routes
+            if (file_exists(base_path('src/DocumentManagement/routes/api.php'))) {
+                Route::group([], base_path('src/DocumentManagement/routes/api.php'));
+            }
+
+            // Change Request Module routes
+            if (file_exists(base_path('src/ChangeRequest/routes/api.php'))) {
+                Route::group([], base_path('src/ChangeRequest/routes/api.php'));
+            }
+
+            // Web routes
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
         });
@@ -46,7 +63,7 @@ class RouteServiceProvider extends ServiceProvider
     protected function configureRateLimiting()
     {
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(60)->by($request->user('api')?->id ?: $request->ip());  // Sửa từ $request->user()
         });
     }
 }

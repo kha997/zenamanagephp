@@ -2,6 +2,8 @@
 
 namespace Src\ChangeRequest\Listeners;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Src\Foundation\Events\EventBus;
@@ -385,7 +387,7 @@ class ChangeRequestEventListener
                     'end_date' => $newEndDate,
                     'cost' => $newCost,
                     'note' => "Updated due to approved Change Request {$changeRequest->code}",
-                    'created_by' => Auth::id() ?? $changeRequest->decided_by
+                    'created_by' => AuthHelper::id() ?? $changeRequest->decided_by
                 ]);
                 
                 Log::info('New baseline version created', [
@@ -501,7 +503,7 @@ class ChangeRequestEventListener
             'description' => $description,
             'tag_path' => "ChangeRequest/{$changeRequest->code}",
             'visibility' => 'internal',
-            'created_by' => Auth::id() ?? 'system'
+            'created_by' => AuthHelper::idOrSystem()
         ]);
     }
 
@@ -515,7 +517,7 @@ class ChangeRequestEventListener
             'change_request_id' => $changeRequest->id,
             'project_id' => $changeRequest->project_id,
             'action' => $action,
-            'actor_id' => Auth::id(),
+            'actor_id' => AuthHelper::id(),
             'timestamp' => now()->toISOString(),
             'details' => $details
         ]);
@@ -560,7 +562,7 @@ class ChangeRequestEventListener
             'change_request_id' => $changeRequest->id,
             'version_timestamp' => now()->toISOString(),
             'changed_fields' => $changedFields,
-            'actor_id' => Auth::id()
+            'actor_id' => AuthHelper::id()
         ]);
     }
 
@@ -624,7 +626,7 @@ class ChangeRequestEventListener
                 'name' => "Approve Change Request {$changeRequest->code}",
                 'description' => "Review and approve/reject Change Request: {$changeRequest->title}",
                 'status' => Task::STATUS_PENDING,
-                'priority' => Task::PRIORITY_HIGH,
+                'priority' => Task::PRIORITY_MEDIUM, // Thay từ PRIORITY_NORMAL
                 'start_date' => now(),
                 'end_date' => now()->addDays(7),
                 'tags' => ['approval', 'change-request'],
@@ -642,7 +644,7 @@ class ChangeRequestEventListener
         EventBus::publish('Project.Dashboard.Updated', [
             'entityId' => $changeRequest->project_id,
             'projectId' => $changeRequest->project_id,
-            'actorId' => Auth::id(),
+            'actorId' => AuthHelper::id(),
             'changedFields' => ['pending_approvals' => $status],
             'timestamp' => now()->toISOString(),
             'eventId' => uniqid('dashboard_', true)
@@ -761,7 +763,7 @@ class ChangeRequestEventListener
         EventBus::publish('Project.Metrics.Updated', [
             'entityId' => $projectId,
             'projectId' => $projectId,
-            'actorId' => Auth::id(),
+            'actorId' => AuthHelper::id(),
             'changedFields' => ['change_requests_count'],
             'timestamp' => now()->toISOString(),
             'eventId' => uniqid('metrics_', true)

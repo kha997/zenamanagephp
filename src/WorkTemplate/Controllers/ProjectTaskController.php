@@ -128,7 +128,7 @@ class ProjectTaskController extends Controller
             $updatedTask = $this->taskService->updateTask(
                 $task,
                 $request->validated(),
-                $request->user()->id
+                $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
             return JSendResponse::success(
@@ -166,7 +166,7 @@ class ProjectTaskController extends Controller
             $result = $this->taskService->toggleConditionalVisibility(
                 $task,
                 $request->boolean('is_visible'),
-                $request->user()->id
+                $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
             return JSendResponse::success($result);

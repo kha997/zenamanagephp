@@ -17,7 +17,7 @@ class InteractionLogUpdated extends BaseEvent
         parent::__construct(
             entityId: $this->interactionLog->id,
             projectId: $this->interactionLog->project_id,
-            actorId: auth()->id(),
+            actorId: $this->resolveActorId(),
             changedFields: $this->getChangedFields(),
             eventName: 'InteractionLog.Updated'
         );

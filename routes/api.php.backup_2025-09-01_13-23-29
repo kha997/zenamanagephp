@@ -1,0 +1,236 @@
+<?php
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\UserController;
+use Src\CoreProject\Controllers\ProjectController;
+use Src\CoreProject\Controllers\ComponentController;
+use Src\CoreProject\Controllers\TaskController;
+use Src\CoreProject\Controllers\TaskAssignmentController;
+use Src\CoreProject\Controllers\WorkTemplateController;
+use Src\CoreProject\Controllers\BaselineController;
+use Src\WorkTemplate\Controllers\TemplateController;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| is assigned the "api" middleware group. Enjoy building your API!
+|
+*/
+
+Route::middleware('auth:api')->get('/user', function (Request $request) {
+    return $request->user('api');  // Sửa từ $request->user()
+});
+
+// Test route để kiểm tra Laravel hoạt động
+Route::get('/test', function () {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Laravel API is working!',
+        'timestamp' => now()
+    ]);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Core Project API Routes (v1)
+|--------------------------------------------------------------------------
+|
+| RESTful API routes cho module CoreProject với RBAC middleware
+| Tất cả routes được prefix với /api/v1/ theo chuẩn JSend
+|
+*/
+
+Route::prefix('v1')->group(function () {
+    
+    /*
+    |--------------------------------------------------------------------------
+    | User Management Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::apiResource('users', UserController::class);
+    
+    // Profile routes
+    Route::prefix('users')->group(function () {
+        Route::get('profile', [UserController::class, 'profile']);
+        Route::put('profile', [UserController::class, 'updateProfile']);
+    });
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Project Routes với RBAC
+    |--------------------------------------------------------------------------
+    */
+    // Route::middleware(['auth:api', // 'rbac:project.view'])->get('projects', [ProjectController::class, 'index']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:project.create'])->post('projects', [ProjectController::class, 'store']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:project.view,projectId'])->get('projects/{project}', [ProjectController::class, 'show']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:project.update,projectId'])->put('projects/{projectId}', [ProjectController::class, 'update']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:project.delete,projectId'])->delete('projects/{projectId}', [ProjectController::class, 'destroy']); // RBAC disabled temporarily
+    
+    // Additional project routes
+    Route::prefix('projects/{projectId}')->middleware(['auth:api'])->group(function () {
+        Route::get('tasks', [TaskController::class, 'index']); // Thêm route này
+        Route::post('recalculate-progress', [ProjectController::class, 'recalculateProgress']);
+        Route::post('recalculate-actual-cost', [ProjectController::class, 'recalculateActualCost']);
+    });
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Component Routes với RBAC
+    |--------------------------------------------------------------------------
+    */
+    // Route::middleware(['auth:api', // 'rbac:component.view'])->get('components', [ComponentController::class, 'index']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:component.create'])->post('components', [ComponentController::class, 'store']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:component.view'])->get('components/{id}', [ComponentController::class, 'show']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:component.update'])->put('components/{id}', [ComponentController::class, 'update']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:component.delete'])->delete('components/{id}', [ComponentController::class, 'destroy']); // RBAC disabled temporarily
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Task Routes với RBAC
+    |--------------------------------------------------------------------------
+    */
+    // Route::middleware(['auth:api', // 'rbac:task.view'])->get('tasks', [TaskController::class, 'index']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:task.create'])->post('tasks', [TaskController::class, 'store']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:task.view'])->get('tasks/{id}', [TaskController::class, 'show']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:task.update'])->put('tasks/{id}', [TaskController::class, 'update']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:task.delete'])->delete('tasks/{id}', [TaskController::class, 'destroy']); // RBAC disabled temporarily
+    
+    // Thêm các task-specific endpoints
+    // Route::middleware(['auth:api', // 'rbac:task.update'])->patch('tasks/{id}/status', [TaskController::class, 'updateStatus']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:task.assign'])->post('tasks/{id}/assign', [TaskController::class, 'assignUser']); // RBAC disabled temporarily
+    // Route::middleware(['auth:api', // 'rbac:task.update'])->post('tasks/{id}/dependencies', [TaskController::class, 'updateDependencies']); // RBAC disabled temporarily
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Task Assignment Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::apiResource('task-assignments', TaskAssignmentController::class);
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Work Template Routes
+    |--------------------------------------------------------------------------
+    */
+    // Work Templates routes
+    Route::apiResource('work-templates', WorkTemplateController::class);
+    Route::post('work-templates/{templateId}/apply', [WorkTemplateController::class, 'applyToProject']);
+    Route::get('work-templates/meta/categories', [WorkTemplateController::class, 'categories']);
+    Route::get('work-templates/meta/conditional-tags', [WorkTemplateController::class, 'conditionalTags']);
+    Route::post('work-templates/{templateId}/duplicate', [WorkTemplateController::class, 'duplicate']);
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Baseline Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('projects/{projectId}')->group(function () {
+        Route::apiResource('baselines', BaselineController::class)->except(['index']);
+        Route::get('baselines', [BaselineController::class, 'index']);
+        Route::post('baselines/from-current', [BaselineController::class, 'createFromCurrent']);
+        Route::get('baselines/report', [BaselineController::class, 'report']);
+    });
+    
+    // Standalone baseline routes
+    Route::apiResource('baselines', BaselineController::class)->only(['show', 'update', 'destroy']);
+    Route::get('baselines/{id1}/compare/{id2}', [BaselineController::class, 'compare']);
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Template Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['auth:api'])->group(function () {
+        Route::apiResource('templates', \Src\WorkTemplate\Controllers\TemplateController::class)
+            ->parameters(['templates' => 'id']); // Ép {template} -> {id}
+        Route::post('templates/{id}/apply', [\Src\WorkTemplate\Controllers\TemplateController::class, 'apply']);
+        Route::get('templates/{id}/versions', [\Src\WorkTemplate\Controllers\TemplateController::class, 'versions']);
+    });
+    
+    /*
+    |--------------------------------------------------------------------------
+    | API Documentation & Health Check Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::get('health', function () {
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'service' => 'Z.E.N.A Project Management API',
+                'version' => '1.0.0',
+                'timestamp' => now()->toISOString(),
+                'environment' => app()->environment()
+            ]
+        ]);
+    });
+    
+    Route::get('api-info', function () {
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'api_version' => 'v1',
+                'modules' => [
+                    'users' => 'User Management with RBAC',
+                    'projects' => 'Core Project Management',
+                    'components' => 'Project Components',
+                    'tasks' => 'Task Management with Dependencies',
+                    'assignments' => 'Task Assignments',
+                    'work_templates' => 'Work Templates',
+                    'baselines' => 'Project Baselines',
+                    'files' => 'File Management'
+                ],
+                'authentication' => 'JWT with RBAC',
+                'response_format' => 'JSend Specification'
+            ]
+        ]);
+    });
+});
+
+    Route::group(['prefix' => 'projects/{projectId}', 'middleware' => ['auth:api'] // 'rbac:project.view,projectId', function () {
+        Route::get('/', [ProjectController::class, 'show']);
+        Route::put('/', [ProjectController::class, 'update']);
+        Route::delete('/', [ProjectController::class, 'destroy']);
+        Route::post('/recalculate-progress', [ProjectController::class, 'recalculateProgress']);
+        Route::post('/recalculate-actual-cost', [ProjectController::class, 'recalculateActualCost']);
+        
+        // Thêm route cho tasks
+        Route::get('/tasks', [TaskController::class, 'index']);
+    });
+    // Tạm thời comment tất cả middleware
+    Route::get('/test-simple', function () {
+        return response()->json(['status' => 'success', 'message' => 'No middleware test']);
+    });
+
+// RBAC Test Route
+Route::prefix('v1')->middleware(['auth:api', 'rbac:project.view'])->get('rbac-test', function (Request $request) {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'RBAC OK',
+        'user_id' => $request->user('api')?->id,
+        'timestamp' => now()->toIso8601String()
+    ]);
+});
+
+// RBAC Test Route
+Route::prefix('v1')->middleware(['auth:api', 'rbac:project.view'])->get('rbac-test', function (Request $request) {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'RBAC OK',
+        'user_id' => $request->user('api')?->id,
+        'timestamp' => now()->toIso8601String()
+    ]);
+});
+
+// RBAC Test Route
+Route::prefix('v1')->middleware(['auth:api', 'rbac:project.view'])->get('rbac-test', function (Request $request) {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'RBAC OK',
+        'user_id' => $request->user('api')?->id,
+        'timestamp' => now()->toIso8601String()
+    ]);
+});

@@ -2,6 +2,8 @@
 
 namespace Src\CoreProject\Models;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +16,8 @@ use Src\Foundation\Traits\HasVisibility;
 use Src\Foundation\Traits\HasAuditLog;
 use Src\Foundation\Events\EventBus;
 use Src\Compensation\Models\TaskCompensation;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Model Task - Quản lý công việc
@@ -37,8 +41,8 @@ use Src\Compensation\Models\TaskCompensation;
  */
 class Task extends Model
 {
-    use HasUlids, HasTimestamps, HasOwnership, HasTags, HasVisibility, HasAuditLog;
-
+    use HasFactory, HasUlids, HasTimestamps, HasOwnership, HasAuditLog;
+    
     protected $table = 'tasks';
     
     // Cấu hình ULID primary key
@@ -80,7 +84,7 @@ class Task extends Model
 
     protected $attributes = [
         'status' => 'pending',
-        'priority' => 'normal',
+        'priority' => 'medium',
         'is_hidden' => false,
         'estimated_hours' => 0.0,
         'actual_hours' => 0.0,
@@ -110,13 +114,13 @@ class Task extends Model
      * Các mức độ ưu tiên
      */
     public const PRIORITY_LOW = 'low';
-    public const PRIORITY_NORMAL = 'normal';
+    public const PRIORITY_MEDIUM = 'medium';
     public const PRIORITY_HIGH = 'high';
     public const PRIORITY_CRITICAL = 'critical';
 
     public const VALID_PRIORITIES = [
         self::PRIORITY_LOW,
-        self::PRIORITY_NORMAL,
+        self::PRIORITY_MEDIUM,
         self::PRIORITY_HIGH,
         self::PRIORITY_CRITICAL,
     ];
@@ -155,7 +159,7 @@ class Task extends Model
             'task_assignments',
             'task_id',
             'user_id'
-        )->withPivot(['split_percentage', 'role'])
+        )->withPivot(['split_percent', 'role'])
           ->withTimestamps();
     }
 
@@ -197,7 +201,7 @@ class Task extends Model
             'component_id' => $this->component?->ulid,
             'old_progress' => $oldProgress,
             'new_progress' => $newProgress,
-            'actor_id' => auth()->id() ?? 'system'
+            'actor_id' => $this->resolveActorId() ?? 'system'
         ]);
     }
 
@@ -277,5 +281,26 @@ class Task extends Model
                         $q->whereNull('dependencies')
                           ->orWhereJsonLength('dependencies', 0);
                     });
+    }
+
+    /**
+     * Resolve actor ID safely
+     */
+    protected function resolveActorId(): ?int
+    {
+        try {
+            return AuthHelper::id();
+        } catch (\Throwable $e) {
+            Log::warning('Could not resolve actor ID: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Tạo factory instance mới cho model
+     */
+    protected static function newFactory()
+    {
+        return \Database\Factories\TaskFactory::new();
     }
 }

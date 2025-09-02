@@ -71,12 +71,12 @@ class RBACMiddleware
     /**
      * Check if user has required permission
      * 
-     * @param int $userId
+     * @param string $userId
      * @param string $permission
      * @param int|null $projectId
      * @return bool
      */
-    private function checkUserPermission(int $userId, string $permission, ?int $projectId = null): bool
+    private function checkUserPermission(string $userId, string $permission, ?int $projectId = null): bool
     {
         try {
             // Get RBACManager from service container
@@ -191,3 +191,15 @@ class RBACMiddleware
         ], 400);
     }
 }
+
+// XÓA HOẶC COMMENT ĐÚNG CÁCH CÁC DÒNG SAU:
+/*
+// Đúng cách:
+$user = Auth::guard('api')->user();
+
+// Hoặc:
+$user = auth('api')->user();
+
+// Tránh:
+$user = auth()->user(); // Có thể gây vấn đề
+*/

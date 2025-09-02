@@ -16,6 +16,9 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
         
+        // Đăng ký middleware alias cho test environment
+        $this->app['router']->aliasMiddleware('rbac', \Src\RBAC\Middleware\RBACMiddleware::class);
+        
         // RefreshDatabase trait đã tự động xử lý migrations
         // Không cần gọi migrate:fresh thủ công
     }

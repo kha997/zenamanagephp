@@ -5,6 +5,7 @@ namespace Src\RBAC\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Models\Permission;
+use Src\RBAC\Resources\PermissionResource;
 use Src\Foundation\EventBus;
 
 /**
@@ -50,9 +51,15 @@ class PermissionController
         if ($request->get('group_by') === 'module') {
             $permissions = $query->get()->groupBy('module');
             
+            // Transform grouped data using PermissionResource
+            $transformedData = [];
+            foreach ($permissions as $module => $modulePermissions) {
+                $transformedData[$module] = PermissionResource::collection($modulePermissions);
+            }
+            
             return response()->json([
                 'status' => 'success',
-                'data' => ['permissions_by_module' => $permissions]
+                'data' => ['permissions_by_module' => $transformedData]
             ]);
         }
 
@@ -63,7 +70,7 @@ class PermissionController
         return response()->json([
             'status' => 'success',
             'data' => [
-                'permissions' => $permissions->items(),
+                'permissions' => PermissionResource::collection($permissions->items()),
                 'pagination' => [
                     'current_page' => $permissions->currentPage(),
                     'per_page' => $permissions->perPage(),
@@ -130,7 +137,7 @@ class PermissionController
 
         return response()->json([
             'status' => 'success',
-            'data' => ['permission' => $permission]
+            'data' => ['permission' => PermissionResource::make($permission)]
         ], 201);
     }
 }

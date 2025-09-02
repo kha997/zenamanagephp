@@ -15,7 +15,7 @@ class InteractionLogDeleted extends BaseEvent
         parent::__construct(
             entityId: $this->deletedLogData['id'],
             projectId: $this->deletedLogData['project_id'],
-            actorId: auth()->id(),
+            actorId: $this->resolveActorId(),
             changedFields: ['deleted'],
             eventName: 'InteractionLog.Deleted'
         );

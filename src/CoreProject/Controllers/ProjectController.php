@@ -4,6 +4,7 @@ namespace Src\CoreProject\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller; // Thêm import này
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Resources\ProjectResource;
 use Src\CoreProject\Requests\StoreProjectRequest;
@@ -16,16 +17,15 @@ use Src\Foundation\Utils\JSendResponse;
  * 
  * @package Src\CoreProject\Controllers
  */
-class ProjectController
+class ProjectController extends Controller // Thêm extends Controller
 {
-    /**
-     * Constructor - áp dụng RBAC middleware
-     */
-    public function __construct()
-    {
-        $this->middleware(RBACMiddleware::class);
-    }
+    // Xóa constructor middleware
+    // public function __construct()
+    // {
+    //     $this->middleware(RBACMiddleware::class);
+    // }
 
+    // Thay vào đó, áp dụng middleware trong routes
     /**
      * Lấy danh sách projects
      *
@@ -105,7 +105,7 @@ class ProjectController
     {
         try {
             $projectData = $request->validated();
-            $projectData['tenant_id'] = $request->user()->tenant_id ?? 1;
+            $projectData['tenant_id'] = $request->user('api')->tenant_id ?? 1; // Thêm 'api' guard
             
             // Tạo project từ template nếu có
             if (isset($projectData['work_template_id'])) {
@@ -137,7 +137,7 @@ class ProjectController
      * @param int $projectId
      * @return JsonResponse
      */
-    public function show(int $projectId): JsonResponse
+    public function show(string $projectId): JsonResponse // Đổi từ int thành string
     {
         try {
             $project = Project::with([
@@ -163,7 +163,7 @@ class ProjectController
      * @param int $projectId
      * @return JsonResponse
      */
-    public function update(UpdateProjectRequest $request, int $projectId): JsonResponse
+    public function update(UpdateProjectRequest $request, string $projectId): JsonResponse // Đổi từ int thành string
     {
         try {
             $project = Project::findOrFail($projectId);
@@ -199,7 +199,7 @@ class ProjectController
      * @param int $projectId
      * @return JsonResponse
      */
-    public function destroy(int $projectId): JsonResponse
+    public function destroy(string $projectId): JsonResponse // Đổi từ int thành string
     {
         try {
             $project = Project::findOrFail($projectId);
@@ -238,10 +238,10 @@ class ProjectController
     /**
      * Tính toán lại progress của project
      *
-     * @param int $projectId
+     * @param string $projectId
      * @return JsonResponse
      */
-    public function recalculateProgress(int $projectId): JsonResponse
+    public function recalculateProgress(string $projectId): JsonResponse // Đổi từ int thành string
     {
         try {
             $project = Project::findOrFail($projectId);
@@ -262,10 +262,10 @@ class ProjectController
     /**
      * Tính toán lại chi phí thực tế của project
      *
-     * @param int $projectId
+     * @param string $projectId
      * @return JsonResponse
      */
-    public function recalculateActualCost(int $projectId): JsonResponse
+    public function recalculateActualCost(string $projectId): JsonResponse // Đổi từ int thành string
     {
         try {
             $project = Project::findOrFail($projectId);

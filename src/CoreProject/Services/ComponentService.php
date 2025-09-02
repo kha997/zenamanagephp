@@ -2,12 +2,16 @@
 
 namespace Src\CoreProject\Services;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Src\CoreProject\Models\Component;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Events\ComponentProgressUpdated;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Auth; // Thêm import Auth facade
+use Illuminate\Support\Facades\Log;
 use Exception;
 
 /**
@@ -16,6 +20,24 @@ use Exception;
  */
 class ComponentService
 {
+    /**
+     * Resolve actor ID từ auth helper với fallback an toàn
+     * 
+     * @return string|int
+     */
+    private function resolveActorId()
+    {
+        try {
+            return AuthHelper::idOrSystem();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from auth helper', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return 'system';
+        }
+    }
+    
     /**
      * Tạo component mới cho project
      *
@@ -49,15 +71,15 @@ class ComponentService
                 'tags' => $data['tags'] ?? null,
                 'visibility' => $data['visibility'] ?? 'internal',
                 'client_approved' => $data['client_approved'] ?? false,
-                'created_by' => auth()->id(),
-                'updated_by' => auth()->id(),
+                'created_by' => $this->resolveActorId(),
+                'updated_by' => $this->resolveActorId(),
             ]);
             
             // Dispatch event for component creation
             Event::dispatch(new ComponentProgressUpdated(
                 $component->id,
                 $projectId,
-                auth()->id(),
+                $this->resolveActorId(),
                 session('tenant_id'),
                 0, // old progress
                 $component->progress_percent, // new progress
@@ -90,7 +112,7 @@ class ComponentService
             
             // Update component
             $component->update(array_merge($data, [
-                'updated_by' => auth()->id(),
+                'updated_by' => $this->resolveActorId(),
             ]));
             
             // Check if progress or cost changed
@@ -107,7 +129,7 @@ class ComponentService
                 Event::dispatch(new ComponentProgressUpdated(
                     $component->id,
                     $component->project_id,
-                    auth()->id(),
+                    $this->resolveActorId(),
                     session('tenant_id'),
                     $oldProgress,
                     $component->progress_percent,
@@ -156,7 +178,7 @@ class ComponentService
                 Event::dispatch(new ComponentProgressUpdated(
                     $componentId,
                     $projectId,
-                    auth()->id(),
+                    $this->resolveActorId(), // Thay đổi từ auth()->id()
                     session('tenant_id'),
                     $component->progress_percent,
                     0, // component deleted
@@ -266,7 +288,7 @@ class ComponentService
                 Event::dispatch(new ComponentProgressUpdated(
                     $component->id,
                     $component->project_id,
-                    auth()->id(),
+                    $this->resolveActorId(), // Thay đổi từ auth()->id()
                     session('tenant_id'),
                     $oldProgress,
                     $component->progress_percent,
@@ -298,14 +320,14 @@ class ComponentService
                 
                 $component->update([
                     'progress_percent' => $progressPercent,
-                    'updated_by' => auth()->id(),
+                    'updated_by' => $this->resolveActorId(),
                 ]);
                 
                 // Dispatch event
                 Event::dispatch(new ComponentProgressUpdated(
                     $component->id,
                     $component->project_id,
-                    auth()->id(),
+                    $this->resolveActorId(),
                     session('tenant_id'),
                     $oldProgress,
                     $progressPercent,

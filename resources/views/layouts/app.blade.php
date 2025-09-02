@@ -55,23 +55,23 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('interaction-logs.index') }}" class="nav-link {{ request()->routeIs('interaction-logs.*') ? 'active' : '' }}">
-                            <i class="fas fa-comments nav-icon"></i>
-                            Nhật ký tương tác
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a href="{{ route('change-requests.index') }}" class="nav-link {{ request()->routeIs('change-requests.*') ? 'active' : '' }}">
                             <i class="fas fa-exchange-alt nav-icon"></i>
                             Yêu cầu thay đổi
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('reports.index') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+                            <i class="fas fa-chart-bar nav-icon"></i>
+                            Báo cáo
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('notifications.index') }}" class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
                             <i class="fas fa-bell nav-icon"></i>
                             Thông báo
-                            @if(auth()->user()->unreadNotifications->count() > 0)
-                                <span class="badge badge-danger">{{ auth()->user()->unreadNotifications->count() }}</span>
+                            @if(Auth::user()->unreadNotifications->count() > 0)
+                                <span class="badge badge-danger">{{ Auth::user()->unreadNotifications->count() }}</span>
                             @endif
                         </a>
                     </li>
@@ -113,8 +113,8 @@
                     <div class="dropdown">
                         <button class="btn btn-secondary" id="notifications-toggle">
                             <i class="fas fa-bell"></i>
-                            @if(auth()->user()->unreadNotifications->count() > 0)
-                                <span class="badge badge-danger">{{ auth()->user()->unreadNotifications->count() }}</span>
+                            @if(Auth::user()->unreadNotifications->count() > 0)
+                                <span class="badge badge-danger">{{ Auth::user()->unreadNotifications->count() }}</span>
                             @endif
                         </button>
                     </div>
@@ -123,18 +123,18 @@
                     <div class="dropdown">
                         <button class="btn btn-secondary" id="user-menu-toggle">
                             <i class="fas fa-user"></i>
-                            {{ auth()->user()->name }}
+                            {{ Auth::user()->name }}
                         </button>
                         <div class="dropdown-menu" id="user-menu">
                             <a href="{{ route('profile.edit') }}" class="dropdown-item">
                                 <i class="fas fa-user-edit"></i>
                                 Hồ sơ
                             </a>
-                            <a href="{{ route('settings') }}" class="dropdown-item">
+                            <a href="{{ route('settings.index') }}" class="dropdown-item">
                                 <i class="fas fa-cog"></i>
                                 Cài đặt
                             </a>
-                            <hr>
+                            <div class="dropdown-divider"></div>
                             <a href="#" class="dropdown-item" id="logout-btn">
                                 <i class="fas fa-sign-out-alt"></i>
                                 Đăng xuất
@@ -144,17 +144,30 @@
                 </div>
             </header>
             
-            <!-- Content -->
+            <!-- Page Content -->
             <div class="content">
                 @if(session('success'))
-                    <div class="alert alert-success">
+                    <div class="alert alert-success alert-dismissible">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         {{ session('success') }}
                     </div>
                 @endif
                 
                 @if(session('error'))
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         {{ session('error') }}
+                    </div>
+                @endif
+                
+                @if($errors->any())
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <ul class="mb-0">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
                     </div>
                 @endif
                 
@@ -164,7 +177,6 @@
     </div>
     
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     @vite(['resources/js/app.js'])
     
     @stack('scripts')

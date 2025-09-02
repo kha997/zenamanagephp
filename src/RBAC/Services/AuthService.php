@@ -192,6 +192,17 @@ class AuthService
     }
 
     /**
+     * Tạo token cho testing purposes
+     *
+     * @param User $user
+     * @return string
+     */
+    public function createTokenForUser(User $user): string
+    {
+        return $this->generateToken($user);
+    }
+
+    /**
      * Tạo JWT token cho user
      *
      * @param User $user
@@ -200,6 +211,10 @@ class AuthService
     private function generateToken(User $user): string
     {
         $now = time();
+        
+        // Load system roles của user
+        $systemRoles = $user->systemRoles()->pluck('name')->toArray();
+        
         $payload = [
             'iss' => config('app.url'),
             'iat' => $now,
@@ -210,7 +225,7 @@ class AuthService
             'user_id' => $user->id,
             'tenant_id' => $user->tenant_id,
             'email' => $user->email,
-            'system_roles' => [] // TODO: Load user roles từ database
+            'system_roles' => $systemRoles
         ];
 
         return JWT::encode($payload, $this->jwtSecret, $this->jwtAlgo);

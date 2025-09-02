@@ -9,55 +9,66 @@ use Src\ChangeRequest\Controllers\ChangeRequestController;
 |--------------------------------------------------------------------------
 |
 | Định nghĩa các route API cho module Change Request
-| Tất cả routes đều có prefix /api/v1/change-requests và middleware auth:api, rbac
+| Tất cả routes đều có prefix /api/v1/change-requests và middleware auth:api
 |
 */
 
 Route::prefix('api/v1/change-requests')
-    ->middleware(['auth:api', 'rbac'])
+    ->middleware(['auth:api'])
     ->group(function () {
         
         // Change Request CRUD routes
         Route::get('/', [ChangeRequestController::class, 'index'])
+            ->middleware('rbac:change_request.view')
             ->name('change-requests.index');
             
         Route::post('/', [ChangeRequestController::class, 'store'])
+            ->middleware('rbac:change_request.create')
             ->name('change-requests.store');
             
         Route::get('/{id}', [ChangeRequestController::class, 'show'])
+            ->middleware('rbac:change_request.view')
             ->name('change-requests.show')
             ->where('id', '[0-9]+');
             
         Route::put('/{id}', [ChangeRequestController::class, 'update'])
+            ->middleware('rbac:change_request.edit')
             ->name('change-requests.update')
             ->where('id', '[0-9]+');
             
         Route::delete('/{id}', [ChangeRequestController::class, 'destroy'])
+            ->middleware('rbac:change_request.delete')
             ->name('change-requests.destroy')
             ->where('id', '[0-9]+');
         
         // Change Request workflow routes
         Route::post('/{id}/submit', [ChangeRequestController::class, 'submit'])
+            ->middleware('rbac:change_request.submit')
             ->name('change-requests.submit')
             ->where('id', '[0-9]+');
             
         Route::post('/{id}/approve', [ChangeRequestController::class, 'approve'])
+            ->middleware('rbac:change_request.approve')
             ->name('change-requests.approve')
             ->where('id', '[0-9]+');
             
         Route::post('/{id}/reject', [ChangeRequestController::class, 'reject'])
+            ->middleware('rbac:change_request.reject')
             ->name('change-requests.reject')
             ->where('id', '[0-9]+');
         
         // Statistics and reporting routes
         Route::get('/statistics/{projectId}', [ChangeRequestController::class, 'getStatistics'])
+            ->middleware('rbac:change_request.stats')
             ->name('change-requests.statistics')
             ->where('projectId', '[0-9]+');
             
         Route::get('/project/{projectId}', [ChangeRequestController::class, 'getByProject'])
+            ->middleware('rbac:change_request.view')
             ->name('change-requests.by-project')
             ->where('projectId', '[0-9]+');
             
         Route::get('/pending-approval', [ChangeRequestController::class, 'getPendingApproval'])
+            ->middleware('rbac:change_request.approve')
             ->name('change-requests.pending-approval');
     });

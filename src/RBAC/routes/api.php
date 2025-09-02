@@ -15,7 +15,7 @@ use Src\RBAC\Controllers\RBACController;
 */
 
 // Authentication routes (không cần middleware)
-Route::prefix('api/v1/auth')->group(function () {
+Route::prefix('v1/auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('register', [AuthController::class, 'register']);
     
@@ -28,43 +28,55 @@ Route::prefix('api/v1/auth')->group(function () {
     });
 });
 
-// RBAC management routes (cần authentication và permissions)
-Route::middleware(['auth:api', 'rbac'])->prefix('api/v1/rbac')->group(function () {
+// RBAC management routes (chỉ cần rbac middleware)
+Route::prefix('v1/rbac')->group(function () {
     // Role management
-    Route::apiResource('roles', RoleController::class);
-    Route::post('roles/{role}/permissions', [RoleController::class, 'syncPermissions']);
-    Route::get('roles/by-scope', [RBACController::class, 'getRolesByScope']);
+    Route::get('roles', [RoleController::class, 'index'])->middleware('rbac:role.view');
+    Route::post('roles', [RoleController::class, 'store'])->middleware('rbac:role.create');
+    Route::get('roles/{role}', [RoleController::class, 'show'])->middleware('rbac:role.view');
+    Route::put('roles/{role}', [RoleController::class, 'update'])->middleware('rbac:role.edit');
+    Route::delete('roles/{role}', [RoleController::class, 'destroy'])->middleware('rbac:role.delete');
+    Route::post('roles/{role}/permissions', [RoleController::class, 'syncPermissions'])->middleware('rbac:role.edit');
+    Route::get('roles/by-scope', [RBACController::class, 'getRolesByScope'])->middleware('rbac:role.view');
     
     // Permission management
-    Route::apiResource('permissions', PermissionController::class);
-    Route::get('permissions/hierarchy', [RBACController::class, 'getPermissionHierarchy']);
+    Route::get('permissions', [PermissionController::class, 'index'])->middleware('rbac:permission.view');
+    Route::post('permissions', [PermissionController::class, 'store'])->middleware('rbac:permission.create');
+    Route::get('permissions/{permission}', [PermissionController::class, 'show'])->middleware('rbac:permission.view');
+    Route::put('permissions/{permission}', [PermissionController::class, 'update'])->middleware('rbac:permission.edit');
+    Route::delete('permissions/{permission}', [PermissionController::class, 'destroy'])->middleware('rbac:permission.delete');
+    Route::get('permissions/hierarchy', [RBACController::class, 'getPermissionHierarchy'])->middleware('rbac:permission.view');
     
     // Permission Matrix CSV import/export
     Route::prefix('permission-matrix')->group(function () {
-        Route::get('export', [PermissionMatrixController::class, 'export']);
-        Route::post('import', [PermissionMatrixController::class, 'import']);
-        Route::post('validate', [PermissionMatrixController::class, 'validateCsv']);
-        Route::get('template', [PermissionMatrixController::class, 'getTemplate']);
+        Route::get('export', [PermissionMatrixController::class, 'export'])->middleware('rbac:permission.export');
+        Route::post('import', [PermissionMatrixController::class, 'import'])->middleware('rbac:permission.import');
+        Route::post('validate', [PermissionMatrixController::class, 'validateCsv'])->middleware('rbac:permission.import');
+        Route::get('template', [PermissionMatrixController::class, 'getTemplate'])->middleware('rbac:permission.view');
     });
     
     // User effective permissions
-    Route::get('users/{user}/effective-permissions', [RBACController::class, 'getUserEffectivePermissions']);
-    Route::post('users/{user}/check-permission', [RBACController::class, 'checkUserPermission']);
+    Route::get('users/{user}/effective-permissions', [RBACController::class, 'getUserEffectivePermissions'])->middleware('rbac:user.view');
+    Route::post('users/{user}/check-permission', [RBACController::class, 'checkUserPermission'])->middleware('rbac:user.view');
     
     // Bulk operations
-    Route::post('bulk-assign-roles', [RBACController::class, 'bulkAssignRoles']);
+    Route::post('bulk-assign-roles', [RBACController::class, 'bulkAssignRoles'])->middleware('rbac:role.assign');
     
     // Audit log
-    Route::get('audit-log', [RBACController::class, 'getAuditLog']);
+    Route::get('audit-log', [RBACController::class, 'getAuditLog'])->middleware('rbac:audit.view');
     
     // Assignment management
     Route::prefix('assignments')->group(function () {
-        Route::get('users/{user}/roles', [AssignmentController::class, 'getUserRoles']);
-        Route::post('users/{user}/roles', [AssignmentController::class, 'assignUserRoles']);
-        Route::delete('users/{user}/roles/{role}', [AssignmentController::class, 'removeUserRole']);
+        Route::get('users/{user}/roles', [AssignmentController::class, 'getUserRoles'])->middleware('rbac:user.view');
+        Route::post('users/{user}/roles', [AssignmentController::class, 'assignUserRoles'])->middleware('rbac:role.assign');
+        Route::delete('users/{user}/roles/{role}', [AssignmentController::class, 'removeUserRole'])->middleware('rbac:role.assign');
         
-        Route::get('projects/{project}/users', [AssignmentController::class, 'getProjectUsers']);
-        Route::post('projects/{project}/users/{user}/roles', [AssignmentController::class, 'assignProjectRole']);
-        Route::delete('projects/{project}/users/{user}/roles/{role}', [AssignmentController::class, 'removeProjectRole']);
+        Route::get('projects/{project}/users', [AssignmentController::class, 'getProjectUsers'])->middleware('rbac:project.view');
+        Route::post('projects/{project}/users/{user}/roles', [AssignmentController::class, 'assignProjectRole'])->middleware('rbac:role.assign');
+        Route::delete('projects/{project}/users/{user}/roles/{role}', [AssignmentController::class, 'removeProjectRole'])->middleware('rbac:role.assign');
     });
+    
+    // User-roles routes for test compatibility
+    Route::post('user-roles', [AssignmentController::class, 'assignUserRoles'])->middleware('rbac:role.assign');
+    Route::delete('user-roles/{user}/{role}', [AssignmentController::class, 'removeUserRole'])->middleware('rbac:role.assign');
 });

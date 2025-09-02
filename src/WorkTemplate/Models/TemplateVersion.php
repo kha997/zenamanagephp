@@ -3,6 +3,7 @@
 namespace Src\WorkTemplate\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Src\Foundation\Traits\HasAuditFields;
@@ -22,7 +23,7 @@ use Src\Foundation\Traits\HasAuditFields;
  */
 class TemplateVersion extends Model
 {
-    use HasUlids, HasAuditFields;
+    use HasFactory, HasUlids, HasAuditFields;
 
     protected $table = 'template_versions';
     protected $keyType = 'string';

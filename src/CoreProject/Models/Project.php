@@ -2,6 +2,8 @@
 
 namespace Src\CoreProject\Models;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,6 +14,8 @@ use Src\Foundation\Traits\HasTimestamps;
 use Src\Foundation\Traits\HasOwnership;
 use Src\Foundation\Traits\HasAuditLog;
 use Src\Foundation\Events\EventBus;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Auth\AuthenticationException;
 
 /**
  * Model Project - Quản lý dự án
@@ -195,7 +199,7 @@ class Project extends Model
         EventBus::dispatch('Project.Project.ProgressUpdated', [
             'entityId' => $this->id,
             'projectId' => $this->id,
-            'actorId' => auth()->id() ?? 'system',
+            'actorId' => $this->resolveActorId(),
             'changedFields' => [
                 'progress' => [
                     'old' => $oldProgress,
@@ -218,7 +222,7 @@ class Project extends Model
         EventBus::dispatch('Project.Project.CostUpdated', [
             'entityId' => $this->id,
             'projectId' => $this->id,
-            'actorId' => auth()->id() ?? 'system',
+            'actorId' => $this->resolveActorId(),
             'changedFields' => [
                 'actual_cost' => [
                     'old' => $oldCost,
@@ -258,5 +262,29 @@ class Project extends Model
     protected static function newFactory()
     {
         return \Database\Factories\ProjectFactory::new();
+    }
+
+    /**
+     * Resolve actor ID từ Auth facade với xử lý ngoại lệ
+     * 
+     * @return string|int
+     * @throws AuthenticationException
+     */
+    private function resolveActorId(): string|int
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+            
+            // Trả về 'system' nếu không có người dùng xác thực
+            return 'system';
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from Auth facade', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return 'system';
+        }
     }
 }

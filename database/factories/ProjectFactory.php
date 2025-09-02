@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 use Src\CoreProject\Models\Project;
 use App\Models\Tenant;
 use Carbon\Carbon;
@@ -29,6 +30,7 @@ class ProjectFactory extends Factory
         $endDate = $this->faker->dateTimeBetween($startDate, '+1 year');
         
         return [
+            // Xóa dòng này: 'id' => Str::ulid()->toString(),
             'tenant_id' => Tenant::factory(),
             'name' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(2),

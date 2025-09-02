@@ -99,8 +99,8 @@ class TaskSeeder extends Seeder
             
             $task->assignments()->create([
                 'user_id' => $user->id,
-                'split_percentage' => $percentage,
-                'role' => fake()->randomElement(['lead', 'member', 'reviewer']),
+                'split_percent' => $percentage,
+                'role' => fake()->randomElement(['assignee', 'reviewer', 'observer']), // Sửa từ ['lead', 'member', 'reviewer']
             ]);
             
             $totalPercentage -= $percentage;

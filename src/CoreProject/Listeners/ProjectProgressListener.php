@@ -2,6 +2,8 @@
 
 namespace Src\CoreProject\Listeners;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Component;
@@ -115,11 +117,28 @@ class ProjectProgressListener
         EventBus::publish('Project.Project.ProgressUpdated', [
             'entityId' => $project->id,
             'projectId' => $project->id,
-            'actorId' => auth()->id() ?? 'system',
+            'actorId' => $this->resolveActorId(),
             'changedFields' => ['progress' => ['old' => $project->getOriginal('progress'), 'new' => $newProgress]],
             'timestamp' => now()->toISOString(),
             'eventId' => uniqid('event_', true)
         ]);
+    }
+
+    /**
+     * Giải quyết ID của actor hiện tại
+     *
+     * @return string
+     */
+    private function resolveActorId(): string
+    {
+        try {
+            return AuthHelper::idOrSystem();
+        } catch (\Throwable $e) {
+            Log::warning('Could not resolve actor ID in ProjectProgressListener', [
+                'error' => $e->getMessage()
+            ]);
+            return 'system';
+        }
     }
 
     /**
@@ -139,7 +158,7 @@ class ProjectProgressListener
         EventBus::publish('Project.Project.CostUpdated', [
             'entityId' => $project->id,
             'projectId' => $project->id,
-            'actorId' => auth()->id() ?? 'system',
+            'actorId' => $this->resolveActorId(),
             'changedFields' => ['actual_cost' => ['old' => $oldCost, 'new' => $totalActualCost]],
             'timestamp' => now()->toISOString(),
             'eventId' => uniqid('event_', true)

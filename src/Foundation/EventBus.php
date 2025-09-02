@@ -3,9 +3,10 @@ declare(strict_types=1);
 
 namespace Src\Foundation;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Exception;
 use Throwable;
-
 /**
  * Event Bus cho hệ thống sự kiện chuẩn zenamanage
  * Tuân thủ naming convention: Domain.Entity.Action (e.g., Project.Component.ProgressUpdated)
@@ -367,7 +368,16 @@ class EventBus {
         // Đảm bảo có các field bắt buộc với giá trị mặc định
         $normalized['entityId'] = $normalized['entityId'] ?? $normalized['id'] ?? null;
         $normalized['projectId'] = $normalized['projectId'] ?? null;
-        $normalized['actorId'] = $normalized['actorId'] ?? auth()->id() ?? 'system';
+        // Xử lý actorId an toàn hơn
+        try {
+            if (function_exists('auth') && AuthHelper::check()) {
+                $normalized['actorId'] = $normalized['actorId'] ?? AuthHelper::idOrSystem();
+            } else {
+                $normalized['actorId'] = $normalized['actorId'] ?? 'system';
+            }
+        } catch (\Throwable $e) {
+            $normalized['actorId'] = $normalized['actorId'] ?? 'system';
+        }
         
         return $normalized;
     }

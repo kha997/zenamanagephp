@@ -3,6 +3,7 @@
 namespace Src\RBAC\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -19,7 +20,7 @@ use Src\Foundation\Traits\HasTimestamps;
  */
 class Role extends Model
 {
-    use HasUlids, HasTimestamps;
+    use HasFactory, HasUlids, HasTimestamps;
 
     protected $table = 'roles';
     
@@ -66,10 +67,11 @@ class Role extends Model
             Permission::class,
             'role_permissions',
             'role_id',
-            'permission_id', // Sửa từ 'permission_code' thành 'permission_id'
+            'permission_id',
             'id',
-            'id' // Sửa từ 'code' thành 'id'
-        )->withPivot(['allow_override'])
+            'id'
+        )->using(RolePermission::class) // Sử dụng model pivot
+          ->withPivot(['allow_override'])
           ->withTimestamps();
     }
 

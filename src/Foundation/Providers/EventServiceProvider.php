@@ -50,16 +50,8 @@ class EventServiceProvider extends ServiceProvider
         parent::boot();
         
         // Đăng ký EventLogListener để listen tất cả events
-        Event::listen('*', [EventLogListener::class, 'handle']);
-        
-        // Đăng ký listener tổng hợp cho các sự kiện progress/cost
-        EventBus::subscribe('Project.Component.ProgressUpdated', [ProjectCalculationListener::class, 'handle'], 10);
-        EventBus::subscribe('Project.Component.CostUpdated', [ProjectCalculationListener::class, 'handle'], 10);
-        EventBus::subscribe('Component.Progress.Updated', [ProjectCalculationListener::class, 'handle'], 10);
-        EventBus::subscribe('Component.Cost.Updated', [ProjectCalculationListener::class, 'handle'], 10);
-        
-        // Backward compatibility với ComponentProgressUpdated event
-        EventBus::subscribe('ComponentProgressUpdated', [ProjectCalculationListener::class, 'handleComponentProgressUpdated'], 10);
+        // Tạm thời comment để test
+        // Event::listen('*', [EventLogListener::class, 'handle']);
     }
 
     /**

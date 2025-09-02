@@ -33,7 +33,7 @@ class StoreTaskAssignmentRequest extends FormRequest
                 'integer',
                 'exists:users,id'
             ],
-            'split_percentage' => [
+            'split_percent' => [
                 'required',
                 'numeric',
                 'min:0.01',
@@ -58,9 +58,9 @@ class StoreTaskAssignmentRequest extends FormRequest
             'task_id.exists' => 'Task không tồn tại.',
             'user_id.required' => 'User ID là bắt buộc.',
             'user_id.exists' => 'User không tồn tại.',
-            'split_percentage.required' => 'Phần trăm phân chia là bắt buộc.',
-            'split_percentage.min' => 'Phần trăm phân chia phải lớn hơn 0.',
-            'split_percentage.max' => 'Phần trăm phân chia không được vượt quá 100%.',
+            'split_percent.required' => 'Phần trăm phân chia là bắt buộc.',
+            'split_percent.min' => 'Phần trăm phân chia phải lớn hơn 0.',
+            'split_percent.max' => 'Phần trăm phân chia không được vượt quá 100%.',
             'role.required' => 'Vai trò là bắt buộc.',
             'role.in' => 'Vai trò không hợp lệ.'
         ];
@@ -74,7 +74,7 @@ class StoreTaskAssignmentRequest extends FormRequest
         $validator->after(function ($validator) {
             $taskId = $this->input('task_id');
             $userId = $this->input('user_id');
-            $splitPercentage = $this->input('split_percentage', 0);
+            $splitPercentage = $this->input('split_percent', 0);
             
             // Kiểm tra user đã được assign cho task này chưa
             $existingAssignment = TaskAssignment::where('task_id', $taskId)
@@ -91,11 +91,11 @@ class StoreTaskAssignmentRequest extends FormRequest
             // Kiểm tra tổng phần trăm không vượt quá 100%
             if ($taskId) {
                 $currentTotal = TaskAssignment::where('task_id', $taskId)
-                    ->sum('split_percentage');
+                    ->sum('split_percent');
                     
                 if (($currentTotal + $splitPercentage) > 100) {
                     $validator->errors()->add(
-                        'split_percentage',
+                        'split_percent',
                         'Tổng phần trăm phân chia cho task này sẽ vượt quá 100%. ' .
                         'Hiện tại: ' . $currentTotal . '%, thêm: ' . $splitPercentage . '%'
                     );

@@ -2,6 +2,8 @@
 
 namespace Src\CoreProject\Services;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Component;
 use Src\CoreProject\Models\WorkTemplate;
@@ -33,6 +35,27 @@ class WorkTemplateApplicationService
     ) {
         $this->conditionalTagService = $conditionalTagService;
         $this->taskService = $taskService;
+    }
+    
+    /**
+     * Resolve actor ID từ Auth facade với fallback an toàn
+     * 
+     * @return string|int
+     */
+    private function resolveActorId()
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+            return 'system';
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from Auth facade', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return 'system';
+        }
     }
     
     /**
@@ -126,12 +149,13 @@ class WorkTemplateApplicationService
             ];
             
             // Dispatch event
+            // Trong phương thức applyTemplateToProject, tại dòng 134:
             EventBus::dispatch('WorkTemplate.Applied', [
                 'template_id' => $template->ulid,
                 'project_id' => $project->ulid,
                 'component_id' => $component?->ulid,
                 'result' => $result,
-                'actor_id' => auth()->id() ?? 'system'
+                'actor_id' => $this->resolveActorId()
             ]);
             
             Log::info("Work template applied successfully", [
@@ -174,7 +198,7 @@ class WorkTemplateApplicationService
             'name' => $taskData['name'],
             'description' => $taskData['description'] ?? null,
             'estimated_hours' => $taskData['estimated_hours'] ?? 0.0,
-            'priority' => $taskData['priority'] ?? Task::PRIORITY_NORMAL,
+            'priority' => $taskData['priority'] ?? Task::PRIORITY_MEDIUM, // Thay từ PRIORITY_NORMAL
             'conditional_tag' => $taskData['conditional_tag'] ?? null,
             'is_hidden' => $isHidden,
             'tags' => $taskData['tags'] ?? [],
@@ -259,7 +283,7 @@ class WorkTemplateApplicationService
             TaskAssignment::create([
                 'task_id' => $task->id,
                 'user_id' => $defaultAssigneeId,
-                'split_percentage' => 100.0
+                'split_percent' => 100.0
             ]);
         }
     }

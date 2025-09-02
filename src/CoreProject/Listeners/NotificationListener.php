@@ -222,7 +222,7 @@ class NotificationListener
                         'task_id' => $task->id,
                         'project_id' => $task->project_id,
                         'task_name' => $task->name,
-                        'assignment_percentage' => $assignment->split_percentage
+                        'assignment_percentage' => $assignment->split_percent
                     ]
                 );
 
@@ -244,7 +244,7 @@ class NotificationListener
                                 'task_id' => $task->id,
                                 'task_name' => $task->name,
                                 'project_name' => $task->project->name ?? null,
-                                'assignment_percentage' => $assignment->split_percentage
+                                'assignment_percentage' => $assignment->split_percent
                             ]
                         ]);
                     }

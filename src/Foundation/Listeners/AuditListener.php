@@ -2,6 +2,8 @@
 
 namespace Src\Foundation\Listeners;
 
+use Src\Foundation\Helpers\AuthHelper;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Src\Foundation\Events\BaseEvent;
@@ -76,23 +78,39 @@ class AuditListener
     }
 
     /**
-     * Lấy tenant_id từ context hoặc event
+     * Get tenant ID safely from authenticated user or event payload
      *
-     * @param BaseEvent $event
+     * @param mixed $event
      * @return string|null
      */
-    private function getTenantId(BaseEvent $event): ?string
+    private function getTenantId($event): ?string
     {
-        // Thử lấy từ authenticated user
-        if (auth()->check()) {
-            return auth()->user()->tenant_id ?? null;
+        try {
+            // Try to get tenant_id from authenticated user first
+            if (AuthHelper::check()) {
+                $user = AuthHelper::user();
+                if ($user && property_exists($user, 'tenant_id')) {
+                    return $user->tenant_id;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Log error in debug mode
+            if (config('app.debug')) {
+                \Log::warning('AuditListener: Unable to get tenant from auth', [
+                    'error' => $e->getMessage()
+                ]);
+            }
         }
-
-        // Thử lấy từ event payload nếu có
-        if (property_exists($event, 'tenantId')) {
+        
+        // Fallback to event payload if available
+        if (is_object($event) && property_exists($event, 'tenantId')) {
             return $event->tenantId;
         }
-
+        
+        if (is_array($event) && isset($event['tenantId'])) {
+            return $event['tenantId'];
+        }
+        
         return null;
     }
 

@@ -13,7 +13,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => 'web',
+        'guard' => 'web', // Đổi từ 'api' về 'web'
         'passwords' => 'users',
     ],
 
@@ -39,9 +39,8 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-
         'api' => [
-            'driver' => 'jwt', // Đổi từ 'sanctum' thành 'jwt'
+            'driver' => 'jwt', // Sửa từ 'sanctum' sang 'jwt'
             'provider' => 'users',
             'hash' => false,
         ],

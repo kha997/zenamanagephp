@@ -2,26 +2,21 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Src\CoreProject\Models\Baseline;
+use Carbon\Carbon;
+use Src\Shared\Requests\BaseApiRequest;
 
-/**
- * Form Request để xác thực dữ liệu khi thực hiện re-baseline
- * 
- * @package Src\CoreProject\Requests
- */
-class RebaselineRequest extends FormRequest
+class RebaselineRequest extends BaseApiRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true; // Authorization được xử lý bởi RBAC middleware
+        return true;
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Get the validation rules that apply to the request.
      */
     public function rules(): array
     {
@@ -32,71 +27,55 @@ class RebaselineRequest extends FormRequest
                 'max:1000'
             ],
             'new_start_date' => [
-                'sometimes',
+                'nullable',
                 'date'
             ],
             'new_end_date' => [
-                'sometimes',
+                'nullable',
                 'date',
-                'after:new_start_date'
+                'after_or_equal:new_start_date'
             ],
             'new_cost' => [
-                'sometimes',
+                'nullable',
                 'numeric',
                 'min:0',
                 'max:999999999999.99'
-            ],
-            'approval_required' => [
-                'nullable',
-                'boolean'
             ]
         ];
     }
 
     /**
-     * Thông báo lỗi tùy chỉnh
+     * Configure the validator instance.
      */
-    public function messages(): array
-    {
-        return [
-            'reason.required' => 'Lý do re-baseline là bắt buộc.',
-            'reason.max' => 'Lý do re-baseline không được vượt quá 1000 ký tự.',
-            'new_end_date.after' => 'Ngày kết thúc mới phải sau ngày bắt đầu mới.',
-            'new_cost.min' => 'Chi phí mới không thể âm.',
-            'new_cost.max' => 'Chi phí mới vượt quá giới hạn cho phép.'
-        ];
-    }
-
-    /**
-     * Validation tùy chỉnh
-     */
-    public function withValidator($validator): void
+    public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            // Kiểm tra ít nhất một trong các trường mới được cung cấp
-            if (!$this->new_start_date && !$this->new_end_date && !$this->new_cost) {
-                $validator->errors()->add('general', 'Phải cung cấp ít nhất một thông tin mới để re-baseline.');
+            // Kiểm tra ít nhất một trường mới phải được cung cấp
+            if (!$this->input('new_start_date') && 
+                !$this->input('new_end_date') && 
+                !$this->input('new_cost')) {
+                $validator->errors()->add('general', 'Phải cung cấp ít nhất một thông tin mới để thực hiện re-baseline.');
             }
-            
-            // Kiểm tra thời gian hợp lý nếu có cả start_date và end_date
-            if ($this->new_start_date && $this->new_end_date) {
-                $startDate = \Carbon\Carbon::parse($this->new_start_date);
-                $endDate = \Carbon\Carbon::parse($this->new_end_date);
+
+            // Kiểm tra thời gian dự án không vượt quá 10 năm
+            if ($this->input('new_start_date') && $this->input('new_end_date')) {
+                $startDate = Carbon::parse($this->input('new_start_date'));
+                $endDate = Carbon::parse($this->input('new_end_date'));
                 
                 if ($startDate->diffInYears($endDate) > 10) {
-                    $validator->errors()->add('new_end_date', 'Thời gian dự án mới không được vượt quá 10 năm.');
+                    $validator->errors()->add('new_end_date', 'Thời gian dự án không được vượt quá 10 năm.');
                 }
             }
         });
     }
 
     /**
-     * Chuẩn bị dữ liệu trước khi validation
+     * Prepare the data for validation.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'approval_required' => $this->approval_required ?? false
+            'approval_required' => $this->input('approval_required', false)
         ]);
     }
 }

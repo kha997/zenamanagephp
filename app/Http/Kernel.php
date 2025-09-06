@@ -64,6 +64,11 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'rbac' => \Src\RBAC\Middleware\RBACMiddleware::class,
+        
+        // New custom middleware
+        'jwt.auth' => \App\Http\Middleware\JWTAuthMiddleware::class,
+        'tenant.isolation' => \App\Http\Middleware\TenantIsolationMiddleware::class,
+        'api.rate.limit' => \App\Http\Middleware\APIRateLimitMiddleware::class,
     ];
     
     // Comment hoặc xóa method này

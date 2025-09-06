@@ -1,31 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
->
+         processIsolation="false"
+         stopOnFailure="false"
+         cacheDirectory=".phpunit.cache"
+         backupGlobals="false">
     <testsuites>
         <testsuite name="Unit">
-            <directory suffix="Test.php">./tests/Unit</directory>
+            <directory>tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
-            <directory suffix="Test.php">./tests/Feature</directory>
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Performance">
+            <directory>tests/Performance</directory>
         </testsuite>
     </testsuites>
-    <coverage processUncoveredFiles="true">
+    <source>
         <include>
-            <directory suffix=".php">./app</directory>
+            <directory>app</directory>
+            <directory>src</directory>
         </include>
-    </coverage>
+        <exclude>
+            <directory>app/Console</directory>
+            <directory>src/*/routes</directory>
+            <file>src/*/Providers/*ServiceProvider.php</file>
+        </exclude>
+    </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:2fl+Ktvkdphvz9JfhttxMSLsYtfnQBVulIO9KS6rp/s="/>
+        <env name="APP_DEBUG" value="true"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
-        <env name="CACHE_DRIVER" value="file"/>
+        <env name="CACHE_DRIVER" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="JWT_SECRET" value="test-jwt-secret-key-for-testing-only"/>
+        <env name="JWT_TTL" value="60"/>
     </php>
+    <logging>
+        <junit outputFile="build/logs/junit.xml"/>
+        <teamcity outputFile="build/logs/teamcity.txt"/>
+        <testdoxHtml outputFile="build/logs/testdox.html"/>
+        <testdoxText outputFile="build/logs/testdox.txt"/>
+    </logging>
 </phpunit>

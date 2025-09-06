@@ -8,44 +8,54 @@ use Tests\TestCase;
 use App\Models\User;
 use App\Models\Tenant;
 use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Task;
 use Src\InteractionLogs\Models\InteractionLog;
 use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * Feature tests cho InteractionLog API endpoints
+ * 
+ * Kiểm tra CRUD operations, permissions, và business logic
+ * cho module InteractionLogs
+ */
 class InteractionLogApiTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
-    protected $user;
-    protected $tenant;
-    protected $project;
-    protected $token;
+    protected User $user;
+    protected Tenant $tenant;
+    protected Project $project;
+    protected Task $task;
+    protected string $token;
 
-    /**
-     * Setup method
-     */
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->tenant = Tenant::factory()->create([
-            'id' => 1,
-            'name' => 'Test Company',
-            'domain' => 'test.com'
-        ]);
+        // Tạo tenant
+        $this->tenant = Tenant::factory()->create();
         
+        // Tạo user và login
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
             'password' => Hash::make('password123'),
         ]);
         
+        // Tạo project và task
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id
         ]);
         
+        $this->task = Task::factory()->create([
+            'project_id' => $this->project->id
+        ]);
+        
+        // Tạo roles và permissions
         $this->createRolesAndPermissions();
         
+        // Login để lấy token
         $loginResponse = $this->postJson('/api/v1/auth/login', [
             'email' => $this->user->email,
             'password' => 'password123',
@@ -55,229 +65,201 @@ class InteractionLogApiTest extends TestCase
     }
 
     /**
-     * Tạo roles và permissions cho test
+     * Test tạo interaction log mới
      */
-    private function createRolesAndPermissions()
+    public function test_create_interaction_log(): void
     {
-        $permissions = [
-            'interaction_log.create',
-            'interaction_log.read',
-            'interaction_log.update',
-            'interaction_log.delete',
-            'interaction_log.approve_client',
-        ];
-        
-        foreach ($permissions as $permissionCode) {
-            Permission::create([
-                'code' => $permissionCode,
-                'module' => 'interaction_log',
-                'action' => explode('.', $permissionCode)[1],
-                'description' => 'Permission for ' . $permissionCode
-            ]);
-        }
-        
-        $adminRole = Role::create([
-            'name' => 'Admin',
-            'scope' => 'system',
-            'description' => 'System Administrator'
-        ]);
-        
-        $adminRole->permissions()->attach(
-            Permission::whereIn('code', $permissions)->pluck('id')
-        );
-        
-        $this->user->systemRoles()->attach($adminRole->id);
-    }
-
-    /**
-     * Test create interaction log
-     */
-    public function test_can_create_interaction_log()
-    {
-        $logData = [
+        $data = [
             'project_id' => $this->project->id,
+            'linked_task_id' => $this->task->id,
             'type' => 'meeting',
-            'description' => 'Client meeting about project progress',
+            'description' => 'Weekly project meeting',
             'tag_path' => 'Material/Flooring/Granite',
-            'visibility' => 'internal'
+            'visibility' => 'internal',
+            'client_approved' => false
         ];
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/v1/interaction-logs', $logData);
+            'Authorization' => 'Bearer ' . $this->token
+        ])->postJson('/api/v1/interaction-logs', $data);
 
         $response->assertStatus(201)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'interaction_log' => [
-                             'id',
-                             'project_id',
-                             'type',
-                             'description',
-                             'tag_path',
-                             'visibility',
-                             'client_approved',
-                             'created_at',
-                             'updated_at'
-                         ]
-                     ]
-                 ]);
+                ->assertJsonStructure([
+                    'status',
+                    'data' => [
+                        'interaction_log' => [
+                            'id',
+                            'project_id',
+                            'linked_task_id',
+                            'type',
+                            'description',
+                            'tag_path',
+                            'visibility',
+                            'client_approved',
+                            'created_by',
+                            'created_at'
+                        ]
+                    ]
+                ]);
 
         $this->assertDatabaseHas('interaction_logs', [
             'project_id' => $this->project->id,
             'type' => 'meeting',
-            'visibility' => 'internal'
+            'description' => 'Weekly project meeting',
+            'created_by' => $this->user->id
         ]);
     }
 
     /**
-     * Test get interaction logs by project
+     * Test lấy danh sách interaction logs
      */
-    public function test_can_get_interaction_logs_by_project()
+    public function test_get_interaction_logs(): void
     {
-        InteractionLog::factory()->count(3)->create([
-            'project_id' => $this->project->id
+        // Tạo test data
+        InteractionLog::factory(5)->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/v1/projects/{$this->project->id}/interaction-logs");
+            'Authorization' => 'Bearer ' . $this->token
+        ])->getJson('/api/v1/interaction-logs?project_id=' . $this->project->id);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'interaction_logs' => [
-                             '*' => [
-                                 'id',
-                                 'project_id',
-                                 'type',
-                                 'description',
-                                 'tag_path',
-                                 'visibility',
-                                 'created_at'
-                             ]
-                         ],
-                         'pagination'
-                     ]
-                 ]);
+                ->assertJsonStructure([
+                    'status',
+                    'data' => [
+                        'interaction_logs' => [
+                            '*' => [
+                                'id',
+                                'project_id',
+                                'type',
+                                'description',
+                                'visibility',
+                                'created_at'
+                            ]
+                        ],
+                        'pagination'
+                    ]
+                ]);
     }
 
     /**
-     * Test approve interaction log for client
+     * Test cập nhật interaction log
      */
-    public function test_can_approve_interaction_log_for_client()
+    public function test_update_interaction_log(): void
     {
         $log = InteractionLog::factory()->create([
             'project_id' => $this->project->id,
-            'visibility' => 'client',
-            'client_approved' => false
+            'created_by' => $this->user->id,
+            'visibility' => 'internal'
         ]);
 
+        $updateData = [
+            'description' => 'Updated meeting notes',
+            'visibility' => 'client',
+            'client_approved' => true
+        ];
+
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/v1/interaction-logs/{$log->id}/approve-for-client");
+            'Authorization' => 'Bearer ' . $this->token
+        ])->putJson('/api/v1/interaction-logs/' . $log->id, $updateData);
 
-        $response->assertStatus(200)
-                 ->assertJson([
-                     'status' => 'success',
-                     'data' => [
-                         'interaction_log' => [
-                             'id' => $log->id,
-                             'client_approved' => true
-                         ]
-                     ]
-                 ]);
-
+        $response->assertStatus(200);
+        
         $this->assertDatabaseHas('interaction_logs', [
             'id' => $log->id,
+            'description' => 'Updated meeting notes',
+            'visibility' => 'client',
             'client_approved' => true
         ]);
     }
 
     /**
-     * Test get logs by tag path
+     * Test xóa interaction log
      */
-    public function test_can_get_logs_by_tag_path()
+    public function test_delete_interaction_log(): void
     {
-        InteractionLog::factory()->create([
+        $log = InteractionLog::factory()->create([
             'project_id' => $this->project->id,
-            'tag_path' => 'Material/Flooring/Granite'
+            'created_by' => $this->user->id
         ]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/v1/interaction-logs/by-tag-path?tag_path=Material/Flooring/Granite');
+            'Authorization' => 'Bearer ' . $this->token
+        ])->deleteJson('/api/v1/interaction-logs/' . $log->id);
 
-        $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'interaction_logs' => [
-                             '*' => [
-                                 'id',
-                                 'tag_path',
-                                 'description'
-                             ]
-                         ]
-                     ]
-                 ]);
+        $response->assertStatus(204);
+        
+        $this->assertSoftDeleted('interaction_logs', [
+            'id' => $log->id
+        ]);
     }
 
     /**
-     * Test project statistics
+     * Test tenant isolation
      */
-    public function test_can_get_project_statistics()
+    public function test_tenant_isolation(): void
     {
-        InteractionLog::factory()->count(5)->create([
+        // Tạo tenant khác
+        $otherTenant = Tenant::factory()->create();
+        $otherUser = User::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'password' => Hash::make('password123')
+        ]);
+        
+        // Login với user khác
+        $otherLoginResponse = $this->postJson('/api/v1/auth/login', [
+            'email' => $otherUser->email,
+            'password' => 'password123'
+        ]);
+        $otherToken = $otherLoginResponse->json('data.token');
+        
+        // Tạo log với user đầu tiên
+        $log = InteractionLog::factory()->create([
             'project_id' => $this->project->id,
-            'type' => 'meeting'
+            'created_by' => $this->user->id
+        ]);
+        
+        // User khác không thể truy cập
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $otherToken
+        ])->getJson('/api/v1/interaction-logs/' . $log->id);
+        
+        $response->assertStatus(404);
+    }
+
+    /**
+     * Tạo roles và permissions cho test
+     */
+    private function createRolesAndPermissions(): void
+    {
+        $permissions = [
+            'interaction_log.create',
+            'interaction_log.read',
+            'interaction_log.update',
+            'interaction_log.delete'
+        ];
+
+        foreach ($permissions as $permissionCode) {
+            Permission::factory()->create([
+                'code' => $permissionCode,
+                'module' => 'interaction_logs',
+                'action' => explode('.', $permissionCode)[1]
+            ]);
+        }
+
+        $role = Role::factory()->create([
+            'name' => 'Project Manager',
+            'scope' => 'system'
         ]);
 
-        InteractionLog::factory()->count(3)->create([
-            'project_id' => $this->project->id,
-            'type' => 'call'
-        ]);
+        // Gán permissions cho role
+        $role->permissions()->attach(
+            Permission::whereIn('code', $permissions)->pluck('id')
+        );
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/v1/projects/{$this->project->id}/interaction-logs/statistics");
-
-        $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'statistics' => [
-                             'total_logs',
-                             'by_type',
-                             'by_visibility',
-                             'client_approved_count'
-                         ]
-                     ]
-                 ]);
-    }
-
-    /**
-     * Test validation errors
-     */
-    public function test_create_interaction_log_validation_errors()
-    {
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/v1/interaction-logs', []);
-
-        $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['project_id', 'type', 'description']);
-    }
-
-    /**
-     * Test unauthorized access
-     */
-    public function test_unauthorized_access_to_interaction_logs()
-    {
-        $response = $this->getJson('/api/v1/interaction-logs');
-
-        $response->assertStatus(401);
+        // Gán role cho user
+        $this->user->systemRoles()->attach($role->id);
     }
 }

@@ -2,27 +2,22 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\Task;
+use Src\Shared\Requests\BaseApiRequest;
 
-/**
- * Form Request để xác thực dữ liệu khi cập nhật Task
- * 
- * @package zenamanage\CoreProject\Requests
- */
-class UpdateTaskRequest extends FormRequest
+class UpdateTaskRequest extends BaseApiRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true; // Authorization được xử lý bởi RBAC middleware
+        return true;
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Get the validation rules that apply to the request.
      */
     public function rules(): array
     {
@@ -35,11 +30,10 @@ class UpdateTaskRequest extends FormRequest
                 'integer',
                 'exists:components,id',
                 function ($attribute, $value, $fail) use ($task) {
-                    // Kiểm tra component phải thuộc cùng project
                     if ($value && $task) {
-                        $component = \zenamanage\CoreProject\Models\Component::find($value);
+                        $component = \Src\CoreProject\Models\Component::find($value);
                         if ($component && $component->project_id !== $task->project_id) {
-                            $fail('Component phải thuộc cùng dự án.');
+                            $fail('Component phải thuộc cùng dự án với task.');
                         }
                     }
                 }
@@ -47,7 +41,6 @@ class UpdateTaskRequest extends FormRequest
             'phase_id' => [
                 'nullable',
                 'integer'
-                // TODO: Add exists validation when Phase model is created
             ],
             'name' => [
                 'sometimes',
@@ -152,37 +145,6 @@ class UpdateTaskRequest extends FormRequest
                 'nullable',
                 'boolean'
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'component_id.exists' => 'Component không tồn tại.',
-            'name.required' => 'Tên task là bắt buộc.',
-            'name.unique' => 'Tên task đã tồn tại trong dự án này.',
-            'name.max' => 'Tên task không được vượt quá 255 ký tự.',
-            'description.max' => 'Mô tả không được vượt quá 2000 ký tự.',
-            'start_date.date' => 'Ngày bắt đầu phải là ngày hợp lệ.',
-            'end_date.date' => 'Ngày kết thúc phải là ngày hợp lệ.',
-            'end_date.after_or_equal' => 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
-            'status.in' => 'Trạng thái không hợp lệ.',
-            'priority.in' => 'Mức độ ưu tiên không hợp lệ.',
-            'dependencies.array' => 'Dependencies phải là mảng.',
-            'dependencies.*.exists' => 'Task phụ thuộc không tồn tại.',
-            'dependencies.*.not_in' => 'Task không thể phụ thuộc vào chính nó.',
-            'conditional_tag.max' => 'Conditional tag không được vượt quá 100 ký tự.',
-            'estimated_hours.min' => 'Số giờ ước tính không được âm.',
-            'estimated_hours.max' => 'Số giờ ước tính không được vượt quá 9999.99.',
-            'actual_hours.min' => 'Số giờ thực tế không được âm.',
-            'actual_hours.max' => 'Số giờ thực tế không được vượt quá 9999.99.',
-            'progress_percent.min' => 'Tiến độ không được nhỏ hơn 0%.',
-            'progress_percent.max' => 'Tiến độ không được lớn hơn 100%.',
-            'visibility.in' => 'Mức độ hiển thị phải là internal hoặc client.',
-            'tags.*.max' => 'Mỗi tag không được vượt quá 50 ký tự.'
         ];
     }
 

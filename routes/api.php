@@ -1,7 +1,9 @@
-<?php
+<?php declare(strict_types=1);
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\Api\InteractionLogController; // Thêm dòng này
 use Src\CoreProject\Controllers\ProjectController;
 use Src\CoreProject\Controllers\ComponentController;
 use Src\CoreProject\Controllers\TaskController;
@@ -24,17 +26,21 @@ use Src\RBAC\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
-| Public Test Routes
+| Public Health Check Routes
 |--------------------------------------------------------------------------
 */
 
 // Basic API health check
-Route::get('/test', function () {
+Route::get('/health', function () {
     return response()->json([
         'status' => 'success',
-        'message' => 'Laravel API is working!',
-        'timestamp' => now()->toISOString(),
-        'version' => app()->version()
+        'data' => [
+            'service' => 'Z.E.N.A Project Management API',
+            'version' => '1.0.0',
+            'timestamp' => now()->toISOString(),
+            'environment' => app()->environment(),
+            'laravel_version' => app()->version()
+        ]
     ]);
 });
 
@@ -46,7 +52,13 @@ Route::get('/info', function () {
             'api_version' => 'v1',
             'service' => 'Z.E.N.A Project Management API',
             'environment' => app()->environment(),
-            'timestamp' => now()->toISOString()
+            'timestamp' => now()->toISOString(),
+            'features' => [
+                'authentication' => 'JWT',
+                'response_format' => 'JSend',
+                'pagination' => 'cursor_based',
+                'localization' => 'vi'
+            ]
         ]
     ]);
 });
@@ -72,142 +84,53 @@ Route::prefix('v1')->group(function () {
         Route::middleware('auth:api')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
             Route::post('logout', [AuthController::class, 'logout']);
+            Route::post('refresh', [AuthController::class, 'refresh']);
             Route::post('check-permission', [AuthController::class, 'checkPermission']);
         });
     });
     
     /*
     |--------------------------------------------------------------------------
-    | JWT Test Routes
+    | Protected API Routes
     |--------------------------------------------------------------------------
     */
+    // Thêm import ở đầu file
+    use App\Http\Controllers\Api\InteractionLogController;
     
-    // Test JWT authentication
-    Route::middleware('auth:api')->get('jwt-test', function (Request $request) {
-        return response()->json([
-            'status' => 'success',
-            'message' => 'JWT Authentication working!',
-            'data' => [
-                'user_id' => $request->user('api')->id,
-                'user_name' => $request->user('api')->name,
-                'user_email' => $request->user('api')->email,
-                'tenant_id' => $request->user('api')->tenant_id,
-                'authenticated_at' => now()->toISOString()
-            ]
-        ]);
-    });
-    
-    // Test JWT with user details
-    Route::middleware('auth:api')->get('user-profile', function (Request $request) {
-        $user = $request->user('api');
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'tenant_id' => $user->tenant_id,
-                    'created_at' => $user->created_at,
-                    'updated_at' => $user->updated_at
-                ],
-                'tenant' => $user->tenant ? [
-                    'id' => $user->tenant->id,
-                    'name' => $user->tenant->name,
-                    'domain' => $user->tenant->domain
-                ] : null,
-                'request_time' => now()->toISOString()
-            ]
-        ]);
-    });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Health Check Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::get('health', function () {
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'service' => 'Z.E.N.A Project Management API',
-                'version' => '1.0.0',
-                'timestamp' => now()->toISOString(),
-                'environment' => app()->environment(),
-                'laravel_version' => app()->version()
-            ]
-        ]);
-    });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | User Management Routes
-    |--------------------------------------------------------------------------
-    */
     Route::middleware('auth:api')->group(function () {
-        Route::apiResource('users', UserController::class);
         
-        // Profile routes
+        // User Management Routes
+        Route::apiResource('users', UserController::class);
         Route::prefix('users')->group(function () {
             Route::get('profile', [UserController::class, 'profile']);
             Route::put('profile', [UserController::class, 'updateProfile']);
         });
-    });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Project Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('auth:api')->group(function () {
-        Route::apiResource('projects', ProjectController::class);
         
-        // Project-specific routes
+        // Project Routes
+        Route::apiResource('projects', ProjectController::class);
         Route::prefix('projects/{projectId}')->group(function () {
             Route::get('tasks', [TaskController::class, 'index']);
             Route::post('recalculate-progress', [ProjectController::class, 'recalculateProgress']);
             Route::post('recalculate-actual-cost', [ProjectController::class, 'recalculateActualCost']);
         });
-    });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Component Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('auth:api')->group(function () {
+        
+        // Component Routes
         Route::apiResource('components', ComponentController::class);
-    });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Task Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('auth:api')->group(function () {
+        
+        // Task Routes
         Route::apiResource('tasks', TaskController::class);
         Route::apiResource('task-assignments', TaskAssignmentController::class);
-    });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Work Template Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('auth:api')->group(function () {
+        
+        // Work Template Routes
         Route::apiResource('work-templates', WorkTemplateController::class);
-        Route::post('work-templates/{templateId}/apply', [WorkTemplateController::class, 'applyToProject']);
-        Route::get('work-templates/meta/categories', [WorkTemplateController::class, 'categories']);
-        Route::get('work-templates/meta/conditional-tags', [WorkTemplateController::class, 'conditionalTags']);
-        Route::post('work-templates/{templateId}/duplicate', [WorkTemplateController::class, 'duplicate']);
-    });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Baseline Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('auth:api')->group(function () {
+        Route::prefix('work-templates')->group(function () {
+            Route::post('{templateId}/apply', [WorkTemplateController::class, 'applyToProject']);
+            Route::get('meta/categories', [WorkTemplateController::class, 'categories']);
+            Route::get('meta/conditional-tags', [WorkTemplateController::class, 'conditionalTags']);
+            Route::post('{templateId}/duplicate', [WorkTemplateController::class, 'duplicate']);
+        });
+        
+        // Baseline Routes
         Route::prefix('projects/{projectId}')->group(function () {
             Route::apiResource('baselines', BaselineController::class)->except(['index']);
             Route::get('baselines', [BaselineController::class, 'index']);
@@ -218,17 +141,54 @@ Route::prefix('v1')->group(function () {
         // Standalone baseline routes
         Route::apiResource('baselines', BaselineController::class)->only(['show', 'update', 'destroy']);
         Route::get('baselines/{id1}/compare/{id2}', [BaselineController::class, 'compare']);
-    });
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Template Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::middleware('auth:api')->group(function () {
+        
+        // Template Routes
         Route::apiResource('templates', TemplateController::class)
             ->parameters(['templates' => 'id']);
-        Route::post('templates/{id}/apply', [TemplateController::class, 'apply']);
-        Route::get('templates/{id}/versions', [TemplateController::class, 'versions']);
+        Route::prefix('templates')->group(function () {
+            Route::post('{id}/apply', [TemplateController::class, 'apply']);
+            Route::get('{id}/versions', [TemplateController::class, 'versions']);
+        });
+        
+        // Protected routes với full middleware stack
+        Route::middleware(['jwt.auth', 'tenant.isolation', 'api.rate.limit:general'])->group(function () {
+        
+        // User management routes
+        Route::middleware(['rbac:user.view'])->get('/users', [UserController::class, 'index']);
+        Route::middleware(['rbac:user.create'])->post('/users', [UserController::class, 'store']);
+        
+        // Project routes
+        Route::middleware(['rbac:project.view'])->get('/projects', [ProjectController::class, 'index']);
+        Route::middleware(['rbac:project.create'])->post('/projects', [ProjectController::class, 'store']);
+        
+        // Interaction logs với rate limiting đặc biệt
+        Route::middleware(['api.rate.limit:general'])->group(function () {
+            Route::middleware(['rbac:interaction_log.view'])->get('/interaction-logs', [InteractionLogController::class, 'index']);
+            Route::middleware(['rbac:interaction_log.create'])->post('/interaction-logs', [InteractionLogController::class, 'store']);
+            Route::middleware(['rbac:interaction_log.approve'])->patch('/interaction-logs/{id}/approve', [InteractionLogController::class, 'approve']);
+        });
+        
+        // File upload với rate limiting nghiêm ngặt
+        Route::middleware(['api.rate.limit:upload'])->group(function () {
+            Route::middleware(['rbac:file.upload'])->post('/files/upload', [FileController::class, 'upload']);
+        });
+        
+        // Export với rate limiting rất nghiêm ngặt
+        Route::middleware(['api.rate.limit:export'])->group(function () {
+            Route::middleware(['rbac:project.export'])->get('/projects/{id}/export', [ProjectController::class, 'export']);
+            Route::middleware(['rbac:interaction_log.export'])->get('/interaction-logs/export', [InteractionLogController::class, 'export']);
+        });
+        });
+        
+        // Project-specific Interaction Log Routes
+        Route::prefix('projects/{projectId}')->group(function () {
+            Route::get('interaction-logs', [InteractionLogController::class, 'indexByProject']);
+            Route::get('interaction-logs/client-visible', [InteractionLogController::class, 'clientVisible']);
+        });
+        
+        // Task-specific Interaction Log Routes
+        Route::prefix('tasks/{taskId}')->group(function () {
+            Route::get('interaction-logs', [InteractionLogController::class, 'indexByTask']);
+        });
     });
 });

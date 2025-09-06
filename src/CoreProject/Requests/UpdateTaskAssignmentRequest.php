@@ -2,11 +2,11 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\TaskAssignment;
 
-class UpdateTaskAssignmentRequest extends FormRequest
+class UpdateTaskAssignmentRequest extends BaseApiRequest
 {
     /**
      * Xác định user có quyền thực hiện request này không
@@ -36,20 +36,6 @@ class UpdateTaskAssignmentRequest extends FormRequest
                 'string',
                 'in:' . implode(',', array_keys(TaskAssignment::ROLES))
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'split_percent.required' => 'Phần trăm phân chia là bắt buộc.',
-            'split_percent.min' => 'Phần trăm phân chia phải lớn hơn 0.',
-            'split_percent.max' => 'Phần trăm phân chia không được vượt quá 100%.',
-            'role.required' => 'Vai trò là bắt buộc.',
-            'role.in' => 'Vai trò không hợp lệ.'
         ];
     }
 

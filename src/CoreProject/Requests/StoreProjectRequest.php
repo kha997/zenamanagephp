@@ -2,7 +2,7 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule;
 
 /**
@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
  * 
  * @package Src\CoreProject\Requests
  */
-class StoreProjectRequest extends FormRequest
+class StoreProjectRequest extends BaseApiRequest
 {
     /**
      * Xác định user có quyền thực hiện request này không
@@ -80,23 +80,6 @@ class StoreProjectRequest extends FormRequest
                 'integer',
                 'exists:work_templates,id'
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'name.required' => 'Tên dự án là bắt buộc.',
-            'name.unique' => 'Tên dự án đã tồn tại trong hệ thống.',
-            'start_date.required' => 'Ngày bắt đầu là bắt buộc.',
-            'start_date.after_or_equal' => 'Ngày bắt đầu không thể là ngày trong quá khứ.',
-            'end_date.required' => 'Ngày kết thúc là bắt buộc.',
-            'end_date.after' => 'Ngày kết thúc phải sau ngày bắt đầu.',
-            'planned_cost.min' => 'Chi phí dự kiến không thể âm.',
-            'tags.*.max' => 'Mỗi tag không được vượt quá 50 ký tự.'
         ];
     }
 

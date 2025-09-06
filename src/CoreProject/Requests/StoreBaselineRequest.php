@@ -2,7 +2,7 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\Baseline;
 
@@ -11,7 +11,7 @@ use Src\CoreProject\Models\Baseline;
  * 
  * @package Src\CoreProject\Requests
  */
-class StoreBaselineRequest extends FormRequest
+class StoreBaselineRequest extends BaseApiRequest
 {
     /**
      * Xác định user có quyền thực hiện request này không
@@ -57,26 +57,6 @@ class StoreBaselineRequest extends FormRequest
                 'string',
                 'max:2000'
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'project_id.required' => 'ID dự án là bắt buộc.',
-            'project_id.exists' => 'Dự án không tồn tại.',
-            'type.required' => 'Loại baseline là bắt buộc.',
-            'type.in' => 'Loại baseline không hợp lệ.',
-            'start_date.required' => 'Ngày bắt đầu là bắt buộc.',
-            'end_date.required' => 'Ngày kết thúc là bắt buộc.',
-            'end_date.after' => 'Ngày kết thúc phải sau ngày bắt đầu.',
-            'cost.required' => 'Chi phí là bắt buộc.',
-            'cost.min' => 'Chi phí không thể âm.',
-            'cost.max' => 'Chi phí vượt quá giới hạn cho phép.',
-            'note.max' => 'Ghi chú không được vượt quá 2000 ký tự.'
         ];
     }
 

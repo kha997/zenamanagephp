@@ -2,13 +2,13 @@
 
 namespace Src\CoreProject\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\BaseApiResource;
 
 /**
  * Component API Resource
  * Transform Component model data for API responses
  */
-class ComponentResource extends JsonResource
+class ComponentResource extends BaseApiResource
 {
     /**
      * Transform the resource into an array.
@@ -20,35 +20,27 @@ class ComponentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'ulid' => $this->ulid,
+            'ulid' => $this->formatUlid($this->ulid),
             'project_id' => $this->project_id,
             'parent_component_id' => $this->parent_component_id,
             'name' => $this->name,
             'description' => $this->description,
-            'progress_percent' => (float) $this->progress_percent,
-            'planned_cost' => (float) $this->planned_cost,
-            'actual_cost' => (float) $this->actual_cost,
-            'tags' => $this->tags,
-            'visibility' => $this->visibility,
-            'client_approved' => $this->client_approved,
-            'created_at' => $this->created_at->toISOString(),
-            'updated_at' => $this->updated_at->toISOString(),
+            'progress_percent' => $this->formatDecimal($this->progress_percent),
+            'planned_cost' => $this->formatDecimal($this->planned_cost),
+            'actual_cost' => $this->formatDecimal($this->actual_cost),
+            'created_at' => $this->formatDateTime($this->created_at),
+            'updated_at' => $this->formatDateTime($this->updated_at),
             
             // Relationships
-            'project' => new ProjectResource($this->whenLoaded('project')),
-            'parent_component' => new ComponentResource($this->whenLoaded('parentComponent')),
-            'child_components' => ComponentResource::collection($this->whenLoaded('childComponents')),
-            'tasks' => TaskResource::collection($this->whenLoaded('tasks')),
-            
-            // Counts
-            'child_components_count' => $this->whenCounted('childComponents'),
-            'tasks_count' => $this->whenCounted('tasks'),
+            'project' => $this->includeRelationship('project', ProjectResource::class),
+            'parent_component' => $this->includeRelationship('parentComponent', ComponentResource::class),
+            'child_components' => $this->includeRelationship('childComponents', ComponentResource::class),
+            'tasks' => $this->includeRelationship('tasks', TaskResource::class),
             
             // Computed properties
-            'is_root' => $this->parent_component_id === null,
-            'has_children' => $this->child_components_count > 0,
-            'cost_variance' => $this->getCostVariance(),
-            'hierarchy_level' => $this->getHierarchyLevel(),
+            'cost_variance' => $this->formatDecimal($this->getCostVariance()),
+            'has_children' => $this->hasChildren(),
+            'level' => $this->getLevel(),
         ];
     }
     
@@ -61,9 +53,17 @@ class ComponentResource extends JsonResource
     }
     
     /**
-     * Get hierarchy level (0 for root, 1 for first level children, etc.)
+     * Check if component has children
      */
-    private function getHierarchyLevel(): int
+    private function hasChildren(): bool
+    {
+        return $this->childComponents()->exists();
+    }
+    
+    /**
+     * Get component level in hierarchy
+     */
+    private function getLevel(): int
     {
         $level = 0;
         $parent = $this->parentComponent;

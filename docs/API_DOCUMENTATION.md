@@ -1,7 +1,7 @@
 # Z.E.N.A Project Management API Documentation
 
-## Tổng quan
+## Overview
 
-Z.E.N.A Project Management API cung cấp các endpoint RESTful để quản lý dự án, nhiệm vụ, tài liệu và thông báo. API sử dụng JWT authentication và tuân thủ chuẩn JSend cho response format.
+Z.E.N.A Project Management API là một RESTful API được xây dựng trên Laravel 10.x, cung cấp các endpoints để quản lý dự án, nhiệm vụ, người dùng và các tính năng liên quan.
 
-### Base URL
+## Base URL

@@ -1,108 +1,99 @@
 #!/bin/bash
 
-# Production Deployment Script
-# Triển khai ứng dụng lên môi trường production
+# Z.E.N.A Project Management - Production Deployment Script
+# Author: Development Team
+# Version: 1.0
 
 set -e
 
-# Configuration
-APP_DIR="/var/www/html"
-BACKUP_DIR="/var/backups/zenamanage"
-LOG_FILE="/var/log/zenamanage/deployment.log"
-DATE=$(date '+%Y%m%d_%H%M%S')
-GIT_BRANCH="${1:-main}"
+echo "🚀 Starting Z.E.N.A Project Management deployment..."
 
-# Logging function
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+# Configuration
+APP_DIR="/var/www/zena"
+BACKUP_DIR="/var/backups/zena"
+DATE=$(date +"%Y%m%d_%H%M%S")
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+log_info() {
+    echo -e "${GREEN}[INFO]${NC} $1"
 }
 
-log "Starting deployment of branch: $GIT_BRANCH"
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
 
-# 1. Create backup before deployment
-log "Creating backup before deployment..."
-mkdir -p "$BACKUP_DIR/$DATE"
-cp -r "$APP_DIR" "$BACKUP_DIR/$DATE/app_backup"
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
 
-# 2. Put application in maintenance mode
-log "Enabling maintenance mode..."
-cd "$APP_DIR"
-php artisan down --message="Deploying new version" --retry=60
+# Pre-deployment checks
+log_info "Running pre-deployment checks..."
 
-# 3. Pull latest code
-log "Pulling latest code from $GIT_BRANCH..."
-git fetch origin
-git checkout "$GIT_BRANCH"
-git pull origin "$GIT_BRANCH"
-
-# 4. Install/update dependencies
-log "Installing Composer dependencies..."
-composer install --no-dev --optimize-autoloader --no-interaction
-
-log "Installing NPM dependencies..."
-npm ci --production
-
-# 5. Build frontend assets
-log "Building frontend assets..."
-npm run build
-
-# 6. Clear and cache configuration
-log "Clearing and caching configuration..."
-php artisan config:clear
-php artisan config:cache
-php artisan route:clear
-php artisan route:cache
-php artisan view:clear
-php artisan view:cache
-
-# 7. Run database migrations
-log "Running database migrations..."
-php artisan migrate --force
-
-# 8. Clear application cache
-log "Clearing application cache..."
-php artisan cache:clear
-php artisan queue:restart
-
-# 9. Set proper permissions
-log "Setting file permissions..."
-chown -R www-data:www-data "$APP_DIR"
-chmod -R 755 "$APP_DIR"
-chmod -R 775 "$APP_DIR/storage"
-chmod -R 775 "$APP_DIR/bootstrap/cache"
-
-# 10. Restart services
-log "Restarting services..."
-sudo systemctl reload nginx
-sudo systemctl restart php8.0-fpm
-sudo supervisorctl restart all
-
-# 11. Run health check
-log "Running health check..."
-sleep 10
-HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/api/v1/health)
-if [ "$HEALTH_STATUS" != "200" ]; then
-    log "ERROR: Health check failed with status $HEALTH_STATUS"
-    log "Rolling back deployment..."
-    
-    # Rollback
-    php artisan up
-    cp -r "$BACKUP_DIR/$DATE/app_backup/*" "$APP_DIR/"
-    sudo systemctl reload nginx
-    sudo systemctl restart php8.0-fpm
-    
-    log "Rollback completed. Deployment failed."
+# Check if Docker is running
+if ! docker info > /dev/null 2>&1; then
+    log_error "Docker is not running. Please start Docker first."
     exit 1
 fi
 
-# 12. Disable maintenance mode
-log "Disabling maintenance mode..."
-php artisan up
+# Check if required files exist
+if [ ! -f "docker-compose.yml" ]; then
+    log_error "docker-compose.yml not found in current directory."
+    exit 1
+fi
 
-# 13. Clean up old backups (keep last 5)
-log "Cleaning up old backups..."
-cd "$BACKUP_DIR"
-ls -t | tail -n +6 | xargs -r rm -rf
+# Create backup
+log_info "Creating backup..."
+mkdir -p $BACKUP_DIR
+if [ -d "$APP_DIR" ]; then
+    tar -czf "$BACKUP_DIR/zena_backup_$DATE.tar.gz" -C "$APP_DIR" .
+    log_info "Backup created: $BACKUP_DIR/zena_backup_$DATE.tar.gz"
+fi
 
-log "Deployment completed successfully!"
-log "Application is now live with the latest changes from $GIT_BRANCH"
+# Pull latest images
+log_info "Pulling latest Docker images..."
+docker-compose pull
+
+# Stop existing containers
+log_info "Stopping existing containers..."
+docker-compose down
+
+# Build and start containers
+log_info "Building and starting containers..."
+docker-compose up -d --build
+
+# Wait for services to be ready
+log_info "Waiting for services to be ready..."
+sleep 30
+
+# Run database migrations
+log_info "Running database migrations..."
+docker-compose exec -T app php artisan migrate --force
+
+# Clear and cache config
+log_info "Optimizing application..."
+docker-compose exec -T app php artisan config:cache
+docker-compose exec -T app php artisan route:cache
+docker-compose exec -T app php artisan view:cache
+
+# Run health check
+log_info "Running health check..."
+if curl -f http://localhost:8080/health > /dev/null 2>&1; then
+    log_info "✅ Deployment successful! Application is running."
+else
+    log_error "❌ Health check failed. Please check the logs."
+    docker-compose logs app
+    exit 1
+fi
+
+# Cleanup old backups (keep last 5)
+log_info "Cleaning up old backups..."
+find $BACKUP_DIR -name "zena_backup_*.tar.gz" -type f -mtime +30 -delete
+
+log_info "🎉 Deployment completed successfully!"
+log_info "Application URL: http://localhost:8080"
+log_info "WebSocket URL: ws://localhost:8081"

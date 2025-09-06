@@ -2,7 +2,7 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule;
 
 /**
@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
  * 
  * @package zenamanage\CoreProject\Requests
  */
-class StoreComponentRequest extends FormRequest
+class StoreComponentRequest extends BaseApiRequest
 {
     /**
      * Xác định user có quyền thực hiện request này không
@@ -91,28 +91,6 @@ class StoreComponentRequest extends FormRequest
                 'nullable',
                 'boolean'
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'project_id.required' => 'ID dự án là bắt buộc.',
-            'project_id.exists' => 'Dự án không tồn tại.',
-            'parent_component_id.exists' => 'Component cha không tồn tại.',
-            'name.required' => 'Tên component là bắt buộc.',
-            'name.unique' => 'Tên component đã tồn tại trong cùng cấp độ của dự án này.',
-            'name.max' => 'Tên component không được vượt quá 255 ký tự.',
-            'description.max' => 'Mô tả không được vượt quá 1000 ký tự.',
-            'progress_percent.min' => 'Tiến độ không được nhỏ hơn 0%.',
-            'progress_percent.max' => 'Tiến độ không được lớn hơn 100%.',
-            'planned_cost.min' => 'Chi phí dự kiến không được âm.',
-            'actual_cost.min' => 'Chi phí thực tế không được âm.',
-            'visibility.in' => 'Mức độ hiển thị phải là internal hoặc client.',
-            'tags.*.max' => 'Mỗi tag không được vượt quá 50 ký tự.'
         ];
     }
 

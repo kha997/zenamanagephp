@@ -17,16 +17,30 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Chạy theo thứ tự: Tenant -> User -> Project -> RBAC
+        // Chạy theo thứ tự: Tenant -> User -> RBAC -> Project -> Features
         $this->call([
+            // Core Data
             TenantSeeder::class,
             UserSeeder::class,
+            
+            // RBAC System
             RoleSeeder::class,
-            ProjectSeeder::class,
-            ComponentSeeder::class,        // Thêm ComponentSeeder
-            TaskSeeder::class,             // Thêm TaskSeeder
-            WorkTemplateSeeder::class,     // Thêm WorkTemplateSeeder
+            PermissionSeeder::class,
             UserRoleSeeder::class,
+            
+            // Project Structure
+            WorkTemplateSeeder::class,
+            ProjectSeeder::class,
+            ComponentSeeder::class,
+            TaskSeeder::class,
+            
+            // Feature-Specific Data
+            InteractionLogSeeder::class,
+            NotificationSeeder::class,
+            DocumentSeeder::class,
+            ChangeRequestSeeder::class,
+            BaselineSeeder::class,
+            CompensationSeeder::class,
         ]);
     }
 }

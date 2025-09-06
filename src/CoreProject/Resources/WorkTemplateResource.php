@@ -2,13 +2,13 @@
 
 namespace Src\CoreProject\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\BaseApiResource;
 
 /**
- * WorkTemplate API Resource
+ * Work Template API Resource
  * Transform WorkTemplate model data for API responses
  */
-class WorkTemplateResource extends JsonResource
+class WorkTemplateResource extends BaseApiResource
 {
     /**
      * Transform the resource into an array.
@@ -20,7 +20,7 @@ class WorkTemplateResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'ulid' => $this->ulid,
+            'ulid' => $this->formatUlid($this->ulid),
             'name' => $this->name,
             'description' => $this->description,
             'category' => $this->category,
@@ -29,13 +29,13 @@ class WorkTemplateResource extends JsonResource
             'version' => $this->version,
             'is_active' => $this->is_active,
             'tags' => $this->tags,
-            'created_at' => $this->created_at->toISOString(),
-            'updated_at' => $this->updated_at->toISOString(),
+            'created_at' => $this->formatDateTime($this->created_at),
+            'updated_at' => $this->formatDateTime($this->updated_at),
             
             // Computed properties
             'tasks_count' => $this->getTasksCount(),
             'estimated_duration' => $this->getEstimatedDuration(),
-            'total_estimated_hours' => $this->getTotalEstimatedHours(),
+            'total_estimated_hours' => $this->formatDecimal($this->getTotalEstimatedHours()),
         ];
     }
     
@@ -44,14 +44,7 @@ class WorkTemplateResource extends JsonResource
      */
     private function getCategoryLabel(): string
     {
-        $categories = [
-            'design' => 'Thiết kế',
-            'construction' => 'Thi công',
-            'qc' => 'Kiểm soát chất lượng',
-            'inspection' => 'Nghiệm thu'
-        ];
-        
-        return $categories[$this->category] ?? $this->category;
+        return static::CATEGORIES[$this->category] ?? $this->category;
     }
     
     /**
@@ -59,19 +52,15 @@ class WorkTemplateResource extends JsonResource
      */
     private function getTasksCount(): int
     {
-        if (!isset($this->template_data['tasks']) || !is_array($this->template_data['tasks'])) {
-            return 0;
-        }
-        
-        return count($this->template_data['tasks']);
+        return count($this->template_data['tasks'] ?? []);
     }
     
     /**
-     * Get estimated duration from template metadata
+     * Get estimated duration from template data
      */
     private function getEstimatedDuration(): ?int
     {
-        return $this->template_data['metadata']['estimated_duration'] ?? null;
+        return $this->template_data['estimated_duration'] ?? null;
     }
     
     /**
@@ -79,12 +68,10 @@ class WorkTemplateResource extends JsonResource
      */
     private function getTotalEstimatedHours(): float
     {
-        if (!isset($this->template_data['tasks']) || !is_array($this->template_data['tasks'])) {
-            return 0.0;
-        }
-        
+        $tasks = $this->template_data['tasks'] ?? [];
         $totalHours = 0.0;
-        foreach ($this->template_data['tasks'] as $task) {
+        
+        foreach ($tasks as $task) {
             $totalHours += (float) ($task['estimated_hours'] ?? 0);
         }
         

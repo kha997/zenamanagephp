@@ -2,13 +2,13 @@
 
 namespace Src\CoreProject\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\BaseApiResource;
 
 /**
  * Task API Resource
  * Transform Task model data for API responses
  */
-class TaskResource extends JsonResource
+class TaskResource extends BaseApiResource
 {
     /**
      * Transform the resource into an array.
@@ -20,13 +20,13 @@ class TaskResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'ulid' => $this->ulid,
+            'ulid' => $this->formatUlid($this->ulid),
             'project_id' => $this->project_id,
             'component_id' => $this->component_id,
             'name' => $this->name,
             'description' => $this->description,
-            'start_date' => $this->start_date?->format('Y-m-d'),
-            'end_date' => $this->end_date?->format('Y-m-d'),
+            'start_date' => $this->formatDate($this->start_date),
+            'end_date' => $this->formatDate($this->end_date),
             'status' => $this->status,
             'status_label' => $this->getStatusLabel(),
             'priority' => $this->priority,
@@ -34,30 +34,26 @@ class TaskResource extends JsonResource
             'dependencies' => $this->dependencies,
             'conditional_tag' => $this->conditional_tag,
             'is_hidden' => $this->is_hidden,
-            'estimated_hours' => (float) $this->estimated_hours,
-            'actual_hours' => (float) $this->actual_hours,
-            'progress_percent' => (float) $this->progress_percent,
+            'estimated_hours' => $this->formatDecimal($this->estimated_hours),
+            'actual_hours' => $this->formatDecimal($this->actual_hours),
+            'progress_percent' => $this->formatDecimal($this->progress_percent),
             'tags' => $this->tags,
             'visibility' => $this->visibility,
             'client_approved' => $this->client_approved,
-            'created_at' => $this->created_at->toISOString(),
-            'updated_at' => $this->updated_at->toISOString(),
+            'created_at' => $this->formatDateTime($this->created_at),
+            'updated_at' => $this->formatDateTime($this->updated_at),
             
             // Relationships
-            'project' => new ProjectResource($this->whenLoaded('project')),
-            'component' => new ComponentResource($this->whenLoaded('component')),
-            'assignments' => TaskAssignmentResource::collection($this->whenLoaded('assignments')),
-            'assigned_users' => UserResource::collection($this->whenLoaded('assignedUsers')),
-            
-            // Counts
-            'assignments_count' => $this->whenCounted('assignments'),
+            'project' => $this->includeRelationship('project', ProjectResource::class),
+            'component' => $this->includeRelationship('component', ComponentResource::class),
+            'assignments' => $this->includeRelationship('assignments', TaskAssignmentResource::class),
+            'assigned_users' => $this->includeRelationship('assignedUsers', UserResource::class),
             
             // Computed properties
-            'duration_days' => $this->getDurationDays(),
-            'hours_variance' => $this->getHoursVariance(),
-            'can_start' => $this->canStart(),
             'is_overdue' => $this->isOverdue(),
-            'completion_percentage' => $this->getCompletionPercentage(),
+            'duration_days' => $this->getDurationDays(),
+            'completion_percentage' => $this->formatDecimal($this->getCompletionPercentage()),
+            'hours_variance' => $this->formatDecimal($this->getHoursVariance()),
         ];
     }
     
@@ -78,6 +74,14 @@ class TaskResource extends JsonResource
     }
     
     /**
+     * Check if task is overdue
+     */
+    private function isOverdue(): bool
+    {
+        return $this->end_date && $this->end_date->isPast() && $this->status !== 'completed';
+    }
+    
+    /**
      * Get task duration in days
      */
     private function getDurationDays(): ?int
@@ -90,22 +94,18 @@ class TaskResource extends JsonResource
     }
     
     /**
+     * Get completion percentage based on progress
+     */
+    private function getCompletionPercentage(): float
+    {
+        return (float) $this->progress_percent;
+    }
+    
+    /**
      * Get hours variance (actual - estimated)
      */
     private function getHoursVariance(): float
     {
         return (float) ($this->actual_hours - $this->estimated_hours);
-    }
-    
-    /**
-     * Get completion percentage based on status and progress
-     */
-    private function getCompletionPercentage(): float
-    {
-        if ($this->status === 'completed') {
-            return 100.0;
-        }
-        
-        return (float) $this->progress_percent;
     }
 }

@@ -1,21 +1,13 @@
 <?php declare(strict_types=1);
 
-use Illuminate\Support\Str;
-
 return [
-    'default' => env('CACHE_DRIVER', 'file'),
+    'default' => env('CACHE_DRIVER', 'redis'),
 
     'stores' => [
-        'array' => [
-            'driver' => 'array',
-            'serialize' => false,
-        ],
-
-        'database' => [
-            'driver' => 'database',
-            'table' => 'cache',
-            'connection' => null,
-            'lock_connection' => null,
+        'redis' => [
+            'driver' => 'redis',
+            'connection' => 'cache',
+            'lock_connection' => 'default',
         ],
 
         'file' => [
@@ -23,44 +15,26 @@ return [
             'path' => storage_path('framework/cache/data'),
         ],
 
-        'memcached' => [
-            'driver' => 'memcached',
-            'persistent_id' => env('MEMCACHED_PERSISTENT_ID'),
-            'sasl' => [
-                env('MEMCACHED_USERNAME'),
-                env('MEMCACHED_PASSWORD'),
-            ],
-            'options' => [
-                // Memcached::OPT_CONNECT_TIMEOUT => 2000,
-            ],
-            'servers' => [
-                [
-                    'host' => env('MEMCACHED_HOST', '127.0.0.1'),
-                    'port' => env('MEMCACHED_PORT', 11211),
-                    'weight' => 100,
-                ],
-            ],
-        ],
-
-        'redis' => [
+        // Dedicated cache store for sessions
+        'session' => [
             'driver' => 'redis',
-            'connection' => 'cache',
-            'lock_connection' => 'default',
+            'connection' => 'session',
         ],
 
-        'dynamodb' => [
-            'driver' => 'dynamodb',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
-            'table' => env('DYNAMODB_CACHE_TABLE', 'cache'),
-            'endpoint' => env('DYNAMODB_ENDPOINT'),
+        // Dedicated cache store for user data
+        'users' => [
+            'driver' => 'redis',
+            'connection' => 'users',
+            'prefix' => 'zena_users',
         ],
 
-        'octane' => [
-            'driver' => 'octane',
+        // Dedicated cache store for projects
+        'projects' => [
+            'driver' => 'redis',
+            'connection' => 'projects',
+            'prefix' => 'zena_projects',
         ],
     ],
 
-    'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache_'),
+    'prefix' => env('CACHE_PREFIX', 'zena_cache'),
 ];

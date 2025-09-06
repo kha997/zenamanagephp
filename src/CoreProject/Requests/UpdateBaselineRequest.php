@@ -2,7 +2,7 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\Baseline;
 
@@ -11,7 +11,7 @@ use Src\CoreProject\Models\Baseline;
  * 
  * @package Src\CoreProject\Requests
  */
-class UpdateBaselineRequest extends FormRequest
+class UpdateBaselineRequest extends BaseApiRequest
 {
     /**
      * Xác định user có quyền thực hiện request này không
@@ -52,20 +52,6 @@ class UpdateBaselineRequest extends FormRequest
                 'string',
                 'max:2000'
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'type.in' => 'Loại baseline không hợp lệ.',
-            'end_date.after' => 'Ngày kết thúc phải sau ngày bắt đầu.',
-            'cost.min' => 'Chi phí không thể âm.',
-            'cost.max' => 'Chi phí vượt quá giới hạn cho phép.',
-            'note.max' => 'Ghi chú không được vượt quá 2000 ký tự.'
         ];
     }
 

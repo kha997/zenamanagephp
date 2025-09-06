@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Auth\JwtGuard;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request; // Đã có import này
 use Src\RBAC\Services\AuthService;
 
 class AuthServiceProvider extends ServiceProvider
@@ -28,12 +27,16 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        // Đăng ký JWT Guard với Request::capture()
+        // ✅ SỬA: Đăng ký JWT guard với cách tiếp cận khác
         Auth::extend('jwt', function ($app, $name, array $config) {
+            // Lấy user provider
+            $userProvider = Auth::createUserProvider($config['provider']);
+            
+            // Tạo JwtGuard instance
             return new JwtGuard(
-                Auth::createUserProvider($config['provider']), // Tạo user provider từ config
-                Request::capture(), // Sử dụng Request::capture() thay vì inject
-                $app->make(AuthService::class) // Inject AuthService để xử lý JWT
+                $userProvider,
+                $app['request'],
+                $app->make(AuthService::class)
             );
         });
     }

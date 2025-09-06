@@ -2,7 +2,7 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\Project;
 
@@ -11,16 +11,8 @@ use Src\CoreProject\Models\Project;
  * 
  * @package Src\CoreProject\Requests
  */
-class UpdateProjectRequest extends FormRequest
+class UpdateProjectRequest extends BaseApiRequest
 {
-    /**
-     * Xác định user có quyền thực hiện request này không
-     */
-    public function authorize(): bool
-    {
-        return true; // Authorization được xử lý bởi RBAC middleware
-    }
-
     /**
      * Các quy tắc validation cho request
      */
@@ -94,25 +86,6 @@ class UpdateProjectRequest extends FormRequest
                 'nullable',
                 'boolean'
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'name.required' => 'Tên dự án là bắt buộc.',
-            'name.unique' => 'Tên dự án đã tồn tại trong hệ thống.',
-            'start_date.required' => 'Ngày bắt đầu là bắt buộc.',
-            'end_date.required' => 'Ngày kết thúc là bắt buộc.',
-            'end_date.after' => 'Ngày kết thúc phải sau ngày bắt đầu.',
-            'progress.min' => 'Tiến độ không thể âm.',
-            'progress.max' => 'Tiến độ không thể vượt quá 100%.',
-            'planned_cost.min' => 'Chi phí dự kiến không thể âm.',
-            'actual_cost.min' => 'Chi phí thực tế không thể âm.',
-            'tags.*.max' => 'Mỗi tag không được vượt quá 50 ký tự.'
         ];
     }
 

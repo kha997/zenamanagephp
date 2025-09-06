@@ -2,11 +2,11 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\WorkTemplate;
+use Src\Shared\Requests\BaseApiRequest;
 
-class StoreWorkTemplateRequest extends FormRequest
+class StoreWorkTemplateRequest extends BaseApiRequest
 {
     /**
      * Xác định user có quyền thực hiện request này không
@@ -85,22 +85,6 @@ class StoreWorkTemplateRequest extends FormRequest
                 'string',
                 'max:50'
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'name.required' => 'Tên template là bắt buộc.',
-            'name.unique' => 'Tên template đã tồn tại.',
-            'category.required' => 'Loại template là bắt buộc.',
-            'category.in' => 'Loại template không hợp lệ.',
-            'template_data.required' => 'Dữ liệu template là bắt buộc.',
-            'template_data.tasks.*.name.required_with' => 'Tên task là bắt buộc.',
-            'template_data.tasks.*.estimated_hours.min' => 'Số giờ ước tính phải lớn hơn hoặc bằng 0.'
         ];
     }
 

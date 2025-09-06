@@ -1,237 +1,316 @@
-# Z.E.N.A Project Management - Hướng dẫn sử dụng
+# Z.E.N.A Project Management - User Manual
 
 ## Mục lục
+
 1. [Giới thiệu](#giới-thiệu)
-2. [Đăng nhập và Bắt đầu](#đăng-nhập-và-bắt-đầu)
+2. [Đăng nhập và Bảo mật](#đăng-nhập-và-bảo-mật)
 3. [Quản lý Dự án](#quản-lý-dự-án)
 4. [Quản lý Nhiệm vụ](#quản-lý-nhiệm-vụ)
-5. [Quản lý Tài liệu](#quản-lý-tài-liệu)
-6. [Change Requests](#change-requests)
-7. [Thông báo](#thông-báo)
-8. [Phân quyền](#phân-quyền)
-9. [Báo cáo và Thống kê](#báo-cáo-và-thống-kê)
+5. [Quản lý Thành phần](#quản-lý-thành-phần)
+6. [Nhật ký Tương tác](#nhật-ký-tương-tác)
+7. [Yêu cầu Thay đổi](#yêu-cầu-thay-đổi)
+8. [Quản lý Người dùng](#quản-lý-người-dùng)
+9. [Thông báo](#thông-báo)
+10. [Báo cáo và Phân tích](#báo-cáo-và-phân-tích)
 
 ## Giới thiệu
 
-Z.E.N.A Project Management là hệ thống quản lý dự án toàn diện, giúp bạn:
-- Quản lý dự án từ khởi tạo đến hoàn thành
-- Theo dõi tiến độ và chi phí real-time
-- Quản lý tài liệu và phiên bản
-- Xử lý change requests
-- Giao tiếp và thông báo real-time
-- Phân quyền chi tiết theo vai trò
+Z.E.N.A Project Management là hệ thống quản lý dự án toàn diện, được thiết kế để hỗ trợ các doanh nghiệp trong việc quản lý dự án, nhiệm vụ, và tài nguyên một cách hiệu quả.
 
-## Đăng nhập và Bắt đầu
+### Tính năng chính
+
+- **Quản lý Dự án**: Tạo, theo dõi và quản lý dự án từ khởi tạo đến hoàn thành
+- **Quản lý Nhiệm vụ**: Phân công, theo dõi tiến độ và quản lý dependencies
+- **RBAC (Role-Based Access Control)**: Hệ thống phân quyền 3 lớp linh hoạt
+- **Nhật ký Tương tác**: Ghi lại tất cả các tương tác trong dự án
+- **Yêu cầu Thay đổi**: Quy trình approval cho các thay đổi dự án
+- **Thông báo**: Hệ thống thông báo đa kênh
+- **Báo cáo**: Dashboard và báo cáo chi tiết
+
+## Đăng nhập và Bảo mật
 
 ### Đăng nhập
-1. Truy cập trang chủ của hệ thống
+
+1. Truy cập vào URL của hệ thống
 2. Nhập email và mật khẩu
 3. Nhấn "Đăng nhập"
 
-### Dashboard
-Sau khi đăng nhập, bạn sẽ thấy Dashboard với:
-- Tổng quan dự án đang thực hiện
-- Nhiệm vụ cần hoàn thành
-- Thông báo mới
-- Biểu đồ tiến độ và chi phí
+### Bảo mật
+
+- Hệ thống sử dụng JWT (JSON Web Tokens) để xác thực
+- Token có thời hạn 1 giờ và sẽ tự động refresh
+- Mật khẩu được mã hóa bằng bcrypt
+
+### Đổi mật khẩu
+
+1. Vào **Hồ sơ cá nhân**
+2. Chọn **Đổi mật khẩu**
+3. Nhập mật khẩu cũ và mật khẩu mới
+4. Xác nhận thay đổi
 
 ## Quản lý Dự án
 
-### Tạo Dự án Mới
-1. Vào menu "Dự án" → "Tạo mới"
+### Tạo Dự án mới
+
+1. Vào **Dự án** > **Tạo mới**
 2. Điền thông tin:
    - **Tên dự án**: Tên mô tả dự án
-   - **Mô tả**: Chi tiết về dự án
-   - **Ngày bắt đầu/kết thúc**: Timeline dự án
-   - **Template**: Chọn template có sẵn (nếu có)
-3. Nhấn "Tạo dự án"
+   - **Mô tả**: Mô tả chi tiết về dự án
+   - **Ngày bắt đầu**: Ngày khởi động dự án
+   - **Ngày kết thúc**: Ngày dự kiến hoàn thành
+   - **Template**: Chọn template nếu có
+3. Nhấn **Tạo dự án**
 
-### Xem Danh sách Dự án
-- Vào menu "Dự án" → "Danh sách"
-- Sử dụng bộ lọc để tìm kiếm:
-  - Theo trạng thái
-  - Theo tên dự án
-  - Theo ngày tạo
+### Quản lý Dự án
 
-### Chi tiết Dự án
-Nhấn vào tên dự án để xem:
-- **Thông tin tổng quan**: Tiến độ, chi phí, timeline
-- **Components**: Các thành phần của dự án
-- **Tasks**: Danh sách nhiệm vụ
-- **Documents**: Tài liệu liên quan
-- **Change Requests**: Yêu cầu thay đổi
-- **Team**: Thành viên tham gia
+#### Dashboard Dự án
+- **Tiến độ tổng thể**: Hiển thị % hoàn thành
+- **Chi phí**: So sánh chi phí thực tế vs dự kiến
+- **Timeline**: Gantt chart hiển thị timeline
+- **Thành viên**: Danh sách thành viên và vai trò
 
-### Cập nhật Tiến độ
+#### Cập nhật Dự án
 1. Vào chi tiết dự án
-2. Chọn tab "Components"
-3. Nhấn "Cập nhật" bên cạnh component
-4. Nhập:
-   - **Tiến độ (%)**: Phần trăm hoàn thành
-   - **Chi phí thực tế**: Chi phí đã phát sinh
-   - **Ghi chú**: Mô tả về tiến độ
+2. Nhấn **Chỉnh sửa**
+3. Cập nhật thông tin cần thiết
+4. **Lưu thay đổi**
+
+### Baseline Management
+
+#### Tạo Baseline
+1. Vào **Dự án** > **Baseline**
+2. Chọn loại baseline:
+   - **Contract Baseline**: Baseline theo hợp đồng
+   - **Execution Baseline**: Baseline thực thi
+3. Điền thông tin và **Lưu**
 
 ## Quản lý Nhiệm vụ
 
 ### Tạo Nhiệm vụ
-1. Vào dự án → Tab "Tasks" → "Tạo mới"
+
+1. Vào **Dự án** > **Nhiệm vụ** > **Tạo mới**
 2. Điền thông tin:
    - **Tên nhiệm vụ**
-   - **Mô tả chi tiết**
+   - **Mô tả**
+   - **Thành phần**: Chọn component liên quan
    - **Ngày bắt đầu/kết thúc**
-   - **Component**: Thuộc thành phần nào
    - **Dependencies**: Nhiệm vụ phụ thuộc
-   - **Phân công**: Giao cho ai, tỷ lệ phần trăm
+   - **Người thực hiện**: Phân công với % tham gia
 
-### Cập nhật Trạng thái
-1. Vào danh sách nhiệm vụ
-2. Nhấn vào nhiệm vụ cần cập nhật
-3. Thay đổi trạng thái:
-   - **Pending**: Chờ thực hiện
-   - **In Progress**: Đang thực hiện
-   - **Completed**: Hoàn thành
-   - **On Hold**: Tạm dừng
+### Quản lý Dependencies
 
-### Theo dõi Dependencies
-- Hệ thống tự động hiển thị các nhiệm vụ phụ thuộc
-- Không thể bắt đầu nhiệm vụ khi dependencies chưa hoàn thành
-- Biểu đồ Gantt hiển thị mối quan hệ phụ thuộc
+- **Predecessor**: Nhiệm vụ phải hoàn thành trước
+- **Successor**: Nhiệm vụ phụ thuộc vào nhiệm vụ này
+- Hệ thống tự động cảnh báo circular dependencies
 
-## Quản lý Tài liệu
+### Cập nhật Tiến độ
 
-### Upload Tài liệu
-1. Vào dự án → Tab "Documents" → "Upload"
-2. Chọn file từ máy tính
+1. Vào chi tiết nhiệm vụ
+2. Cập nhật **% hoàn thành**
+3. Thêm **Ghi chú** nếu cần
+4. **Lưu thay đổi**
+
+### Conditional Tasks
+
+- Nhiệm vụ có thể được ẩn dựa trên **conditional_tag**
+- Chỉ hiển thị khi điều kiện được kích hoạt
+
+## Quản lý Thành phần
+
+### Tạo Component
+
+1. Vào **Dự án** > **Thành phần** > **Tạo mới**
+2. Điền thông tin:
+   - **Tên thành phần**
+   - **Component cha**: Nếu là sub-component
+   - **Chi phí dự kiến**
+   - **Mô tả**
+
+### Cấu trúc Phân cấp
+
+- Components có thể có cấu trúc phân cấp (parent-child)
+- Tiến độ và chi phí được tính toán tự động từ sub-components
+
+### Cập nhật Chi phí và Tiến độ
+
+1. Vào chi tiết component
+2. Cập nhật:
+   - **Chi phí thực tế**
+   - **% tiến độ**
+3. Hệ thống tự động cập nhật project progress
+
+## Nhật ký Tương tác
+
+### Tạo Interaction Log
+
+1. Vào **Dự án** > **Nhật ký** > **Tạo mới**
+2. Chọn loại tương tác:
+   - **Call**: Cuộc gọi
+   - **Email**: Email
+   - **Meeting**: Cuộc họp
+   - **Note**: Ghi chú
+   - **Feedback**: Phản hồi
 3. Điền thông tin:
-   - **Tiêu đề**: Tên tài liệu
-   - **Liên kết với**: Task, Diary, hoặc Change Request
-   - **Ghi chú**: Mô tả về tài liệu
+   - **Mô tả**: Nội dung chi tiết
+   - **Tag Path**: Phân loại (VD: Material/Flooring/Granite)
+   - **Visibility**: Internal hoặc Client
+   - **Linked Task**: Liên kết với nhiệm vụ
 
-### Quản lý Phiên bản
-- Mỗi lần upload file mới sẽ tạo phiên bản mới
-- Có thể xem lịch sử các phiên bản
-- Có thể revert về phiên bản cũ
-- Download bất kỳ phiên bản nào
+### Quản lý Visibility
 
-### Phân loại Tài liệu
-Tài liệu được phân loại theo:
-- **Loại**: Contract, Design, Report, etc.
-- **Trạng thái**: Draft, Review, Approved
-- **Quyền truy cập**: Internal, Client
+- **Internal**: Chỉ nội bộ team xem được
+- **Client**: Client có thể xem (cần approval)
 
-## Change Requests
+### Client Approval
+
+1. Chọn log có visibility = "Client"
+2. Nhấn **Approve for Client**
+3. Log sẽ hiển thị cho client
+
+## Yêu cầu Thay đổi
 
 ### Tạo Change Request
-1. Vào dự án → Tab "Change Requests" → "Tạo mới"
+
+1. Vào **Dự án** > **Change Request** > **Tạo mới**
 2. Điền thông tin:
-   - **Tiêu đề**: Tóm tắt thay đổi
-   - **Mô tả**: Chi tiết về thay đổi
-   - **Tác động**:
-     - Thời gian (ngày)
-     - Chi phí (VND)
-     - KPI (chất lượng, timeline, ngân sách)
+   - **Tiêu đề**
+   - **Mô tả chi tiết**
+   - **Impact Days**: Ảnh hưởng đến timeline
+   - **Impact Cost**: Ảnh hưởng đến chi phí
+   - **Impact KPI**: Ảnh hưởng đến các KPI khác
 
-### Quy trình Phê duyệt
-1. **Draft**: Tạo và chỉnh sửa
-2. **Awaiting Approval**: Gửi để phê duyệt
-3. **Approved/Rejected**: Quyết định cuối cùng
+### Quy trình Approval
 
-### Xử lý sau Phê duyệt
-Khi CR được phê duyệt:
-- Hệ thống tự động cập nhật timeline
-- Điều chỉnh ngân sách dự án
-- Thông báo cho team members
-- Tạo tasks mới nếu cần
+1. **Draft**: Tạo mới, chưa submit
+2. **Awaiting Approval**: Đã submit, chờ duyệt
+3. **Approved**: Đã được duyệt
+4. **Rejected**: Bị từ chối
+
+### Xử lý Change Request
+
+#### Approve CR
+1. Vào chi tiết CR
+2. Review thông tin impact
+3. Nhấn **Approve**
+4. Thêm **Decision Note**
+5. Hệ thống tự động dispatch event để update các module liên quan
+
+#### Reject CR
+1. Vào chi tiết CR
+2. Nhấn **Reject**
+3. Thêm lý do từ chối
+
+## Quản lý Người dùng
+
+### Hệ thống RBAC 3 lớp
+
+1. **System-Wide Roles**: Quyền toàn hệ thống
+2. **Custom Roles**: Quyền tùy chỉnh
+3. **Project-Specific Roles**: Quyền riêng cho từng dự án
+
+### Tạo User
+
+1. Vào **Quản lý** > **Người dùng** > **Tạo mới**
+2. Điền thông tin cơ bản
+3. Assign roles phù hợp
+
+### Phân quyền
+
+#### System Roles
+- **Super Admin**: Full quyền hệ thống
+- **Admin**: Quản lý trong tenant
+- **Manager**: Quản lý dự án
+- **User**: Người dùng cơ bản
+
+#### Project Roles
+- **Project Manager**: Quản lý dự án
+- **Team Lead**: Dẫn dắt team
+- **Developer**: Thực hiện nhiệm vụ
+- **Viewer**: Chỉ xem
+
+### Assign Roles
+
+1. Vào chi tiết user
+2. Tab **Roles**
+3. Chọn **Add Role**
+4. Chọn scope (System/Project) và role
+5. **Lưu**
 
 ## Thông báo
 
-### Loại Thông báo
-- **Critical**: Cần xử lý ngay
-- **Normal**: Thông tin quan trọng
-- **Low**: Thông tin tham khảo
+### Cấu hình Notification Rules
 
-### Kênh Thông báo
-- **In-app**: Hiển thị trong hệ thống
-- **Email**: Gửi qua email
-- **WebSocket**: Real-time notifications
+1. Vào **Hồ sơ** > **Thông báo**
+2. Tạo rule mới:
+   - **Event**: Loại sự kiện (task.created, project.updated, etc.)
+   - **Priority**: Mức độ ưu tiên tối thiểu
+   - **Channels**: Kênh nhận thông báo
+     - **In-app**: Trong ứng dụng
+     - **Email**: Qua email
+     - **Webhook**: Qua webhook
 
-### Cài đặt Thông báo
-1. Vào "Cài đặt" → "Thông báo"
-2. Chọn loại sự kiện muốn nhận thông báo
-3. Chọn kênh thông báo
-4. Đặt mức độ ưu tiên tối thiểu
+### Quản lý Thông báo
 
-## Phân quyền
+- **Mark as Read**: Đánh dấu đã đọc
+- **Mark All as Read**: Đánh dấu tất cả đã đọc
+- **Filter**: Lọc theo priority, channel
 
-### Các Loại Role
-- **System Admin**: Quản trị toàn hệ thống
-- **Project Manager**: Quản lý dự án
-- **Team Lead**: Dẫn dắt nhóm
-- **Developer**: Thực hiện nhiệm vụ
-- **Client**: Khách hàng (chỉ xem)
+## Báo cáo và Phân tích
 
-### Phân quyền theo Dự án
-- Mỗi user có thể có role khác nhau ở các dự án khác nhau
-- Project-specific roles override system roles
-- Có thể tạo custom roles cho từng dự án
+### Dashboard Tổng quan
 
-### Quản lý Permissions
-Admin có thể:
-- Tạo/sửa/xóa roles
-- Gán/gỡ permissions cho roles
-- Assign roles cho users
-- Xem audit log của permissions
-
-## Báo cáo và Thống kê
-
-### Dashboard Analytics
-- **Project Progress**: Tiến độ tổng thể
-- **Budget Tracking**: Theo dõi ngân sách
-- **Resource Utilization**: Sử dụng nguồn lực
-- **Timeline Analysis**: Phân tích timeline
+- **Project Overview**: Tổng quan các dự án
+- **Progress Charts**: Biểu đồ tiến độ
+- **Cost Analysis**: Phân tích chi phí
+- **Resource Utilization**: Sử dụng tài nguyên
 
 ### Báo cáo Chi tiết
-1. Vào "Báo cáo" từ menu chính
-2. Chọn loại báo cáo:
-   - Project Summary
-   - Task Performance
-   - Budget Analysis
-   - Team Productivity
-3. Chọn khoảng thời gian
-4. Export PDF/Excel nếu cần
 
-### Metrics và KPIs
-Hệ thống theo dõi:
-- **On-time Delivery Rate**: Tỷ lệ giao đúng hạn
-- **Budget Variance**: Chênh lệch ngân sách
-- **Quality Score**: Điểm chất lượng
-- **Team Efficiency**: Hiệu suất team
+#### Project Report
+- Tiến độ từng component
+- Chi phí thực tế vs dự kiến
+- Timeline và milestones
+- Resource allocation
+
+#### Task Report
+- Task completion rate
+- Overdue tasks
+- Task dependencies
+- Performance metrics
+
+#### User Report
+- Workload distribution
+- Performance tracking
+- Time tracking
+
+### Export Báo cáo
+
+1. Chọn loại báo cáo
+2. Thiết lập filters
+3. Chọn format export (PDF, Excel, CSV)
+4. **Download**
 
 ## Troubleshooting
 
-### Các Vấn đề Thường gặp
+### Các lỗi thường gặp
 
-**1. Không thể đăng nhập**
+#### Không thể đăng nhập
 - Kiểm tra email/password
 - Xóa cache browser
-- Liên hệ admin để reset password
+- Liên hệ admin nếu account bị lock
 
-**2. Không nhận được thông báo**
-- Kiểm tra cài đặt notification
-- Kiểm tra spam folder (email)
-- Đảm bảo browser cho phép notifications
+#### Không thể tạo task
+- Kiểm tra quyền truy cập
+- Đảm bảo project đang active
+- Kiểm tra dependencies hợp lệ
 
-**3. Upload file thất bại**
-- Kiểm tra kích thước file (max 10MB)
-- Kiểm tra định dạng file được hỗ trợ
-- Kiểm tra kết nối internet
-
-**4. Dữ liệu không cập nhật real-time**
-- Refresh trang
-- Kiểm tra kết nối WebSocket
-- Liên hệ admin nếu vấn đề tiếp tục
+#### Thông báo không nhận được
+- Kiểm tra notification rules
+- Verify email settings
+- Kiểm tra spam folder
 
 ### Liên hệ Hỗ trợ
-- **Email**: support@zenamanage.com
-- **Phone**: +84 123 456 789
-- **Help Desk**: Trong hệ thống, menu "Hỗ trợ"
+
+- **Email**: support@zena-project.com
+- **Phone**: +84 xxx xxx xxx
+- **Help Desk**: Trong ứng dụng > Help

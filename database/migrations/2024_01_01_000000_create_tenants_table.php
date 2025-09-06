@@ -3,38 +3,44 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
-/**
- * Migration for tenants table to support multi-tenancy
- */
-return new class extends Migration
+class CreateTenantsTable extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
+        // Lưu SQL mode hiện tại
+        $currentSqlMode = DB::selectOne('SELECT @@sql_mode as mode')->mode;
+        
+        // Tắt strict mode tạm thời
+        DB::statement("SET sql_mode = ''");
+        
+        // Tạo bảng bằng Laravel Schema Builder với ULID
         Schema::create('tenants', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Sử dụng ULID làm primary key
+            $table->ulid('id')->primary();
             $table->string('name');
-            $table->string('domain')->unique();
-            $table->string('database_name')->nullable();
-            $table->json('settings')->nullable();
+            $table->string('domain')->nullable();
+            $table->string('database_name', 100)->nullable();
+            $table->json('settings')->nullable()->comment('Cấu hình tenant-specific');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            $table->softDeletes(); // Thêm cột deleted_at cho soft deletes
+            $table->softDeletes();
             
-            $table->engine = 'InnoDB';
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_unicode_ci';
+            // Indexes
+            $table->unique('domain');
+            $table->index('name');
+            $table->index('is_active');
+            $table->index(['is_active', 'created_at']);
         });
+        
+        // Khôi phục SQL mode ban đầu
+        DB::statement("SET sql_mode = '{$currentSqlMode}'");
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
         Schema::dropIfExists('tenants');
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
     }
-};
+}

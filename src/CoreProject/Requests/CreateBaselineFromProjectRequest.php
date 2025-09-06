@@ -2,26 +2,21 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Src\CoreProject\Models\Baseline;
+use Src\Shared\Requests\BaseApiRequest;
 
-/**
- * Form Request để xác thực dữ liệu khi tạo baseline từ project hiện tại
- * 
- * @package Src\CoreProject\Requests
- */
-class CreateBaselineFromProjectRequest extends FormRequest
+class CreateBaselineFromProjectRequest extends BaseApiRequest
 {
     /**
-     * Xác định user có quyền thực hiện request này không
+     * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true; // Authorization được xử lý bởi RBAC middleware
+        return true;
     }
 
     /**
-     * Các quy tắc validation cho request
+     * Get the validation rules that apply to the request.
      */
     public function rules(): array
     {
@@ -29,7 +24,7 @@ class CreateBaselineFromProjectRequest extends FormRequest
             'type' => [
                 'required',
                 'string',
-                'in:' . implode(',', [Baseline::TYPE_CONTRACT, Baseline::TYPE_EXECUTION])
+                'in:' . Baseline::TYPE_CONTRACT . ',' . Baseline::TYPE_EXECUTION
             ],
             'note' => [
                 'nullable',
@@ -48,25 +43,13 @@ class CreateBaselineFromProjectRequest extends FormRequest
     }
 
     /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'type.required' => 'Loại baseline là bắt buộc.',
-            'type.in' => 'Loại baseline không hợp lệ.',
-            'note.max' => 'Ghi chú không được vượt quá 2000 ký tự.'
-        ];
-    }
-
-    /**
-     * Chuẩn bị dữ liệu trước khi validation
+     * Prepare the data for validation.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'include_actual_costs' => $this->include_actual_costs ?? true,
-            'include_actual_dates' => $this->include_actual_dates ?? true
+            'include_actual_costs' => $this->input('include_actual_costs', true),
+            'include_actual_dates' => $this->input('include_actual_dates', true)
         ]);
     }
 }

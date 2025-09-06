@@ -2,13 +2,13 @@
 
 namespace Src\CoreProject\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\BaseApiResource;
 
 /**
- * TaskAssignment API Resource
+ * Task Assignment API Resource
  * Transform TaskAssignment model data for API responses
  */
-class TaskAssignmentResource extends JsonResource
+class TaskAssignmentResource extends BaseApiResource
 {
     /**
      * Transform the resource into an array.
@@ -20,39 +20,22 @@ class TaskAssignmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'ulid' => $this->ulid,
+            'ulid' => $this->formatUlid($this->ulid),
             'task_id' => $this->task_id,
             'user_id' => $this->user_id,
-            'split_percentage' => (float) $this->split_percentage,
-            'role' => $this->role,
-            'role_label' => $this->getRoleLabel(),
-            'created_at' => $this->created_at->toISOString(),
-            'updated_at' => $this->updated_at->toISOString(),
+            'split_percentage' => $this->formatDecimal($this->split_percentage),
+            'assigned_at' => $this->formatDateTime($this->assigned_at),
+            'created_at' => $this->formatDateTime($this->created_at),
+            'updated_at' => $this->formatDateTime($this->updated_at),
             
             // Relationships
-            'task' => new TaskResource($this->whenLoaded('task')),
-            'user' => new UserResource($this->whenLoaded('user')),
+            'task' => $this->includeRelationship('task', TaskResource::class),
+            'user' => $this->includeRelationship('user', UserResource::class),
             
             // Computed properties
-            'is_primary' => $this->role === 'primary',
-            'estimated_hours' => $this->getEstimatedHours(),
-            'actual_hours' => $this->getActualHours(),
+            'estimated_hours' => $this->formatDecimal($this->getEstimatedHours()),
+            'actual_hours' => $this->formatDecimal($this->getActualHours()),
         ];
-    }
-    
-    /**
-     * Get role label
-     */
-    private function getRoleLabel(): string
-    {
-        $roles = [
-            'primary' => 'Chính',
-            'secondary' => 'Phụ',
-            'reviewer' => 'Kiểm duyệt',
-            'observer' => 'Theo dõi'
-        ];
-        
-        return $roles[$this->role] ?? $this->role;
     }
     
     /**
@@ -60,7 +43,7 @@ class TaskAssignmentResource extends JsonResource
      */
     private function getEstimatedHours(): float
     {
-        if (!$this->task) {
+        if (!$this->task || !$this->task->estimated_hours) {
             return 0.0;
         }
         
@@ -72,7 +55,7 @@ class TaskAssignmentResource extends JsonResource
      */
     private function getActualHours(): float
     {
-        if (!$this->task) {
+        if (!$this->task || !$this->task->actual_hours) {
             return 0.0;
         }
         

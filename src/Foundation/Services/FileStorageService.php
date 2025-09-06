@@ -4,55 +4,56 @@ namespace Src\Foundation\Services;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Exception;
 
 /**
- * Service quản lý file storage cho documents và uploads
- * Hỗ trợ multiple storage drivers (local, s3, google cloud)
+ * Service quản lý file storage với multiple drivers
+ * Hỗ trợ local, S3, Google Drive
  */
 class FileStorageService
 {
+    private string $defaultDisk;
+    private array $allowedMimes;
+    private int $maxFileSize;
+    
+    public function __construct()
+    {
+        $this->defaultDisk = config('filesystems.default', 'local');
+        $this->allowedMimes = config('app.allowed_file_types', [
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+            'jpg', 'jpeg', 'png', 'gif', 'svg',
+            'zip', 'rar', '7z'
+        ]);
+        $this->maxFileSize = config('app.max_file_size', 10485760); // 10MB
+    }
+    
     /**
-     * Upload file và trả về thông tin file
-     *
-     * @param UploadedFile $file File được upload
-     * @param string $disk Storage disk (documents, uploads, s3, google)
-     * @param string|null $directory Thư mục lưu trữ
-     * @param string|null $filename Tên file tùy chỉnh
-     * @return array Thông tin file đã upload
-     * @throws Exception
+     * Upload file với validation
      */
     public function uploadFile(
         UploadedFile $file,
-        string $disk = 'documents',
-        ?string $directory = null,
+        string $directory = 'uploads',
+        ?string $disk = null,
         ?string $filename = null
     ): array {
         try {
-            // Validate file trước khi upload
+            // Validate file
             $this->validateFile($file);
-
-            // Generate filename nếu không được cung cấp
-            if (!$filename) {
-                $filename = $this->generateUniqueFilename($file);
-            }
-
-            // Build đường dẫn đầy đủ
-            $path = $directory ? $directory . '/' . $filename : $filename;
-
-            // Lưu trữ file
-            $storedPath = Storage::disk($disk)->putFileAs(
-                $directory ?? '',
-                $file,
-                $filename
-            );
-
+            
+            $disk = $disk ?? $this->defaultDisk;
+            $filename = $filename ?? $this->generateUniqueFilename($file);
+            $path = $directory . '/' . $filename;
+            
+            // Store file
+            $storedPath = Storage::disk($disk)->putFileAs($directory, $file, $filename);
+            
             if (!$storedPath) {
-                throw new Exception('Failed to store file');
+                throw new \Exception('Failed to store file');
             }
-
-            return [
+            
+            // Get file info
+            $fileInfo = [
                 'original_name' => $file->getClientOriginalName(),
                 'filename' => $filename,
                 'path' => $storedPath,
@@ -61,187 +62,197 @@ class FileStorageService
                 'mime_type' => $file->getMimeType(),
                 'extension' => $file->getClientOriginalExtension(),
                 'url' => $this->getFileUrl($storedPath, $disk),
-                'hash' => hash_file('sha256', $file->getRealPath())
+                'uploaded_at' => now()->toISOString()
             ];
-        } catch (Exception $e) {
-            throw new Exception('File upload failed: ' . $e->getMessage());
+            
+            Log::info('File uploaded successfully', $fileInfo);
+            
+            return [
+                'success' => true,
+                'file' => $fileInfo
+            ];
+        } catch (\Exception $e) {
+            Log::error('File upload failed', [
+                'original_name' => $file->getClientOriginalName(),
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'error' => $e->getMessage()
+            ];
         }
     }
-
+    
     /**
-     * Xóa file khỏi storage
-     *
-     * @param string $path Đường dẫn file
-     * @param string $disk Storage disk
-     * @return bool
+     * Upload multiple files
      */
-    public function deleteFile(string $path, string $disk = 'documents'): bool
+    public function uploadMultipleFiles(
+        array $files,
+        string $directory = 'uploads',
+        ?string $disk = null
+    ): array {
+        $results = [];
+        $successCount = 0;
+        $failCount = 0;
+        
+        foreach ($files as $index => $file) {
+            if ($file instanceof UploadedFile) {
+                $result = $this->uploadFile($file, $directory, $disk);
+                $results[$index] = $result;
+                
+                if ($result['success']) {
+                    $successCount++;
+                } else {
+                    $failCount++;
+                }
+            } else {
+                $results[$index] = [
+                    'success' => false,
+                    'error' => 'Invalid file object'
+                ];
+                $failCount++;
+            }
+        }
+        
+        return [
+            'results' => $results,
+            'summary' => [
+                'total' => count($files),
+                'success' => $successCount,
+                'failed' => $failCount
+            ]
+        ];
+    }
+    
+    /**
+     * Xóa file
+     */
+    public function deleteFile(string $path, ?string $disk = null): bool
     {
         try {
-            return Storage::disk($disk)->delete($path);
-        } catch (Exception $e) {
+            $disk = $disk ?? $this->defaultDisk;
+            
+            if (Storage::disk($disk)->exists($path)) {
+                $deleted = Storage::disk($disk)->delete($path);
+                
+                if ($deleted) {
+                    Log::info('File deleted successfully', [
+                        'path' => $path,
+                        'disk' => $disk
+                    ]);
+                }
+                
+                return $deleted;
+            }
+            
+            return true; // File doesn't exist, consider as deleted
+        } catch (\Exception $e) {
+            Log::error('File deletion failed', [
+                'path' => $path,
+                'disk' => $disk,
+                'error' => $e->getMessage()
+            ]);
             return false;
         }
     }
-
+    
     /**
-     * Kiểm tra file có tồn tại không
-     *
-     * @param string $path Đường dẫn file
-     * @param string $disk Storage disk
-     * @return bool
+     * Lấy URL của file
      */
-    public function fileExists(string $path, string $disk = 'documents'): bool
-    {
-        return Storage::disk($disk)->exists($path);
-    }
-
-    /**
-     * Lấy URL của file để truy cập
-     *
-     * @param string $path Đường dẫn file
-     * @param string $disk Storage disk
-     * @return string|null
-     */
-    public function getFileUrl(string $path, string $disk = 'documents'): ?string
+    public function getFileUrl(string $path, ?string $disk = null): string
     {
         try {
-            // Đối với public files, trả về URL trực tiếp
-            if (in_array($disk, ['public', 'uploads'])) {
+            $disk = $disk ?? $this->defaultDisk;
+            
+            if ($disk === 'local') {
                 return Storage::disk($disk)->url($path);
             }
             
-            // Đối với private files, trả về download route
-            return route('files.download', [
+            // For cloud storage, generate temporary URL
+            return Storage::disk($disk)->temporaryUrl($path, now()->addHours(24));
+        } catch (\Exception $e) {
+            Log::error('Get file URL failed', [
+                'path' => $path,
                 'disk' => $disk,
-                'path' => base64_encode($path)
+                'error' => $e->getMessage()
             ]);
-        } catch (Exception $e) {
-            return null;
+            return '';
         }
     }
-
+    
     /**
-     * Download file từ storage
-     *
-     * @param string $path Đường dẫn file
-     * @param string $disk Storage disk
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse
-     * @throws Exception
+     * Kiểm tra file có tồn tại không
      */
-    public function downloadFile(string $path, string $disk = 'documents')
-    {
-        if (!$this->fileExists($path, $disk)) {
-            throw new Exception('File not found');
-        }
-
-        return Storage::disk($disk)->download($path);
-    }
-
-    /**
-     * Lấy thông tin chi tiết của file
-     *
-     * @param string $path Đường dẫn file
-     * @param string $disk Storage disk
-     * @return array|null
-     */
-    public function getFileInfo(string $path, string $disk = 'documents'): ?array
+    public function fileExists(string $path, ?string $disk = null): bool
     {
         try {
-            if (!$this->fileExists($path, $disk)) {
+            $disk = $disk ?? $this->defaultDisk;
+            return Storage::disk($disk)->exists($path);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Lấy thông tin file
+     */
+    public function getFileInfo(string $path, ?string $disk = null): ?array
+    {
+        try {
+            $disk = $disk ?? $this->defaultDisk;
+            
+            if (!Storage::disk($disk)->exists($path)) {
                 return null;
             }
-
-            $storage = Storage::disk($disk);
             
             return [
                 'path' => $path,
-                'disk' => $disk,
-                'size' => $storage->size($path),
-                'last_modified' => $storage->lastModified($path),
-                'mime_type' => $storage->mimeType($path),
+                'size' => Storage::disk($disk)->size($path),
+                'last_modified' => Storage::disk($disk)->lastModified($path),
+                'mime_type' => Storage::disk($disk)->mimeType($path),
                 'url' => $this->getFileUrl($path, $disk)
             ];
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
+            Log::error('Get file info failed', [
+                'path' => $path,
+                'error' => $e->getMessage()
+            ]);
             return null;
         }
     }
-
+    
     /**
-     * Validate file upload theo các quy tắc bảo mật
-     *
-     * @param UploadedFile $file
-     * @throws Exception
+     * Validate uploaded file
      */
     private function validateFile(UploadedFile $file): void
     {
-        // Kiểm tra kích thước file (tối đa 50MB)
-        $maxSize = 50 * 1024 * 1024; // 50MB
-        if ($file->getSize() > $maxSize) {
-            throw new Exception('File size exceeds maximum allowed size (50MB)');
+        // Check file size
+        if ($file->getSize() > $this->maxFileSize) {
+            throw new \Exception('File size exceeds maximum allowed size');
         }
-
-        // Kiểm tra extension được phép
-        $allowedExtensions = [
-            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-            'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg',
-            'txt', 'csv', 'zip', 'rar', '7z',
-            'mp4', 'avi', 'mov', 'wmv'
-        ];
         
+        // Check mime type
         $extension = strtolower($file->getClientOriginalExtension());
-        if (!in_array($extension, $allowedExtensions)) {
-            throw new Exception('File type not allowed: ' . $extension);
+        if (!in_array($extension, $this->allowedMimes, true)) {
+            throw new \Exception('File type not allowed');
         }
-
-        // Kiểm tra MIME type để tăng cường bảo mật
-        $allowedMimeTypes = [
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-powerpoint',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            'image/jpeg',
-            'image/png',
-            'image/gif',
-            'image/bmp',
-            'image/svg+xml',
-            'text/plain',
-            'text/csv',
-            'application/zip',
-            'application/x-rar-compressed',
-            'application/x-7z-compressed',
-            'video/mp4',
-            'video/x-msvideo',
-            'video/quicktime',
-            'video/x-ms-wmv'
-        ];
         
-        if (!in_array($file->getMimeType(), $allowedMimeTypes)) {
-            throw new Exception('MIME type not allowed: ' . $file->getMimeType());
+        // Check if file is valid
+        if (!$file->isValid()) {
+            throw new \Exception('Invalid file upload');
         }
     }
-
+    
     /**
-     * Tạo tên file unique để tránh trùng lặp
-     *
-     * @param UploadedFile $file
-     * @return string
+     * Tạo filename unique
      */
     private function generateUniqueFilename(UploadedFile $file): string
     {
         $extension = $file->getClientOriginalExtension();
         $basename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $basename = Str::slug($basename); // Remove special characters
         
-        // Sanitize filename để tránh các ký tự đặc biệt
-        $basename = Str::slug($basename);
-        
-        // Thêm timestamp và random string để đảm bảo unique
-        $timestamp = now()->format('YmdHis');
-        $random = Str::random(8);
-        
-        return $basename . '_' . $timestamp . '_' . $random . '.' . $extension;
+        return $basename . '_' . time() . '_' . Str::random(8) . '.' . $extension;
     }
 }

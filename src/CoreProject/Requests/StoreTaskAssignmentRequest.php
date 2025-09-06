@@ -2,12 +2,12 @@
 
 namespace Src\CoreProject\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
+use App\Http\Requests\BaseApiRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\TaskAssignment;
 use Src\CoreProject\Models\Task;
 
-class StoreTaskAssignmentRequest extends FormRequest
+class StoreTaskAssignmentRequest extends BaseApiRequest
 {
     /**
      * Xác định user có quyền thực hiện request này không
@@ -45,24 +45,6 @@ class StoreTaskAssignmentRequest extends FormRequest
                 'string',
                 'in:' . implode(',', array_keys(TaskAssignment::ROLES))
             ]
-        ];
-    }
-
-    /**
-     * Thông báo lỗi tùy chỉnh
-     */
-    public function messages(): array
-    {
-        return [
-            'task_id.required' => 'Task ID là bắt buộc.',
-            'task_id.exists' => 'Task không tồn tại.',
-            'user_id.required' => 'User ID là bắt buộc.',
-            'user_id.exists' => 'User không tồn tại.',
-            'split_percent.required' => 'Phần trăm phân chia là bắt buộc.',
-            'split_percent.min' => 'Phần trăm phân chia phải lớn hơn 0.',
-            'split_percent.max' => 'Phần trăm phân chia không được vượt quá 100%.',
-            'role.required' => 'Vai trò là bắt buộc.',
-            'role.in' => 'Vai trò không hợp lệ.'
         ];
     }
 

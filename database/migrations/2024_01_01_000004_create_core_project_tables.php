@@ -4,56 +4,51 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Migration tạo các bảng cho Core Project Structure
- * Bao gồm: projects, components, work_templates, tasks
- */
-class CreateCoreProjectTables extends Migration
+return new class extends Migration
 {
     /**
-     * Chạy migration
+     * Run the migrations.
      */
     public function up(): void
     {
-        // Bảng projects - Quản lý dự án
+        // Bảng projects - Dự án chính
         Schema::create('projects', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Sử dụng ULID làm khóa chính
+            $table->ulid('id')->primary();
             $table->foreignUlid('tenant_id')->constrained('tenants')->onDelete('cascade');
             $table->string('name', 255)->index();
             $table->text('description')->nullable();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->enum('status', ['planning', 'active', 'on_hold', 'completed', 'cancelled'])->default('planning')->index();
-            $table->decimal('progress', 5, 2)->default(0)->comment('Tiến độ % (0-100)');
-            $table->decimal('planned_cost', 15, 2)->default(0)->comment('Chi phí dự kiến');
-            $table->decimal('actual_cost', 15, 2)->default(0)->comment('Chi phí thực tế');
-            $table->json('tags')->nullable()->comment('Tags đa cấp');
+            $table->decimal('progress', 5, 2)->default(0)->comment('Tiến độ tổng thể (0-100)');
+            $table->decimal('planned_cost', 15, 2)->default(0);
+            $table->decimal('actual_cost', 15, 2)->default(0);
+            $table->json('tags')->nullable();
             $table->enum('visibility', ['internal', 'client'])->default('internal');
             $table->boolean('client_approved')->default(false);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->foreignUlid('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignUlid('updated_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
             
             // Indexes
             $table->index(['tenant_id', 'status']);
             $table->index(['start_date', 'end_date']);
+            $table->index(['visibility', 'client_approved']);
         });
 
-        // Bảng components - Quản lý thành phần dự án (có thể lồng nhau)
+        // Bảng components - Thành phần dự án
         Schema::create('components', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Sử dụng ULID làm khóa chính
+            $table->ulid('id')->primary();
             $table->foreignUlid('project_id')->constrained('projects')->onDelete('cascade');
-            $table->string('parent_component_id', 26)->nullable()->comment('Component cha (cho nested structure)');
+            $table->ulid('parent_component_id')->nullable()->comment('Component cha cho cấu trúc cây');
             $table->string('name', 255)->index();
             $table->text('description')->nullable();
             $table->decimal('progress_percent', 5, 2)->default(0)->comment('Tiến độ % (0-100)');
-            $table->decimal('planned_cost', 15, 2)->default(0)->comment('Chi phí dự kiến');
-            $table->decimal('actual_cost', 15, 2)->default(0)->comment('Chi phí thực tế');
-            $table->json('tags')->nullable()->comment('Tags đa cấp');
-            $table->enum('visibility', ['internal', 'client'])->default('internal');
-            $table->boolean('client_approved')->default(false);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->decimal('planned_cost', 15, 2)->default(0);
+            $table->decimal('actual_cost', 15, 2)->default(0);
+            $table->json('tags')->nullable();
+            $table->foreignUlid('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignUlid('updated_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
             
             // Indexes
@@ -61,23 +56,22 @@ class CreateCoreProjectTables extends Migration
             $table->index(['progress_percent']);
         });
 
-        // Thêm khóa ngoại self-referencing sau khi tạo bảng
+        // Thêm self-referencing foreign key sau khi bảng đã được tạo
         Schema::table('components', function (Blueprint $table) {
             $table->foreign('parent_component_id')->references('id')->on('components')->onDelete('cascade');
         });
 
-        // Bảng work_templates - Mẫu công việc
+        // Bảng work_templates - Template công việc
         Schema::create('work_templates', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Sử dụng ULID làm khóa chính
+            $table->ulid('id')->primary();
             $table->string('name', 255)->index();
-            $table->text('description')->nullable();
             $table->enum('category', ['design', 'construction', 'qc', 'inspection'])->index();
-            $table->json('template_data')->comment('Dữ liệu template (tasks, dependencies, etc.)');
-            $table->integer('version')->default(1)->comment('Phiên bản template');
+            $table->json('template_data')->comment('Dữ liệu template dạng JSON');
+            $table->integer('version')->default(1);
+            $table->text('description')->nullable();
             $table->boolean('is_active')->default(true)->index();
-            $table->json('tags')->nullable()->comment('Tags đa cấp');
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->foreignUlid('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignUlid('updated_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
             
             // Indexes
@@ -87,10 +81,10 @@ class CreateCoreProjectTables extends Migration
 
         // Bảng tasks - Quản lý công việc
         Schema::create('tasks', function (Blueprint $table) {
-            $table->ulid('id')->primary(); // Sử dụng ULID làm khóa chính
+            $table->ulid('id')->primary();
             $table->foreignUlid('project_id')->constrained('projects')->onDelete('cascade');
             $table->foreignUlid('component_id')->nullable()->constrained('components')->onDelete('set null')->comment('Component liên quan');
-            $table->unsignedBigInteger('phase_id')->nullable()->comment('Phase liên quan');
+            $table->foreignUlid('phase_id')->nullable()->comment('Phase liên quan nếu có bảng phases');
             $table->string('name', 255)->index();
             $table->text('description')->nullable();
             $table->date('start_date')->nullable();
@@ -106,8 +100,8 @@ class CreateCoreProjectTables extends Migration
             $table->json('tags')->nullable()->comment('Tags đa cấp');
             $table->enum('visibility', ['internal', 'client'])->default('internal');
             $table->boolean('client_approved')->default(false);
-            $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->foreignUlid('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignUlid('updated_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
             
             // Indexes
@@ -121,7 +115,7 @@ class CreateCoreProjectTables extends Migration
         Schema::create('task_assignments', function (Blueprint $table) {
             $table->id(); // Giữ nguyên ID tự tăng cho bảng pivot
             $table->foreignUlid('task_id')->constrained('tasks')->onDelete('cascade');
-            $table->unsignedBigInteger('user_id')->index();
+            $table->foreignUlid('user_id')->constrained('users')->onDelete('cascade');
             $table->decimal('split_percentage', 5, 2)->default(100)->comment('Phần trăm phân chia công việc');
             $table->enum('role', ['assignee', 'reviewer', 'observer'])->default('assignee');
             $table->timestamps();
@@ -145,4 +139,4 @@ class CreateCoreProjectTables extends Migration
         Schema::dropIfExists('components');
         Schema::dropIfExists('projects');
     }
-}
+};

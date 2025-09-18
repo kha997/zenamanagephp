@@ -101,10 +101,10 @@ class TaskService
                 'project_id' => $data['project_id'],
                 'component_id' => $data['component_id'] ?? null,
                 'phase_id' => $data['phase_id'] ?? null,
-                'name' => $data['name'],
+                'name' => $data['title'] ?? $data['name'] ?? 'Untitled Task',
                 'description' => $data['description'] ?? null,
                 'start_date' => $data['start_date'] ?? null,
-                'end_date' => $data['end_date'] ?? null,
+                'end_date' => $data['due_date'] ?? $data['end_date'] ?? null,
                 'status' => $data['status'] ?? 'pending',
                 'priority' => $data['priority'] ?? 'medium',
                 'dependencies' => $data['dependencies'] ?? null,
@@ -116,6 +116,7 @@ class TaskService
                 'tags' => $data['tags'] ?? null,
                 'visibility' => $data['visibility'] ?? 'internal',
                 'client_approved' => $data['client_approved'] ?? false,
+                'assignee_id' => $data['assignee_id'] ?? null,
             ]);
 
             // Create assignments if provided

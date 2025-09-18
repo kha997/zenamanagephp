@@ -27,16 +27,20 @@ class TaskFormRequest extends FormRequest
     {
         return [
             'project_id' => ['required', 'exists:projects,id'],
-            'component_id' => ['nullable', 'exists:components,id'],
-            'phase_id' => ['nullable', 'integer'],
-            'name' => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'priority' => ['required', Rule::in(['low', 'medium', 'high', 'urgent'])],
+            'status' => ['required', Rule::in(['pending', 'in_progress', 'completed', 'cancelled'])],
             'start_date' => ['required', 'date'],
-            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
-            'status' => ['sometimes', Rule::in(['pending', 'in_progress', 'completed', 'cancelled'])],
-            'dependencies' => ['sometimes', 'array'],
-            'dependencies.*' => ['integer', 'exists:tasks,id'],
-            'conditional_tag' => ['nullable', 'string', 'max:100'],
-            'is_hidden' => ['sometimes', 'boolean'],
+            'due_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'estimated_hours' => ['nullable', 'numeric', 'min:0'],
+            'assignee_id' => ['nullable', 'exists:users,id'],
+            'watchers' => ['sometimes', 'array'],
+            'watchers.*' => ['integer', 'exists:users,id'],
+            'notifications' => ['sometimes', 'boolean'],
+            'time_tracking' => ['sometimes', 'boolean'],
+            'subtasks' => ['sometimes', 'boolean'],
+            'tags' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -46,17 +50,27 @@ class TaskFormRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'project_id.required' => 'ID dự án là bắt buộc.',
-            'project_id.exists' => 'Dự án không tồn tại.',
-            'component_id.exists' => 'Component không tồn tại.',
-            'name.required' => 'Tên task là bắt buộc.',
-            'name.max' => 'Tên task không được vượt quá 255 ký tự.',
-            'start_date.required' => 'Ngày bắt đầu là bắt buộc.',
-            'end_date.required' => 'Ngày kết thúc là bắt buộc.',
-            'end_date.after_or_equal' => 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
-            'status.in' => 'Trạng thái không hợp lệ.',
-            'dependencies.array' => 'Dependencies phải là mảng.',
-            'dependencies.*.exists' => 'Task dependency không tồn tại.',
+            'project_id.required' => 'Project is required.',
+            'project_id.exists' => 'Project does not exist.',
+            'title.required' => 'Task title is required.',
+            'title.max' => 'Task title cannot exceed 255 characters.',
+            'description.max' => 'Description cannot exceed 1000 characters.',
+            'priority.required' => 'Priority is required.',
+            'priority.in' => 'Invalid priority level.',
+            'status.required' => 'Status is required.',
+            'status.in' => 'Invalid status.',
+            'start_date.required' => 'Start date is required.',
+            'start_date.date' => 'Start date must be a valid date.',
+            'due_date.required' => 'Due date is required.',
+            'due_date.date' => 'Due date must be a valid date.',
+            'due_date.after_or_equal' => 'Due date must be after or equal to start date.',
+            'estimated_hours.numeric' => 'Estimated hours must be a number.',
+            'estimated_hours.min' => 'Estimated hours cannot be negative.',
+            'assignee_id.exists' => 'Assignee does not exist.',
+            'watchers.array' => 'Watchers must be an array.',
+            'watchers.*.integer' => 'Watcher ID must be an integer.',
+            'watchers.*.exists' => 'Watcher does not exist.',
+            'tags.max' => 'Tags cannot exceed 500 characters.',
         ];
     }
 

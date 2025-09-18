@@ -111,10 +111,12 @@ $currentRoute = 'tasks';
                             required
                         >
                             <option value="">Select Project</option>
-                            <option value="1">Villa Project Alpha</option>
-                            <option value="2">Office Building Beta</option>
-                            <option value="3">Shopping Mall Development</option>
-                            <option value="4">Residential Complex</option>
+                            @php
+                                $projects = \Src\CoreProject\Models\Project::all();
+                            @endphp
+                            @foreach($projects as $project)
+                                <option value="{{ $project->id }}">{{ $project->name }}</option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -129,11 +131,12 @@ $currentRoute = 'tasks';
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         >
                             <option value="">Select Assignee</option>
-                            <option value="1">Sarah Johnson</option>
-                            <option value="2">Mike Wilson</option>
-                            <option value="3">Emily Davis</option>
-                            <option value="4">Alex Lee</option>
-                            <option value="5">Emma Brown</option>
+                            @php
+                                $users = \App\Models\User::all();
+                            @endphp
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
                         </select>
                     </div>
                 </div>
@@ -175,6 +178,19 @@ $currentRoute = 'tasks';
                             <option value="high">High</option>
                             <option value="urgent">Urgent</option>
                         </select>
+                    </div>
+
+                    <!-- Start Date -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-calendar text-gray-400 mr-1"></i>
+                            Start Date
+                        </label>
+                        <input 
+                            type="date" 
+                            x-model="formData.start_date"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        >
                     </div>
 
                     <!-- Due Date -->
@@ -317,17 +333,18 @@ function editTask() {
         isSubmitting: false,
         newTag: '',
         formData: {
-            id: {{ $task->id ?? '1' }},
-            title: '{{ $task->title ?? "Design UI Mockups" }}',
-            description: '{{ $task->description ?? "Create detailed UI mockups for the new dashboard interface including wireframes and user flow diagrams." }}',
-            project_id: '{{ $task->project_id ?? "1" }}',
-            assignee_id: '{{ $task->assignee_id ?? "2" }}',
-            status: '{{ $task->status ?? "in_progress" }}',
-            priority: '{{ $task->priority ?? "high" }}',
-            due_date: '{{ $task->due_date ?? "2025-09-20" }}',
-            progress: {{ $task->progress ?? '65' }},
-            estimated_hours: {{ $task->estimated_hours ?? '40' }},
-            tags: {{ json_encode($task->tags ?? ['design', 'ui', 'mockups']) }}
+            id: '{{ $task->id ?? "" }}',
+            title: '{{ $task->name ?? "" }}',
+            description: '{{ $task->description ?? "" }}',
+            project_id: '{{ $task->project_id ?? "" }}',
+            assignee_id: '{{ $task->assignee_id ?? "" }}',
+            status: '{{ $task->status ?? "pending" }}',
+            priority: '{{ $task->priority ?? "medium" }}',
+            start_date: '{{ $task->start_date ?? "" }}',
+            due_date: '{{ $task->end_date ?? "" }}',
+            progress: {{ $task->progress_percent ?? '0' }},
+            estimated_hours: {{ $task->estimated_hours ?? '0' }},
+            tags: {{ json_encode(explode(',', $task->tags ?? '')) }}
         },
 
         addTag() {

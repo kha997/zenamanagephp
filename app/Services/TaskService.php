@@ -185,7 +185,7 @@ class TaskService
                 'tags' => $data['tags'] ?? $task->tags,
                 'visibility' => $data['visibility'] ?? $task->visibility,
                 'client_approved' => $data['client_approved'] ?? $task->client_approved,
-                'assignee_id' => $data['assignee_id'] ?? $task->assignee_id,
+                'assignee_id' => !empty($data['assignee_id']) ? $data['assignee_id'] : null,
             ]);
 
             // Update assignments if provided

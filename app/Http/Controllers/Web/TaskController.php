@@ -109,7 +109,7 @@ class TaskController extends Controller
             $task = $this->taskService->createTask($taskData);
             
             return redirect()
-                ->route('tasks.show', $task->id)
+                ->route('tasks.index')
                 ->with('success', 'Task đã được tạo thành công!');
         } catch (\Exception $e) {
             return redirect()

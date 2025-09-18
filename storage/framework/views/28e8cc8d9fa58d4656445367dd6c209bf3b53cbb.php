@@ -1285,55 +1285,198 @@ function tasksManagement() {
         },
         
         // Bulk Operations
-        bulkExport() {
-            const selectedTasksData = this.tasks.filter(t => this.selectedTasks.includes(t.id));
-            console.log('Exporting tasks:', selectedTasksData);
-            alert(`Exporting ${selectedTasksData.length} tasks...`);
+        async bulkExport() {
+            if (this.selectedTasks.length === 0) {
+                alert('Please select tasks to export');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/tasks/bulk/export', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        task_ids: this.selectedTasks,
+                        format: 'csv'
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Export completed! Download: ${result.data.filename}`);
+                    // Auto download
+                    window.open(result.data.download_url, '_blank');
+                    this.clearSelection();
+                } else {
+                    alert('Export failed: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Export failed: ' + error.message);
+            }
         },
         
-        bulkStatusChange() {
+        async bulkStatusChange() {
+            if (this.selectedTasks.length === 0) {
+                alert('Please select tasks to update status');
+                return;
+            }
+
             const newStatus = prompt('Enter new status (pending, in_progress, completed, cancelled):');
             if (newStatus && ['pending', 'in_progress', 'completed', 'cancelled'].includes(newStatus)) {
-                this.tasks.forEach(task => {
-                    if (this.selectedTasks.includes(task.id)) {
-                        task.status = newStatus;
+                try {
+                    const response = await fetch('/api/tasks/bulk/status-change', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            task_ids: this.selectedTasks,
+                            status: newStatus
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Update local data
+                        this.tasks.forEach(task => {
+                            if (this.selectedTasks.includes(task.id)) {
+                                task.status = newStatus;
+                            }
+                        });
+                        this.clearSelection();
+                        alert(result.message);
+                    } else {
+                        alert('Status update failed: ' + result.message);
                     }
-                });
-                this.clearSelection();
-                alert('Tasks status updated successfully!');
+                } catch (error) {
+                    console.error('Status update error:', error);
+                    alert('Status update failed: ' + error.message);
+                }
             }
         },
         
-        bulkAssign() {
-            const assignee = prompt('Enter assignee name:');
-            if (assignee) {
-                this.tasks.forEach(task => {
-                    if (this.selectedTasks.includes(task.id)) {
-                        task.assignee = assignee;
+        async bulkAssign() {
+            if (this.selectedTasks.length === 0) {
+                alert('Please select tasks to assign');
+                return;
+            }
+
+            const assigneeId = prompt('Enter assignee ID (user ID):');
+            if (assigneeId && !isNaN(assigneeId)) {
+                try {
+                    const response = await fetch('/api/tasks/bulk/assign', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            task_ids: this.selectedTasks,
+                            assignee_id: parseInt(assigneeId)
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Update local data
+                        this.tasks.forEach(task => {
+                            if (this.selectedTasks.includes(task.id)) {
+                                task.assignee = `User ${assigneeId}`;
+                            }
+                        });
+                        this.clearSelection();
+                        alert(result.message);
+                    } else {
+                        alert('Assignment failed: ' + result.message);
                     }
-                });
-                this.clearSelection();
-                alert('Tasks assigned successfully!');
+                } catch (error) {
+                    console.error('Assignment error:', error);
+                    alert('Assignment failed: ' + error.message);
+                }
             }
         },
         
-        bulkArchive() {
+        async bulkArchive() {
+            if (this.selectedTasks.length === 0) {
+                alert('Please select tasks to archive');
+                return;
+            }
+
             if (confirm(`Archive ${this.selectedTasks.length} tasks?`)) {
-                this.tasks.forEach(task => {
-                    if (this.selectedTasks.includes(task.id)) {
-                        task.status = 'archived';
+                try {
+                    const response = await fetch('/api/tasks/bulk/archive', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            task_ids: this.selectedTasks
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Update local data
+                        this.tasks.forEach(task => {
+                            if (this.selectedTasks.includes(task.id)) {
+                                task.status = 'archived';
+                            }
+                        });
+                        this.clearSelection();
+                        alert(result.message);
+                    } else {
+                        alert('Archive failed: ' + result.message);
                     }
-                });
-                this.clearSelection();
-                alert('Tasks archived successfully!');
+                } catch (error) {
+                    console.error('Archive error:', error);
+                    alert('Archive failed: ' + error.message);
+                }
             }
         },
         
-        bulkDelete() {
+        async bulkDelete() {
+            if (this.selectedTasks.length === 0) {
+                alert('Please select tasks to delete');
+                return;
+            }
+
             if (confirm(`Delete ${this.selectedTasks.length} tasks? This action cannot be undone.`)) {
-                this.tasks = this.tasks.filter(t => !this.selectedTasks.includes(t.id));
-                this.clearSelection();
-                alert('Tasks deleted successfully!');
+                try {
+                    const response = await fetch('/api/tasks/bulk/delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            task_ids: this.selectedTasks
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Remove from local data
+                        this.tasks = this.tasks.filter(t => !this.selectedTasks.includes(t.id));
+                        this.clearSelection();
+                        alert(result.message);
+                    } else {
+                        alert('Delete failed: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Delete error:', error);
+                    alert('Delete failed: ' + error.message);
+                }
             }
         },
         
@@ -1366,9 +1509,23 @@ function tasksManagement() {
             alert(`Task duplicated: ${newTask.name}`);
         },
         
-        showTaskDocuments(task) {
-            console.log('Managing documents for task:', task);
-            this.showDocumentsModal(task);
+        async showTaskDocuments(task) {
+            try {
+                const response = await fetch(`/api/documents/task/${task.id}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('Task documents:', result.data.documents);
+                    this.selectedTask = task;
+                    this.selectedTask.documents = result.data.documents;
+                    this.showDocumentsModal(task);
+                } else {
+                    alert('Failed to load documents: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Documents error:', error);
+                alert('Failed to load documents: ' + error.message);
+            }
         },
         
         timeTrack(task) {
@@ -1379,9 +1536,23 @@ function tasksManagement() {
             }
         },
         
-        showTaskHistory(task) {
-            console.log('Viewing history for task:', task);
-            this.showHistoryModal(task);
+        async showTaskHistory(task) {
+            try {
+                const response = await fetch(`/tasks/${task.id}/history`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    console.log('Task history:', result.data.history);
+                    this.selectedTask = task;
+                    this.selectedTask.history = result.data.history;
+                    this.showHistoryModal(task);
+                } else {
+                    alert('Failed to load history: ' + result.message);
+                }
+            } catch (error) {
+                console.error('History error:', error);
+                alert('Failed to load history: ' + error.message);
+            }
         },
         
         archiveTask(task) {
@@ -1406,18 +1577,41 @@ function tasksManagement() {
             }
         },
         
-        duplicateTask(task) {
+        async duplicateTask(task) {
             if (confirm(`Duplicate task: ${task.name}?`)) {
-                const newTask = {
-                    ...task,
-                    id: Date.now(),
-                    name: task.name + ' (Copy)',
-                    status: 'pending',
-                    progress: 0,
-                    created_at: new Date().toISOString().split('T')[0]
-                };
-                this.tasks.push(newTask);
-                this.showNotification(`Task duplicated: ${newTask.name}`, 'success');
+                try {
+                    const response = await fetch('/api/tasks/bulk/duplicate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            task_id: task.id
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        const newTask = {
+                            ...task,
+                            id: result.data.new_task_id,
+                            name: result.data.new_task_name,
+                            status: 'pending',
+                            progress_percent: 0,
+                            actual_hours: 0,
+                            created_at: new Date().toISOString().split('T')[0]
+                        };
+                        this.tasks.push(newTask);
+                        alert(result.message);
+                    } else {
+                        alert('Duplicate failed: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Duplicate error:', error);
+                    alert('Duplicate failed: ' + error.message);
+                }
             }
         },
         
@@ -1428,13 +1622,51 @@ function tasksManagement() {
             }
         },
         
-        exportTasks() {
-            console.log('Exporting all tasks');
-            alert('Exporting all tasks...');
+        async exportTasks() {
+            try {
+                const response = await fetch('/api/tasks/bulk/export', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        task_ids: this.tasks.map(t => t.id),
+                        format: 'csv'
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Export completed! Download: ${result.data.filename}`);
+                    // Auto download
+                    window.open(result.data.download_url, '_blank');
+                } else {
+                    alert('Export failed: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Export failed: ' + error.message);
+            }
         },
         
-        viewAnalytics() {
-            window.location.href = '/dashboard/pm';
+        async viewAnalytics() {
+            try {
+                const response = await fetch('/api/analytics/tasks');
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Show analytics in a modal or redirect to analytics page
+                    console.log('Analytics data:', result.data);
+                    alert(`Analytics loaded! Total tasks: ${result.data.summary.total_tasks}, Completion rate: ${result.data.summary.completion_rate}%`);
+                } else {
+                    alert('Failed to load analytics: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Analytics error:', error);
+                alert('Failed to load analytics: ' + error.message);
+            }
         },
         
         // Modal Methods

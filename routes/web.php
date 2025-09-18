@@ -343,9 +343,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/security', function () {
         return view('admin.security');
     })->name('security');
-    Route::get('/alerts', function () {
-        return view('admin.alerts');
-    })->name('alerts');
+    Route::get('/alerts', [App\Http\Controllers\Web\AlertController::class, 'index'])->name('alerts');
     Route::get('/activities', function () {
         return view('admin.activities');
     })->name('activities');
@@ -493,4 +491,13 @@ Route::prefix('api/documents')->name('documents.')->group(function () {
     Route::delete('/delete', [App\Http\Controllers\Web\DocumentManagementController::class, 'deleteDocument'])->name('delete');
     Route::get('/download/{filename}', [App\Http\Controllers\Web\DocumentManagementController::class, 'downloadDocument'])->name('download');
     Route::get('/categories', [App\Http\Controllers\Web\DocumentManagementController::class, 'getDocumentCategories'])->name('categories');
+});
+
+// Alert Management Routes
+Route::prefix('api/alerts')->name('alerts.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Web\AlertController::class, 'getAlerts'])->name('index');
+    Route::post('/create', [App\Http\Controllers\Web\AlertController::class, 'createAlert'])->name('create');
+    Route::put('/status', [App\Http\Controllers\Web\AlertController::class, 'updateStatus'])->name('update-status');
+    Route::delete('/delete', [App\Http\Controllers\Web\AlertController::class, 'deleteAlert'])->name('delete');
+    Route::get('/statistics', [App\Http\Controllers\Web\AlertController::class, 'getStatistics'])->name('statistics');
 });

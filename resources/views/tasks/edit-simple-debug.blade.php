@@ -111,6 +111,12 @@ $currentRoute = 'tasks';
                 >
                     Test Network
                 </button>
+                <button 
+                    @click="updateTask()"
+                    class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                >
+                    Test Update
+                </button>
             </div>
         </div>
 

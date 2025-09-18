@@ -171,7 +171,7 @@ class TaskController extends Controller
             }
             
             return redirect()
-                ->route('tasks.show', $task->id)
+                ->route('tasks.index')
                 ->with('success', 'Task đã được cập nhật thành công!');
         } catch (\Exception $e) {
             return redirect()

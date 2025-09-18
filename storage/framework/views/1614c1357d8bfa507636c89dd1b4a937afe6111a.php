@@ -340,11 +340,11 @@ function editTask() {
             assignee_id: '<?php echo e($task->assignee_id ?? ""); ?>',
             status: '<?php echo e($task->status ?? "pending"); ?>',
             priority: '<?php echo e($task->priority ?? "medium"); ?>',
-            start_date: '<?php echo e($task->start_date ?? ""); ?>',
-            due_date: '<?php echo e($task->end_date ?? ""); ?>',
+            start_date: '<?php echo e($task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : ""); ?>',
+            due_date: '<?php echo e($task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : ""); ?>',
             progress: <?php echo e($task->progress_percent ?? '0'); ?>,
             estimated_hours: <?php echo e($task->estimated_hours ?? '0'); ?>,
-            tags: <?php echo e(json_encode(explode(',', $task->tags ?? ''))); ?>
+            tags: <?php echo e(json_encode(array_filter(explode(',', $task->tags ?? '')))); ?>
 
         },
 

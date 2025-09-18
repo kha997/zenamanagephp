@@ -160,12 +160,13 @@ class TaskService
             }
 
             $task->update([
+                'project_id' => $data['project_id'] ?? $task->project_id,
                 'component_id' => $data['component_id'] ?? $task->component_id,
                 'phase_id' => $data['phase_id'] ?? $task->phase_id,
-                'name' => $data['name'] ?? $task->name,
+                'name' => $data['title'] ?? $data['name'] ?? $task->name,
                 'description' => $data['description'] ?? $task->description,
                 'start_date' => $data['start_date'] ?? $task->start_date,
-                'end_date' => $data['end_date'] ?? $task->end_date,
+                'end_date' => $data['due_date'] ?? $data['end_date'] ?? $task->end_date,
                 'status' => $data['status'] ?? $task->status,
                 'priority' => $data['priority'] ?? $task->priority,
                 'dependencies' => $data['dependencies'] ?? $task->dependencies,
@@ -177,6 +178,7 @@ class TaskService
                 'tags' => $data['tags'] ?? $task->tags,
                 'visibility' => $data['visibility'] ?? $task->visibility,
                 'client_approved' => $data['client_approved'] ?? $task->client_approved,
+                'assignee_id' => $data['assignee_id'] ?? $task->assignee_id,
             ]);
 
             // Update assignments if provided

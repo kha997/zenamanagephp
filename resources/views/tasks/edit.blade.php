@@ -362,18 +362,44 @@ function editTask() {
             this.isSubmitting = true;
             
             try {
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('_method', 'PUT');
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                formData.append('title', this.formData.title);
+                formData.append('description', this.formData.description);
+                formData.append('project_id', this.formData.project_id);
+                formData.append('assignee_id', this.formData.assignee_id);
+                formData.append('status', this.formData.status);
+                formData.append('priority', this.formData.priority);
+                formData.append('start_date', this.formData.start_date);
+                formData.append('due_date', this.formData.due_date);
+                formData.append('progress_percent', this.formData.progress);
+                formData.append('estimated_hours', this.formData.estimated_hours);
+                formData.append('tags', this.formData.tags.join(','));
                 
-                // Show success message
-                this.showNotification('Task updated successfully!', 'success');
+                // Submit to server
+                const response = await fetch(`/tasks/${this.formData.id}`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
                 
-                // Redirect to tasks list
-                setTimeout(() => {
-                    window.location.href = '/tasks';
-                }, 1500);
+                if (response.ok) {
+                    this.showNotification('Task updated successfully!', 'success');
+                    
+                    // Redirect to tasks list
+                    setTimeout(() => {
+                        window.location.href = '/tasks';
+                    }, 1500);
+                } else {
+                    throw new Error('Failed to update task');
+                }
                 
             } catch (error) {
+                console.error('Update error:', error);
                 this.showNotification('Failed to update task. Please try again.', 'error');
             } finally {
                 this.isSubmitting = false;

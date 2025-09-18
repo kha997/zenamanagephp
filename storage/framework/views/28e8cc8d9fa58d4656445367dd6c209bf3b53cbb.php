@@ -483,10 +483,10 @@ $currentRoute = 'tasks';
                             </div>
                             
                             <!-- Tags -->
-                            <div class="flex items-center space-x-2 mb-4" x-show="task.tags && task.tags.length > 0">
+                            <div class="flex items-center space-x-2 mb-4" x-show="task.tags && Array.isArray(task.tags) && task.tags.length > 0">
                                 <span class="text-sm text-gray-600">Tags:</span>
                                 <div class="flex space-x-1">
-                                    <template x-for="tag in task.tags" :key="tag">
+                                    <template x-for="(tag, index) in task.tags" :key="`tag-${index}-${tag}`">
                                         <span class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded" x-text="tag"></span>
                                     </template>
                                 </div>
@@ -1661,11 +1661,24 @@ function tasksManagement() {
                 const result = await response.json();
                 
                 if (result.success) {
-                    this.tasks = result.data.tasks;
+                    // Process tasks to ensure tags are arrays
+                    this.tasks = result.data.tasks.map(task => ({
+                        ...task,
+                        tags: this.processTags(task.tags)
+                    }));
                 }
             } catch (error) {
                 console.error('Failed to load tasks:', error);
             }
+        },
+
+        processTags(tags) {
+            if (!tags) return [];
+            if (Array.isArray(tags)) return tags;
+            if (typeof tags === 'string') {
+                return tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+            }
+            return [];
         }
     }
 }

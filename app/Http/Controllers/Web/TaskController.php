@@ -161,19 +161,33 @@ class TaskController extends Controller
     public function update(TaskFormRequest $request, string $taskId): RedirectResponse
     {
         try {
+            // Debug: Log request data
+            \Log::info('Task Update Request', [
+                'task_id' => $taskId,
+                'request_data' => $request->all(),
+                'validated_data' => $request->validated()
+            ]);
+            
             $taskData = $request->validated();
             $task = $this->taskService->updateTask($taskId, $taskData);
             
             if (!$task) {
+                \Log::error('Task not found for update', ['task_id' => $taskId]);
                 return redirect()
                     ->back()
                     ->withErrors(['error' => 'Task không tồn tại.']);
             }
             
+            \Log::info('Task updated successfully', ['task_id' => $taskId]);
             return redirect()
                 ->route('tasks.index')
                 ->with('success', 'Task đã được cập nhật thành công!');
         } catch (\Exception $e) {
+            \Log::error('Task update failed', [
+                'task_id' => $taskId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return redirect()
                 ->back()
                 ->withInput()

@@ -152,10 +152,17 @@ class TaskService
     public function updateTask(string $taskId, array $data): ?Task
     {
         try {
+            // Debug: Log update data
+            \Log::info('TaskService updateTask called', [
+                'task_id' => $taskId,
+                'data' => $data
+            ]);
+            
             DB::beginTransaction();
 
             $task = Task::find($taskId);
             if (!$task) {
+                \Log::error('Task not found in TaskService', ['task_id' => $taskId]);
                 return null;
             }
 

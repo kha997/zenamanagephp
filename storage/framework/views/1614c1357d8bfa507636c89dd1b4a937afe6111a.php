@@ -411,7 +411,9 @@ function editTask() {
                 formData.append('name', this.formData.name);
                 formData.append('description', this.formData.description);
                 formData.append('project_id', this.formData.project_id);
-                formData.append('assignee_id', this.formData.assignee_id || '');
+                // Handle assignee_id properly - send empty string if not selected
+                const assigneeId = this.formData.assignee_id && this.formData.assignee_id !== '' ? this.formData.assignee_id : '';
+                formData.append('assignee_id', assigneeId);
                 formData.append('status', this.formData.status);
                 formData.append('priority', this.formData.priority);
                 formData.append('start_date', this.formData.start_date);
@@ -419,6 +421,12 @@ function editTask() {
                 formData.append('progress_percent', this.formData.progress_percent);
                 formData.append('estimated_hours', this.formData.estimated_hours);
                 formData.append('tags', this.formData.tags.join(','));
+                
+                // Debug: Log form data being sent
+                console.log('Form data being sent:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key + ':', value);
+                }
                 
                 // Submit to server
                 const response = await fetch(`/tasks/${this.formData.id}`, {

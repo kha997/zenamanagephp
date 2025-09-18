@@ -338,7 +338,16 @@ $currentRoute = 'tasks';
                         View Task
                     </a>
                     <button 
-                        type="submit" 
+                        type="button" 
+                        @click="testUpdate()"
+                        class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center mr-2"
+                    >
+                        <i class="fas fa-bug mr-2"></i>
+                        Test Update
+                    </button>
+                    <button 
+                        type="button" 
+                        @click="updateTask()"
                         class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                         :disabled="isSubmitting"
                     >
@@ -388,6 +397,31 @@ function editTask() {
             }
         },
 
+        async testUpdate() {
+            console.log('Testing update...');
+            try {
+                const formData = new FormData();
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                formData.append('name', 'Test Task');
+                formData.append('description', 'Test Description');
+                
+                const response = await fetch('/test-task-update', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                
+                const result = await response.json();
+                console.log('Test response:', result);
+                alert('Test successful! Check console for details.');
+            } catch (error) {
+                console.error('Test failed:', error);
+                alert('Test failed: ' + error.message);
+            }
+        },
+
         addTag() {
             if (this.newTag.trim() && !this.formData.tags.includes(this.newTag.trim())) {
                 this.formData.tags.push(this.newTag.trim());
@@ -403,6 +437,9 @@ function editTask() {
             this.isSubmitting = true;
             
             try {
+                console.log('Starting task update...');
+                console.log('Task ID:', this.formData.id);
+                console.log('Form data:', this.formData);
                 // Prepare form data
                 const formData = new FormData();
                 formData.append('_method', 'PUT');
@@ -428,6 +465,7 @@ function editTask() {
                 }
                 
                 // Submit to server
+                console.log('Submitting to:', `/tasks/${this.formData.id}`);
                 const response = await fetch(`/tasks/${this.formData.id}`, {
                     method: 'POST',
                     body: formData,
@@ -435,6 +473,9 @@ function editTask() {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     }
                 });
+                
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
                 
                 if (response.ok) {
                     this.showNotification('Task updated successfully!', 'success');

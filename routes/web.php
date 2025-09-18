@@ -43,6 +43,20 @@ Route::get('/test', function () {
     return 'Test route working!';
 });
 
+// Test route for task update debugging
+Route::post('/test-task-update', function (Request $request) {
+    \Log::info('Test task update route hit', [
+        'request_data' => $request->all(),
+        'method' => $request->method(),
+        'url' => $request->url()
+    ]);
+    return response()->json([
+        'success' => true,
+        'message' => 'Test route working',
+        'data' => $request->all()
+    ]);
+});
+
 // Authentication Routes
 Route::get('/login', [App\Http\Controllers\AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [App\Http\Controllers\AuthController::class, 'login']);

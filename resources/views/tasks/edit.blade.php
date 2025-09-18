@@ -78,7 +78,7 @@ $currentRoute = 'tasks';
                         </label>
                         <input 
                             type="text" 
-                            x-model="formData.title"
+                            x-model="formData.name"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             placeholder="Enter task title"
                             required
@@ -201,7 +201,7 @@ $currentRoute = 'tasks';
                         </label>
                         <input 
                             type="date" 
-                            x-model="formData.due_date"
+                            x-model="formData.end_date"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         >
                     </div>
@@ -215,14 +215,14 @@ $currentRoute = 'tasks';
                         <div class="space-y-2">
                             <input 
                                 type="range" 
-                                x-model="formData.progress"
+                                x-model="formData.progress_percent"
                                 min="0" 
                                 max="100" 
                                 class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                             >
                             <div class="flex justify-between text-sm text-gray-600">
                                 <span>0%</span>
-                                <span class="font-medium" x-text="formData.progress + '%'"></span>
+                                <span class="font-medium" x-text="formData.progress_percent + '%'"></span>
                                 <span>100%</span>
                             </div>
                         </div>
@@ -334,15 +334,15 @@ function editTask() {
         newTag: '',
         formData: {
             id: '{{ $task->id ?? "" }}',
-            title: '{{ $task->name ?? "" }}',
+            name: '{{ $task->name ?? "" }}',
             description: '{{ $task->description ?? "" }}',
             project_id: '{{ $task->project_id ?? "" }}',
             assignee_id: '{{ $task->assignee_id ?? "" }}',
             status: '{{ $task->status ?? "pending" }}',
             priority: '{{ $task->priority ?? "medium" }}',
             start_date: '{{ $task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : "" }}',
-            due_date: '{{ $task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : "" }}',
-            progress: {{ $task->progress_percent ?? '0' }},
+            end_date: '{{ $task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : "" }}',
+            progress_percent: {{ $task->progress_percent ?? '0' }},
             estimated_hours: {{ $task->estimated_hours ?? '0' }},
             tags: {{ json_encode(array_filter(explode(',', $task->tags ?? ''))) }}
         },
@@ -366,15 +366,15 @@ function editTask() {
                 const formData = new FormData();
                 formData.append('_method', 'PUT');
                 formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-                formData.append('title', this.formData.title);
+                formData.append('name', this.formData.name);
                 formData.append('description', this.formData.description);
                 formData.append('project_id', this.formData.project_id);
                 formData.append('assignee_id', this.formData.assignee_id);
                 formData.append('status', this.formData.status);
                 formData.append('priority', this.formData.priority);
                 formData.append('start_date', this.formData.start_date);
-                formData.append('due_date', this.formData.due_date);
-                formData.append('progress_percent', this.formData.progress);
+                formData.append('end_date', this.formData.end_date);
+                formData.append('progress_percent', this.formData.progress_percent);
                 formData.append('estimated_hours', this.formData.estimated_hours);
                 formData.append('tags', this.formData.tags.join(','));
                 

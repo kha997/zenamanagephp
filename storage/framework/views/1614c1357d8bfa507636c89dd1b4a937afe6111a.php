@@ -396,6 +396,9 @@ function editTask() {
             console.log('Task data loaded:', this.formData);
             console.log('Task ID:', '<?php echo e($task->id ?? "NO_ID"); ?>');
             console.log('Task Name:', '<?php echo e($task->name ?? "NO_NAME"); ?>');
+            console.log('Task Status:', '<?php echo e($task->status ?? "NO_STATUS"); ?>');
+            console.log('Task Priority:', '<?php echo e($task->priority ?? "NO_PRIORITY"); ?>');
+            console.log('Task Assignee ID:', '<?php echo e($task->assignee_id ?? "NO_ASSIGNEE"); ?>');
             
             // Test Alpine.js functionality
             this.testAlpine = 'Alpine.js is working!';
@@ -454,6 +457,8 @@ function editTask() {
                 console.log('Starting task update...');
                 console.log('Task ID:', this.formData.id);
                 console.log('Form data:', this.formData);
+                console.log('Status value:', this.formData.status);
+                console.log('Priority value:', this.formData.priority);
                 // Prepare form data
                 const formData = new FormData();
                 formData.append('_method', 'PUT');

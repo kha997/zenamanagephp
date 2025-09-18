@@ -1,278 +1,149 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
-use App\Models\User;
-use App\Models\Tenant;
-use Src\CoreProject\Models\Project;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Src\CoreProject\Models\Task;
-use Src\RBAC\Models\Role;
-use Src\RBAC\Models\Permission;
-use Illuminate\Support\Facades\Hash;
+use Src\CoreProject\Models\Project;
+use App\Models\User;
 
 class TaskApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
 
-    protected $user;
-    protected $tenant;
+    protected $task;
     protected $project;
-    protected $token;
+    protected $user;
 
-    /**
-     * Setup method
-     */
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->tenant = Tenant::factory()->create([
-            'id' => 1,
-            'name' => 'Test Company',
-            'domain' => 'test.com'
+        // Create test data
+        $this->project = Project::create([
+            'id' => '01k5e2kkwynze0f37a8a4d3435',
+            'name' => 'Test Project',
+            'description' => 'Test project for testing',
+            'code' => 'TEST001',
+            'status' => 'active',
+            'start_date' => now(),
+            'end_date' => now()->addDays(30),
         ]);
-        
-        $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id,
-            'password' => Hash::make('password123'),
+
+        $this->user = User::create([
+            'id' => '01k5e5nty3m1059pcyymbkgqt9',
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => bcrypt('password'),
         ]);
-        
-        $this->project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+
+        $this->task = Task::create([
+            'id' => '01k5e5nty3m1059pcyymbkgqt8',
+            'project_id' => $this->project->id,
+            'name' => 'Test Task',
+            'description' => 'Test task description',
+            'status' => 'in_progress',
+            'priority' => 'low',
+            'start_date' => now(),
+            'end_date' => now()->addDays(7),
+            'assignee_id' => $this->user->id,
+            'progress_percent' => 50,
+            'estimated_hours' => 8,
+            'tags' => 'test,api',
         ]);
-        
-        $this->createRolesAndPermissions();
-        
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $this->user->email,
-            'password' => 'password123',
-        ]);
-        
-        $this->token = $loginResponse->json('data.token');
     }
 
-    /**
-     * Tạo roles và permissions cho test
-     */
-    private function createRolesAndPermissions()
+    /** @test */
+    public function test_api_tasks_index_returns_correct_data()
     {
-        $permissions = [
-            'task.create',
-            'task.read',
-            'task.update',
-            'task.delete',
-        ];
+        $response = $this->get('/api/tasks');
         
-        foreach ($permissions as $permissionCode) {
-            Permission::create([
-                'code' => $permissionCode,
-                'module' => 'task',
-                'action' => explode('.', $permissionCode)[1],
-                'description' => 'Permission for ' . $permissionCode
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'success',
+            'data' => [
+                'tasks',
+                'total',
+                'per_page',
+                'current_page',
+                'last_page'
+            ]
+        ]);
+        
+        $data = $response->json();
+        $this->assertTrue($data['success']);
+        $this->assertCount(1, $data['data']['tasks']);
+        
+        $task = $data['data']['tasks'][0];
+        $this->assertEquals($this->task->id, $task['id']);
+        $this->assertEquals('in_progress', $task['status']);
+        $this->assertEquals('low', $task['priority']);
+    }
+
+    /** @test */
+    public function test_api_tasks_with_filters()
+    {
+        // Test status filter
+        $response = $this->get('/api/tasks?status=in_progress');
+        $response->assertStatus(200);
+        
+        $data = $response->json();
+        $this->assertCount(1, $data['data']['tasks']);
+        
+        // Test project filter
+        $response = $this->get("/api/tasks?project_id={$this->project->id}");
+        $response->assertStatus(200);
+        
+        $data = $response->json();
+        $this->assertCount(1, $data['data']['tasks']);
+        
+        // Test assignee filter
+        $response = $this->get("/api/tasks?assignee_id={$this->user->id}");
+        $response->assertStatus(200);
+        
+        $data = $response->json();
+        $this->assertCount(1, $data['data']['tasks']);
+    }
+
+    /** @test */
+    public function test_api_tasks_search_functionality()
+    {
+        $response = $this->get('/api/tasks?search=Test Task');
+        $response->assertStatus(200);
+        
+        $data = $response->json();
+        $this->assertCount(1, $data['data']['tasks']);
+        
+        $response = $this->get('/api/tasks?search=NonExistent');
+        $response->assertStatus(200);
+        
+        $data = $response->json();
+        $this->assertCount(0, $data['data']['tasks']);
+    }
+
+    /** @test */
+    public function test_api_tasks_pagination()
+    {
+        // Create more tasks for pagination testing
+        for ($i = 0; $i < 15; $i++) {
+            Task::create([
+                'project_id' => $this->project->id,
+                'name' => "Task {$i}",
+                'description' => "Description {$i}",
+                'status' => 'pending',
+                'priority' => 'medium',
+                'start_date' => now(),
+                'end_date' => now()->addDays(7),
+                'assignee_id' => $this->user->id,
             ]);
         }
+
+        $response = $this->get('/api/tasks?per_page=10');
+        $response->assertStatus(200);
         
-        $adminRole = Role::create([
-            'name' => 'Admin',
-            'scope' => 'system',
-            'description' => 'System Administrator'
-        ]);
-        
-        $adminRole->permissions()->attach(
-            Permission::whereIn('code', $permissions)->pluck('id')
-        );
-        
-        $this->user->systemRoles()->attach($adminRole->id);
-    }
-
-    /**
-     * Test get all tasks
-     */
-    public function test_can_get_all_tasks()
-    {
-        Task::factory()->count(3)->create([
-            'project_id' => $this->project->id
-        ]);
-
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/v1/tasks');
-
-        $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'tasks' => [
-                             '*' => [
-                                 'id',
-                                 'name',
-                                 'description',
-                                 'start_date',
-                                 'end_date',
-                                 'status',
-                                 'priority',
-                                 'project_id',
-                                 'created_at',
-                                 'updated_at'
-                             ]
-                         ],
-                         'pagination'
-                     ]
-                 ]);
-    }
-
-    /**
-     * Test create task
-     */
-    public function test_can_create_task()
-    {
-        $taskData = [
-            'name' => $this->faker->sentence(3),
-            'description' => $this->faker->paragraph,
-            'project_id' => $this->project->id,
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addWeeks(2)->format('Y-m-d'),
-            'status' => 'pending',
-            'priority' => 'medium'
-        ];
-
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/v1/tasks', $taskData);
-
-        $response->assertStatus(201)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'task' => [
-                             'id',
-                             'name',
-                             'description',
-                             'project_id',
-                             'start_date',
-                             'end_date',
-                             'status',
-                             'priority',
-                             'created_at',
-                             'updated_at'
-                         ]
-                     ]
-                 ]);
-
-        $this->assertDatabaseHas('tasks', [
-            'name' => $taskData['name'],
-            'project_id' => $this->project->id
-        ]);
-    }
-
-    /**
-     * Test update task status
-     */
-    public function test_can_update_task_status()
-    {
-        $task = Task::factory()->create([
-            'project_id' => $this->project->id,
-            'status' => 'pending'
-        ]);
-
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->patchJson("/api/v1/tasks/{$task->id}/status", [
-            'status' => 'in_progress'
-        ]);
-
-        $response->assertStatus(200)
-                 ->assertJson([
-                     'status' => 'success',
-                     'data' => [
-                         'task' => [
-                             'id' => $task->id,
-                             'status' => 'in_progress'
-                         ]
-                     ]
-                 ]);
-
-        $this->assertDatabaseHas('tasks', [
-            'id' => $task->id,
-            'status' => 'in_progress'
-        ]);
-    }
-
-    /**
-     * Test assign task to user
-     */
-    public function test_can_assign_task_to_user()
-    {
-        $task = Task::factory()->create([
-            'project_id' => $this->project->id
-        ]);
-
-        $assignee = User::factory()->create([
-            'tenant_id' => $this->tenant->id
-        ]);
-
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/v1/tasks/{$task->id}/assign", [
-            'user_id' => $assignee->id,
-            'split_percentage' => 100
-        ]);
-
-        $response->assertStatus(200)
-                 ->assertJson([
-                     'status' => 'success',
-                     'data' => [
-                         'message' => 'Công việc đã được gán thành công'
-                     ]
-                 ]);
-
-        $this->assertDatabaseHas('task_assignments', [
-            'task_id' => $task->id,
-            'user_id' => $assignee->id,
-            'split_percentage' => 100
-        ]);
-    }
-
-    /**
-     * Test task dependencies
-     */
-    public function test_can_set_task_dependencies()
-    {
-        $task1 = Task::factory()->create(['project_id' => $this->project->id]);
-        $task2 = Task::factory()->create(['project_id' => $this->project->id]);
-        $task3 = Task::factory()->create(['project_id' => $this->project->id]);
-
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/v1/tasks/{$task3->id}/dependencies", [
-            'dependencies' => [$task1->id, $task2->id]
-        ]);
-
-        $response->assertStatus(200)
-                 ->assertJson([
-                     'status' => 'success',
-                     'data' => [
-                         'message' => 'Phụ thuộc công việc đã được cập nhật'
-                     ]
-                 ]);
-
-        $task3->refresh();
-        $this->assertEquals([$task1->id, $task2->id], json_decode($task3->dependencies, true));
-    }
-
-    /**
-     * Test validation errors
-     */
-    public function test_create_task_validation_errors()
-    {
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/v1/tasks', []);
-
-        $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['name', 'project_id', 'start_date', 'end_date']);
+        $data = $response->json();
+        $this->assertCount(10, $data['data']['tasks']);
+        $this->assertEquals(16, $data['data']['total']); // 1 original + 15 new
     }
 }

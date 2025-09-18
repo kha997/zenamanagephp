@@ -910,98 +910,7 @@ function tasksManagement() {
         selectedProjectToMove: '',
         
         // Enhanced Task Data
-        tasks: [
-            {
-                id: 1,
-                name: 'Design System Architecture',
-                description: 'Create comprehensive design system for the project',
-                status: 'in_progress',
-                priority: 'high',
-                risk_level: 'medium',
-                project_id: 1,
-                project_name: 'Office Building Complex',
-                assignee: 'John Smith',
-                due_date: 'Mar 15, 2024',
-                estimated_hours: 40,
-                actual_hours: 25,
-                progress_percent: 62,
-                created_at: '2023-01-15',
-                dependencies: ['TASK-001', 'TASK-002'],
-                tags: ['design', 'architecture', 'system']
-            },
-            {
-                id: 2,
-                name: 'Database Schema Design',
-                description: 'Design and implement database schema for the application',
-                status: 'completed',
-                priority: 'high',
-                risk_level: 'low',
-                project_id: 1,
-                project_name: 'Office Building Complex',
-                assignee: 'Sarah Wilson',
-                due_date: 'Feb 28, 2024',
-                estimated_hours: 32,
-                actual_hours: 30,
-                progress_percent: 100,
-                created_at: '2023-01-10',
-                dependencies: [],
-                tags: ['database', 'schema', 'backend']
-            },
-            {
-                id: 3,
-                name: 'Frontend Development',
-                description: 'Develop responsive frontend components',
-                status: 'pending',
-                priority: 'medium',
-                risk_level: 'high',
-                project_id: 2,
-                project_name: 'Shopping Mall Development',
-                assignee: 'Mike Johnson',
-                due_date: 'Apr 30, 2024',
-                estimated_hours: 80,
-                actual_hours: 0,
-                progress_percent: 0,
-                created_at: '2023-02-01',
-                dependencies: ['TASK-002'],
-                tags: ['frontend', 'react', 'ui']
-            },
-            {
-                id: 4,
-                name: 'API Integration',
-                description: 'Integrate third-party APIs and services',
-                status: 'in_progress',
-                priority: 'medium',
-                risk_level: 'medium',
-                project_id: 2,
-                project_name: 'Shopping Mall Development',
-                assignee: 'Alex Lee',
-                due_date: 'Mar 20, 2024',
-                estimated_hours: 24,
-                actual_hours: 12,
-                progress_percent: 50,
-                created_at: '2023-02-05',
-                dependencies: ['TASK-003'],
-                tags: ['api', 'integration', 'backend']
-            },
-            {
-                id: 5,
-                name: 'Testing & QA',
-                description: 'Comprehensive testing and quality assurance',
-                status: 'pending',
-                priority: 'high',
-                risk_level: 'low',
-                project_id: 3,
-                project_name: 'Residential Complex',
-                assignee: 'Emma Davis',
-                due_date: 'Dec 10, 2024',
-                estimated_hours: 48,
-                actual_hours: 0,
-                progress_percent: 0,
-                created_at: '2023-03-10',
-                dependencies: ['TASK-004', 'TASK-005'],
-                tags: ['testing', 'qa', 'quality']
-            }
-        ],
+        tasks: <?php echo json_encode($tasks->items() ?? [], 15, 512) ?>,
         
         // Computed Properties
         get filteredTasks() {
@@ -1741,6 +1650,21 @@ function tasksManagement() {
             if (savedFilters) {
                 const filters = JSON.parse(savedFilters);
                 Object.assign(this, filters);
+            }
+            this.loadTasks();
+        },
+
+        // Load tasks from API
+        async loadTasks() {
+            try {
+                const response = await fetch('/api/tasks');
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.tasks = result.data.tasks;
+                }
+            } catch (error) {
+                console.error('Failed to load tasks:', error);
             }
         }
     }

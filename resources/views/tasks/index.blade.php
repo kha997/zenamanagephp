@@ -912,7 +912,7 @@ function tasksManagement() {
         selectedProjectToMove: '',
         
         // Enhanced Task Data
-        tasks: @json($tasks->items() ?? []),
+        tasks: [],
         
         // Computed Properties
         get filteredTasks() {

@@ -20,7 +20,7 @@ class TaskService
      */
     public function getTasks(array $filters, int $perPage = 15): LengthAwarePaginator
     {
-        $query = Task::with(['project', 'component', 'assignments.user']);
+        $query = Task::with(['project', 'assignments.user']);
 
         // Apply project filter only if project_id is provided
         if (!empty($filters['project_id'])) {
@@ -75,7 +75,7 @@ class TaskService
         }
 
         if (in_array('component', $includes)) {
-            $query->with('component');
+            // $query->with('component'); // Component table doesn't exist
         }
 
         if (in_array('project', $includes)) {
@@ -133,7 +133,7 @@ class TaskService
 
             DB::commit();
 
-            return $task->load(['project', 'component', 'assignments.user']);
+            return $task->load(['project', 'assignments.user']);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -197,7 +197,7 @@ class TaskService
 
             DB::commit();
 
-            return $task->load(['project', 'component', 'assignments.user']);
+            return $task->load(['project', 'assignments.user']);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -223,7 +223,7 @@ class TaskService
 
         $task->update(['status' => $status]);
 
-        return $task->load(['project', 'component', 'assignments.user']);
+        return $task->load(['project', 'assignments.user']);
     }
 
     /**
@@ -270,7 +270,7 @@ class TaskService
             $query->where('component_id', $filters['component_id']);
         }
 
-        return $query->with(['component', 'assignments.user'])->get();
+        return $query->with(['assignments.user'])->get();
     }
 
     /**
@@ -300,6 +300,6 @@ class TaskService
             $query->where('project_id', $filters['project_id']);
         }
 
-        return $query->with(['project', 'component', 'assignments.user'])->get();
+        return $query->with(['project', 'assignments.user'])->get();
     }
 }

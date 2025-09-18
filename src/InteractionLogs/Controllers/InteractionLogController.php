@@ -1,17 +1,17 @@
 <?php declare(strict_types=1);
 
-namespace App\InteractionLogs\Controllers;
+namespace Src\InteractionLogs\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
-use App\InteractionLogs\Models\InteractionLog;
-use App\InteractionLogs\Requests\StoreInteractionLogRequest;
-use App\InteractionLogs\Requests\UpdateInteractionLogRequest;
-use App\InteractionLogs\Resources\InteractionLogResource;
-use App\InteractionLogs\Resources\InteractionLogCollection;
+use Src\InteractionLogs\Models\InteractionLog;
+use Src\InteractionLogs\Requests\StoreInteractionLogRequest;
+use Src\InteractionLogs\Requests\UpdateInteractionLogRequest;
+use Src\InteractionLogs\Resources\InteractionLogResource;
+use Src\InteractionLogs\Resources\InteractionLogCollection;
 use Src\InteractionLogs\Services\InteractionLogService; // Sửa từ App\ thành Src\
-use App\Foundation\Utils\JSendResponse;
+use Src\Foundation\Utils\JSendResponse;
 
 /**
  * Controller quản lý Interaction Logs

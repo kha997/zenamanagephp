@@ -24,7 +24,8 @@ class DocumentController
     public function __construct(
         private DocumentService $documentService
     ) {
-        $this->middleware(RBACMiddleware::class);
+        // Remove middleware from constructor to avoid AuthManager issues
+        // Middleware is handled at route level
     }
 
     /**

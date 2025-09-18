@@ -2,179 +2,184 @@
 
 namespace Src\CoreProject\Listeners;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Src\CoreProject\Events\ComponentProgressUpdated;
+use Src\CoreProject\Events\ComponentCostUpdated;
+use Src\CoreProject\Events\ProjectProgressUpdated;
+use Src\CoreProject\Events\ProjectCostUpdated;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Component;
 use Src\Foundation\EventBus;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 /**
- * Listener tổng hợp để xử lý tính toán progress và cost của project
- * Thay thế các listener trùng lặp khác
+ * ProjectCalculationListener
+ * 
+ * Xử lý tính toán lại progress và cost của project khi component thay đổi
+ * Sử dụng EventBus để dispatch events mới
  */
 class ProjectCalculationListener
 {
+    protected EventBus $eventBus;
+    
+    public function __construct(EventBus $eventBus)
+    {
+        $this->eventBus = $eventBus;
+    }
+
     /**
-     * Xử lý các sự kiện liên quan đến component progress/cost
-     *
-     * @param array $payload
+     * Xử lý event ComponentProgressUpdated
+     * 
+     * @param ComponentProgressUpdated $event
      * @return void
      */
-    public function handle(array $payload): void
+    public function handleComponentProgressUpdated(ComponentProgressUpdated $event): void
     {
-        $eventName = $payload['eventName'] ?? '';
-        $projectId = $payload['projectId'] ?? null;
-        
-        if (!$projectId) {
-            Log::warning('Missing projectId in event payload', ['event' => $eventName]);
-            return;
-        }
-        
         try {
-            DB::transaction(function () use ($projectId, $eventName, $payload) {
-                $this->recalculateProject($projectId, $eventName, $payload);
+            DB::transaction(function () use ($event) {
+                $this->recalculateProjectProgress($event->projectId, $event->actorId);
             });
-            
-            Log::info('Project calculations completed', [
-                'project_id' => $projectId,
-                'event' => $eventName,
-                'actor' => $payload['actorId'] ?? 'system'
-            ]);
-            
         } catch (\Exception $e) {
-            Log::error('Failed to recalculate project metrics', [
-                'project_id' => $projectId,
-                'event' => $eventName,
+            Log::error('Failed to recalculate project progress', [
+                'project_id' => $event->projectId,
+                'component_id' => $event->entityId,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
         }
     }
-    
+
     /**
-     * Tính toán lại các metrics của project
-     *
-     * @param int $projectId
-     * @param string $eventName
-     * @param array $payload
+     * Xử lý event ComponentCostUpdated
+     * 
+     * @param ComponentCostUpdated $event
      * @return void
      */
-    private function recalculateProject(int $projectId, string $eventName, array $payload): void
+    public function handleComponentCostUpdated(ComponentCostUpdated $event): void
     {
-        $project = Project::find($projectId);
-        if (!$project) {
-            Log::warning("Project not found: {$projectId}");
+        try {
+            DB::transaction(function () use ($event) {
+                $this->recalculateProjectCost($event->projectId, $event->actorId);
+            });
+        } catch (\Exception $e) {
+            Log::error('Failed to recalculate project cost', [
+                'project_id' => $event->projectId,
+                'component_id' => $event->entityId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+    /**
+     * Tính toán lại progress của project
+     * 
+     * @param int $projectId
+     * @param int $actorId
+     * @return void
+     */
+    protected function recalculateProjectProgress(int $projectId, int $actorId): void
+    {
+        $project = Project::findOrFail($projectId);
+        $oldProgress = $project->progress;
+        
+        // Lấy tất cả root components (parent_component_id = null)
+        $rootComponents = Component::where('project_id', $projectId)
+            ->whereNull('parent_component_id')
+            ->get();
+        
+        if ($rootComponents->isEmpty()) {
             return;
         }
         
-        // Cache key để tránh tính toán trùng lặp trong cùng request
-        $cacheKey = "project_calc_{$projectId}_" . md5($eventName . serialize($payload));
+        // Tính weighted average progress
+        $totalWeight = $rootComponents->sum('planned_cost');
         
-        if (Cache::has($cacheKey)) {
-            return; // Đã tính toán trong request này
+        if ($totalWeight <= 0) {
+            return;
         }
         
-        $oldProgress = $project->progress;
-        $oldCost = $project->actual_cost;
+        $weightedProgress = $rootComponents->sum(function ($component) {
+            return $component->progress_percent * $component->planned_cost;
+        });
         
-        // Tính toán progress và cost
-        $newProgress = $this->calculateProjectProgress($project);
-        $newCost = $this->calculateProjectCost($project);
+        $newProgress = round($weightedProgress / $totalWeight, 2);
         
         // Cập nhật nếu có thay đổi
-        $updates = [];
-        if (abs($oldProgress - $newProgress) > 0.01) { // Tolerance cho floating point
-            $updates['progress'] = $newProgress;
-        }
-        if (abs($oldCost - $newCost) > 0.01) {
-            $updates['actual_cost'] = $newCost;
-        }
-        
-        if (!empty($updates)) {
-            $project->update($updates);
+        if ($oldProgress !== $newProgress) {
+            $project->update(['progress' => $newProgress]);
             
-            // Phát các sự kiện tương ứng
-            if (isset($updates['progress'])) {
-                EventBus::publish('Project.Project.ProgressUpdated', [
-                    'entityId' => $project->id,
-                    'projectId' => $project->id,
-                    'actorId' => $payload['actorId'] ?? 'system',
-                    'changedFields' => ['progress' => ['old' => $oldProgress, 'new' => $newProgress]],
-                    'triggeredBy' => $eventName
-                ]);
-            }
-            
-            if (isset($updates['actual_cost'])) {
-                EventBus::publish('Project.Project.CostUpdated', [
-                    'entityId' => $project->id,
-                    'projectId' => $project->id,
-                    'actorId' => $payload['actorId'] ?? 'system',
-                    'changedFields' => ['actual_cost' => ['old' => $oldCost, 'new' => $newCost]],
-                    'triggeredBy' => $eventName
-                ]);
-            }
+            // Dispatch ProjectProgressUpdated event
+            $this->eventBus->publish('Project.Progress.Updated', [
+                'entityId' => $projectId,
+                'projectId' => $projectId,
+                'actorId' => $actorId,
+                'changedFields' => [
+                    'progress' => [
+                        'old' => $oldProgress,
+                        'new' => $newProgress
+                    ]
+                ],
+                'timestamp' => now()->toISOString()
+            ]);
         }
-        
-        // Cache để tránh tính toán trùng lặp
-        Cache::put($cacheKey, true, 60); // Cache 1 phút
     }
-    
+
     /**
-     * Tính toán progress của project dựa trên weighted average
-     *
-     * @param Project $project
-     * @return float
-     */
-    private function calculateProjectProgress(Project $project): float
-    {
-        $rootComponents = $project->rootComponents;
-        
-        if ($rootComponents->isEmpty()) {
-            return 0.0;
-        }
-        
-        $totalWeight = 0;
-        $weightedProgress = 0;
-        
-        foreach ($rootComponents as $component) {
-            $weight = max($component->planned_cost ?? 0, 1); // Tối thiểu weight = 1
-            $progress = $component->progress_percent ?? 0;
-            
-            $totalWeight += $weight;
-            $weightedProgress += ($progress * $weight);
-        }
-        
-        return $totalWeight > 0 ? round($weightedProgress / $totalWeight, 2) : 0.0;
-    }
-    
-    /**
-     * Tính toán actual cost của project
-     *
-     * @param Project $project
-     * @return float
-     */
-    private function calculateProjectCost(Project $project): float
-    {
-        return $project->rootComponents()->sum('actual_cost') ?? 0.0;
-    }
-    
-    /**
-     * Xử lý sự kiện ComponentProgressUpdated (backward compatibility)
-     *
-     * @param \Src\CoreProject\Events\ComponentProgressUpdated $event
+     * Tính toán lại cost của project
+     * 
+     * @param int $projectId
+     * @param int $actorId
      * @return void
      */
-    public function handleComponentProgressUpdated($event): void
+    protected function recalculateProjectCost(int $projectId, int $actorId): void
     {
-        $payload = [
-            'eventName' => 'Project.Component.ProgressUpdated',
-            'entityId' => $event->componentId,
-            'projectId' => $event->projectId,
-            'actorId' => $event->actorId,
-            'changedFields' => $event->changedFields ?? []
-        ];
+        $project = Project::findOrFail($projectId);
+        $oldCost = $project->actual_cost;
         
-        $this->handle($payload);
+        // Tính tổng actual_cost của tất cả root components
+        $newCost = Component::where('project_id', $projectId)
+            ->whereNull('parent_component_id')
+            ->sum('actual_cost');
+        
+        // Cập nhật nếu có thay đổi
+        if ($oldCost !== $newCost) {
+            $project->update(['actual_cost' => $newCost]);
+            
+            // Dispatch ProjectCostUpdated event
+            $this->eventBus->publish('Project.Cost.Updated', [
+                'entityId' => $projectId,
+                'projectId' => $projectId,
+                'actorId' => $actorId,
+                'changedFields' => [
+                    'actual_cost' => [
+                        'old' => $oldCost,
+                        'new' => $newCost
+                    ]
+                ],
+                'timestamp' => now()->toISOString()
+            ]);
+        }
+    }
+
+    /**
+     * Generic handle method for EventBus compatibility
+     * 
+     * @param mixed $payload Event payload
+     * @return void
+     */
+    public function handle($payload): void
+    {
+        // Determine event type and route to appropriate handler
+        if ($payload instanceof ComponentProgressUpdated) {
+            $this->handleComponentProgressUpdated($payload);
+        } elseif ($payload instanceof ComponentCostUpdated) {
+            $this->handleComponentCostUpdated($payload);
+        } else {
+            Log::warning('Unknown event type in ProjectCalculationListener', [
+                'payload_type' => get_class($payload),
+                'payload' => $payload
+            ]);
+        }
     }
 }

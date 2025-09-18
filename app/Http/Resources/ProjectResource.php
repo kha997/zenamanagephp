@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Transform Project model into JSON response
+ * Project API Resource
+ * 
+ * Transforms Project model for JSON responses according to JSend specification
  * 
  * @property \App\Models\Project $resource
  */
@@ -25,44 +27,27 @@ class ProjectResource extends JsonResource
             'tenant_id' => $this->tenant_id,
             'name' => $this->name,
             'description' => $this->description,
-            'start_date' => $this->start_date?->toDateString(),
-            'end_date' => $this->end_date?->toDateString(),
+            'start_date' => $this->start_date?->format('Y-m-d'),
+            'end_date' => $this->end_date?->format('Y-m-d'),
             'status' => $this->status,
-            'progress' => round($this->progress, 2),
-            'actual_cost' => $this->actual_cost,
+            'progress' => (float) $this->progress,
+            'actual_cost' => (float) $this->actual_cost,
+            
+            // Computed fields
+            'duration_days' => $this->getDurationDays(),
+            'is_overdue' => $this->isOverdue(),
+            'completion_status' => $this->getCompletionStatus(),
+            
+            // Relationships - conditional loading
+            'components' => ComponentResource::collection($this->whenLoaded('components')),
+            'tasks' => TaskResource::collection($this->whenLoaded('tasks')),
+            'change_requests' => ChangeRequestResource::collection($this->whenLoaded('changeRequests')),
+            'interaction_logs' => InteractionLogResource::collection($this->whenLoaded('interactionLogs')),
+            'baselines' => BaselineResource::collection($this->whenLoaded('baselines')),
+            
+            // Timestamps
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
-            
-            // Conditional relationships
-            'tenant' => $this->whenLoaded('tenant', function () {
-                return [
-                    'id' => $this->tenant->id,
-                    'name' => $this->tenant->name,
-                ];
-            }),
-            
-            'components' => $this->whenLoaded('components', function () {
-                return $this->components->map(function ($component) {
-                    return [
-                        'id' => $component->id,
-                        'name' => $component->name,
-                        'progress_percent' => $component->progress_percent,
-                        'planned_cost' => $component->planned_cost,
-                        'actual_cost' => $component->actual_cost,
-                    ];
-                });
-            }),
-            
-            // Performance optimization - chỉ load khi cần
-            'tasks_count' => $this->when(
-                $this->relationLoaded('tasks'),
-                fn() => $this->tasks->count()
-            ),
-            
-            'interaction_logs_count' => $this->when(
-                $this->relationLoaded('interactionLogs'),
-                fn() => $this->interactionLogs->count()
-            ),
         ];
     }
 }

@@ -1,0 +1,400 @@
+name: Code Quality & Security
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM
+
+env:
+  PHP_VERSION: '8.2'
+
+jobs:
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Run PHPStan Static Analysis
+      run: |
+        composer require --dev phpstan/phpstan
+        ./vendor/bin/phpstan analyse --level=8 --error-format=json > phpstan-report.json
+
+    - name: Run PHP CS Fixer
+      run: |
+        composer require --dev friendsofphp/php-cs-fixer
+        ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-report.json
+
+    - name: Run PHP Mess Detector
+      run: |
+        composer require --dev phpmd/phpmd
+        ./vendor/bin/phpmd app text cleancode,codesize,controversial,design,naming,unusedcode > phpmd-report.txt
+
+    - name: Run PHP Copy Paste Detector
+      run: |
+        composer require --dev sebastian/phpcpd
+        ./vendor/bin/phpcpd app --min-lines=5 --min-tokens=70 > phpcpd-report.txt
+
+    - name: Upload Code Quality Reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-quality-reports
+        path: |
+          phpstan-report.json
+          cs-fixer-report.json
+          phpmd-report.txt
+          phpcpd-report.txt
+
+    - name: Comment Code Quality on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const phpstan = JSON.parse(fs.readFileSync('phpstan-report.json', 'utf8'));
+          const csFixer = JSON.parse(fs.readFileSync('cs-fixer-report.json', 'utf8'));
+          
+          let comment = '## Code Quality Report\n\n';
+          
+          if (phpstan.totals.errors > 0) {
+            comment += `### PHPStan Issues: ${phpstan.totals.errors} errors\n`;
+            phpstan.files.slice(0, 5).forEach(file => {
+              comment += `- ${file.path}: ${file.errors.length} issues\n`;
+            });
+          }
+          
+          if (csFixer.files && csFixer.files.length > 0) {
+            comment += `\n### Code Style Issues: ${csFixer.files.length} files need fixing\n`;
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Run Composer Security Audit
+      run: composer audit --format=json > composer-audit.json
+
+    - name: Run PHP Security Checker
+      run: |
+        composer require --dev enlightn/security-checker
+        ./vendor/bin/security-checker security:check --format=json > security-checker.json
+
+    - name: Run PHPStan Security Rules
+      run: |
+        composer require --dev phpstan/phpstan-security-rules
+        ./vendor/bin/phpstan analyse --level=8 --error-format=json > phpstan-security.json
+
+    - name: Run PHP CS Fixer Security Rules
+      run: |
+        composer require --dev friendsofphp/php-cs-fixer
+        ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-security.json
+
+    - name: Upload Security Reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          composer-audit.json
+          security-checker.json
+          phpstan-security.json
+          cs-fixer-security.json
+
+    - name: Comment Security Issues on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const composerAudit = JSON.parse(fs.readFileSync('composer-audit.json', 'utf8'));
+          const securityChecker = JSON.parse(fs.readFileSync('security-checker.json', 'utf8'));
+          
+          let comment = '## Security Scan Report\n\n';
+          
+          if (composerAudit.advisories && composerAudit.advisories.length > 0) {
+            comment += `### Composer Security Issues: ${composerAudit.advisories.length} vulnerabilities found\n`;
+            composerAudit.advisories.slice(0, 5).forEach(advisory => {
+              comment += `- ${advisory.packageName}: ${advisory.title}\n`;
+            });
+          }
+          
+          if (securityChecker.vulnerabilities && securityChecker.vulnerabilities.length > 0) {
+            comment += `\n### Security Checker Issues: ${securityChecker.vulnerabilities.length} vulnerabilities found\n`;
+            securityChecker.vulnerabilities.slice(0, 5).forEach(vuln => {
+              comment += `- ${vuln.package}: ${vuln.title}\n`;
+            });
+          }
+          
+          if (composerAudit.advisories.length === 0 && securityChecker.vulnerabilities.length === 0) {
+            comment += '✅ No security vulnerabilities found!';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Run Composer Outdated Check
+      run: composer outdated --format=json > composer-outdated.json
+
+    - name: Run Composer License Check
+      run: |
+        composer require --dev maglnet/composer-require-checker
+        ./vendor/bin/composer-require-checker check --format=json > composer-require-checker.json
+
+    - name: Upload Dependency Reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-reports
+        path: |
+          composer-outdated.json
+          composer-require-checker.json
+
+    - name: Comment Dependency Issues on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const outdated = JSON.parse(fs.readFileSync('composer-outdated.json', 'utf8'));
+          
+          let comment = '## Dependency Scan Report\n\n';
+          
+          if (outdated.installed && outdated.installed.length > 0) {
+            comment += `### Outdated Packages: ${outdated.installed.length} packages need updates\n`;
+            outdated.installed.slice(0, 10).forEach(pkg => {
+              comment += `- ${pkg.name}: ${pkg.version} → ${pkg.latest}\n`;
+            });
+          } else {
+            comment += '✅ All packages are up to date!';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  docker-security:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile.prod
+        push: false
+        tags: zenamanage:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'zenamanage:test'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run Trivy vulnerability scanner (JSON)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'zenamanage:test'
+        format: 'json'
+        output: 'trivy-results.json'
+
+    - name: Upload Trivy JSON results
+      uses: actions/upload-artifact@v3
+      with:
+        name: trivy-results
+        path: trivy-results.json
+
+    - name: Comment Docker Security Issues on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const trivyResults = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
+          
+          let comment = '## Docker Security Scan Report\n\n';
+          
+          if (trivyResults.Results && trivyResults.Results.length > 0) {
+            let totalVulns = 0;
+            trivyResults.Results.forEach(result => {
+              if (result.Vulnerabilities) {
+                totalVulns += result.Vulnerabilities.length;
+              }
+            });
+            
+            comment += `### Vulnerabilities Found: ${totalVulns} total\n`;
+            
+            trivyResults.Results.forEach(result => {
+              if (result.Vulnerabilities && result.Vulnerabilities.length > 0) {
+                comment += `\n#### ${result.Target}\n`;
+                result.Vulnerabilities.slice(0, 5).forEach(vuln => {
+                  comment += `- ${vuln.VulnerabilityID}: ${vuln.Title} (${vuln.Severity})\n`;
+                });
+              }
+            });
+          } else {
+            comment += '✅ No vulnerabilities found in Docker image!';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  license-scan:
+    name: License Compliance Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: Run Composer License Check
+      run: |
+        composer require --dev maglnet/composer-require-checker
+        ./vendor/bin/composer-require-checker check --format=json > composer-license-check.json
+
+    - name: Upload License Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-report
+        path: composer-license-check.json
+
+    - name: Comment License Issues on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const licenseCheck = JSON.parse(fs.readFileSync('composer-license-check.json', 'utf8'));
+          
+          let comment = '## License Compliance Report\n\n';
+          
+          if (licenseCheck.violations && licenseCheck.violations.length > 0) {
+            comment += `### License Violations: ${licenseCheck.violations.length} found\n`;
+            licenseCheck.violations.forEach(violation => {
+              comment += `- ${violation.package}: ${violation.license}\n`;
+            });
+          } else {
+            comment += '✅ All packages comply with license requirements!';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

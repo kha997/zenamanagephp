@@ -193,20 +193,28 @@ class TaskDependencyService
      */
     private function hasCycleDFS(int $node, array $adjacencyList, array &$visited, array &$recursionStack): bool
     {
+        // Check if we're already in the recursion stack (cycle detected)
+        if (isset($recursionStack[$node]) && $recursionStack[$node]) {
+            return true; // Cycle detected
+        }
+
+        // If already visited and not in recursion stack, no cycle from this path
+        if (isset($visited[$node])) {
+            return false;
+        }
+
+        // Mark as visited and add to recursion stack
         $visited[$node] = true;
         $recursionStack[$node] = true;
         
         $neighbors = $adjacencyList[$node] ?? [];
         foreach ($neighbors as $neighbor) {
-            if (!isset($visited[$neighbor])) {
-                if ($this->hasCycleDFS($neighbor, $adjacencyList, $visited, $recursionStack)) {
-                    return true;
-                }
-            } elseif (isset($recursionStack[$neighbor]) && $recursionStack[$neighbor]) {
+            if ($this->hasCycleDFS($neighbor, $adjacencyList, $visited, $recursionStack)) {
                 return true;
             }
         }
         
+        // Remove from recursion stack when backtracking
         $recursionStack[$node] = false;
         return false;
     }

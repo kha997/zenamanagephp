@@ -1,0 +1,123 @@
+# Production Dockerfile
+# Dashboard System - Production Build
+
+# Multi-stage build
+FROM composer:2.6 AS composer-stage
+
+# Copy composer files
+COPY composer.json composer.lock ./
+
+# Install dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
+
+# Node.js stage
+FROM node:18-alpine AS node-stage
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY frontend/ ./
+
+# Build assets
+RUN npm run build
+
+# PHP-FPM stage
+FROM php:8.2-fpm-alpine AS production
+
+# Install system dependencies
+RUN apk add --no-cache \
+    nginx \
+    supervisor \
+    curl \
+    zip \
+    unzip \
+    git \
+    oniguruma-dev \
+    libxml2-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libzip-dev \
+    icu-dev \
+    imagemagick-dev \
+    imagemagick \
+    redis \
+    mysql-client \
+    && rm -rf /var/cache/apk/*
+
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        mbstring \
+        xml \
+        zip \
+        intl \
+        gd \
+        opcache \
+        bcmath \
+        sockets
+
+# Install Redis extension
+RUN pecl install redis \
+    && docker-php-ext-enable redis
+
+# Install Imagick extension
+RUN pecl install imagick \
+    && docker-php-ext-enable imagick
+
+# Install Composer
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy application code
+COPY . .
+
+# Copy Composer dependencies
+COPY --from=composer-stage /app/vendor ./vendor
+
+# Copy built assets
+COPY --from=node-stage /app/dist ./public/dist
+
+# Create necessary directories
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
+    && mkdir -p bootstrap/cache \
+    && mkdir -p public/storage
+
+# Set permissions
+RUN chown -R www-data:www-data storage bootstrap/cache public/storage \
+    && chmod -R 775 storage bootstrap/cache public/storage
+
+# Copy configuration files
+COPY docker/php/php.ini /usr/local/etc/php/php.ini
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create nginx user
+RUN adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx
+
+# Create nginx directories
+RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run/nginx
+
+# Set nginx permissions
+RUN chown -R nginx:nginx /var/cache/nginx /var/log/nginx /var/run/nginx
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:9000/health || exit 1
+
+# Expose ports
+EXPOSE 9000
+
+# Start supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

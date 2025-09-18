@@ -2,9 +2,8 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
 use App\Models\Tenant;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * Factory cho Tenant model
@@ -12,41 +11,22 @@ use Illuminate\Support\Str;
 class TenantFactory extends Factory
 {
     protected $model = Tenant::class;
-
+    
+    /**
+     * Define the model's default state
+     *
+     * @return array<string, mixed>
+     */
     public function definition(): array
     {
-        $name = $this->faker->company();
-        
         return [
-            'name' => $name,
-            'slug' => Str::slug($name) . '-' . $this->faker->unique()->randomNumber(4),
-            'domain' => $this->faker->unique()->domainName(),
-            'database_name' => null,
-            'settings' => null,
-            'status' => 'active',
+            'name' => $this->faker->company(),
+            'domain' => $this->faker->domainName(),
+            'settings' => json_encode([
+                'timezone' => 'Asia/Ho_Chi_Minh',
+                'currency' => 'VND'
+            ]),
             'is_active' => true,
         ];
-    }
-    
-    /**
-     * Tạo tenant với trạng thái trial
-     */
-    public function trial(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'status' => 'trial',
-            'trial_ends_at' => now()->addDays(30),
-        ]);
-    }
-    
-    /**
-     * Tạo tenant không hoạt động
-     */
-    public function inactive(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'status' => 'inactive',
-            'is_active' => false,
-        ]);
     }
 }

@@ -4,6 +4,12 @@ return [
     'default' => env('CACHE_DRIVER', 'redis'),
 
     'stores' => [
+        // Array cache for testing
+        'array' => [
+            'driver' => 'array',
+            'serialize' => false,
+        ],
+
         'redis' => [
             'driver' => 'redis',
             'connection' => 'cache',
@@ -13,6 +19,14 @@ return [
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
+        ],
+
+        // Thêm database cache store
+        'database' => [
+            'driver' => 'database',
+            'table' => 'cache',
+            'connection' => null,
+            'lock_connection' => null,
         ],
 
         // Dedicated cache store for sessions

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useProjectsStore } from '@/store/projects';
 import { useTasksStore } from '@/store/tasks';
@@ -21,6 +22,7 @@ import {
  * Bao gồm thống kê dự án, task, tiến độ và thông báo
  */
 export const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { projects, isLoading: projectsLoading } = useProjectsStore();
   const { tasks, isLoading: tasksLoading } = useTasksStore();
@@ -63,11 +65,11 @@ export const DashboardPage: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => navigate('/calendar')}>
             <Calendar className="w-4 h-4 mr-2" />
             Lịch làm việc
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => navigate('/projects/create')}>
             <FolderOpen className="w-4 h-4 mr-2" />
             Dự án mới
           </Button>

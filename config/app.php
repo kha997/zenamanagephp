@@ -171,16 +171,18 @@ return [
          */
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
-        // App\Providers\JwtAuthServiceProvider::class, // Xóa dòng này để tránh duplicate
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+        App\Providers\CustomServiceProvider::class,
         
         /*
          * Z.E.N.A Custom Service Providers
          */
         App\Foundation\Providers\EventServiceProvider::class,
-
+        // ... Z.E.N.A Event System
+        Src\Foundation\Providers\EventBusServiceProvider::class,
+        
         /*
          * Custom Module Service Providers...
          */

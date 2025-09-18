@@ -168,4 +168,33 @@ class NotificationDispatchListener
             
         return $rule ? json_decode($rule->channels, true) : ['inapp'];
     }
+
+    /**
+     * Universal handler method để EventBus có thể gọi
+     * Định tuyến event đến method cụ thể dựa trên event name
+     */
+    public function handle($event): void
+    {
+        $eventName = $event->getEventName();
+        
+        switch ($eventName) {
+            case 'Project.Component.ProgressUpdated':
+                $this->handleComponentProgressUpdated($event);
+                break;
+                
+            case 'InteractionLog.Created':
+                $this->handleInteractionLogCreated($event);
+                break;
+                
+            case 'ChangeRequest.Approved':
+                $this->handleChangeRequestApproved($event);
+                break;
+                
+            default:
+                Log::warning('NotificationDispatchListener: Unhandled event', [
+                    'event_name' => $eventName,
+                    'event_class' => get_class($event)
+                ]);
+        }
+    }
 }

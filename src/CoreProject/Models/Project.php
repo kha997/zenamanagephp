@@ -42,26 +42,27 @@ class Project extends Model
     
     protected $fillable = [
         'tenant_id',
+        'code',
         'name',
         'description',
         'start_date',
         'end_date',
         'status',
         'progress',
-        'actual_cost'
+        'budget_total'
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
         'progress' => 'float',
-        'actual_cost' => 'float'
+        'budget_total' => 'float'
     ];
 
     protected $attributes = [
         'status' => 'planning',
         'progress' => 0.0,
-        'actual_cost' => 0.0
+        'budget_total' => 0.0
     ];
 
     /**
@@ -94,7 +95,7 @@ class Project extends Model
      */
     public function components(): HasMany
     {
-        return $this->hasMany(Component::class);
+        return $this->hasMany(\Src\CoreProject\Models\Component::class);
     }
 
     /**
@@ -102,7 +103,7 @@ class Project extends Model
      */
     public function rootComponents(): HasMany
     {
-        return $this->hasMany(Component::class)
+        return $this->hasMany(\Src\CoreProject\Models\Component::class)
                     ->whereNull('parent_component_id');
     }
 
@@ -111,7 +112,7 @@ class Project extends Model
      */
     public function tasks(): HasMany
     {
-        return $this->hasMany(Task::class);
+        return $this->hasMany(\Src\CoreProject\Models\Task::class);
     }
 
     /**
@@ -141,7 +142,7 @@ class Project extends Model
      */
     public function baselines(): HasMany
     {
-        return $this->hasMany(\Src\Baseline\Models\Baseline::class);
+        return $this->hasMany(\Src\CoreProject\Models\Baseline::class);
     }
 
     /**

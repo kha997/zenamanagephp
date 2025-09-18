@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Transform User model into JSON response
+ * User API Resource
+ * 
+ * Transforms User model for JSON responses according to JSend specification
  * 
  * @property \App\Models\User $resource
  */
@@ -22,38 +24,31 @@ class UserResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'tenant_id' => $this->tenant_id,
             'name' => $this->name,
             'email' => $this->email,
-            'tenant_id' => $this->tenant_id,
+            
+            // Security: Never expose password or sensitive data
+            
+            // Computed fields
+            'initials' => $this->getInitials(),
+            'full_display_name' => $this->getFullDisplayName(),
+            
+            // Relationships - conditional loading
+            'system_roles' => RoleResource::collection($this->whenLoaded('systemRoles')),
+            'project_roles' => $this->when(
+                $this->relationLoaded('projectRoles'),
+                fn() => $this->projectRoles->map(fn($pivot) => [
+                    'project_id' => $pivot->project_id,
+                    'role' => new RoleResource($pivot->role),
+                ])
+            ),
+            'task_assignments' => TaskAssignmentResource::collection($this->whenLoaded('taskAssignments')),
+            'notifications' => NotificationResource::collection($this->whenLoaded('notifications')),
+            
+            // Timestamps
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
-            
-            // Security - chỉ hiển thị thông tin nhạy cảm cho chính user đó hoặc admin
-            $this->mergeWhen(
-                $request->user()?->id === $this->id || $request->user()?->can('view-user-details'),
-                [
-                    'email_verified_at' => $this->email_verified_at?->toISOString(),
-                    'last_login_at' => $this->last_login_at?->toISOString(),
-                ]
-            ),
-            
-            // Conditional relationships
-            'tenant' => $this->whenLoaded('tenant', function () {
-                return [
-                    'id' => $this->tenant->id,
-                    'name' => $this->tenant->name,
-                ];
-            }),
-            
-            'roles' => $this->whenLoaded('roles', function () {
-                return $this->roles->map(function ($role) {
-                    return [
-                        'id' => $role->id,
-                        'name' => $role->name,
-                        'scope' => $role->scope,
-                    ];
-                });
-            }),
         ];
     }
 }

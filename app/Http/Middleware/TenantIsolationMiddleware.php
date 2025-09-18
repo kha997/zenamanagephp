@@ -1,125 +1,117 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Models\Tenant;
 
 /**
  * Tenant Isolation Middleware
  * 
- * Middleware này sẽ:
- * - Kiểm tra tenant_id từ JWT payload
- * - Set tenant context cho toàn bộ request
- * - Validate user có quyền truy cập tenant không
- * - Apply global scope cho Eloquent queries
+ * Ensures users can only access data within their tenant
  */
 class TenantIsolationMiddleware
 {
     /**
-     * Handle an incoming request
-     * 
-     * @param Request $request
-     * @param Closure $next
-     * @return mixed
+     * Handle an incoming request.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
+     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
     public function handle(Request $request, Closure $next)
     {
-        $tenantId = $request->get('auth_tenant_id');
-        $userId = $request->get('auth_user_id');
+        $user = $request->user();
         
-        if (!$tenantId) {
-            return $this->forbiddenResponse('Missing tenant context');
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Authentication required'
+            ], 401);
         }
+
+        // Get user's tenant ID
+        $userTenantId = $user->tenant_id;
         
-        // Validate user belongs to tenant
-        if (!$this->validateUserTenantAccess($userId, $tenantId)) {
-            Log::warning('Tenant Access Violation', [
-                'user_id' => $userId,
-                'attempted_tenant_id' => $tenantId,
-                'ip_address' => $request->ip(),
-                'endpoint' => $request->getPathInfo()
-            ]);
-            
-            return $this->forbiddenResponse('Access denied to tenant');
+        if (!$userTenantId) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'User not associated with any tenant'
+            ], 403);
         }
+
+        // Add tenant context to request
+        $request->merge(['tenant_context' => $userTenantId]);
         
-        // Set tenant context for the request
-        $this->setTenantContext($tenantId);
-        
-        $response = $next($request);
-        
-        // Clear tenant context after request
-        $this->clearTenantContext();
-        
-        return $response;
+        // Check for cross-tenant access attempts
+        $this->validateTenantAccess($request, $userTenantId);
+
+        return $next($request);
     }
-    
+
     /**
-     * Validate user has access to tenant
-     * 
-     * @param string $userId
-     * @param string $tenantId
-     * @return bool
+     * Validate that user is not trying to access other tenant's data
      */
-    private function validateUserTenantAccess(string $userId, string $tenantId): bool
+    private function validateTenantAccess(Request $request, string $userTenantId): void
     {
-        try {
-            // Check if user belongs to the tenant
-            $userExists = DB::table('users')
-                ->where('id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->exists();
+        $route = $request->route();
+        
+        if (!$route) {
+            return;
+        }
+
+        $parameters = $route->parameters();
+        
+        // Check if trying to access another user
+        if (isset($parameters['user']) || isset($parameters['id'])) {
+            $targetId = $parameters['user'] ?? $parameters['id'];
+            
+            // If it's a user ID, check tenant
+            if ($this->isUserId($targetId)) {
+                $targetUser = User::find($targetId);
                 
-            return $userExists;
-        } catch (\Exception $e) {
-            Log::error('Tenant Validation Error', [
-                'user_id' => $userId,
-                'tenant_id' => $tenantId,
-                'error' => $e->getMessage()
-            ]);
-            
-            return false;
+                if ($targetUser && $targetUser->tenant_id !== $userTenantId) {
+                    abort(403, 'Access denied: Cross-tenant access not allowed');
+                }
+            }
         }
+
+        // Check query parameters for tenant-specific resources
+        $this->validateQueryParameters($request, $userTenantId);
     }
-    
+
     /**
-     * Set tenant context for current request
-     * 
-     * @param string $tenantId
+     * Check if the ID looks like a user ID (ULID format)
      */
-    private function setTenantContext(string $tenantId): void
+    private function isUserId(string $id): bool
     {
-        // Store tenant ID in app container
-        app()->instance('current_tenant_id', $tenantId);
+        // ULID format: 26 characters, starts with timestamp
+        return strlen($id) === 26 && ctype_alnum($id);
+    }
+
+    /**
+     * Validate query parameters for tenant isolation
+     */
+    private function validateQueryParameters(Request $request, string $userTenantId): void
+    {
+        // Check for explicit tenant_id in query
+        $queryTenantId = $request->query('tenant_id');
         
-        // Set session variable for Eloquent global scopes
-        config(['app.current_tenant_id' => $tenantId]);
-    }
-    
-    /**
-     * Clear tenant context after request
-     */
-    private function clearTenantContext(): void
-    {
-        app()->forgetInstance('current_tenant_id');
-        config(['app.current_tenant_id' => null]);
-    }
-    
-    /**
-     * Return forbidden response
-     * 
-     * @param string $message
-     * @return JsonResponse
-     */
-    private function forbiddenResponse(string $message): JsonResponse
-    {
-        return response()->json([
-            'status' => 'error',
-            'message' => $message
-        ], 403);
+        if ($queryTenantId && $queryTenantId !== $userTenantId) {
+            abort(403, 'Access denied: Cannot access other tenant data');
+        }
+
+        // Check for user_id in query (for admin operations)
+        $queryUserId = $request->query('user_id');
+        
+        if ($queryUserId) {
+            $targetUser = User::find($queryUserId);
+            
+            if ($targetUser && $targetUser->tenant_id !== $userTenantId) {
+                abort(403, 'Access denied: Cannot access other tenant users');
+            }
+        }
     }
 }

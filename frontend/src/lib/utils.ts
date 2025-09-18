@@ -1,47 +1,59 @@
-import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
-/**
- * Utility function để kết hợp CSS classes với Tailwind CSS
- * Sử dụng clsx để xử lý conditional classes và twMerge để merge Tailwind classes
- */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
-/**
- * Format số thành currency (VND)
- */
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND'
-  }).format(amount);
-}
-
-/**
- * Format date thành string theo định dạng Việt Nam
- */
-export function formatDate(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date;
-  return new Intl.DateTimeFormat('vi-VN', {
+export function formatDate(date: string | Date): string {
+  return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(dateObj);
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(date))
 }
 
-/**
- * Truncate text với ellipsis
- */
+export function formatDateTime(date: string | Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(date))
+}
+
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount)
+}
+
+export function formatNumber(number: number): string {
+  return new Intl.NumberFormat('en-US').format(number)
+}
+
+export function formatPercentage(value: number): string {
+  return `${Math.round(value * 100)}%`
+}
+
 export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
+  if (text.length <= maxLength) return text
+  return text.slice(0, maxLength) + '...'
 }
 
-/**
- * Sleep function cho async operations
- */
-export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+export function generateId(): string {
+  return Math.random().toString(36).substr(2, 9)
+}
+
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
 }

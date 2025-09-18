@@ -191,6 +191,17 @@ class ValidationService
      */
     private function hasCircularDependency(string $nodeId, string $targetId, array &$visited, array &$recursionStack): bool
     {
+        // Check if we're already in the recursion stack (cycle detected)
+        if (isset($recursionStack[$nodeId]) && $recursionStack[$nodeId]) {
+            return true; // Cycle detected
+        }
+
+        // If already visited and not in recursion stack, no cycle from this path
+        if (isset($visited[$nodeId])) {
+            return false;
+        }
+
+        // Mark as visited and add to recursion stack
         $visited[$nodeId] = true;
         $recursionStack[$nodeId] = true;
         
@@ -202,16 +213,13 @@ class ValidationService
                 return true; // Found circular dependency
             }
             
-            if (!isset($visited[$depId])) {
-                if ($this->hasCircularDependency($depId, $targetId, $visited, $recursionStack)) {
-                    return true;
-                }
-            } elseif (isset($recursionStack[$depId])) {
+            if ($this->hasCircularDependency($depId, $targetId, $visited, $recursionStack)) {
                 return true;
             }
         }
         
-        unset($recursionStack[$nodeId]);
+        // Remove from recursion stack when backtracking
+        $recursionStack[$nodeId] = false;
         return false;
     }
     

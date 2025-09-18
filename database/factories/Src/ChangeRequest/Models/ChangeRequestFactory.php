@@ -10,68 +10,101 @@ use App\Models\User;
 /**
  * Factory cho ChangeRequest model
  * 
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\ChangeRequest\Models\ChangeRequest>
+ * Tạo test data cho change requests với workflow states
  */
 class ChangeRequestFactory extends Factory
 {
     protected $model = ChangeRequest::class;
 
+    /**
+     * Define the model's default state
+     */
     public function definition(): array
     {
         return [
             'project_id' => Project::factory(),
             'code' => 'CR-' . $this->faker->unique()->numberBetween(1000, 9999),
             'title' => $this->faker->sentence(4),
-            'description' => $this->faker->paragraph(3),
-            'status' => $this->faker->randomElement(ChangeRequest::VALID_STATUSES),
+            'description' => $this->faker->paragraph(4),
+            'status' => $this->faker->randomElement(['draft', 'awaiting_approval', 'approved', 'rejected']),
             'impact_days' => $this->faker->numberBetween(0, 30),
-            'impact_cost' => $this->faker->randomFloat(2, 0, 100000),
-            'impact_kpi' => [
-                'schedule_delay' => $this->faker->numberBetween(0, 15),
-                'budget_increase' => $this->faker->randomFloat(2, 0, 50000),
-                'quality_impact' => $this->faker->randomElement(['none', 'low', 'medium', 'high']),
-            ],
+            'impact_cost' => $this->faker->randomFloat(2, 0, 25000),
+            'impact_kpi' => json_encode([
+                'quality' => $this->faker->randomElement(['+5%', '+10%', '-2%']),
+                'timeline' => $this->faker->randomElement(['+5 days', '+10 days', 'no impact']),
+                'budget' => $this->faker->randomElement(['+$5000', '+$10000', 'within budget'])
+            ]),
             'created_by' => User::factory(),
-            'decided_by' => $this->faker->optional(0.6)->randomElement([User::factory()]),
-            'decided_at' => $this->faker->optional(0.6)->dateTimeBetween('-1 month', 'now'),
-            'decision_note' => $this->faker->optional(0.5)->paragraph(),
+            'decided_by' => null,
+            'decided_at' => null,
+            'decision_note' => null,
+            'created_at' => $this->faker->dateTimeBetween('-2 months', 'now'),
+            'updated_at' => now()
         ];
     }
 
     /**
-     * State: Draft status
+     * Draft change request state
      */
     public function draft(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => ChangeRequest::STATUS_DRAFT,
+            'status' => 'draft',
             'decided_by' => null,
             'decided_at' => null,
-            'decision_note' => null,
+            'decision_note' => null
         ]);
     }
 
     /**
-     * State: Approved status
+     * Approved change request state
      */
     public function approved(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => ChangeRequest::STATUS_APPROVED,
+            'status' => 'approved',
             'decided_by' => User::factory(),
-            'decided_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
-            'decision_note' => 'Approved after review',
+            'decided_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
+            'decision_note' => 'Approved for ' . $this->faker->randomElement([
+                'quality improvement',
+                'client requirements',
+                'technical necessity',
+                'business value'
+            ])
         ]);
     }
 
     /**
-     * State: High impact
+     * Rejected change request state
+     */
+    public function rejected(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'rejected',
+            'decided_by' => User::factory(),
+            'decided_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
+            'decision_note' => 'Rejected due to ' . $this->faker->randomElement([
+                'budget constraints',
+                'timeline impact',
+                'technical complexity',
+                'scope limitations'
+            ])
+        ]);
+    }
+
+    /**
+     * High impact change request
      */
     public function highImpact(): static
     {
         return $this->state(fn (array $attributes) => [
-            'impact_days' => $this->faker->numberBetween(15, 60),
-            'impact_cost' => $this->faker->randomFloat(2, 50000, 200000),
+            'impact_days' => $this->faker->numberBetween(15, 45),
+            'impact_cost' => $this->faker->randomFloat(2, 15000, 50000),
+            'impact_kpi' => json_encode([
+                'quality' => '+15%',
+                'timeline' => '+' . $this->faker->numberBetween(15, 30) . ' days',
+                'budget' => '+$' . $this->faker->numberBetween(15000, 50000)
+            ])
         ]);
     }
 }

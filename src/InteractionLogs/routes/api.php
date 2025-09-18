@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
-use App\InteractionLogs\Controllers\InteractionLogController;
+use Src\InteractionLogs\Controllers\InteractionLogController;
 
 /**
  * API Routes cho module InteractionLogs

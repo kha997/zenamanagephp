@@ -27,7 +27,7 @@ class AuthService
         // Sử dụng JWT secret từ .env thay vì app.key
         $this->jwtSecret = config('jwt.secret') ?: env('JWT_SECRET', 'default-secret-key');
         $this->jwtTtl = (int) (config('jwt.ttl') ?: env('JWT_TTL', 3600));
-        $this->jwtRefreshTtl = (int) (config('jwt.refresh_ttl') ?: env('JWT_REFRESH_TTL', 20160));
+        $this->jwtRefreshTtl = (int) (config('jwt.refresh_ttl') ?: env('JWT_REFRESH_TTL', 1209600)); // 14 days
         $this->jwtAlgo = config('jwt.algo') ?: env('JWT_ALGO', 'HS256');
     }
 
@@ -52,9 +52,9 @@ class AuthService
             $token = $this->generateToken($user);
 
             return [
-                'success' => true,
-                'user' => $user->load('tenant'),
-                'token' => $token
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => config('jwt.ttl') * 60
             ];
         } catch (Exception $e) {
             return [
@@ -89,10 +89,10 @@ class AuthService
             DB::commit();
 
             return [
-                'success' => true,
                 'user' => $user->load('tenant'),
-                'tenant' => $tenant,
-                'token' => $token
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => config('jwt.ttl') * 60
             ];
         } catch (Exception $e) {
             DB::rollBack();
@@ -111,7 +111,8 @@ class AuthService
     public function getCurrentUser(): ?User
     {
         try {
-            $token = request()->bearerToken();
+            $request = app('request');
+            $token = $request->bearerToken();
             if (!$token) {
                 return null;
             }
@@ -212,8 +213,13 @@ class AuthService
     {
         $now = time();
         
-        // Load system roles của user
-        $systemRoles = $user->systemRoles()->pluck('name')->toArray();
+        // Load system roles của user với error handling
+        try {
+            $systemRoles = $user->systemRoles()->pluck('name')->toArray();
+        } catch (Exception $e) {
+            // Fallback nếu có lỗi với systemRoles
+            $systemRoles = [];
+        }
         
         $payload = [
             'iss' => config('app.url'),
@@ -245,6 +251,17 @@ class AuthService
         } catch (Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * Kiểm tra token có hợp lệ không
+     *
+     * @param string $token
+     * @return bool
+     */
+    public function isValidToken(string $token): bool
+    {
+        return $this->validateToken($token) !== null;
     }
 
     /**

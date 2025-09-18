@@ -22,7 +22,7 @@ class Role extends Model
 {
     use HasFactory, HasUlids, HasTimestamps;
 
-    protected $table = 'roles';
+    protected $table = 'zena_roles';
     
     /**
      * Kiểu dữ liệu của khóa chính
@@ -65,13 +65,12 @@ class Role extends Model
     {
         return $this->belongsToMany(
             Permission::class,
-            'role_permissions',
+            'zena_role_permissions',
             'role_id',
             'permission_id',
             'id',
             'id'
-        )->using(RolePermission::class) // Sử dụng model pivot
-          ->withPivot(['allow_override'])
+        )->withPivot(['allow_override'])
           ->withTimestamps();
     }
 
@@ -82,7 +81,7 @@ class Role extends Model
     {
         return $this->belongsToMany(
             \App\Models\User::class,
-            'system_user_roles',
+            'zena_user_roles',
             'role_id',
             'user_id'
         )->withTimestamps();

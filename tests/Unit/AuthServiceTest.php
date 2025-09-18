@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Config;
 use App\Models\User;
 use App\Models\Tenant;
 use Src\RBAC\Services\AuthService;
-use Src\RBAC\Models\Role;
-use Src\RBAC\Models\Permission;
+use App\Models\ZenaRole;
+use App\Models\ZenaPermission;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Carbon\Carbon;
@@ -65,7 +65,8 @@ class AuthServiceTest extends TestCase
      */
     public function test_login_success_with_valid_credentials(): void
     {
-        $result = $this->authService->login('test@example.com', 'password123');
+        $credentials = ['email' => 'test@example.com', 'password' => 'password123'];
+        $result = $this->authService->login($credentials);
         
         $this->assertIsArray($result);
         $this->assertArrayHasKey('access_token', $result);
@@ -81,9 +82,12 @@ class AuthServiceTest extends TestCase
      */
     public function test_login_fails_with_invalid_email(): void
     {
-        $result = $this->authService->login('nonexistent@example.com', 'password123');
+        $credentials = ['email' => 'nonexistent@example.com', 'password' => 'password123'];
+        $result = $this->authService->login($credentials);
         
-        $this->assertNull($result);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('success', $result);
+        $this->assertFalse($result['success']);
     }
 
     /**
@@ -91,9 +95,12 @@ class AuthServiceTest extends TestCase
      */
     public function test_login_fails_with_wrong_password(): void
     {
-        $result = $this->authService->login('test@example.com', 'wrongpassword');
+        $credentials = ['email' => 'test@example.com', 'password' => 'wrongpassword'];
+        $result = $this->authService->login($credentials);
         
-        $this->assertNull($result);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('success', $result);
+        $this->assertFalse($result['success']);
     }
 
     /**
@@ -104,11 +111,16 @@ class AuthServiceTest extends TestCase
         $userData = [
             'name' => 'New User',
             'email' => 'newuser@example.com',
-            'password' => 'newpassword123',
-            'tenant_id' => $this->tenant->id
+            'password' => 'newpassword123'
         ];
         
-        $result = $this->authService->register($userData);
+        $tenantData = [
+            'name' => 'Test Tenant',
+            'domain' => 'test.com',
+            'settings' => ['timezone' => 'UTC']
+        ];
+        
+        $result = $this->authService->register($userData, $tenantData);
         
         $this->assertIsArray($result);
         $this->assertArrayHasKey('user', $result);
@@ -119,8 +131,7 @@ class AuthServiceTest extends TestCase
         // Kiểm tra user được tạo trong database
         $this->assertDatabaseHas('users', [
             'email' => 'newuser@example.com',
-            'name' => 'New User',
-            'tenant_id' => $this->tenant->id
+            'name' => 'New User'
         ]);
     }
 
@@ -136,8 +147,17 @@ class AuthServiceTest extends TestCase
             'tenant_id' => $this->tenant->id
         ];
         
-        $this->expectException(\Exception::class);
-        $this->authService->register($userData);
+        $tenantData = [
+            'name' => 'Test Tenant',
+            'domain' => 'test.com',
+            'settings' => ['timezone' => 'UTC']
+        ];
+        
+        $result = $this->authService->register($userData, $tenantData);
+        
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('success', $result);
+        $this->assertFalse($result['success']);
     }
 
     /**
@@ -163,7 +183,7 @@ class AuthServiceTest extends TestCase
     {
         $token = $this->authService->createTokenForUser($this->user);
         
-        $isValid = $this->authService->validateToken($token);
+        $isValid = $this->authService->isValidToken($token);
         
         $this->assertTrue($isValid);
     }
@@ -175,7 +195,7 @@ class AuthServiceTest extends TestCase
     {
         $invalidToken = 'invalid.jwt.token';
         
-        $isValid = $this->authService->validateToken($invalidToken);
+        $isValid = $this->authService->isValidToken($invalidToken);
         
         $this->assertFalse($isValid);
     }
@@ -252,12 +272,12 @@ class AuthServiceTest extends TestCase
     public function test_check_permission_with_user_having_permission(): void
     {
         // Tạo role và permission
-        $role = Role::factory()->create([
+        $role = ZenaRole::factory()->create([
             'name' => 'Test Role',
             'scope' => 'system'
         ]);
         
-        $permission = Permission::factory()->create([
+        $permission = ZenaPermission::factory()->create([
             'code' => 'task.create',
             'module' => 'task',
             'action' => 'create'
@@ -267,9 +287,9 @@ class AuthServiceTest extends TestCase
         $role->permissions()->attach($permission->id);
         
         // Gán role cho user
-        $this->user->systemRoles()->attach($role->id);
+        $this->user->roles()->attach($role->id);
         
-        $hasPermission = $this->authService->checkPermission($this->user, 'task.create');
+        $hasPermission = $this->authService->checkPermission('task.create');
         
         $this->assertTrue($hasPermission);
     }
@@ -279,7 +299,7 @@ class AuthServiceTest extends TestCase
      */
     public function test_check_permission_with_user_not_having_permission(): void
     {
-        $hasPermission = $this->authService->checkPermission($this->user, 'nonexistent.permission');
+        $hasPermission = $this->authService->checkPermission('nonexistent.permission');
         
         $this->assertFalse($hasPermission);
     }
@@ -293,7 +313,9 @@ class AuthServiceTest extends TestCase
         
         $result = $this->authService->logout($token);
         
-        $this->assertTrue($result);
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('success', $result);
+        $this->assertTrue($result['success']);
     }
 
     /**

@@ -4,6 +4,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { AdminLayout } from '@/layouts/AdminLayout'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminRoute } from './AdminRoute'
+import { RoleGuard } from './RoleGuard'
 
 // Auth pages
 import { Login } from '@/features/auth/pages/Login'
@@ -17,6 +18,15 @@ import { TaskBoard } from '@/features/tasks/pages/TaskBoard'
 import { Notifications } from '@/features/notifications/pages/Notifications'
 import { UserProfile } from '@/features/users/pages/UserProfile'
 import { Settings } from '@/features/settings/pages/Settings'
+
+// Z.E.N.A Dashboard pages
+import { PmDashboard } from '@/pages/dashboard/PmDashboard'
+import { DesignerDashboard } from '@/pages/dashboard/DesignerDashboard'
+import { SiteEngineerDashboard } from '@/pages/dashboard/SiteEngineerDashboard'
+import { QcDashboard } from '@/pages/dashboard/QcDashboard'
+import { ProcurementDashboard } from '@/pages/dashboard/ProcurementDashboard'
+import { FinanceDashboard } from '@/pages/dashboard/FinanceDashboard'
+import { ClientDashboard } from '@/pages/dashboard/ClientDashboard'
 
 // Templates pages
 import { TemplatesList, TemplateDetail, CreateTemplate } from '@/features/templates'
@@ -50,10 +60,37 @@ export function AppRoutes() {
         <Route index element={<Navigate to="login" replace />} />
       </Route>
 
+      {/* Unauthorized route */}
+      <Route path="/unauthorized" element={
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6 text-center">
+            <div className="text-red-500 text-6xl mb-4">🚫</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+            <p className="text-gray-600 mb-4">You don't have permission to access this resource.</p>
+            <button 
+              onClick={() => window.history.back()}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      } />
+
       {/* Protected routes - Main application */}
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+        
+        {/* Z.E.N.A Role-based Dashboard Routes */}
+        <Route path="admin/dashboard" element={<RoleGuard requiredRoles={['SuperAdmin', 'Admin']}><Dashboard /></RoleGuard>} />
+        <Route path="pm/dashboard" element={<RoleGuard requiredRoles={['PM']}><PmDashboard /></RoleGuard>} />
+        <Route path="designer/dashboard" element={<RoleGuard requiredRoles={['Designer']}><DesignerDashboard /></RoleGuard>} />
+        <Route path="site-engineer/dashboard" element={<RoleGuard requiredRoles={['SiteEngineer']}><SiteEngineerDashboard /></RoleGuard>} />
+        <Route path="qc/dashboard" element={<RoleGuard requiredRoles={['QC']}><QcDashboard /></RoleGuard>} />
+        <Route path="procurement/dashboard" element={<RoleGuard requiredRoles={['Procurement']}><ProcurementDashboard /></RoleGuard>} />
+        <Route path="finance/dashboard" element={<RoleGuard requiredRoles={['Finance']}><FinanceDashboard /></RoleGuard>} />
+        <Route path="client/dashboard" element={<RoleGuard requiredRoles={['Client']}><ClientDashboard /></RoleGuard>} />
         
         {/* Projects routes */}
         <Route path="projects" element={<ProjectsList />} />

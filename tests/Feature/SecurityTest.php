@@ -1,176 +1,147 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Tests\Feature;
 
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Foundation\Testing\WithFaker;
 use App\Models\User;
 use App\Models\Tenant;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Task;
-use Src\RBAC\Services\AuthService;
 
 /**
- * Test bảo mật cho SQL injection và XSS
+ * Security Test Suite
+ * 
+ * Comprehensive security testing for production hardening
  */
 class SecurityTest extends TestCase
 {
-    use RefreshDatabase;
-
-    private $tenant;
-    private $user;
-    private $authHeaders;
-    private AuthService $authService;
+    use RefreshDatabase, WithFaker;
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        // Đăng ký middleware alias cho test environment
-        $this->app['router']->aliasMiddleware('rbac', \Src\RBAC\Middleware\RBACMiddleware::class);
-        
+        // Create test tenant
         $this->tenant = Tenant::factory()->create();
+        
+        // Create test user
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'password' => Hash::make('password123')
+            'email_verified' => true
         ]);
-        
-        $this->authService = app(AuthService::class);
-        $token = $this->authService->createTokenForUser($this->user);
-        $this->authHeaders = ['Authorization' => 'Bearer ' . $token];
     }
 
     /**
-     * Test SQL Injection trong search parameters
+     * Test security headers are present
      */
-    public function test_sql_injection_in_search_parameters()
+    public function test_security_headers_are_present()
     {
-        $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
-        
-        // Các payload SQL injection phổ biến
-        $sqlInjectionPayloads = [
-            "'; DROP TABLE projects; --",
-            "' OR '1'='1",
-            "' UNION SELECT * FROM users --",
-            "'; INSERT INTO projects (name) VALUES ('hacked'); --",
-            "' OR 1=1 --",
-            "admin'--",
-            "admin'/*",
-            "' OR 'x'='x",
-            "') OR ('1'='1",
-            "' OR 1=1#"
-        ];
-        
-        foreach ($sqlInjectionPayloads as $payload) {
-            // Test search trong projects
-            $response = $this->withHeaders($this->authHeaders)
-                ->getJson('/api/v1/projects?search=' . urlencode($payload));
-            
-            // Không được trả về lỗi SQL và không được hack
-            $this->assertNotEquals(500, $response->getStatusCode(), 
-                "SQL injection payload should not cause server error: {$payload}");
-            
-            // Test search trong tasks
-            $response = $this->withHeaders($this->authHeaders)
-                ->getJson("/api/v1/projects/{$project->id}/tasks?search=" . urlencode($payload));
-            
-            $this->assertNotEquals(500, $response->getStatusCode(), 
-                "SQL injection in tasks should not cause server error: {$payload}");
-        }
-        
-        // Verify database integrity
-        $this->assertTrue(DB::table('projects')->exists(), 'Projects table should still exist');
-        $this->assertTrue(DB::table('users')->exists(), 'Users table should still exist');
+        $response = $this->get('/api/v1/test');
+
+        $response->assertHeader('X-Content-Type-Options', 'nosniff');
+        $response->assertHeader('X-Frame-Options', 'DENY');
+        $response->assertHeader('X-XSS-Protection', '1; mode=block');
+        $response->assertHeader('Strict-Transport-Security');
+        $response->assertHeader('Content-Security-Policy');
+        $response->assertHeader('Referrer-Policy');
     }
 
     /**
-     * Test SQL Injection trong filter parameters
+     * Test rate limiting works
      */
-    public function test_sql_injection_in_filters()
+    public function test_rate_limiting_works()
     {
-        $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
-        
-        $maliciousFilters = [
-            'status' => "active'; DROP TABLE tasks; --",
-            'priority' => "high' OR '1'='1",
-            'component_id' => "1' UNION SELECT id FROM users --"
-        ];
-        
-        foreach ($maliciousFilters as $filterKey => $filterValue) {
-            $response = $this->withHeaders($this->authHeaders)
-                ->getJson("/api/v1/projects/{$project->id}/tasks?{$filterKey}=" . urlencode($filterValue));
+        // Make multiple requests to trigger rate limit
+        for ($i = 0; $i < 15; $i++) {
+            $response = $this->get('/api/v1/test');
             
-            // Should handle malicious input gracefully
-            $this->assertContains($response->getStatusCode(), [200, 400, 422], 
-                "Filter injection should be handled gracefully: {$filterKey}={$filterValue}");
-        }
-    }
-
-    /**
-     * Test XSS trong input fields
-     */
-    public function test_xss_in_input_fields()
-    {
-        $xssPayloads = [
-            '<script>alert("XSS")</script>',
-            '<img src=x onerror=alert("XSS")>',
-            '<svg onload=alert("XSS")>',
-            'javascript:alert("XSS")',
-            '<iframe src="javascript:alert(\'XSS\')"></iframe>',
-            '<body onload=alert("XSS")>',
-            '<div onclick="alert(\'XSS\')">Click me</div>',
-            '"><script>alert("XSS")</script>',
-            "';alert('XSS');//",
-            '<script>document.location="http://evil.com"</script>'
-        ];
-        
-        foreach ($xssPayloads as $payload) {
-            // Test XSS trong project creation
-            $response = $this->withHeaders($this->authHeaders)
-                ->postJson('/api/v1/projects', [
-                    'name' => $payload,
-                    'description' => $payload,
-                    'start_date' => '2024-01-01',
-                    'end_date' => '2024-12-31'
-                ]);
-            
-            if ($response->getStatusCode() === 201) {
-                $project = $response->json('data');
-                
-                // Verify XSS payload is escaped/sanitized
-                $this->assertStringNotContainsString('<script>', $project['name'], 
-                    'XSS payload should be sanitized in name field');
-                $this->assertStringNotContainsString('javascript:', $project['description'], 
-                    'XSS payload should be sanitized in description field');
+            if ($i >= 10) {
+                $response->assertStatus(429);
             }
         }
     }
 
     /**
-     * Test XSS trong response data
+     * Test SQL injection protection
      */
-    public function test_xss_in_response_data()
+    public function test_sql_injection_protection()
     {
-        // Tạo project với potential XSS content
-        $project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id,
-            'name' => '<script>alert("XSS")</script>Test Project',
-            'description' => '<img src=x onerror=alert("XSS")>Description'
+        $maliciousInput = "'; DROP TABLE users; --";
+        
+        $response = $this->postJson('/api/v1/test', [
+            'search' => $maliciousInput
         ]);
+
+        $response->assertStatus(400);
+        $response->assertJson([
+            'status' => 'error',
+            'code' => 'SUSPICIOUS_INPUT'
+        ]);
+    }
+
+    /**
+     * Test XSS protection
+     */
+    public function test_xss_protection()
+    {
+        $xssPayload = '<script>alert("XSS")</script>';
         
-        $response = $this->withHeaders($this->authHeaders)
-            ->getJson("/api/v1/projects/{$project->id}");
+        $response = $this->postJson('/api/v1/test', [
+            'content' => $xssPayload
+        ]);
+
+        $response->assertStatus(400);
+        $response->assertJson([
+            'status' => 'error',
+            'code' => 'SUSPICIOUS_INPUT'
+        ]);
+    }
+
+    /**
+     * Test file upload security
+     */
+    public function test_file_upload_security()
+    {
+        // Test malicious file upload
+        $maliciousFile = $this->createMaliciousFile();
         
-        $response->assertStatus(200);
-        $responseData = $response->json('data');
-        
-        // Verify response data is properly escaped
-        $this->assertStringNotContainsString('<script>', $responseData['name'], 
-            'Response should not contain unescaped script tags');
-        $this->assertStringNotContainsString('onerror=', $responseData['description'], 
-            'Response should not contain unescaped event handlers');
+        $response = $this->postJson('/api/v1/upload', [
+            'file' => $maliciousFile
+        ]);
+
+        $response->assertStatus(400);
+        $response->assertJson([
+            'status' => 'error'
+        ]);
+    }
+
+    /**
+     * Test tenant isolation
+     */
+    public function test_tenant_isolation()
+    {
+        // Create another tenant and user
+        $otherTenant = Tenant::factory()->create();
+        $otherUser = User::factory()->create([
+            'tenant_id' => $otherTenant->id
+        ]);
+
+        // Try to access other tenant's user
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/users/{$otherUser->id}");
+
+        $response->assertStatus(403);
+    }
+
+    /**
+     * Test authentication bypass protection
+     */
+    public function test_authentication_bypass_protection()
+    {
+        // Try to access protected route without authentication
+        $response = $this->getJson('/api/v1/users');
+
+        $response->assertStatus(401);
     }
 
     /**
@@ -178,93 +149,139 @@ class SecurityTest extends TestCase
      */
     public function test_csrf_protection()
     {
-        // Test POST request without CSRF token (should fail)
-        $response = $this->postJson('/api/v1/projects', [
-            'name' => 'Test Project',
-            'description' => 'Test Description'
+        // Test CSRF protection on state-changing operations
+        $response = $this->postJson('/api/v1/users', [
+            'name' => 'Test User',
+            'email' => 'test@example.com'
         ]);
-        
-        // Should require authentication
-        $this->assertEquals(401, $response->getStatusCode());
-        
-        // Test with invalid token
-        $response = $this->withHeaders(['Authorization' => 'Bearer invalid_token'])
-            ->postJson('/api/v1/projects', [
-                'name' => 'Test Project',
-                'description' => 'Test Description'
-            ]);
-        
-        $this->assertEquals(401, $response->getStatusCode());
+
+        // Should require CSRF token or proper authentication
+        $response->assertStatus(401);
     }
 
     /**
-     * Test authorization bypass attempts
+     * Test password policy enforcement
      */
-    public function test_authorization_bypass_attempts()
+    public function test_password_policy_enforcement()
     {
-        // Tạo project của tenant khác
-        $otherTenant = Tenant::factory()->create();
-        $otherProject = Project::factory()->create(['tenant_id' => $otherTenant->id]);
-        
-        // Attempt to access other tenant's project
-        $response = $this->withHeaders($this->authHeaders)
-            ->getJson("/api/v1/projects/{$otherProject->id}");
-        
-        // Should be forbidden or not found
-        $this->assertContains($response->getStatusCode(), [403, 404], 
-            'Should not allow access to other tenant\'s projects');
-        
-        // Attempt to modify other tenant's project
-        $response = $this->withHeaders($this->authHeaders)
-            ->putJson("/api/v1/projects/{$otherProject->id}", [
-                'name' => 'Hacked Project Name'
-            ]);
-        
-        $this->assertContains($response->getStatusCode(), [403, 404], 
-            'Should not allow modification of other tenant\'s projects');
-    }
-
-    /**
-     * Test input validation bypass attempts
-     */
-    public function test_input_validation_bypass()
-    {
-        $maliciousInputs = [
-            // Extremely long strings
-            'name' => str_repeat('A', 10000),
-            // Null bytes
-            'description' => "Test\x00Description",
-            // Unicode attacks
-            'name' => "Test\u202e\u0041\u0042\u0043",
-            // Path traversal
-            'name' => '../../../etc/passwd',
-            // Command injection
-            'description' => '; cat /etc/passwd'
+        $weakPasswords = [
+            '123456',
+            'password',
+            'abc123',
+            'qwerty'
         ];
-        
-        foreach ($maliciousInputs as $field => $value) {
-            $response = $this->withHeaders($this->authHeaders)
-                ->postJson('/api/v1/projects', [
-                    'name' => $field === 'name' ? $value : 'Valid Name',
-                    'description' => $field === 'description' ? $value : 'Valid Description',
-                    'start_date' => '2024-01-01',
-                    'end_date' => '2024-12-31'
-                ]);
-            
-            // Should either reject with validation error or sanitize input
-            if ($response->getStatusCode() === 201) {
-                $project = $response->json('data');
-                
-                // Verify malicious content is sanitized
-                $this->assertStringNotContainsString('\x00', $project[$field] ?? '', 
-                    'Null bytes should be removed');
-                $this->assertStringNotContainsString('../', $project[$field] ?? '', 
-                    'Path traversal should be prevented');
-            } else {
-                // Should return validation error
-                $this->assertContains($response->getStatusCode(), [400, 422], 
-                    'Should return validation error for malicious input');
-            }
+
+        foreach ($weakPasswords as $password) {
+            $response = $this->postJson('/api/v1/auth/register', [
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+                'password' => $password,
+                'password_confirmation' => $password
+            ]);
+
+            $response->assertStatus(422);
+            $response->assertJsonValidationErrors(['password']);
         }
+    }
+
+    /**
+     * Test MFA enforcement
+     */
+    public function test_mfa_enforcement()
+    {
+        // Enable MFA for user
+        $this->user->update(['mfa_enabled' => true]);
+
+        // Try to login without MFA
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => $this->user->email,
+            'password' => 'password'
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'status' => 'success',
+            'requires_mfa' => true
+        ]);
+    }
+
+    /**
+     * Test session security
+     */
+    public function test_session_security()
+    {
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/v1/sessions');
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure([
+            'data' => [
+                '*' => [
+                    'id',
+                    'device_name',
+                    'ip_address',
+                    'is_current',
+                    'is_trusted',
+                    'last_activity_at'
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Test audit logging
+     */
+    public function test_audit_logging()
+    {
+        // Perform an action that should be logged
+        $response = $this->actingAs($this->user)
+            ->putJson("/api/v1/users/{$this->user->id}", [
+                'name' => 'Updated Name'
+            ]);
+
+        $response->assertStatus(200);
+
+        // Check audit log was created
+        $this->assertDatabaseHas('audit_logs', [
+            'user_id' => $this->user->id,
+            'action' => 'update',
+            'entity_type' => 'User',
+            'entity_id' => $this->user->id
+        ]);
+    }
+
+    /**
+     * Test production security middleware
+     */
+    public function test_production_security_middleware()
+    {
+        // Test that SimpleUserController routes are blocked in production
+        config(['app.env' => 'production']);
+        
+        $response = $this->getJson('/api/simple/users');
+        
+        $response->assertStatus(404);
+        $response->assertJson([
+            'status' => 'error',
+            'code' => 'PRODUCTION_SECURITY_BLOCK'
+        ]);
+    }
+
+    /**
+     * Create malicious file for testing
+     */
+    private function createMaliciousFile()
+    {
+        $tempFile = tmpfile();
+        fwrite($tempFile, '<?php echo "malicious"; ?>');
+        $tempPath = stream_get_meta_data($tempFile)['uri'];
+        
+        return new \Illuminate\Http\UploadedFile(
+            $tempPath,
+            'malicious.php',
+            'application/x-php',
+            null,
+            true
+        );
     }
 }

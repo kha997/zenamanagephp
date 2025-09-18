@@ -46,8 +46,12 @@ body {
 
 .main-content {
     flex: 1;
-    margin-left: var(--sidebar-width);
     background-color: var(--light-bg);
+}
+
+.main-content.with-sidebar {
+    margin-left: var(--sidebar-width);
+}
 }
 
 .header {

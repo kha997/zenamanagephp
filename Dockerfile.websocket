@@ -1,41 +1,72 @@
-FROM php:8.0-cli-alpine
+# WebSocket Server Dockerfile
+# Dashboard System - WebSocket Server
 
-# Install dependencies
+FROM php:8.2-fpm-alpine
+
+# Install system dependencies
 RUN apk add --no-cache \
-    git \
     curl \
-    libpng-dev \
-    libxml2-dev \
     zip \
-    unzip
+    unzip \
+    git \
+    oniguruma-dev \
+    libxml2-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libzip-dev \
+    icu-dev \
+    redis \
+    mysql-client \
+    && rm -rf /var/cache/apk/*
 
 # Install PHP extensions
-RUN docker-php-ext-install \
-    pdo_mysql \
-    mbstring \
-    pcntl \
-    sockets
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        mbstring \
+        xml \
+        zip \
+        intl \
+        gd \
+        opcache \
+        bcmath \
+        sockets
+
+# Install Redis extension
+RUN pecl install redis \
+    && docker-php-ext-enable redis
 
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy composer files
-COPY composer.json composer.lock ./
-
-# Install dependencies
-RUN composer install --no-dev --optimize-autoloader
-
 # Copy application code
 COPY . .
 
+# Install dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Create necessary directories
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views \
+    && mkdir -p bootstrap/cache
+
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# Copy configuration files
+COPY docker/php/php.ini /usr/local/etc/php/php.ini
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:6001/health || exit 1
 
 # Expose WebSocket port
-EXPOSE 8080
+EXPOSE 6001
 
 # Start WebSocket server
-CMD ["php", "websocket_server.php"]
+CMD ["php", "artisan", "websockets:serve", "--host=0.0.0.0", "--port=6001"]

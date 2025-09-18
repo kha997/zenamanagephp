@@ -12,32 +12,80 @@ import {
   ArrowRightOnRectangleIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
-  ChatBubbleLeftRightIcon
+  ChatBubbleLeftRightIcon,
+  BuildingOfficeIcon,
+  WrenchScrewdriverIcon,
+  CheckCircleIcon,
+  ShoppingCartIcon,
+  CurrencyDollarIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
   className?: string;
 }
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Projects', href: '/projects', icon: FolderIcon },
-  { name: 'Tasks', href: '/tasks', icon: ClipboardDocumentListIcon },
-  { name: 'Templates', href: '/templates', icon: DocumentTextIcon },
-  { name: 'Change Requests', href: '/change-requests', icon: ExclamationTriangleIcon },
-  { name: 'Interaction Logs', href: '/interaction-logs', icon: ChatBubbleLeftRightIcon },
-  { name: 'Notifications', href: '/notifications', icon: BellIcon },
-  { name: 'Profile', href: '/profile', icon: UserIcon },
-  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
-];
+// Role-based navigation configuration
+const getNavigationForRole = (userRoles: string[]) => {
+  const baseNavigation = [
+    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, roles: ['*'] },
+    { name: 'Profile', href: '/profile', icon: UserIcon, roles: ['*'] },
+    { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, roles: ['*'] },
+  ];
+
+  const roleSpecificNavigation = [
+    // Admin/SuperAdmin specific
+    { name: 'Admin Dashboard', href: '/admin/dashboard', icon: BuildingOfficeIcon, roles: ['SuperAdmin', 'Admin'] },
+    
+    // PM specific
+    { name: 'PM Dashboard', href: '/pm/dashboard', icon: FolderIcon, roles: ['PM'] },
+    
+    // Designer specific
+    { name: 'Designer Dashboard', href: '/designer/dashboard', icon: DocumentTextIcon, roles: ['Designer'] },
+    
+    // Site Engineer specific
+    { name: 'Site Engineer Dashboard', href: '/site-engineer/dashboard', icon: WrenchScrewdriverIcon, roles: ['SiteEngineer'] },
+    
+    // QC specific
+    { name: 'QC Dashboard', href: '/qc/dashboard', icon: CheckCircleIcon, roles: ['QC'] },
+    
+    // Procurement specific
+    { name: 'Procurement Dashboard', href: '/procurement/dashboard', icon: ShoppingCartIcon, roles: ['Procurement'] },
+    
+    // Finance specific
+    { name: 'Finance Dashboard', href: '/finance/dashboard', icon: CurrencyDollarIcon, roles: ['Finance'] },
+    
+    // Client specific
+    { name: 'Client Dashboard', href: '/client/dashboard', icon: UserGroupIcon, roles: ['Client'] },
+    
+    // Common features
+    { name: 'Projects', href: '/projects', icon: FolderIcon, roles: ['PM', 'Designer', 'SiteEngineer', 'QC', 'SuperAdmin', 'Admin'] },
+    { name: 'Tasks', href: '/tasks', icon: ClipboardDocumentListIcon, roles: ['PM', 'Designer', 'SiteEngineer', 'QC', 'SuperAdmin', 'Admin'] },
+    { name: 'Templates', href: '/templates', icon: DocumentTextIcon, roles: ['PM', 'Designer', 'SuperAdmin', 'Admin'] },
+    { name: 'Change Requests', href: '/change-requests', icon: ExclamationTriangleIcon, roles: ['PM', 'SuperAdmin', 'Admin'] },
+    { name: 'Notifications', href: '/notifications', icon: BellIcon, roles: ['*'] },
+  ];
+
+  // Filter navigation based on user roles
+  const allNavigation = [...baseNavigation, ...roleSpecificNavigation];
+  
+  return allNavigation.filter(item => 
+    item.roles.includes('*') || 
+    item.roles.some(role => userRoles.includes(role))
+  );
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
   const location = useLocation();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuthStore();
 
   const handleLogout = () => {
     logout();
   };
+
+  // Get user roles for navigation filtering
+  const userRoles = user?.roles?.map(role => role.name) || [];
+  const navigation = getNavigationForRole(userRoles);
 
   return (
     <div className={cn('flex h-full w-64 flex-col bg-gray-900', className)}>

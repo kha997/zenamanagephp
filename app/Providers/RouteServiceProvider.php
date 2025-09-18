@@ -29,25 +29,13 @@ class RouteServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         $this->routes(function () {
+            // Test routes
+            Route::group([], base_path('routes/test.php'));
+
             // Main API routes
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
-
-            // RBAC Module routes (Auth + RBAC management)
-            Route::middleware('api')
-                ->prefix('api')
-                ->group(base_path('src/RBAC/routes/api.php'));
-
-            // Document Management Module routes
-            if (file_exists(base_path('src/DocumentManagement/routes/api.php'))) {
-                Route::group([], base_path('src/DocumentManagement/routes/api.php'));
-            }
-
-            // Change Request Module routes
-            if (file_exists(base_path('src/ChangeRequest/routes/api.php'))) {
-                Route::group([], base_path('src/ChangeRequest/routes/api.php'));
-            }
 
             // Web routes
             Route::middleware('web')

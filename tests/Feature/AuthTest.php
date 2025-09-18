@@ -2,170 +2,196 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
 use App\Models\Tenant;
+use Illuminate\Support\Facades\Hash;
 
+/**
+ * Feature tests for Authentication endpoints
+ */
 class AuthTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
-
-    private Tenant $tenant;
+    use RefreshDatabase;
 
     /**
-     * Setup method để tạo tenant mặc định
+     * Test user registration
      */
-    protected function setUp(): void
+    public function test_user_registration(): void
     {
-        parent::setUp();
+        $tenant = Tenant::factory()->create();
         
-        // Tạo tenant mặc định cho test
-        $this->tenant = Tenant::factory()->create([
-            'name' => 'Test Company',
-            'domain' => 'test.com'
-        ]);
-    }
-
-    /**
-     * Test user registration.
-     *
-     * @return void
-     */
-    public function test_user_can_register()
-    {
         $userData = [
-            'name' => $this->faker->name,
-            'email' => $this->faker->unique()->safeEmail,
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
-            'company_name' => $this->faker->company,
+            'tenant_id' => $tenant->id
         ];
-    
-        $response = $this->postJson('/api/v1/auth/register', $userData);
-    
-        // Debug: In ra response body nếu có lỗi
-        if ($response->getStatusCode() !== 201) {
-            dump('Response Status: ' . $response->getStatusCode());
-            dump('Response Body: ' . $response->getContent());
-            dump('Request Data: ', $userData);
-        }
-    
+
+        $response = $this->postJson('/api/auth/register', $userData);
+
         $response->assertStatus(201)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'user' => [
-                             'id',
-                             'name',
-                             'email',
-                             'created_at',
-                             'updated_at',
-                         ],
-                         'token', // AuthController trả về 'token' thay vì 'access_token'
-                         'token_type',
-                         'expires_in',
-                     ],
-                 ]);
-    
+                ->assertJsonStructure([
+                    'data' => [
+                        'user' => [
+                            'id',
+                            'name',
+                            'email',
+                            'tenant_id'
+                        ],
+                        'token'
+                    ]
+                ]);
+
         $this->assertDatabaseHas('users', [
-            'email' => $userData['email'],
+            'email' => 'john@example.com',
+            'tenant_id' => $tenant->id
         ]);
     }
 
     /**
-     * Test user login.
-     *
-     * @return void
+     * Test user login
      */
-    public function test_user_can_login()
+    public function test_user_login(): void
     {
-        $password = 'password123';
-        $user = User::factory()->forTenant($this->tenant->id)->create([
-            'password' => Hash::make($password),
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'email' => 'john@example.com',
+            'password' => Hash::make('password123')
         ]);
 
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => $user->email,
-            'password' => $password,
+        $loginData = [
+            'email' => 'john@example.com',
+            'password' => 'password123'
+        ];
+
+        $response = $this->postJson('/api/auth/login', $loginData);
+
+        $response->assertStatus(200)
+                ->assertJsonStructure([
+                    'data' => [
+                        'user' => [
+                            'id',
+                            'name',
+                            'email',
+                            'tenant_id'
+                        ],
+                        'token'
+                    ]
+                ]);
+    }
+
+    /**
+     * Test user login with invalid credentials
+     */
+    public function test_user_login_invalid_credentials(): void
+    {
+        $loginData = [
+            'email' => 'john@example.com',
+            'password' => 'wrongpassword'
+        ];
+
+        $response = $this->postJson('/api/auth/login', $loginData);
+
+        $response->assertStatus(401)
+                ->assertJson([
+                    'message' => 'Invalid credentials'
+                ]);
+    }
+
+    /**
+     * Test user logout
+     */
+    public function test_user_logout(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        
+        // Create a token for the user
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token
+        ])->postJson('/api/auth/logout');
+
+        $response->assertStatus(200)
+                ->assertJson([
+                    'message' => 'Logged out successfully'
+                ]);
+    }
+
+    /**
+     * Test getting authenticated user
+     */
+    public function test_get_authenticated_user(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        
+        // Create a token for the user
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token
+        ])->getJson('/api/user');
+
+        $response->assertStatus(200)
+                ->assertJsonStructure([
+                    'data' => [
+                        'id',
+                        'name',
+                        'email',
+                        'tenant_id'
+                    ]
+                ]);
+    }
+
+    /**
+     * Test accessing protected route without authentication
+     */
+    public function test_access_protected_route_without_auth(): void
+    {
+        $response = $this->getJson('/api/user');
+
+        $response->assertStatus(401);
+    }
+
+    /**
+     * Test password reset request
+     */
+    public function test_password_reset_request(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'email' => 'john@example.com'
+        ]);
+
+        $response = $this->postJson('/api/auth/forgot-password', [
+            'email' => 'john@example.com'
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'user' => [
-                             'id',
-                             'name',
-                             'email',
-                         ],
-                         'token', // AuthController trả về 'token' thay vì 'access_token'
-                         'token_type',
-                         'expires_in',
-                     ],
-                 ]);
+                ->assertJson([
+                    'message' => 'Password reset link sent to your email'
+                ]);
     }
 
     /**
-     * Test user cannot login with invalid credentials.
-     *
-     * @return void
+     * Test password reset with invalid email
      */
-    public function test_user_cannot_login_with_invalid_credentials()
+    public function test_password_reset_invalid_email(): void
     {
-        $user = User::factory()->forTenant($this->tenant->id)->create([
-            'password' => Hash::make('correct_password'),
+        $response = $this->postJson('/api/auth/forgot-password', [
+            'email' => 'nonexistent@example.com'
         ]);
 
-        $response = $this->postJson('/api/v1/auth/login', [
-            'email' => $user->email,
-            'password' => 'wrong_password',
-        ]);
-
-        $response->assertStatus(401)
-                 ->assertJson([
-                     'status' => 'fail', // AuthController trả về 'fail' thay vì 'error'
-                     'data' => [
-                         'message' => 'Email hoặc mật khẩu không đúng'
-                     ]
-                 ]);
-    }
-
-    /**
-     * Test user can get profile with valid token.
-     *
-     * @return void
-     */
-    public function test_user_can_get_profile_with_valid_token()
-    {
-        $password = 'password123';
-        $user = User::factory()->forTenant($this->tenant->id)->create([
-            'password' => Hash::make($password),
-        ]);
-
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $user->email,
-            'password' => $password,
-        ]);
-
-        $token = $loginResponse->json('data.token'); // Sử dụng 'token' thay vì 'access_token'
-
-        $profileResponse = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token,
-        ])->getJson('/api/v1/auth/me');
-
-        $profileResponse->assertStatus(200)
-                        ->assertJson([
-                            'status' => 'success',
-                            'data' => [
-                                'user' => [
-                                    'id' => $user->id,
-                                    'name' => $user->name,
-                                    'email' => $user->email,
-                                ],
-                            ],
-                        ]);
+        $response->assertStatus(404)
+                ->assertJson([
+                    'message' => 'User not found'
+                ]);
     }
 }

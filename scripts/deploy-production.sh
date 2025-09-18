@@ -1,99 +1,250 @@
 #!/bin/bash
 
-# Z.E.N.A Project Management - Production Deployment Script
-# Author: Development Team
-# Version: 1.0
+# ZenaManage Production Deployment Script
+# This script deploys the application to production
 
 set -e
-
-echo "🚀 Starting Z.E.N.A Project Management deployment..."
-
-# Configuration
-APP_DIR="/var/www/zena"
-BACKUP_DIR="/var/backups/zena"
-DATE=$(date +"%Y%m%d_%H%M%S")
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+# Configuration
+PROJECT_NAME="ZenaManage"
+PROJECT_PATH=$(pwd)
+BACKUP_PATH="storage/backups"
+LOG_FILE="storage/logs/deploy-$(date +%Y%m%d_%H%M%S).log"
+DEPLOYMENT_ID=$(date +%Y%m%d_%H%M%S)
+
+# Functions
+log() {
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
 }
 
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
+success() {
+    echo -e "${GREEN}✅ $1${NC}" | tee -a "$LOG_FILE"
 }
 
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
+warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}" | tee -a "$LOG_FILE"
+}
+
+error() {
+    echo -e "${RED}❌ $1${NC}" | tee -a "$LOG_FILE"
+    exit 1
+}
+
+# Check if running as root
+check_root() {
+    if [[ $EUID -eq 0 ]]; then
+        error "This script should not be run as root. Please run as a regular user with sudo privileges."
+    fi
 }
 
 # Pre-deployment checks
-log_info "Running pre-deployment checks..."
-
-# Check if Docker is running
-if ! docker info > /dev/null 2>&1; then
-    log_error "Docker is not running. Please start Docker first."
-    exit 1
-fi
-
-# Check if required files exist
-if [ ! -f "docker-compose.yml" ]; then
-    log_error "docker-compose.yml not found in current directory."
-    exit 1
-fi
+pre_deployment_checks() {
+    log "Running pre-deployment checks..."
+    
+    # Check if we're in the right directory
+    if [[ ! -f "artisan" ]]; then
+        error "Not in Laravel project directory. Please run from project root."
+    fi
+    
+    # Check if git is clean
+    if [[ -n $(git status --porcelain) ]]; then
+        warning "Git working directory is not clean. Consider committing changes first."
+        read -p "Continue anyway? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
+    fi
+    
+    # Check if .env exists
+    if [[ ! -f ".env" ]]; then
+        error "Environment file (.env) not found. Please create it first."
+    fi
+    
+    success "Pre-deployment checks passed"
+}
 
 # Create backup
-log_info "Creating backup..."
-mkdir -p $BACKUP_DIR
-if [ -d "$APP_DIR" ]; then
-    tar -czf "$BACKUP_DIR/zena_backup_$DATE.tar.gz" -C "$APP_DIR" .
-    log_info "Backup created: $BACKUP_DIR/zena_backup_$DATE.tar.gz"
-fi
+create_backup() {
+    log "Creating backup..."
+    
+    mkdir -p "$BACKUP_PATH"
+    
+    # Database backup
+    DB_NAME=$(grep DB_DATABASE .env | cut -d '=' -f2)
+    DB_USER=$(grep DB_USERNAME .env | cut -d '=' -f2)
+    DB_PASS=$(grep DB_PASSWORD .env | cut -d '=' -f2)
+    
+    if [[ -n "$DB_NAME" && -n "$DB_USER" ]]; then
+        mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_PATH/db_$DEPLOYMENT_ID.sql"
+        success "Database backup created: $BACKUP_PATH/db_$DEPLOYMENT_ID.sql"
+    else
+        warning "Could not create database backup - missing DB credentials"
+    fi
+    
+    # File backup
+    tar -czf "$BACKUP_PATH/files_$DEPLOYMENT_ID.tar.gz" --exclude='.git' --exclude='node_modules' --exclude='storage/logs' .
+    success "File backup created: $BACKUP_PATH/files_$DEPLOYMENT_ID.tar.gz"
+}
 
-# Pull latest images
-log_info "Pulling latest Docker images..."
-docker-compose pull
+# Pull latest changes
+pull_changes() {
+    log "Pulling latest changes..."
+    
+    git fetch origin
+    git pull origin main
+    
+    success "Latest changes pulled"
+}
 
-# Stop existing containers
-log_info "Stopping existing containers..."
-docker-compose down
+# Install dependencies
+install_dependencies() {
+    log "Installing dependencies..."
+    
+    # Install PHP dependencies
+    composer install --optimize-autoloader --no-dev
+    
+    # Install Node.js dependencies
+    npm install
+    npm run build
+    
+    success "Dependencies installed"
+}
 
-# Build and start containers
-log_info "Building and starting containers..."
-docker-compose up -d --build
+# Run migrations
+run_migrations() {
+    log "Running database migrations..."
+    
+    php artisan migrate --force
+    
+    success "Database migrations completed"
+}
 
-# Wait for services to be ready
-log_info "Waiting for services to be ready..."
-sleep 30
+# Clear caches
+clear_caches() {
+    log "Clearing caches..."
+    
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    php artisan cache:clear
+    
+    success "Caches cleared"
+}
 
-# Run database migrations
-log_info "Running database migrations..."
-docker-compose exec -T app php artisan migrate --force
+# Warm up email cache
+warm_email_cache() {
+    log "Warming up email cache..."
+    
+    php artisan email:warm-cache
+    
+    success "Email cache warmed up"
+}
 
-# Clear and cache config
-log_info "Optimizing application..."
-docker-compose exec -T app php artisan config:cache
-docker-compose exec -T app php artisan route:cache
-docker-compose exec -T app php artisan view:cache
+# Set permissions
+set_permissions() {
+    log "Setting file permissions..."
+    
+    sudo chown -R www-data:www-data "$PROJECT_PATH"
+    sudo chmod -R 755 "$PROJECT_PATH"
+    sudo chmod -R 775 "$PROJECT_PATH/storage"
+    sudo chmod -R 775 "$PROJECT_PATH/bootstrap/cache"
+    
+    success "File permissions set"
+}
 
-# Run health check
-log_info "Running health check..."
-if curl -f http://localhost:8080/health > /dev/null 2>&1; then
-    log_info "✅ Deployment successful! Application is running."
-else
-    log_error "❌ Health check failed. Please check the logs."
-    docker-compose logs app
-    exit 1
-fi
+# Restart services
+restart_services() {
+    log "Restarting services..."
+    
+    # Restart queue workers
+    php artisan queue:restart
+    
+    # Restart PHP-FPM
+    sudo systemctl restart php8.2-fpm
+    
+    # Reload Nginx
+    sudo systemctl reload nginx
+    
+    success "Services restarted"
+}
 
-# Cleanup old backups (keep last 5)
-log_info "Cleaning up old backups..."
-find $BACKUP_DIR -name "zena_backup_*.tar.gz" -type f -mtime +30 -delete
+# Run system tests
+run_tests() {
+    log "Running system tests..."
+    
+    php artisan system:test --quick
+    
+    success "System tests completed"
+}
 
-log_info "🎉 Deployment completed successfully!"
-log_info "Application URL: http://localhost:8080"
-log_info "WebSocket URL: ws://localhost:8081"
+# Update deployment status
+update_deployment_status() {
+    log "Updating deployment status..."
+    
+    echo "{
+        \"deployment_id\": \"$DEPLOYMENT_ID\",
+        \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+        \"status\": \"completed\",
+        \"version\": \"$(git rev-parse HEAD)\",
+        \"branch\": \"$(git branch --show-current)\"
+    }" > storage/app/deployment.json
+    
+    success "Deployment status updated"
+}
+
+# Cleanup old backups
+cleanup_backups() {
+    log "Cleaning up old backups..."
+    
+    # Keep only last 7 days of backups
+    find "$BACKUP_PATH" -name "*.sql" -mtime +7 -delete
+    find "$BACKUP_PATH" -name "*.tar.gz" -mtime +7 -delete
+    
+    success "Old backups cleaned up"
+}
+
+# Main deployment function
+main() {
+    log "Starting ZenaManage production deployment..."
+    log "Deployment ID: $DEPLOYMENT_ID"
+    
+    check_root
+    pre_deployment_checks
+    create_backup
+    pull_changes
+    install_dependencies
+    run_migrations
+    clear_caches
+    warm_email_cache
+    set_permissions
+    restart_services
+    run_tests
+    update_deployment_status
+    cleanup_backups
+    
+    success "Production deployment completed successfully!"
+    
+    log "Deployment Summary:"
+    log "  - Deployment ID: $DEPLOYMENT_ID"
+    log "  - Version: $(git rev-parse HEAD)"
+    log "  - Branch: $(git branch --show-current)"
+    log "  - Backup: $BACKUP_PATH/files_$DEPLOYMENT_ID.tar.gz"
+    log "  - Log: $LOG_FILE"
+    
+    log "Next steps:"
+    log "  1. Monitor system performance"
+    log "  2. Check email functionality"
+    log "  3. Verify queue workers are running"
+    log "  4. Test monitoring alerts"
+}
+
+# Run main function
+main "$@"

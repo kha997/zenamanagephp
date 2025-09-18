@@ -1,285 +1,502 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Tests\Feature;
 
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Component;
-use Src\InteractionLogs\Models\InteractionLog;
-use Src\CoreProject\Models\Task;
 use App\Models\User;
-use App\Models\Tenant;
-use Src\RBAC\Services\AuthService; // Sửa từ Src\Auth\Services\AuthService
-use Illuminate\Support\Facades\Cache;
+use App\Models\Dashboard;
+use App\Models\Widget;
+use App\Models\SupportTicket;
+use App\Models\PerformanceMetric;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
-/**
- * Test hiệu suất với tập dữ liệu lớn
- * 
- * Kiểm tra khả năng xử lý của hệ thống với:
- * - Large datasets (1000+ records)
- * - Memory usage optimization
- * - Database query performance
- * - Cache effectiveness
- */
 class PerformanceTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
-    protected User $user;
-    protected Tenant $tenant;
-    protected string $authToken;
-    protected AuthService $authService;
+    protected $user;
+    protected $admin;
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        // Tạo tenant và user cho test
-        $this->tenant = Tenant::factory()->create();
-        $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id
-        ]);
-        
-        // Sử dụng AuthService để tạo token
-        $this->authService = app(AuthService::class);
-        $loginResult = $this->authService->login([
-            'email' => $this->user->email,
-            'password' => 'password' // Default password từ UserFactory
-        ]);
-        
-        $this->authToken = $loginResult['token'];
-        
-        // Set authorization header cho các request
-        $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->authToken,
-            'Accept' => 'application/json',
-        ]);
+        $this->user = User::factory()->create(['role' => 'user']);
+        $this->admin = User::factory()->create(['role' => 'admin']);
     }
 
     /**
-     * Test hiệu suất với dataset lớn - 1000 projects
+     * Test API response times
      */
-    public function test_large_projects_dataset_performance(): void
+    public function test_api_response_times()
     {
-        $startTime = microtime(true);
-        $startMemory = memory_get_usage();
-        
-        // Tạo 1000 projects
-        $projects = Project::factory(1000)->create([
-            'tenant_id' => $this->tenant->id
-        ]);
-        
-        $creationTime = microtime(true) - $startTime;
-        
-        // Test API performance với pagination
-        $response = $this->getJson('/api/v1/projects?per_page=50');
-        
-        $apiTime = microtime(true) - $startTime - $creationTime;
-        $memoryUsed = memory_get_usage() - $startMemory;
-        
-        $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'status',
-                    'data' => [
-                        'data',
-                        'current_page',
-                        'per_page',
-                        'total'
-                    ]
-                ]);
-        
-        // Performance assertions
-        $this->assertLessThan(30, $creationTime, 'Tạo 1000 projects không được vượt quá 30 giây');
-        $this->assertLessThan(2, $apiTime, 'API response time không được vượt quá 2 giây');
-        $this->assertLessThan(256 * 1024 * 1024, $memoryUsed, 'Memory usage không được vượt quá 256MB');
-        
-        echo "\n=== LARGE PROJECTS PERFORMANCE ===\n";
-        echo "Creation time: {$creationTime}s\n";
-        echo "API response time: {$apiTime}s\n";
-        echo "Memory used: " . round($memoryUsed / 1024 / 1024, 2) . "MB\n";
-    }
+        $this->actingAs($this->user);
 
-    /**
-     * Test hiệu suất với 5000 interaction logs
-     */
-    public function test_large_interaction_logs_performance(): void
-    {
+        // Test dashboard list endpoint
         $startTime = microtime(true);
-        $startMemory = memory_get_usage();
+        $response = $this->get('/api/dashboards');
+        $endTime = microtime(true);
         
-        // Tạo project trước
-        $project = Project::factory()->create([
-            'tenant_id' => $this->tenant->id
-        ]);
-        
-        // Tạo 5000 interaction logs
-        $logs = InteractionLog::factory(5000)->create([
-            'project_id' => $project->id,
-            'created_by' => $this->user->id
-        ]);
-        
-        $creationTime = microtime(true) - $startTime;
-        
-        // Test API performance
-        $response = $this->getJson("/api/v1/projects/{$project->id}/interaction-logs?per_page=100");
-        
-        $apiTime = microtime(true) - $startTime - $creationTime;
-        $memoryUsed = memory_get_usage() - $startMemory;
+        $responseTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
         
         $response->assertStatus(200);
+        $this->assertLessThan(500, $responseTime, 'Dashboard list API should respond within 500ms');
+
+        // Test widget list endpoint
+        $startTime = microtime(true);
+        $response = $this->get('/api/widgets');
+        $endTime = microtime(true);
         
-        // Performance assertions
-        $this->assertLessThan(60, $creationTime, 'Tạo 5000 logs không được vượt quá 60 giây');
-        $this->assertLessThan(3, $apiTime, 'API response time không được vượt quá 3 giây');
+        $responseTime = ($endTime - $startTime) * 1000;
         
-        echo "\n=== LARGE INTERACTION LOGS PERFORMANCE ===\n";
-        echo "Creation time: {$creationTime}s\n";
-        echo "API response time: {$apiTime}s\n";
-        echo "Memory used: " . round($memoryUsed / 1024 / 1024, 2) . "MB\n";
+        $response->assertStatus(200);
+        $this->assertLessThan(300, $responseTime, 'Widget list API should respond within 300ms');
+
+        // Test support tickets endpoint
+        $startTime = microtime(true);
+        $response = $this->get('/api/support/tickets');
+        $endTime = microtime(true);
+        
+        $responseTime = ($endTime - $startTime) * 1000;
+        
+        $response->assertStatus(200);
+        $this->assertLessThan(400, $responseTime, 'Support tickets API should respond within 400ms');
     }
 
     /**
-     * Test memory usage với large dataset
+     * Test database query performance
      */
-    public function test_memory_usage_with_large_dataset(): void
+    public function test_database_query_performance()
     {
-        $initialMemory = memory_get_usage();
-        
-        // Tạo dataset lớn
-        $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
-        $components = Component::factory(500)->create(['project_id' => $project->id]);
-        $tasks = Task::factory(1000)->create(['project_id' => $project->id]);
-        
-        $afterCreationMemory = memory_get_usage();
-        
-        // Test query với eager loading
-        $startQueryTime = microtime(true);
-        $projectWithRelations = Project::with(['components', 'tasks'])
-            ->find($project->id);
-        $queryTime = microtime(true) - $startQueryTime;
-        
-        $afterQueryMemory = memory_get_usage();
-        
-        // Memory assertions
-        $creationMemoryUsage = $afterCreationMemory - $initialMemory;
-        $queryMemoryUsage = $afterQueryMemory - $afterCreationMemory;
-        
-        $this->assertLessThan(512 * 1024 * 1024, $creationMemoryUsage, 'Memory cho tạo data không được vượt quá 512MB');
-        $this->assertLessThan(128 * 1024 * 1024, $queryMemoryUsage, 'Memory cho query không được vượt quá 128MB');
-        $this->assertLessThan(1, $queryTime, 'Query time với eager loading không được vượt quá 1 giây');
-        
-        echo "\n=== MEMORY USAGE TEST ===\n";
-        echo "Creation memory: " . round($creationMemoryUsage / 1024 / 1024, 2) . "MB\n";
-        echo "Query memory: " . round($queryMemoryUsage / 1024 / 1024, 2) . "MB\n";
-        echo "Query time: {$queryTime}s\n";
-    }
+        $this->actingAs($this->user);
 
-    /**
-     * Test database query optimization
-     */
-    public function test_database_query_optimization(): void
-    {
-        // Tạo test data
-        $projects = Project::factory(100)->create(['tenant_id' => $this->tenant->id]);
+        // Create test data
+        $dashboards = Dashboard::factory()->count(50)->create(['user_id' => $this->user->id]);
         
-        foreach ($projects as $project) {
-            Component::factory(5)->create(['project_id' => $project->id]);
-            Task::factory(10)->create(['project_id' => $project->id]);
+        foreach ($dashboards as $dashboard) {
+            Widget::factory()->count(5)->create(['dashboard_id' => $dashboard->id]);
         }
-        
-        // Test N+1 query problem
-        DB::enableQueryLog();
-        
+
+        // Test dashboard query with relationships
         $startTime = microtime(true);
+        $dashboards = Dashboard::with('widgets')->where('user_id', $this->user->id)->get();
+        $endTime = microtime(true);
         
-        // Query với eager loading (optimized)
-        $optimizedProjects = Project::with(['components', 'tasks'])
-            ->where('tenant_id', $this->tenant->id)
-            ->limit(50)
-            ->get();
+        $queryTime = ($endTime - $startTime) * 1000;
         
-        $optimizedTime = microtime(true) - $startTime;
-        $optimizedQueries = count(DB::getQueryLog());
-        
-        DB::flushQueryLog();
-        
+        $this->assertLessThan(200, $queryTime, 'Dashboard query with widgets should complete within 200ms');
+        $this->assertCount(50, $dashboards);
+
+        // Test complex query performance
         $startTime = microtime(true);
-        
-        // Query không có eager loading (non-optimized)
-        $nonOptimizedProjects = Project::where('tenant_id', $this->tenant->id)
-            ->limit(50)
+        $result = DB::table('dashboards')
+            ->join('widgets', 'dashboards.id', '=', 'widgets.dashboard_id')
+            ->where('dashboards.user_id', $this->user->id)
+            ->select('dashboards.name', 'widgets.title', 'widgets.type')
             ->get();
+        $endTime = microtime(true);
         
-        // Access relations để trigger lazy loading
-        foreach ($nonOptimizedProjects as $project) {
-            $project->components->count();
-            $project->tasks->count();
-        }
+        $queryTime = ($endTime - $startTime) * 1000;
         
-        $nonOptimizedTime = microtime(true) - $startTime;
-        $nonOptimizedQueries = count(DB::getQueryLog());
-        
-        // Assertions
-        $this->assertLessThan($nonOptimizedQueries, $optimizedQueries, 'Eager loading phải giảm số lượng queries');
-        $this->assertLessThan($nonOptimizedTime, $optimizedTime, 'Eager loading phải nhanh hơn lazy loading');
-        
-        echo "\n=== DATABASE QUERY OPTIMIZATION ===\n";
-        echo "Optimized queries: {$optimizedQueries}, time: {$optimizedTime}s\n";
-        echo "Non-optimized queries: {$nonOptimizedQueries}, time: {$nonOptimizedTime}s\n";
-        echo "Query reduction: " . round((1 - $optimizedQueries / $nonOptimizedQueries) * 100, 2) . "%\n";
-        echo "Time improvement: " . round((1 - $optimizedTime / $nonOptimizedTime) * 100, 2) . "%\n";
+        $this->assertLessThan(300, $queryTime, 'Complex join query should complete within 300ms');
+        $this->assertCount(250, $result); // 50 dashboards * 5 widgets each
     }
 
     /**
      * Test cache performance
      */
-    public function test_cache_performance(): void
+    public function test_cache_performance()
     {
-        $project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
-        Component::factory(50)->create(['project_id' => $project->id]);
-        
-        $cacheKey = "project_stats_{$project->id}";
-        
-        // Test without cache
+        $this->actingAs($this->user);
+
+        // Test cache write performance
         $startTime = microtime(true);
-        $stats = [
-            'total_components' => $project->components()->count(),
-            'completed_components' => $project->components()->where('progress_percent', 100)->count(),
-            'total_cost' => $project->components()->sum('actual_cost'),
-        ];
-        $noCacheTime = microtime(true) - $startTime;
+        Cache::put('test_key', 'test_value', 60);
+        $endTime = microtime(true);
         
-        // Cache the result
-        Cache::put($cacheKey, $stats, 3600);
-        
-        // Test with cache
+        $writeTime = ($endTime - $startTime) * 1000;
+        $this->assertLessThan(10, $writeTime, 'Cache write should complete within 10ms');
+
+        // Test cache read performance
         $startTime = microtime(true);
-        $cachedStats = Cache::get($cacheKey);
-        $cacheTime = microtime(true) - $startTime;
+        $value = Cache::get('test_key');
+        $endTime = microtime(true);
         
-        // Assertions
-        $this->assertEquals($stats, $cachedStats);
-        $this->assertLessThan($noCacheTime, $cacheTime, 'Cache phải nhanh hơn query trực tiếp');
-        $this->assertLessThan(0.01, $cacheTime, 'Cache access phải dưới 10ms');
+        $readTime = ($endTime - $startTime) * 1000;
+        $this->assertLessThan(5, $readTime, 'Cache read should complete within 5ms');
+        $this->assertEquals('test_value', $value);
+
+        // Test cache bulk operations
+        $startTime = microtime(true);
+        for ($i = 0; $i < 100; $i++) {
+            Cache::put("bulk_key_{$i}", "bulk_value_{$i}", 60);
+        }
+        $endTime = microtime(true);
         
-        $speedImprovement = round(($noCacheTime / $cacheTime), 2);
-        
-        echo "\n=== CACHE PERFORMANCE ===\n";
-        echo "No cache time: {$noCacheTime}s\n";
-        echo "Cache time: {$cacheTime}s\n";
-        echo "Speed improvement: {$speedImprovement}x faster\n";
-        
-        // Cleanup
-        Cache::forget($cacheKey);
+        $bulkWriteTime = ($endTime - $startTime) * 1000;
+        $this->assertLessThan(100, $bulkWriteTime, 'Bulk cache writes should complete within 100ms');
+    }
+
+    /**
+     * Test memory usage
+     */
+    public function test_memory_usage()
+    {
+        $this->actingAs($this->user);
+
+        $initialMemory = memory_get_usage(true);
+
+        // Create large dataset
+        $dashboards = [];
+        for ($i = 0; $i < 100; $i++) {
+            $dashboard = Dashboard::factory()->create(['user_id' => $this->user->id]);
+            $dashboards[] = $dashboard;
+            
+            for ($j = 0; $j < 10; $j++) {
+                Widget::factory()->create(['dashboard_id' => $dashboard->id]);
+            }
+        }
+
+        $peakMemory = memory_get_peak_usage(true);
+        $memoryIncrease = $peakMemory - $initialMemory;
+        $memoryIncreaseMB = $memoryIncrease / 1024 / 1024;
+
+        // Assert memory usage is reasonable (less than 50MB increase)
+        $this->assertLessThan(50, $memoryIncreaseMB, 'Memory usage should not exceed 50MB for 1000 records');
+
+        // Test memory cleanup
+        unset($dashboards);
+        gc_collect_cycles();
+
+        $finalMemory = memory_get_usage(true);
+        $memoryCleanup = $peakMemory - $finalMemory;
+        $memoryCleanupMB = $memoryCleanup / 1024 / 1024;
+
+        // Assert memory was properly cleaned up
+        $this->assertGreaterThan(0, $memoryCleanupMB, 'Memory should be cleaned up after unsetting variables');
+    }
+
+    /**
+     * Test concurrent request handling
+     */
+    public function test_concurrent_request_handling()
+    {
+        $this->actingAs($this->user);
+
+        $dashboard = Dashboard::factory()->create(['user_id' => $this->user->id]);
+
+        $startTime = microtime(true);
+
+        // Simulate concurrent requests
+        $responses = [];
+        for ($i = 0; $i < 10; $i++) {
+            $responses[] = $this->get("/api/dashboards/{$dashboard->id}");
+        }
+
+        $endTime = microtime(true);
+        $totalTime = ($endTime - $startTime) * 1000;
+
+        // All requests should succeed
+        foreach ($responses as $response) {
+            $response->assertStatus(200);
+        }
+
+        // Total time should be reasonable
+        $this->assertLessThan(1000, $totalTime, '10 concurrent requests should complete within 1000ms');
+    }
+
+    /**
+     * Test large dataset handling
+     */
+    public function test_large_dataset_handling()
+    {
+        $this->actingAs($this->user);
+
+        // Create large dataset
+        $dashboards = Dashboard::factory()->count(1000)->create(['user_id' => $this->user->id]);
+
+        $startTime = microtime(true);
+        $response = $this->get('/api/dashboards');
+        $endTime = microtime(true);
+
+        $responseTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(1000, $responseTime, 'Large dataset should be handled within 1000ms');
+
+        // Test pagination performance
+        $startTime = microtime(true);
+        $response = $this->get('/api/dashboards?page=1&per_page=50');
+        $endTime = microtime(true);
+
+        $responseTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(200, $responseTime, 'Paginated results should load within 200ms');
+    }
+
+    /**
+     * Test file upload performance
+     */
+    public function test_file_upload_performance()
+    {
+        $this->actingAs($this->user);
+
+        // Test small file upload
+        $smallFile = \Illuminate\Http\UploadedFile::fake()->create('small.txt', 100); // 100KB
+
+        $startTime = microtime(true);
+        $response = $this->post('/api/upload', ['file' => $smallFile]);
+        $endTime = microtime(true);
+
+        $uploadTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(500, $uploadTime, 'Small file upload should complete within 500ms');
+
+        // Test medium file upload
+        $mediumFile = \Illuminate\Http\UploadedFile::fake()->create('medium.txt', 1024); // 1MB
+
+        $startTime = microtime(true);
+        $response = $this->post('/api/upload', ['file' => $mediumFile]);
+        $endTime = microtime(true);
+
+        $uploadTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(2000, $uploadTime, 'Medium file upload should complete within 2000ms');
+    }
+
+    /**
+     * Test search performance
+     */
+    public function test_search_performance()
+    {
+        $this->actingAs($this->user);
+
+        // Create test data with searchable content
+        for ($i = 0; $i < 100; $i++) {
+            Dashboard::factory()->create([
+                'user_id' => $this->user->id,
+                'name' => "Dashboard {$i}",
+                'description' => "Description for dashboard {$i}"
+            ]);
+        }
+
+        // Test search performance
+        $startTime = microtime(true);
+        $response = $this->get('/api/dashboards?search=Dashboard');
+        $endTime = microtime(true);
+
+        $searchTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(300, $searchTime, 'Search should complete within 300ms');
+
+        // Test complex search
+        $startTime = microtime(true);
+        $response = $this->get('/api/dashboards?search=Dashboard 50');
+        $endTime = microtime(true);
+
+        $searchTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(200, $searchTime, 'Complex search should complete within 200ms');
+    }
+
+    /**
+     * Test WebSocket performance
+     */
+    public function test_websocket_performance()
+    {
+        $this->actingAs($this->user);
+
+        // Test WebSocket authentication performance
+        $startTime = microtime(true);
+        $response = $this->get('/api/websocket/auth');
+        $endTime = microtime(true);
+
+        $authTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(100, $authTime, 'WebSocket authentication should complete within 100ms');
+    }
+
+    /**
+     * Test maintenance task performance
+     */
+    public function test_maintenance_task_performance()
+    {
+        $this->actingAs($this->admin);
+
+        // Test cache clearing performance
+        $startTime = microtime(true);
+        $response = $this->post('/admin/maintenance/clear-cache');
+        $endTime = microtime(true);
+
+        $maintenanceTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(1000, $maintenanceTime, 'Cache clearing should complete within 1000ms');
+
+        // Test database maintenance performance
+        $startTime = microtime(true);
+        $response = $this->post('/admin/maintenance/database');
+        $endTime = microtime(true);
+
+        $maintenanceTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(2000, $maintenanceTime, 'Database maintenance should complete within 2000ms');
+    }
+
+    /**
+     * Test backup performance
+     */
+    public function test_backup_performance()
+    {
+        $this->actingAs($this->admin);
+
+        // Create test data
+        Dashboard::factory()->count(100)->create(['user_id' => $this->user->id]);
+
+        // Test backup performance
+        $startTime = microtime(true);
+        $response = $this->post('/admin/maintenance/backup-database');
+        $endTime = microtime(true);
+
+        $backupTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(5000, $backupTime, 'Database backup should complete within 5000ms');
+    }
+
+    /**
+     * Test system health check performance
+     */
+    public function test_system_health_check_performance()
+    {
+        $this->actingAs($this->admin);
+
+        // Test health check performance
+        $startTime = microtime(true);
+        $response = $this->get('/api/health');
+        $endTime = microtime(true);
+
+        $healthCheckTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(500, $healthCheckTime, 'Health check should complete within 500ms');
+    }
+
+    /**
+     * Test performance metrics collection
+     */
+    public function test_performance_metrics_collection()
+    {
+        $this->actingAs($this->admin);
+
+        // Create some performance metrics
+        PerformanceMetric::factory()->count(100)->create();
+
+        // Test metrics retrieval performance
+        $startTime = microtime(true);
+        $response = $this->get('/api/health/performance');
+        $endTime = microtime(true);
+
+        $metricsTime = ($endTime - $startTime) * 1000;
+
+        $response->assertStatus(200);
+        $this->assertLessThan(300, $metricsTime, 'Performance metrics should load within 300ms');
+    }
+
+    /**
+     * Test stress test with mixed operations
+     */
+    public function test_stress_test_mixed_operations()
+    {
+        $this->actingAs($this->user);
+
+        $startTime = microtime(true);
+
+        // Perform mixed operations
+        for ($i = 0; $i < 50; $i++) {
+            // Create dashboard
+            $dashboardResponse = $this->post('/api/dashboards', [
+                'name' => "Stress Test Dashboard {$i}",
+                'description' => "Stress test description {$i}",
+                'layout' => 'grid',
+                'is_public' => false
+            ]);
+
+            if ($dashboardResponse->status() === 201) {
+                $dashboardId = $dashboardResponse->json('id');
+
+                // Create widget
+                $this->post('/api/widgets', [
+                    'dashboard_id' => $dashboardId,
+                    'type' => 'chart',
+                    'title' => "Widget {$i}",
+                    'config' => ['chart_type' => 'line'],
+                    'position' => ['x' => 0, 'y' => 0, 'w' => 6, 'h' => 4]
+                ]);
+
+                // Update dashboard
+                $this->put("/api/dashboards/{$dashboardId}", [
+                    'name' => "Updated Dashboard {$i}"
+                ]);
+
+                // Get dashboard
+                $this->get("/api/dashboards/{$dashboardId}");
+
+                // Delete dashboard
+                $this->delete("/api/dashboards/{$dashboardId}");
+            }
+        }
+
+        $endTime = microtime(true);
+        $totalTime = ($endTime - $startTime) * 1000;
+
+        // Assert reasonable performance for mixed operations
+        $this->assertLessThan(10000, $totalTime, 'Mixed operations should complete within 10000ms');
+    }
+
+    /**
+     * Test memory leak detection
+     */
+    public function test_memory_leak_detection()
+    {
+        $this->actingAs($this->user);
+
+        $initialMemory = memory_get_usage(true);
+
+        // Perform operations that might cause memory leaks
+        for ($i = 0; $i < 100; $i++) {
+            $dashboard = Dashboard::factory()->create(['user_id' => $this->user->id]);
+            
+            for ($j = 0; $j < 10; $j++) {
+                Widget::factory()->create(['dashboard_id' => $dashboard->id]);
+            }
+
+            // Simulate API calls
+            $this->get("/api/dashboards/{$dashboard->id}");
+            $this->get("/api/widgets?dashboard_id={$dashboard->id}");
+
+            // Clean up
+            $dashboard->delete();
+        }
+
+        // Force garbage collection
+        gc_collect_cycles();
+
+        $finalMemory = memory_get_usage(true);
+        $memoryIncrease = $finalMemory - $initialMemory;
+        $memoryIncreaseMB = $memoryIncrease / 1024 / 1024;
+
+        // Assert no significant memory leak (less than 10MB increase)
+        $this->assertLessThan(10, $memoryIncreaseMB, 'Memory leak should not exceed 10MB');
     }
 }
-
-/*
- * Ghi chú về factory namespaces:
- * - Cần thay đổi từ: Database\Factories\Src\InteractionLogs\Models\InteractionLogFactory
- * - Thành: Database\Factories\InteractionLogFactory
- * - Tương tự cho các factory khác
- */

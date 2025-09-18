@@ -2,343 +2,514 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
-/**
- * Controller để kiểm tra tình trạng sức khỏe của ứng dụng
- */
 class HealthController extends Controller
 {
     /**
-     * Kiểm tra tình trạng cơ bản của ứng dụng
-     *
-     * @return JsonResponse
+     * Basic health check endpoint
      */
-    public function health(): JsonResponse
+    public function index(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'healthy',
+            'timestamp' => Carbon::now()->toISOString(),
+            'service' => 'ZenaManage Dashboard',
+            'version' => config('app.version', '1.0.0'),
+            'environment' => app()->environment(),
+        ]);
+    }
+
+    /**
+     * Comprehensive health check with all services
+     */
+    public function detailed(): JsonResponse
     {
         $checks = [
             'database' => $this->checkDatabase(),
             'redis' => $this->checkRedis(),
             'storage' => $this->checkStorage(),
+            'queue' => $this->checkQueue(),
             'websocket' => $this->checkWebSocket(),
+            'external_services' => $this->checkExternalServices(),
         ];
-        
-        $allHealthy = collect($checks)->every(fn($check) => $check['status'] === 'ok');
-        
+
+        $overallStatus = $this->determineOverallStatus($checks);
+
         return response()->json([
-            'status' => $allHealthy ? 'ok' : 'error',
-            'timestamp' => now()->toISOString(),
-            'checks' => $checks,
+            'status' => $overallStatus,
+            'timestamp' => Carbon::now()->toISOString(),
+            'service' => 'ZenaManage Dashboard',
             'version' => config('app.version', '1.0.0'),
-        ], $allHealthy ? 200 : 503);
-    }
-
-    /**
-     * Kiểm tra tình trạng sẵn sàng của ứng dụng
-     *
-     * @return JsonResponse
-     */
-    public function ready(): JsonResponse
-    {
-        $checks = [
-            'database_migrations' => $this->checkMigrations(),
-            'required_services' => $this->checkRequiredServices(),
-            'configuration' => $this->checkConfiguration(),
-        ];
-        
-        $allReady = collect($checks)->every(fn($check) => $check['status'] === 'ok');
-        
-        return response()->json([
-            'status' => $allReady ? 'ready' : 'not_ready',
-            'timestamp' => now()->toISOString(),
+            'environment' => app()->environment(),
             'checks' => $checks,
-        ], $allReady ? 200 : 503);
+        ], $overallStatus === 'healthy' ? 200 : 503);
     }
 
     /**
-     * Lấy metrics của ứng dụng
-     *
-     * @return JsonResponse
-     */
-    public function metrics(): JsonResponse
-    {
-        if (!config('metrics.enabled')) {
-            return response()->json(['error' => 'Metrics disabled'], 404);
-        }
-        
-        $metrics = [
-            'system' => [
-                'memory_usage' => memory_get_usage(true),
-                'memory_peak' => memory_get_peak_usage(true),
-                'cpu_usage' => sys_getloadavg()[0] ?? 0,
-                'disk_usage' => $this->getDiskUsage(),
-            ],
-            'application' => [
-                'uptime' => $this->getUptime(),
-                'active_users' => $this->getActiveUsers(),
-                'total_projects' => $this->getTotalProjects(),
-                'pending_tasks' => $this->getPendingTasks(),
-            ],
-        ];
-        
-        return response()->json($metrics);
-    }
-
-    /**
-     * Kiểm tra kết nối database
-     *
-     * @return array
+     * Database health check
      */
     private function checkDatabase(): array
     {
         try {
             $startTime = microtime(true);
-            DB::select('SELECT 1');
-            $responseTime = (microtime(true) - $startTime) * 1000;
             
+            // Test basic connection
+            DB::connection()->getPdo();
+            
+            // Test query execution
+            $result = DB::select('SELECT 1 as test');
+            
+            // Check database size
+            $size = DB::select("
+                SELECT 
+                    ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'DB Size in MB'
+                FROM information_schema.tables 
+                WHERE table_schema = DATABASE()
+            ")[0]->{'DB Size in MB'} ?? 0;
+
+            // Check connection count
+            $connections = DB::select("SHOW STATUS LIKE 'Threads_connected'")[0]->Value ?? 0;
+
+            $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+
             return [
-                'status' => 'ok',
-                'response_time_ms' => round($responseTime, 2),
-                'connection' => config('database.default'),
+                'status' => 'healthy',
+                'response_time_ms' => $responseTime,
+                'database_size_mb' => $size,
+                'active_connections' => (int) $connections,
+                'message' => 'Database connection successful',
             ];
         } catch (\Exception $e) {
-            return [
-                'status' => 'error',
+            Log::error('Database health check failed', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+                'message' => 'Database connection failed',
             ];
         }
     }
 
     /**
-     * Kiểm tra kết nối Redis
-     *
-     * @return array
+     * Redis health check
      */
     private function checkRedis(): array
     {
         try {
             $startTime = microtime(true);
-            Redis::ping();
-            $responseTime = (microtime(true) - $startTime) * 1000;
             
+            // Test Redis connection
+            Redis::ping();
+            
+            // Test Redis operations
+            $testKey = 'health_check_' . time();
+            Redis::set($testKey, 'test_value', 'EX', 60);
+            $value = Redis::get($testKey);
+            Redis::del($testKey);
+
+            if ($value !== 'test_value') {
+                throw new \Exception('Redis read/write test failed');
+            }
+
+            // Get Redis info
+            $info = Redis::info();
+            $memoryUsage = $info['used_memory_human'] ?? 'Unknown';
+            $connectedClients = $info['connected_clients'] ?? 0;
+
+            $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+
             return [
-                'status' => 'ok',
-                'response_time_ms' => round($responseTime, 2),
-                'connection' => config('database.redis.default.host'),
+                'status' => 'healthy',
+                'response_time_ms' => $responseTime,
+                'memory_usage' => $memoryUsage,
+                'connected_clients' => (int) $connectedClients,
+                'message' => 'Redis connection successful',
             ];
         } catch (\Exception $e) {
-            return [
-                'status' => 'error',
+            Log::error('Redis health check failed', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+                'message' => 'Redis connection failed',
             ];
         }
     }
 
     /**
-     * Kiểm tra storage
-     *
-     * @return array
+     * Storage health check
      */
     private function checkStorage(): array
     {
         try {
-            $disks = config('metrics.health_checks.storage.disks', ['local']);
-            $results = [];
+            $startTime = microtime(true);
             
-            foreach ($disks as $disk) {
-                $testFile = 'health-check-' . time() . '.txt';
-                Storage::disk($disk)->put($testFile, 'health check');
-                $exists = Storage::disk($disk)->exists($testFile);
-                Storage::disk($disk)->delete($testFile);
-                
-                $results[$disk] = $exists ? 'ok' : 'error';
+            // Test storage write
+            $testFile = 'health_check_' . time() . '.txt';
+            $testContent = 'Health check test content';
+            
+            Storage::put($testFile, $testContent);
+            
+            // Test storage read
+            $readContent = Storage::get($testFile);
+            
+            if ($readContent !== $testContent) {
+                throw new \Exception('Storage read/write test failed');
             }
             
-            $allOk = collect($results)->every(fn($status) => $status === 'ok');
+            // Clean up test file
+            Storage::delete($testFile);
             
+            // Get storage info
+            $disk = Storage::disk();
+            $totalSpace = disk_total_space(storage_path());
+            $freeSpace = disk_free_space(storage_path());
+            $usedSpace = $totalSpace - $freeSpace;
+            $usagePercentage = round(($usedSpace / $totalSpace) * 100, 2);
+
+            $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+
             return [
-                'status' => $allOk ? 'ok' : 'error',
-                'disks' => $results,
+                'status' => 'healthy',
+                'response_time_ms' => $responseTime,
+                'total_space_gb' => round($totalSpace / 1024 / 1024 / 1024, 2),
+                'free_space_gb' => round($freeSpace / 1024 / 1024 / 1024, 2),
+                'usage_percentage' => $usagePercentage,
+                'message' => 'Storage access successful',
             ];
         } catch (\Exception $e) {
-            return [
-                'status' => 'error',
+            Log::error('Storage health check failed', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+                'message' => 'Storage access failed',
             ];
         }
     }
 
     /**
-     * Kiểm tra WebSocket server
-     *
-     * @return array
+     * Queue health check
+     */
+    private function checkQueue(): array
+    {
+        try {
+            $startTime = microtime(true);
+            
+            // Check queue connection
+            $queue = app('queue');
+            $connection = $queue->connection();
+            
+            // Get queue size
+            $size = $connection->size();
+            
+            // Check failed jobs
+            $failedJobs = $connection->size('failed');
+            
+            // Test queue push
+            $testJob = 'health_check_' . time();
+            $connection->push('App\\Jobs\\HealthCheckJob', ['test' => $testJob]);
+            
+            // Clean up test job
+            $connection->pop('default');
+
+            $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+
+            return [
+                'status' => 'healthy',
+                'response_time_ms' => $responseTime,
+                'queue_size' => $size,
+                'failed_jobs' => $failedJobs,
+                'message' => 'Queue system operational',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Queue health check failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+                'message' => 'Queue system failed',
+            ];
+        }
+    }
+
+    /**
+     * WebSocket health check
      */
     private function checkWebSocket(): array
     {
         try {
-            $url = config('metrics.health_checks.websocket.url');
-            if (!$url) {
-                return ['status' => 'skipped', 'reason' => 'URL not configured'];
+            $startTime = microtime(true);
+            
+            // Check WebSocket server status
+            $websocketHost = config('websockets.host', 'localhost');
+            $websocketPort = config('websockets.port', 6001);
+            
+            $connection = @fsockopen($websocketHost, $websocketPort, $errno, $errstr, 5);
+            
+            if (!$connection) {
+                throw new \Exception("WebSocket server not reachable: $errstr ($errno)");
             }
             
-            $client = new Client(['timeout' => 5]);
-            $startTime = microtime(true);
-            $response = $client->get($url);
-            $responseTime = (microtime(true) - $startTime) * 1000;
+            fclose($connection);
+
+            $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+
+            return [
+                'status' => 'healthy',
+                'response_time_ms' => $responseTime,
+                'host' => $websocketHost,
+                'port' => $websocketPort,
+                'message' => 'WebSocket server accessible',
+            ];
+        } catch (\Exception $e) {
+            Log::error('WebSocket health check failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+                'message' => 'WebSocket server not accessible',
+            ];
+        }
+    }
+
+    /**
+     * External services health check
+     */
+    private function checkExternalServices(): array
+    {
+        $services = [];
+        
+        // Check mail service
+        $services['mail'] = $this->checkMailService();
+        
+        // Check external APIs
+        $services['external_apis'] = $this->checkExternalApis();
+        
+        return $services;
+    }
+
+    /**
+     * Mail service health check
+     */
+    private function checkMailService(): array
+    {
+        try {
+            // Check if mail configuration exists
+            $mailConfig = config('mail.default');
+            if (!$mailConfig) {
+                return [
+                    'status' => 'unhealthy',
+                    'message' => 'Mail service not configured',
+                ];
+            }
             
             return [
-                'status' => $response->getStatusCode() === 200 ? 'ok' : 'error',
-                'response_time_ms' => round($responseTime, 2),
-                'url' => $url,
+                'status' => 'healthy',
+                'message' => 'Mail service configured',
+                'driver' => $mailConfig,
             ];
-        } catch (RequestException $e) {
+        } catch (\Exception $e) {
             return [
-                'status' => 'error',
+                'status' => 'unhealthy',
                 'error' => $e->getMessage(),
+                'message' => 'Mail service not configured',
             ];
         }
     }
 
     /**
-     * Kiểm tra migrations
-     *
-     * @return array
+     * External APIs health check
      */
-    private function checkMigrations(): array
+    private function checkExternalApis(): array
     {
+        $apis = [];
+        
+        // Check if external APIs are configured
+        $externalApis = config('services.external_apis', []);
+        
+        foreach ($externalApis as $name => $config) {
+            try {
+                $startTime = microtime(true);
+                
+                $client = new \GuzzleHttp\Client();
+                $response = $client->get($config['health_endpoint'], [
+                    'timeout' => 5,
+                    'verify' => false,
+                ]);
+                
+                $responseTime = round((microtime(true) - $startTime) * 1000, 2);
+                
+                $apis[$name] = [
+                    'status' => $response->getStatusCode() === 200 ? 'healthy' : 'unhealthy',
+                    'response_time_ms' => $responseTime,
+                    'status_code' => $response->getStatusCode(),
+                    'message' => 'External API accessible',
+                ];
+            } catch (\Exception $e) {
+                $apis[$name] = [
+                    'status' => 'unhealthy',
+                    'error' => $e->getMessage(),
+                    'message' => 'External API not accessible',
+                ];
+            }
+        }
+        
+        return $apis;
+    }
+
+    /**
+     * Determine overall health status
+     */
+    private function determineOverallStatus(array $checks): string
+    {
+        $criticalServices = ['database', 'redis', 'storage'];
+        $unhealthyCritical = 0;
+        
+        foreach ($criticalServices as $service) {
+            if (isset($checks[$service]) && $checks[$service]['status'] !== 'healthy') {
+                $unhealthyCritical++;
+            }
+        }
+        
+        if ($unhealthyCritical > 0) {
+            return 'unhealthy';
+        }
+        
+        $unhealthyServices = 0;
+        foreach ($checks as $check) {
+            if (is_array($check) && isset($check['status']) && $check['status'] !== 'healthy') {
+                $unhealthyServices++;
+            }
+        }
+        
+        if ($unhealthyServices > 0) {
+            return 'degraded';
+        }
+        
+        return 'healthy';
+    }
+
+    /**
+     * Metrics endpoint for Prometheus
+     */
+    public function metrics(): string
+    {
+        $metrics = [];
+        
+        // Application metrics
+        $metrics[] = '# HELP app_uptime_seconds Application uptime in seconds';
+        $metrics[] = '# TYPE app_uptime_seconds counter';
+        $metrics[] = 'app_uptime_seconds ' . (time() - filemtime(base_path('bootstrap/app.php')));
+        
+        // Database metrics
         try {
-            $pending = DB::table('migrations')
-                ->where('batch', 0)
-                ->count();
+            $dbSize = DB::select("
+                SELECT 
+                    ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'DB Size in MB'
+                FROM information_schema.tables 
+                WHERE table_schema = DATABASE()
+            ")[0]->{'DB Size in MB'} ?? 0;
             
-            return [
-                'status' => $pending === 0 ? 'ok' : 'error',
-                'pending_migrations' => $pending,
-            ];
+            $metrics[] = '# HELP app_database_size_mb Database size in MB';
+            $metrics[] = '# TYPE app_database_size_mb gauge';
+            $metrics[] = "app_database_size_mb $dbSize";
         } catch (\Exception $e) {
-            return [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
+            // Ignore database errors for metrics
         }
+        
+        // Redis metrics
+        try {
+            $redisInfo = Redis::info();
+            $metrics[] = '# HELP app_redis_memory_usage_bytes Redis memory usage in bytes';
+            $metrics[] = '# TYPE app_redis_memory_usage_bytes gauge';
+            $metrics[] = 'app_redis_memory_usage_bytes ' . ($redisInfo['used_memory'] ?? 0);
+        } catch (\Exception $e) {
+            // Ignore Redis errors for metrics
+        }
+        
+        // Storage metrics
+        try {
+            $totalSpace = disk_total_space(storage_path());
+            $freeSpace = disk_free_space(storage_path());
+            $usedSpace = $totalSpace - $freeSpace;
+            
+            $metrics[] = '# HELP app_storage_total_bytes Total storage space in bytes';
+            $metrics[] = '# TYPE app_storage_total_bytes gauge';
+            $metrics[] = "app_storage_total_bytes $totalSpace";
+            
+            $metrics[] = '# HELP app_storage_free_bytes Free storage space in bytes';
+            $metrics[] = '# TYPE app_storage_free_bytes gauge';
+            $metrics[] = "app_storage_free_bytes $freeSpace";
+            
+            $metrics[] = '# HELP app_storage_used_bytes Used storage space in bytes';
+            $metrics[] = '# TYPE app_storage_used_bytes gauge';
+            $metrics[] = "app_storage_used_bytes $usedSpace";
+        } catch (\Exception $e) {
+            // Ignore storage errors for metrics
+        }
+        
+        return implode("\n", $metrics) . "\n";
     }
 
     /**
-     * Kiểm tra các service bắt buộc
-     *
-     * @return array
+     * Readiness probe for Kubernetes
      */
-    private function checkRequiredServices(): array
+    public function readiness(): JsonResponse
     {
-        $services = [
-            'queue' => $this->checkQueue(),
-            'cache' => $this->checkCache(),
-            'session' => $this->checkSession(),
+        $checks = [
+            'database' => $this->checkDatabase(),
+            'redis' => $this->checkRedis(),
+            'storage' => $this->checkStorage(),
         ];
-        
-        $allOk = collect($services)->every(fn($status) => $status === 'ok');
-        
-        return [
-            'status' => $allOk ? 'ok' : 'error',
-            'services' => $services,
-        ];
+
+        $ready = true;
+        foreach ($checks as $check) {
+            if ($check['status'] !== 'healthy') {
+                $ready = false;
+                break;
+            }
+        }
+
+        return response()->json([
+            'ready' => $ready,
+            'timestamp' => Carbon::now()->toISOString(),
+            'checks' => $checks,
+        ], $ready ? 200 : 503);
     }
 
     /**
-     * Kiểm tra cấu hình
-     *
-     * @return array
+     * Liveness probe for Kubernetes
      */
-    private function checkConfiguration(): array
+    public function liveness(): JsonResponse
     {
-        $required = [
-            'APP_KEY' => config('app.key'),
-            'DB_CONNECTION' => config('database.default'),
-            'JWT_SECRET' => config('jwt.secret'),
-        ];
-        
-        $missing = collect($required)
-            ->filter(fn($value) => empty($value))
-            ->keys()
-            ->toArray();
-        
-        return [
-            'status' => empty($missing) ? 'ok' : 'error',
-            'missing_config' => $missing,
-        ];
-    }
-
-    // Helper methods
-    private function checkQueue(): string
-    {
-        try {
-            // Simple check if queue connection is working
-            return 'ok';
-        } catch (\Exception $e) {
-            return 'error';
-        }
-    }
-
-    private function checkCache(): string
-    {
-        try {
-            cache()->put('health-check', 'ok', 60);
-            return cache()->get('health-check') === 'ok' ? 'ok' : 'error';
-        } catch (\Exception $e) {
-            return 'error';
-        }
-    }
-
-    private function checkSession(): string
-    {
-        try {
-            return config('session.driver') ? 'ok' : 'error';
-        } catch (\Exception $e) {
-            return 'error';
-        }
-    }
-
-    private function getDiskUsage(): array
-    {
-        $bytes = disk_free_space('/');
-        $total = disk_total_space('/');
-        
-        return [
-            'free_bytes' => $bytes,
-            'total_bytes' => $total,
-            'used_percent' => round((($total - $bytes) / $total) * 100, 2),
-        ];
-    }
-
-    private function getUptime(): int
-    {
-        // Simple uptime calculation (could be improved)
-        return time() - filemtime(base_path('bootstrap/app.php'));
-    }
-
-    private function getActiveUsers(): int
-    {
-        // Count active sessions or users online in last 15 minutes
-        return DB::table('users')
-            ->where('last_activity', '>', now()->subMinutes(15))
-            ->count();
-    }
-
-    private function getTotalProjects(): int
-    {
-        return DB::table('projects')->count();
-    }
-
-    private function getPendingTasks(): int
-    {
-        return DB::table('tasks')
-            ->where('status', 'pending')
-            ->count();
+        return response()->json([
+            'alive' => true,
+            'timestamp' => Carbon::now()->toISOString(),
+            'uptime' => time() - filemtime(base_path('bootstrap/app.php')),
+        ]);
     }
 }

@@ -59,17 +59,17 @@ class CacheServiceTest extends TestCase
         $key2 = 'project_1_tasks';
         $tags = ['project_1'];
         
-        $this->cacheService->tags($tags)->put($key1, 'project data', 3600);
-        $this->cacheService->tags($tags)->put($key2, 'tasks data', 3600);
+        $this->cacheService->putWithTags($tags, $key1, 'project data', 3600);
+        $this->cacheService->putWithTags($tags, $key2, 'tasks data', 3600);
         
-        $this->assertTrue($this->cacheService->tags($tags)->has($key1));
-        $this->assertTrue($this->cacheService->tags($tags)->has($key2));
+        $this->assertTrue($this->cacheService->getWithTags($tags, $key1) !== null);
+        $this->assertTrue($this->cacheService->getWithTags($tags, $key2) !== null);
         
         // Flush by tags
-        $this->cacheService->tags($tags)->flush();
+        $this->cacheService->flushByTags($tags);
         
-        $this->assertFalse($this->cacheService->tags($tags)->has($key1));
-        $this->assertFalse($this->cacheService->tags($tags)->has($key2));
+        $this->assertNull($this->cacheService->getWithTags($tags, $key1));
+        $this->assertNull($this->cacheService->getWithTags($tags, $key2));
     }
 
     /**
@@ -86,12 +86,12 @@ class CacheServiceTest extends TestCase
         };
         
         // First call should execute callback
-        $result1 = $this->cacheService->remember($key, 3600, $callback);
+        $result1 = $this->cacheService->remember($key, $callback, 3600);
         $this->assertEquals('calculated_result', $result1);
         $this->assertEquals(1, $callCount);
         
         // Second call should use cache
-        $result2 = $this->cacheService->remember($key, 3600, $callback);
+        $result2 = $this->cacheService->remember($key, $callback, 3600);
         $this->assertEquals('calculated_result', $result2);
         $this->assertEquals(1, $callCount); // Callback không được gọi lần 2
     }
@@ -102,21 +102,22 @@ class CacheServiceTest extends TestCase
     public function test_cache_invalidation_patterns(): void
     {
         $projectId = 'project_123';
+        $tags = ['project', "project_{$projectId}"];
         
-        // Cache project data
-        $this->cacheService->putProjectData($projectId, ['name' => 'Test Project']);
-        $this->cacheService->putProjectTasks($projectId, ['task1', 'task2']);
-        $this->cacheService->putProjectProgress($projectId, 75.5);
+        // Cache project data with tags
+        $this->cacheService->putWithTags($tags, 'project_data', ['name' => 'Test Project'], 3600);
+        $this->cacheService->putWithTags($tags, 'project_tasks', ['task1', 'task2'], 3600);
+        $this->cacheService->putWithTags($tags, 'project_progress', 75.5, 3600);
         
-        $this->assertTrue($this->cacheService->hasProjectData($projectId));
-        $this->assertTrue($this->cacheService->hasProjectTasks($projectId));
-        $this->assertTrue($this->cacheService->hasProjectProgress($projectId));
+        $this->assertTrue($this->cacheService->getWithTags($tags, 'project_data') !== null);
+        $this->assertTrue($this->cacheService->getWithTags($tags, 'project_tasks') !== null);
+        $this->assertTrue($this->cacheService->getWithTags($tags, 'project_progress') !== null);
         
         // Invalidate all project cache
-        $this->cacheService->invalidateProject($projectId);
+        $this->cacheService->invalidateProjectCache($projectId);
         
-        $this->assertFalse($this->cacheService->hasProjectData($projectId));
-        $this->assertFalse($this->cacheService->hasProjectTasks($projectId));
-        $this->assertFalse($this->cacheService->hasProjectProgress($projectId));
+        $this->assertNull($this->cacheService->getWithTags($tags, 'project_data'));
+        $this->assertNull($this->cacheService->getWithTags($tags, 'project_tasks'));
+        $this->assertNull($this->cacheService->getWithTags($tags, 'project_progress'));
     }
 }

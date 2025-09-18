@@ -40,8 +40,6 @@ class Kernel extends HttpKernel
 
         'api' => [
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            // 'throttle:api',
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
 
@@ -63,12 +61,22 @@ class Kernel extends HttpKernel
         'signed' => \App\Http\Middleware\ValidateSignature::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'rbac' => \Src\RBAC\Middleware\RBACMiddleware::class,
+        // 'rbac' => \Src\RBAC\Middleware\RBACMiddleware::class, // Temporarily disabled
         
-        // New custom middleware
-        'jwt.auth' => \App\Http\Middleware\JWTAuthMiddleware::class,
-        'tenant.isolation' => \App\Http\Middleware\TenantIsolationMiddleware::class,
+        // Custom middleware
         'api.rate.limit' => \App\Http\Middleware\APIRateLimitMiddleware::class,
+        'simple.jwt.auth' => \App\Http\Middleware\SimpleJwtAuth::class,
+        'production.security' => \App\Http\Middleware\ProductionSecurityMiddleware::class,
+        'tenant.isolation' => \App\Http\Middleware\TenantIsolationMiddleware::class,
+        'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
+        'enhanced.rate.limit' => \App\Http\Middleware\EnhancedRateLimitMiddleware::class,
+        'input.sanitization' => \App\Http\Middleware\InputSanitizationMiddleware::class,
+        'cache.optimization' => \App\Http\Middleware\CacheMiddleware::class,
+        'performance.monitoring' => \App\Http\Middleware\PerformanceMonitoringMiddleware::class,
+        
+        // Invitation system middleware
+        'invitation.auth' => \App\Http\Middleware\InvitationAuth::class,
+        'role.permission' => \App\Http\Middleware\RolePermission::class,
     ];
     
     // Comment hoặc xóa method này

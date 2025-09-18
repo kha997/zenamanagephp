@@ -21,27 +21,42 @@ class RoleSeeder extends Seeder
     {
         // Tạo system roles - sử dụng firstOrCreate để tránh trùng lặp
         $adminRole = Role::firstOrCreate(
-            ['name' => 'System Admin', 'scope' => 'system'],
-            ['description' => 'Quản trị viên hệ thống']
+            ['name' => 'System Admin'],
+            [
+                'scope' => 'system',
+                'allow_override' => true,
+                'description' => 'Quản trị viên hệ thống',
+                'is_active' => true
+            ]
         );
 
         $managerRole = Role::firstOrCreate(
-            ['name' => 'Project Manager', 'scope' => 'project'],
-            ['description' => 'Quản lý dự án']
+            ['name' => 'Project Manager'],
+            [
+                'scope' => 'system',
+                'allow_override' => true,
+                'description' => 'Quản lý dự án',
+                'is_active' => true
+            ]
         );
 
         $memberRole = Role::firstOrCreate(
-            ['name' => 'Project Member', 'scope' => 'project'],
-            ['description' => 'Thành viên dự án']
+            ['name' => 'Project Member'],
+            [
+                'scope' => 'system',
+                'allow_override' => false,
+                'description' => 'Thành viên dự án',
+                'is_active' => true
+            ]
         );
 
         // Tạo permissions - sử dụng firstOrCreate để tránh trùng lặp
         $permissions = [
-            ['code' => 'project.create', 'module' => 'project', 'action' => 'create'],
-            ['code' => 'project.read', 'module' => 'project', 'action' => 'read'],
-            ['code' => 'project.update', 'module' => 'project', 'action' => 'update'],
-            ['code' => 'project.delete', 'module' => 'project', 'action' => 'delete'],
-            ['code' => 'user.manage', 'module' => 'user', 'action' => 'manage'],
+            ['code' => 'project.create', 'module' => 'project', 'action' => 'create', 'description' => 'Create Project'],
+            ['code' => 'project.read', 'module' => 'project', 'action' => 'read', 'description' => 'Read Project'],
+            ['code' => 'project.update', 'module' => 'project', 'action' => 'update', 'description' => 'Update Project'],
+            ['code' => 'project.delete', 'module' => 'project', 'action' => 'delete', 'description' => 'Delete Project'],
+            ['code' => 'user.manage', 'module' => 'user', 'action' => 'manage', 'description' => 'Manage Users'],
         ];
 
         foreach ($permissions as $permData) {
@@ -49,7 +64,9 @@ class RoleSeeder extends Seeder
                 ['code' => $permData['code']],
                 [
                     'module' => $permData['module'],
-                    'action' => $permData['action']
+                    'action' => $permData['action'],
+                    'description' => $permData['description'],
+                    'is_active' => true
                 ]
             );
         }

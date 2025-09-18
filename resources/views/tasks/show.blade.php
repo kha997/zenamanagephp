@@ -1,516 +1,143 @@
-@extends('layouts.app')
-
-@section('title', 'Chi tiết Công việc')
-
-@section('content')
-<div class="page-header">
-    <div class="page-header-content">
-        <h1 class="page-title" id="task-title">Chi tiết Công việc</h1>
-        <div class="page-actions">
-            <button class="btn btn-secondary" onclick="window.location.href='/tasks'">
-                <i class="icon-arrow-left"></i> Quay lại danh sách
-            </button>
-            <button class="btn btn-primary" onclick="editTask()" id="edit-btn">
-                <i class="icon-edit"></i> Chỉnh sửa
-            </button>
-        </div>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Detail - ZENA</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #333; }
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar { width: 250px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; position: fixed; height: 100vh; overflow-y: auto; z-index: 1000; }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo { font-size: 1.5rem; font-weight: bold; color: white; text-decoration: none; }
+        .sidebar-nav { padding: 20px 0; }
+        .nav-item { margin-bottom: 5px; }
+        .nav-link { display: flex; align-items: center; padding: 12px 20px; color: white; text-decoration: none; transition: all 0.3s; }
+        .nav-link:hover { background: rgba(255,255,255,0.1); }
+        .nav-link.active { background: rgba(255,255,255,0.2); }
+        .nav-icon { margin-right: 10px; width: 20px; }
+        .main-content { margin-left: 250px; flex: 1; padding: 20px; }
+        .header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .header-content { display: flex; justify-content: space-between; align-items: center; }
+        .page-title { font-size: 2rem; color: #333; }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .role-badge { background: #8b5cf6; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; margin-left: 10px; }
+        .task-header { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .task-title { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .task-name { font-size: 1.8rem; font-weight: bold; color: #333; }
+        .task-status { padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; }
+        .status-in-progress { background: #dbeafe; color: #1e40af; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; font-size: 0.9rem; transition: all 0.3s; margin-right: 10px; }
+        .btn-primary { background: #8b5cf6; color: white; }
+        .btn-primary:hover { background: #7c3aed; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #5a6268; }
+        .task-details { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .detail-row { display: flex; margin-bottom: 15px; }
+        .detail-label { font-weight: 600; width: 150px; color: #374151; }
+        .detail-value { color: #666; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="/dashboard" class="logo">🚀 ZENA</a>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item"><a href="/dashboard" class="nav-link"><i class="fas fa-tachometer-alt nav-icon"></i>Dashboard</a></li>
+                    <li class="nav-item"><a href="/dashboard/sales" class="nav-link"><i class="fas fa-chart-line nav-icon"></i>Sales Analytics</a></li>
+                    <li class="nav-item"><a href="/dashboard/users" class="nav-link"><i class="fas fa-users nav-icon"></i>User Management</a></li>
+                    <li class="nav-item"><a href="/dashboard/performance" class="nav-link"><i class="fas fa-tachometer-alt nav-icon"></i>Performance</a></li>
+                    <li class="nav-item"><a href="/dashboard/marketing" class="nav-link"><i class="fas fa-bullhorn nav-icon"></i>Marketing</a></li>
+                    <li class="nav-item"><a href="/dashboard/financial" class="nav-link"><i class="fas fa-dollar-sign nav-icon"></i>Financial</a></li>
+                    <li class="nav-item"><a href="/dashboard/projects" class="nav-link"><i class="fas fa-project-diagram nav-icon"></i>Projects</a></li>
+                    <li class="nav-item"><a href="/tasks" class="nav-link active"><i class="fas fa-tasks nav-icon"></i>Tasks</a></li>
+                    <li class="nav-item"><a href="/team" class="nav-link"><i class="fas fa-users nav-icon"></i>Team</a></li>
+                    <li class="nav-item"><a href="/admin" class="nav-link"><i class="fas fa-cog nav-icon"></i>Admin</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div class="header">
+                <div class="header-content">
+                    <h1 class="page-title">📋 Task Detail</h1>
+                    <div class="user-info">
+                        <span>Xin chào, User!</span>
+                        <span class="role-badge">Project Manager</span>
+                    </div>
+                </div>
+            </div>
+            <div class="task-header">
+                <div class="task-title">
+                    <div>
+                        <span class="task-name">Design UI Mockups</span>
+                    </div>
+                    <span class="task-status status-in-progress">In Progress</span>
+                </div>
+                <div style="margin: 15px 0;">
+                    <strong>Project:</strong> Villa Project Alpha | 
+                    <strong>Assignee:</strong> Sarah Johnson | 
+                    <strong>Priority:</strong> High
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="editTask()">
+                        <i class="fas fa-edit"></i> Edit Task
+                    </button>
+                    <button class="btn btn-secondary" onclick="changeStatus()">
+                        <i class="fas fa-check"></i> Change Status
+                    </button>
+                    <button class="btn btn-secondary" onclick="addComment()">
+                        <i class="fas fa-comment"></i> Add Comment
+                    </button>
+                </div>
+            </div>
+            <div class="task-details">
+                <h3 style="margin-bottom: 20px;">Task Details</h3>
+                <div class="detail-row">
+                    <div class="detail-label">Description:</div>
+                    <div class="detail-value">Create comprehensive UI mockups for the villa project including all rooms, exterior design, and landscaping features.</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Due Date:</div>
+                    <div class="detail-value">January 20, 2025</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Progress:</div>
+                    <div class="detail-value">75% Complete</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Estimated Hours:</div>
+                    <div class="detail-value">40 hours</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Spent Hours:</div>
+                    <div class="detail-value">30 hours</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Created:</div>
+                    <div class="detail-value">January 10, 2025</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Last Updated:</div>
+                    <div class="detail-value">January 15, 2025</div>
+                </div>
+            </div>
+        </main>
     </div>
-</div>
-
-<div class="content-wrapper">
-    <div class="row">
-        <div class="col-lg-8">
-            <!-- Task Overview -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">Tổng quan</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="info-item">
-                                <label>Dự án:</label>
-                                <span id="project-name">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Thành phần:</label>
-                                <span id="component-name">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Trạng thái:</label>
-                                <span id="task-status">-</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="info-item">
-                                <label>Ngày bắt đầu:</label>
-                                <span id="start-date">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Ngày kết thúc:</label>
-                                <span id="end-date">-</span>
-                            </div>
-                            <div class="info-item">
-                                <label>Tiến độ:</label>
-                                <div class="progress-display">
-                                    <div class="progress">
-                                        <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
-                                    </div>
-                                    <span id="progress-text">0%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="info-item mt-3">
-                        <label>Mô tả:</label>
-                        <div id="task-description" class="description-content">-</div>
-                    </div>
-                    
-                    <div class="info-item mt-3" id="conditional-tag-section" style="display: none;">
-                        <label>Thẻ điều kiện:</label>
-                        <span id="conditional-tag" class="badge badge-info">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Task Assignments -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title">Phân công</h5>
-                </div>
-                <div class="card-body">
-                    <div id="assignments-list">
-                        <!-- Assignments will be loaded via AJAX -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Dependencies -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title">Phụ thuộc</h5>
-                </div>
-                <div class="card-body">
-                    <div id="dependencies-list">
-                        <!-- Dependencies will be loaded via AJAX -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Progress Updates -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title">Cập nhật tiến độ</h5>
-                    <button class="btn btn-sm btn-primary" onclick="showProgressModal()">
-                        <i class="icon-plus"></i> Cập nhật
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div id="progress-updates">
-                        <!-- Progress updates will be loaded via AJAX -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-4">
-            <!-- Quick Actions -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title">Thao tác nhanh</h5>
-                </div>
-                <div class="card-body">
-                    <button class="btn btn-success btn-block mb-2" onclick="markAsCompleted()" id="complete-btn">
-                        <i class="icon-check"></i> Đánh dấu hoàn thành
-                    </button>
-                    <button class="btn btn-warning btn-block mb-2" onclick="markAsInProgress()" id="progress-btn">
-                        <i class="icon-play"></i> Bắt đầu thực hiện
-                    </button>
-                    <button class="btn btn-secondary btn-block mb-2" onclick="markAsOnHold()" id="hold-btn">
-                        <i class="icon-pause"></i> Tạm dừng
-                    </button>
-                    <button class="btn btn-outline-danger btn-block" onclick="deleteTask()">
-                        <i class="icon-trash"></i> Xóa công việc
-                    </button>
-                </div>
-            </div>
-
-            <!-- Related Documents -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title">Tài liệu liên quan</h5>
-                    <button class="btn btn-sm btn-primary" onclick="uploadDocument()">
-                        <i class="icon-upload"></i> Tải lên
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div id="related-documents">
-                        <!-- Documents will be loaded via AJAX -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Activity Timeline -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title">Hoạt động gần đây</h5>
-                </div>
-                <div class="card-body">
-                    <div id="activity-timeline">
-                        <!-- Activity timeline will be loaded via AJAX -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Progress Update Modal -->
-<div class="modal fade" id="progressModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cập nhật tiến độ</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="progress-form">
-                    <div class="form-group">
-                        <label for="progress-percentage">Tiến độ (%) <span class="text-danger">*</span></label>
-                        <input type="number" id="progress-percentage" name="progress" class="form-control" 
-                               min="0" max="100" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="progress-note">Ghi chú</label>
-                        <textarea id="progress-note" name="note" class="form-control" rows="3"></textarea>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" onclick="saveProgress()">Lưu</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-class TaskDetailManager {
-    constructor() {
-        this.taskId = {{ $taskId ?? 'null' }};
-        this.taskData = null;
-        
-        if (this.taskId) {
-            this.loadTaskDetail();
-            this.loadAssignments();
-            this.loadDependencies();
-            this.loadProgressUpdates();
-            this.loadRelatedDocuments();
-            this.loadActivityTimeline();
+    <script>
+        function editTask() {
+            window.location.href = "/tasks/{{ $task }}/edit";
         }
-    }
-
-    async loadTaskDetail() {
-        try {
-            const response = await zenaApp.apiCall('GET', `/api/v1/tasks/${this.taskId}`);
-            
-            if (response.status === 'success') {
-                this.taskData = response.data;
-                this.renderTaskDetail();
-            }
-        } catch (error) {
-            zenaApp.showNotification('Lỗi khi tải thông tin công việc', 'error');
+        function changeStatus() {
+            alert("Change status functionality will be implemented");
         }
-    }
-
-    renderTaskDetail() {
-        const task = this.taskData;
-        
-        document.getElementById('task-title').textContent = task.name;
-        document.getElementById('project-name').textContent = task.project.name;
-        document.getElementById('component-name').textContent = task.component ? task.component.name : 'Không có';
-        document.getElementById('start-date').textContent = zenaApp.formatDate(task.start_date);
-        document.getElementById('end-date').textContent = zenaApp.formatDate(task.end_date);
-        document.getElementById('task-description').textContent = task.description || 'Không có mô tả';
-        
-        // Status
-        const statusElement = document.getElementById('task-status');
-        statusElement.innerHTML = `<span class="badge badge-${this.getStatusColor(task.status)}">${this.getStatusText(task.status)}</span>`;
-        
-        // Progress
-        const progress = task.progress || 0;
-        document.getElementById('progress-bar').style.width = `${progress}%`;
-        document.getElementById('progress-text').textContent = `${progress}%`;
-        
-        // Conditional tag
-        if (task.conditional_tag) {
-            document.getElementById('conditional-tag-section').style.display = 'block';
-            document.getElementById('conditional-tag').textContent = task.conditional_tag;
+        function addComment() {
+            alert("Add comment functionality will be implemented");
         }
-        
-        // Update action buttons based on status
-        this.updateActionButtons(task.status);
-    }
-
-    updateActionButtons(status) {
-        const completeBtn = document.getElementById('complete-btn');
-        const progressBtn = document.getElementById('progress-btn');
-        const holdBtn = document.getElementById('hold-btn');
-        
-        // Reset all buttons
-        [completeBtn, progressBtn, holdBtn].forEach(btn => {
-            btn.style.display = 'block';
-            btn.disabled = false;
-        });
-        
-        switch (status) {
-            case 'completed':
-                completeBtn.style.display = 'none';
-                break;
-            case 'in_progress':
-                progressBtn.style.display = 'none';
-                break;
-            case 'on_hold':
-                holdBtn.style.display = 'none';
-                break;
-        }
-    }
-
-    async loadAssignments() {
-        const container = document.getElementById('assignments-list');
-        
-        if (!this.taskData || !this.taskData.assignments || this.taskData.assignments.length === 0) {
-            container.innerHTML = '<p class="text-muted">Chưa có phân công nào</p>';
-            return;
-        }
-
-        container.innerHTML = this.taskData.assignments.map(assignment => `
-            <div class="assignment-item">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="assignee-info">
-                        <h6 class="mb-1">${assignment.user.name}</h6>
-                        <small class="text-muted">${assignment.user.email}</small>
-                    </div>
-                    <div class="assignment-percentage">
-                        <span class="badge badge-primary">${assignment.split_percentage}%</span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    async loadDependencies() {
-        const container = document.getElementById('dependencies-list');
-        
-        if (!this.taskData || !this.taskData.dependencies || this.taskData.dependencies.length === 0) {
-            container.innerHTML = '<p class="text-muted">Không có phụ thuộc nào</p>';
-            return;
-        }
-
-        try {
-            const dependencyTasks = await Promise.all(
-                this.taskData.dependencies.map(taskId => 
-                    zenaApp.apiCall('GET', `/api/v1/tasks/${taskId}`)
-                )
-            );
-
-            container.innerHTML = dependencyTasks.map(response => {
-                if (response.status === 'success') {
-                    const task = response.data;
-                    return `
-                        <div class="dependency-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="task-info">
-                                    <h6 class="mb-1">${task.name}</h6>
-                                    <small class="text-muted">${task.project.name}</small>
-                                </div>
-                                <div class="task-status">
-                                    <span class="badge badge-${this.getStatusColor(task.status)}">
-                                        ${this.getStatusText(task.status)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-                return '';
-            }).join('');
-        } catch (error) {
-            container.innerHTML = '<p class="text-danger">Lỗi khi tải thông tin phụ thuộc</p>';
-        }
-    }
-
-    async loadProgressUpdates() {
-        // This would load progress update history
-        const container = document.getElementById('progress-updates');
-        container.innerHTML = '<p class="text-muted">Chưa có cập nhật tiến độ nào</p>';
-    }
-
-    async loadRelatedDocuments() {
-        try {
-            const response = await zenaApp.apiCall('GET', `/api/v1/tasks/${this.taskId}/documents`);
-            const container = document.getElementById('related-documents');
-            
-            if (response.status === 'success' && response.data.length > 0) {
-                container.innerHTML = response.data.map(doc => `
-                    <div class="document-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="doc-info">
-                                <h6 class="mb-1">${doc.title}</h6>
-                                <small class="text-muted">v${doc.current_version.version_number}</small>
-                            </div>
-                            <div class="doc-actions">
-                                <button class="btn btn-sm btn-outline-primary" onclick="downloadDocument(${doc.id})">
-                                    <i class="icon-download"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<p class="text-muted">Chưa có tài liệu nào</p>';
-            }
-        } catch (error) {
-            document.getElementById('related-documents').innerHTML = '<p class="text-muted">Chưa có tài liệu nào</p>';
-        }
-    }
-
-    async loadActivityTimeline() {
-        try {
-            const response = await zenaApp.apiCall('GET', `/api/v1/tasks/${this.taskId}/activities`);
-            const container = document.getElementById('activity-timeline');
-            
-            if (response.status === 'success' && response.data.length > 0) {
-                container.innerHTML = response.data.map(activity => `
-                    <div class="timeline-item">
-                        <div class="timeline-marker"></div>
-                        <div class="timeline-content">
-                            <h6 class="mb-1">${activity.description}</h6>
-                            <small class="text-muted">${zenaApp.formatDateTime(activity.created_at)}</small>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<p class="text-muted">Chưa có hoạt động nào</p>';
-            }
-        } catch (error) {
-            document.getElementById('activity-timeline').innerHTML = '<p class="text-muted">Chưa có hoạt động nào</p>';
-        }
-    }
-
-    async updateTaskStatus(status) {
-        try {
-            const response = await zenaApp.apiCall('PUT', `/api/v1/tasks/${this.taskId}`, { status });
-            
-            if (response.status === 'success') {
-                zenaApp.showNotification('Cập nhật trạng thái thành công', 'success');
-                this.loadTaskDetail();
-            }
-        } catch (error) {
-            zenaApp.showNotification('Lỗi khi cập nhật trạng thái', 'error');
-        }
-    }
-
-    getStatusColor(status) {
-        const colors = {
-            'pending': 'warning',
-            'in_progress': 'primary',
-            'completed': 'success',
-            'cancelled': 'danger',
-            'on_hold': 'secondary'
-        };
-        return colors[status] || 'secondary';
-    }
-
-    getStatusText(status) {
-        const texts = {
-            'pending': 'Chờ thực hiện',
-            'in_progress': 'Đang thực hiện',
-            'completed': 'Hoàn thành',
-            'cancelled': 'Đã hủy',
-            'on_hold': 'Tạm dừng'
-        };
-        return texts[status] || status;
-    }
-}
-
-// Global functions
-function editTask() {
-    window.location.href = `/tasks/${taskDetailManager.taskId}/edit`;
-}
-
-function markAsCompleted() {
-    taskDetailManager.updateTaskStatus('completed');
-}
-
-function markAsInProgress() {
-    taskDetailManager.updateTaskStatus('in_progress');
-}
-
-function markAsOnHold() {
-    taskDetailManager.updateTaskStatus('on_hold');
-}
-
-function deleteTask() {
-    if (confirm('Bạn có chắc chắn muốn xóa công việc này?')) {
-        zenaApp.apiCall('DELETE', `/api/v1/tasks/${taskDetailManager.taskId}`)
-            .then(response => {
-                if (response.status === 'success') {
-                    zenaApp.showNotification('Xóa công việc thành công', 'success');
-                    window.location.href = '/tasks';
-                }
-            })
-            .catch(error => {
-                zenaApp.showNotification('Lỗi khi xóa công việc', 'error');
-            });
-    }
-}
-
-function showProgressModal() {
-    $('#progressModal').modal('show');
-}
-
-function saveProgress() {
-    const form = document.getElementById('progress-form');
-    
-    if (!form.checkValidity()) {
-        form.classList.add('was-validated');
-        return;
-    }
-
-    const formData = new FormData(form);
-    const progressData = Object.fromEntries(formData.entries());
-
-    zenaApp.apiCall('POST', `/api/v1/tasks/${taskDetailManager.taskId}/progress`, progressData)
-        .then(response => {
-            if (response.status === 'success') {
-                zenaApp.showNotification('Cập nhật tiến độ thành công', 'success');
-                $('#progressModal').modal('hide');
-                taskDetailManager.loadTaskDetail();
-                taskDetailManager.loadProgressUpdates();
-            }
-        })
-        .catch(error => {
-            zenaApp.showNotification('Lỗi khi cập nhật tiến độ', 'error');
-        });
-}
-
-function uploadDocument() {
-    // This would open a document upload modal
-    zenaApp.showNotification('Chức năng upload tài liệu sẽ được triển khai', 'info');
-}
-
-function downloadDocument(documentId) {
-    window.open(`/api/v1/documents/${documentId}/download`, '_blank');
-}
-
-// Initialize when page loads
-let taskDetailManager;
-document.addEventListener('DOMContentLoaded', function() {
-    taskDetailManager = new TaskDetailManager();
-});
-</script>
-@endsection
+    </script>
+</body>
+</html>

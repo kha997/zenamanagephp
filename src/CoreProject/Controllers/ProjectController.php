@@ -9,6 +9,7 @@ use Src\CoreProject\Models\Project;
 use Src\CoreProject\Resources\ProjectResource;
 use Src\CoreProject\Requests\StoreProjectRequest;
 use Src\CoreProject\Requests\UpdateProjectRequest;
+use Src\CoreProject\Requests\IndexProjectRequest;
 use Src\RBAC\Middleware\RBACMiddleware;
 use Src\Foundation\Utils\JSendResponse;
 
@@ -32,55 +33,64 @@ class ProjectController extends Controller // Thêm extends Controller
      * @param Request $request
      * @return JsonResponse
      */
-    public function index(Request $request): JsonResponse
+    /**
+     * Lấy danh sách projects với proper validation
+     *
+     * @param IndexProjectRequest $request
+     * @return JsonResponse
+     */
+    public function index(IndexProjectRequest $request): JsonResponse
     {
         try {
+            // Sử dụng validated data thay vì raw request
+            $validated = $request->validated();
+            
             $query = Project::with(['rootComponents', 'tasks']);
-
-            // Filter theo status
-            if ($request->has('status')) {
-                $query->where('status', $request->get('status'));
+    
+            // Filter theo status với validated data
+            if (!empty($validated['status'])) {
+                $query->where('status', $validated['status']);
             }
-
-            // Filter theo visibility
-            if ($request->has('visibility')) {
-                $query->where('visibility', $request->get('visibility'));
+    
+            // Filter theo visibility với validated data
+            if (!empty($validated['visibility'])) {
+                $query->where('visibility', $validated['visibility']);
             }
-
-            // Filter theo date range
-            if ($request->has('start_date_from')) {
-                $query->where('start_date', '>=', $request->get('start_date_from'));
+    
+            // Filter theo date range với validated data
+            if (!empty($validated['start_date_from'])) {
+                $query->where('start_date', '>=', $validated['start_date_from']);
             }
-            if ($request->has('start_date_to')) {
-                $query->where('start_date', '<=', $request->get('start_date_to'));
+            if (!empty($validated['start_date_to'])) {
+                $query->where('start_date', '<=', $validated['start_date_to']);
             }
-
-            // Filter theo progress range
-            if ($request->has('progress_min')) {
-                $query->where('progress', '>=', $request->get('progress_min'));
+    
+            // Filter theo progress range với validated data
+            if (isset($validated['progress_min'])) {
+                $query->where('progress', '>=', $validated['progress_min']);
             }
-            if ($request->has('progress_max')) {
-                $query->where('progress', '<=', $request->get('progress_max'));
+            if (isset($validated['progress_max'])) {
+                $query->where('progress', '<=', $validated['progress_max']);
             }
-
-            // Search theo tên
-            if ($request->has('search')) {
-                $search = $request->get('search');
+    
+            // Search với validated và sanitized data
+            if (!empty($validated['search'])) {
+                $search = $validated['search'];
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'LIKE', "%{$search}%")
                       ->orWhere('description', 'LIKE', "%{$search}%");
                 });
             }
-
-            // Sorting
-            $sortBy = $request->get('sort_by', 'created_at');
-            $sortDirection = $request->get('sort_direction', 'desc');
+    
+            // Sorting với validated data
+            $sortBy = $validated['sort_by'] ?? 'created_at';
+            $sortDirection = $validated['sort_direction'] ?? 'desc';
             $query->orderBy($sortBy, $sortDirection);
-
+    
             $projects = $query->paginate(
-                $request->get('per_page', 15)
+                $validated['per_page'] ?? 15
             );
-
+    
             return JSendResponse::success([
                 'projects' => ProjectResource::collection($projects->items()),
                 'pagination' => [
@@ -223,7 +233,7 @@ class ProjectController extends Controller // Thêm extends Controller
             $project->delete();
 
             // Dispatch event
-            event(new \Src\CoreProject\Events\ProjectDeleted($project));
+            event(new \Src\CoreProject\Events\ProjectUpdated($project, $oldData, ['deleted']));
 
             return JSendResponse::success([
                 'message' => 'Dự án đã được xóa thành công.'

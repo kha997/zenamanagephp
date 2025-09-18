@@ -7,8 +7,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Src\Common\Services\AuditService;
 use App\Models\User;
 use App\Models\Tenant;
-use Src\CoreProject\Models\Project;
+use App\Models\Project;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 /**
  * Unit tests cho AuditService
@@ -25,11 +27,23 @@ class AuditServiceTest extends TestCase
     {
         parent::setUp();
         
+        // Mock Auth facade to prevent request errors
+        $mockRequest = Request::create('/test', 'GET');
+        Auth::setRequest($mockRequest);
+        
         $this->auditService = new AuditService();
         
         $tenant = Tenant::factory()->create();
         $this->user = User::factory()->create(['tenant_id' => $tenant->id]);
-        $this->project = Project::factory()->create(['tenant_id' => $tenant->id]);
+        $this->project = Project::create([
+            'tenant_id' => $tenant->id,
+            'code' => 'PRJ-TEST-' . rand(1000, 9999),
+            'name' => 'Test Project',
+            'description' => 'Test project for audit service',
+            'status' => 'active',
+            'progress' => 50,
+            'budget_total' => 100000
+        ]);
     }
 
     /**

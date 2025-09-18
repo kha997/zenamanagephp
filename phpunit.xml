@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
-         colors="true"
-         processIsolation="false"
-         stopOnFailure="false"
-         cacheDirectory=".phpunit.cache"
-         backupGlobals="false">
+         colors="true">
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
@@ -14,25 +10,23 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
-        <testsuite name="Performance">
-            <directory>tests/Performance</directory>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        <testsuite name="Final Testing">
+            <file>tests/Feature/FinalSystemTest.php</file>
+            <file>tests/Feature/PerformanceTest.php</file>
+            <file>tests/Feature/SecurityTest.php</file>
+            <file>tests/Feature/QualityAssuranceTest.php</file>
         </testsuite>
     </testsuites>
     <source>
         <include>
             <directory>app</directory>
-            <directory>src</directory>
         </include>
-        <exclude>
-            <directory>app/Console</directory>
-            <directory>src/*/routes</directory>
-            <file>src/*/Providers/*ServiceProvider.php</file>
-        </exclude>
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
-        <env name="APP_KEY" value="base64:2fl+Ktvkdphvz9JfhttxMSLsYtfnQBVulIO9KS6rp/s="/>
-        <env name="APP_DEBUG" value="true"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
@@ -41,13 +35,27 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
-        <env name="JWT_SECRET" value="test-jwt-secret-key-for-testing-only"/>
-        <env name="JWT_TTL" value="60"/>
+        <env name="REDIS_HOST" value="127.0.0.1"/>
+        <env name="REDIS_PORT" value="6379"/>
+        <env name="REDIS_DB" value="0"/>
     </php>
+    <coverage>
+        <include>
+            <directory>app</directory>
+        </include>
+        <exclude>
+            <directory>app/Console/Kernel.php</directory>
+            <directory>app/Exceptions</directory>
+            <directory>app/Http/Middleware</directory>
+            <directory>app/Providers</directory>
+        </exclude>
+        <report>
+            <html outputDirectory="storage/app/coverage"/>
+            <text outputFile="storage/app/coverage.txt"/>
+            <clover outputFile="storage/app/coverage.xml"/>
+        </report>
+    </coverage>
     <logging>
-        <junit outputFile="build/logs/junit.xml"/>
-        <teamcity outputFile="build/logs/teamcity.txt"/>
-        <testdoxHtml outputFile="build/logs/testdox.html"/>
-        <testdoxText outputFile="build/logs/testdox.txt"/>
+        <junit outputFile="storage/app/junit.xml"/>
     </logging>
 </phpunit>

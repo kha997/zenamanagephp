@@ -454,3 +454,43 @@ Route::get('/test', function () {
         'timestamp' => now()
     ]);
 });
+
+// Bulk Operations Routes
+Route::prefix('api/tasks/bulk')->name('tasks.bulk.')->group(function () {
+    Route::post('/export', [App\Http\Controllers\Web\TaskBulkController::class, 'bulkExport'])->name('export');
+    Route::post('/status-change', [App\Http\Controllers\Web\TaskBulkController::class, 'bulkStatusChange'])->name('status-change');
+    Route::post('/assign', [App\Http\Controllers\Web\TaskBulkController::class, 'bulkAssign'])->name('assign');
+    Route::post('/archive', [App\Http\Controllers\Web\TaskBulkController::class, 'bulkArchive'])->name('archive');
+    Route::post('/delete', [App\Http\Controllers\Web\TaskBulkController::class, 'bulkDelete'])->name('delete');
+    Route::post('/duplicate', [App\Http\Controllers\Web\TaskBulkController::class, 'duplicate'])->name('duplicate');
+    Route::get('/download/{filename}', [App\Http\Controllers\Web\TaskBulkController::class, 'downloadExport'])->name('download');
+});
+
+Route::prefix('api/projects/bulk')->name('projects.bulk.')->group(function () {
+    Route::post('/export', [App\Http\Controllers\Web\ProjectBulkController::class, 'bulkExport'])->name('export');
+    Route::post('/status-change', [App\Http\Controllers\Web\ProjectBulkController::class, 'bulkStatusChange'])->name('status-change');
+    Route::post('/assign', [App\Http\Controllers\Web\ProjectBulkController::class, 'bulkAssign'])->name('assign');
+    Route::post('/archive', [App\Http\Controllers\Web\ProjectBulkController::class, 'bulkArchive'])->name('archive');
+    Route::post('/delete', [App\Http\Controllers\Web\ProjectBulkController::class, 'bulkDelete'])->name('delete');
+    Route::post('/duplicate', [App\Http\Controllers\Web\ProjectBulkController::class, 'duplicate'])->name('duplicate');
+    Route::get('/download/{filename}', [App\Http\Controllers\Web\ProjectBulkController::class, 'downloadExport'])->name('download');
+});
+
+// Analytics Routes
+Route::prefix('api/analytics')->name('analytics.')->group(function () {
+    Route::get('/tasks', [App\Http\Controllers\Web\AnalyticsController::class, 'taskAnalytics'])->name('tasks');
+    Route::get('/projects', [App\Http\Controllers\Web\AnalyticsController::class, 'projectAnalytics'])->name('projects');
+    Route::get('/dashboard', [App\Http\Controllers\Web\AnalyticsController::class, 'dashboardAnalytics'])->name('dashboard');
+    Route::get('/productivity', [App\Http\Controllers\Web\AnalyticsController::class, 'productivityMetrics'])->name('productivity');
+});
+
+// Document Management Routes
+Route::prefix('api/documents')->name('documents.')->group(function () {
+    Route::post('/upload/task', [App\Http\Controllers\Web\DocumentManagementController::class, 'uploadTaskDocument'])->name('upload-task');
+    Route::post('/upload/project', [App\Http\Controllers\Web\DocumentManagementController::class, 'uploadProjectDocument'])->name('upload-project');
+    Route::get('/task/{taskId}', [App\Http\Controllers\Web\DocumentManagementController::class, 'getTaskDocuments'])->name('get-task');
+    Route::get('/project/{projectId}', [App\Http\Controllers\Web\DocumentManagementController::class, 'getProjectDocuments'])->name('get-project');
+    Route::delete('/delete', [App\Http\Controllers\Web\DocumentManagementController::class, 'deleteDocument'])->name('delete');
+    Route::get('/download/{filename}', [App\Http\Controllers\Web\DocumentManagementController::class, 'downloadDocument'])->name('download');
+    Route::get('/categories', [App\Http\Controllers\Web\DocumentManagementController::class, 'getDocumentCategories'])->name('categories');
+});

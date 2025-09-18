@@ -418,6 +418,30 @@ function editTaskSimpleDebug() {
             this.logDebug('Priority value: ' + this.formData.priority);
             
             try {
+                // Get fresh CSRF token first
+                this.logDebug('Getting fresh CSRF token...');
+                const tokenResponse = await fetch('/tasks/' + this.formData.id + '/edit', {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (tokenResponse.ok) {
+                    const html = await tokenResponse.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const freshToken = doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    
+                    if (freshToken) {
+                        this.logDebug('Fresh CSRF token: ' + freshToken);
+                        // Update meta tag with fresh token
+                        document.querySelector('meta[name="csrf-token"]').setAttribute('content', freshToken);
+                    } else {
+                        this.logDebug('WARNING: Could not get fresh CSRF token');
+                    }
+                }
+                
                 // Prepare form data
                 const formData = new FormData();
                 formData.append('_method', 'PUT');

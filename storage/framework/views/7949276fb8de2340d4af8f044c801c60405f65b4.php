@@ -360,30 +360,51 @@ function editTaskSimpleDebug() {
         },
 
         async testNetworkRequest() {
-            this.logDebug('Testing network request...');
+            this.logDebug('=== TESTING NETWORK REQUEST ===');
+            this.logDebug('Starting network request to /api/tasks...');
             
             try {
+                // Check CSRF token first
+                const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                if (csrfToken) {
+                    this.logDebug('CSRF token found: ' + csrfToken.getAttribute('content'));
+                } else {
+                    this.logDebug('WARNING: CSRF token not found!');
+                }
+                
+                this.logDebug('Making fetch request...');
                 const response = await fetch('/api/tasks', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        'X-CSRF-TOKEN': csrfToken ? csrfToken.getAttribute('content') : 'test-token'
                     }
                 });
                 
-                this.logDebug('Network request response: ' + response.status);
+                this.logDebug('Response received!');
+                this.logDebug('Response status: ' + response.status);
                 this.logDebug('Response ok: ' + response.ok);
+                this.logDebug('Response headers: ' + JSON.stringify([...response.headers.entries()]));
                 
                 if (response.ok) {
+                    this.logDebug('Parsing response JSON...');
                     const data = await response.json();
-                    this.logDebug('Response data: ' + JSON.stringify(data));
+                    this.logDebug('Response data parsed successfully!');
+                    this.logDebug('Success: ' + data.success);
                     this.logDebug('Tasks found: ' + (data.data?.tasks?.length || 0));
+                    this.logDebug('Total tasks: ' + (data.data?.total || 0));
+                    this.logDebug('First task name: ' + (data.data?.tasks?.[0]?.name || 'N/A'));
                 } else {
-                    this.logDebug('Network request failed: ' + response.status);
+                    this.logDebug('Network request failed with status: ' + response.status);
+                    const errorText = await response.text();
+                    this.logDebug('Error response: ' + errorText);
                 }
             } catch (error) {
                 this.logDebug('Network request error: ' + error.message);
+                this.logDebug('Error stack: ' + error.stack);
             }
+            
+            this.logDebug('=== NETWORK REQUEST TEST COMPLETED ===');
         },
 
         async updateTask() {

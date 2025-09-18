@@ -1,0 +1,304 @@
+1758183550s:8896:"<!-- Email Tracking Pixel -->
+<img src="http://localhost/email-tracking/open/demo-tracking-id" width="1" height="1" style="display:none;" alt="">
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You&#039;re Invited!</title>
+    <style>
+        /* Reset styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #374151;
+            background-color: #f9fafb;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .email-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 32px 24px;
+            text-align: center;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .email-title {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .email-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+        }
+        
+        .email-content {
+            padding: 32px 24px;
+        }
+        
+        .email-footer {
+            background-color: #f8fafc;
+            padding: 24px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .footer-text {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .footer-link {
+            color: #667eea;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .footer-link:hover {
+            text-decoration: underline;
+        }
+        
+        .company-info {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+        
+        /* Button styles */
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #667eea;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        
+        .btn:hover {
+            background-color: #5a67d8;
+        }
+        
+        .btn-secondary {
+            background-color: #6b7280;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+        
+        /* Content styles */
+        .content-section {
+            margin-bottom: 24px;
+        }
+        
+        .content-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 12px;
+        }
+        
+        .content-text {
+            color: #4b5563;
+            margin-bottom: 16px;
+        }
+        
+        .highlight-box {
+            background-color: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        
+        .highlight-title {
+            font-weight: 600;
+            color: #0c4a6e;
+            margin-bottom: 8px;
+        }
+        
+        .highlight-text {
+            color: #075985;
+            font-size: 14px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 600px) {
+            .email-container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .email-header,
+            .email-content,
+            .email-footer {
+                padding: 24px 16px;
+            }
+            
+            .footer-links {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="email-header">
+            <div class="logo">ZM</div>
+            <h1 class="email-title">You&#039;re Invited!</h1>
+            <p class="email-subtitle">Join Demo Organization</p>
+        </div>
+        
+        <!-- Content -->
+        <div class="email-content">
+            <!-- Welcome Message -->
+<div class="content-section">
+    <h2 class="content-title">Welcome to Demo Organization!</h2>
+    <p class="content-text">
+        Hello Admin,
+    </p>
+    <p class="content-text">
+        Admin has invited you to join <strong>Demo Organization</strong> 
+        as a <strong>User</strong>.
+    </p>
+        <p class="content-text">
+        You'll be working on the project: <strong>Sample Project</strong>
+    </p>
+    </div>
+
+<!-- Invitation Details -->
+<div class="highlight-box">
+    <div class="highlight-title">📋 Invitation Details</div>
+    <div class="highlight-text">
+        <strong>Role:</strong> User<br>
+                <strong>Project:</strong> Sample Project<br>
+                <strong>Organization:</strong> Demo Organization<br>
+        <strong>Invited by:</strong> Admin<br>
+        <strong>Expires:</strong> September 25, 2025 at 7:19 AM
+    </div>
+</div>
+
+<!-- Custom Message -->
+
+<!-- Call to Action -->
+<div class="content-section" style="text-align: center;">
+    <a href="http://localhost/email-tracking/click/demo-tracking-id/http%3A%2F%2Flocalhost%2Finvitations%2Faccept%2Ftest-token" class="btn" style="font-size: 16px; padding: 16px 32px;">
+        🚀 Accept Invitation
+    </a>
+</div>
+
+<!-- Instructions -->
+<div class="content-section">
+    <h3 class="content-title">What happens next?</h3>
+    <div style="color: #4b5563;">
+        <p style="margin-bottom: 12px;">
+            <strong>1.</strong> Click the "Accept Invitation" button above
+        </p>
+        <p style="margin-bottom: 12px;">
+            <strong>2.</strong> Create your account with a secure password
+        </p>
+        <p style="margin-bottom: 12px;">
+            <strong>3.</strong> Complete your profile information
+        </p>
+        <p style="margin-bottom: 12px;">
+            <strong>4.</strong> Start collaborating with your team!
+        </p>
+    </div>
+</div>
+
+<!-- Security Notice -->
+<div class="content-section">
+    <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 16px;">
+        <h4 style="color: #92400e; margin-bottom: 8px;">🔒 Security Notice</h4>
+        <p style="color: #92400e; font-size: 14px; margin: 0;">
+            This invitation link is unique to you and expires in 7 days. 
+            Please do not share this link with others. If you didn't expect this invitation, 
+            you can safely ignore this email.
+        </p>
+    </div>
+</div>
+
+<!-- Alternative Access -->
+<div class="content-section">
+    <p class="content-text">
+        If the button doesn't work, you can copy and paste this link into your browser:
+    </p>
+    <div style="background-color: #f3f4f6; padding: 12px; border-radius: 4px; word-break: break-all; font-family: monospace; font-size: 12px; color: #374151;">
+        http://localhost/invitations/accept/test-token
+    </div>
+</div>
+
+<!-- Contact Information -->
+<div class="content-section">
+    <p class="content-text">
+        If you have any questions about this invitation, please contact 
+        <strong>Admin</strong> or our support team.
+    </p>
+</div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="email-footer">
+            <p class="footer-text">
+                This email was sent from ZenaManage Project Management Platform
+            </p>
+            
+            <div class="footer-links">
+                <a href="http://localhost" class="footer-link">Visit Website</a>
+                <a href="http://localhost/support" class="footer-link">Support</a>
+                <a href="http://localhost/privacy" class="footer-link">Privacy Policy</a>
+            </div>
+            
+            <div class="company-info">
+                <p>© 2025 ZenaManage. All rights reserved.</p>
+                <p>If you have any questions, please contact our support team.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+";

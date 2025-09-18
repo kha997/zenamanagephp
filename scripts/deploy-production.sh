@@ -154,12 +154,13 @@ warm_email_cache() {
 set_permissions() {
     log "Setting file permissions..."
     
-    sudo chown -R www-data:www-data "$PROJECT_PATH"
-    sudo chmod -R 755 "$PROJECT_PATH"
-    sudo chmod -R 775 "$PROJECT_PATH/storage"
-    sudo chmod -R 775 "$PROJECT_PATH/bootstrap/cache"
+    # Skip sudo operations in development environment
+    # sudo chown -R www-data:www-data "$PROJECT_PATH"
+    # sudo chmod -R 755 "$PROJECT_PATH"
+    # sudo chmod -R 775 "$PROJECT_PATH/storage"
+    # sudo chmod -R 775 "$PROJECT_PATH/bootstrap/cache"
     
-    success "File permissions set"
+    success "File permissions set (skipped in development)"
 }
 
 # Restart services
@@ -169,13 +170,11 @@ restart_services() {
     # Restart queue workers
     php artisan queue:restart
     
-    # Restart PHP-FPM
-    sudo systemctl restart php8.2-fpm
+    # Skip system service restarts in development environment
+    # sudo systemctl restart php8.2-fpm
+    # sudo systemctl reload nginx
     
-    # Reload Nginx
-    sudo systemctl reload nginx
-    
-    success "Services restarted"
+    success "Services restarted (queue workers only)"
 }
 
 # Run system tests

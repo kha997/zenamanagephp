@@ -9,7 +9,7 @@ use Src\CoreProject\Models\Task;
 $app = require_once 'bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
-echo "=== RECENT TASKS CHECK ===\n\n";
+echo "=== LATEST TASKS CHECK ===\n\n";
 
 try {
     // Get latest 5 tasks
@@ -25,14 +25,20 @@ try {
         echo "---\n";
     }
     
-    // Check if task 01 exists
-    $task01 = Task::where('name', 'task 01')->first();
-    if ($task01) {
-        echo "✅ Task 01 found in database\n";
-        echo "   - ID: {$task01->id}\n";
-        echo "   - Created: {$task01->created_at}\n";
+    // Check if task 03 and 04 exist
+    $task03 = Task::where('name', 'task 03')->first();
+    $task04 = Task::where('name', 'task 04')->first();
+    
+    if ($task03) {
+        echo "✅ Task 03 found in database\n";
     } else {
-        echo "❌ Task 01 NOT found in database\n";
+        echo "❌ Task 03 NOT found in database\n";
+    }
+    
+    if ($task04) {
+        echo "✅ Task 04 found in database\n";
+    } else {
+        echo "❌ Task 04 NOT found in database\n";
     }
     
     // Check total count

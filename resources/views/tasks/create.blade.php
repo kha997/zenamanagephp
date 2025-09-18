@@ -12,6 +12,18 @@
     <div class="dashboard-card p-6">
         <h3 class="text-lg font-semibold text-gray-900 mb-6">📝 Create New Task</h3>
         
+        <!-- Display validation errors -->
+        @if ($errors->any())
+            <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h4 class="text-sm font-medium text-red-800 mb-2">Please fix the following errors:</h4>
+                <ul class="text-sm text-red-700 list-disc list-inside">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+        
         <form method="POST" action="/tasks" >
             <input type="hidden" name="_token" value="{{ csrf_token() }}">
             
@@ -28,6 +40,7 @@
                                 type="text" 
                                 name="title" 
                                 required 
+                                value="{{ old('title') }}"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Enter task title"
                             >
@@ -40,7 +53,7 @@
                                 rows="4"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Describe the task..."
-                            ></textarea>
+                            >{{ old('description') }}</textarea>
                         </div>
                         
                         <div>
@@ -55,7 +68,7 @@
                                     $projects = \Src\CoreProject\Models\Project::all();
                                 @endphp
                                 @foreach($projects as $project)
-                                    <option value="{{ $project->id }}">{{ $project->name }}</option>
+                                    <option value="{{ $project->id }}" {{ old('project_id') == $project->id ? 'selected' : '' }}>{{ $project->name }}</option>
                                 @endforeach
                             </select>
                         </div>

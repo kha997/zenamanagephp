@@ -104,7 +104,7 @@ $currentRoute = 'tasks';
                         <input 
                             type="text" 
                             x-model="formData.name"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             placeholder="Enter task title"
                             required
                         >
@@ -119,7 +119,7 @@ $currentRoute = 'tasks';
                         <textarea 
                             x-model="formData.description"
                             rows="4"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-vertical"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-vertical text-gray-900 bg-white"
                             placeholder="Enter task description"
                         ></textarea>
                     </div>
@@ -132,7 +132,7 @@ $currentRoute = 'tasks';
                         </label>
                         <select 
                             x-model="formData.project_id"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             required
                         >
                             <option value="">Select Project</option>
@@ -153,7 +153,7 @@ $currentRoute = 'tasks';
                         </label>
                         <select 
                             x-model="formData.assignee_id"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                         >
                             <option value="">Select Assignee</option>
                             <?php
@@ -176,7 +176,7 @@ $currentRoute = 'tasks';
                         </label>
                         <select 
                             x-model="formData.status"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             required
                         >
                             <option value="pending">Pending</option>
@@ -195,7 +195,7 @@ $currentRoute = 'tasks';
                         </label>
                         <select 
                             x-model="formData.priority"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             required
                         >
                             <option value="low">Low</option>
@@ -214,7 +214,7 @@ $currentRoute = 'tasks';
                         <input 
                             type="date" 
                             x-model="formData.start_date"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                         >
                     </div>
 
@@ -227,7 +227,7 @@ $currentRoute = 'tasks';
                         <input 
                             type="date" 
                             x-model="formData.end_date"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                         >
                     </div>
 
@@ -264,7 +264,7 @@ $currentRoute = 'tasks';
                             x-model="formData.estimated_hours"
                             min="0"
                             step="0.5"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             placeholder="Enter estimated hours"
                         >
                     </div>
@@ -292,7 +292,7 @@ $currentRoute = 'tasks';
                         type="text" 
                         x-model="newTag"
                         @keydown.enter.prevent="addTag()"
-                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                         placeholder="Add a tag and press Enter"
                     >
                     <button type="button" @click="addTag()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">

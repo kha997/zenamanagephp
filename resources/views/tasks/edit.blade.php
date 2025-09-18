@@ -391,13 +391,28 @@ function editTask() {
 
         init() {
             // Debug: Log task data
+            console.log('=== ALPINE.JS INITIALIZATION ===');
             console.log('Alpine.js initialized!');
-            console.log('Task data loaded:', this.formData);
+            console.log('Raw task data from server:');
             console.log('Task ID:', '{{ $task->id ?? "NO_ID" }}');
             console.log('Task Name:', '{{ $task->name ?? "NO_NAME" }}');
             console.log('Task Status:', '{{ $task->status ?? "NO_STATUS" }}');
             console.log('Task Priority:', '{{ $task->priority ?? "NO_PRIORITY" }}');
             console.log('Task Assignee ID:', '{{ $task->assignee_id ?? "NO_ASSIGNEE" }}');
+            console.log('Task Description:', '{{ $task->description ?? "NO_DESCRIPTION" }}');
+            console.log('Task Project ID:', '{{ $task->project_id ?? "NO_PROJECT" }}');
+            console.log('Task Start Date:', '{{ $task->start_date ?? "NO_START_DATE" }}');
+            console.log('Task End Date:', '{{ $task->end_date ?? "NO_END_DATE" }}');
+            console.log('Task Progress:', '{{ $task->progress_percent ?? "NO_PROGRESS" }}');
+            console.log('Task Estimated Hours:', '{{ $task->estimated_hours ?? "NO_HOURS" }}');
+            console.log('Task Tags:', '{{ $task->tags ?? "NO_TAGS" }}');
+            
+            console.log('FormData after initialization:');
+            console.log('formData.id:', this.formData.id);
+            console.log('formData.name:', this.formData.name);
+            console.log('formData.status:', this.formData.status);
+            console.log('formData.priority:', this.formData.priority);
+            console.log('formData.description:', this.formData.description);
             
             // Test Alpine.js functionality
             this.testAlpine = 'Alpine.js is working!';
@@ -411,6 +426,8 @@ function editTask() {
                     this.formData = { ...this.formData, ...draftData };
                 }
             }
+            
+            console.log('=== ALPINE.JS INITIALIZATION COMPLETED ===');
         },
 
         async testUpdate() {

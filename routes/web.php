@@ -297,6 +297,7 @@ Route::prefix('tasks')->name('tasks.')->group(function () {
     Route::get('/{task}', [App\Http\Controllers\Web\TaskController::class, 'show'])->name('show');
     Route::get('/{task}/edit', [App\Http\Controllers\Web\TaskController::class, 'edit'])->name('edit');
     Route::get('/{task}/edit-debug', [App\Http\Controllers\Web\TaskController::class, 'editDebug'])->name('edit-debug');
+    Route::get('/{task}/edit-simple-debug', [App\Http\Controllers\Web\TaskController::class, 'editSimpleDebug'])->name('edit-simple-debug');
     Route::put('/{task}', [App\Http\Controllers\Web\TaskController::class, 'update'])->name('update');
     Route::delete('/{task}', [App\Http\Controllers\Web\TaskController::class, 'destroy'])->name('destroy');
     

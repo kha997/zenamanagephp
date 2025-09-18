@@ -1,13 +1,11 @@
-@extends('layouts.dashboard')
+<?php $__env->startSection('title', 'Edit Task - Debug Mode'); ?>
+<?php $__env->startSection('page-title', 'Edit Task - Debug Mode'); ?>
+<?php $__env->startSection('page-description', 'Debug version with extensive logging'); ?>
+<?php $__env->startSection('user-initials', 'PM'); ?>
+<?php $__env->startSection('user-name', 'Project Manager'); ?>
+<?php $__env->startSection('current-route', 'tasks'); ?>
 
-@section('title', 'Edit Task - Debug Mode')
-@section('page-title', 'Edit Task - Debug Mode')
-@section('page-description', 'Debug version with extensive logging')
-@section('user-initials', 'PM')
-@section('user-name', 'Project Manager')
-@section('current-route', 'tasks')
-
-@php
+<?php
 $breadcrumb = [
     [
         'label' => 'Dashboard',
@@ -24,14 +22,14 @@ $breadcrumb = [
     ]
 ];
 $currentRoute = 'tasks';
-@endphp
+?>
 
-@section('content')
-@if(isset($error))
+<?php $__env->startSection('content'); ?>
+<?php if(isset($error)): ?>
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="bg-red-50 border border-red-200 rounded-lg p-6">
         <h3 class="text-lg font-medium text-red-800 mb-2">Error Loading Task</h3>
-        <p class="text-red-700">{{ $error }}</p>
+        <p class="text-red-700"><?php echo e($error); ?></p>
         <div class="mt-4">
             <a href="/tasks" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
                 Back to Tasks
@@ -39,7 +37,7 @@ $currentRoute = 'tasks';
         </div>
     </div>
 </div>
-@elseif(!$task)
+<?php elseif(!$task): ?>
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
         <h3 class="text-lg font-medium text-yellow-800 mb-2">Task Not Found</h3>
@@ -51,7 +49,7 @@ $currentRoute = 'tasks';
         </div>
     </div>
 </div>
-@else
+<?php else: ?>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="editTaskDebug()">
     <!-- Debug Console -->
     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
@@ -73,7 +71,7 @@ $currentRoute = 'tasks';
             <div>
                 <h3 class="text-lg font-medium text-gray-700 mb-3">Server Data</h3>
                 <div class="bg-gray-50 p-4 rounded-lg">
-                    <pre class="text-sm text-gray-700">{{ json_encode($task->toArray(), JSON_PRETTY_PRINT) }}</pre>
+                    <pre class="text-sm text-gray-700"><?php echo e(json_encode($task->toArray(), JSON_PRETTY_PRINT)); ?></pre>
                 </div>
             </div>
             <div>
@@ -90,7 +88,7 @@ $currentRoute = 'tasks';
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900">Edit Task - Debug Mode</h2>
-                <p class="text-gray-600 mt-1">Task ID: {{ $task->id }}</p>
+                <p class="text-gray-600 mt-1">Task ID: <?php echo e($task->id); ?></p>
             </div>
             <div class="flex space-x-3">
                 <button 
@@ -114,8 +112,8 @@ $currentRoute = 'tasks';
             </div>
         </div>
 
-        <form method="POST" action="/tasks/{{ $task->id }}" @submit.prevent="updateTask()">
-            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+        <form method="POST" action="/tasks/<?php echo e($task->id); ?>" @submit.prevent="updateTask()">
+            <input type="hidden" name="_token" value="<?php echo e(csrf_token()); ?>">
             
             <div class="space-y-6">
                 <!-- Task Name -->
@@ -292,7 +290,7 @@ $currentRoute = 'tasks';
         </form>
     </div>
 </div>
-@endif
+<?php endif; ?>
 
 <script>
 function editTaskDebug() {
@@ -300,27 +298,27 @@ function editTaskDebug() {
         isSubmitting: false,
         newTag: '',
         formData: {
-            id: '{{ $task->id ?? "" }}',
-            name: '{{ $task->name ?? "" }}',
-            description: '{{ $task->description ?? "" }}',
-            project_id: '{{ $task->project_id ?? "" }}',
-            assignee_id: '{{ $task->assignee_id ?? "" }}',
-            status: '{{ $task->status ?? "pending" }}',
-            priority: '{{ $task->priority ?? "medium" }}',
-            start_date: '{{ $task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : "" }}',
-            end_date: '{{ $task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : "" }}',
-            progress_percent: {{ $task->progress_percent ?? '0' }},
-            estimated_hours: {{ $task->estimated_hours ?? '0' }},
-            tags: '{{ $task->tags ?? "" }}'
+            id: '<?php echo e($task->id ?? ""); ?>',
+            name: '<?php echo e($task->name ?? ""); ?>',
+            description: '<?php echo e($task->description ?? ""); ?>',
+            project_id: '<?php echo e($task->project_id ?? ""); ?>',
+            assignee_id: '<?php echo e($task->assignee_id ?? ""); ?>',
+            status: '<?php echo e($task->status ?? "pending"); ?>',
+            priority: '<?php echo e($task->priority ?? "medium"); ?>',
+            start_date: '<?php echo e($task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : ""); ?>',
+            end_date: '<?php echo e($task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : ""); ?>',
+            progress_percent: <?php echo e($task->progress_percent ?? '0'); ?>,
+            estimated_hours: <?php echo e($task->estimated_hours ?? '0'); ?>,
+            tags: '<?php echo e($task->tags ?? ""); ?>'
         },
 
         init() {
             this.debugLog('Alpine.js editTaskDebug initialized');
-            this.debugLog('Task ID: {{ $task->id ?? "NO_ID" }}');
-            this.debugLog('Task Name: {{ $task->name ?? "NO_NAME" }}');
-            this.debugLog('Task Status: {{ $task->status ?? "NO_STATUS" }}');
-            this.debugLog('Task Priority: {{ $task->priority ?? "NO_PRIORITY" }}');
-            this.debugLog('Task Assignee ID: {{ $task->assignee_id ?? "NO_ASSIGNEE" }}');
+            this.debugLog('Task ID: <?php echo e($task->id ?? "NO_ID"); ?>');
+            this.debugLog('Task Name: <?php echo e($task->name ?? "NO_NAME"); ?>');
+            this.debugLog('Task Status: <?php echo e($task->status ?? "NO_STATUS"); ?>');
+            this.debugLog('Task Priority: <?php echo e($task->priority ?? "NO_PRIORITY"); ?>');
+            this.debugLog('Task Assignee ID: <?php echo e($task->assignee_id ?? "NO_ASSIGNEE"); ?>');
             this.debugLog('Initial formData: ' + JSON.stringify(this.formData));
             
             // Test Alpine.js functionality
@@ -343,8 +341,8 @@ function editTaskDebug() {
         },
 
         clearDebugLog() {
-            const debugConsole = document.getElementById('debug-console');
-            debugConsole.innerHTML = '<div>Debug log cleared...</div>';
+            const console = document.getElementById('debug-console');
+            console.innerHTML = '<div>Debug log cleared...</div>';
         },
 
         testAlpine() {
@@ -485,4 +483,6 @@ function editTaskDebug() {
     }
 }
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.dashboard', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/tasks/edit-debug.blade.php ENDPATH**/ ?>

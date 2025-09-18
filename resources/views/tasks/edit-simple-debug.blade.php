@@ -1,8 +1,8 @@
 @extends('layouts.dashboard')
 
-@section('title', 'Edit Task - Debug Mode')
-@section('page-title', 'Edit Task - Debug Mode')
-@section('page-description', 'Debug version with extensive logging')
+@section('title', 'Edit Task - Simple Debug')
+@section('page-title', 'Edit Task - Simple Debug')
+@section('page-description', 'Simple debug version without console conflicts')
 @section('user-initials', 'PM')
 @section('user-name', 'Project Manager')
 @section('current-route', 'tasks')
@@ -19,8 +19,8 @@ $breadcrumb = [
         'url' => '/tasks'
     ],
     [
-        'label' => 'Edit Task - Debug',
-        'url' => '/tasks/' . ($task->id ?? '1') . '/edit-debug'
+        'label' => 'Edit Task - Simple Debug',
+        'url' => '/tasks/' . ($task->id ?? '1') . '/edit-simple-debug'
     ]
 ];
 $currentRoute = 'tasks';
@@ -52,17 +52,17 @@ $currentRoute = 'tasks';
     </div>
 </div>
 @else
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="editTaskDebug()">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="editTaskSimpleDebug()">
     <!-- Debug Console -->
     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
         <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-gray-800">🔍 Debug Console</h2>
+            <h2 class="text-xl font-semibold text-gray-800">🔍 Simple Debug Console</h2>
             <button @click="clearDebugLog()" class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700">
                 Clear Log
             </button>
         </div>
         <div class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm h-64 overflow-y-auto" id="debug-console">
-            <div>Debug console initialized...</div>
+            <div>Simple debug console initialized...</div>
         </div>
     </div>
 
@@ -89,7 +89,7 @@ $currentRoute = 'tasks';
     <div class="bg-white rounded-lg shadow-lg p-6">
         <div class="flex justify-between items-center mb-6">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">Edit Task - Debug Mode</h2>
+                <h2 class="text-2xl font-bold text-gray-900">Edit Task - Simple Debug</h2>
                 <p class="text-gray-600 mt-1">Task ID: {{ $task->id }}</p>
             </div>
             <div class="flex space-x-3">
@@ -130,7 +130,7 @@ $currentRoute = 'tasks';
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                         placeholder="Enter task title"
                         required
-                        @input="debugLog('Name input changed: ' + $event.target.value)"
+                        @input="logDebug('Name input changed: ' + $event.target.value)"
                     >
                 </div>
 
@@ -145,7 +145,7 @@ $currentRoute = 'tasks';
                         rows="4"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                         placeholder="Enter task description"
-                        @input="debugLog('Description input changed: ' + $event.target.value)"
+                        @input="logDebug('Description input changed: ' + $event.target.value)"
                     ></textarea>
                 </div>
 
@@ -160,7 +160,7 @@ $currentRoute = 'tasks';
                             x-model="formData.status"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             required
-                            @change="debugLog('Status changed to: ' + $event.target.value)"
+                            @change="logDebug('Status changed to: ' + $event.target.value)"
                         >
                             <option value="pending">Pending</option>
                             <option value="in_progress">In Progress</option>
@@ -180,7 +180,7 @@ $currentRoute = 'tasks';
                             x-model="formData.priority"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             required
-                            @change="debugLog('Priority changed to: ' + $event.target.value)"
+                            @change="logDebug('Priority changed to: ' + $event.target.value)"
                         >
                             <option value="low">Low</option>
                             <option value="medium">Medium</option>
@@ -202,7 +202,7 @@ $currentRoute = 'tasks';
                             x-model="formData.start_date"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             required
-                            @change="debugLog('Start date changed to: ' + $event.target.value)"
+                            @change="logDebug('Start date changed to: ' + $event.target.value)"
                         >
                     </div>
 
@@ -217,7 +217,7 @@ $currentRoute = 'tasks';
                             x-model="formData.end_date"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             required
-                            @change="debugLog('Due date changed to: ' + $event.target.value)"
+                            @change="logDebug('Due date changed to: ' + $event.target.value)"
                         >
                     </div>
                 </div>
@@ -234,7 +234,7 @@ $currentRoute = 'tasks';
                             x-model="formData.progress_percent"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             min="0" max="100"
-                            @input="debugLog('Progress changed to: ' + $event.target.value)"
+                            @input="logDebug('Progress changed to: ' + $event.target.value)"
                         >
                     </div>
 
@@ -249,7 +249,7 @@ $currentRoute = 'tasks';
                             x-model="formData.estimated_hours"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                             min="0" step="0.5"
-                            @input="debugLog('Estimated hours changed to: ' + $event.target.value)"
+                            @input="logDebug('Estimated hours changed to: ' + $event.target.value)"
                         >
                     </div>
                 </div>
@@ -265,7 +265,7 @@ $currentRoute = 'tasks';
                         x-model="formData.tags"
                         class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
                         placeholder="Enter tags separated by commas"
-                        @input="debugLog('Tags changed to: ' + $event.target.value)"
+                        @input="logDebug('Tags changed to: ' + $event.target.value)"
                     >
                 </div>
 
@@ -295,10 +295,9 @@ $currentRoute = 'tasks';
 @endif
 
 <script>
-function editTaskDebug() {
+function editTaskSimpleDebug() {
     return {
         isSubmitting: false,
-        newTag: '',
         formData: {
             id: '{{ $task->id ?? "" }}',
             name: '{{ $task->name ?? "" }}',
@@ -315,60 +314,55 @@ function editTaskDebug() {
         },
 
         init() {
-            this.debugLog('Alpine.js editTaskDebug initialized');
-            this.debugLog('Task ID: {{ $task->id ?? "NO_ID" }}');
-            this.debugLog('Task Name: {{ $task->name ?? "NO_NAME" }}');
-            this.debugLog('Task Status: {{ $task->status ?? "NO_STATUS" }}');
-            this.debugLog('Task Priority: {{ $task->priority ?? "NO_PRIORITY" }}');
-            this.debugLog('Task Assignee ID: {{ $task->assignee_id ?? "NO_ASSIGNEE" }}');
-            this.debugLog('Initial formData: ' + JSON.stringify(this.formData));
-            
-            // Test Alpine.js functionality
-            this.testAlpine = 'Alpine.js is working!';
-            this.debugLog('Alpine test: ' + this.testAlpine);
+            this.logDebug('Alpine.js editTaskSimpleDebug initialized');
+            this.logDebug('Task ID: {{ $task->id ?? "NO_ID" }}');
+            this.logDebug('Task Name: {{ $task->name ?? "NO_NAME" }}');
+            this.logDebug('Task Status: {{ $task->status ?? "NO_STATUS" }}');
+            this.logDebug('Task Priority: {{ $task->priority ?? "NO_PRIORITY" }}');
+            this.logDebug('Task Assignee ID: {{ $task->assignee_id ?? "NO_ASSIGNEE" }}');
+            this.logDebug('Initial formData: ' + JSON.stringify(this.formData));
         },
 
-        debugLog(message) {
+        logDebug(message) {
             const timestamp = new Date().toLocaleTimeString();
             const debugConsole = document.getElementById('debug-console');
-            const logEntry = document.createElement('div');
-            logEntry.textContent = `[${timestamp}] ${message}`;
-            debugConsole.appendChild(logEntry);
-            debugConsole.scrollTop = debugConsole.scrollHeight;
-            
-            // Also log to browser console (use original console.log)
-            if (typeof console !== 'undefined' && console.log) {
-                console.log(`[DEBUG] ${message}`);
+            if (debugConsole) {
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `[${timestamp}] ${message}`;
+                debugConsole.appendChild(logEntry);
+                debugConsole.scrollTop = debugConsole.scrollHeight;
             }
         },
 
         clearDebugLog() {
             const debugConsole = document.getElementById('debug-console');
-            debugConsole.innerHTML = '<div>Debug log cleared...</div>';
+            if (debugConsole) {
+                debugConsole.innerHTML = '<div>Debug log cleared...</div>';
+            }
         },
 
         testAlpine() {
-            this.debugLog('Testing Alpine.js functionality...');
-            this.debugLog('Alpine.js is working: ' + (typeof Alpine !== 'undefined'));
-            this.debugLog('Form data binding: ' + JSON.stringify(this.formData));
-            this.debugLog('Alpine test completed');
+            this.logDebug('Testing Alpine.js functionality...');
+            this.logDebug('Alpine.js is working: ' + (typeof Alpine !== 'undefined'));
+            this.logDebug('Form data binding: ' + JSON.stringify(this.formData));
+            this.logDebug('Alpine test completed');
         },
 
         testFormData() {
-            this.debugLog('Testing form data...');
-            this.debugLog('Form data keys: ' + Object.keys(this.formData).join(', '));
-            this.debugLog('Form data values: ' + JSON.stringify(this.formData));
+            this.logDebug('Testing form data...');
+            this.logDebug('Form data keys: ' + Object.keys(this.formData).join(', '));
+            this.logDebug('Form data values: ' + JSON.stringify(this.formData));
             
             // Test each field
             Object.keys(this.formData).forEach(key => {
-                this.debugLog(`${key}: ${this.formData[key]} (${typeof this.formData[key]})`);
+                this.logDebug(`${key}: ${this.formData[key]} (${typeof this.formData[key]})`);
             });
             
-            this.debugLog('Form data test completed');
+            this.logDebug('Form data test completed');
         },
 
         async testNetworkRequest() {
-            this.debugLog('Testing network request...');
+            this.logDebug('Testing network request...');
             
             try {
                 const response = await fetch('/api/tasks', {
@@ -379,28 +373,28 @@ function editTaskDebug() {
                     }
                 });
                 
-                this.debugLog('Network request response: ' + response.status);
-                this.debugLog('Response ok: ' + response.ok);
+                this.logDebug('Network request response: ' + response.status);
+                this.logDebug('Response ok: ' + response.ok);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    this.debugLog('Response data: ' + JSON.stringify(data));
-                    this.debugLog('Tasks found: ' + (data.data?.tasks?.length || 0));
+                    this.logDebug('Response data: ' + JSON.stringify(data));
+                    this.logDebug('Tasks found: ' + (data.data?.tasks?.length || 0));
                 } else {
-                    this.debugLog('Network request failed: ' + response.status);
+                    this.logDebug('Network request failed: ' + response.status);
                 }
             } catch (error) {
-                this.debugLog('Network request error: ' + error.message);
+                this.logDebug('Network request error: ' + error.message);
             }
         },
 
         async updateTask() {
             this.isSubmitting = true;
-            this.debugLog('Starting task update...');
-            this.debugLog('Task ID: ' + this.formData.id);
-            this.debugLog('Form data: ' + JSON.stringify(this.formData));
-            this.debugLog('Status value: ' + this.formData.status);
-            this.debugLog('Priority value: ' + this.formData.priority);
+            this.logDebug('Starting task update...');
+            this.logDebug('Task ID: ' + this.formData.id);
+            this.logDebug('Form data: ' + JSON.stringify(this.formData));
+            this.logDebug('Status value: ' + this.formData.status);
+            this.logDebug('Priority value: ' + this.formData.priority);
             
             try {
                 // Prepare form data
@@ -421,13 +415,13 @@ function editTaskDebug() {
                 formData.append('tags', this.formData.tags);
                 
                 // Debug: Log form data being sent
-                this.debugLog('Form data being sent:');
+                this.logDebug('Form data being sent:');
                 for (let [key, value] of formData.entries()) {
-                    this.debugLog(`${key}: ${value}`);
+                    this.logDebug(`${key}: ${value}`);
                 }
                 
                 // Submit to server
-                this.debugLog('Submitting to: /tasks/' + this.formData.id);
+                this.logDebug('Submitting to: /tasks/' + this.formData.id);
                 const response = await fetch(`/tasks/${this.formData.id}`, {
                     method: 'POST',
                     body: formData,
@@ -436,12 +430,12 @@ function editTaskDebug() {
                     }
                 });
                 
-                this.debugLog('Response status: ' + response.status);
-                this.debugLog('Response ok: ' + response.ok);
+                this.logDebug('Response status: ' + response.status);
+                this.logDebug('Response ok: ' + response.ok);
                 
                 if (response.ok) {
-                    this.debugLog('Task updated successfully!');
-                    this.showNotification('Task updated successfully!', 'success');
+                    this.logDebug('Task updated successfully!');
+                    alert('Task updated successfully!');
                     
                     // Redirect to tasks list
                     setTimeout(() => {
@@ -449,38 +443,32 @@ function editTaskDebug() {
                     }, 1500);
                 } else {
                     const responseText = await response.text();
-                    this.debugLog('Update failed: ' + response.status + ' ' + responseText);
+                    this.logDebug('Update failed: ' + response.status + ' ' + responseText);
                     
                     try {
                         const errorData = JSON.parse(responseText);
                         if (errorData.errors) {
-                            this.debugLog('Validation errors: ' + JSON.stringify(errorData.errors));
-                            this.showNotification('Validation errors: ' + JSON.stringify(errorData.errors), 'error');
+                            this.logDebug('Validation errors: ' + JSON.stringify(errorData.errors));
+                            alert('Validation errors: ' + JSON.stringify(errorData.errors));
                         } else {
-                            this.showNotification('Failed to update task: ' + (errorData.message || 'Unknown error'), 'error');
+                            alert('Failed to update task: ' + (errorData.message || 'Unknown error'));
                         }
                     } catch (e) {
-                        this.showNotification('Failed to update task. Please try again.', 'error');
+                        alert('Failed to update task. Please try again.');
                     }
                 }
                 
             } catch (error) {
-                this.debugLog('Update error: ' + error.message);
-                this.showNotification('Failed to update task. Please try again.', 'error');
+                this.logDebug('Update error: ' + error.message);
+                alert('Failed to update task. Please try again.');
             } finally {
                 this.isSubmitting = false;
             }
         },
 
         cancelEdit() {
-            this.debugLog('Cancelling edit...');
+            this.logDebug('Cancelling edit...');
             window.location.href = '/tasks';
-        },
-
-        showNotification(message, type) {
-            this.debugLog(`Notification: ${type} - ${message}`);
-            // You can implement a toast notification here
-            alert(message);
         }
     }
 }

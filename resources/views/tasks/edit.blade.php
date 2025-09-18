@@ -52,7 +52,177 @@ $currentRoute = 'tasks';
     </div>
 </div>
 @else
-<div x-data="editTask()">
+<div x-data="{
+        isSubmitting: false,
+        newTag: '',
+        formData: {
+            id: '{{ $task->id ?? "" }}',
+            name: '{{ $task->name ?? "" }}',
+            description: '{{ $task->description ?? "" }}',
+            project_id: '{{ $task->project_id ?? "" }}',
+            assignee_id: '{{ $task->assignee_id ?? "" }}',
+            status: '{{ $task->status ?? "pending" }}',
+            priority: '{{ $task->priority ?? "medium" }}',
+            start_date: '{{ $task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : "" }}',
+            end_date: '{{ $task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : "" }}',
+            progress_percent: {{ $task->progress_percent ?? '0' }},
+            estimated_hours: {{ $task->estimated_hours ?? '0' }},
+            tags: {{ json_encode(array_filter(explode(',', $task->tags ?? ''))) }}
+        },
+        testAlpine: 'Alpine.js is working!',
+        
+        init() {
+            console.log('=== ALPINE.JS INITIALIZATION ===');
+            console.log('Alpine.js initialized!');
+            console.log('Raw task data from server:');
+            console.log('Task ID:', '{{ $task->id ?? "NO_ID" }}');
+            console.log('Task Name:', '{{ $task->name ?? "NO_NAME" }}');
+            console.log('Task Status:', '{{ $task->status ?? "NO_STATUS" }}');
+            console.log('Task Priority:', '{{ $task->priority ?? "NO_PRIORITY" }}');
+            console.log('Task Assignee ID:', '{{ $task->assignee_id ?? "NO_ASSIGNEE" }}');
+            console.log('Task Description:', '{{ $task->description ?? "NO_DESCRIPTION" }}');
+            console.log('Task Project ID:', '{{ $task->project_id ?? "NO_PROJECT" }}');
+            console.log('Task Start Date:', '{{ $task->start_date ?? "NO_START_DATE" }}');
+            console.log('Task End Date:', '{{ $task->end_date ?? "NO_END_DATE" }}');
+            console.log('Task Progress:', '{{ $task->progress_percent ?? "NO_PROGRESS" }}');
+            console.log('Task Estimated Hours:', '{{ $task->estimated_hours ?? "NO_HOURS" }}');
+            console.log('Task Tags:', '{{ $task->tags ?? "NO_TAGS" }}');
+            
+            console.log('FormData after initialization:');
+            console.log('formData.id:', this.formData.id);
+            console.log('formData.name:', this.formData.name);
+            console.log('formData.status:', this.formData.status);
+            console.log('formData.priority:', this.formData.priority);
+            console.log('formData.description:', this.formData.description);
+            
+            console.log('=== ALPINE.JS INITIALIZATION COMPLETED ===');
+        },
+        
+        async testUpdate() {
+            console.log('Testing update...');
+            try {
+                const formData = new FormData();
+                formData.append('_token', document.querySelector('meta[name=\"csrf-token\"]').getAttribute('content'));
+                formData.append('name', 'Test Task');
+                formData.append('description', 'Test Description');
+                formData.append('status', 'pending');
+                formData.append('priority', 'medium');
+                
+                console.log('Test update data prepared');
+            } catch (error) {
+                console.error('Test update error:', error);
+            }
+        },
+        
+        addTag() {
+            if (this.newTag.trim() && !this.formData.tags.includes(this.newTag.trim())) {
+                this.formData.tags.push(this.newTag.trim());
+                this.newTag = '';
+            }
+        },
+        
+        removeTag(tag) {
+            this.formData.tags = this.formData.tags.filter(t => t !== tag);
+        },
+        
+        async updateTask() {
+            this.isSubmitting = true;
+            console.log('Starting task update...');
+            console.log('Task ID:', this.formData.id);
+            console.log('Form data:', this.formData);
+            console.log('Status value:', this.formData.status);
+            console.log('Priority value:', this.formData.priority);
+            
+            try {
+                // Get fresh CSRF token first
+                console.log('Getting fresh CSRF token...');
+                const tokenResponse = await fetch('/tasks/' + this.formData.id + '/edit', {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (tokenResponse.ok) {
+                    const html = await tokenResponse.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const freshToken = doc.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content');
+                    
+                    if (freshToken) {
+                        console.log('Fresh CSRF token:', freshToken);
+                        document.querySelector('meta[name=\"csrf-token\"]').setAttribute('content', freshToken);
+                    } else {
+                        console.log('WARNING: Could not get fresh CSRF token');
+                    }
+                }
+                
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('_method', 'PUT');
+                formData.append('_token', document.querySelector('meta[name=\"csrf-token\"]').getAttribute('content'));
+                formData.append('name', this.formData.name);
+                formData.append('description', this.formData.description);
+                formData.append('project_id', this.formData.project_id);
+                const assigneeId = this.formData.assignee_id && this.formData.assignee_id !== '' ? this.formData.assignee_id : '';
+                formData.append('assignee_id', assigneeId);
+                formData.append('status', this.formData.status);
+                formData.append('priority', this.formData.priority);
+                formData.append('start_date', this.formData.start_date);
+                formData.append('end_date', this.formData.end_date);
+                formData.append('progress_percent', this.formData.progress_percent);
+                formData.append('estimated_hours', this.formData.estimated_hours);
+                formData.append('tags', this.formData.tags);
+                
+                // Debug: Log form data being sent
+                console.log('Form data being sent:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key + ':', value);
+                }
+                
+                // Submit to server
+                console.log('Submitting to:', `/tasks/${this.formData.id}`);
+                const response = await fetch(`/tasks/${this.formData.id}`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=\"csrf-token\"]').getAttribute('content')
+                    }
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                if (response.ok) {
+                    console.log('Task updated successfully!');
+                    alert('Task updated successfully!');
+                    window.location.href = '/tasks';
+                } else {
+                    const errorText = await response.text();
+                    console.log('Update failed:', response.status, errorText);
+                    alert('Failed to update task. Please try again.');
+                }
+            } catch (error) {
+                console.error('Update error:', error);
+                alert('An error occurred while updating the task.');
+            } finally {
+                this.isSubmitting = false;
+            }
+        },
+        
+        showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+    }"
     <!-- Task Information Card -->
     <div class="dashboard-card p-6 mb-6">
         <div class="flex items-center justify-between mb-4">

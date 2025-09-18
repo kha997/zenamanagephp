@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="test-csrf-token">
+    <title>Frontend Debug - Task Edit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">🔍 Frontend Debug - Task Edit</h1>
+        
+        <!-- Debug Console -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Console Debug</h2>
+            <div id="console-output" class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm h-64 overflow-y-auto">
+                <div>Console output will appear here...</div>
+            </div>
+            <button onclick="clearConsole()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                Clear Console
+            </button>
+        </div>
+
+        <!-- Form Data Binding Test -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8" x-data="formDataTest()">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Form Data Binding Test</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Test Form -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-700 mb-3">Test Form</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Task Name</label>
+                            <input 
+                                type="text" 
+                                x-model="formData.name"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                                placeholder="Enter task name"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select 
+                                x-model="formData.status"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                            >
+                                <option value="pending">Pending</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="review">Review</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                            <select 
+                                x-model="formData.priority"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                            >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Progress (%)</label>
+                            <input 
+                                type="number" 
+                                x-model="formData.progress_percent"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                                min="0" max="100"
+                            >
+                        </div>
+                        
+                        <button 
+                            @click="testFormSubmission()"
+                            class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Test Form Submission
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Form Data Display -->
+                <div>
+                    <h3 class="text-lg font-medium text-gray-700 mb-3">Form Data (Live)</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <pre x-text="JSON.stringify(formData, null, 2)" class="text-sm text-gray-700"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Request Test -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Network Request Test</h2>
+            
+            <div class="space-y-4">
+                <button 
+                    onclick="testNetworkRequest()"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                    Test Network Request
+                </button>
+                
+                <div id="network-output" class="bg-gray-50 p-4 rounded-lg">
+                    <div class="text-gray-600">Network request results will appear here...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSRF Token Test -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">CSRF Token Test</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">CSRF Token from Meta Tag</label>
+                    <input 
+                        type="text" 
+                        id="csrf-token-display"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                        readonly
+                    >
+                </div>
+                
+                <button 
+                    onclick="testCSRFToken()"
+                    class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                    Test CSRF Token
+                </button>
+                
+                <div id="csrf-output" class="bg-gray-50 p-4 rounded-lg">
+                    <div class="text-gray-600">CSRF token test results will appear here...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Console debugging
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn,
+            info: console.info
+        };
+
+        function logToPage(message, type = 'log') {
+            const consoleOutput = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'text-red-400' : 
+                         type === 'warn' ? 'text-yellow-400' : 
+                         type === 'info' ? 'text-blue-400' : 'text-green-400';
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = color;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        // Override console methods
+        console.log = function(...args) {
+            originalConsole.log.apply(console, args);
+            logToPage(args.join(' '), 'log');
+        };
+
+        console.error = function(...args) {
+            originalConsole.error.apply(console, args);
+            logToPage(args.join(' '), 'error');
+        };
+
+        console.warn = function(...args) {
+            originalConsole.warn.apply(console, args);
+            logToPage(args.join(' '), 'warn');
+        };
+
+        console.info = function(...args) {
+            originalConsole.info.apply(console, args);
+            logToPage(args.join(' '), 'info');
+        };
+
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '<div>Console cleared...</div>';
+        }
+
+        // Alpine.js form data test
+        function formDataTest() {
+            return {
+                formData: {
+                    id: '01k5e5nty3m1059pcyymbkgqt8',
+                    name: 'Test Task',
+                    description: 'Test task description',
+                    project_id: '01k5e2kkwynze0f37a8a4d3435',
+                    assignee_id: '',
+                    status: 'in_progress',
+                    priority: 'low',
+                    start_date: '2025-09-18',
+                    end_date: '2025-09-19',
+                    progress_percent: 50,
+                    estimated_hours: 8,
+                    tags: ['test', 'debug']
+                },
+
+                init() {
+                    console.log('Alpine.js formDataTest initialized');
+                    console.log('Initial formData:', this.formData);
+                },
+
+                testFormSubmission() {
+                    console.log('Testing form submission...');
+                    console.log('Form data:', this.formData);
+                    
+                    // Test form data validation
+                    if (!this.formData.name) {
+                        console.error('Name is required');
+                        return;
+                    }
+                    
+                    if (!this.formData.status) {
+                        console.error('Status is required');
+                        return;
+                    }
+                    
+                    if (!this.formData.priority) {
+                        console.error('Priority is required');
+                        return;
+                    }
+                    
+                    console.log('Form validation passed');
+                    
+                    // Simulate form submission
+                    this.simulateSubmission();
+                },
+
+                simulateSubmission() {
+                    console.log('Simulating form submission...');
+                    
+                    const formData = new FormData();
+                    formData.append('_method', 'PUT');
+                    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                    formData.append('name', this.formData.name);
+                    formData.append('description', this.formData.description);
+                    formData.append('project_id', this.formData.project_id);
+                    formData.append('assignee_id', this.formData.assignee_id);
+                    formData.append('status', this.formData.status);
+                    formData.append('priority', this.formData.priority);
+                    formData.append('start_date', this.formData.start_date);
+                    formData.append('end_date', this.formData.end_date);
+                    formData.append('progress_percent', this.formData.progress_percent);
+                    formData.append('estimated_hours', this.formData.estimated_hours);
+                    formData.append('tags', this.formData.tags.join(','));
+                    
+                    console.log('FormData prepared:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(`${key}: ${value}`);
+                    }
+                    
+                    console.log('Form submission simulation complete');
+                }
+            }
+        }
+
+        // Network request test
+        async function testNetworkRequest() {
+            const output = document.getElementById('network-output');
+            output.innerHTML = '<div class="text-blue-600">Testing network request...</div>';
+            
+            try {
+                console.log('Testing network request to /api/tasks');
+                
+                const response = await fetch('/api/tasks', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+                
+                console.log('Network request response:', response);
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    output.innerHTML = `
+                        <div class="text-green-600">✅ Network request successful!</div>
+                        <div class="mt-2 text-sm text-gray-700">
+                            Status: ${response.status}<br>
+                            Tasks found: ${data.data?.tasks?.length || 0}
+                        </div>
+                    `;
+                } else {
+                    console.error('Network request failed:', response.status);
+                    output.innerHTML = `
+                        <div class="text-red-600">❌ Network request failed</div>
+                        <div class="mt-2 text-sm text-gray-700">Status: ${response.status}</div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Network request error:', error);
+                output.innerHTML = `
+                    <div class="text-red-600">❌ Network request error</div>
+                    <div class="mt-2 text-sm text-gray-700">${error.message}</div>
+                `;
+            }
+        }
+
+        // CSRF token test
+        function testCSRFToken() {
+            const output = document.getElementById('csrf-output');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            console.log('Testing CSRF token...');
+            console.log('CSRF token:', csrfToken);
+            
+            if (csrfToken) {
+                output.innerHTML = `
+                    <div class="text-green-600">✅ CSRF token found!</div>
+                    <div class="mt-2 text-sm text-gray-700">
+                        Token: ${csrfToken}<br>
+                        Length: ${csrfToken.length} characters
+                    </div>
+                `;
+                console.log('CSRF token test passed');
+            } else {
+                output.innerHTML = `
+                    <div class="text-red-600">❌ CSRF token not found</div>
+                    <div class="mt-2 text-sm text-gray-700">Meta tag with name="csrf-token" not found</div>
+                `;
+                console.error('CSRF token test failed');
+            }
+        }
+
+        // Initialize CSRF token display
+        document.addEventListener('DOMContentLoaded', function() {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            document.getElementById('csrf-token-display').value = csrfToken || 'Not found';
+            
+            console.log('Frontend debug page loaded');
+            console.log('CSRF token:', csrfToken);
+        });
+    </script>
+</body>
+</html>

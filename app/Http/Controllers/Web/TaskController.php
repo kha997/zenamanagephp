@@ -156,6 +156,25 @@ class TaskController extends Controller
     }
 
     /**
+     * Show the form for editing a task (debug version).
+     */
+    public function editDebug(string $taskId): View
+    {
+        try {
+            $task = Task::findOrFail($taskId);
+            $projects = Project::select('id', 'name')->get();
+            
+            return view('tasks.edit-debug', compact('task', 'projects'));
+        } catch (\Exception $e) {
+            return view('tasks.edit-debug', [
+                'task' => null,
+                'projects' => collect(),
+                'error' => 'Không thể tải form chỉnh sửa task: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
      * Update the specified task.
      */
     public function update(TaskFormRequest $request, string $taskId): RedirectResponse

@@ -68,14 +68,14 @@ $currentRoute = 'tasks';
                     {{ $task->status ?? 'In Progress' }}
                 </span>
             </div>
-        </div>
+                    </div>
         
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div class="flex items-center">
                 <i class="fas fa-calendar-plus text-gray-400 mr-2"></i>
                 <span class="text-gray-600">Created:</span>
                 <span class="ml-2 font-medium">{{ $task->created_at ?? date('Y-m-d H:i:s') }}</span>
-            </div>
+                </div>
             <div class="flex items-center">
                 <i class="fas fa-clock text-gray-400 mr-2"></i>
                 <span class="text-gray-600">Last Updated:</span>
@@ -87,11 +87,11 @@ $currentRoute = 'tasks';
                 <span class="ml-2 font-medium">{{ $task->assignee ?? 'Mike Wilson' }}</span>
             </div>
         </div>
-    </div>
-
+            </div>
+            
     <!-- Edit Form -->
     <div class="dashboard-card p-6">
-        <form>
+                <form>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Left Column -->
                 <div class="space-y-6">
@@ -369,9 +369,9 @@ $currentRoute = 'tasks';
     </div>
 </div>
 
-<script>
-function editTask() {
-    return {
+    <script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('editTask', () => ({
         isSubmitting: false,
         newTag: '',
         formData: {
@@ -517,7 +517,7 @@ function editTask() {
                     
                     // Redirect to tasks list
                     setTimeout(() => {
-                        window.location.href = '/tasks';
+            window.location.href = '/tasks';
                     }, 1500);
                 } else {
                     // Log response details for debugging
@@ -575,9 +575,9 @@ function editTask() {
             }, 3000);
         },
 
-    }
-}
-</script>
+    }));
+        });
+    </script>
 
 <style>
 .slider::-webkit-slider-thumb {

@@ -910,7 +910,7 @@ function tasksManagement() {
         selectedProjectToMove: '',
         
         // Enhanced Task Data
-        tasks: <?php echo json_encode($tasks->items() ?? [], 15, 512) ?>,
+        tasks: [],
         
         // Computed Properties
         get filteredTasks() {

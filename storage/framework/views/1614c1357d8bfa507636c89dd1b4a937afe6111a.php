@@ -370,7 +370,7 @@ function editTask() {
                 formData.append('name', this.formData.name);
                 formData.append('description', this.formData.description);
                 formData.append('project_id', this.formData.project_id);
-                formData.append('assignee_id', this.formData.assignee_id);
+                formData.append('assignee_id', this.formData.assignee_id || '');
                 formData.append('status', this.formData.status);
                 formData.append('priority', this.formData.priority);
                 formData.append('start_date', this.formData.start_date);
@@ -396,7 +396,22 @@ function editTask() {
                         window.location.href = '/tasks';
                     }, 1500);
                 } else {
-                    throw new Error('Failed to update task');
+                    // Log response details for debugging
+                    const responseText = await response.text();
+                    console.error('Update failed:', response.status, responseText);
+                    
+                    // Try to parse as JSON for validation errors
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        if (errorData.errors) {
+                            console.error('Validation errors:', errorData.errors);
+                            this.showNotification('Validation errors: ' + JSON.stringify(errorData.errors), 'error');
+                        } else {
+                            this.showNotification('Failed to update task: ' + (errorData.message || 'Unknown error'), 'error');
+                        }
+                    } catch (e) {
+                        this.showNotification('Failed to update task. Please try again.', 'error');
+                    }
                 }
                 
             } catch (error) {

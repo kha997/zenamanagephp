@@ -27,6 +27,31 @@ $currentRoute = 'tasks';
 @endphp
 
 @section('content')
+@if(isset($error))
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+        <h3 class="text-lg font-medium text-red-800 mb-2">Error Loading Task</h3>
+        <p class="text-red-700">{{ $error }}</p>
+        <div class="mt-4">
+            <a href="/tasks" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+                Back to Tasks
+            </a>
+        </div>
+    </div>
+</div>
+@elseif(!$task)
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <h3 class="text-lg font-medium text-yellow-800 mb-2">Task Not Found</h3>
+        <p class="text-yellow-700">The requested task could not be found.</p>
+        <div class="mt-4">
+            <a href="/tasks" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors">
+                Back to Tasks
+            </a>
+        </div>
+    </div>
+</div>
+@else
 <div x-data="editTask()">
     <!-- Task Information Card -->
     <div class="dashboard-card p-6 mb-6">
@@ -347,6 +372,22 @@ function editTask() {
             tags: {{ json_encode(array_filter(explode(',', $task->tags ?? ''))) }}
         },
 
+        init() {
+            // Debug: Log task data
+            console.log('Task data loaded:', this.formData);
+            console.log('Task ID:', '{{ $task->id ?? "NO_ID" }}');
+            console.log('Task Name:', '{{ $task->name ?? "NO_NAME" }}');
+            
+            // Load saved draft if exists
+            const draft = localStorage.getItem('taskDraft');
+            if (draft) {
+                const draftData = JSON.parse(draft);
+                if (confirm('A draft was found. Would you like to load it?')) {
+                    this.formData = { ...this.formData, ...draftData };
+                }
+            }
+        },
+
         addTag() {
             if (this.newTag.trim() && !this.formData.tags.includes(this.newTag.trim())) {
                 this.formData.tags.push(this.newTag.trim());
@@ -450,16 +491,6 @@ function editTask() {
             }, 3000);
         },
 
-        init() {
-            // Load draft if exists
-            const draft = localStorage.getItem('taskDraft');
-            if (draft) {
-                const draftData = JSON.parse(draft);
-                if (confirm('A draft was found. Would you like to load it?')) {
-                    this.formData = { ...this.formData, ...draftData };
-                }
-            }
-        }
     }
 }
 </script>
@@ -485,4 +516,5 @@ function editTask() {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 </style>
+@endif
 @endsection

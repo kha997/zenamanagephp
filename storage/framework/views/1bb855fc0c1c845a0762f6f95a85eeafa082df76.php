@@ -45,13 +45,16 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Project</label>
                             <select 
                                 name="project_id" 
+                                required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="">Select Project</option>
-                                <option value="1">Office Building Complex</option>
-                                <option value="2">Shopping Mall Development</option>
-                                <option value="3">Residential Complex</option>
-                                <option value="4">Hotel Complex</option>
+                                <?php
+                                    $projects = \Src\CoreProject\Models\Project::all();
+                                ?>
+                                <?php $__currentLoopData = $projects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $project): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($project->id); ?>"><?php echo e($project->name); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                     </div>
@@ -89,10 +92,11 @@
                         
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
                                 <input 
                                     type="date" 
                                     name="start_date" 
+                                    required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
                             </div>

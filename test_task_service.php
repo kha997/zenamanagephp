@@ -2,23 +2,21 @@
 
 require_once 'vendor/autoload.php';
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\Web\TaskController;
-use App\Http\Requests\TaskFormRequest;
 use App\Services\TaskService;
+use Src\CoreProject\Models\Task;
 
 // Bootstrap Laravel
 $app = require_once 'bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
-echo "=== FORM SUBMISSION TEST ===\n\n";
+echo "=== TASK SERVICE TEST ===\n\n";
 
 try {
     // Create test form data
     $formData = [
         'title' => 'task 01',
         'description' => 'test description',
-        'project_id' => '01k5e2kkwynze0f37a8a4d3435', // Office Building Complex
+        'project_id' => '01k5e2kkwynze0f37a8a4d3435', // E-Commerce Platform
         'priority' => 'low',
         'status' => 'pending',
         'start_date' => '2025-09-18',
@@ -32,39 +30,30 @@ try {
         'tags' => 'test,debug'
     ];
     
-    echo "1. Testing TaskFormRequest validation...\n";
+    echo "1. Testing TaskService createTask method directly...\n";
     
-    // Create request object
-    $request = new Request($formData);
-    $request->setMethod('POST');
-    
-    // Test validation
-    $formRequest = new TaskFormRequest();
-    $formRequest->setContainer($app);
-    $formRequest->setRedirector($app->make('redirect'));
-    
-    // Manually validate
-    $validator = $app->make('validator')->make($formData, $formRequest->rules(), $formRequest->messages());
-    
-    if ($validator->fails()) {
-        echo "❌ Validation failed:\n";
-        foreach ($validator->errors()->all() as $error) {
-            echo "   - {$error}\n";
-        }
-    } else {
-        echo "✅ Validation passed\n";
-    }
-    
-    echo "\n2. Testing TaskService createTask...\n";
-    
-    // Test TaskService
+    // Create TaskService instance
     $taskService = new TaskService();
+    
+    // Test createTask method
     $task = $taskService->createTask($formData);
     
-    echo "✅ Task created successfully:\n";
+    echo "✅ TaskService createTask method executed successfully\n";
+    echo "Task created:\n";
     echo "   - ID: {$task->id}\n";
     echo "   - Name: {$task->name}\n";
     echo "   - Status: {$task->status}\n";
+    echo "   - Project ID: {$task->project_id}\n";
+    
+    // Check if task exists in database
+    $task01 = Task::where('name', 'task 01')->first();
+    if ($task01) {
+        echo "✅ Task 01 found in database:\n";
+        echo "   - ID: {$task01->id}\n";
+        echo "   - Created: {$task01->created_at}\n";
+    } else {
+        echo "❌ Task 01 not found in database\n";
+    }
     
 } catch (Exception $e) {
     echo "❌ Error: " . $e->getMessage() . "\n";

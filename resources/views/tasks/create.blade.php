@@ -246,34 +246,8 @@ function taskCreate() {
         
         createTask() {
             this.creating = true;
-            
-            // Get form data
-            const form = document.querySelector('form');
-            const formData = new FormData(form);
-            
-            // Submit form to server
-            fetch('/tasks', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    this.creating = false;
-                    alert('Task created successfully!');
-                    window.location.href = '/tasks';
-                } else {
-                    this.creating = false;
-                    alert('Failed to create task');
-                }
-            })
-            .catch(error => {
-                this.creating = false;
-                console.error('Error:', error);
-                alert('Failed to create task: ' + error.message);
-            });
+            // Form will submit normally to server
+            // This is just for UI feedback
         },
         
         cancelCreate() {

@@ -1,0 +1,32 @@
+PHP Warning:  PHP Startup: redis: Unable to initialize module
+Module compiled with module API=20200930
+PHP    compiled with module API=20220829
+These options need to match
+ in Unknown on line 0
+
+Warning: PHP Startup: redis: Unable to initialize module
+Module compiled with module API=20200930
+PHP    compiled with module API=20220829
+These options need to match
+ in Unknown on line 0
+
+   ArgumentCountError 
+
+  Too few arguments to function App\Http\Controllers\Web\TaskController::__construct(), 0 passed in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/test-task-edit-automated.php on line 25 and exactly 1 expected
+
+  at app/Http/Controllers/Web/TaskController.php:28
+     24▕      * TaskController constructor.
+     25▕      *
+     26▕      * @param TaskService $taskService
+     27▕      */
+  ➜  28▕     public function __construct(private readonly TaskService $taskService)
+     29▕     {
+     30▕     }
+     31▕ 
+     32▕     /**
+
+  1   test-task-edit-automated.php:25
+      App\Http\Controllers\Web\TaskController::__construct()
+
+  2   test-task-edit-automated.php:293
+      TaskEditAutomatedTest::__construct()

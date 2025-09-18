@@ -1,13 +1,11 @@
-@extends('layouts.dashboard')
+<?php $__env->startSection('title', 'Edit Task - Simple Debug'); ?>
+<?php $__env->startSection('page-title', 'Edit Task - Simple Debug'); ?>
+<?php $__env->startSection('page-description', 'Simple debug version without console conflicts'); ?>
+<?php $__env->startSection('user-initials', 'PM'); ?>
+<?php $__env->startSection('user-name', 'Project Manager'); ?>
+<?php $__env->startSection('current-route', 'tasks'); ?>
 
-@section('title', 'Edit Task - Simple Debug')
-@section('page-title', 'Edit Task - Simple Debug')
-@section('page-description', 'Simple debug version without console conflicts')
-@section('user-initials', 'PM')
-@section('user-name', 'Project Manager')
-@section('current-route', 'tasks')
-
-@php
+<?php
 $breadcrumb = [
     [
         'label' => 'Dashboard',
@@ -24,14 +22,14 @@ $breadcrumb = [
     ]
 ];
 $currentRoute = 'tasks';
-@endphp
+?>
 
-@section('content')
-@if(isset($error))
+<?php $__env->startSection('content'); ?>
+<?php if(isset($error)): ?>
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="bg-red-50 border border-red-200 rounded-lg p-6">
         <h3 class="text-lg font-medium text-red-800 mb-2">Error Loading Task</h3>
-        <p class="text-red-700">{{ $error }}</p>
+        <p class="text-red-700"><?php echo e($error); ?></p>
         <div class="mt-4">
             <a href="/tasks" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
                 Back to Tasks
@@ -39,7 +37,7 @@ $currentRoute = 'tasks';
         </div>
     </div>
 </div>
-@elseif(!$task)
+<?php elseif(!$task): ?>
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
         <h3 class="text-lg font-medium text-yellow-800 mb-2">Task Not Found</h3>
@@ -51,7 +49,7 @@ $currentRoute = 'tasks';
         </div>
     </div>
 </div>
-@else
+<?php else: ?>
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="editTaskSimpleDebug()">
     <!-- Debug Console -->
     <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
@@ -73,7 +71,7 @@ $currentRoute = 'tasks';
             <div>
                 <h3 class="text-lg font-medium text-gray-700 mb-3">Server Data</h3>
                 <div class="bg-gray-50 p-4 rounded-lg">
-                    <pre class="text-sm text-gray-700">{{ json_encode($task->toArray(), JSON_PRETTY_PRINT) }}</pre>
+                    <pre class="text-sm text-gray-700"><?php echo e(json_encode($task->toArray(), JSON_PRETTY_PRINT)); ?></pre>
                 </div>
             </div>
             <div>
@@ -90,7 +88,7 @@ $currentRoute = 'tasks';
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900">Edit Task - Simple Debug</h2>
-                <p class="text-gray-600 mt-1">Task ID: {{ $task->id }}</p>
+                <p class="text-gray-600 mt-1">Task ID: <?php echo e($task->id); ?></p>
             </div>
             <div class="flex space-x-3">
                 <button 
@@ -114,8 +112,8 @@ $currentRoute = 'tasks';
             </div>
         </div>
 
-        <form method="POST" action="/tasks/{{ $task->id }}" @submit.prevent="updateTask()">
-            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+        <form method="POST" action="/tasks/<?php echo e($task->id); ?>" @submit.prevent="updateTask()">
+            <input type="hidden" name="_token" value="<?php echo e(csrf_token()); ?>">
             
             <div class="space-y-6">
                 <!-- Task Name -->
@@ -292,34 +290,34 @@ $currentRoute = 'tasks';
         </form>
     </div>
 </div>
-@endif
+<?php endif; ?>
 
 <script>
 function editTaskSimpleDebug() {
     return {
         isSubmitting: false,
         formData: {
-            id: '{{ $task->id ?? "" }}',
-            name: '{{ $task->name ?? "" }}',
-            description: '{{ $task->description ?? "" }}',
-            project_id: '{{ $task->project_id ?? "" }}',
-            assignee_id: '{{ $task->assignee_id ?? "" }}',
-            status: '{{ $task->status ?? "pending" }}',
-            priority: '{{ $task->priority ?? "medium" }}',
-            start_date: '{{ $task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : "" }}',
-            end_date: '{{ $task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : "" }}',
-            progress_percent: {{ $task->progress_percent ?? '0' }},
-            estimated_hours: {{ $task->estimated_hours ?? '0' }},
-            tags: '{{ $task->tags ?? "" }}'
+            id: '<?php echo e($task->id ?? ""); ?>',
+            name: '<?php echo e($task->name ?? ""); ?>',
+            description: '<?php echo e($task->description ?? ""); ?>',
+            project_id: '<?php echo e($task->project_id ?? ""); ?>',
+            assignee_id: '<?php echo e($task->assignee_id ?? ""); ?>',
+            status: '<?php echo e($task->status ?? "pending"); ?>',
+            priority: '<?php echo e($task->priority ?? "medium"); ?>',
+            start_date: '<?php echo e($task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : ""); ?>',
+            end_date: '<?php echo e($task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : ""); ?>',
+            progress_percent: <?php echo e($task->progress_percent ?? '0'); ?>,
+            estimated_hours: <?php echo e($task->estimated_hours ?? '0'); ?>,
+            tags: '<?php echo e($task->tags ?? ""); ?>'
         },
 
         init() {
             this.logDebug('Alpine.js editTaskSimpleDebug initialized');
-            this.logDebug('Task ID: {{ $task->id ?? "NO_ID" }}');
-            this.logDebug('Task Name: {{ $task->name ?? "NO_NAME" }}');
-            this.logDebug('Task Status: {{ $task->status ?? "NO_STATUS" }}');
-            this.logDebug('Task Priority: {{ $task->priority ?? "NO_PRIORITY" }}');
-            this.logDebug('Task Assignee ID: {{ $task->assignee_id ?? "NO_ASSIGNEE" }}');
+            this.logDebug('Task ID: <?php echo e($task->id ?? "NO_ID"); ?>');
+            this.logDebug('Task Name: <?php echo e($task->name ?? "NO_NAME"); ?>');
+            this.logDebug('Task Status: <?php echo e($task->status ?? "NO_STATUS"); ?>');
+            this.logDebug('Task Priority: <?php echo e($task->priority ?? "NO_PRIORITY"); ?>');
+            this.logDebug('Task Assignee ID: <?php echo e($task->assignee_id ?? "NO_ASSIGNEE"); ?>');
             this.logDebug('Initial formData: ' + JSON.stringify(this.formData));
         },
 
@@ -362,51 +360,30 @@ function editTaskSimpleDebug() {
         },
 
         async testNetworkRequest() {
-            this.logDebug('=== TESTING NETWORK REQUEST ===');
-            this.logDebug('Starting network request to /api/tasks...');
+            this.logDebug('Testing network request...');
             
             try {
-                // Check CSRF token first
-                const csrfToken = document.querySelector('meta[name="csrf-token"]');
-                if (csrfToken) {
-                    this.logDebug('CSRF token found: ' + csrfToken.getAttribute('content'));
-                } else {
-                    this.logDebug('WARNING: CSRF token not found!');
-                }
-                
-                this.logDebug('Making fetch request...');
                 const response = await fetch('/api/tasks', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken ? csrfToken.getAttribute('content') : 'test-token'
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                     }
                 });
                 
-                this.logDebug('Response received!');
-                this.logDebug('Response status: ' + response.status);
+                this.logDebug('Network request response: ' + response.status);
                 this.logDebug('Response ok: ' + response.ok);
-                this.logDebug('Response headers: ' + JSON.stringify([...response.headers.entries()]));
                 
                 if (response.ok) {
-                    this.logDebug('Parsing response JSON...');
                     const data = await response.json();
-                    this.logDebug('Response data parsed successfully!');
-                    this.logDebug('Success: ' + data.success);
+                    this.logDebug('Response data: ' + JSON.stringify(data));
                     this.logDebug('Tasks found: ' + (data.data?.tasks?.length || 0));
-                    this.logDebug('Total tasks: ' + (data.data?.total || 0));
-                    this.logDebug('First task name: ' + (data.data?.tasks?.[0]?.name || 'N/A'));
                 } else {
-                    this.logDebug('Network request failed with status: ' + response.status);
-                    const errorText = await response.text();
-                    this.logDebug('Error response: ' + errorText);
+                    this.logDebug('Network request failed: ' + response.status);
                 }
             } catch (error) {
                 this.logDebug('Network request error: ' + error.message);
-                this.logDebug('Error stack: ' + error.stack);
             }
-            
-            this.logDebug('=== NETWORK REQUEST TEST COMPLETED ===');
         },
 
         async updateTask() {
@@ -494,4 +471,6 @@ function editTaskSimpleDebug() {
     }
 }
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.dashboard', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/tasks/edit-simple-debug.blade.php ENDPATH**/ ?>

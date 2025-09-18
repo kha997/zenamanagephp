@@ -133,7 +133,8 @@ clear_caches() {
     log "Clearing caches..."
     
     php artisan config:cache
-    php artisan route:cache
+    # Skip route caching due to route conflicts
+    # php artisan route:cache
     php artisan view:cache
     php artisan cache:clear
     

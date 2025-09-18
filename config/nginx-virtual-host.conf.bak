@@ -1,0 +1,88 @@
+# Nginx Configuration for zenamanage.com
+
+server {
+    listen 80;
+    server_name zenamanage.com www.zenamanage.com;
+    root /Applications/XAMPP/xamppfiles/htdocs/zenamanage/public;
+    index index.php;
+    
+    # Security headers
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options DENY;
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Referrer-Policy "strict-origin-when-cross-origin";
+    
+    # Handle PHP files
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+    
+    # Handle static files
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Handle Laravel routes
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+    
+    # Security
+    location ~ /\. {
+        deny all;
+    }
+    
+    # Logs
+    access_log /var/log/nginx/zenamanage.com-access.log;
+    error_log /var/log/nginx/zenamanage.com-error.log;
+}
+
+# HTTPS Server (will be enabled after SSL setup)
+server {
+    listen 443 ssl http2;
+    server_name zenamanage.com www.zenamanage.com;
+    root /Applications/XAMPP/xamppfiles/htdocs/zenamanage/public;
+    index index.php;
+#     
+    ssl_certificate /Applications/XAMPP/xamppfiles/htdocs/zenamanage/storage/ssl/server.crt;
+    ssl_certificate_key /Applications/XAMPP/xamppfiles/htdocs/zenamanage/storage/ssl/server.key;
+#     
+#     # SSL configuration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+#     
+#     # Security headers
+    add_header Strict-Transport-Security "max-age=63072000" always;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-Frame-Options DENY;
+    add_header X-XSS-Protection "1; mode=block";
+    add_header Referrer-Policy "strict-origin-when-cross-origin";
+#     
+#     # Handle PHP files
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+#     
+#     # Handle static files
+#     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+#     
+#     # Handle Laravel routes
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+#     
+#     # Logs
+    access_log /var/log/nginx/zenamanage.com-ssl-access.log;
+    error_log /var/log/nginx/zenamanage.com-ssl-error.log;
+# }

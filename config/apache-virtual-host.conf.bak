@@ -1,0 +1,40 @@
+# Apache Virtual Host Configuration for zenamanage.com
+
+<VirtualHost *:80>
+    ServerName zenamanage.com
+    ServerAlias www.zenamanage.com
+    DocumentRoot /Applications/XAMPP/xamppfiles/htdocs/zenamanage/public
+    
+    <Directory /Applications/XAMPP/xamppfiles/htdocs/zenamanage/public>
+        AllowOverride All
+        Require all granted
+    </Directory>
+    
+    ErrorLog ${APACHE_LOG_DIR}/zenamanage.com-error.log
+    CustomLog ${APACHE_LOG_DIR}/zenamanage.com-access.log combined
+    
+    # Security headers
+    Header always set X-Content-Type-Options nosniff
+    Header always set X-Frame-Options DENY
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</VirtualHost>
+
+# HTTPS Virtual Host (will be enabled after SSL setup)
+<VirtualHost *:443>
+    ServerName zenamanage.com
+    ServerAlias www.zenamanage.com
+    DocumentRoot /Applications/XAMPP/xamppfiles/htdocs/zenamanage/public
+#     
+    SSLEngine on
+    SSLCertificateFile /Applications/XAMPP/xamppfiles/htdocs/zenamanage/storage/ssl/server.crt
+    SSLCertificateKeyFile /Applications/XAMPP/xamppfiles/htdocs/zenamanage/storage/ssl/server.key
+#     
+    <Directory /Applications/XAMPP/xamppfiles/htdocs/zenamanage/public>
+        AllowOverride All
+        Require all granted
+    </Directory>
+#     
+    ErrorLog ${APACHE_LOG_DIR}/zenamanage.com-ssl-error.log
+    CustomLog ${APACHE_LOG_DIR}/zenamanage.com-ssl-access.log combined
+# </VirtualHost>

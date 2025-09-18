@@ -85,10 +85,10 @@
                                     name="priority" 
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="urgent">Urgent</option>
+                                    <option value="low" {{ old('priority') == 'low' ? 'selected' : '' }}>Low</option>
+                                    <option value="medium" {{ old('priority') == 'medium' ? 'selected' : '' }}>Medium</option>
+                                    <option value="high" {{ old('priority') == 'high' ? 'selected' : '' }}>High</option>
+                                    <option value="urgent" {{ old('priority') == 'urgent' ? 'selected' : '' }}>Urgent</option>
                                 </select>
                             </div>
                             <div>
@@ -97,10 +97,10 @@
                                     name="status" 
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 >
-                                    <option value="todo">To Do</option>
-                                    <option value="in_progress">In Progress</option>
-                                    <option value="review">Review</option>
-                                    <option value="done">Done</option>
+                                    <option value="pending" {{ old('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                                    <option value="in_progress" {{ old('status') == 'in_progress' ? 'selected' : '' }}>In Progress</option>
+                                    <option value="completed" {{ old('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                                    <option value="cancelled" {{ old('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                                 </select>
                             </div>
                         </div>

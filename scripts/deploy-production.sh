@@ -82,11 +82,11 @@ create_backup() {
     DB_USER=$(grep DB_USERNAME .env | cut -d '=' -f2)
     DB_PASS=$(grep DB_PASSWORD .env | cut -d '=' -f2)
     
-    if [[ -n "$DB_NAME" && -n "$DB_USER" ]]; then
+    if command -v mysqldump &> /dev/null && [[ -n "$DB_NAME" && -n "$DB_USER" ]]; then
         mysqldump -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_PATH/db_$DEPLOYMENT_ID.sql"
         success "Database backup created: $BACKUP_PATH/db_$DEPLOYMENT_ID.sql"
     else
-        warning "Could not create database backup - missing DB credentials"
+        warning "Could not create database backup - mysqldump not found or missing DB credentials"
     fi
     
     # File backup

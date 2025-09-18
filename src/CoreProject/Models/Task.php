@@ -67,7 +67,8 @@ class Task extends Model
         'progress_percent',
         'tags',
         'visibility',
-        'client_approved'
+        'client_approved',
+        'assignee_id'
     ];
 
     protected $casts = [

@@ -52,6 +52,35 @@ class TaskController extends Controller
     }
 
     /**
+     * API endpoint to get tasks for frontend
+     */
+    public function apiIndex(Request $request): JsonResponse
+    {
+        try {
+            $filters = $request->only(['status', 'project_id', 'assignee_id', 'search']);
+            $perPage = (int) $request->get('per_page', 50);
+            
+            $tasks = $this->taskService->getTasks($filters, $perPage);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'tasks' => $tasks->items(),
+                    'total' => $tasks->total(),
+                    'per_page' => $tasks->perPage(),
+                    'current_page' => $tasks->currentPage(),
+                    'last_page' => $tasks->lastPage()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load tasks: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Show the form for creating a new task.
      */
     public function create(Request $request): View

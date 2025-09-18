@@ -501,3 +501,8 @@ Route::prefix('api/alerts')->name('alerts.')->group(function () {
     Route::delete('/delete', [App\Http\Controllers\Web\AlertController::class, 'deleteAlert'])->name('delete');
     Route::get('/statistics', [App\Http\Controllers\Web\AlertController::class, 'getStatistics'])->name('statistics');
 });
+
+// Tasks API Routes
+Route::prefix('api/tasks')->name('tasks.api.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Web\TaskController::class, 'apiIndex'])->name('index');
+});

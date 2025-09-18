@@ -1488,7 +1488,7 @@ function tasksManagement() {
         
         createTask() {
             console.log('Creating new task');
-            alert('Opening task creation form...');
+            window.location.href = '/tasks/create';
         },
         
         editTask(task) {

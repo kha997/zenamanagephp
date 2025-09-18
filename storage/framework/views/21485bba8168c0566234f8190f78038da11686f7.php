@@ -130,7 +130,7 @@
     </div>
     <script>
         function editTask() {
-            window.location.href = "/tasks/{{ $task->id }}/edit";
+            window.location.href = "/tasks/<?php echo e($task); ?>/edit";
         }
         function changeStatus() {
             alert("Change status functionality will be implemented");
@@ -140,4 +140,4 @@
         }
     </script>
 </body>
-</html>
+</html><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/tasks/show.blade.php ENDPATH**/ ?>

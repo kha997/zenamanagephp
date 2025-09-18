@@ -91,7 +91,7 @@ $currentRoute = 'tasks';
 
     <!-- Edit Form -->
     <div class="dashboard-card p-6">
-        <form @submit.prevent="updateTask()">
+        <form>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Left Column -->
                 <div class="space-y-6">
@@ -339,6 +339,14 @@ $currentRoute = 'tasks';
                     </a>
                     <button 
                         type="button" 
+                        @click="alert('Alpine.js is working!')"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center mr-2"
+                    >
+                        <i class="fas fa-check mr-2"></i>
+                        Test Alpine
+                    </button>
+                    <button 
+                        type="button" 
                         @click="testUpdate()"
                         class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center mr-2"
                     >
@@ -383,9 +391,14 @@ function editTask() {
 
         init() {
             // Debug: Log task data
+            console.log('Alpine.js initialized!');
             console.log('Task data loaded:', this.formData);
             console.log('Task ID:', '{{ $task->id ?? "NO_ID" }}');
             console.log('Task Name:', '{{ $task->name ?? "NO_NAME" }}');
+            
+            // Test Alpine.js functionality
+            this.testAlpine = 'Alpine.js is working!';
+            console.log('Alpine test:', this.testAlpine);
             
             // Load saved draft if exists
             const draft = localStorage.getItem('taskDraft');

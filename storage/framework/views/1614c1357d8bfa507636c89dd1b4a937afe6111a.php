@@ -111,10 +111,12 @@ $currentRoute = 'tasks';
                             required
                         >
                             <option value="">Select Project</option>
-                            <option value="1">Villa Project Alpha</option>
-                            <option value="2">Office Building Beta</option>
-                            <option value="3">Shopping Mall Development</option>
-                            <option value="4">Residential Complex</option>
+                            <?php
+                                $projects = \Src\CoreProject\Models\Project::all();
+                            ?>
+                            <?php $__currentLoopData = $projects; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $project): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($project->id); ?>"><?php echo e($project->name); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
 
@@ -129,11 +131,12 @@ $currentRoute = 'tasks';
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         >
                             <option value="">Select Assignee</option>
-                            <option value="1">Sarah Johnson</option>
-                            <option value="2">Mike Wilson</option>
-                            <option value="3">Emily Davis</option>
-                            <option value="4">Alex Lee</option>
-                            <option value="5">Emma Brown</option>
+                            <?php
+                                $users = \App\Models\User::all();
+                            ?>
+                            <?php $__currentLoopData = $users; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $user): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <option value="<?php echo e($user->id); ?>"><?php echo e($user->name); ?></option>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         </select>
                     </div>
                 </div>
@@ -175,6 +178,19 @@ $currentRoute = 'tasks';
                             <option value="high">High</option>
                             <option value="urgent">Urgent</option>
                         </select>
+                    </div>
+
+                    <!-- Start Date -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-calendar text-gray-400 mr-1"></i>
+                            Start Date
+                        </label>
+                        <input 
+                            type="date" 
+                            x-model="formData.start_date"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        >
                     </div>
 
                     <!-- Due Date -->
@@ -317,17 +333,18 @@ function editTask() {
         isSubmitting: false,
         newTag: '',
         formData: {
-            id: <?php echo e($task->id ?? '1'); ?>,
-            title: '<?php echo e($task->title ?? "Design UI Mockups"); ?>',
-            description: '<?php echo e($task->description ?? "Create detailed UI mockups for the new dashboard interface including wireframes and user flow diagrams."); ?>',
-            project_id: '<?php echo e($task->project_id ?? "1"); ?>',
-            assignee_id: '<?php echo e($task->assignee_id ?? "2"); ?>',
-            status: '<?php echo e($task->status ?? "in_progress"); ?>',
-            priority: '<?php echo e($task->priority ?? "high"); ?>',
-            due_date: '<?php echo e($task->due_date ?? "2025-09-20"); ?>',
-            progress: <?php echo e($task->progress ?? '65'); ?>,
-            estimated_hours: <?php echo e($task->estimated_hours ?? '40'); ?>,
-            tags: <?php echo e(json_encode($task->tags ?? ['design', 'ui', 'mockups'])); ?>
+            id: '<?php echo e($task->id ?? ""); ?>',
+            title: '<?php echo e($task->name ?? ""); ?>',
+            description: '<?php echo e($task->description ?? ""); ?>',
+            project_id: '<?php echo e($task->project_id ?? ""); ?>',
+            assignee_id: '<?php echo e($task->assignee_id ?? ""); ?>',
+            status: '<?php echo e($task->status ?? "pending"); ?>',
+            priority: '<?php echo e($task->priority ?? "medium"); ?>',
+            start_date: '<?php echo e($task->start_date ?? ""); ?>',
+            due_date: '<?php echo e($task->end_date ?? ""); ?>',
+            progress: <?php echo e($task->progress_percent ?? '0'); ?>,
+            estimated_hours: <?php echo e($task->estimated_hours ?? '0'); ?>,
+            tags: <?php echo e(json_encode(explode(',', $task->tags ?? ''))); ?>
 
         },
 

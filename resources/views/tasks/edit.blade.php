@@ -340,11 +340,11 @@ function editTask() {
             assignee_id: '{{ $task->assignee_id ?? "" }}',
             status: '{{ $task->status ?? "pending" }}',
             priority: '{{ $task->priority ?? "medium" }}',
-            start_date: '{{ $task->start_date ?? "" }}',
-            due_date: '{{ $task->end_date ?? "" }}',
+            start_date: '{{ $task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : "" }}',
+            due_date: '{{ $task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : "" }}',
             progress: {{ $task->progress_percent ?? '0' }},
             estimated_hours: {{ $task->estimated_hours ?? '0' }},
-            tags: {{ json_encode(explode(',', $task->tags ?? '')) }}
+            tags: {{ json_encode(array_filter(explode(',', $task->tags ?? ''))) }}
         },
 
         addTag() {

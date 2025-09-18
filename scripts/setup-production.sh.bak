@@ -192,7 +192,7 @@ setup_queue_workers() {
     sudo tee /etc/supervisor/conf.d/zenamanage-worker.conf > /dev/null << EOF
 [program:zenamanage-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php $PROJECT_PATH/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+command=php $PROJECT_PATH/artisan queue:work redis --sleep=3 --tries=3 --max-time=3600
 autostart=true
 autorestart=true
 stopasgroup=true

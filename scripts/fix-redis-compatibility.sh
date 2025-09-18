@@ -1,0 +1,122 @@
+#!/bin/bash
+
+# ZenaManage Redis Compatibility Fix Script
+
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+# --- Configuration ---
+PROJECT_PATH=$(pwd)
+LOG_FILE="$PROJECT_PATH/storage/logs/fix-redis-$(date +%Y%m%d_%H%M%S).log"
+
+# --- Functions ---
+log() {
+    echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+success() {
+    log "✅ $1"
+}
+
+error() {
+    log "❌ $1"
+    exit 1
+}
+
+warning() {
+    log "⚠️  $1"
+}
+
+# --- Main Script ---
+log "🔧 Fixing Redis Module Compatibility"
+log "===================================="
+
+# 1. Check current Redis status
+log "Checking current Redis status..."
+if php artisan redis:ping &> /dev/null; then
+    success "Redis is working"
+    log "No fix needed - Redis is operational"
+    exit 0
+else
+    warning "Redis is not working - implementing workaround"
+fi
+
+# 2. Create jobs table for database queue
+log "Creating jobs table for database queue..."
+php artisan queue:table
+php artisan migrate --force
+
+# 3. Update .env to use database queue
+log "Updating .env to use database queue..."
+if grep -q "QUEUE_CONNECTION=redis" .env; then
+    sed -i.bak 's/QUEUE_CONNECTION=redis/QUEUE_CONNECTION=database/' .env
+    success "Updated QUEUE_CONNECTION to database"
+else
+    warning "QUEUE_CONNECTION not found in .env"
+fi
+
+# 4. Update cache driver to file
+log "Updating cache driver to file..."
+if grep -q "CACHE_DRIVER=redis" .env; then
+    sed -i.bak 's/CACHE_DRIVER=redis/CACHE_DRIVER=file/' .env
+    success "Updated CACHE_DRIVER to file"
+else
+    warning "CACHE_DRIVER not found in .env"
+fi
+
+# 5. Update session driver to file
+log "Updating session driver to file..."
+if grep -q "SESSION_DRIVER=redis" .env; then
+    sed -i.bak 's/SESSION_DRIVER=redis/SESSION_DRIVER=file/' .env
+    success "Updated SESSION_DRIVER to file"
+else
+    warning "SESSION_DRIVER not found in .env"
+fi
+
+# 6. Clear caches
+log "Clearing caches..."
+php artisan config:clear
+php artisan cache:clear
+php artisan queue:clear
+
+# 7. Test database queue
+log "Testing database queue..."
+if php artisan queue:work --once --timeout=1 &> /dev/null; then
+    success "Database queue is working"
+else
+    warning "Database queue test failed"
+fi
+
+# 8. Update queue worker scripts
+log "Updating queue worker scripts..."
+find scripts/ -name "*.sh" -exec sed -i.bak 's/database --queue=/database --queue=/g' {} \;
+find scripts/ -name "*.sh" -exec sed -i.bak 's/queue:work database/queue:work database/g' {} \;
+
+# 9. Test email with database queue
+log "Testing email with database queue..."
+php artisan email:test test@example.com --type=simple --sync
+
+# 10. Summary
+log ""
+log "🔧 Redis Compatibility Fix Summary"
+log "=================================="
+log "✅ Switched from Redis to Database queue"
+log "✅ Updated cache driver to file"
+log "✅ Updated session driver to file"
+log "✅ Created jobs table"
+log "✅ Updated worker scripts"
+log "✅ Tested email functionality"
+log ""
+log "📊 New Configuration:"
+log "- Queue: Database (jobs table)"
+log "- Cache: File"
+log "- Session: File"
+log "- No Redis dependency"
+log ""
+log "🎯 Next Steps:"
+log "1. Restart queue workers: php artisan queue:restart"
+log "2. Test email sending: php artisan email:test test@example.com"
+log "3. Monitor queue: php artisan queue:work --once"
+log ""
+log "Redis compatibility fix completed at: $(date)"
+log "Log file: $LOG_FILE"

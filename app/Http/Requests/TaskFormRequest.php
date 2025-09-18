@@ -34,7 +34,7 @@ class TaskFormRequest extends FormRequest
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after_or_equal:start_date'],
             'estimated_hours' => ['nullable', 'numeric', 'min:0'],
-            'assignee_id' => ['nullable', 'exists:users,id'],
+            'assignee_id' => ['nullable', 'string'],
             'watchers' => ['sometimes', 'array'],
             'watchers.*' => ['integer', 'exists:users,id'],
             'notifications' => ['sometimes', 'boolean'],
@@ -94,6 +94,11 @@ class TaskFormRequest extends FormRequest
                 if ($taskId && in_array($taskId, $this->dependencies)) {
                     $validator->errors()->add('dependencies', 'Task không thể phụ thuộc vào chính nó.');
                 }
+            }
+
+            // Validate assignee_id if not empty
+            if (!empty($this->assignee_id) && !\App\Models\User::find($this->assignee_id)) {
+                $validator->errors()->add('assignee_id', 'Selected assignee does not exist.');
             }
         });
     }

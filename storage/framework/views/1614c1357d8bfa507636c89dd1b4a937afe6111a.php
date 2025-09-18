@@ -78,7 +78,7 @@ $currentRoute = 'tasks';
                         </label>
                         <input 
                             type="text" 
-                            x-model="formData.title"
+                            x-model="formData.name"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             placeholder="Enter task title"
                             required
@@ -201,7 +201,7 @@ $currentRoute = 'tasks';
                         </label>
                         <input 
                             type="date" 
-                            x-model="formData.due_date"
+                            x-model="formData.end_date"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         >
                     </div>
@@ -215,14 +215,14 @@ $currentRoute = 'tasks';
                         <div class="space-y-2">
                             <input 
                                 type="range" 
-                                x-model="formData.progress"
+                                x-model="formData.progress_percent"
                                 min="0" 
                                 max="100" 
                                 class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                             >
                             <div class="flex justify-between text-sm text-gray-600">
                                 <span>0%</span>
-                                <span class="font-medium" x-text="formData.progress + '%'"></span>
+                                <span class="font-medium" x-text="formData.progress_percent + '%'"></span>
                                 <span>100%</span>
                             </div>
                         </div>
@@ -334,15 +334,15 @@ function editTask() {
         newTag: '',
         formData: {
             id: '<?php echo e($task->id ?? ""); ?>',
-            title: '<?php echo e($task->name ?? ""); ?>',
+            name: '<?php echo e($task->name ?? ""); ?>',
             description: '<?php echo e($task->description ?? ""); ?>',
             project_id: '<?php echo e($task->project_id ?? ""); ?>',
             assignee_id: '<?php echo e($task->assignee_id ?? ""); ?>',
             status: '<?php echo e($task->status ?? "pending"); ?>',
             priority: '<?php echo e($task->priority ?? "medium"); ?>',
             start_date: '<?php echo e($task->start_date ? \Carbon\Carbon::parse($task->start_date)->format('Y-m-d') : ""); ?>',
-            due_date: '<?php echo e($task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : ""); ?>',
-            progress: <?php echo e($task->progress_percent ?? '0'); ?>,
+            end_date: '<?php echo e($task->end_date ? \Carbon\Carbon::parse($task->end_date)->format('Y-m-d') : ""); ?>',
+            progress_percent: <?php echo e($task->progress_percent ?? '0'); ?>,
             estimated_hours: <?php echo e($task->estimated_hours ?? '0'); ?>,
             tags: <?php echo e(json_encode(array_filter(explode(',', $task->tags ?? '')))); ?>
 
@@ -363,18 +363,44 @@ function editTask() {
             this.isSubmitting = true;
             
             try {
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('_method', 'PUT');
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+                formData.append('name', this.formData.name);
+                formData.append('description', this.formData.description);
+                formData.append('project_id', this.formData.project_id);
+                formData.append('assignee_id', this.formData.assignee_id);
+                formData.append('status', this.formData.status);
+                formData.append('priority', this.formData.priority);
+                formData.append('start_date', this.formData.start_date);
+                formData.append('end_date', this.formData.end_date);
+                formData.append('progress_percent', this.formData.progress_percent);
+                formData.append('estimated_hours', this.formData.estimated_hours);
+                formData.append('tags', this.formData.tags.join(','));
                 
-                // Show success message
-                this.showNotification('Task updated successfully!', 'success');
+                // Submit to server
+                const response = await fetch(`/tasks/${this.formData.id}`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
                 
-                // Redirect to tasks list
-                setTimeout(() => {
-                    window.location.href = '/tasks';
-                }, 1500);
+                if (response.ok) {
+                    this.showNotification('Task updated successfully!', 'success');
+                    
+                    // Redirect to tasks list
+                    setTimeout(() => {
+                        window.location.href = '/tasks';
+                    }, 1500);
+                } else {
+                    throw new Error('Failed to update task');
+                }
                 
             } catch (error) {
+                console.error('Update error:', error);
                 this.showNotification('Failed to update task. Please try again.', 'error');
             } finally {
                 this.isSubmitting = false;

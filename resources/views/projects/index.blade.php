@@ -1,1166 +1,410 @@
-@extends('layouts.dashboard')
+@extends('layouts.app')
 
-@section('title', 'Projects Management')
-@section('page-title', 'Projects Management')
-@section('page-description', 'Comprehensive project management and analytics')
-@section('user-initials', 'PM')
-@section('user-name', 'Project Manager')
-@section('current-route', 'projects')
-
-@php
-$breadcrumb = [
-    [
-        'label' => 'Dashboard',
-        'url' => '/dashboard',
-        'icon' => 'fas fa-home'
-    ],
-    [
-        'label' => 'Projects Management',
-        'url' => '/projects'
-    ]
-];
-$currentRoute = 'projects';
-@endphp
+@section('title', 'Projects Dashboard')
 
 @section('content')
-<div x-data="projectsManagement()">
-    <!-- Header Actions -->
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900">📋 Projects Management</h2>
-            <p class="text-gray-600 mt-1">Comprehensive project management and analytics</p>
-        </div>
-        <div class="flex space-x-3">
-            <button 
-                @click="exportProjects()"
-                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-            >
-                📊 Export
-            </button>
-            <button 
-                @click="viewDashboard()"
-                class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
-            >
-                📈 Analytics
-            </button>
-            <button 
-                @click="createProject()"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-            >
-                🚀 Create Project
-            </button>
-        </div>
-    </div>
+<div class="min-h-screen bg-gray-50">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div x-data="projectsDashboard()">
+            <!-- Projects Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="dashboard-card metric-card blue p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">Total Projects</p>
+                            <p class="text-3xl font-bold text-white" x-text="stats?.totalProjects || {{ $mockProjects->count() }}"></p>
+                            <p class="text-white/80 text-sm">
+                                <span x-text="stats?.activeProjects || {{ $mockProjects->where('status', 'in_progress')->count() }}"></span> active
+                            </p>
+                        </div>
+                        <i class="fas fa-project-diagram text-4xl text-white/60"></i>
+                    </div>
+                </div>
 
-    <!-- Enhanced Project Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div class="dashboard-card metric-card green p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-white/80 text-sm">Total Projects</p>
-                    <p class="text-3xl font-bold text-white" x-text="projects.length"></p>
-                    <p class="text-white/80 text-sm">+2 this week</p>
+                <div class="dashboard-card metric-card green p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">In Progress</p>
+                            <p class="text-3xl font-bold text-white" x-text="stats?.inProgress || {{ $mockProjects->where('status', 'in_progress')->count() }}"></p>
+                            <p class="text-white/80 text-sm">
+                                <span x-text="stats?.completedThisWeek || 3"></span> completed this week
+                            </p>
+                        </div>
+                        <i class="fas fa-play text-4xl text-white/60"></i>
+                    </div>
                 </div>
-                <i class="fas fa-project-diagram text-4xl text-white/60"></i>
-            </div>
-        </div>
 
-        <div class="dashboard-card metric-card blue p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-white/80 text-sm">Active Projects</p>
-                    <p class="text-3xl font-bold text-white" x-text="getActiveProjects()"></p>
-                    <p class="text-white/80 text-sm">In progress</p>
-                </div>
-                <i class="fas fa-play text-4xl text-white/60"></i>
-            </div>
-        </div>
-
-        <div class="dashboard-card metric-card orange p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-white/80 text-sm">Completed</p>
-                    <p class="text-3xl font-bold text-white" x-text="getCompletedProjects()"></p>
-                    <p class="text-white/80 text-sm">This month</p>
-                </div>
-                <i class="fas fa-check-circle text-4xl text-white/60"></i>
-            </div>
-        </div>
-
-        <div class="dashboard-card metric-card purple p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-white/80 text-sm">On Hold</p>
-                    <p class="text-3xl font-bold text-white" x-text="getOnHoldProjects()"></p>
-                    <p class="text-white/80 text-sm">Need attention</p>
-                </div>
-                <i class="fas fa-pause text-4xl text-white/60"></i>
-            </div>
-        </div>
-    </div>
-
-    <!-- Advanced Analytics Dashboard -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <!-- Budget Analysis -->
-        <div class="dashboard-card p-6">
-            <h3 class="text-lg font-semibold mb-4 flex items-center">
-                <i class="fas fa-dollar-sign text-green-600 mr-2"></i>
-                Budget Analysis
-            </h3>
-            <div class="space-y-3">
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Total Budget:</span>
-                    <span class="font-semibold text-gray-900" x-text="formatCurrency(getTotalBudget())"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Spent:</span>
-                    <span class="text-red-600 font-semibold" x-text="formatCurrency(getSpentBudget())"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Remaining:</span>
-                    <span class="text-green-600 font-semibold" x-text="formatCurrency(getRemainingBudget())"></span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-red-500 h-2 rounded-full" :style="`width: ${getBudgetUtilization()}%`"></div>
-                </div>
-                <div class="text-xs text-gray-500 text-center" x-text="`${getBudgetUtilization()}% utilized`"></div>
-            </div>
-        </div>
-        
-        <!-- Timeline Analysis -->
-        <div class="dashboard-card p-6">
-            <h3 class="text-lg font-semibold mb-4 flex items-center">
-                <i class="fas fa-calendar-alt text-blue-600 mr-2"></i>
-                Timeline Analysis
-            </h3>
-            <div class="space-y-3">
-                <div class="flex justify-between">
-                    <span class="text-gray-600">On Schedule:</span>
-                    <span class="text-green-600 font-semibold" x-text="getOnScheduleProjects()"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Behind Schedule:</span>
-                    <span class="text-red-600 font-semibold" x-text="getBehindScheduleProjects()"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">At Risk:</span>
-                    <span class="text-orange-600 font-semibold" x-text="getAtRiskProjects()"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Avg. Duration:</span>
-                    <span class="text-gray-900 font-semibold" x-text="getAverageDuration()"></span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Resource Utilization -->
-        <div class="dashboard-card p-6">
-            <h3 class="text-lg font-semibold mb-4 flex items-center">
-                <i class="fas fa-users text-purple-600 mr-2"></i>
-                Resource Utilization
-            </h3>
-            <div class="space-y-3">
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Team Members:</span>
-                    <span class="font-semibold text-gray-900" x-text="getTotalTeamMembers()"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Active:</span>
-                    <span class="text-green-600 font-semibold" x-text="getActiveTeamMembers()"></span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-gray-600">Utilization:</span>
-                    <span class="text-blue-600 font-semibold" x-text="getResourceUtilization() + '%'"></span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-blue-500 h-2 rounded-full" :style="`width: ${getResourceUtilization()}%`"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Enhanced Filters and Search -->
-    <div class="dashboard-card p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <!-- Search -->
-            <div class="lg:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Search Projects</label>
-                <input 
-                    type="text" 
-                    x-model="searchQuery"
-                    @input="filterProjects()"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Search by name, client, or description..."
-                >
-            </div>
-            
-            <!-- Status Filter -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select 
-                    x-model="selectedStatus"
-                    @change="filterProjects()"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    <option value="">All Status</option>
-                    <option value="planning">Planning</option>
-                    <option value="active">Active</option>
-                    <option value="on_hold">On Hold</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-            </div>
-            
-            <!-- Priority Filter -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <select 
-                    x-model="selectedPriority"
-                    @change="filterProjects()"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    <option value="">All Priority</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                </select>
-            </div>
-            
-            <!-- Sort Options -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
-                <select 
-                    x-model="sortBy"
-                    @change="sortProjects()"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    <option value="name">Name</option>
-                    <option value="due_date">Due Date</option>
-                    <option value="budget">Budget</option>
-                    <option value="progress">Progress</option>
-                    <option value="priority">Priority</option>
-                    <option value="created_at">Created Date</option>
-                </select>
-            </div>
-        </div>
-        
-        <!-- Advanced Filters -->
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Date Range Filter -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Date Range</label>
-                <div class="flex space-x-2">
-                    <input 
-                        type="date" 
-                        x-model="dateFrom"
-                        @change="filterProjects()"
-                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                    <input 
-                        type="date" 
-                        x-model="dateTo"
-                        @change="filterProjects()"
-                        class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                </div>
-            </div>
-            
-            <!-- Budget Range Filter -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Budget Range</label>
-                <select 
-                    x-model="selectedBudgetRange"
-                    @change="filterProjects()"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    <option value="">All Budgets</option>
-                    <option value="0-1000000">$0 - $1M</option>
-                    <option value="1000000-5000000">$1M - $5M</option>
-                    <option value="5000000-10000000">$5M - $10M</option>
-                    <option value="10000000+">$10M+</option>
-                </select>
-            </div>
-            
-            <!-- Client Filter -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Client</label>
-                <select 
-                    x-model="selectedClient"
-                    @change="filterProjects()"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    <option value="">All Clients</option>
-                    <template x-for="client in getUniqueClients()" :key="client">
-                        <option :value="client" x-text="client"></option>
-                    </template>
-                </select>
-            </div>
-        </div>
-        
-        <!-- Filter Actions -->
-        <div class="mt-4 flex justify-between items-center">
-            <div class="flex space-x-2">
-                <button 
-                    @click="clearFilters()"
-                    class="px-3 py-2 text-gray-600 hover:text-gray-800 text-sm"
-                >
-                    Clear Filters
-                </button>
-                <button 
-                    @click="saveFilters()"
-                    class="px-3 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
-                >
-                    Save Filters
-                </button>
-            </div>
-            <div class="text-sm text-gray-500" x-text="`${filteredProjects.length} of ${projects.length} projects`"></div>
-        </div>
-    </div>
-
-    <!-- Bulk Operations -->
-    <div class="dashboard-card p-4 mb-6" x-show="selectedProjects.length > 0">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                <span class="text-sm text-gray-600" x-text="`${selectedProjects.length} projects selected`"></span>
-                <button 
-                    @click="selectAllProjects()"
-                    class="text-blue-600 hover:text-blue-800 text-sm"
-                >
-                    Select All
-                </button>
-                <button 
-                    @click="clearSelection()"
-                    class="text-gray-600 hover:text-gray-800 text-sm"
-                >
-                    Clear Selection
-                </button>
-            </div>
-            <div class="flex space-x-2">
-                <button 
-                    @click="bulkExport()"
-                    class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
-                >
-                    <i class="fas fa-chart-bar mr-1"></i>Export Selected
-                </button>
-                <button 
-                    @click="bulkStatusChange()"
-                    class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
-                >
-                    <i class="fas fa-list-check mr-1"></i>Change Status
-                </button>
-                <button 
-                    @click="bulkAssign()"
-                    class="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
-                >
-                    <i class="fas fa-user mr-1"></i>Assign
-                </button>
-                <button 
-                    @click="bulkArchive()"
-                    class="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition-colors"
-                >
-                    <i class="fas fa-archive mr-1"></i>Archive
-                </button>
-                <button 
-                    @click="bulkDelete()"
-                    class="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
-                >
-                    <i class="fas fa-trash mr-1"></i>Delete
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Projects List with Enhanced Features -->
-    <div class="space-y-4">
-        <template x-for="project in filteredProjects" :key="project.id">
-            <div class="dashboard-card p-6 hover:shadow-lg transition-shadow cursor-pointer" 
-                 :class="{'ring-2 ring-blue-500': selectedProjects.includes(project.id)}"
-                 @click="toggleProjectSelection(project)">
-                <div class="flex items-start justify-between">
-                    <div class="flex items-start space-x-4 flex-1">
-                        <!-- Selection Checkbox -->
-                        <input 
-                            type="checkbox" 
-                            :checked="selectedProjects.includes(project.id)"
-                            @click.stop="toggleProjectSelection(project)"
-                            class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        >
-                        
-                        <!-- Project Info -->
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-3 mb-3">
-                                <h3 class="text-lg font-semibold text-gray-900" x-text="project.name"></h3>
-                                <span 
-                                    class="px-2 py-1 text-xs rounded-full"
-                                    :class="getStatusClass(project.status)"
-                                    x-text="project.status"
-                                ></span>
-                                <span 
-                                    class="px-2 py-1 text-xs rounded-full"
-                                    :class="getPriorityClass(project.priority)"
-                                    x-text="project.priority"
-                                ></span>
-                                <span 
-                                    class="px-2 py-1 text-xs rounded-full"
-                                    :class="getRiskClass(project.risk_level)"
-                                    x-text="project.risk_level"
-                                ></span>
+                <div class="dashboard-card metric-card orange p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">On Hold</p>
+                            <p class="text-3xl font-bold text-white" x-text="stats?.onHold || {{ $mockProjects->where('status', 'on_hold')->count() }}"></p>
+                            <div class="flex space-x-2 mt-1">
+                                <p class="text-white/80 text-sm">
+                                    <span x-text="stats?.needsReview || 1"></span> needs review
+                                </p>
                             </div>
-                            
-                            <p class="text-gray-600 mb-4" x-text="project.description"></p>
-                            
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-500 mb-4">
-                                <div>
-                                    <span class="font-medium">Client:</span>
-                                    <span x-text="project.client"></span>
-                                </div>
-                                <div>
-                                    <span class="font-medium">PM:</span>
-                                    <span x-text="project.pm"></span>
-                                </div>
-                                <div>
-                                    <span class="font-medium">Due Date:</span>
-                                    <span x-text="project.due_date"></span>
-                                </div>
-                                <div>
-                                    <span class="font-medium">Budget:</span>
-                                    <span x-text="formatCurrency(project.budget)"></span>
-                                </div>
-                            </div>
-                            
-                            <!-- Progress Bar -->
-                            <div class="mb-4">
-                                <div class="flex justify-between text-sm text-gray-600 mb-1">
-                                    <span>Progress</span>
-                                    <span x-text="project.progress + '%'"></span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div 
-                                        class="h-2 rounded-full"
-                                        :class="getProgressColor(project.progress)"
-                                        :style="`width: ${project.progress}%`"
-                                    ></div>
-                                </div>
-                            </div>
-                            
-                            <!-- Team Members -->
-                            <div class="flex items-center space-x-2 mb-4">
-                                <span class="text-sm text-gray-600">Team:</span>
-                                <div class="flex -space-x-2">
-                                    <template x-for="member in project.team_members" :key="member.id">
-                                        <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs" 
-                                             :title="member.name">
-                                            <span x-text="member.name.charAt(0)"></span>
-                                        </div>
-                                    </template>
-                                </div>
-                                <span class="text-xs text-gray-500" x-text="`+${project.team_members.length} members`"></span>
-                            </div>
-                            
-                            <!-- Documents & Tasks -->
-                            <div class="flex items-center space-x-4 text-sm text-gray-500">
-                                <div class="flex items-center">
-                                    <i class="fas fa-file-alt mr-1"></i>
-                                    <span x-text="project.documents_count + ' docs'"></span>
-                                </div>
-                                <div class="flex items-center">
-                                    <i class="fas fa-tasks mr-1"></i>
-                                    <span x-text="project.tasks_count + ' tasks'"></span>
-                                </div>
-                                <div class="flex items-center">
-                                    <i class="fas fa-comments mr-1"></i>
-                                    <span x-text="project.comments_count + ' comments'"></span>
+                        </div>
+                        <i class="fas fa-pause text-4xl text-white/60"></i>
+                    </div>
+                </div>
+
+                <div class="dashboard-card metric-card purple p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">Completed</p>
+                            <p class="text-3xl font-bold text-white" x-text="stats?.completed || {{ $mockProjects->where('status', 'completed')->count() }}"></p>
+                            <p class="text-white/80 text-sm">
+                                <span x-text="stats?.completionRate || 85"></span>% completion rate
+                            </p>
+                        </div>
+                        <i class="fas fa-check-circle text-4xl text-white/60"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Overview Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Recent Projects -->
+                <div class="dashboard-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Recent Projects</h3>
+                        <div class="flex items-center gap-2">
+                            <button class="zena-btn zena-btn-primary zena-btn-sm" @click="createProject()">
+                                <i class="fas fa-plus mr-2"></i>
+                                New Project
+                            </button>
+                            <a href="/tasks" class="zena-btn zena-btn-outline zena-btn-sm">
+                                <i class="fas fa-tasks mr-2"></i>
+                                View Tasks
+                            </a>
+                            <a href="/documents" class="zena-btn zena-btn-outline zena-btn-sm">
+                                <i class="fas fa-file-alt mr-2"></i>
+                                View Documents
+                            </a>
+                            <div class="relative group">
+                                <button class="zena-btn zena-btn-outline zena-btn-sm">
+                                    <i class="fas fa-download mr-2"></i>
+                                    Export
+                                    <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                                </button>
+                                
+                                <!-- Dropdown Menu -->
+                                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                    <div class="py-1">
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" @click="exportProjects('excel')">
+                                            <i class="fas fa-file-excel mr-2 text-green-600"></i>
+                                            Excel (.xlsx)
+                                        </a>
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" @click="exportProjects('pdf')">
+                                            <i class="fas fa-file-pdf mr-2 text-red-600"></i>
+                                            PDF (.pdf)
+                                        </a>
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" @click="exportProjects('csv')">
+                                            <i class="fas fa-file-csv mr-2 text-blue-600"></i>
+                                            CSV (.csv)
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <div class="space-y-4">
+                        @forelse($mockProjects->take(4) as $project)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-project-diagram text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">{{ $project['name'] }}</h4>
+                                    <p class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($project['start_date'])->format('M d, Y') }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                @php
+                                    $statusConfig = [
+                                        'planning' => ['color' => 'bg-blue-100 text-blue-800', 'text' => 'Planning'],
+                                        'in_progress' => ['color' => 'bg-green-100 text-green-800', 'text' => 'Active'],
+                                        'on_hold' => ['color' => 'bg-orange-100 text-orange-800', 'text' => 'On Hold'],
+                                        'completed' => ['color' => 'bg-gray-100 text-gray-800', 'text' => 'Completed'],
+                                    ];
+                                    $status = $statusConfig[$project['status']] ?? ['color' => 'bg-gray-100 text-gray-800', 'text' => 'Unknown'];
+                                @endphp
+                                <span class="px-2 py-1 text-xs font-medium rounded-full {{ $status['color'] }}">
+                                    {{ $status['text'] }}
+                                </span>
+                                <span class="text-sm font-medium text-gray-900">{{ $project['progress'] ?? 0 }}%</span>
+                            </div>
+                        </div>
+                        @empty
+                        <div class="text-center py-8">
+                            <i class="fas fa-project-diagram text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No projects found</p>
+                        </div>
+                        @endforelse
+                    </div>
+                </div>
+
+                <!-- Project Performance -->
+                <div class="dashboard-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Project Performance</h3>
+                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                            <i class="fas fa-arrow-up mr-1"></i>+8.2%
+                        </span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Average Completion Time</span>
+                            <span class="text-lg font-semibold text-gray-900">45 days</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Budget Utilization</span>
+                            <span class="text-lg font-semibold text-gray-900">78%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Client Satisfaction</span>
+                            <span class="text-lg font-semibold text-gray-900">4.8/5</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-green-600 h-2 rounded-full" style="width: 78%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500">78% of projects completed on time</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Items Section -->
+            <div class="dashboard-card p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Quick Access</h3>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-500">Navigate to related sections</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Tasks Card -->
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/tasks'">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-blue-900">My Tasks</h4>
+                                <p class="text-sm text-blue-700">View assigned tasks</p>
+                                <div class="mt-2 flex items-center text-sm text-blue-600">
+                                    <i class="fas fa-tasks mr-2"></i>
+                                    <span>5 active tasks</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-tasks text-3xl text-blue-500"></i>
+                        </div>
+                    </div>
                     
-                    <!-- Action Buttons -->
-                    <div class="flex space-x-1 ml-4">
-                        <button 
-                            @click.stop="viewProject(project)"
-                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors"
-                            title="View Details"
-                        >
-                            <i class="fas fa-eye"></i>
+                    <!-- Documents Card -->
+                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/documents'">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-green-900">Project Documents</h4>
+                                <p class="text-sm text-green-700">Manage project files</p>
+                                <div class="mt-2 flex items-center text-sm text-green-600">
+                                    <i class="fas fa-file-alt mr-2"></i>
+                                    <span>12 documents</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-file-alt text-3xl text-green-500"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Team Card -->
+                    <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/team'">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-purple-900">Project Team</h4>
+                                <p class="text-sm text-purple-700">View team members</p>
+                                <div class="mt-2 flex items-center text-sm text-purple-600">
+                                    <i class="fas fa-users mr-2"></i>
+                                    <span>8 members</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-users text-3xl text-purple-500"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Projects Table -->
+            <div class="dashboard-card p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">All Projects</h3>
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search projects..." class="zena-input zena-input-sm" x-model="searchQuery">
+                            <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <select class="zena-select zena-select-sm" x-model="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="planning">Planning</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="on_hold">On Hold</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="zena-table">
+                        <thead>
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Team</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($mockProjects as $project)
+                            <tr>
+                                <td>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-project-diagram text-blue-600 text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">{{ $project['name'] }}</div>
+                                            <div class="text-sm text-gray-500">{{ Str::limit($project['description'], 50) }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @php
+                                        $statusConfig = [
+                                            'planning' => ['color' => 'zena-badge-info', 'text' => 'Planning'],
+                                            'in_progress' => ['color' => 'zena-badge-success', 'text' => 'In Progress'],
+                                            'on_hold' => ['color' => 'zena-badge-warning', 'text' => 'On Hold'],
+                                            'completed' => ['color' => 'zena-badge-neutral', 'text' => 'Completed'],
+                                        ];
+                                        $status = $statusConfig[$project['status']] ?? ['color' => 'zena-badge-neutral', 'text' => 'Unknown'];
+                                    @endphp
+                                    <span class="zena-badge {{ $status['color'] }}">
+                                        {{ $status['text'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="zena-progress w-16">
+                                            <div class="zena-progress-bar zena-progress-bar-success" style="width: {{ $project['progress'] ?? 0 }}%"></div>
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-900">{{ $project['progress'] ?? 0 }}%</span>
+                                    </div>
+                                </td>
+                                <td class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($project['start_date'])->format('M d, Y') }}</td>
+                                <td class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($project['end_date'])->format('M d, Y') }}</td>
+                                <td>
+                                    <div class="flex -space-x-2">
+                                        <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-medium">A</div>
+                                        <div class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-medium">B</div>
+                                        <div class="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-medium">C</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center space-x-2">
+                                        <button class="zena-btn zena-btn-outline zena-btn-sm" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="zena-btn zena-btn-outline zena-btn-sm" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="zena-btn zena-btn-outline zena-btn-sm zena-btn-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="7" class="text-center py-8">
+                                    <i class="fas fa-project-diagram text-4xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500">No projects found</p>
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="mt-6 flex items-center justify-between">
+                    <div class="flex items-center text-sm text-gray-700">
+                        <span>Showing</span>
+                        <select class="mx-2 border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span>of <span class="font-medium">{{ $mockProjects->count() }}</span> projects</span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fas fa-chevron-left mr-1"></i>
+                            Previous
                         </button>
-                        <button 
-                            @click.stop="editProject(project)"
-                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors"
-                            title="Edit Project"
-                        >
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button 
-                            @click.stop="showProjectDocuments(project)"
-                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors"
-                            title="Documents & Files"
-                        >
-                            <i class="fas fa-file-alt"></i>
-                        </button>
-                        <button 
-                            @click.stop="showProjectHistory(project)"
-                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors"
-                            title="History & Log"
-                        >
-                            <i class="fas fa-history"></i>
-                        </button>
-                        <button 
-                            @click.stop="duplicateProject(project)"
-                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors"
-                            title="Duplicate Project"
-                        >
-                            <i class="fas fa-copy"></i>
-                        </button>
-                        <button 
-                            @click.stop="archiveProject(project)"
-                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors"
-                            title="Archive Project"
-                        >
-                            <i class="fas fa-archive"></i>
-                        </button>
-                        <button 
-                            @click.stop="deleteProject(project)"
-                            class="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors"
-                            title="Delete Project"
-                        >
-                            <i class="fas fa-trash"></i>
+                        
+                        <div class="flex items-center space-x-1">
+                            <button class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700">
+                                1
+                            </button>
+                            <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                                2
+                            </button>
+                            <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                                3
+                            </button>
+                            <span class="px-2 py-2 text-sm text-gray-500">...</span>
+                            <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                                10
+                            </button>
+                        </div>
+                        
+                        <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                            Next
+                            <i class="fas fa-chevron-right ml-1"></i>
                         </button>
                     </div>
                 </div>
             </div>
-        </template>
-    </div>
-
-    <!-- Empty State -->
-    <div x-show="filteredProjects.length === 0" class="text-center py-12">
-        <div class="text-6xl mb-4">📋</div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
-        <p class="text-gray-600 mb-4">Create your first project to get started</p>
-        <button 
-            @click="createProject()"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-            Create Project
-        </button>
-    </div>
-
-    <!-- Pagination -->
-    <div class="mt-6 flex justify-center">
-        <nav class="flex items-center space-x-2">
-            <button 
-                @click="previousPage()"
-                :disabled="currentPage === 1"
-                class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
-            >
-                Previous
-            </button>
-            <template x-for="page in getPageNumbers()" :key="page">
-                <button 
-                    @click="goToPage(page)"
-                    :class="{'bg-blue-600 text-white': page === currentPage, 'text-gray-700 hover:text-gray-900': page !== currentPage}"
-                    class="px-3 py-2 text-sm rounded"
-                >
-                    <span x-text="page"></span>
-                </button>
-            </template>
-            <button 
-                @click="nextPage()"
-                :disabled="currentPage === totalPages"
-                class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
-            >
-                Next
-            </button>
-        </nav>
-    </div>
+        </div>
+    </main>
 </div>
 
 <script>
-function projectsManagement() {
+function projectsDashboard() {
     return {
-        // State
         searchQuery: '',
-        selectedStatus: '',
-        selectedPriority: '',
-        sortBy: 'name',
-        dateFrom: '',
-        dateTo: '',
-        selectedBudgetRange: '',
-        selectedClient: '',
-        selectedProjects: [],
-        currentPage: 1,
-        itemsPerPage: 10,
+        statusFilter: '',
         
-        // Enhanced Project Data
-        projects: [
-            {
-                id: 1,
-                name: 'Office Building Complex',
-                description: 'Modern office building with 20 floors and advanced facilities',
-                status: 'active',
-                priority: 'high',
-                risk_level: 'medium',
-                client: 'ABC Corporation',
-                pm: 'John Smith',
-                due_date: 'Mar 15, 2024',
-                budget: 5000000,
-                progress: 75,
-                created_at: '2023-01-15',
-                team_members: [
-                    { id: 1, name: 'John Smith' },
-                    { id: 2, name: 'Sarah Wilson' },
-                    { id: 3, name: 'Mike Johnson' }
-                ],
-                documents_count: 45,
-                tasks_count: 23,
-                comments_count: 12
-            },
-            {
-                id: 2,
-                name: 'Shopping Mall Development',
-                description: 'Large shopping mall with retail spaces and entertainment areas',
-                status: 'active',
-                priority: 'medium',
-                risk_level: 'low',
-                client: 'XYZ Group',
-                pm: 'Sarah Wilson',
-                due_date: 'Feb 28, 2024',
-                budget: 8500000,
-                progress: 45,
-                created_at: '2023-02-01',
-                team_members: [
-                    { id: 4, name: 'Sarah Wilson' },
-                    { id: 5, name: 'Alex Lee' },
-                    { id: 6, name: 'Emma Davis' }
-                ],
-                documents_count: 32,
-                tasks_count: 18,
-                comments_count: 8
-            },
-            {
-                id: 3,
-                name: 'Residential Complex',
-                description: 'Luxury residential complex with 500 units',
-                status: 'planning',
-                priority: 'medium',
-                risk_level: 'high',
-                client: 'DEF Properties',
-                pm: 'Mike Johnson',
-                due_date: 'Dec 15, 2024',
-                budget: 12000000,
-                progress: 15,
-                created_at: '2023-03-10',
-                team_members: [
-                    { id: 7, name: 'Mike Johnson' },
-                    { id: 8, name: 'Lisa Brown' }
-                ],
-                documents_count: 18,
-                tasks_count: 8,
-                comments_count: 5
-            },
-            {
-                id: 4,
-                name: 'Hotel Complex',
-                description: '5-star hotel with conference facilities',
-                status: 'on_hold',
-                priority: 'low',
-                risk_level: 'medium',
-                client: 'GHI Hotels',
-                pm: 'Alex Lee',
-                due_date: 'Jun 30, 2024',
-                budget: 6200000,
-                progress: 30,
-                created_at: '2023-04-05',
-                team_members: [
-                    { id: 9, name: 'Alex Lee' },
-                    { id: 10, name: 'Tom Wilson' }
-                ],
-                documents_count: 25,
-                tasks_count: 12,
-                comments_count: 6
-            },
-            {
-                id: 5,
-                name: 'Industrial Warehouse',
-                description: 'Large-scale industrial warehouse facility',
-                status: 'completed',
-                priority: 'high',
-                risk_level: 'low',
-                client: 'JKL Industries',
-                pm: 'Emma Davis',
-                due_date: 'Jan 20, 2024',
-                budget: 3500000,
-                progress: 100,
-                created_at: '2023-01-01',
-                team_members: [
-                    { id: 11, name: 'Emma Davis' },
-                    { id: 12, name: 'David Chen' }
-                ],
-                documents_count: 28,
-                tasks_count: 15,
-                comments_count: 9
-            }
-        ],
-        
-        // Computed Properties
-        get filteredProjects() {
-            let filtered = this.projects;
-            
-            // Search filter
-            if (this.searchQuery) {
-                filtered = filtered.filter(project => 
-                    project.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                    project.description.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                    project.client.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                    project.pm.toLowerCase().includes(this.searchQuery.toLowerCase())
-                );
-            }
-            
-            // Status filter
-            if (this.selectedStatus) {
-                filtered = filtered.filter(project => project.status === this.selectedStatus);
-            }
-            
-            // Priority filter
-            if (this.selectedPriority) {
-                filtered = filtered.filter(project => project.priority === this.selectedPriority);
-            }
-            
-            // Date range filter
-            if (this.dateFrom) {
-                filtered = filtered.filter(project => new Date(project.created_at) >= new Date(this.dateFrom));
-            }
-            if (this.dateTo) {
-                filtered = filtered.filter(project => new Date(project.created_at) <= new Date(this.dateTo));
-            }
-            
-            // Budget range filter
-            if (this.selectedBudgetRange) {
-                const [min, max] = this.selectedBudgetRange.split('-').map(v => v === '' ? Infinity : parseInt(v));
-                filtered = filtered.filter(project => {
-                    if (max === Infinity) return project.budget >= min;
-                    return project.budget >= min && project.budget <= max;
-                });
-            }
-            
-            // Client filter
-            if (this.selectedClient) {
-                filtered = filtered.filter(project => project.client === this.selectedClient);
-            }
-            
-            // Sort
-            filtered.sort((a, b) => {
-                switch (this.sortBy) {
-                    case 'name':
-                        return a.name.localeCompare(b.name);
-                    case 'due_date':
-                        return new Date(a.due_date) - new Date(b.due_date);
-                    case 'budget':
-                        return b.budget - a.budget;
-                    case 'progress':
-                        return b.progress - a.progress;
-                    case 'priority':
-                        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-                        return priorityOrder[b.priority] - priorityOrder[a.priority];
-                    case 'created_at':
-                        return new Date(b.created_at) - new Date(a.created_at);
-                    default:
-                        return 0;
-                }
-            });
-            
-            return filtered;
+        stats: {
+            totalProjects: {{ $mockProjects->count() }},
+            activeProjects: {{ $mockProjects->where('status', 'in_progress')->count() }},
+            inProgress: {{ $mockProjects->where('status', 'in_progress')->count() }},
+            onHold: {{ $mockProjects->where('status', 'on_hold')->count() }},
+            completed: {{ $mockProjects->where('status', 'completed')->count() }},
+            completedThisWeek: 3,
+            needsReview: 1,
+            completionRate: 85
         },
         
-        get totalPages() {
-            return Math.ceil(this.filteredProjects.length / this.itemsPerPage);
-        },
-        
-        // Methods
-        getActiveProjects() {
-            return this.projects.filter(p => p.status === 'active').length;
-        },
-        
-        getCompletedProjects() {
-            return this.projects.filter(p => p.status === 'completed').length;
-        },
-        
-        getOnHoldProjects() {
-            return this.projects.filter(p => p.status === 'on_hold').length;
-        },
-        
-        getTotalBudget() {
-            return this.projects.reduce((sum, project) => sum + project.budget, 0);
-        },
-        
-        getSpentBudget() {
-            return this.projects.reduce((sum, project) => sum + (project.budget * project.progress / 100), 0);
-        },
-        
-        getRemainingBudget() {
-            return this.getTotalBudget() - this.getSpentBudget();
-        },
-        
-        getBudgetUtilization() {
-            return Math.round((this.getSpentBudget() / this.getTotalBudget()) * 100);
-        },
-        
-        getOnScheduleProjects() {
-            return this.projects.filter(p => p.progress >= 75 && p.status === 'active').length;
-        },
-        
-        getBehindScheduleProjects() {
-            return this.projects.filter(p => p.progress < 50 && p.status === 'active').length;
-        },
-        
-        getAtRiskProjects() {
-            return this.projects.filter(p => p.risk_level === 'high').length;
-        },
-        
-        getAverageDuration() {
-            const durations = this.projects.map(p => {
-                const start = new Date(p.created_at);
-                const end = new Date(p.due_date);
-                return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-            });
-            return Math.round(durations.reduce((sum, d) => sum + d, 0) / durations.length) + ' days';
-        },
-        
-        getTotalTeamMembers() {
-            const allMembers = new Set();
-            this.projects.forEach(project => {
-                project.team_members.forEach(member => allMembers.add(member.id));
-            });
-            return allMembers.size;
-        },
-        
-        getActiveTeamMembers() {
-            const activeMembers = new Set();
-            this.projects.filter(p => p.status === 'active').forEach(project => {
-                project.team_members.forEach(member => activeMembers.add(member.id));
-            });
-            return activeMembers.size;
-        },
-        
-        getResourceUtilization() {
-            return Math.round((this.getActiveTeamMembers() / this.getTotalTeamMembers()) * 100);
-        },
-        
-        getUniqueClients() {
-            return [...new Set(this.projects.map(p => p.client))];
-        },
-        
-        formatCurrency(amount) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(amount);
-        },
-        
-        getStatusClass(status) {
-            const classes = {
-                'planning': 'bg-yellow-100 text-yellow-800',
-                'active': 'bg-green-100 text-green-800',
-                'on_hold': 'bg-orange-100 text-orange-800',
-                'completed': 'bg-blue-100 text-blue-800',
-                'cancelled': 'bg-red-100 text-red-800'
-            };
-            return classes[status] || 'bg-gray-100 text-gray-800';
-        },
-        
-        getPriorityClass(priority) {
-            const classes = {
-                'low': 'bg-gray-100 text-gray-800',
-                'medium': 'bg-yellow-100 text-yellow-800',
-                'high': 'bg-orange-100 text-orange-800',
-                'urgent': 'bg-red-100 text-red-800'
-            };
-            return classes[priority] || 'bg-gray-100 text-gray-800';
-        },
-        
-        getRiskClass(risk) {
-            const classes = {
-                'low': 'bg-green-100 text-green-800',
-                'medium': 'bg-yellow-100 text-yellow-800',
-                'high': 'bg-red-100 text-red-800'
-            };
-            return classes[risk] || 'bg-gray-100 text-gray-800';
-        },
-        
-        getProgressColor(progress) {
-            if (progress >= 80) return 'bg-green-500';
-            if (progress >= 60) return 'bg-blue-500';
-            if (progress >= 40) return 'bg-yellow-500';
-            return 'bg-red-500';
-        },
-        
-        // Filter and Search Methods
-        filterProjects() {
-            // Filtering is handled by computed property
-        },
-        
-        sortProjects() {
-            // Sorting is handled by computed property
-        },
-        
-        clearFilters() {
-            this.searchQuery = '';
-            this.selectedStatus = '';
-            this.selectedPriority = '';
-            this.dateFrom = '';
-            this.dateTo = '';
-            this.selectedBudgetRange = '';
-            this.selectedClient = '';
-            this.sortBy = 'name';
-        },
-        
-        saveFilters() {
-            // Save current filters to localStorage
-            const filters = {
-                searchQuery: this.searchQuery,
-                selectedStatus: this.selectedStatus,
-                selectedPriority: this.selectedPriority,
-                dateFrom: this.dateFrom,
-                dateTo: this.dateTo,
-                selectedBudgetRange: this.selectedBudgetRange,
-                selectedClient: this.selectedClient,
-                sortBy: this.sortBy
-            };
-            localStorage.setItem('projectFilters', JSON.stringify(filters));
-            this.showNotification('Filters saved successfully!', 'success');
-        },
-        
-        // Selection Methods
-        toggleProjectSelection(project) {
-            const index = this.selectedProjects.indexOf(project.id);
-            if (index > -1) {
-                this.selectedProjects.splice(index, 1);
-            } else {
-                this.selectedProjects.push(project.id);
-            }
-        },
-        
-        selectAllProjects() {
-            this.selectedProjects = this.filteredProjects.map(p => p.id);
-        },
-        
-        clearSelection() {
-            this.selectedProjects = [];
-        },
-        
-        // Bulk Operations
-        bulkExport() {
-            const selectedProjectsData = this.projects.filter(p => this.selectedProjects.includes(p.id));
-            console.log('Exporting projects:', selectedProjectsData);
-            this.showNotification(`Exporting ${selectedProjectsData.length} projects...`, 'info');
-        },
-        
-        bulkStatusChange() {
-            if (this.selectedProjects.length === 0) {
-                this.showNotification('Please select projects first', 'warning');
-                return;
-            }
-            
-            const newStatus = prompt('Enter new status (draft, active, on_hold, completed, archived):');
-            if (newStatus && ['draft', 'active', 'on_hold', 'completed', 'archived'].includes(newStatus)) {
-                this.projects.forEach(project => {
-                    if (this.selectedProjects.includes(project.id)) {
-                        project.status = newStatus;
-                    }
-                });
-                this.showNotification(`${this.selectedProjects.length} projects status updated to ${newStatus}`, 'success');
-                this.clearSelection();
-            } else if (newStatus) {
-                this.showNotification('Invalid status. Please use: draft, active, on_hold, completed, or archived', 'error');
-            }
-        },
-        
-        bulkAssign() {
-            if (this.selectedProjects.length === 0) {
-                this.showNotification('Please select projects first', 'warning');
-                return;
-            }
-            
-            const assigneeId = prompt('Enter assignee ID (1-5):');
-            if (assigneeId && parseInt(assigneeId) >= 1 && parseInt(assigneeId) <= 5) {
-                this.projects.forEach(project => {
-                    if (this.selectedProjects.includes(project.id)) {
-                        project.pm_id = parseInt(assigneeId);
-                    }
-                });
-                this.showNotification(`${this.selectedProjects.length} projects assigned to user ${assigneeId}`, 'success');
-                this.clearSelection();
-            } else if (assigneeId) {
-                this.showNotification('Invalid assignee ID. Please use 1-5', 'error');
-            }
-        },
-        
-        bulkArchive() {
-            if (confirm(`Archive ${this.selectedProjects.length} projects?`)) {
-                this.projects.forEach(project => {
-                    if (this.selectedProjects.includes(project.id)) {
-                        project.status = 'archived';
-                    }
-                });
-                this.clearSelection();
-                this.showNotification(`${this.selectedProjects.length} projects archived successfully!`, 'success');
-            }
-        },
-        
-        bulkDelete() {
-            if (confirm(`Delete ${this.selectedProjects.length} projects? This action cannot be undone.`)) {
-                const deletedCount = this.selectedProjects.length;
-                this.projects = this.projects.filter(p => !this.selectedProjects.includes(p.id));
-                this.clearSelection();
-                this.showNotification(`${deletedCount} projects deleted successfully!`, 'success');
-            }
-        },
-        
-        // Project Actions
-        viewProject(project) {
-            console.log('Viewing project:', project);
-            this.showNotification(`Opening project: ${project.name}`, 'info');
-            // Redirect to project detail page
-            setTimeout(() => {
-                window.location.href = `/projects/${project.id}`;
-            }, 1000);
+        exportProjects(format) {
+            console.log('Exporting projects in', format, 'format');
+            // Implementation for export functionality
         },
         
         createProject() {
             console.log('Creating new project');
-            this.showNotification('Opening project creation form...', 'info');
-            // Redirect to project creation page
-            setTimeout(() => {
-                window.location.href = '/projects/create';
-            }, 1000);
-        },
-        
-        editProject(project) {
-            console.log('Editing project:', project);
-            this.showNotification(`Opening edit form for: ${project.name}`, 'info');
-            // Redirect to project edit page
-            setTimeout(() => {
-                window.location.href = `/projects/${project.id}/edit`;
-            }, 1000);
-        },
-        
-        showProjectDocuments(project) {
-            console.log('Managing documents for project:', project);
-            this.showNotification(`Opening documents for: ${project.name}`, 'info');
-            // Open documents modal or redirect to documents page
-            setTimeout(() => {
-                window.open(`/projects/${project.id}/documents`, '_blank');
-            }, 1000);
-        },
-        
-        showProjectHistory(project) {
-            console.log('Viewing history for project:', project);
-            this.showNotification(`Opening history for: ${project.name}`, 'info');
-            // Open history modal or redirect to history page
-            setTimeout(() => {
-                window.open(`/projects/${project.id}/history`, '_blank');
-            }, 1000);
-        },
-        
-        duplicateProject(project) {
-            if (confirm(`Duplicate project: ${project.name}?`)) {
-                const newProject = {
-                    ...project,
-                    id: Date.now(),
-                    name: project.name + ' (Copy)',
-                    status: 'planning',
-                    progress: 0,
-                    created_at: new Date().toISOString().split('T')[0]
-                };
-                this.projects.push(newProject);
-                this.showNotification(`Project duplicated: ${newProject.name}`, 'success');
-            }
-        },
-        
-        archiveProject(project) {
-            if (confirm(`Archive project: ${project.name}?`)) {
-                project.status = 'archived';
-                this.showNotification(`Project archived: ${project.name}`, 'success');
-            }
-        },
-        
-        deleteProject(project) {
-            if (confirm(`Delete project: ${project.name}? This action cannot be undone.`)) {
-                this.projects = this.projects.filter(p => p.id !== project.id);
-                this.showNotification(`Project deleted: ${project.name}`, 'success');
-            }
-        },
-        
-        exportProjects() {
-            console.log('Exporting all projects');
-            this.showNotification('Exporting all projects...', 'info');
-        },
-        
-        viewDashboard() {
-            this.showNotification('Opening analytics dashboard...', 'info');
-            setTimeout(() => {
-                window.location.href = '/dashboard/pm';
-            }, 1000);
-        },
-        
-        showNotification(message, type = 'info') {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white shadow-lg transition-all duration-300 ${
-                type === 'success' ? 'bg-green-600' : 
-                type === 'error' ? 'bg-red-600' : 
-                type === 'warning' ? 'bg-yellow-600' :
-                'bg-blue-600'
-            }`;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            // Remove notification after 3 seconds
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        },
-        
-        // Pagination Methods
-        getPageNumbers() {
-            const pages = [];
-            const start = Math.max(1, this.currentPage - 2);
-            const end = Math.min(this.totalPages, this.currentPage + 2);
-            
-            for (let i = start; i <= end; i++) {
-                pages.push(i);
-            }
-            return pages;
-        },
-        
-        goToPage(page) {
-            this.currentPage = page;
-        },
-        
-        previousPage() {
-            if (this.currentPage > 1) {
-                this.currentPage--;
-            }
-        },
-        
-        nextPage() {
-            if (this.currentPage < this.totalPages) {
-                this.currentPage++;
-            }
-        },
-        
-        // Initialize
-        init() {
-            // Load saved filters
-            const savedFilters = localStorage.getItem('projectFilters');
-            if (savedFilters) {
-                const filters = JSON.parse(savedFilters);
-                Object.assign(this, filters);
-            }
+            // Implementation for create project functionality
         }
     }
 }

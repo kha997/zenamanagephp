@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Http\Controllers\Controller;
 use App\Models\SidebarConfig;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 
 class SimpleSidebarBuilderController extends Controller
@@ -16,7 +16,7 @@ class SimpleSidebarBuilderController extends Controller
     public function index(): View
     {
         // Simple authorization check
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             abort(403, 'Unauthorized');
         }
 
@@ -57,7 +57,7 @@ class SimpleSidebarBuilderController extends Controller
     public function show(string $role): View
     {
         // Simple authorization check
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             abort(403, 'Unauthorized');
         }
 
@@ -84,7 +84,7 @@ class SimpleSidebarBuilderController extends Controller
     public function preview(string $role): View
     {
         // Simple authorization check
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             abort(403, 'Unauthorized');
         }
 

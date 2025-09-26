@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\BaseApiController;
-use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaTask;
-use App\Models\ZenaNotification;
-use Illuminate\Http\Request;
+use App\Models\Notification;
+use App\Models\Project;
+use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -33,7 +31,7 @@ class RealTimeController extends BaseApiController
             }
 
             // Verify user has access to project
-            $project = ZenaProject::where('id', $projectId)
+            $project = Project::where('id', $projectId)
                 ->where('tenant_id', $user->tenant_id)
                 ->first();
 
@@ -77,7 +75,7 @@ class RealTimeController extends BaseApiController
             $limit = $request->input('limit', 50);
             $offset = $request->input('offset', 0);
 
-            $notifications = ZenaNotification::where('user_id', $user->id)
+            $notifications = Notification::where('user_id', $user->id)
                 ->where('project_id', $projectId)
                 ->orderBy('created_at', 'desc')
                 ->limit($limit)
@@ -112,7 +110,7 @@ class RealTimeController extends BaseApiController
             }
 
             // Verify user has access to project
-            $project = ZenaProject::where('id', $projectId)
+            $project = Project::where('id', $projectId)
                 ->where('tenant_id', $user->tenant_id)
                 ->first();
 
@@ -121,16 +119,16 @@ class RealTimeController extends BaseApiController
             }
 
             $stats = [
-                'total_tasks' => ZenaTask::where('project_id', $projectId)->count(),
-                'completed_tasks' => ZenaTask::where('project_id', $projectId)
+                'total_tasks' => Task::where('project_id', $projectId)->count(),
+                'completed_tasks' => Task::where('project_id', $projectId)
                     ->where('status', 'completed')->count(),
-                'active_tasks' => ZenaTask::where('project_id', $projectId)
+                'active_tasks' => Task::where('project_id', $projectId)
                     ->where('status', 'in_progress')->count(),
-                'overdue_tasks' => ZenaTask::where('project_id', $projectId)
+                'overdue_tasks' => Task::where('project_id', $projectId)
                     ->where('due_date', '<', now())
                     ->where('status', '!=', 'completed')->count(),
                 'recent_activities' => $this->getRecentActivityCount($projectId, 24), // Last 24 hours
-                'notifications_sent' => ZenaNotification::where('project_id', $projectId)
+                'notifications_sent' => Notification::where('project_id', $projectId)
                     ->where('created_at', '>=', now()->subDay())->count()
             ];
 
@@ -279,7 +277,7 @@ class RealTimeController extends BaseApiController
                 'project_id' => 'nullable|string'
             ]);
 
-            $notification = ZenaNotification::create([
+            $notification = Notification::create([
                 'user_id' => $request->input('recipient_id'),
                 'project_id' => $request->input('project_id'),
                 'type' => $request->input('type'),
@@ -432,7 +430,7 @@ class RealTimeController extends BaseApiController
     /**
      * Broadcast notification
      */
-    private function broadcastNotification(ZenaNotification $notification): void
+    private function broadcastNotification(Notification $notification): void
     {
         try {
             // Use Redis pub/sub to communicate with WebSocket server

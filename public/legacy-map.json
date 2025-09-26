@@ -1,0 +1,145 @@
+{
+  "metadata": {
+    "version": "1.1",
+    "created": "2024-12-19",
+    "updated": "2024-12-19",
+    "description": "Legacy route migration plan for ZenaManage",
+    "total_routes": 3,
+    "phases": {
+      "announce": "2024-12-20",
+      "redirect": "2024-12-27", 
+      "remove": "2025-01-10"
+    },
+    "status": "active",
+    "monitoring_enabled": true
+  },
+  "legacy_routes": [
+    {
+      "legacy_path": "/dashboard",
+      "new_path": "/app/dashboard",
+      "status": "active",
+      "phase": "announce",
+      "announce_date": "2024-12-20",
+      "redirect_date": "2024-12-27",
+      "remove_date": "2025-01-10",
+      "reason": "Standardize app routes",
+      "traffic_impact": "high",
+      "breaking_change": false,
+      "middleware_applied": ["legacy.gone", "legacy.redirect", "legacy.route"],
+      "monitoring_key": "legacy_route_usage:/dashboard"
+    },
+    {
+      "legacy_path": "/projects",
+      "new_path": "/app/projects",
+      "status": "active",
+      "phase": "announce",
+      "announce_date": "2024-12-20",
+      "redirect_date": "2024-12-27",
+      "remove_date": "2025-01-10",
+      "reason": "Standardize app routes",
+      "traffic_impact": "high",
+      "breaking_change": false,
+      "middleware_applied": ["legacy.gone", "legacy.redirect", "legacy.route"],
+      "monitoring_key": "legacy_route_usage:/projects"
+    },
+    {
+      "legacy_path": "/tasks",
+      "new_path": "/app/tasks",
+      "status": "active",
+      "phase": "announce",
+      "announce_date": "2024-12-20",
+      "redirect_date": "2024-12-27",
+      "remove_date": "2025-01-10",
+      "reason": "Standardize app routes",
+      "traffic_impact": "high",
+      "breaking_change": false,
+      "middleware_applied": ["legacy.gone", "legacy.redirect", "legacy.route"],
+      "monitoring_key": "legacy_route_usage:/tasks"
+    }
+  ],
+  "phase_details": {
+    "announce": {
+      "start_date": "2024-12-20",
+      "end_date": "2024-12-26",
+      "actions": [
+        "Add deprecation headers to legacy routes",
+        "Log usage statistics",
+        "Send notifications to users",
+        "Update documentation",
+        "Monitor usage patterns"
+      ],
+      "headers_added": [
+        "Deprecation: true",
+        "Sunset: 2025-01-10",
+        "Link: <new_path>; rel=\"successor-version\"",
+        "X-Legacy-Route: true",
+        "X-New-Route: <new_path>",
+        "X-Migration-Reason: <reason>"
+      ]
+    },
+    "redirect": {
+      "start_date": "2024-12-27",
+      "end_date": "2025-01-09",
+      "actions": [
+        "Implement 301 permanent redirects",
+        "Monitor redirect performance",
+        "Update analytics tracking",
+        "Track redirect success rates"
+      ],
+      "redirect_type": "301",
+      "preserve_query_params": true,
+      "monitoring_enabled": true
+    },
+    "remove": {
+      "start_date": "2025-01-10",
+      "end_date": "2025-01-10",
+      "actions": [
+        "Remove legacy route definitions",
+        "Clean up unused code",
+        "Update tests",
+        "Archive monitoring data"
+      ],
+      "response_code": "410",
+      "cleanup_required": true
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "service": "LegacyRouteMonitoringService",
+    "endpoints": {
+      "usage_stats": "/api/v1/legacy-routes/usage",
+      "migration_phase": "/api/v1/legacy-routes/migration-phase",
+      "report": "/api/v1/legacy-routes/report",
+      "record_usage": "/api/v1/legacy-routes/record-usage",
+      "cleanup": "/api/v1/legacy-routes/cleanup"
+    },
+    "retention_days": 30,
+    "alert_thresholds": {
+      "high_usage": 100,
+      "increasing_trend": 1.1,
+      "slow_migration": 50
+    }
+  },
+  "rollback_procedures": {
+    "emergency_rollback": {
+      "description": "Immediate rollback to previous state",
+      "steps": [
+        "Disable legacy middleware",
+        "Restore original routes",
+        "Clear monitoring data",
+        "Notify users"
+      ],
+      "estimated_time": "5 minutes"
+    },
+    "phased_rollback": {
+      "description": "Gradual rollback by phase",
+      "steps": [
+        "Revert to previous phase",
+        "Update timeline",
+        "Communicate changes",
+        "Monitor impact"
+      ],
+      "estimated_time": "30 minutes"
+    }
+  }
+}

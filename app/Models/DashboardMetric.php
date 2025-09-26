@@ -2,11 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Src\Foundation\Traits\HasTimestamps;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Model DashboardMetric - Quản lý metrics và KPIs
@@ -23,7 +22,7 @@ use Src\Foundation\Traits\HasTimestamps;
  */
 class DashboardMetric extends Model
 {
-    use HasFactory, HasUlids, HasTimestamps;
+    use HasUlids, HasFactory;
 
     protected $table = 'dashboard_metrics';
     

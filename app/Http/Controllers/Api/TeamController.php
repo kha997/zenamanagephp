@@ -4,13 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Team;
-use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class TeamController extends Controller
 {
@@ -51,8 +47,7 @@ class TeamController extends Controller
                 $search = $request->input('search');
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%")
-                      ->orWhere('department', 'like', "%{$search}%");
+                      ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -85,7 +80,7 @@ class TeamController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        
     }
 
     /**
@@ -96,7 +91,7 @@ class TeamController extends Controller
      */
     public function show($id)
     {
-        //
+        
     }
 
     /**
@@ -108,7 +103,7 @@ class TeamController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        
     }
 
     /**
@@ -119,6 +114,6 @@ class TeamController extends Controller
      */
     public function destroy($id)
     {
-        //
+        
     }
 }

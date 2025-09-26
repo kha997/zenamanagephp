@@ -1,20 +1,15 @@
 <?php
 
 namespace App\Services;
+use Illuminate\Support\Facades\Auth;
 
-use App\Models\User;
+
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\Document;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Collection;
+use App\Models\User;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Reader\Xlsx as XlsxReader;
-use PhpOffice\PhpSpreadsheet\Reader\Csv as CsvReader;
 
 /**
  * Import/Export Service
@@ -75,7 +70,7 @@ class ImportExportService
         
         // Log export
         $this->auditService->logAction(
-            userId: auth()->id() ?? 'system',
+            userId: Auth::id() ?? 'system',
             action: 'export_users',
             entityType: 'User',
             newData: [
@@ -112,7 +107,7 @@ class ImportExportService
         
         // Log export
         $this->auditService->logAction(
-            userId: auth()->id() ?? 'system',
+            userId: Auth::id() ?? 'system',
             action: 'export_projects',
             entityType: 'Project',
             newData: [
@@ -153,7 +148,7 @@ class ImportExportService
         
         // Log export
         $this->auditService->logAction(
-            userId: auth()->id() ?? 'system',
+            userId: Auth::id() ?? 'system',
             action: 'export_tasks',
             entityType: 'Task',
             newData: [
@@ -243,7 +238,7 @@ class ImportExportService
 
             // Log import
             $this->auditService->logAction(
-                userId: auth()->id() ?? 'system',
+                userId: Auth::id() ?? 'system',
                 action: 'import_users',
                 entityType: 'User',
                 newData: [
@@ -291,7 +286,7 @@ class ImportExportService
 
             // Log import
             $this->auditService->logAction(
-                userId: auth()->id() ?? 'system',
+                userId: Auth::id() ?? 'system',
                 action: 'import_projects',
                 entityType: 'Project',
                 newData: [
@@ -339,7 +334,7 @@ class ImportExportService
 
             // Log import
             $this->auditService->logAction(
-                userId: auth()->id() ?? 'system',
+                userId: Auth::id() ?? 'system',
                 action: 'import_tasks',
                 entityType: 'Task',
                 projectId: $projectId,

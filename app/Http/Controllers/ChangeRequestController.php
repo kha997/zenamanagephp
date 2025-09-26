@@ -2,188 +2,332 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ChangeRequestFormRequest;
-use App\Http\Resources\ChangeRequestResource;
-use App\Services\ChangeRequestService;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Src\ChangeRequest\Models\ChangeRequest;
+use Src\ChangeRequest\Resources\ChangeRequestCollection;
+use Src\ChangeRequest\Resources\ChangeRequestResource;
+use Src\Foundation\Helpers\AuthHelper;
+use Src\Foundation\Utils\JSendResponse;
+use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
- * RESTful Controller cho ChangeRequest management
+ * Controller xử lý các hoạt động CRUD và workflow cho Change Request
  * 
- * @package App\Http\Controllers
+ * @package Src\ChangeRequest\Controllers
  */
 class ChangeRequestController extends Controller
 {
     /**
-     * @param ChangeRequestService $changeRequestService
+     * @var ChangeRequestService
      */
-    public function __construct(
-        private readonly ChangeRequestService $changeRequestService
-    ) {}
+    private ChangeRequestService $changeRequestService;
 
     /**
-     * Display change requests of a project.
-     * GET /api/v1/projects/{project}/change-requests
+     * Constructor - áp dụng RBAC middleware và inject service
      */
-    public function index(int $projectId, Request $request): JsonResponse
+    public function __construct(ChangeRequestService $changeRequestService)
     {
-        try {
-            $filters = $request->only(['status', 'search']);
-            $filters['project_id'] = $projectId;
-            $perPage = (int) $request->get('per_page', 15);
-            
-            $changeRequests = $this->changeRequestService->getChangeRequests($filters, $perPage);
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'change_requests' => ChangeRequestResource::collection($changeRequests->items()),
-                    'pagination' => [
-                        'current_page' => $changeRequests->currentPage(),
-                        'last_page' => $changeRequests->lastPage(),
-                        'per_page' => $changeRequests->perPage(),
-                        'total' => $changeRequests->total(),
-                    ]
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lấy danh sách CR: ' . $e->getMessage()
-            ], 500);
-        }
+        $this->middleware(RBACMiddleware::class);
+        $this->changeRequestService = $changeRequestService;
     }
 
     /**
-     * Store a newly created change request.
-     * POST /api/v1/projects/{project}/change-requests
+     * Lấy danh sách change requests theo project
+     * GET /api/v1/projects/{project_id}/cr?status=
+     *
+     * @param Request $request
+     * @param string $projectId
+     * @return JsonResponse
      */
-    public function store(ChangeRequestFormRequest $request, int $projectId): JsonResponse
+    public function index(Request $request, string $projectId): JsonResponse
     {
         try {
-            $data = $request->validated();
-            $data['project_id'] = $projectId;
-            
-            $changeRequest = $this->changeRequestService->createChangeRequest($data);
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'change_request' => new ChangeRequestResource($changeRequest)
-                ],
-                'message' => 'Change Request đã được tạo thành công.'
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể tạo CR: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Display the specified change request.
-     * GET /api/v1/change-requests/{changeRequest}
-     */
-    public function show(int $changeRequestId): JsonResponse
-    {
-        try {
-            $changeRequest = $this->changeRequestService->getChangeRequestById($changeRequestId);
-            
-            if (!$changeRequest) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Change Request không tồn tại.'
-                ], 404);
-            }
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'change_request' => new ChangeRequestResource($changeRequest)
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lấy thông tin CR: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Update the specified change request.
-     * PUT/PATCH /api/v1/change-requests/{changeRequest}
-     */
-    public function update(ChangeRequestFormRequest $request, int $changeRequestId): JsonResponse
-    {
-        try {
-            $changeRequest = $this->changeRequestService->updateChangeRequest($changeRequestId, $request->validated());
-            
-            if (!$changeRequest) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Change Request không tồn tại.'
-                ], 404);
-            }
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'change_request' => new ChangeRequestResource($changeRequest)
-                ],
-                'message' => 'Change Request đã được cập nhật thành công.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể cập nhật CR: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Approve or reject change request.
-     * PATCH /api/v1/change-requests/{changeRequest}/decision
-     */
-    public function makeDecision(Request $request, int $changeRequestId): JsonResponse
-    {
-        $request->validate([
-            'decision' => 'required|in:approved,rejected',
-            'decision_note' => 'nullable|string|max:2000'
-        ]);
-        
-        try {
-            $changeRequest = $this->changeRequestService->makeDecision(
-                $changeRequestId,
-                $request->decision,
-                $request->decision_note
+            $changeRequests = $this->changeRequestService->getChangeRequestsByProject(
+                $projectId,
+                $request->get('status'),
+                $request->get('priority'),
+                (int) $request->get('per_page', 15)
             );
-            
-            if (!$changeRequest) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Change Request không tồn tại.'
-                ], 404);
-            }
-            
-            $message = $request->decision === 'approved' 
-                ? 'Change Request đã được phê duyệt.' 
-                : 'Change Request đã bị từ chối.';
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'change_request' => new ChangeRequestResource($changeRequest)
-                ],
-                'message' => $message
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể xử lý quyết định: ' . $e->getMessage()
-            ], 500);
+
+            return JSendResponse::success(
+                new ChangeRequestCollection($changeRequests)
+            );
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể lấy danh sách change requests: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Tạo change request mới
+     * POST /api/v1/projects/{project_id}/cr
+     *
+     * @param StoreChangeRequestRequest $request
+     * @param string $projectId
+     * @return JsonResponse
+     */
+    public function store(StoreChangeRequestRequest $request, string $projectId): JsonResponse
+    {
+        try {
+            $changeRequest = $this->changeRequestService->createChangeRequest(
+                $projectId,
+                $request->validated(),
+                $this->resolveActorId()
+            );
+
+            return JSendResponse::success(
+                new ChangeRequestResource($changeRequest),
+                'Change request đã được tạo thành công',
+                201
+            );
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể tạo change request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Lấy thông tin chi tiết change request
+     * GET /api/v1/projects/{project_id}/cr/{id}
+     *
+     * @param string $projectId
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function show(string $projectId, string $id): JsonResponse
+    {
+        try {
+            $changeRequest = $this->changeRequestService->getChangeRequestById($id);
+
+            if (!$changeRequest || $changeRequest->project_id !== $projectId) {
+                return JSendResponse::error('Change request không tồn tại', 404);
+            }
+
+            return JSendResponse::success(
+                new ChangeRequestResource($changeRequest)
+            );
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể lấy thông tin change request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cập nhật change request (chỉ khi ở trạng thái draft)
+     * PUT /api/v1/projects/{project_id}/cr/{id}
+     *
+     * @param UpdateChangeRequestRequest $request
+     * @param string $projectId
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function update(UpdateChangeRequestRequest $request, string $projectId, string $id): JsonResponse
+    {
+        try {
+            $changeRequest = $this->changeRequestService->updateChangeRequest(
+                $id,
+                $request->validated(),
+                $this->resolveActorId()
+            );
+
+            return JSendResponse::success(
+                new ChangeRequestResource($changeRequest),
+                'Change request đã được cập nhật thành công'
+            );
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể cập nhật change request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Xóa change request (chỉ khi ở trạng thái draft)
+     * DELETE /api/v1/projects/{project_id}/cr/{id}
+     *
+     * @param string $projectId
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function destroy(string $projectId, string $id): JsonResponse
+    {
+        try {
+            $changeRequest = ChangeRequest::where('id', $id)
+                ->where('project_id', $projectId)
+                ->first();
+
+            if (!$changeRequest) {
+                return JSendResponse::error('Change request không tồn tại', 404);
+            }
+
+            // Chỉ cho phép xóa khi ở trạng thái draft
+            if (!$changeRequest->isDraft()) {
+                return JSendResponse::error('Không thể xóa change request đã được submit', 403);
+            }
+
+            $changeRequest->delete();
+
+            return JSendResponse::success(
+                null,
+                'Change request đã được xóa thành công'
+            );
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể xóa change request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Submit change request để chờ phê duyệt
+     * POST /api/v1/cr/{id}/submit
+     *
+     * @param SubmitChangeRequestRequest $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function submit(SubmitChangeRequestRequest $request, string $id): JsonResponse
+    {
+        try {
+            $changeRequest = $this->changeRequestService->submitForApproval(
+                $id,
+                $this->resolveActorId()
+            );
+
+            return JSendResponse::success(
+                new ChangeRequestResource($changeRequest),
+                'Change request đã được submit để chờ phê duyệt'
+            );
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể submit change request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Phê duyệt change request
+     * POST /api/v1/cr/{id}/approve
+     *
+     * @param DecideChangeRequestRequest $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function approve(DecideChangeRequestRequest $request, string $id): JsonResponse
+    {
+        try {
+            $changeRequest = $this->changeRequestService->approveChangeRequest(
+                $id,
+                $this->resolveActorId(),
+                $request->get('decision_note')
+            );
+
+            return JSendResponse::success(
+                new ChangeRequestResource($changeRequest),
+                'Change request đã được phê duyệt'
+            );
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể phê duyệt change request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Từ chối change request
+     * POST /api/v1/cr/{id}/reject
+     *
+     * @param DecideChangeRequestRequest $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function reject(DecideChangeRequestRequest $request, string $id): JsonResponse
+    {
+        try {
+            $changeRequest = $this->changeRequestService->rejectChangeRequest(
+                $id,
+                $this->resolveActorId(),
+                $request->get('decision_note')
+            );
+
+            return JSendResponse::success(
+                new ChangeRequestResource($changeRequest),
+                'Change request đã bị từ chối'
+            );
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể từ chối change request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Lấy thống kê change requests theo project
+     * GET /api/v1/projects/{project_id}/cr/stats
+     *
+     * @param string $projectId
+     * @return JsonResponse
+     */
+    public function stats(string $projectId): JsonResponse
+    {
+        try {
+            $stats = $this->changeRequestService->getChangeRequestStats($projectId);
+
+            return JSendResponse::success($stats);
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể lấy thống kê change requests: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Quản lý liên kết CR với entities khác
+     * POST /api/v1/cr/{id}/links
+     *
+     * @param Request $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function manageLinks(Request $request, string $id): JsonResponse
+    {
+        try {
+            $request->validate([
+                'linked_type' => 'required|in:task,document,component',
+                'linked_id' => 'required|string',
+                'action' => 'required|in:add,remove',
+                'description' => 'nullable|string|max:500'
+            ]);
+
+            $result = $this->changeRequestService->manageEntityLink(
+                $id,
+                $request->get('linked_type'),
+                $request->get('linked_id'),
+                $request->get('action'),
+                $request->get('description')
+            );
+
+            $message = $request->get('action') === 'add' 
+                ? 'Liên kết đã được thêm thành công'
+                : 'Liên kết đã được xóa thành công';
+
+            return JSendResponse::success($result, $message);
+        } catch (Exception $e) {
+            return JSendResponse::error('Không thể quản lý liên kết: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Resolve the current actor ID for audit trails
+     * Uses Auth facade instead of auth() helper for better testability
+     *
+     * @return string|int The actor ID or 'system' as fallback
+     */
+    private function resolveActorId()
+    {
+        try {
+            // Check if user is authenticated using Auth facade
+            if (AuthHelper::check()) {
+                return AuthHelper::idOrSystem();
+            }
+        } catch (\Throwable $e) {
+            // Log the error for debugging in non-production environments
+            if (config('app.debug')) {
+                \Log::warning('Controller: Unable to resolve actor ID', [
+                    'error' => $e->getMessage(),
+                    'controller' => static::class
+                ]);
+            }
+        }
+        
+        // Fallback to 'system' for test environments or when auth is unavailable
+        return 'system';
     }
 }

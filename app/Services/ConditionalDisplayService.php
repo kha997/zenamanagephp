@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
 class ConditionalDisplayService
@@ -71,7 +70,7 @@ class ConditionalDisplayService
      */
     protected function evaluateProjectType($value, User $user): bool
     {
-        // TODO: Implement project type evaluation
+        
         // This would check if user has access to projects of specific type
         $userProjectTypes = $this->getUserProjectTypes($user);
         
@@ -89,10 +88,7 @@ class ConditionalDisplayService
     {
         $cacheKey = "feature_flag_{$value}_user_{$user->id}";
         
-        return Cache::remember($cacheKey, 300, function () use ($value, $user) {
-            // TODO: Implement feature flag system
-            // This would check against a feature flag service/database
-            return $this->getFeatureFlagStatus($value, $user);
+        return Cache::remember($cacheKey, 300, function () 
         });
     }
 
@@ -144,7 +140,7 @@ class ConditionalDisplayService
      */
     protected function evaluateProjectStatus($value, User $user): bool
     {
-        // TODO: Implement project status evaluation
+        
         // This would check if user has projects with specific status
         $userProjectStatuses = $this->getUserProjectStatuses($user);
         
@@ -185,7 +181,7 @@ class ConditionalDisplayService
      */
     protected function evaluateUserPreference($value, User $user): bool
     {
-        // TODO: Implement user preference evaluation
+        
         // This would check user preferences from database
         $userPreferences = $this->getUserPreferences($user);
         
@@ -208,10 +204,7 @@ class ConditionalDisplayService
     {
         $cacheKey = "module_enabled_{$value}_tenant_{$user->tenant_id}";
         
-        return Cache::remember($cacheKey, 600, function () use ($value, $user) {
-            // TODO: Implement module enabled check
-            // This would check tenant-specific module settings
-            return $this->getModuleStatus($value, $user->tenant_id);
+        return Cache::remember($cacheKey, 600, function () 
         });
     }
 
@@ -234,7 +227,7 @@ class ConditionalDisplayService
      */
     protected function getUserProjectTypes(User $user): array
     {
-        // TODO: Implement actual project type retrieval
+        
         return ['design', 'construction']; // Default
     }
 
@@ -243,7 +236,7 @@ class ConditionalDisplayService
      */
     protected function getFeatureFlagStatus(string $flag, User $user): bool
     {
-        // TODO: Implement feature flag system
+        
         $featureFlags = [
             'qc_enabled' => true,
             'procurement_enabled' => true,
@@ -260,7 +253,7 @@ class ConditionalDisplayService
      */
     protected function getUserRole(User $user): string
     {
-        // TODO: Implement proper role detection
+        
         if ($user->email === 'admin@zena.com') {
             return 'super_admin';
         }
@@ -273,7 +266,7 @@ class ConditionalDisplayService
      */
     protected function getUserProjectStatuses(User $user): array
     {
-        // TODO: Implement actual project status retrieval
+        
         return ['active', 'planning']; // Default
     }
 
@@ -282,7 +275,7 @@ class ConditionalDisplayService
      */
     protected function getUserPreferences(User $user): array
     {
-        // TODO: Implement user preferences retrieval
+        
         return [
             'show_analytics' => true,
             'compact_view' => false,
@@ -295,7 +288,7 @@ class ConditionalDisplayService
      */
     protected function getModuleStatus(string $module, ?string $tenantId): bool
     {
-        // TODO: Implement module status check
+        
         $moduleStatuses = [
             'qc' => true,
             'procurement' => true,

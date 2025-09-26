@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\BaseApiController;
-use App\Models\ZenaChangeRequest;
-use App\Models\ZenaProject;
-use Illuminate\Http\Request;
+use App\Models\ChangeRequest;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ChangeRequestController extends BaseApiController
 {
@@ -25,7 +25,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $query = ZenaChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+            $query = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
 
             // Filter by project if specified
             if ($request->has('project_id')) {
@@ -76,7 +76,7 @@ class ChangeRequestController extends BaseApiController
             }
 
             $validator = Validator::make($request->all(), [
-                'project_id' => 'required|exists:zena_projects,id',
+                'project_id' => 'required|exists:projects,id',
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
                 'change_type' => 'required|in:scope,cost,schedule,quality,design,other',
@@ -92,7 +92,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->validationError($validator->errors());
             }
 
-            $changeRequest = ZenaChangeRequest::create([
+            $changeRequest = ChangeRequest::create([
                 'project_id' => $request->input('project_id'),
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
@@ -128,7 +128,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ZenaChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name', 'attachments'])
+            $changeRequest = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name', 'attachments'])
                 ->find($id);
 
             if (!$changeRequest) {
@@ -153,7 +153,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ZenaChangeRequest::find($id);
+            $changeRequest = ChangeRequest::find($id);
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -202,7 +202,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ZenaChangeRequest::find($id);
+            $changeRequest = ChangeRequest::find($id);
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -228,7 +228,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ZenaChangeRequest::find($id);
+            $changeRequest = ChangeRequest::find($id);
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -263,7 +263,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ZenaChangeRequest::find($id);
+            $changeRequest = ChangeRequest::find($id);
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -326,7 +326,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ZenaChangeRequest::find($id);
+            $changeRequest = ChangeRequest::find($id);
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -369,7 +369,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ZenaChangeRequest::find($id);
+            $changeRequest = ChangeRequest::find($id);
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -413,7 +413,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ZenaChangeRequest::find($id);
+            $changeRequest = ChangeRequest::find($id);
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -449,10 +449,10 @@ class ChangeRequestController extends BaseApiController
      */
     private function generateChangeRequestNumber(string $projectId): string
     {
-        $project = ZenaProject::find($projectId);
+        $project = Project::find($projectId);
         $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
         
-        $lastChangeRequest = ZenaChangeRequest::where('project_id', $projectId)
+        $lastChangeRequest = ChangeRequest::where('project_id', $projectId)
             ->orderBy('created_at', 'desc')
             ->first();
         
@@ -464,7 +464,7 @@ class ChangeRequestController extends BaseApiController
     /**
      * Calculate cost impact percentage.
      */
-    private function calculateCostImpactPercentage(ZenaChangeRequest $changeRequest): float
+    private function calculateCostImpactPercentage(ChangeRequest $changeRequest): float
     {
         $project = $changeRequest->project;
         if (!$project || !$project->budget) {
@@ -478,7 +478,7 @@ class ChangeRequestController extends BaseApiController
     /**
      * Calculate schedule impact percentage.
      */
-    private function calculateScheduleImpactPercentage(ZenaChangeRequest $changeRequest): float
+    private function calculateScheduleImpactPercentage(ChangeRequest $changeRequest): float
     {
         $project = $changeRequest->project;
         if (!$project || !$project->start_date || !$project->end_date) {
@@ -494,7 +494,7 @@ class ChangeRequestController extends BaseApiController
     /**
      * Assess risks for change request.
      */
-    private function assessRisks(ZenaChangeRequest $changeRequest): array
+    private function assessRisks(ChangeRequest $changeRequest): array
     {
         $risks = [];
 
@@ -531,7 +531,7 @@ class ChangeRequestController extends BaseApiController
     /**
      * Create baseline snapshot before applying changes.
      */
-    private function createBaselineSnapshot(ZenaChangeRequest $changeRequest): void
+    private function createBaselineSnapshot(ChangeRequest $changeRequest): void
     {
         // This would create a snapshot of the current project state
         // Implementation depends on the baseline management system

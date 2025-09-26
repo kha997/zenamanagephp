@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Requests;
+use Illuminate\Support\Facades\Auth;
+
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -40,7 +42,7 @@ class UserFormRequest extends FormRequest
                 'email',
                 'max:255',
                 Rule::unique('users', 'email')
-                    ->where('tenant_id', auth()->user()->tenant_id)
+                    ->where('tenant_id', Auth::user()->tenant_id)
                     ->ignore($userId)
             ],
             'password' => [
@@ -51,6 +53,7 @@ class UserFormRequest extends FormRequest
                     ->mixedCase()
                     ->numbers()
                     ->symbols()
+                    ->uncompromised()
             ],
             'password_confirmation' => 'required_with:password|same:password',
             'system_roles' => 'nullable|array',
@@ -89,7 +92,7 @@ class UserFormRequest extends FormRequest
     {
         // Auto-assign tenant_id from authenticated user
         $this->merge([
-            'tenant_id' => auth()->user()->tenant_id,
+            'tenant_id' => Auth::user()->tenant_id,
         ]);
     }
 }

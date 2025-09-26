@@ -1,0 +1,85 @@
+# MySQL Slave Configuration for Replication
+[mysqld]
+# Basic Settings
+user = mysql
+default-storage-engine = InnoDB
+socket = /var/run/mysqld/mysqld.sock
+pid-file = /var/run/mysqld/mysqld.pid
+
+# Network Settings
+bind-address = 0.0.0.0
+port = 3306
+max_connections = 200
+max_connect_errors = 10
+
+# Character Set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Replication Settings (Slave)
+server-id = 2
+relay-log = mysql-relay-bin
+log-slave-updates = 1
+read_only = 1
+super_read_only = 1
+slave_skip_errors = 1062,1032
+
+# Replication Filters
+replicate-wild-ignore-table = mysql.%
+replicate-wild-ignore-table = information_schema.%
+replicate-wild-ignore-table = performance_schema.%
+replicate-wild-ignore-table = sys.%
+
+# Slave Settings
+slave_net_timeout = 60
+slave_parallel_workers = 4
+slave_parallel_type = LOGICAL_CLOCK
+slave_preserve_commit_order = 1
+
+# InnoDB Settings
+innodb_buffer_pool_size = 1G
+innodb_log_file_size = 256M
+innodb_log_buffer_size = 16M
+innodb_flush_method = O_DIRECT
+innodb_file_per_table = 1
+innodb_open_files = 400
+innodb_io_capacity = 400
+innodb_flush_neighbors = 1
+
+# Query Cache (Disabled for read-only)
+query_cache_type = 0
+query_cache_size = 0
+
+# MyISAM Settings
+key_buffer_size = 32M
+table_open_cache = 400
+myisam_sort_buffer_size = 64M
+myisam_max_sort_file_size = 10G
+myisam_repair_threads = 1
+
+# Temporary Tables
+tmp_table_size = 64M
+max_heap_table_size = 64M
+
+# Logging
+log-error = /var/log/mysql/error.log
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 2
+log_queries_not_using_indexes = 1
+
+# Security
+local-infile = 0
+symbolic-links = 0
+
+# Performance Schema
+performance_schema = ON
+performance_schema_max_table_instances = 400
+performance_schema_max_table_handles = 1000
+performance_schema_max_index_stat = 1000
+
+[mysql]
+default-character-set = utf8mb4
+
+[client]
+default-character-set = utf8mb4

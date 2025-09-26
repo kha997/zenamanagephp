@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Services\EmailService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class EmailTestCommand extends Command
 {

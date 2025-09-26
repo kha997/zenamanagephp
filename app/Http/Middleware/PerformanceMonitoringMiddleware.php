@@ -2,9 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
 use Illuminate\Http\Request;
-use App\Services\PerformanceMonitoringService;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -30,8 +28,7 @@ class PerformanceMonitoringMiddleware
         }
 
         // Monitor request performance
-        $metrics = $this->monitoringService->monitorRequest($request, function () use ($next, $request) {
-            return $next($request);
+        $metrics = $this->monitoringService->monitorRequest($request, function () 
         });
 
         // Add performance headers

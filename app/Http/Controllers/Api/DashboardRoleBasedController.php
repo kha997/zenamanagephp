@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\DashboardRoleBasedService;
-use Illuminate\Http\Request;
+use App\Services\dService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class DashboardRoleBasedController extends Controller
 {
@@ -101,7 +100,7 @@ class DashboardRoleBasedController extends Controller
             // Filter by category if specified
             if ($category) {
                 $widgets = array_filter($widgets, function ($widget) use ($category) {
-                    return $widget['widget']['category'] === $category;
+                    return $widget['category'] === $category;
                 });
             }
 
@@ -165,8 +164,7 @@ class DashboardRoleBasedController extends Controller
             $metrics = $this->roleBasedService->getRoleBasedMetrics($user, $projectId);
 
             // Add time range context
-            $metrics = array_map(function ($metric) use ($timeRange, $includeTrends) {
-                $metric['time_range'] = $timeRange;
+            $metrics = array_map(function ($metric) use ($includeTrends) {
                 if (!$includeTrends) {
                     unset($metric['trend']);
                 }
@@ -568,11 +566,9 @@ class DashboardRoleBasedController extends Controller
             $hasAccess = \App\Models\Project::where('id', $projectId)
                 ->where('tenant_id', $user->tenant_id)
                 ->where(function ($query) use ($user) {
-                    if ($user->role !== 'system_admin') {
-                        $query->whereHas('projectUsers', function ($q) use ($user) {
-                            $q->where('user_id', $user->id);
-                        });
-                    }
+                    $query->whereHas('projectUsers', function ($q) use ($user) {
+                        $q->where('user_id', $user->id);
+                    });
                 })
                 ->exists();
 

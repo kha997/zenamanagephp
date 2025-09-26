@@ -90,4 +90,47 @@ class UserPolicy
         // Only SuperAdmin and Admin can delete users
         return $user->hasRole(['super_admin', 'admin']);
     }
+
+    /**
+     * Determine whether the user can restore the model.
+     */
+    public function restore(User $user, User $model)
+    {
+        return $user->hasRole(['super_admin', 'admin']);
+    }
+
+    /**
+     * Determine whether the user can permanently delete the model.
+     */
+    public function forceDelete(User $user, User $model)
+    {
+        return $user->hasRole(['super_admin']);
+    }
+
+    /**
+     * Determine whether the user can assign roles to the model.
+     */
+    public function assignRole(User $user, User $model)
+    {
+        // Only SuperAdmin and Admin can assign roles
+        return $user->hasRole(['super_admin', 'admin']);
+    }
+
+    /**
+     * Determine whether the user can view user activity.
+     */
+    public function viewActivity(User $user, User $model)
+    {
+        // SuperAdmin/Admin can view all user activity
+        if ($user->hasRole(['super_admin', 'admin'])) {
+            return true;
+        }
+
+        // Users can view their own activity
+        if ($user->id === $model->id) {
+            return true;
+        }
+
+        return false;
+    }
 }

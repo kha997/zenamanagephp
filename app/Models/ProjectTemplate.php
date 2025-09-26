@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProjectTemplate extends Model
 {
-    use HasFactory;
     
     protected $fillable = [
         'name',
@@ -157,18 +156,7 @@ class ProjectTemplate extends Model
                 $tasks = $tasks->whereIn('phase_key', $selectedPhases);
             }
             
-            $result['tasks'] = $tasks->map(function ($task) use ($includeDependencies, $includeDeliverables) {
-                $taskData = [
-                    'name' => $task->name,
-                    'description' => $task->description,
-                    'duration_days' => $task->duration_days,
-                    'priority' => $task->priority,
-                    'phase_key' => $task->phase_key,
-                    'estimated_cost' => $task->estimated_cost,
-                    'team_size' => $task->team_size,
-                    'is_milestone' => $task->is_milestone,
-                    'sort_order' => $task->sort_order
-                ];
+            $result['tasks'] = $tasks->map(function ($task) 
 
                 if ($includeDependencies && $task->dependencies) {
                     $taskData['dependencies'] = $task->dependencies;
@@ -216,27 +204,54 @@ class ProjectTemplate extends Model
     {
         $errors = [];
         
+        $this->validatePhases($errors);
+        $this->validateTasks($errors);
+        $this->validateOrphanedTasks($errors);
+        $this->validateCircularDependencies($errors);
+
+        return $errors;
+    }
+
+    /**
+     * Validate phases
+     */
+    private function validatePhases(array &$errors): void
+    {
         if (!$this->phases || empty($this->phases)) {
             $errors[] = 'Template must have at least one phase';
         }
+    }
 
+    /**
+     * Validate tasks
+     */
+    private function validateTasks(array &$errors): void
+    {
         if ($this->tasks()->count() === 0) {
             $errors[] = 'Template must have at least one task';
         }
+    }
 
-        // Check for orphaned tasks (tasks without phases)
+    /**
+     * Validate orphaned tasks
+     */
+    private function validateOrphanedTasks(array &$errors): void
+    {
         $orphanedTasks = $this->tasks()->whereNotIn('phase_key', array_keys($this->phases ?? []))->count();
         if ($orphanedTasks > 0) {
             $errors[] = "Found {$orphanedTasks} tasks without valid phases";
         }
+    }
 
-        // Check for circular dependencies
+    /**
+     * Validate circular dependencies
+     */
+    private function validateCircularDependencies(array &$errors): void
+    {
         $circularDeps = $this->checkCircularDependencies();
         if (!empty($circularDeps)) {
             $errors[] = 'Circular dependencies found: ' . implode(', ', $circularDeps);
         }
-
-        return $errors;
     }
 
     /**

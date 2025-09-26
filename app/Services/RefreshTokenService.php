@@ -3,11 +3,9 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Refresh Token Service

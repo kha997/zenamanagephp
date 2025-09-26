@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Project;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Project;
 
 /**
  * Form Request cho Project index với filtering

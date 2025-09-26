@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class PerformanceMetric extends Model
 {
-    use HasFactory;
 
     protected $fillable = [
         'metric_name',

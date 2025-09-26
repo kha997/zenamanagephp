@@ -1,11 +1,10 @@
 <?php declare(strict_types=1);
 
 namespace App\Events;
+use Illuminate\Support\Facades\Auth;
 
-use App\Models\Project;
-use Illuminate\Broadcasting\InteractsWithSockets;
+
 use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
 
 /**
  * Event được dispatch khi tạo project mới
@@ -13,7 +12,6 @@ use Illuminate\Queue\SerializesModels;
  */
 class ProjectCreated
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
      * Constructor
@@ -23,7 +21,7 @@ class ProjectCreated
     public function __construct(
         public Project $project
     ) {
-        //
+        
     }
 
     /**
@@ -46,7 +44,7 @@ class ProjectCreated
         return [
             'entityId' => $this->project->id,
             'projectId' => $this->project->id,
-            'actorId' => auth()->id(),
+            'actorId' => Auth::id(),
             'tenantId' => $this->project->tenant_id,
             'projectName' => $this->project->name,
             'projectData' => $this->project->toArray(),

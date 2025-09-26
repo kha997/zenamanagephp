@@ -6,10 +6,9 @@ use App\Models\EmailTracking;
 use App\Services\EmailService;
 use App\Services\QueueManagementService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class EmailMonitoringCommand extends Command
 {

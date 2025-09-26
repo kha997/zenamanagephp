@@ -2,14 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\Tenant;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use App\Models\User;
 use Carbon\Carbon;
 use DOMDocument;
 use DOMXPath;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * SAML Service

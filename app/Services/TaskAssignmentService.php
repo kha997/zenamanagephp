@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use Src\CoreProject\Models\Task;
-use Src\CoreProject\Models\TaskAssignment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -33,14 +31,12 @@ class TaskAssignmentService
             ->with(['task.project', 'task.component']);
 
         if (!empty($filters['status'])) {
-            $query->whereHas('task', function ($q) use ($filters) {
-                $q->where('status', $filters['status']);
+            $query->whereHas('task', function ($q) 
             });
         }
 
         if (!empty($filters['project_id'])) {
-            $query->whereHas('task', function ($q) use ($filters) {
-                $q->where('project_id', $filters['project_id']);
+            $query->whereHas('task', function ($q) 
             });
         }
 

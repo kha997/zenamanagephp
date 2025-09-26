@@ -1,11 +1,12 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Http\Controllers\Controller;
-use App\Models\Task;
 use App\Models\Project;
-use Illuminate\Http\Request;
+use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -59,12 +60,11 @@ class DocumentManagementController extends Controller
                 'mime_type' => $file->getMimeType(),
                 'note' => $request->note,
                 'category' => $request->category ?? 'general',
-                'uploaded_by' => auth()->id() ?? 1, // Default user for demo
+                'uploaded_by' => Auth::id() ?? 1, // Default user for demo
                 'uploaded_at' => now()
             ];
 
-            // For now, store in a simple way (in production, use Document model)
-            $documents = $this->getTaskDocuments($task->id);
+            // For now, store in a simple way (in production, 
             $documents[] = $documentData;
             $this->saveTaskDocuments($task->id, $documents);
 
@@ -127,7 +127,7 @@ class DocumentManagementController extends Controller
                 'mime_type' => $file->getMimeType(),
                 'note' => $request->note,
                 'category' => $request->category ?? 'general',
-                'uploaded_by' => auth()->id() ?? 1,
+                'uploaded_by' => Auth::id() ?? 1,
                 'uploaded_at' => now()
             ];
 
@@ -160,7 +160,7 @@ class DocumentManagementController extends Controller
     {
         try {
             $task = Task::findOrFail($taskId);
-            $documents = $this->getTaskDocuments($taskId);
+            $documents = $this->getTaskDocumentsFromStorage($taskId);
 
             return response()->json([
                 'success' => true,
@@ -241,15 +241,15 @@ class DocumentManagementController extends Controller
 
             // Remove from documents list
             if ($type === 'task') {
-                $documents = $this->getTaskDocuments($entityId);
-                $documents = array_filter($documents, function($doc) use ($filename) {
-                    return $doc['filename'] !== $filename;
+                $documents = $this->getTaskDocumentsFromStorage($entityId);
+                $documents = array_filter($documents, function($doc) use ($documentId) {
+                    return $doc['id'] !== $documentId;
                 });
                 $this->saveTaskDocuments($entityId, array_values($documents));
             } else {
-                $documents = $this->getProjectDocuments($entityId);
-                $documents = array_filter($documents, function($doc) use ($filename) {
-                    return $doc['filename'] !== $filename;
+                $documents = $this->getProjectDocumentsFromStorage($entityId);
+                $documents = array_filter($documents, function($doc) use ($documentId) {
+                    return $doc['id'] !== $documentId;
                 });
                 $this->saveProjectDocuments($entityId, array_values($documents));
             }
@@ -326,7 +326,7 @@ class DocumentManagementController extends Controller
     /**
      * Helper method to get task documents from storage
      */
-    private function getTaskDocuments(int $taskId): array
+    private function getTaskDocumentsFromStorage(int $taskId): array
     {
         $filePath = "documents/tasks/{$taskId}/documents.json";
         
@@ -350,7 +350,7 @@ class DocumentManagementController extends Controller
     /**
      * Helper method to get project documents from storage
      */
-    private function getProjectDocuments(int $projectId): array
+    private function getProjectDocumentsFromStorage(int $projectId): array
     {
         $filePath = "documents/projects/{$projectId}/documents.json";
         

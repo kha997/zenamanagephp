@@ -8,13 +8,14 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.0.2",
+        "php": "^8.0",
+        "darkaonline/l5-swagger": "^8.6",
         "doctrine/dbal": "^3.10",
         "firebase/php-jwt": "^6.11",
         "google/apiclient": "^2.18",
         "guzzlehttp/guzzle": "^7.2",
         "laravel/framework": "*",
-        "laravel/sanctum": "^3.0",
+        "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.7",
         "league/flysystem-aws-s3-v3": "^3.29",
         "predis/predis": "^3.2",
@@ -22,11 +23,11 @@
         "ramsey/uuid": "^4.9",
         "ratchet/pawl": "^0.4.3",
         "ratchet/rfc6455": "^0.4.0",
-        "react/socket": "^1.16",
-        "spatie/laravel-permission": "^6.21"
+        "react/socket": "^1.16"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
+        "friendsofphp/php-cs-fixer": "^3.87",
         "laravel/dusk": "^7.13",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.0.1",

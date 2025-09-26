@@ -4,16 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
-use App\Models\Project;
-use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
 {
@@ -76,8 +70,7 @@ class DocumentController extends Controller
                 $search = $request->input('search');
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%")
-                      ->orWhere('original_name', 'like', "%{$search}%");
+                      ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -115,7 +108,7 @@ class DocumentController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'project_id' => 'required|exists:zena_projects,id',
+            'project_id' => 'required|exists:projects,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'document_type' => 'required|in:drawing,specification,contract,report,photo,other',
@@ -146,7 +139,7 @@ class DocumentController extends Controller
 
             $fileInfo = $uploadResult['file'];
 
-            $document = ZenaDocument::create([
+            $document = Document::create([
                 'project_id' => $request->input('project_id'),
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
@@ -181,7 +174,7 @@ class DocumentController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
-        $document = ZenaDocument::with(['project', 'uploadedBy', 'versions'])
+        $document = Document::with(['project', 'uploadedBy', 'versions'])
             ->find($id);
 
         if (!$document) {
@@ -203,7 +196,7 @@ class DocumentController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
-        $document = ZenaDocument::find($id);
+        $document = Document::find($id);
 
         if (!$document) {
             return $this->error('Document not found', 404);
@@ -247,7 +240,7 @@ class DocumentController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
-        $document = ZenaDocument::find($id);
+        $document = Document::find($id);
 
         if (!$document) {
             return $this->error('Document not found', 404);
@@ -280,7 +273,7 @@ class DocumentController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
-        $document = ZenaDocument::find($id);
+        $document = Document::find($id);
 
         if (!$document) {
             return $this->error('Document not found', 404);
@@ -322,7 +315,7 @@ class DocumentController extends Controller
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $document = ZenaDocument::find($id);
+        $document = Document::find($id);
 
         if (!$document) {
             return $this->error('Document not found', 404);
@@ -347,7 +340,7 @@ class DocumentController extends Controller
             }
 
             // Create new version
-            $newVersion = ZenaDocument::create([
+            $newVersion = Document::create([
                 'project_id' => $document->project_id,
                 'title' => $document->title,
                 'description' => $document->description,
@@ -384,13 +377,13 @@ class DocumentController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
-        $document = ZenaDocument::find($id);
+        $document = Document::find($id);
 
         if (!$document) {
             return $this->error('Document not found', 404);
         }
 
-        $versions = ZenaDocument::where('parent_document_id', $id)
+        $versions = Document::where('parent_document_id', $id)
             ->orWhere('id', $id)
             ->with(['uploadedBy'])
             ->orderBy('created_at', 'desc')

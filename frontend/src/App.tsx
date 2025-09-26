@@ -9,7 +9,7 @@ import DashboardPage from './pages/DashboardPage'
 import UsersPage from './pages/UsersPage'
 import UserDetailPage from './pages/UserDetailPage'
 import CreateUserPage from './pages/CreateUserPage'
-import ProjectsPage from './pages/ProjectsPage'
+import ProjectsDashboard from './pages/ProjectsDashboard';
 import ProjectDetailPage from './pages/ProjectDetailPage'
 import CreateProjectPage from './pages/projects/CreateProjectPage'
 import TasksPage from './pages/TasksPage'
@@ -17,7 +17,7 @@ import TaskDetailPage from './pages/TaskDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import TestPage from './pages/TestPage'
 import UsersTestPage from './pages/UsersTestPage'
-import UsersDebugPage from './pages/UsersDebugPage'
+import SimpleTest from './pages/SimpleTest';
 import SimpleTestPage from './pages/SimpleTestPage'
 import GanttChartPage from './pages/GanttChartPage'
 import DocumentCenterPage from './pages/DocumentCenterPage'
@@ -25,9 +25,8 @@ import QCModulePage from './pages/QCModulePage'
 import ChangeRequestsPage from './pages/ChangeRequestsPage'
 import ReportsPage from './pages/ReportsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
-import FrontendIntegrationTestPage from './pages/FrontendIntegrationTestPage'
-import LoadingSpinner from './components/LoadingSpinner'
-import pwaService from './services/pwaService'
+import TestProjects from './pages/TestProjects'
+import SimpleProjectsTest from './pages/SimpleProjectsTest'
 
 function App() {
   const { user, isLoading, checkAuth } = useAuthStore()
@@ -81,8 +80,10 @@ function App() {
           <Route path="/users" element={<UsersPage />} />
           <Route path="/users/new" element={<CreateUserPage />} />
           <Route path="/users/:id" element={<UserDetailPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/projects/create" element={<CreateProjectPage />} />
+          <Route path="/projects" element={<ProjectsDashboard />} />
+          <Route path="/test-projects" element={<TestProjects />} />
+          <Route path="/simple-projects-test" element={<SimpleProjectsTest />} />
+          <Route path="/simple-test" element={<SimpleTest />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
           <Route path="/tasks" element={<TasksPage />} />
           <Route path="/tasks/:id" element={<TaskDetailPage />} />

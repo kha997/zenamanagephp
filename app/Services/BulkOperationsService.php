@@ -1,16 +1,16 @@
 <?php
 
 namespace App\Services;
+use Illuminate\Support\Facades\Auth;
 
-use App\Models\User;
+
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\Document;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Collection;
-use Carbon\Carbon;
 
 /**
  * Bulk Operations Service
@@ -62,7 +62,7 @@ class BulkOperationsService
 
                         // Log creation
                         $this->auditService->logAction(
-                            userId: auth()->id() ?? 'system',
+                            userId: Auth::guard('api')->id() ?? 'system',
                             action: 'bulk_user_create',
                             entityType: 'User',
                             entityId: $user->id,
@@ -124,7 +124,7 @@ class BulkOperationsService
 
                         // Log update
                         $this->auditService->logAction(
-                            userId: auth()->id() ?? 'system',
+                            userId: Auth::guard('api')->id() ?? 'system',
                             action: 'bulk_user_update',
                             entityType: 'User',
                             entityId: $user->id,
@@ -176,7 +176,10 @@ class BulkOperationsService
             DB::beginTransaction();
 
             foreach (array_chunk($userIds, $this->batchSize) as $batch) {
-                $users = User::whereIn('id', $batch)->get();
+                $cacheKey = 'bulk:users:' . md5(implode(',', $batch));
+                $users = Cache::remember($cacheKey, 300, function() use ($batch) {
+                    return User::whereIn('id', $batch)->get();
+                });
                 
                 foreach ($users as $user) {
                     try {
@@ -188,7 +191,7 @@ class BulkOperationsService
 
                         // Log deletion
                         $this->auditService->logAction(
-                            userId: auth()->id() ?? 'system',
+                            userId: Auth::guard('api')->id() ?? 'system',
                             action: 'bulk_user_delete',
                             entityType: 'User',
                             entityId: $user->id,
@@ -252,7 +255,7 @@ class BulkOperationsService
 
                         // Log creation
                         $this->auditService->logAction(
-                            userId: auth()->id() ?? 'system',
+                            userId: Auth::guard('api')->id() ?? 'system',
                             action: 'bulk_project_create',
                             entityType: 'Project',
                             entityId: $project->id,
@@ -308,7 +311,7 @@ class BulkOperationsService
 
                         // Log update
                         $this->auditService->logAction(
-                            userId: auth()->id() ?? 'system',
+                            userId: Auth::guard('api')->id() ?? 'system',
                             action: 'bulk_project_update',
                             entityType: 'Project',
                             entityId: $project->id,
@@ -369,7 +372,7 @@ class BulkOperationsService
 
                         // Log creation
                         $this->auditService->logAction(
-                            userId: auth()->id() ?? 'system',
+                            userId: Auth::guard('api')->id() ?? 'system',
                             action: 'bulk_task_create',
                             entityType: 'Task',
                             entityId: $task->id,
@@ -415,7 +418,10 @@ class BulkOperationsService
             DB::beginTransaction();
 
             foreach (array_chunk($taskIds, $this->batchSize) as $batch) {
-                $tasks = Task::whereIn('id', $batch)->get();
+                $cacheKey = 'bulk:tasks:' . md5(implode(',', $batch));
+                $tasks = Cache::remember($cacheKey, 300, function() use ($batch) {
+                    return Task::whereIn('id', $batch)->get();
+                });
                 
                 foreach ($tasks as $task) {
                     try {
@@ -427,7 +433,7 @@ class BulkOperationsService
 
                         // Log update
                         $this->auditService->logAction(
-                            userId: auth()->id() ?? 'system',
+                            userId: Auth::guard('api')->id() ?? 'system',
                             action: 'bulk_task_status_update',
                             entityType: 'Task',
                             entityId: $task->id,
@@ -494,7 +500,7 @@ class BulkOperationsService
 
                     // Log assignment
                     $this->auditService->logAction(
-                        userId: auth()->id() ?? 'system',
+                        userId: Auth::guard('api')->id() ?? 'system',
                         action: 'bulk_user_project_assignment',
                         entityType: 'UserProject',
                         entityId: $user->id,
@@ -547,7 +553,7 @@ class BulkOperationsService
     private function createUser(array $data, string $tenantId = null): User
     {
         $data['password'] = bcrypt($data['password'] ?? 'defaultpassword123');
-        $data['tenant_id'] = $tenantId ?? auth()->user()?->tenant_id;
+        $data['tenant_id'] = $tenantId ?? Auth::user()?->tenant_id;
         
         return User::create($data);
     }
@@ -557,7 +563,7 @@ class BulkOperationsService
      */
     private function createProject(array $data, string $tenantId = null): Project
     {
-        $data['tenant_id'] = $tenantId ?? auth()->user()?->tenant_id;
+        $data['tenant_id'] = $tenantId ?? Auth::user()?->tenant_id;
         
         return Project::create($data);
     }
@@ -567,7 +573,7 @@ class BulkOperationsService
      */
     private function createTask(array $data, string $tenantId = null): Task
     {
-        $data['tenant_id'] = $tenantId ?? auth()->user()?->tenant_id;
+        $data['tenant_id'] = $tenantId ?? Auth::user()?->tenant_id;
         
         return Task::create($data);
     }

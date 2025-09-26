@@ -2,9 +2,6 @@
 
 namespace App\Listeners;
 
-use App\Events\ProjectMilestoneCompleted;
-use App\Events\ProjectTaskUpdated;
-use App\Events\ProjectTeamMemberJoined;
 use App\Models\ProjectActivity;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -14,7 +11,6 @@ use Illuminate\Queue\InteractsWithQueue;
  */
 class LogProjectActivity implements ShouldQueue
 {
-    use InteractsWithQueue;
 
     /**
      * Handle the event.

@@ -55,7 +55,7 @@ class RealTimeNotificationsTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_notifications', [
+        $this->assertDatabaseHas('notifications', [
             'user_id' => $this->user->id,
             'type' => 'task_assigned',
             'title' => 'New Task Assigned'
@@ -121,7 +121,7 @@ class RealTimeNotificationsTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_notifications', [
+        $this->assertDatabaseHas('notifications', [
             'id' => $notification->id,
             'status' => 'read'
         ]);
@@ -298,7 +298,7 @@ class RealTimeNotificationsTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('zena_notifications', [
+        $this->assertDatabaseMissing('notifications', [
             'id' => $notification->id
         ]);
     }

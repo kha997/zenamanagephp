@@ -3,14 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\ZenaProject;
-use App\Models\ZenaTask;
-use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
-use App\Models\ZenaChangeRequest;
-use Illuminate\Http\Request;
+use App\Models\ChangeRequest;
+use App\Models\Project;
+use App\Models\Rfi;
+use App\Models\Task;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class PmDashboardController extends Controller
 {
@@ -19,7 +17,7 @@ class PmDashboardController extends Controller
      */
     public function getOverview(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -31,7 +29,7 @@ class PmDashboardController extends Controller
         $projectId = $request->input('project_id');
         
         // Get PM's projects
-        $projects = ZenaProject::whereHas('users', function ($q) use ($user) {
+        $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
 
@@ -57,12 +55,12 @@ class PmDashboardController extends Controller
                 'total_projects' => $projects->count(),
                 'active_projects' => $projects->where('status', 'active')->count(),
                 'completed_projects' => $projects->where('status', 'completed')->count(),
-                'total_tasks' => ZenaTask::whereIn('project_id', $projects->pluck('id'))->count(),
-                'completed_tasks' => ZenaTask::whereIn('project_id', $projects->pluck('id'))
+                'total_tasks' => Task::whereIn('project_id', $projects->pluck('id'))->count(),
+                'completed_tasks' => Task::whereIn('project_id', $projects->pluck('id'))
                     ->where('status', 'completed')->count(),
-                'pending_rfis' => ZenaRfi::whereIn('project_id', $projects->pluck('id'))
+                'pending_rfis' => Rfi::whereIn('project_id', $projects->pluck('id'))
                     ->where('status', 'pending')->count(),
-                'overdue_tasks' => ZenaTask::whereIn('project_id', $projects->pluck('id'))
+                'overdue_tasks' => Task::whereIn('project_id', $projects->pluck('id'))
                     ->where('due_date', '<', now())
                     ->where('status', '!=', 'completed')->count(),
             ],
@@ -81,7 +79,7 @@ class PmDashboardController extends Controller
      */
     public function getProjectProgress(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -100,7 +98,7 @@ class PmDashboardController extends Controller
         }
 
         // Verify PM has access to this project
-        $project = ZenaProject::where('id', $projectId)
+        $project = Project::where('id', $projectId)
             ->whereHas('users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
@@ -137,7 +135,7 @@ class PmDashboardController extends Controller
      */
     public function getRiskAssessment(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -149,7 +147,7 @@ class PmDashboardController extends Controller
         $projectId = $request->input('project_id');
         
         // Get PM's projects
-        $projects = ZenaProject::whereHas('users', function ($q) use ($user) {
+        $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
 
@@ -178,7 +176,7 @@ class PmDashboardController extends Controller
      */
     public function getWeeklyReport(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -191,7 +189,7 @@ class PmDashboardController extends Controller
         $weekStart = $request->input('week_start', now()->startOfWeek());
         
         // Get PM's projects
-        $projects = ZenaProject::whereHas('users', function ($q) use ($user) {
+        $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
 
@@ -206,33 +204,26 @@ class PmDashboardController extends Controller
                 'start' => $weekStart,
                 'end' => now()->endOfWeek(),
             ],
-            'projects_summary' => $projects->map(function ($project) use ($weekStart) {
+            'projects_summary' => $projects->map(function ($project) {
                 return [
                     'id' => $project->id,
                     'name' => $project->name,
-                    'tasks_completed' => ZenaTask::where('project_id', $project->id)
-                        ->where('status', 'completed')
-                        ->whereBetween('updated_at', [$weekStart, now()->endOfWeek()])
-                        ->count(),
-                    'tasks_created' => ZenaTask::where('project_id', $project->id)
-                        ->whereBetween('created_at', [$weekStart, now()->endOfWeek()])
-                        ->count(),
-                    'rfis_resolved' => ZenaRfi::where('project_id', $project->id)
-                        ->where('status', 'resolved')
-                        ->whereBetween('updated_at', [$weekStart, now()->endOfWeek()])
-                        ->count(),
+                    'status' => $project->status,
+                    'progress' => $project->progress_percentage ?? 0,
+                    'tasks_completed' => $project->tasks()->where('status', 'completed')->count(),
+                    'total_tasks' => $project->tasks()->count(),
                 ];
             }),
             'overall_metrics' => [
-                'total_tasks_completed' => ZenaTask::whereIn('project_id', $projects->pluck('id'))
+                'total_tasks_completed' => Task::whereIn('project_id', $projects->pluck('id'))
                     ->where('status', 'completed')
                     ->whereBetween('updated_at', [$weekStart, now()->endOfWeek()])
                     ->count(),
-                'total_rfis_resolved' => ZenaRfi::whereIn('project_id', $projects->pluck('id'))
+                'total_rfis_resolved' => Rfi::whereIn('project_id', $projects->pluck('id'))
                     ->where('status', 'resolved')
                     ->whereBetween('updated_at', [$weekStart, now()->endOfWeek()])
                     ->count(),
-                'total_change_requests' => ZenaChangeRequest::whereIn('project_id', $projects->pluck('id'))
+                'total_change_requests' => ChangeRequest::whereIn('project_id', $projects->pluck('id'))
                     ->whereBetween('created_at', [$weekStart, now()->endOfWeek()])
                     ->count(),
             ],
@@ -249,13 +240,13 @@ class PmDashboardController extends Controller
      */
     private function calculateProjectProgress(string $projectId): float
     {
-        $totalTasks = ZenaTask::where('project_id', $projectId)->count();
+        $totalTasks = Task::where('project_id', $projectId)->count();
         
         if ($totalTasks === 0) {
             return 0.0;
         }
 
-        $completedTasks = ZenaTask::where('project_id', $projectId)
+        $completedTasks = Task::where('project_id', $projectId)
             ->where('status', 'completed')
             ->count();
 
@@ -267,7 +258,7 @@ class PmDashboardController extends Controller
      */
     private function getTaskProgress(string $projectId): array
     {
-        $tasks = ZenaTask::where('project_id', $projectId)->get();
+        $tasks = Task::where('project_id', $projectId)->get();
         
         return [
             'total' => $tasks->count(),
@@ -308,7 +299,7 @@ class PmDashboardController extends Controller
      */
     private function getBudgetProgress(string $projectId): array
     {
-        $project = ZenaProject::find($projectId);
+        $project = Project::find($projectId);
         
         // Sample data - in real implementation, this would calculate from actual costs
         return [
@@ -324,7 +315,7 @@ class PmDashboardController extends Controller
      */
     private function getTimelineProgress(string $projectId): array
     {
-        $project = ZenaProject::find($projectId);
+        $project = Project::find($projectId);
         
         if (!$project || !$project->start_date || !$project->end_date) {
             return [
@@ -408,7 +399,7 @@ class PmDashboardController extends Controller
      */
     private function getHighRiskTasks(array $projectIds): array
     {
-        return ZenaTask::whereIn('project_id', $projectIds)
+        return Task::whereIn('project_id', $projectIds)
             ->where('priority', 'high')
             ->where('status', '!=', 'completed')
             ->where('due_date', '<', now()->addDays(3))
@@ -431,7 +422,7 @@ class PmDashboardController extends Controller
      */
     private function getOverdueItems(array $projectIds): array
     {
-        return ZenaTask::whereIn('project_id', $projectIds)
+        return Task::whereIn('project_id', $projectIds)
             ->where('due_date', '<', now())
             ->where('status', '!=', 'completed')
             ->get()

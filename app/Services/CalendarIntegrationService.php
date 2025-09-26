@@ -2,17 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\CalendarIntegration;
 use App\Models\CalendarEvent;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\ProjectMilestone;
-use App\Models\User;
+use App\Models\CalendarIntegration;
 use Google\Client;
 use Google\Service\Calendar;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 /**
  * CalendarIntegrationService - Service cho calendar integrations

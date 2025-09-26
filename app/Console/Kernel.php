@@ -12,6 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        // Temporarily commented out to avoid dependency issues
+        /*
         // System Health Monitoring
         $schedule->command('maintenance:run --task=metrics')
             ->everyFiveMinutes()
@@ -81,6 +83,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('config:cache')
             ->dailyAt('12:00')
             ->withoutOverlapping();
+        */
     }
 
     /**

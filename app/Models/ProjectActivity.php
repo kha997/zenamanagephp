@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Request;
  */
 class ProjectActivity extends Model
 {
-    use HasFactory, HasUlids;
+    use HasUlids, HasFactory;
 
     protected $table = 'project_activities';
     

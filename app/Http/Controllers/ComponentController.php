@@ -2,193 +2,143 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ComponentFormRequest;
-use App\Http\Resources\ComponentResource;
-use App\Services\ComponentService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Src\CoreProject\Models\Component;
+use Src\CoreProject\Resources\ComponentResource;
+use Src\Foundation\Utils\JSendResponse;
+use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
- * RESTful Controller cho Component management
+ * Controller xử lý các hoạt động CRUD cho Component
  * 
- * @package App\Http\Controllers
+ * @package Src\CoreProject\Controllers
  */
-class ComponentController extends Controller
+class ComponentController
 {
     /**
-     * @param ComponentService $componentService
+     * Constructor - áp dụng RBAC middleware
      */
-    public function __construct(
-        private readonly ComponentService $componentService
-    ) {}
-
-    /**
-     * Display components of a project.
-     * GET /api/v1/projects/{project}/components
-     */
-    public function index(int $projectId, Request $request): JsonResponse
+    public function __construct()
     {
-        try {
-            $filters = $request->only(['parent_id', 'search']);
-            $filters['project_id'] = $projectId;
-            
-            $components = $this->componentService->getComponents($filters);
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'components' => ComponentResource::collection($components)
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lấy danh sách component: ' . $e->getMessage()
-            ], 500);
-        }
+        // Xóa middleware khỏi constructor - sẽ áp dụng trong routes
+        // $this->middleware(RBACMiddleware::class);
     }
 
     /**
-     * Store a newly created component.
-     * POST /api/v1/projects/{project}/components
+     * Lấy danh sách components của một project
+     *
+     * @param Request $request
+     * @param string $projectId
+     * @return JsonResponse
      */
-    public function store(ComponentFormRequest $request, int $projectId): JsonResponse
+    public function index(Request $request, string $projectId): JsonResponse
+    {
+        try {
+            $components = Component::where('project_id', $projectId)->with(['user', 'project'])->get();
+            return JSendResponse::success(ComponentResource::collection($components));
+        } catch (\Exception $e) {
+            return JSendResponse::error('Không thể lấy danh sách components: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Tạo component mới
+     *
+     * @param StoreComponentRequest $request
+     * @param string $projectId
+     * @return JsonResponse
+     */
+    public function store(StoreComponentRequest $request, string $projectId): JsonResponse
     {
         try {
             $data = $request->validated();
             $data['project_id'] = $projectId;
             
-            $component = $this->componentService->createComponent($data);
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'component' => new ComponentResource($component)
-                ],
-                'message' => 'Component đã được tạo thành công.'
-            ], 201);
+            $component = Component::create($data);
+            return JSendResponse::success(new ComponentResource($component), 'Component đã được tạo thành công');
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể tạo component: ' . $e->getMessage()
-            ], 500);
+            return JSendResponse::error('Không thể tạo component: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Display the specified component.
-     * GET /api/v1/components/{component}
+     * Hiển thị chi tiết component
+     *
+     * @param string $projectId
+     * @param string $componentId
+     * @return JsonResponse
      */
-    public function show(int $componentId, Request $request): JsonResponse
+    public function show(string $projectId, string $componentId): JsonResponse
     {
         try {
-            $includes = $request->get('include', []);
-            if (is_string($includes)) {
-                $includes = explode(',', $includes);
-            }
-            
-            $component = $this->componentService->getComponentById($componentId, $includes);
-            
-            if (!$component) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Component không tồn tại.'
-                ], 404);
-            }
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'component' => new ComponentResource($component)
-                ]
-            ]);
+            $component = Component::where('project_id', $projectId)
+                                ->select(['id', 'name', 'status'])->where('id', $componentId)
+                                ->firstOrFail();
+            return JSendResponse::success(new ComponentResource($component));
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lấy thông tin component: ' . $e->getMessage()
-            ], 500);
+            return JSendResponse::error('Không tìm thấy component: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Update the specified component.
-     * PUT/PATCH /api/v1/components/{component}
+     * Cập nhật component
+     *
+     * @param UpdateComponentRequest $request
+     * @param string $projectId
+     * @param string $componentId
+     * @return JsonResponse
      */
-    public function update(ComponentFormRequest $request, int $componentId): JsonResponse
+    public function update(UpdateComponentRequest $request, string $projectId, string $componentId): JsonResponse
     {
         try {
-            $component = $this->componentService->updateComponent($componentId, $request->validated());
+            $component = Component::where('project_id', $projectId)
+                                ->select(['id', 'name', 'status'])->where('id', $componentId)
+                                ->firstOrFail();
             
-            if (!$component) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Component không tồn tại.'
-                ], 404);
-            }
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'component' => new ComponentResource($component)
-                ],
-                'message' => 'Component đã được cập nhật thành công.'
-            ]);
+            $component->update($request->validated());
+            return JSendResponse::success(new ComponentResource($component), 'Component đã được cập nhật thành công');
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể cập nhật component: ' . $e->getMessage()
-            ], 500);
+            return JSendResponse::error('Không thể cập nhật component: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Remove the specified component.
-     * DELETE /api/v1/components/{component}
+     * Xóa component
+     *
+     * @param string $projectId
+     * @param string $componentId
+     * @return JsonResponse
      */
-    public function destroy(int $componentId): JsonResponse
+    public function destroy(string $projectId, string $componentId): JsonResponse
     {
         try {
-            $deleted = $this->componentService->deleteComponent($componentId);
+            $component = Component::where('project_id', $projectId)
+                                ->select(['id', 'name', 'status'])->where('id', $componentId)
+                                ->firstOrFail();
             
-            if (!$deleted) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Component không tồn tại hoặc không thể xóa.'
-                ], 404);
-            }
-            
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Component đã được xóa thành công.'
-            ]);
+            $component->delete();
+            return JSendResponse::success(null, 'Component đã được xóa thành công');
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể xóa component: ' . $e->getMessage()
-            ], 500);
+            return JSendResponse::error('Không thể xóa component: ' . $e->getMessage());
         }
     }
-
+    
     /**
-     * Get component hierarchy tree.
-     * GET /api/v1/projects/{project}/components/tree
+     * Lấy cây phân cấp components
+     *
+     * @param string $projectId
+     * @return JsonResponse
      */
-    public function tree(int $projectId): JsonResponse
+    public function tree(string $projectId): JsonResponse
     {
         try {
-            $tree = $this->componentService->getComponentTree($projectId);
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'tree' => $tree
-                ]
-            ]);
+            $components = Component::where('project_id', $projectId)
+                                 ->whereNull('parent_component_id')
+                                 ->with('children')
+                                 ->with(['user', 'project'])->get();
+            return JSendResponse::success(ComponentResource::collection($components));
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lấy cây component: ' . $e->getMessage()
-            ], 500);
+            return JSendResponse::error('Không thể lấy cây components: ' . $e->getMessage());
         }
     }
 }

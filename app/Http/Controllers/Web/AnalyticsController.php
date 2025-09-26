@@ -3,13 +3,11 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Models\Task;
 use App\Models\Project;
-use App\Models\User;
-use Illuminate\Http\Request;
+use App\Models\Task;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 /**
  * Analytics Controller
@@ -30,17 +28,17 @@ class AnalyticsController extends Controller
             $query = Task::query();
 
             if ($projectId) {
-                $query->where('project_id', $projectId);
+                $query->select(['id', 'name', 'status'])->where('project_id', $projectId);
             }
 
-            $query->whereBetween('created_at', [$dateFrom, $dateTo]);
+            $query->whereBetween('tasks.created_at', [$dateFrom, $dateTo]);
 
             // Basic statistics
             $totalTasks = $query->count();
-            $completedTasks = (clone $query)->where('status', 'completed')->count();
-            $inProgressTasks = (clone $query)->where('status', 'in_progress')->count();
-            $pendingTasks = (clone $query)->where('status', 'pending')->count();
-            $overdueTasks = (clone $query)->where('due_date', '<', now())->where('status', '!=', 'completed')->count();
+            $completedTasks = (clone $query)->select(['id', 'name', 'status'])->where('status', 'completed')->count();
+            $inProgressTasks = (clone $query)->select(['id', 'name', 'status'])->where('status', 'in_progress')->count();
+            $pendingTasks = (clone $query)->select(['id', 'name', 'status'])->where('status', 'pending')->count();
+            $overdueTasks = (clone $query)->select(['id', 'name', 'status'])->where('end_date', '<', now())->select(['id', 'name', 'status'])->where('status', '!=', 'completed')->count();
 
             // Time tracking statistics
             $totalEstimatedHours = (clone $query)->sum('estimated_hours');
@@ -78,12 +76,12 @@ class AnalyticsController extends Controller
                 ->groupBy('users.id', 'users.name')
                 ->orderBy('total_tasks', 'desc')
                 ->limit(10)
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($item) {
                     return [
                         'name' => $item->name,
                         'total_tasks' => $item->total_tasks,
-                        'avg_progress' => round($item->avg_progress, 2)
+                        'avg_progress' => round((float)$item->avg_progress, 2)
                     ];
                 });
 
@@ -94,15 +92,15 @@ class AnalyticsController extends Controller
                     DB::raw('count(*) as tasks_created'),
                     DB::raw('avg(progress_percent) as avg_progress')
                 )
-                ->whereBetween('created_at', [$dateFrom, $dateTo])
+                ->whereBetween('tasks.created_at', [$dateFrom, $dateTo])
                 ->groupBy(DB::raw('DATE(created_at)'))
                 ->orderBy('date')
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($item) {
                     return [
                         'date' => $item->date,
                         'tasks_created' => $item->tasks_created,
-                        'avg_progress' => round($item->avg_progress, 2)
+                        'avg_progress' => round((float)$item->avg_progress, 2)
                     ];
                 });
 
@@ -121,7 +119,7 @@ class AnalyticsController extends Controller
                         'total_estimated_hours' => $totalEstimatedHours,
                         'total_actual_hours' => $totalActualHours,
                         'efficiency_rate' => $totalEstimatedHours > 0 ? round(($totalActualHours / $totalEstimatedHours) * 100, 2) : 0,
-                        'average_progress' => round($averageProgress, 2)
+                        'average_progress' => round((float)$averageProgress, 2)
                     ],
                     'distributions' => [
                         'priority' => $priorityStats,
@@ -160,10 +158,10 @@ class AnalyticsController extends Controller
 
             // Basic statistics
             $totalProjects = $query->count();
-            $activeProjects = (clone $query)->where('status', 'active')->count();
-            $completedProjects = (clone $query)->where('status', 'completed')->count();
-            $onHoldProjects = (clone $query)->where('status', 'on_hold')->count();
-            $draftProjects = (clone $query)->where('status', 'draft')->count();
+            $activeProjects = (clone $query)->select(['id', 'name', 'status'])->where('status', 'active')->count();
+            $completedProjects = (clone $query)->select(['id', 'name', 'status'])->where('status', 'completed')->count();
+            $onHoldProjects = (clone $query)->select(['id', 'name', 'status'])->where('status', 'on_hold')->count();
+            $draftProjects = (clone $query)->select(['id', 'name', 'status'])->where('status', 'draft')->count();
 
             // Budget statistics
             $totalBudget = (clone $query)->sum('budget_total');
@@ -184,12 +182,12 @@ class AnalyticsController extends Controller
                 ->groupBy('users.id', 'users.name')
                 ->orderBy('total_projects', 'desc')
                 ->limit(10)
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($item) {
                     return [
                         'name' => $item->name,
                         'total_projects' => $item->total_projects,
-                        'avg_progress' => round($item->avg_progress, 2)
+                        'avg_progress' => round((float)$item->avg_progress, 2)
                     ];
                 });
 
@@ -200,7 +198,7 @@ class AnalyticsController extends Controller
                 ->groupBy('users.id', 'users.name')
                 ->orderBy('count', 'desc')
                 ->limit(10)
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($item) {
                     return [
                         'name' => $item->name,
@@ -217,11 +215,11 @@ class AnalyticsController extends Controller
                     DB::raw('count(*) as projects_created'),
                     DB::raw('sum(budget_total) as total_budget')
                 )
-                ->whereBetween('created_at', [$dateFrom, $dateTo])
+                ->whereBetween('tasks.created_at', [$dateFrom, $dateTo])
                 ->groupBy(DB::raw('YEAR(created_at)'), DB::raw('MONTH(created_at)'))
                 ->orderBy('year')
                 ->orderBy('month')
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($item) {
                     return [
                         'year' => $item->year,
@@ -233,7 +231,7 @@ class AnalyticsController extends Controller
 
             // Project completion timeline
             $completionStats = (clone $query)
-                ->where('status', 'completed')
+                ->select(['id', 'name', 'status'])->where('status', 'completed')
                 ->select(
                     DB::raw('YEAR(updated_at) as year'),
                     DB::raw('MONTH(updated_at) as month'),
@@ -242,7 +240,7 @@ class AnalyticsController extends Controller
                 ->groupBy(DB::raw('YEAR(updated_at)'), DB::raw('MONTH(updated_at)'))
                 ->orderBy('year')
                 ->orderBy('month')
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($item) {
                     return [
                         'year' => $item->year,
@@ -264,8 +262,8 @@ class AnalyticsController extends Controller
                     ],
                     'budget' => [
                         'total_budget' => $totalBudget,
-                        'average_budget' => round($averageBudget, 2),
-                        'average_progress' => round($averageProgress, 2)
+                        'average_budget' => round((float)$averageBudget, 2),
+                        'average_progress' => round((float)$averageProgress, 2)
                     ],
                     'distributions' => [
                         'status' => $statusStats
@@ -304,7 +302,7 @@ class AnalyticsController extends Controller
 
             // Get user-specific data if user_id provided
             $userQuery = $userId ? function($query) use ($userId) {
-                $query->where('assignee_id', $userId);
+                $query->where('assigned_to', $userId);
             } : null;
 
             // Task statistics
@@ -315,24 +313,24 @@ class AnalyticsController extends Controller
 
             $totalTasks = $taskStats->count();
             $myTasks = $userId ? Task::where('assignee_id', $userId)->count() : 0;
-            $completedTasks = (clone $taskStats)->where('status', 'completed')->count();
-            $overdueTasks = (clone $taskStats)->where('due_date', '<', now())->where('status', '!=', 'completed')->count();
+            $completedTasks = (clone $taskStats)->select(['id', 'name', 'status'])->where('status', 'completed')->count();
+            $overdueTasks = (clone $taskStats)->select(['id', 'name', 'status'])->where('end_date', '<', now())->select(['id', 'name', 'status'])->where('status', '!=', 'completed')->count();
 
             // Project statistics
             $projectStats = Project::query();
             if ($userId && $role === 'project_manager') {
-                $projectStats->where('pm_id', $userId);
+                $projectStats->select(['id', 'name', 'status'])->where('pm_id', $userId);
             }
 
             $totalProjects = $projectStats->count();
-            $activeProjects = (clone $projectStats)->where('status', 'active')->count();
-            $completedProjects = (clone $projectStats)->where('status', 'completed')->count();
+            $activeProjects = (clone $projectStats)->select(['id', 'name', 'status'])->where('status', 'active')->count();
+            $completedProjects = (clone $projectStats)->select(['id', 'name', 'status'])->where('status', 'completed')->count();
 
             // Recent activities
             $recentTasks = Task::with(['project', 'assignee'])
                 ->orderBy('updated_at', 'desc')
                 ->limit(10)
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($task) {
                     return [
                         'id' => $task->id,
@@ -347,7 +345,7 @@ class AnalyticsController extends Controller
             $recentProjects = Project::with(['client', 'pm'])
                 ->orderBy('updated_at', 'desc')
                 ->limit(10)
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($project) {
                     return [
                         'id' => $project->id,
@@ -409,10 +407,10 @@ class AnalyticsController extends Controller
             $dateTo = $request->get('date_to', Carbon::now()->format('Y-m-d'));
             $userId = $request->get('user_id');
 
-            $query = Task::query()->whereBetween('created_at', [$dateFrom, $dateTo]);
+            $query = Task::query()->whereBetween('tasks.created_at', [$dateFrom, $dateTo]);
             
             if ($userId) {
-                $query->where('assignee_id', $userId);
+                $query->select(['id', 'name', 'status'])->where('assignee_id', $userId);
             }
 
             // Time-based productivity
@@ -421,13 +419,13 @@ class AnalyticsController extends Controller
             $averageTaskDuration = $query->avg(DB::raw('TIMESTAMPDIFF(HOUR, created_at, updated_at)'));
 
             // Completion metrics
-            $tasksCompleted = (clone $query)->where('status', 'completed')->count();
+            $tasksCompleted = (clone $query)->select(['id', 'name', 'status'])->where('status', 'completed')->count();
             $totalTasks = $query->count();
             $completionRate = $totalTasks > 0 ? round(($tasksCompleted / $totalTasks) * 100, 2) : 0;
 
             // Quality metrics
             $tasksOnTime = (clone $query)
-                ->where('status', 'completed')
+                ->select(['id', 'name', 'status'])->where('status', 'completed')
                 ->whereRaw('updated_at <= due_date')
                 ->count();
             
@@ -440,10 +438,10 @@ class AnalyticsController extends Controller
                     DB::raw('count(*) as tasks_completed'),
                     DB::raw('sum(actual_hours) as hours_logged')
                 )
-                ->where('status', 'completed')
+                ->select(['id', 'name', 'status'])->where('status', 'completed')
                 ->groupBy(DB::raw('DATE(updated_at)'))
                 ->orderBy('date')
-                ->get()
+                ->with(['user', 'project'])->get()
                 ->map(function($item) {
                     return [
                         'date' => $item->date,
@@ -459,7 +457,7 @@ class AnalyticsController extends Controller
                         'total_estimated_hours' => $totalEstimatedHours,
                         'total_actual_hours' => $totalActualHours,
                         'efficiency_rate' => $totalEstimatedHours > 0 ? round(($totalActualHours / $totalEstimatedHours) * 100, 2) : 0,
-                        'average_task_duration_hours' => round($averageTaskDuration, 2)
+                        'average_task_duration_hours' => round((float)$averageTaskDuration, 2)
                     ],
                     'completion' => [
                         'tasks_completed' => $tasksCompleted,

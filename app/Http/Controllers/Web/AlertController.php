@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 /**
  * Alert Controller
@@ -112,8 +112,8 @@ class AlertController extends Controller
 
             // Filter by status
             if ($status && $status !== 'all') {
-                $alerts = array_filter($alerts, function($alert) use ($status) {
-                    return $alert['status'] === $status;
+                $alerts = array_filter($alerts, function($alert) use ($severity) {
+                    return $alert['severity'] === $severity;
                 });
             }
 
@@ -176,7 +176,7 @@ class AlertController extends Controller
                 'tags' => $request->tags ?? [],
                 'status' => 'active',
                 'created_at' => Carbon::now()->toISOString(),
-                'created_by' => auth()->id() ?? 1,
+                'created_by' => Auth::id() ?? 1,
                 'notify_users' => $request->notify_users ?? [],
                 'auto_resolve' => $request->auto_resolve ?? false,
                 'resolve_after' => $request->resolve_after ?? null,

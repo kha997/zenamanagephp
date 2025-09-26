@@ -1,314 +1,248 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace App\Services;
 
+use App\Models\Task;
 use App\Models\Project;
-use Src\CoreProject\Models\Task;
-use Src\CoreProject\Models\TaskAssignment;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Event;
 
-/**
- * Task Service - Business logic for task management
- */
 class TaskService
 {
-    /**
-     * Get filtered tasks with pagination
-     */
-    public function getTasks(array $filters, int $perPage = 15): LengthAwarePaginator
+    protected $taskRepository;
+    protected $auditService;
+    
+    public function __construct(TaskRepository $taskRepository, AuditService $auditService)
     {
-        $query = Task::with(['project', 'assignments.user']);
-
-        // Apply project filter only if project_id is provided
-        if (!empty($filters['project_id'])) {
+        $this->taskRepository = $taskRepository;
+        $this->auditService = $auditService;
+    }
+    
+    /**
+     * Create a new task with business logic
+     */
+    public function createTask(array $data, int $userId, int $tenantId): Task
+    {
+        // Business logic validation
+        $this->validateTaskCreation($data, $userId, $tenantId);
+        
+        // Create task
+        $task = $this->taskRepository->create([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'status' => 'pending',
+            'priority' => $data['priority'] ?? 'medium',
+            'project_id' => $data['project_id'] ?? null,
+            'user_id' => $userId,
+            'tenant_id' => $tenantId,
+            'due_date' => $data['due_date'] ?? null
+        ]);
+        
+        // Fire events for side effects
+        Event::dispatch('task.created', $task);
+        
+        // Audit logging
+        $this->auditService->log('task_created', $userId, $tenantId, [
+            'task_id' => $task->id,
+            'task_title' => $task->title
+        ]);
+        
+        return $task;
+    }
+    
+    /**
+     * Move task to different status
+     */
+    public function moveTask(int $taskId, string $newStatus, int $userId, int $tenantId): Task
+    {
+        $task = $this->taskRepository->findById($taskId);
+        
+        // Business logic validation
+        $this->validateTaskMove($task, $newStatus, $userId);
+        
+        $oldStatus = $task->status;
+        $task = $this->taskRepository->update($taskId, ['status' => $newStatus]);
+        
+        // Fire events for side effects
+        Event::dispatch('task.moved', [
+            'task' => $task,
+            'old_status' => $oldStatus,
+            'new_status' => $newStatus,
+            'user_id' => $userId
+        ]);
+        
+        // Audit logging
+        $this->auditService->log('task_moved', $userId, $tenantId, [
+            'task_id' => $taskId,
+            'old_status' => $oldStatus,
+            'new_status' => $newStatus
+        ]);
+        
+        return $task;
+    }
+    
+    /**
+     * Archive task
+     */
+    public function archiveTask(int $taskId, int $userId, int $tenantId): Task
+    {
+        $task = $this->taskRepository->findById($taskId);
+        
+        // Business logic validation
+        $this->validateTaskArchive($task, $userId);
+        
+        $task = $this->taskRepository->update($taskId, ['archived_at' => now()]);
+        
+        // Fire events for side effects
+        Event::dispatch('task.archived', [
+            'task' => $task,
+            'user_id' => $userId
+        ]);
+        
+        // Audit logging
+        $this->auditService->log('task_archived', $userId, $tenantId, [
+            'task_id' => $taskId
+        ]);
+        
+        return $task;
+    }
+    
+    /**
+     * Get tasks with business logic filters
+     */
+    public function getTasks(array $filters, int $userId, int $tenantId): array
+    {
+        // Apply business logic filters
+        $query = $this->taskRepository->getQuery();
+        
+        // Tenant isolation
+        $query->where('tenant_id', $tenantId);
+        
+        // User-specific filters
+        if (isset($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
+        
+        // Status filters
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        
+        // Priority filters
+        if (isset($filters['priority'])) {
+            $query->where('priority', $filters['priority']);
+        }
+        
+        // Project filters
+        if (isset($filters['project_id'])) {
             $query->where('project_id', $filters['project_id']);
         }
-
-        // Apply filters
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (!empty($filters['component_id'])) {
-            $query->where('component_id', $filters['component_id']);
-        }
-
-        if (!empty($filters['assigned_to'])) {
-            $query->whereHas('assignments', function ($q) use ($filters) {
-                $q->where('user_id', $filters['assigned_to']);
-            });
-        }
-
-        if (!empty($filters['search'])) {
-            $query->where(function ($q) use ($filters) {
-                $q->where('name', 'LIKE', '%' . $filters['search'] . '%')
-                  ->orWhere('description', 'LIKE', '%' . $filters['search'] . '%');
-            });
-        }
-
-        if (!empty($filters['start_date'])) {
-            $query->where('start_date', '>=', $filters['start_date']);
-        }
-
-        if (!empty($filters['end_date'])) {
-            $query->where('end_date', '<=', $filters['end_date']);
-        }
-
-        // Default sorting
-        $query->orderBy('created_at', 'desc');
-
-        return $query->paginate($perPage);
+        
+        return $query->get()->toArray();
     }
-
+    
     /**
-     * Get task by ID with optional includes
+     * Validate task creation
      */
-    public function getTaskById(string $taskId, array $includes = []): ?Task
+    private function validateTaskCreation(array $data, int $userId, int $tenantId): void
     {
-        $query = Task::query();
-
-        if (in_array('assignments', $includes)) {
-            $query->with('assignments.user');
+        // Business rules validation
+        if (empty($data['title'])) {
+            throw new \InvalidArgumentException('Task title is required');
         }
-
-        if (in_array('component', $includes)) {
-            // $query->with('component'); // Component table doesn't exist
+        
+        // Check if user can create tasks in this tenant
+        if (!$this->canUserCreateTasks($userId, $tenantId)) {
+            throw new \UnauthorizedException('User cannot create tasks in this tenant');
         }
-
-        if (in_array('project', $includes)) {
-            $query->with('project');
-        }
-
-        if (in_array('interaction_logs', $includes)) {
-            $query->with('interactionLogs');
-        }
-
-        return $query->find($taskId);
-    }
-
-    /**
-     * Create a new task
-     */
-    public function createTask(array $data): Task
-    {
-        try {
-            DB::beginTransaction();
-
-            $task = Task::create([
-                'project_id' => $data['project_id'],
-                'component_id' => $data['component_id'] ?? null,
-                'phase_id' => $data['phase_id'] ?? null,
-                'name' => $data['name'] ?? 'Untitled Task',
-                'description' => $data['description'] ?? null,
-                'start_date' => $data['start_date'] ?? null,
-                'end_date' => $data['end_date'] ?? null,
-                'status' => $data['status'] ?? 'pending',
-                'priority' => $data['priority'] ?? 'medium',
-                'dependencies' => $data['dependencies'] ?? null,
-                'conditional_tag' => $data['conditional_tag'] ?? null,
-                'is_hidden' => $data['is_hidden'] ?? false,
-                'estimated_hours' => $data['estimated_hours'] ?? 0.0,
-                'actual_hours' => $data['actual_hours'] ?? 0.0,
-                'progress_percent' => $data['progress_percent'] ?? 0.0,
-                'tags' => $data['tags'] ?? null,
-                'visibility' => $data['visibility'] ?? 'internal',
-                'client_approved' => $data['client_approved'] ?? false,
-                'assignee_id' => $data['assignee_id'] ?? null,
-            ]);
-
-            // Create assignments if provided
-            if (!empty($data['assignments'])) {
-                foreach ($data['assignments'] as $assignment) {
-                    TaskAssignment::create([
-                        'task_id' => $task->id,
-                        'user_id' => $assignment['user_id'],
-                        'split_percent' => $assignment['split_percent'] ?? 100.0,
-                        'role' => $assignment['role'] ?? 'assignee',
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            return $task->load(['project', 'assignments.user']);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Task creation failed', [
-                'data' => $data,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
+        
+        // Check project access if project_id is provided
+        if (isset($data['project_id'])) {
+            $this->validateProjectAccess($data['project_id'], $userId, $tenantId);
         }
     }
-
+    
     /**
-     * Update an existing task
+     * Validate task move
      */
-    public function updateTask(string $taskId, array $data): ?Task
+    private function validateTaskMove(Task $task, string $newStatus, int $userId): void
     {
-        try {
-            // Debug: Log update data
-            \Log::info('TaskService updateTask called', [
-                'task_id' => $taskId,
-                'data' => $data
-            ]);
-            
-            DB::beginTransaction();
-
-            $task = Task::find($taskId);
-            if (!$task) {
-                \Log::error('Task not found in TaskService', ['task_id' => $taskId]);
-                return null;
-            }
-
-            $task->update([
-                'project_id' => $data['project_id'] ?? $task->project_id,
-                'component_id' => $data['component_id'] ?? $task->component_id,
-                'phase_id' => $data['phase_id'] ?? $task->phase_id,
-                'name' => $data['name'] ?? $task->name,
-                'description' => $data['description'] ?? $task->description,
-                'start_date' => $data['start_date'] ?? $task->start_date,
-                'end_date' => $data['end_date'] ?? $task->end_date,
-                'status' => $data['status'] ?? $task->status,
-                'priority' => $data['priority'] ?? $task->priority,
-                'dependencies' => $data['dependencies'] ?? $task->dependencies,
-                'conditional_tag' => $data['conditional_tag'] ?? $task->conditional_tag,
-                'is_hidden' => $data['is_hidden'] ?? $task->is_hidden,
-                'estimated_hours' => $data['estimated_hours'] ?? $task->estimated_hours,
-                'actual_hours' => $data['actual_hours'] ?? $task->actual_hours,
-                'progress_percent' => $data['progress_percent'] ?? $task->progress_percent,
-                'tags' => $data['tags'] ?? $task->tags,
-                'visibility' => $data['visibility'] ?? $task->visibility,
-                'client_approved' => $data['client_approved'] ?? $task->client_approved,
-                'assignee_id' => !empty($data['assignee_id']) ? $data['assignee_id'] : null,
-            ]);
-
-            // Update assignments if provided
-            if (isset($data['assignments'])) {
-                // Delete existing assignments
-                $task->assignments()->delete();
-
-                // Create new assignments
-                foreach ($data['assignments'] as $assignment) {
-                    TaskAssignment::create([
-                        'task_id' => $task->id,
-                        'user_id' => $assignment['user_id'],
-                        'split_percent' => $assignment['split_percent'] ?? 100.0,
-                        'role' => $assignment['role'] ?? 'assignee',
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            return $task->load(['project', 'assignments.user']);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Task update failed', [
-                'task_id' => $taskId,
-                'data' => $data,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
+        // Business rules for status transitions
+        $allowedTransitions = [
+            'pending' => ['in_progress', 'cancelled'],
+            'in_progress' => ['completed', 'pending'],
+            'completed' => ['in_progress'],
+            'cancelled' => ['pending']
+        ];
+        
+        if (!in_array($newStatus, $allowedTransitions[$task->status] ?? [])) {
+            throw new \InvalidArgumentException('Invalid status transition');
+        }
+        
+        // Check if user can move this task
+        if (!$this->canUserMoveTask($task, $userId)) {
+            throw new \UnauthorizedException('User cannot move this task');
         }
     }
-
+    
     /**
-     * Update task status
+     * Validate task archive
      */
-    public function updateTaskStatus(string $taskId, string $status): ?Task
+    private function validateTaskArchive(Task $task, int $userId): void
     {
-        $task = Task::find($taskId);
-        if (!$task) {
-            return null;
+        // Only completed or cancelled tasks can be archived
+        if (!in_array($task->status, ['completed', 'cancelled'])) {
+            throw new \InvalidArgumentException('Only completed or cancelled tasks can be archived');
         }
-
-        $task->update(['status' => $status]);
-
-        return $task->load(['project', 'assignments.user']);
-    }
-
-    /**
-     * Delete a task
-     */
-    public function deleteTask(string $taskId): bool
-    {
-        try {
-            $task = Task::find($taskId);
-            if (!$task) {
-                return false;
-            }
-
-            // Delete assignments first
-            $task->assignments()->delete();
-
-            // Delete the task
-            $task->delete();
-
-            return true;
-
-        } catch (\Exception $e) {
-            Log::error('Task deletion failed', [
-                'task_id' => $taskId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return false;
+        
+        // Check if user can archive this task
+        if (!$this->canUserArchiveTask($task, $userId)) {
+            throw new \UnauthorizedException('User cannot archive this task');
         }
     }
-
+    
     /**
-     * Get tasks by project
+     * Check if user can create tasks
      */
-    public function getTasksByProject(string $projectId, array $filters = []): Collection
+    private function canUserCreateTasks(int $userId, int $tenantId): bool
     {
-        $query = Task::where('project_id', $projectId);
-
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (!empty($filters['component_id'])) {
-            $query->where('component_id', $filters['component_id']);
-        }
-
-        return $query->with(['assignments.user'])->get();
+        // Business logic to check user permissions
+        return true; // Simplified for demo
     }
-
+    
     /**
-     * Get tasks by component
+     * Check if user can move task
      */
-    public function getTasksByComponent(string $componentId): Collection
+    private function canUserMoveTask(Task $task, int $userId): bool
     {
-        return Task::where('component_id', $componentId)
-            ->with(['project', 'assignments.user'])
-            ->get();
+        // Business logic to check user permissions
+        return $task->user_id === $userId || $this->isUserAdmin($userId);
     }
-
+    
     /**
-     * Get tasks assigned to user
+     * Check if user can archive task
      */
-    public function getTasksByUser(string $userId, array $filters = []): Collection
+    private function canUserArchiveTask(Task $task, int $userId): bool
     {
-        $query = Task::whereHas('assignments', function ($q) use ($userId) {
-            $q->where('user_id', $userId);
-        });
-
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
-        if (!empty($filters['project_id'])) {
-            $query->where('project_id', $filters['project_id']);
-        }
-
-        return $query->with(['project', 'assignments.user'])->get();
+        // Business logic to check user permissions
+        return $task->user_id === $userId || $this->isUserAdmin($userId);
+    }
+    
+    /**
+     * Check if user is admin
+     */
+    private function isUserAdmin(int $userId): bool
+    {
+        // Business logic to check admin status
+        return false; // Simplified for demo
+    }
+    
+    /**
+     * Validate project access
+     */
+    private function validateProjectAccess(int $projectId, int $userId, int $tenantId): void
+    {
+        // Business logic to validate project access
+        // This would check if user has access to the project
     }
 }

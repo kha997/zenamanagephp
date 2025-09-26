@@ -3,8 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 
 class StartProductionWorkers extends Command
 {

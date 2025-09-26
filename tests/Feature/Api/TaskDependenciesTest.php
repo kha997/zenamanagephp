@@ -58,7 +58,7 @@ class TaskDependenciesTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_tasks', [
+        $this->assertDatabaseHas('tasks', [
             'id' => $task1->id,
             'dependencies' => json_encode([$task2->id])
         ]);
@@ -95,7 +95,7 @@ class TaskDependenciesTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_tasks', [
+        $this->assertDatabaseHas('tasks', [
             'id' => $task1->id,
             'dependencies' => json_encode([])
         ]);
@@ -223,7 +223,7 @@ class TaskDependenciesTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseHas('zena_tasks', [
+        $this->assertDatabaseHas('tasks', [
             'id' => $task1->id,
             'status' => 'done'
         ]);
@@ -237,7 +237,7 @@ class TaskDependenciesTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseHas('zena_tasks', [
+        $this->assertDatabaseHas('tasks', [
             'id' => $task2->id,
             'status' => 'in_progress'
         ]);

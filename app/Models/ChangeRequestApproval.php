@@ -2,11 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Src\Foundation\Traits\HasTimestamps;
 
 /**
  * ChangeRequestApproval Model - Multi-level approvals for change requests
@@ -23,7 +21,6 @@ use Src\Foundation\Traits\HasTimestamps;
  */
 class ChangeRequestApproval extends Model
 {
-    use HasFactory, HasUlids, HasTimestamps;
 
     protected $fillable = [
         'id',
@@ -48,7 +45,7 @@ class ChangeRequestApproval extends Model
      */
     public function changeRequest(): BelongsTo
     {
-        return $this->belongsTo(ZenaChangeRequest::class, 'change_request_id');
+        return $this->belongsTo(ChangeRequest::class, 'change_request_id');
     }
 
     /**

@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Tenant;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -368,7 +366,7 @@ class SecureUploadService
             $fileData['project_id'] = $metadata['project_id'];
         }
         
-        $fileRecord = \App\Models\ZenaDocument::create($fileData);
+        $fileRecord = \App\Models\Document::create($fileData);
 
         // Create signed URL
         $signedUrl = $this->createSignedUrl($storedPath, $userId, $tenantId);
@@ -401,7 +399,7 @@ class SecureUploadService
      */
     public function createFileVersion(string $fileId, UploadedFile $newFile, string $userId, string $tenantId, string $versionNote = ''): array
     {
-        $originalFile = \App\Models\ZenaDocument::where('id', $fileId)
+        $originalFile = \App\Models\Document::where('id', $fileId)
             ->where('tenant_id', $tenantId)
             ->first();
 
@@ -429,7 +427,7 @@ class SecureUploadService
         $storedPath = $newFile->storeAs("documents/{$tenantId}", $secureFilename, 'local');
 
         // Create version record
-        $versionRecord = \App\Models\ZenaDocument::create([
+        $versionRecord = \App\Models\Document::create([
             'id' => Str::ulid(),
             'project_id' => $originalFile->project_id,
             'tenant_id' => $tenantId,
@@ -456,7 +454,7 @@ class SecureUploadService
      */
     public function getFileVersions(string $fileId, string $tenantId): \Illuminate\Support\Collection
     {
-        return \App\Models\ZenaDocument::where('id', $fileId)
+        return \App\Models\Document::where('id', $fileId)
             ->orWhere('parent_document_id', $fileId)
             ->where('tenant_id', $tenantId)
             ->orderBy('version')
@@ -468,7 +466,7 @@ class SecureUploadService
      */
     public function deleteFile(string $fileId, string $userId, string $tenantId): array
     {
-        $file = \App\Models\ZenaDocument::where('id', $fileId)
+        $file = \App\Models\Document::where('id', $fileId)
             ->where('tenant_id', $tenantId)
             ->first();
 
@@ -501,7 +499,7 @@ class SecureUploadService
      */
     public function validateFileAccess(string $fileId, string $userId, string $tenantId): array
     {
-        $file = \App\Models\ZenaDocument::where('id', $fileId)
+        $file = \App\Models\Document::where('id', $fileId)
             ->where('tenant_id', $tenantId)
             ->first();
 
@@ -562,11 +560,7 @@ class SecureUploadService
     {
         $tempPath = tempnam(sys_get_temp_dir(), 'stripped_');
         
-        // For images, we could use GD or ImageMagick to strip EXIF data
-        // For documents, we would need specialized libraries
-        // This is a simplified implementation
-        
-        copy($file->getPathname(), $tempPath);
+        // For images, we could 
         
         return new UploadedFile(
             $tempPath,

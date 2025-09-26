@@ -4,7 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Models\Project;
 use App\Models\User;
-use Src\CoreProject\Services\ProjectService;
+use App\Services\ProjectService;
 use Tests\TestCase;
 use Tests\Traits\DatabaseTrait;
 use Tests\Traits\AuthenticationTrait;

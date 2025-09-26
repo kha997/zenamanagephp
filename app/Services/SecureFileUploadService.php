@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Secure File Upload Service
@@ -253,9 +252,7 @@ class SecureFileUploadService
     private function checkDocumentSecurity(UploadedFile $file): bool
     {
         // For now, just check file size and basic validation
-        // In production, you might want to use a document analysis library
-        
-        $content = file_get_contents($file->getPathname());
+        // In production, you might want to 
         
         // Check for embedded scripts
         if (preg_match('/<script[^>]*>.*?<\/script>/i', $content)) {

@@ -3,15 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Models\Role;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -77,7 +73,7 @@ class AuthController extends Controller
 
         // Get user roles and permissions
         $roles = $user->roles()->pluck('name')->toArray();
-        $permissions = $user->roles()->with('permissions')->get()
+        $permissions = $user->roles()->with('permissions')->with(['user', 'project'])->get()
             ->pluck('permissions')
             ->flatten()
             ->pluck('name')
@@ -109,7 +105,7 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -131,7 +127,7 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -142,7 +138,7 @@ class AuthController extends Controller
         
         // Get user roles and permissions
         $roles = $user->roles()->pluck('name')->toArray();
-        $permissions = $user->roles()->with('permissions')->get()
+        $permissions = $user->roles()->with('permissions')->with(['user', 'project'])->get()
             ->pluck('permissions')
             ->flatten()
             ->pluck('name')
@@ -172,7 +168,7 @@ class AuthController extends Controller
      */
     public function refresh(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -203,7 +199,7 @@ class AuthController extends Controller
      */
     public function getDashboardUrl(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -258,7 +254,7 @@ class AuthController extends Controller
     public function checkPermission(Request $request): JsonResponse
     {
         $permission = $request->input('permission');
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -285,7 +281,7 @@ class AuthController extends Controller
      */
     public function getNotifications(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -303,7 +299,7 @@ class AuthController extends Controller
             $query->whereNull('read_at');
         }
 
-        $notifications = $query->limit($limit)->get();
+        $notifications = $query->limit($limit)->with(['user', 'project'])->get();
 
         return response()->json([
             'status' => 'success',
@@ -319,7 +315,7 @@ class AuthController extends Controller
      */
     public function markNotificationAsRead(Request $request, string $notificationId): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([

@@ -7,9 +7,11 @@
         <div class="zena-nav-brand">
             <a href="/dashboard" class="zena-nav-brand-link">
                 <div class="zena-nav-logo">
-                    <i class="fas fa-cube text-blue-600"></i>
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white text-sm font-bold">Z</span>
+                    </div>
                 </div>
-                <span class="zena-nav-brand-text">ZenaManage</span>
+                <span class="zena-nav-brand-text font-bold text-lg text-blue-600">ZenaManage</span>
             </a>
         </div>
 
@@ -104,8 +106,8 @@
 
         {{-- User Menu --}}
         <div class="zena-nav-user">
-            <div class="zena-nav-user-menu" x-data="{ open: false }">
-                <button @click="open = !open" 
+            <div class="zena-nav-user-menu" id="userDropdown">
+                <button onclick="toggleDropdown()" 
                         class="zena-nav-user-button"
                         aria-expanded="false"
                         aria-haspopup="true">
@@ -113,19 +115,13 @@
                         @yield('user-initials', 'U')
                     </div>
                     <span class="zena-nav-user-name">@yield('user-name', 'User')</span>
-                    <i class="fas fa-chevron-down zena-nav-user-chevron" :class="{ 'rotate-180': open }"></i>
+                    <i class="fas fa-chevron-down zena-nav-user-chevron" id="dropdownChevron"></i>
                 </button>
 
                 {{-- Dropdown Menu --}}
-                <div x-show="open" 
-                     @click.away="open = false"
-                     x-transition:enter="transition ease-out duration-200"
-                     x-transition:enter-start="opacity-0 scale-95"
-                     x-transition:enter-end="opacity-100 scale-100"
-                     x-transition:leave="transition ease-in duration-75"
-                     x-transition:leave-start="opacity-100 scale-100"
-                     x-transition:leave-end="opacity-0 scale-95"
-                     class="zena-nav-user-dropdown">
+                <div id="userDropdownMenu" 
+                     class="zena-nav-user-dropdown"
+                     style="display: none;">
                     <div class="zena-nav-user-info">
                         <div class="zena-nav-user-info-name">@yield('user-name', 'User')</div>
                         <div class="zena-nav-user-info-email">@yield('user-email', 'user@example.com')</div>
@@ -286,3 +282,68 @@
         </div>
     </div>
 </nav>
+
+<script>
+function toggleDropdown() {
+    console.log('🔍 toggleDropdown called');
+    
+    const dropdown = document.getElementById('userDropdownMenu');
+    const chevron = document.getElementById('dropdownChevron');
+    const button = document.querySelector('.zena-nav-user-button');
+    
+    if (!dropdown || !chevron || !button) {
+        console.log('❌ Elements not found');
+        return;
+    }
+    
+    console.log('✅ Elements found');
+    console.log('Current display:', dropdown.style.display);
+    
+    if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+        dropdown.style.display = 'block';
+        chevron.classList.add('rotate-180');
+        button.setAttribute('aria-expanded', 'true');
+        console.log('✅ Dropdown opened');
+    } else {
+        dropdown.style.display = 'none';
+        chevron.classList.remove('rotate-180');
+        button.setAttribute('aria-expanded', 'false');
+        console.log('✅ Dropdown closed');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('userDropdownMenu');
+    const userMenu = document.getElementById('userDropdown');
+    
+    if (dropdown && userMenu && !userMenu.contains(event.target)) {
+        dropdown.style.display = 'none';
+        const chevron = document.getElementById('dropdownChevron');
+        const button = document.querySelector('.zena-nav-user-button');
+        
+        if (chevron) chevron.classList.remove('rotate-180');
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+});
+
+// Debug on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 Navigation script loaded');
+    
+    const dropdown = document.getElementById('userDropdownMenu');
+    const button = document.querySelector('.zena-nav-user-button');
+    
+    if (dropdown) {
+        console.log('✅ Dropdown element found');
+    } else {
+        console.log('❌ Dropdown element NOT found');
+    }
+    
+    if (button) {
+        console.log('✅ Button element found');
+    } else {
+        console.log('❌ Button element NOT found');
+    }
+});
+</script>

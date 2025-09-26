@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TemplateTask extends Model
 {
-    use HasFactory;
 
     protected $fillable = [
         'template_id',
@@ -103,8 +102,8 @@ class TemplateTask extends Model
             return true;
         }
 
-        return collect($this->dependencies)->every(function ($depId) use ($completedTasks) {
-            return in_array($depId, $completedTasks);
+        return collect($this->dependencies)->every(function ($depId) {
+            return TemplateTask::where('id', $depId)->where('status', 'completed')->exists();
         });
     }
 

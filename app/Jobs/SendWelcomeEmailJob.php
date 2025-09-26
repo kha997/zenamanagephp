@@ -2,22 +2,16 @@
 
 namespace App\Jobs;
 
-use App\Models\User;
-use App\Models\EmailTracking;
 use App\Mail\WelcomeEmail;
-use Illuminate\Bus\Queueable;
+use App\Models\EmailTracking;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class SendWelcomeEmailJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $user;
     public $tries = 3;

@@ -3,9 +3,8 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use Src\CoreProject\Models\Task;
 use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\User;
+use Src\CoreProject\Models\Task;
 
 class CleanMockData extends Command
 {

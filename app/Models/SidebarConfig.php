@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 class SidebarConfig extends Model
 {
-    use HasFactory, HasUlids;
+    use HasUlids, HasFactory;
 
     protected $table = 'sidebar_configs';
 

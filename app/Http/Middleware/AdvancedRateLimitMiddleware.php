@@ -2,10 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\RateLimiter;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -15,8 +13,7 @@ class AdvancedRateLimitMiddleware
 {
     private array $rateLimitConfig;
 
-    public function __construct()
-    {
+    public function __construct() { return $this->__constructImpl(); } private function __constructImpl() { 
         $this->rateLimitConfig = [
             'enabled' => config('rate_limit.enabled', true),
             'default_limit' => config('rate_limit.default_limit', 100),

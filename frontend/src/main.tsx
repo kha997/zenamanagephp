@@ -1,11 +1,14 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'react-hot-toast'
-import App from './App.tsx'
-import './index.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 
+// Import components
+import ProjectsDashboard from './pages/ProjectsDashboard';
+import CreateProjectPage from './pages/projects/CreateProjectPage';
+
+// Create query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -13,13 +16,18 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
     },
   },
-})
+});
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+// Main App component
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <Routes>
+          <Route path="/" element={<Navigate to="/projects" replace />} />
+          <Route path="/projects" element={<ProjectsDashboard />} />
+          <Route path="/projects/new" element={<CreateProjectPage />} />
+        </Routes>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -46,5 +54,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         />
       </BrowserRouter>
     </QueryClientProvider>
-  </React.StrictMode>,
-)
+  );
+}
+
+// Render
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

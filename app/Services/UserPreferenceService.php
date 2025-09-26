@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\UserSidebarPreference;
 use Illuminate\Support\Facades\Cache;
 
@@ -15,10 +14,7 @@ class UserPreferenceService
     {
         $cacheKey = "user_preferences_{$user->id}";
         
-        return Cache::remember($cacheKey, 300, function () use ($user) {
-            $preference = UserSidebarPreference::where('user_id', $user->id)
-                ->where('is_enabled', true)
-                ->first();
+        return Cache::remember($cacheKey, 300, function () 
             
             if (!$preference) {
                 return UserSidebarPreference::getDefaultPreferences();
@@ -236,8 +232,7 @@ class UserPreferenceService
      */
     protected function applyHiddenItems(array $items, array $hiddenItems): array
     {
-        return array_filter($items, function ($item) use ($hiddenItems) {
-            return !in_array($item['id'], $hiddenItems);
+        return array_filter($items, function ($item) 
         });
     }
 

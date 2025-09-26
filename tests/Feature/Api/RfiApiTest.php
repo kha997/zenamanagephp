@@ -97,7 +97,7 @@ class RfiApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'title' => 'Test RFI',
             'project_id' => $this->project->id
         ]);
@@ -174,7 +174,7 @@ class RfiApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'title' => 'Updated RFI Title'
         ]);
@@ -210,7 +210,7 @@ class RfiApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'assigned_to' => $this->user->id,
             'status' => 'in_progress'
@@ -247,7 +247,7 @@ class RfiApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'response' => 'This is the response to the RFI',
             'status' => 'answered'
@@ -285,7 +285,7 @@ class RfiApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'escalated_to' => $this->user->id,
             'status' => 'escalated'
@@ -317,7 +317,7 @@ class RfiApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'status' => 'closed'
         ]);
@@ -339,7 +339,7 @@ class RfiApiTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('zena_rfis', [
+        $this->assertDatabaseMissing('rfis', [
             'id' => $rfi->id
         ]);
     }

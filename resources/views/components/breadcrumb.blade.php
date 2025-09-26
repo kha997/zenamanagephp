@@ -1,35 +1,31 @@
-{{-- Breadcrumb Navigation Component --}}
-@props(['items' => []])
+@props(['breadcrumbs' => null])
 
-<nav class="zena-breadcrumb" aria-label="Breadcrumb">
-    <ol class="zena-breadcrumb-list">
-        @foreach($items as $index => $item)
-            <li class="zena-breadcrumb-item">
-                @if($index === count($items) - 1)
-                    {{-- Current page (last item) --}}
-                    <span class="zena-breadcrumb-current" aria-current="page">
-                        @if(isset($item['icon']))
-                            <i class="{{ $item['icon'] }} mr-2"></i>
-                        @endif
-                        {{ $item['label'] }}
-                    </span>
+@php
+    $breadcrumbs = $breadcrumbs ?? \App\Services\BreadcrumbService::generate();
+@endphp
+
+@if(!empty($breadcrumbs))
+<nav class="flex" aria-label="Breadcrumb">
+    <ol class="flex items-center space-x-2">
+        @foreach($breadcrumbs as $index => $breadcrumb)
+            @if($index > 0)
+                <li class="flex items-center">
+                    <svg class="w-4 h-4 text-gray-400 mx-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                </li>
+            @endif
+            
+            <li class="flex items-center">
+                @if($breadcrumb['active'])
+                    <span class="text-gray-500 font-medium">{{ $breadcrumb['title'] }}</span>
                 @else
-                    {{-- Link to other pages --}}
-                    <a href="{{ $item['url'] }}" class="zena-breadcrumb-link">
-                        @if(isset($item['icon']))
-                            <i class="{{ $item['icon'] }} mr-2"></i>
-                        @endif
-                        {{ $item['label'] }}
+                    <a href="{{ $breadcrumb['url'] }}" class="text-blue-600 hover:text-blue-800 font-medium">
+                        {{ $breadcrumb['title'] }}
                     </a>
                 @endif
             </li>
-            
-            @if($index < count($items) - 1)
-                {{-- Separator --}}
-                <li class="zena-breadcrumb-separator">
-                    <i class="fas fa-chevron-right"></i>
-                </li>
-            @endif
         @endforeach
     </ol>
 </nav>
+@endif

@@ -1,221 +1,272 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use App\Models\Project;
 
+/**
+ * Model Document để quản lý tài liệu
+ * 
+ * @property string $id
+ * @property string $project_id
+ * @property string $title
+ * @property string|null $description
+ * @property string|null $linked_entity_type
+ * @property string|null $linked_entity_id
+ * @property string|null $current_version_id
+ * @property array|null $tags
+ * @property string $visibility
+ * @property bool $client_approved
+ * @property string|null $created_by
+ * @property string|null $updated_by
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
+ */
 class Document extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasUlids, HasFactory;
+
+    protected $table = 'documents';
+
+    /**
+     * Kiểu dữ liệu của khóa chính
+     */
+    protected $keyType = 'string';
+
+    /**
+     * Tắt auto increment cho khóa chính
+     */
+    public $incrementing = false;
+
+    /**
+     * Các loại entity có thể liên kết
+     */
+    public const ENTITY_TYPE_TASK = 'task';
+    public const ENTITY_TYPE_DIARY = 'diary';
+    public const ENTITY_TYPE_CR = 'cr';
+
+    /**
+     * Danh sách các loại entity hợp lệ
+     */
+    public const VALID_ENTITY_TYPES = [
+        self::ENTITY_TYPE_TASK,
+        self::ENTITY_TYPE_DIARY,
+        self::ENTITY_TYPE_CR,
+    ];
+
+    /**
+     * Các loại visibility
+     */
+    public const VISIBILITY_INTERNAL = 'internal';
+    public const VISIBILITY_CLIENT = 'client';
 
     protected $fillable = [
-        'id',
-        'tenant_id',
         'project_id',
-        'task_id',
-        'component_id',
+        'tenant_id',
         'uploaded_by',
-        'approved_by',
         'name',
         'original_name',
-        'description',
-        'type', // 'drawing', 'contract', 'specification', 'report', 'photo', 'other'
-        'category', // 'architectural', 'structural', 'mep', 'civil', 'landscape', 'other'
         'file_path',
-        'file_size',
+        'file_type',
         'mime_type',
-        'file_hash', // for duplicate detection
+        'file_size',
+        'file_hash',
+        'category',
+        'description',
+        'metadata',
+        'status',
         'version',
-        'is_latest_version',
-        'status', // 'draft', 'pending_approval', 'approved', 'rejected', 'superseded'
-        'approval_notes',
-        'rejection_reason',
-        'tags', // JSON array
-        'metadata', // JSON data
-        'download_count',
-        'last_accessed_at',
-        'approved_at',
-        'created_at',
-        'updated_at',
-        'deleted_at'
+        'is_current_version',
+        'parent_document_id',
     ];
 
     protected $casts = [
-        'tags' => 'array',
         'metadata' => 'array',
         'file_size' => 'integer',
-        'is_latest_version' => 'boolean',
-        'download_count' => 'integer',
-        'last_accessed_at' => 'datetime',
-        'approved_at' => 'datetime',
+        'version' => 'integer',
+        'is_current_version' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'deleted_at' => 'datetime',
     ];
 
-    // Relationships
-    public function tenant(): BelongsTo
-    {
-        return $this->belongsTo(Tenant::class);
-    }
-
+    /**
+     * Quan hệ với Project
+     */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
-    public function task(): BelongsTo
-    {
-        return $this->belongsTo(Task::class);
-    }
-
-    public function component(): BelongsTo
-    {
-        return $this->belongsTo(Component::class);
-    }
-
-    public function uploadedBy(): BelongsTo
+    /**
+     * Quan hệ với User (người upload)
+     */
+    public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
-    public function approvedBy(): BelongsTo
+    /**
+     * Quan hệ với Tenant
+     */
+    public function tenant(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(Tenant::class);
     }
 
+    /**
+     * Quan hệ với DocumentVersion (tất cả versions)
+     */
     public function versions(): HasMany
     {
-        return $this->hasMany(Document::class, 'original_document_id');
+        return $this->hasMany(DocumentVersion::class)->orderBy('version_number', 'desc');
     }
 
-    public function originalDocument(): BelongsTo
+    /**
+     * Quan hệ với DocumentVersion (version hiện tại)
+     */
+    public function currentVersion(): HasOne
     {
-        return $this->belongsTo(Document::class, 'original_document_id');
+        return $this->hasOne(DocumentVersion::class, 'id', 'current_version_id');
     }
 
-    // Scopes
-    public function scopeForProject($query, $projectId)
+    /**
+     * Quan hệ polymorphic với entity được liên kết
+     */
+    public function linkedEntity(): MorphTo
+    {
+        return $this->morphTo('linked_entity', 'linked_entity_type', 'linked_entity_id');
+    }
+
+    /**
+     * Scope để lọc theo dự án
+     */
+    public function scopeForProject(Builder $query, string $projectId): Builder
     {
         return $query->where('project_id', $projectId);
     }
 
-    public function scopeForTask($query, $taskId)
+    /**
+     * Scope để lọc theo loại entity
+     */
+    public function scopeForEntityType(Builder $query, string $entityType): Builder
     {
-        return $query->where('task_id', $taskId);
+        return $query->where('linked_entity_type', $entityType);
     }
 
-    public function scopeByType($query, $type)
+    /**
+     * Scope để lọc theo entity cụ thể
+     */
+    public function scopeForEntity(Builder $query, string $entityType, string $entityId): Builder
     {
-        return $query->where('type', $type);
+        return $query->where('linked_entity_type', $entityType)
+                    ->where('linked_entity_id', $entityId);
     }
 
-    public function scopeByCategory($query, $category)
+    /**
+     * Scope để lọc documents đã được phê duyệt cho client
+     */
+    public function scopeClientApproved(Builder $query): Builder
     {
-        return $query->where('category', $category);
+        return $query->where('visibility', self::VISIBILITY_CLIENT)
+                    ->where('client_approved', true);
     }
 
-    public function scopeByStatus($query, $status)
+    /**
+     * Scope để lọc theo visibility
+     */
+    public function scopeWithVisibility(Builder $query, string $visibility): Builder
     {
-        return $query->where('status', $status);
+        return $query->where('visibility', $visibility);
     }
 
-    public function scopeLatestVersions($query)
+    /**
+     * Lấy số version tiếp theo
+     */
+    public function getNextVersionNumber(): int
     {
-        return $query->where('is_latest_version', true);
+        $latestVersion = $this->versions()->max('version_number') ?? 0;
+        return $latestVersion + 1;
     }
 
-    public function scopeApproved($query)
+    /**
+     * Tạo version mới cho document
+     */
+    public function createNewVersion(array $versionData): DocumentVersion
     {
-        return $query->where('status', 'approved');
-    }
-
-    public function scopePendingApproval($query)
-    {
-        return $query->where('status', 'pending_approval');
-    }
-
-    public function scopeWithTag($query, $tag)
-    {
-        return $query->whereJsonContains('tags', $tag);
-    }
-
-    // Helper methods
-    public function isDraft(): bool
-    {
-        return $this->status === 'draft';
-    }
-
-    public function isPendingApproval(): bool
-    {
-        return $this->status === 'pending_approval';
-    }
-
-    public function isApproved(): bool
-    {
-        return $this->status === 'approved';
-    }
-
-    public function isRejected(): bool
-    {
-        return $this->status === 'rejected';
-    }
-
-    public function isSuperseded(): bool
-    {
-        return $this->status === 'superseded';
-    }
-
-    public function isLatestVersion(): bool
-    {
-        return $this->is_latest_version;
-    }
-
-    public function getFileSizeFormatted(): string
-    {
-        $bytes = $this->file_size;
-        $units = ['B', 'KB', 'MB', 'GB'];
+        $versionData['document_id'] = $this->id;
+        $versionData['version_number'] = $this->getNextVersionNumber();
         
-        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
-            $bytes /= 1024;
+        $newVersion = DocumentVersion::create($versionData);
+        
+        // Cập nhật current_version_id
+        $this->update(['current_version_id' => $newVersion->id]);
+        
+        return $newVersion;
+    }
+
+    /**
+     * Revert về version cũ
+     */
+    public function revertToVersion(int $versionNumber, string $createdBy, ?string $comment = null): ?DocumentVersion
+    {
+        $targetVersion = $this->versions()->where('version_number', $versionNumber)->first();
+        
+        if (!$targetVersion) {
+            return null;
         }
         
-        return round($bytes, 2) . ' ' . $units[$i];
+        // Tạo version mới từ version cũ
+        $newVersionData = [
+            'file_path' => $targetVersion->file_path,
+            'storage_driver' => $targetVersion->storage_driver,
+            'comment' => $comment ?? "Reverted to version {$versionNumber}",
+            'metadata' => $targetVersion->metadata,
+            'created_by' => $createdBy,
+            'reverted_from_version_number' => $versionNumber,
+        ];
+        
+        return $this->createNewVersion($newVersionData);
     }
 
-    public function getFileExtension(): string
+    /**
+     * Lấy version hiện tại
+     */
+    public function getCurrentVersionNumber(): int
     {
-        return pathinfo($this->original_name, PATHINFO_EXTENSION);
+        return $this->currentVersion?->version_number ?? 0;
     }
 
-    public function incrementDownloadCount(): void
+    /**
+     * Kiểm tra xem document có versions không
+     */
+    public function hasVersions(): bool
     {
-        $this->increment('download_count');
-        $this->update(['last_accessed_at' => now()]);
+        return $this->versions()->exists();
     }
 
-    public function hasTag(string $tag): bool
+    /**
+     * Kiểm tra xem document có thể được client xem không
+     */
+    public function isVisibleToClient(): bool
     {
-        return in_array($tag, $this->tags ?? []);
+        return $this->visibility === self::VISIBILITY_CLIENT && $this->client_approved;
     }
 
-    public function addTag(string $tag): void
+    /**
+     * Lấy danh sách tags dưới dạng string
+     */
+    public function getTagsAsString(): string
     {
-        $tags = $this->tags ?? [];
-        if (!in_array($tag, $tags)) {
-            $tags[] = $tag;
-            $this->update(['tags' => $tags]);
-        }
-    }
-
-    public function removeTag(string $tag): void
-    {
-        $tags = $this->tags ?? [];
-        $tags = array_filter($tags, fn($t) => $t !== $tag);
-        $this->update(['tags' => array_values($tags)]);
+        return $this->tags ? implode(', ', $this->tags) : '';
     }
 }

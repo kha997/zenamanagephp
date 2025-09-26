@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\ZenaProject;
-use App\Models\ZenaTask;
-use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
-use App\Models\ZenaDrawing;
-use Illuminate\Http\Request;
+use App\Models\Drawing;
+use App\Models\Project;
+use App\Models\Rfi;
+use App\Models\Submittal;
+use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 
 class DesignerDashboardController extends Controller
@@ -18,7 +17,7 @@ class DesignerDashboardController extends Controller
      */
     public function getOverview(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -30,7 +29,7 @@ class DesignerDashboardController extends Controller
         $projectId = $request->input('project_id');
         
         // Get Designer's projects
-        $projects = ZenaProject::whereHas('users', function ($q) use ($user) {
+        $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
 
@@ -41,31 +40,28 @@ class DesignerDashboardController extends Controller
         $projects = $projects->get();
 
         $overview = [
-            'projects' => $projects->map(function ($project) use ($user) {
+            'projects' => $projects->map(function ($project) {
                 return [
                     'id' => $project->id,
                     'name' => $project->name,
                     'status' => $project->status,
-                    'design_tasks' => $this->getDesignTasksCount($project->id, $user->id),
-                    'drawings_count' => ZenaDrawing::where('project_id', $project->id)->count(),
-                    'pending_rfis' => ZenaRfi::where('project_id', $project->id)
-                        ->where('assigned_to', $user->id)
-                        ->where('status', 'pending')->count(),
+                    'progress' => $project->progress_percentage ?? 0,
+                    'design_tasks' => $project->tasks()->where('assigned_to', $user->id)->count(),
                 ];
             }),
             'summary' => [
                 'assigned_projects' => $projects->count(),
-                'design_tasks' => ZenaTask::whereIn('project_id', $projects->pluck('id'))
+                'design_tasks' => Task::whereIn('project_id', $projects->pluck('id'))
                     ->where('assigned_to', $user->id)
                     ->where('type', 'design')->count(),
-                'completed_designs' => ZenaTask::whereIn('project_id', $projects->pluck('id'))
+                'completed_designs' => Task::whereIn('project_id', $projects->pluck('id'))
                     ->where('assigned_to', $user->id)
                     ->where('type', 'design')
                     ->where('status', 'completed')->count(),
-                'pending_rfis' => ZenaRfi::whereIn('project_id', $projects->pluck('id'))
+                'pending_rfis' => Rfi::whereIn('project_id', $projects->pluck('id'))
                     ->where('assigned_to', $user->id)
                     ->where('status', 'pending')->count(),
-                'drawings_to_review' => ZenaDrawing::whereIn('project_id', $projects->pluck('id'))
+                'drawings_to_review' => Drawing::whereIn('project_id', $projects->pluck('id'))
                     ->where('status', 'pending_review')->count(),
             ],
             'recent_activities' => $this->getRecentActivities($projects->pluck('id')->toArray()),
@@ -83,7 +79,7 @@ class DesignerDashboardController extends Controller
      */
     public function getDesignTasks(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -96,7 +92,7 @@ class DesignerDashboardController extends Controller
         $status = $request->input('status');
         $priority = $request->input('priority');
         
-        $query = ZenaTask::where('assigned_to', $user->id)
+        $query = Task::where('assigned_to', $user->id)
             ->where('type', 'design');
 
         if ($projectId) {
@@ -139,7 +135,7 @@ class DesignerDashboardController extends Controller
      */
     public function getDrawingsStatus(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -150,13 +146,13 @@ class DesignerDashboardController extends Controller
 
         $projectId = $request->input('project_id');
         
-        $query = ZenaDrawing::query();
+        $query = Drawing::query();
 
         if ($projectId) {
             $query->where('project_id', $projectId);
         } else {
             // Get drawings from designer's projects
-            $projectIds = ZenaProject::whereHas('users', function ($q) use ($user) {
+            $projectIds = Project::whereHas('users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->pluck('id');
             
@@ -201,7 +197,7 @@ class DesignerDashboardController extends Controller
      */
     public function getRfisToAnswer(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -213,7 +209,7 @@ class DesignerDashboardController extends Controller
         $projectId = $request->input('project_id');
         $status = $request->input('status', 'pending');
         
-        $query = ZenaRfi::where('assigned_to', $user->id)
+        $query = Rfi::where('assigned_to', $user->id)
             ->where('status', $status);
 
         if ($projectId) {
@@ -248,7 +244,7 @@ class DesignerDashboardController extends Controller
      */
     public function getSubmittalsStatus(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -259,13 +255,13 @@ class DesignerDashboardController extends Controller
 
         $projectId = $request->input('project_id');
         
-        $query = ZenaSubmittal::query();
+        $query = Submittal::query();
 
         if ($projectId) {
             $query->where('project_id', $projectId);
         } else {
             // Get submittals from designer's projects
-            $projectIds = ZenaProject::whereHas('users', function ($q) use ($user) {
+            $projectIds = Project::whereHas('users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->pluck('id');
             
@@ -309,7 +305,7 @@ class DesignerDashboardController extends Controller
      */
     public function getDesignWorkload(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -321,7 +317,7 @@ class DesignerDashboardController extends Controller
         $projectId = $request->input('project_id');
         
         // Get designer's projects
-        $projects = ZenaProject::whereHas('users', function ($q) use ($user) {
+        $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
 
@@ -338,16 +334,9 @@ class DesignerDashboardController extends Controller
                 return [
                     'project_id' => $project->id,
                     'project_name' => $project->name,
-                    'design_tasks' => ZenaTask::where('project_id', $project->id)
-                        ->where('assigned_to', $user->id)
-                        ->where('type', 'design')->count(),
-                    'completed_tasks' => ZenaTask::where('project_id', $project->id)
-                        ->where('assigned_to', $user->id)
-                        ->where('type', 'design')
-                        ->where('status', 'completed')->count(),
-                    'pending_rfis' => ZenaRfi::where('project_id', $project->id)
-                        ->where('assigned_to', $user->id)
-                        ->where('status', 'pending')->count(),
+                    'assigned_tasks' => $project->tasks()->where('assigned_to', $user->id)->count(),
+                    'completed_tasks' => $project->tasks()->where('assigned_to', $user->id)->where('status', 'completed')->count(),
+                    'pending_tasks' => $project->tasks()->where('assigned_to', $user->id)->where('status', '!=', 'completed')->count(),
                 ];
             }),
         ];
@@ -363,7 +352,7 @@ class DesignerDashboardController extends Controller
      */
     private function getDesignTasksCount(string $projectId, string $userId): int
     {
-        return ZenaTask::where('project_id', $projectId)
+        return Task::where('project_id', $projectId)
             ->where('assigned_to', $userId)
             ->where('type', 'design')
             ->count();
@@ -400,7 +389,7 @@ class DesignerDashboardController extends Controller
      */
     private function getUpcomingDesignDeadlines(array $projectIds, string $userId): array
     {
-        return ZenaTask::whereIn('project_id', $projectIds)
+        return Task::whereIn('project_id', $projectIds)
             ->where('assigned_to', $userId)
             ->where('type', 'design')
             ->where('due_date', '>=', now())
@@ -425,18 +414,18 @@ class DesignerDashboardController extends Controller
      */
     private function calculateCurrentWorkload(array $projectIds, string $userId): array
     {
-        $totalTasks = ZenaTask::whereIn('project_id', $projectIds)
+        $totalTasks = Task::whereIn('project_id', $projectIds)
             ->where('assigned_to', $userId)
             ->where('type', 'design')
             ->count();
 
-        $completedTasks = ZenaTask::whereIn('project_id', $projectIds)
+        $completedTasks = Task::whereIn('project_id', $projectIds)
             ->where('assigned_to', $userId)
             ->where('type', 'design')
             ->where('status', 'completed')
             ->count();
 
-        $pendingRfis = ZenaRfi::whereIn('project_id', $projectIds)
+        $pendingRfis = Rfi::whereIn('project_id', $projectIds)
             ->where('assigned_to', $userId)
             ->where('status', 'pending')
             ->count();
@@ -455,7 +444,7 @@ class DesignerDashboardController extends Controller
      */
     private function getUpcomingDeadlines(array $projectIds, string $userId): array
     {
-        return ZenaTask::whereIn('project_id', $projectIds)
+        return Task::whereIn('project_id', $projectIds)
             ->where('assigned_to', $userId)
             ->where('type', 'design')
             ->where('due_date', '>=', now())

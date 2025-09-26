@@ -2,12 +2,12 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use App\Services\ComponentService;
-use App\Services\NotificationRuleService;
 use App\Services\AuditService;
 use App\Services\CalculationService;
+use App\Services\ComponentService;
 use App\Services\EventBusService;
+use App\Services\NotificationRuleService;
+use Illuminate\Support\ServiceProvider;
 
 class CustomServiceProvider extends ServiceProvider
 {
@@ -42,6 +42,6 @@ class CustomServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        
     }
 }

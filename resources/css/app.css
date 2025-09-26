@@ -52,7 +52,6 @@ body {
 .main-content.with-sidebar {
     margin-left: var(--sidebar-width);
 }
-}
 
 .header {
     background: white;
@@ -168,6 +167,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 0.375rem;
     font-size: 0.875rem;
+    color: #374151; /* text-gray-700 */
     transition: border-color 0.2s;
 }
 

@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Http\Requests;
+use Illuminate\Support\Facades\Auth;
+
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -16,7 +18,7 @@ class TaskBulkCreateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return auth()->check() && auth()->user()->hasPermission('tasks.create');
+        return Auth::check() && Auth::user()->hasPermission('tasks.create');
     }
 
     /**
@@ -60,8 +62,8 @@ class TaskBulkCreateRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Set tenant_id from authenticated user if not provided
-        if (!$this->has('tenant_id') && auth()->check()) {
-            $this->merge(['tenant_id' => auth()->user()->tenant_id]);
+        if (!$this->has('tenant_id') && Auth::check()) {
+            $this->merge(['tenant_id' => Auth::user()->tenant_id]);
         }
     }
 }

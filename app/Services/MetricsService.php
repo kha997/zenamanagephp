@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 
 class MetricsService
 {
@@ -230,8 +229,8 @@ class MetricsService
                 ->count();
             
             // Get document metrics
-            $totalDocuments = DB::table('zena_documents')->count();
-            $totalDocumentSize = DB::table('zena_documents')
+            $totalDocuments = DB::table('documents')->count();
+            $totalDocumentSize = DB::table('documents')
                 ->sum('file_size');
 
             $responseTime = round((microtime(true) - $startTime) * 1000, 2);

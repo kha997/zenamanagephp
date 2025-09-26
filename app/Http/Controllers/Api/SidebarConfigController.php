@@ -4,20 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\SidebarConfig;
-use App\Services\SecurityGuardService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
 
 class SidebarConfigController extends Controller
 {
-    protected SecurityGuardService $securityGuardService;
-
-    public function __construct(SecurityGuardService $securityGuardService)
-    {
-        $this->securityGuardService = $securityGuardService;
-    }
     /**
      * Display a listing of sidebar configs.
      */

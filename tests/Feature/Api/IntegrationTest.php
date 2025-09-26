@@ -167,13 +167,13 @@ class IntegrationTest extends TestCase
         $notification = $response->json('data');
 
         // Verify all entities were created
-        $this->assertDatabaseHas('zena_projects', ['id' => $project['id']]);
-        $this->assertDatabaseHas('zena_tasks', ['id' => $task['id']]);
-        $this->assertDatabaseHas('zena_rfis', ['id' => $rfi['id']]);
-        $this->assertDatabaseHas('zena_submittals', ['id' => $submittal['id']]);
-        $this->assertDatabaseHas('zena_change_requests', ['id' => $changeRequest['id']]);
-        $this->assertDatabaseHas('zena_documents', ['id' => $document['id']]);
-        $this->assertDatabaseHas('zena_notifications', ['id' => $notification['id']]);
+        $this->assertDatabaseHas('projects', ['id' => $project['id']]);
+        $this->assertDatabaseHas('tasks', ['id' => $task['id']]);
+        $this->assertDatabaseHas('rfis', ['id' => $rfi['id']]);
+        $this->assertDatabaseHas('submittals', ['id' => $submittal['id']]);
+        $this->assertDatabaseHas('change_requests', ['id' => $changeRequest['id']]);
+        $this->assertDatabaseHas('documents', ['id' => $document['id']]);
+        $this->assertDatabaseHas('notifications', ['id' => $notification['id']]);
     }
 
     /**
@@ -197,7 +197,7 @@ class IntegrationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'status' => 'in_progress'
         ]);
@@ -211,7 +211,7 @@ class IntegrationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'status' => 'answered'
         ]);
@@ -222,7 +222,7 @@ class IntegrationTest extends TestCase
         ])->postJson("/api/zena/rfis/{$rfi->id}/close");
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_rfis', [
+        $this->assertDatabaseHas('rfis', [
             'id' => $rfi->id,
             'status' => 'closed'
         ]);
@@ -246,7 +246,7 @@ class IntegrationTest extends TestCase
         ])->postJson("/api/zena/submittals/{$submittal->id}/submit");
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_submittals', [
+        $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'status' => 'submitted'
         ]);
@@ -260,7 +260,7 @@ class IntegrationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_submittals', [
+        $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'status' => 'approved'
         ]);
@@ -284,7 +284,7 @@ class IntegrationTest extends TestCase
         ])->postJson("/api/zena/change-requests/{$changeRequest->id}/submit");
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'submitted'
         ]);
@@ -299,7 +299,7 @@ class IntegrationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'approved'
         ]);
@@ -312,7 +312,7 @@ class IntegrationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'implemented'
         ]);
@@ -344,7 +344,7 @@ class IntegrationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_tasks', [
+        $this->assertDatabaseHas('tasks', [
             'id' => $task2->id,
             'dependencies' => json_encode([$task1->id])
         ]);
@@ -430,7 +430,7 @@ class IntegrationTest extends TestCase
         ])->putJson("/api/zena/notifications/{$notification->id}/read");
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('zena_notifications', [
+        $this->assertDatabaseHas('notifications', [
             'id' => $notification->id,
             'status' => 'read'
         ]);

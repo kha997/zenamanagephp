@@ -3,10 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Illuminate\Http\Request;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -29,17 +29,24 @@ class RouteServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         $this->routes(function () {
-            // Test routes
-            Route::group([], base_path('routes/test.php'));
-
-            // Main API routes
+            // Simple API routes for testing middleware
+            Route::prefix('api-simple')
+                ->group(base_path('routes/api-simple.php'));
+                
+            // Main API routes (consolidated)
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
-
+                
             // Web routes
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
+                
+            // Debug routes (only in local environment)
+            if (app()->environment('local')) {
+                Route::middleware('web')
+                    ->group(base_path('routes/debug.php'));
+            }
         });
     }
 
@@ -50,8 +57,11 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting()
     {
+        // Temporarily disable rate limiting to fix cache issues
+        /*
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user('api')?->id ?: $request->ip());  // Sửa từ $request->user()
+            return Limit::perMinute(60)->by($request->user('api')?->id ?: $request->ip());
         });
+        */
     }
 }

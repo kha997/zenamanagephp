@@ -1,0 +1,541 @@
+{
+    "timestamp": "2025-09-19 15:07:19",
+    "moved_files": [
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/ChangeRequest\/Models\/CrLink.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/CrLink.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Compensation\/Models\/Contract.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/Contract.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Compensation\/Models\/TaskCompensation.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/TaskCompensation.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Models\/Baseline.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/Baseline.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Models\/BaselineHistory.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/BaselineHistory.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Models\/ComponentKpi.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/ComponentKpi.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Models\/WorkTemplate.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/WorkTemplate.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/DocumentManagement\/Models\/DocumentVersion.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/DocumentVersion.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Notification\/Models\/Notification.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/Notification.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Models\/RolePermission.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/RolePermission.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Models\/UserRoleCustom.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/UserRoleCustom.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Models\/UserRoleProject.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/UserRoleProject.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Models\/UserRoleSystem.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/UserRoleSystem.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Models\/ProjectPhase.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/ProjectPhase.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Models\/ProjectTask.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/ProjectTask.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Models\/Template.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/Template.php",
+            "status": "moved"
+        },
+        {
+            "type": "Model",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Models\/TemplateVersion.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Models\/TemplateVersion.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Auth\/Services\/AuthService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/AuthService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/ChangeRequest\/Services\/ChangeRequestService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/ChangeRequestService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Common\/Services\/ValidationService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/ValidationService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Compensation\/Services\/CompensationService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/CompensationService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Services\/BaselineService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/BaselineService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Services\/ConditionalTagService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/ConditionalTagService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Services\/WorkTemplateApplicationService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/WorkTemplateApplicationService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/DocumentManagement\/Services\/DocumentService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/DocumentService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Foundation\/Services\/EnhancedMimeValidationService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/EnhancedMimeValidationService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Foundation\/Services\/EventBus.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/EventBus.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Foundation\/Services\/FileStorageService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/FileStorageService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Foundation\/Services\/WebSocketService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/WebSocketService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/InteractionLogs\/Services\/InteractionLogQueryService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/InteractionLogQueryService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/InteractionLogs\/Services\/InteractionLogService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/InteractionLogService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Services\/PermissionMatrixService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/PermissionMatrixService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Services\/RBACManager.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/RBACManager.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Services\/ProjectTaskService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/ProjectTaskService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Service",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Services\/TemplateService.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Services\/TemplateService.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Compensation\/Controllers\/CompensationController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/CompensationController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Controllers\/BaselineController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/BaselineController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Controllers\/WorkTemplateController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/WorkTemplateController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/DocumentManagement\/Controllers\/DocumentController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/DocumentController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Foundation\/Controllers\/FileController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/FileController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/InteractionLogs\/Controllers\/InteractionLogController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/InteractionLogController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Notification\/Controllers\/NotificationRuleController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/NotificationRuleController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Controllers\/AssignmentController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/AssignmentController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Controllers\/PermissionController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/PermissionController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Controllers\/PermissionMatrixController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/PermissionMatrixController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Controllers\/RBACController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/RBACController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Controllers\/RoleController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/RoleController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Controllers\/ProjectTaskController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/ProjectTaskController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Controller",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Controllers\/TemplateController.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Controllers\/TemplateController.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/ChangeRequest\/Requests\/DecideChangeRequestRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/DecideChangeRequestRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/ChangeRequest\/Requests\/StoreChangeRequestRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreChangeRequestRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/ChangeRequest\/Requests\/SubmitChangeRequestRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/SubmitChangeRequestRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/ChangeRequest\/Requests\/UpdateChangeRequestRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateChangeRequestRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Compensation\/Requests\/ApplyContractRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/ApplyContractRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Compensation\/Requests\/PreviewCompensationRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/PreviewCompensationRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Compensation\/Requests\/SyncTaskAssignmentsRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/SyncTaskAssignmentsRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Compensation\/Requests\/UpdateTaskCompensationRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateTaskCompensationRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/CreateBaselineFromProjectRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/CreateBaselineFromProjectRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/RebaselineRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/RebaselineRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/StoreBaselineRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreBaselineRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/StoreComponentRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreComponentRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/StoreProjectRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreProjectRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/StoreTaskAssignmentRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreTaskAssignmentRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/StoreWorkTemplateRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreWorkTemplateRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/UpdateBaselineRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateBaselineRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/UpdateComponentRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateComponentRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/UpdateProjectRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateProjectRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/UpdateTaskAssignmentRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateTaskAssignmentRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/UpdateTaskRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateTaskRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Requests\/UpdateWorkTemplateRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateWorkTemplateRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/DocumentManagement\/Requests\/StoreDocumentRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreDocumentRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/DocumentManagement\/Requests\/UpdateDocumentRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateDocumentRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Notification\/Requests\/StoreNotificationRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreNotificationRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Notification\/Requests\/StoreNotificationRuleRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/StoreNotificationRuleRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Notification\/Requests\/UpdateNotificationRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateNotificationRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Notification\/Requests\/UpdateNotificationRuleRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateNotificationRuleRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Requests\/ApplyTemplateRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/ApplyTemplateRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Requests\/CreateTemplateRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/CreateTemplateRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Request",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/WorkTemplate\/Requests\/UpdateTemplateRequest.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Requests\/UpdateTemplateRequest.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Middleware\/ComponentAccessMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/ComponentAccessMiddleware.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Middleware\/ProjectAccessMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/ProjectAccessMiddleware.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Middleware\/ProjectOwnershipMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/ProjectOwnershipMiddleware.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Middleware\/ProjectStatusMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/ProjectStatusMiddleware.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/CoreProject\/Middleware\/TaskAccessMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/TaskAccessMiddleware.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/Foundation\/Middleware\/PermissionMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/PermissionMiddleware.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Middleware\/AdminOnlyMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/AdminOnlyMiddleware.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Middleware\/ProjectContextMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/ProjectContextMiddleware.php",
+            "status": "moved"
+        },
+        {
+            "type": "Middleware",
+            "from": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/src\/RBAC\/Middleware\/RBACMiddleware.php",
+            "to": "\/Applications\/XAMPP\/xamppfiles\/htdocs\/zenamanage\/app\/Http\/Middleware\/RBACMiddleware.php",
+            "status": "moved"
+        }
+    ],
+    "errors": [],
+    "summary": {
+        "total_moved": 88,
+        "total_errors": 0,
+        "models_moved": 17,
+        "services_moved": 18,
+        "controllers_moved": 14
+    }
+}

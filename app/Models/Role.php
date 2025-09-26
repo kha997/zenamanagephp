@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Models;
 
@@ -6,62 +6,138 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * Model Role - Quản lý vai trò trong hệ thống RBAC
+ * 
+ * @property string $id
+ * @property string $name Tên vai trò
+ * @property string $scope Phạm vi áp dụng (system, custom, project)
+ * @property bool $allow_override Cho phép ghi đè quyền
+ * @property string|null $description Mô tả vai trò
+ */
 class Role extends Model
 {
-    use HasFactory, HasUlids;
+    use HasUlids, HasFactory;
 
+    protected $table = 'roles';
+    
+    /**
+     * Kiểu dữ liệu của khóa chính
+     */
     protected $keyType = 'string';
-    public $incrementing = false;
 
+    /**
+     * Tắt auto increment cho khóa chính
+     */
+    public $incrementing = false;
+    
     protected $fillable = [
         'name',
-        'scope',
+        'scope', 
         'allow_override',
         'description',
+        'is_active',
+        'tenant_id'
     ];
 
     protected $casts = [
         'allow_override' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     /**
-     * Get users that have this role
+     * Các scope hợp lệ cho role
      */
-    public function users(): BelongsToMany
-    {
-        return $this->belongsToMany(User::class, 'user_roles');
-    }
+    public const SCOPE_SYSTEM = 'system';
+    public const SCOPE_CUSTOM = 'custom';
+    public const SCOPE_PROJECT = 'project';
+
+    public const VALID_SCOPES = [
+        self::SCOPE_SYSTEM,
+        self::SCOPE_CUSTOM,
+        self::SCOPE_PROJECT,
+    ];
 
     /**
-     * Get permissions for this role
+     * Relationship: Role có nhiều permissions
      */
     public function permissions(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class, 'role_permissions');
+        return $this->belongsToMany(
+            Permission::class,
+            'role_permissions',
+            'role_id',
+            'permission_id',
+            'id',
+            'id'
+        )->withPivot(['allow_override'])
+          ->withTimestamps();
     }
 
     /**
-     * Check if role has specific permission
+     * Relationship: Role được assign cho nhiều users ở system level
      */
-    public function hasPermission(string $permission): bool
+    public function systemUsers(): BelongsToMany
     {
-        return $this->permissions()->where('name', $permission)->exists();
+        return $this->belongsToMany(
+            \App\Models\User::class,
+            'user_roles',
+            'role_id',
+            'user_id'
+        )->withTimestamps();
     }
 
     /**
-     * Give permission to role
+     * Relationship: Role có nhiều project assignments
      */
-    public function givePermissionTo(Permission $permission): void
+    public function projectAssignments(): HasMany
     {
-        $this->permissions()->syncWithoutDetaching([$permission->id]);
+        return $this->hasMany(UserRoleProject::class);
     }
 
     /**
-     * Revoke permission from role
+     * Kiểm tra role có permission cụ thể không
      */
-    public function revokePermissionTo(Permission $permission): void
+    public function hasPermission(string $permissionCode): bool
     {
-        $this->permissions()->detach($permission->id);
+        return $this->permissions()->where('code', $permissionCode)->exists();
+    }
+
+    /**
+     * Kiểm tra role có thể override permission không
+     */
+    public function canOverridePermission(string $permissionCode): bool
+    {
+        $permission = $this->permissions()
+            ->where('code', $permissionCode)
+            ->first();
+            
+        return $permission && $permission->pivot->allow_override;
+    }
+
+    /**
+     * Scope: Lọc theo scope
+     */
+    public function scopeByScope($query, string $scope)
+    {
+        return $query->where('scope', $scope);
+    }
+
+    /**
+     * Scope: Chỉ lấy system roles
+     */
+    public function scopeSystemRoles($query)
+    {
+        return $query->where('scope', self::SCOPE_SYSTEM);
+    }
+
+    /**
+     * Scope: Chỉ lấy project roles
+     */
+    public function scopeProjectRoles($query)
+    {
+        return $query->where('scope', self::SCOPE_PROJECT);
     }
 }

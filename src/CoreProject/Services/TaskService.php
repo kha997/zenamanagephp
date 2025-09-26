@@ -125,7 +125,7 @@ class TaskService
             $updateFields = array_intersect_key($data, array_flip([
                 'name', 'description', 'start_date', 'end_date', 'status',
                 'priority', 'dependencies', 'conditional_tag', 'is_hidden',
-                'estimated_hours', 'actual_hours', 'tags', 'visibility'
+                'estimated_hours', 'actual_hours', 'tags', 'visibility', 'assignee_id'
             ]));
             
             if (!empty($updateFields)) {

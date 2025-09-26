@@ -5,13 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\ProjectMilestone;
-use App\Models\Task;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 /**
  * ProjectAnalyticsController - API Controller cho Project Analytics
@@ -62,7 +59,7 @@ class ProjectAnalyticsController extends Controller
                 ->count();
             
             // Milestone metrics
-            $totalMilestones = ProjectMilestone::whereHas('project', function ($query) use ($tenantId) {
+            $totalMilestones = ProjectMilestone::whereHas('project', function ($query) {
                 $query->where('tenant_id', $tenantId);
             })->count();
             

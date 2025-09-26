@@ -2,16 +2,12 @@
 
 namespace App\Listeners;
 
-use App\Events\TaskCreated;
-use App\Services\NotificationRuleService;
-use App\Services\AuditService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 
 class SendTaskNotification implements ShouldQueue
 {
-    use InteractsWithQueue;
 
     private NotificationRuleService $notificationService;
     private AuditService $auditService;

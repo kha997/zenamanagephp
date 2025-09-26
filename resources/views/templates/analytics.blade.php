@@ -357,10 +357,9 @@ function templateAnalytics() {
         get filteredTemplates() {
             let filtered = this.templates;
             
+            // Search filter - Enhanced intelligent search
             if (this.searchQuery) {
-                filtered = filtered.filter(template => 
-                    template.name.toLowerCase().includes(this.searchQuery.toLowerCase())
-                );
+                filtered = SmartSearch.filterWithDebug(filtered, this.searchQuery, 'templates', true);
             }
             
             return filtered.sort((a, b) => {
@@ -497,3 +496,7 @@ function templateAnalytics() {
 }
 </script>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/smart-search.js') }}"></script>
+@endpush

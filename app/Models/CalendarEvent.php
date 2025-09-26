@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\Carbon;
 
 /**
  * CalendarEvent Model - Calendar events từ external calendars
@@ -32,7 +31,7 @@ use Carbon\Carbon;
  */
 class CalendarEvent extends Model
 {
-    use HasFactory, HasUlids;
+    use HasUlids, HasFactory;
 
     protected $table = 'calendar_events';
     
@@ -293,8 +292,7 @@ class CalendarEvent extends Model
         $startDate = now();
         $endDate = now()->addDays($days);
         
-        $events = self::whereHas('calendarIntegration', function ($query) use ($userId) {
-            $query->where('user_id', $userId);
+        $events = self::whereHas('calendarIntegration', function ($query) 
         })
         ->whereBetween('start_time', [$startDate, $endDate])
         ->with(['project', 'task', 'milestone', 'calendarIntegration'])

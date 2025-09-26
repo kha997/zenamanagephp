@@ -2,12 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
 
 /**
  * Session Management Service
@@ -394,8 +392,7 @@ class SessionManagementService
     {
         $userAgent = $request->userAgent();
         
-        // Simple device detection (in production, use a proper library)
-        $deviceType = 'desktop';
+        // Simple device detection (in production, 
         if (preg_match('/Mobile|Android|iPhone|iPad/', $userAgent)) {
             $deviceType = 'mobile';
         } elseif (preg_match('/Tablet|iPad/', $userAgent)) {

@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\Tenant;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 /**
  * OpenID Connect Service
@@ -366,8 +365,7 @@ class OIDCService
 
         $cacheKey = "oidc_jwks:{$provider}";
         
-        return Cache::remember($cacheKey, $this->config['cache']['ttl'], function () use ($providerConfig) {
-            $response = Http::get($providerConfig['jwks_uri']);
+        return Cache::remember($cacheKey, $this->config['cache']['ttl'], function () use ($response) {
             
             if ($response->successful()) {
                 return $response->json();

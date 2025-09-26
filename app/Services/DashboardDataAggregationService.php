@@ -2,14 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\ChangeRequest;
-use App\Models\DashboardMetric;
-use App\Models\DashboardMetricValue;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Dashboard Data Aggregation Service

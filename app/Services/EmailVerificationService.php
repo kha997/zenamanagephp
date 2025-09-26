@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 /**
  * Email Verification Service
@@ -74,10 +74,8 @@ class EmailVerificationService
             // Find user with valid token
             $user = User::whereNotNull('email_verification_token')
                 ->where('email_verification_token_expires_at', '>', Carbon::now())
-                ->get()
-                ->first(function ($user) use ($token) {
-                    return Hash::check($token, $user->email_verification_token);
-                });
+                ->where('email_verification_token', $token)
+                ->first();
 
             if (!$user) {
                 return [
@@ -218,10 +216,8 @@ class EmailVerificationService
             $user = User::whereNotNull('email_change_token')
                 ->whereNotNull('pending_email')
                 ->where('email_change_token_expires_at', '>', Carbon::now())
-                ->get()
-                ->first(function ($user) use ($token) {
-                    return Hash::check($token, $user->email_change_token);
-                });
+                ->where('email_change_token', $token)
+                ->first();
 
             if (!$user) {
                 return [

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Integration Demo - ZenaManage</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <h1 class="text-2xl font-bold text-blue-600">ZenaManage</h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500">API Integration Demo</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span class="text-sm text-gray-600">API Connected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Page Title -->
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900">API Integration Demo</h2>
+                <p class="mt-2 text-gray-600">Demonstrating real-time data from ZenaManage APIs</p>
+            </div>
+
+            <!-- API Status Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">Admin Dashboard API</h3>
+                            <p class="text-sm text-gray-500">System-wide statistics and metrics</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span class="text-sm text-green-600">Active</span>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-600">Endpoint: <code class="bg-gray-100 px-2 py-1 rounded">/test-api-admin-dashboard</code></p>
+                        <p class="text-sm text-gray-600 mt-1">Auth: Bearer Token</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900">App Dashboard API</h3>
+                            <p class="text-sm text-gray-500">Tenant-scoped project and task data</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span class="text-sm text-green-600">Active</span>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-600">Endpoint: <code class="bg-gray-100 px-2 py-1 rounded">/test-api-app-dashboard</code></p>
+                        <p class="text-sm text-gray-600 mt-1">Auth: Bearer Token</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Dashboard Data -->
+            <div x-data="apiDemo()" x-init="loadData()">
+                <!-- Admin Dashboard Data -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Admin Dashboard Data</h3>
+                    <div x-show="adminLoading" class="flex justify-center items-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-2 text-gray-600">Loading admin data...</span>
+                    </div>
+                    
+                    <div x-show="adminError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                        <div class="flex">
+                            <div class="py-1">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="font-bold">Error loading admin data</p>
+                                <p x-text="adminError"></p>
+                                <button @click="loadAdminData()" class="mt-2 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
+                                    Retry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div x-show="!adminLoading && !adminError" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Total Users</p>
+                                    <p class="text-3xl font-bold text-gray-900" x-text="adminData.totalUsers || 0"></p>
+                                </div>
+                                <i class="fas fa-users text-4xl text-blue-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Active Projects</p>
+                                    <p class="text-3xl font-bold text-gray-900" x-text="adminData.activeProjects || 0"></p>
+                                </div>
+                                <i class="fas fa-project-diagram text-4xl text-green-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Completed Tasks</p>
+                                    <p class="text-3xl font-bold text-gray-900" x-text="adminData.completedTasks || 0"></p>
+                                </div>
+                                <i class="fas fa-check-circle text-4xl text-yellow-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">System Health</p>
+                                    <p class="text-3xl font-bold text-gray-900" x-text="adminData.systemHealth || 'Good'"></p>
+                                </div>
+                                <i class="fas fa-heartbeat text-4xl text-red-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- App Dashboard Data -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">App Dashboard Data</h3>
+                    <div x-show="appLoading" class="flex justify-center items-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-2 text-gray-600">Loading app data...</span>
+                    </div>
+                    
+                    <div x-show="appError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                        <div class="flex">
+                            <div class="py-1">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="font-bold">Error loading app data</p>
+                                <p x-text="appError"></p>
+                                <button @click="loadAppData()" class="mt-2 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600">
+                                    Retry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div x-show="!appLoading && !appError" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Total Tasks</p>
+                                    <p class="text-3xl font-bold text-gray-900" x-text="appData.totalTasks || 0"></p>
+                                </div>
+                                <i class="fas fa-tasks text-4xl text-blue-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Completed Tasks</p>
+                                    <p class="text-3xl font-bold text-gray-900" x-text="appData.completedTasks || 0"></p>
+                                </div>
+                                <i class="fas fa-check-circle text-4xl text-green-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Team Members</p>
+                                    <p class="text-3xl font-bold text-gray-900" x-text="appData.teamMembers || 0"></p>
+                                </div>
+                                <i class="fas fa-users text-4xl text-yellow-400"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-500">Total Projects</p>
+                                    <p class="text-3xl font-bold text-gray-900" x-text="appData.totalProjects || 0"></p>
+                                </div>
+                                <i class="fas fa-project-diagram text-4xl text-red-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Refresh Button -->
+                <div class="flex justify-center">
+                    <button @click="loadData()" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>
+                        Refresh All Data
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function apiDemo() {
+            return {
+                adminLoading: true,
+                appLoading: true,
+                adminError: null,
+                appError: null,
+                adminData: {},
+                appData: {},
+
+                async loadData() {
+                    await Promise.all([
+                        this.loadAdminData(),
+                        this.loadAppData()
+                    ]);
+                },
+
+                async loadAdminData() {
+                    try {
+                        this.adminLoading = true;
+                        this.adminError = null;
+                        
+                        const token = 'eyJ1c2VyX2lkIjoyOTE0LCJlbWFpbCI6InN1cGVyYWRtaW5AemVuYS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJleHBpcmVzIjoxNzU4NjE2OTIwfQ==';
+                        
+                        const response = await fetch('/test-api-admin-dashboard', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('Admin API Response:', data);
+                        
+                        if (data.status === 'success' && data.data) {
+                            this.adminData = data.data;
+                        }
+                        
+                        this.adminLoading = false;
+                        
+                    } catch (error) {
+                        console.error('Error loading admin data:', error);
+                        this.adminError = error.message;
+                        this.adminLoading = false;
+                    }
+                },
+
+                async loadAppData() {
+                    try {
+                        this.appLoading = true;
+                        this.appError = null;
+                        
+                        const token = 'eyJ1c2VyX2lkIjoyOTE0LCJlbWFpbCI6InN1cGVyYWRtaW5AemVuYS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJleHBpcmVzIjoxNzU4NjE2OTIwfQ==';
+                        
+                        const response = await fetch('/test-api-app-dashboard', {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        console.log('App API Response:', data);
+                        
+                        if (data.success && data.stats) {
+                            this.appData = data.stats;
+                        }
+                        
+                        this.appLoading = false;
+                        
+                    } catch (error) {
+                        console.error('Error loading app data:', error);
+                        this.appError = error.message;
+                        this.appLoading = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

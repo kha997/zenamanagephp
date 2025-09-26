@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,7 +20,7 @@ class CacheMiddleware
             'default_ttl' => config('cache.default_ttl', 3600),
             'short_ttl' => config('cache.short_ttl', 300),
             'long_ttl' => config('cache.long_ttl', 86400),
-            'prefix' => 'zena_cache_',
+            'prefix' => 'cache_',
             'excluded_routes' => [
                 'api/auth/*',
                 'api/users/create',

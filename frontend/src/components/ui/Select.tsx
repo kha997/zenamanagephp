@@ -3,7 +3,7 @@
  * Dropdown select với search và multi-select support
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { cn } from '../../lib/utils/format';
+import { cn } from '../../lib/utils';
 
 interface Option {
   value: string | number;

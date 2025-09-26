@@ -5,79 +5,113 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Log;
+use Src\Compensation\Models\TaskCompensation;
+use Src\Foundation\EventBus;
+use Src\Foundation\Helpers\AuthHelper;
 
+/**
+ * Model Task - Quản lý công việc
+ * 
+ * @property string $id ULID của task (primary key)
+ * @property string $project_id ID dự án (ULID)
+ * @property string|null $component_id ID component (ULID)
+ * @property string|null $phase_id ID phase (ULID)
+ * @property string $name Tên task
+ * @property string|null $description Mô tả
+ * @property \Carbon\Carbon|null $start_date Ngày bắt đầu
+ * @property \Carbon\Carbon|null $end_date Ngày kết thúc
+ * @property string $status Trạng thái
+ * @property string $priority Độ ưu tiên
+ * @property array|null $dependencies Mảng task_ids phụ thuộc
+ * @property string|null $conditional_tag Tag điều kiện
+ * @property bool $is_hidden Ẩn task
+ * @property float $estimated_hours Số giờ ước tính
+ * @property float $actual_hours Số giờ thực tế
+ * @property float $progress_percent Tiến độ %
+ */
 class Task extends Model
 {
-    use HasFactory, HasUlids, SoftDeletes;
-
+    use HasUlids, HasFactory;
+    
     protected $table = 'tasks';
     
     // Cấu hình ULID primary key
     protected $keyType = 'string';
     public $incrementing = false;
-
+    
     protected $fillable = [
+        'tenant_id',
         'project_id',
         'component_id',
         'phase_id',
         'name',
-        'title',
         'description',
-        'status',
-        'priority',
-        'assignee_id',
-        'watchers',
         'start_date',
         'end_date',
-        'progress_percent',
-        'estimated_hours',
-        'actual_hours',
-        'spent_hours',
-        'parent_id',
-        'order',
+        'status',
+        'priority',
         'dependencies',
         'conditional_tag',
         'is_hidden',
+        'estimated_hours',
+        'actual_hours',
+        'estimated_cost',
+        'actual_cost',
+        'progress_percent',
         'tags',
         'visibility',
         'client_approved',
-        'created_by',
-        'updated_by',
+        'assignee_id',
+        'assigned_to',
+        'created_by'
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'progress_percent' => 'decimal:2',
-        'estimated_hours' => 'decimal:2',
-        'actual_hours' => 'decimal:2',
-        'spent_hours' => 'decimal:2',
-        'dependencies' => 'json',
-        'watchers' => 'json',
-        'tags' => 'json',
+        'dependencies' => 'array',
         'is_hidden' => 'boolean',
-        'client_approved' => 'boolean',
-        'order' => 'integer',
+        'estimated_hours' => 'float',
+        'actual_hours' => 'float',
+        'estimated_cost' => 'float',
+        'actual_cost' => 'float',
+        'progress_percent' => 'float',
+        'tags' => 'array',
+        'client_approved' => 'boolean'
+    ];
+
+    protected $attributes = [
+        'status' => 'pending',
+        'priority' => 'medium',
+        'is_hidden' => false,
+        'estimated_hours' => 0.0,
+        'actual_hours' => 0.0,
+        'estimated_cost' => 0.0,
+        'actual_cost' => 0.0,
+        'progress_percent' => 0.0,
+        'visibility' => 'internal',
+        'client_approved' => false
     ];
 
     /**
      * Các trạng thái hợp lệ
      */
-    public const STATUS_TODO = 'todo';
+    public const STATUS_PENDING = 'pending';
     public const STATUS_IN_PROGRESS = 'in_progress';
-    public const STATUS_BLOCKED = 'blocked';
-    public const STATUS_REVIEW = 'review';
-    public const STATUS_DONE = 'done';
+    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_ON_HOLD = 'on_hold';
+    public const STATUS_CANCELLED = 'cancelled';
 
     public const VALID_STATUSES = [
-        self::STATUS_TODO,
+        self::STATUS_PENDING,
         self::STATUS_IN_PROGRESS,
-        self::STATUS_BLOCKED,
-        self::STATUS_REVIEW,
-        self::STATUS_DONE,
+        self::STATUS_COMPLETED,
+        self::STATUS_ON_HOLD,
+        self::STATUS_CANCELLED,
     ];
 
     /**
@@ -86,73 +120,17 @@ class Task extends Model
     public const PRIORITY_LOW = 'low';
     public const PRIORITY_MEDIUM = 'medium';
     public const PRIORITY_HIGH = 'high';
-    public const PRIORITY_URGENT = 'urgent';
+    public const PRIORITY_CRITICAL = 'critical';
 
     public const VALID_PRIORITIES = [
         self::PRIORITY_LOW,
         self::PRIORITY_MEDIUM,
         self::PRIORITY_HIGH,
-        self::PRIORITY_URGENT,
+        self::PRIORITY_CRITICAL,
     ];
 
     /**
-     * Get the project that owns the task.
-     */
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
-    }
-
-    /**
-     * Get the component that owns the task.
-     */
-    public function component(): BelongsTo
-    {
-        return $this->belongsTo(Component::class);
-    }
-
-    /**
-     * Get the user assigned to the task.
-     */
-    public function assignee(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'assignee_id');
-    }
-
-    /**
-     * Get the parent task (for subtasks).
-     */
-    public function parent(): BelongsTo
-    {
-        return $this->belongsTo(Task::class, 'parent_id');
-    }
-
-    /**
-     * Get the subtasks.
-     */
-    public function subtasks(): HasMany
-    {
-        return $this->hasMany(Task::class, 'parent_id')->orderBy('order');
-    }
-
-    /**
-     * Get the user who created the task.
-     */
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    /**
-     * Get the user who last updated the task.
-     */
-    public function updater(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
-    }
-
-    /**
-     * Get the tenant that owns the task.
+     * Relationship: Task thuộc về tenant
      */
     public function tenant(): BelongsTo
     {
@@ -160,7 +138,39 @@ class Task extends Model
     }
 
     /**
-     * Get the task assignments.
+     * Relationship: Task thuộc về project
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Relationship: Task được assign cho user
+     */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * Relationship: Task được tạo bởi user
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Relationship: Task có thể thuộc về component
+     */
+    public function component(): BelongsTo
+    {
+        return $this->belongsTo(Component::class);
+    }
+
+    /**
+     * Relationship: Task có nhiều assignments
      */
     public function assignments(): HasMany
     {
@@ -168,89 +178,126 @@ class Task extends Model
     }
 
     /**
-     * Get teams assigned to this task.
+     * Relationship: Task được assign cho nhiều users
      */
-    public function teams(): BelongsToMany
+    public function assignedUsers(): BelongsToMany
     {
-        return $this->belongsToMany(Team::class, 'task_assignments', 'task_id', 'team_id')
-                    ->where('assignment_type', TaskAssignment::TYPE_TEAM)
-                    ->withPivot(['role', 'assigned_hours', 'actual_hours', 'status', 'assigned_at', 'started_at', 'completed_at', 'notes'])
-                    ->withTimestamps();
+        return $this->belongsToMany(
+            \App\Models\User::class,
+            'task_assignments',
+            'task_id',
+            'user_id'
+        )->withPivot(['split_percent', 'role'])
+          ->withTimestamps();
     }
 
     /**
-     * Get the task notifications.
-     */
-    public function notifications(): HasMany
-    {
-        return $this->hasMany(Notification::class);
-    }
-
-    /**
-     * Get the task interaction logs.
-     */
-    public function interactionLogs(): HasMany
-    {
-        return $this->hasMany(InteractionLog::class);
-    }
-
-    /**
-     * Get the task documents.
-     */
-    public function documents(): HasMany
-    {
-        return $this->hasMany(Document::class);
-    }
-
-    /**
-     * Get the task change requests.
-     */
-    public function changeRequests(): HasMany
-    {
-        return $this->hasMany(ChangeRequest::class);
-    }
-
-    /**
-     * Get the task watchers (users watching this task).
+     * Relationship: Task có nhiều watchers
      */
     public function watchers(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'task_watchers', 'task_id', 'user_id')
-                    ->withTimestamps();
+        return $this->belongsToMany(
+            \App\Models\User::class,
+            'task_watchers',
+            'task_id',
+            'user_id'
+        )->withTimestamps();
     }
 
     /**
-     * Get the task dependencies (tasks this task depends on).
+     * Relationship: Task có nhiều interaction logs
      */
-    public function dependencies(): BelongsToMany
+    public function interactionLogs(): HasMany
     {
-        return $this->belongsToMany(Task::class, 'task_dependencies', 'task_id', 'dependency_id')
-                    ->withTimestamps();
+        return $this->hasMany(\Src\InteractionLogs\Models\InteractionLog::class, 'linked_task_id');
     }
 
     /**
-     * Get the tasks that depend on this task.
+     * Relationship: Task có thể có compensation
      */
-    public function dependents(): BelongsToMany
+    public function compensation(): HasOne
     {
-        return $this->belongsToMany(Task::class, 'task_dependencies', 'dependency_id', 'task_id')
-                    ->withTimestamps();
+        return $this->hasOne(TaskCompensation::class);
     }
 
     /**
-     * SCOPES
+     * Cập nhật tiến độ task
      */
-
-    /**
-     * Scope: Filter by tenant
-     */
-    public function scopeForTenant($query, string $tenantId)
+    public function updateProgress(float $newProgress): void
     {
-        return $query->where('tenant_id', $tenantId);
+        $oldProgress = $this->progress_percent;
+        $this->update(['progress_percent' => $newProgress]);
+        
+        // Auto update status based on progress
+        if ($newProgress >= 100 && $this->status !== self::STATUS_COMPLETED) {
+            $this->update(['status' => self::STATUS_COMPLETED]);
+        } elseif ($newProgress > 0 && $this->status === self::STATUS_PENDING) {
+            $this->update(['status' => self::STATUS_IN_PROGRESS]);
+        }
+        
+        // Dispatch event
+        EventBus::dispatch('Task.Progress.Updated', [
+            'task_id' => $this->ulid,
+            'project_id' => $this->project->ulid,
+            'component_id' => $this->component?->ulid,
+            'old_progress' => $oldProgress,
+            'new_progress' => $newProgress,
+            'actor_id' => $this->resolveActorId() ?? 'system'
+        ]);
     }
 
     /**
-     * Scope: Filter by status
+     * Kiểm tra task có thể bắt đầu không (dependencies đã hoàn thành)
+     */
+    public function canStart(): bool
+    {
+        if (empty($this->dependencies)) {
+            return true;
+        }
+        
+        $dependentTasks = Task::whereIn('ulid', $this->dependencies)->get();
+        
+        return $dependentTasks->every(function ($task) {
+            return $task->status === self::STATUS_COMPLETED;
+        });
+    }
+
+    /**
+     * Lấy các tasks phụ thuộc vào task này
+     */
+    public function getDependentTasks()
+    {
+        return Task::where('project_id', $this->project_id)
+                   ->whereJsonContains('dependencies', $this->ulid)
+                   ->get();
+    }
+
+    /**
+     * Scope: Lọc theo project
+     */
+    public function scopeForProject($query, int $projectId)
+    {
+        return $query->where('project_id', $projectId);
+    }
+
+    /**
+     * Scope: Lọc theo component
+     */
+    public function scopeForComponent($query, int $componentId)
+    {
+        return $query->where('component_id', $componentId);
+    }
+
+    /**
+     * Scope: Chỉ lấy tasks không ẩn
+     */
+    public function scopeVisible($query)
+    {
+        return $query->where('is_hidden', false);
+    }
+
+    /**
+     * Scope: Lọc theo status
      */
     public function scopeByStatus($query, string $status)
     {
@@ -258,7 +305,7 @@ class Task extends Model
     }
 
     /**
-     * Scope: Filter by priority
+     * Scope: Lọc theo priority
      */
     public function scopeByPriority($query, string $priority)
     {
@@ -266,316 +313,35 @@ class Task extends Model
     }
 
     /**
-     * Scope: Filter by assignee
+     * Scope: Tasks có thể bắt đầu
      */
-    public function scopeByAssignee($query, string $assigneeId)
+    public function scopeCanStart($query)
     {
-        return $query->where('assignee_id', $assigneeId);
+        return $query->where('status', self::STATUS_PENDING)
+                    ->where(function($q) {
+                        $q->whereNull('dependencies')
+                          ->orWhereJsonLength('dependencies', 0);
+                    });
     }
 
     /**
-     * Scope: Filter by project
+     * Resolve actor ID safely
      */
-    public function scopeByProject($query, string $projectId)
+    protected function resolveActorId(): ?int
     {
-        return $query->where('project_id', $projectId);
-    }
-
-    /**
-     * Scope: Filter overdue tasks
-     */
-    public function scopeOverdue($query)
-    {
-        return $query->where('end_date', '<', now())
-                     ->whereNotIn('status', [self::STATUS_DONE, 'cancelled']);
-    }
-
-    /**
-     * Scope: Filter tasks due soon
-     */
-    public function scopeDueSoon($query, int $days = 3)
-    {
-        return $query->whereBetween('end_date', [now(), now()->addDays($days)])
-                     ->whereNotIn('status', [self::STATUS_DONE, 'cancelled']);
-    }
-
-    /**
-     * Scope: Filter by watcher
-     */
-    public function scopeByWatcher($query, string $userId)
-    {
-        return $query->whereJsonContains('watchers', $userId);
-    }
-
-    /**
-     * Scope: Search tasks
-     */
-    public function scopeSearch($query, string $search)
-    {
-        return $query->where(function ($q) use ($search) {
-            $q->where('name', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('title', 'like', "%{$search}%");
-        });
-    }
-
-    /**
-     * ACCESSORS & MUTATORS
-     */
-
-    /**
-     * Get task status color
-     */
-    public function getStatusColorAttribute(): string
-    {
-        return match($this->status) {
-            self::STATUS_TODO => 'gray',
-            self::STATUS_IN_PROGRESS => 'blue',
-            self::STATUS_BLOCKED => 'red',
-            self::STATUS_REVIEW => 'yellow',
-            self::STATUS_DONE => 'green',
-            default => 'gray'
-        };
-    }
-
-    /**
-     * Get task priority color
-     */
-    public function getPriorityColorAttribute(): string
-    {
-        return match($this->priority) {
-            self::PRIORITY_LOW => 'green',
-            self::PRIORITY_MEDIUM => 'blue',
-            self::PRIORITY_HIGH => 'orange',
-            self::PRIORITY_URGENT => 'red',
-            default => 'blue'
-        };
-    }
-
-    /**
-     * Get task progress percentage
-     */
-    public function getProgressPercentageAttribute(): float
-    {
-        return (float) $this->progress_percent;
-    }
-
-    /**
-     * Get task duration in hours
-     */
-    public function getDurationHoursAttribute(): ?float
-    {
-        if ($this->start_date && $this->end_date) {
-            return $this->start_date->diffInHours($this->end_date);
+        try {
+            return AuthHelper::id();
+        } catch (\Throwable $e) {
+            Log::warning('Could not resolve actor ID: ' . $e->getMessage());
+            return null;
         }
-        return null;
     }
 
     /**
-     * Get task remaining hours
+     * Tạo factory instance mới cho model
      */
-    public function getRemainingHoursAttribute(): ?float
+    protected static function newFactory()
     {
-        if ($this->estimated_hours && $this->actual_hours) {
-            return max(0, $this->estimated_hours - $this->actual_hours);
-        }
-        return $this->estimated_hours;
-    }
-
-    /**
-     * Check if task is overdue
-     */
-    public function getIsOverdueAttribute(): bool
-    {
-        return $this->end_date && $this->end_date->isPast() && $this->status !== self::STATUS_DONE;
-    }
-
-    /**
-     * Check if task is due soon
-     */
-    public function getIsDueSoonAttribute(): bool
-    {
-        return $this->end_date && $this->end_date->isBetween(now(), now()->addDays(3));
-    }
-
-    /**
-     * Get task health score (0-100)
-     */
-    public function getHealthScoreAttribute(): int
-    {
-        $score = 0;
-        
-        // Progress score (40%)
-        $score += ($this->progress_percent / 100) * 40;
-        
-        // Time score (30%)
-        if ($this->start_date && $this->end_date) {
-            $totalDays = $this->start_date->diffInDays($this->end_date);
-            $elapsedDays = $this->start_date->diffInDays(now());
-            if ($totalDays > 0) {
-                $timeProgress = min(1, $elapsedDays / $totalDays);
-                $score += $timeProgress * 30;
-            }
-        }
-        
-        // Budget score (30%)
-        if ($this->estimated_hours && $this->actual_hours) {
-            $budgetProgress = min(1, $this->actual_hours / $this->estimated_hours);
-            $score += $budgetProgress * 30;
-        }
-        
-        return min(100, (int) $score);
-    }
-
-    /**
-     * BUSINESS LOGIC METHODS
-     */
-
-    /**
-     * Check if task can transition to new status
-     */
-    public function canTransitionTo(string $newStatus): bool
-    {
-        $transitions = [
-            self::STATUS_TODO => [self::STATUS_IN_PROGRESS, self::STATUS_BLOCKED],
-            self::STATUS_IN_PROGRESS => [self::STATUS_REVIEW, self::STATUS_BLOCKED],
-            self::STATUS_BLOCKED => [self::STATUS_TODO, self::STATUS_IN_PROGRESS],
-            self::STATUS_REVIEW => [self::STATUS_DONE, self::STATUS_IN_PROGRESS],
-            self::STATUS_DONE => []
-        ];
-        
-        return in_array($newStatus, $transitions[$this->status] ?? []);
-    }
-
-    /**
-     * Transition task to new status
-     */
-    public function transitionTo(string $newStatus, string $reason = null): bool
-    {
-        if (!$this->canTransitionTo($newStatus)) {
-            return false;
-        }
-
-        $oldStatus = $this->status;
-        $this->update(['status' => $newStatus]);
-
-        // Log audit
-        if (class_exists('\App\Services\AuditService')) {
-            \App\Services\AuditService::log(
-                'task_status_changed',
-                'Task',
-                $this->id,
-                ['status' => $oldStatus, 'reason' => $reason],
-                ['status' => $newStatus]
-            );
-        }
-
-        return true;
-    }
-
-    /**
-     * Add watcher to task
-     */
-    public function addWatcher(string $userId): bool
-    {
-        $watchers = $this->watchers ?? [];
-        if (!in_array($userId, $watchers)) {
-            $watchers[] = $userId;
-            $this->update(['watchers' => $watchers]);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Remove watcher from task
-     */
-    public function removeWatcher(string $userId): bool
-    {
-        $watchers = $this->watchers ?? [];
-        $key = array_search($userId, $watchers);
-        if ($key !== false) {
-            unset($watchers[$key]);
-            $this->update(['watchers' => array_values($watchers)]);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Add dependency to task
-     */
-    public function addDependency(string $dependencyId): bool
-    {
-        $dependencies = $this->dependencies ?? [];
-        if (!in_array($dependencyId, $dependencies)) {
-            $dependencies[] = $dependencyId;
-            $this->update(['dependencies' => $dependencies]);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Remove dependency from task
-     */
-    public function removeDependency(string $dependencyId): bool
-    {
-        $dependencies = $this->dependencies ?? [];
-        $key = array_search($dependencyId, $dependencies);
-        if ($key !== false) {
-            unset($dependencies[$key]);
-            $this->update(['dependencies' => array_values($dependencies)]);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Check if task has circular dependency
-     */
-    public function hasCircularDependency(string $dependencyId): bool
-    {
-        if ($dependencyId === $this->id) {
-            return true;
-        }
-
-        $dependency = Task::find($dependencyId);
-        if (!$dependency) {
-            return false;
-        }
-
-        $dependencies = $dependency->dependencies ?? [];
-        return in_array($this->id, $dependencies);
-    }
-
-    /**
-     * Calculate task progress based on subtasks
-     */
-    public function calculateProgress(): float
-    {
-        $subtasks = $this->subtasks;
-        
-        if ($subtasks->count() === 0) {
-            return $this->progress_percent;
-        }
-        
-        $totalWeight = $subtasks->sum('estimated_hours') ?: $subtasks->count();
-        $completedWeight = $subtasks->where('status', self::STATUS_DONE)->sum('estimated_hours') ?: 
-                          $subtasks->where('status', self::STATUS_DONE)->count();
-        
-        if ($totalWeight == 0) {
-            return 0.0;
-        }
-        
-        return round(($completedWeight / $totalWeight) * 100, 2);
-    }
-
-    /**
-     * Update task progress
-     */
-    public function updateProgress(): void
-    {
-        $this->update(['progress_percent' => $this->calculateProgress()]);
+        return \Database\Factories\TaskFactory::new();
     }
 }

@@ -4,8 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 
 /**
  * MobileAPIService - Service cho mobile-optimized APIs
@@ -74,8 +72,7 @@ class MobileAPIService
 
         $cacheKey = 'mobile_paginated_' . md5(serialize(func_get_args()));
         
-        return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () use ($callback, $page, $perPage, $options) {
-            $result = $callback($page, $perPage);
+        return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () 
             
             return [
                 'data' => $this->optimizeForMobile($result['data'] ?? [], $options),
@@ -99,17 +96,7 @@ class MobileAPIService
     {
         $cacheKey = "mobile_dashboard_{$userId}";
         
-        return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () use ($userId) {
-            return [
-                'user' => $this->getUserSummary($userId),
-                'projects' => $this->getProjectsSummary($userId),
-                'tasks' => $this->getTasksSummary($userId),
-                'notifications' => $this->getNotificationsSummary($userId),
-                'calendar' => $this->getCalendarSummary($userId),
-                'quick_actions' => $this->getQuickActions($userId),
-                'stats' => $this->getMobileStats($userId),
-                'last_updated' => now()->toISOString()
-            ];
+        return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () 
         });
     }
 
@@ -186,13 +173,7 @@ class MobileAPIService
     {
         $cacheKey = "mobile_search_" . md5($query . $userId . serialize($filters));
         
-        return Cache::remember($cacheKey, 300, function () use ($query, $userId, $filters) {
-            $results = [
-                'projects' => $this->searchProjects($query, $userId, $filters),
-                'tasks' => $this->searchTasks($query, $userId, $filters),
-                'users' => $this->searchUsers($query, $userId, $filters),
-                'documents' => $this->searchDocuments($query, $userId, $filters)
-            ];
+        return Cache::remember($cacheKey, 300, function () 
 
             return [
                 'query' => $query,
@@ -211,16 +192,7 @@ class MobileAPIService
     {
         $cacheKey = "mobile_analytics_{$userId}_{$period}";
         
-        return Cache::remember($cacheKey, 3600, function () use ($userId, $period) {
-            return [
-                'user_activity' => $this->getUserActivity($userId, $period),
-                'project_progress' => $this->getProjectProgress($userId, $period),
-                'task_completion' => $this->getTaskCompletion($userId, $period),
-                'time_tracking' => $this->getTimeTracking($userId, $period),
-                'productivity_score' => $this->getProductivityScore($userId, $period),
-                'period' => $period,
-                'generated_at' => now()->toISOString()
-            ];
+        return Cache::remember($cacheKey, 3600, function () 
         });
     }
 
@@ -230,8 +202,7 @@ class MobileAPIService
     private function excludeFields(array $data, array $fields): array
     {
         if (isset($data['data']) && is_array($data['data'])) {
-            $data['data'] = array_map(function ($item) use ($fields) {
-                return array_diff_key($item, array_flip($fields));
+            $data['data'] = array_map(function ($item) 
             }, $data['data']);
         } else {
             $data = array_diff_key($data, array_flip($fields));

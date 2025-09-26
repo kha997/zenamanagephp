@@ -2,21 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use App\Models\DashboardWidget;
-use App\Models\UserDashboard;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\RFI;
 use App\Models\Inspection;
 use App\Models\NCR;
-use App\Models\ChangeRequest;
-use App\Models\Submittal;
-use App\Models\SiteDiary;
-use App\Models\SafetyIncident;
-use Illuminate\Support\Facades\DB;
+use App\Models\Project;
+use App\Models\RFI;
+use App\Models\Task;
+use App\Models\UserDashboard;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Collection;
 
 class DashboardRoleBasedService
 {
@@ -333,8 +326,7 @@ class DashboardRoleBasedService
             $query->where('id', $projectId);
         } elseif ($role !== 'system_admin') {
             // Non-admin users only see assigned projects
-            $query->whereHas('projectUsers', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
+            $query->whereHas('projectUsers', function ($q) 
             });
         }
 
@@ -401,8 +393,7 @@ class DashboardRoleBasedService
         switch ($role) {
             case 'project_manager':
                 // PM sees all tasks in assigned projects
-                $query->whereHas('project.projectUsers', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
+                $query->whereHas('project.projectUsers', function ($q) 
                 });
                 break;
             
@@ -465,8 +456,7 @@ class DashboardRoleBasedService
         // Role-based RFI access
         switch ($role) {
             case 'project_manager':
-                $query->whereHas('project.projectUsers', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
+                $query->whereHas('project.projectUsers', function ($q) 
                 });
                 break;
             
@@ -516,8 +506,7 @@ class DashboardRoleBasedService
         if ($projectId) {
             $query->where('id', $projectId);
         } elseif ($role !== 'system_admin') {
-            $query->whereHas('projectUsers', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
+            $query->whereHas('projectUsers', function ($q) 
             });
         }
 
@@ -583,8 +572,7 @@ class DashboardRoleBasedService
             ->where('tenant_id', $user->tenant_id)
             ->where('is_read', false)
             ->whereIn('type', $roleConfig['alert_types'])
-            ->when($projectId, function ($query) use ($projectId) {
-                $query->where('context->project_id', $projectId);
+            ->when($projectId, function ($query) 
             })
             ->orderBy('created_at', 'desc')
             ->limit(20)
@@ -836,8 +824,7 @@ class DashboardRoleBasedService
         }
 
         $availableProjects = Project::where('tenant_id', $user->tenant_id)
-            ->whereHas('projectUsers', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
+            ->whereHas('projectUsers', function ($q) 
             })
             ->get()
             ->map(function ($p) {

@@ -4,15 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Src\Foundation\Traits\HasTimestamps;
-use Src\Foundation\Traits\HasAuditLog;
-use Src\RBAC\Traits\HasRBACContext;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasRoles;
 
 /**
@@ -33,9 +29,7 @@ use App\Traits\HasRoles;
  */
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasUlids;
-    
-    use HasTimestamps, HasRoles;
+    use HasUlids, HasFactory, HasApiTokens, HasRoles;
 
     /**
      * Cấu hình ULID primary key
@@ -44,6 +38,7 @@ class User extends Authenticatable
     public $incrementing = false;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'email',
         'password',
@@ -83,14 +78,13 @@ class User extends Authenticatable
         'is_active' => true
     ];
 
-
     /**
      * Relationship: User có nhiều Z.E.N.A roles
      */
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(ZenaRole::class, 'zena_user_roles', 'user_id', 'role_id')
-            ->using(ZenaUserRole::class)
+        return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id')
+            ->using(UserRole::class)
             ->withPivot('id')
             ->withTimestamps();
     }
@@ -108,7 +102,7 @@ class User extends Authenticatable
      */
     public function zenaNotifications(): HasMany
     {
-        return $this->hasMany(ZenaNotification::class);
+        return $this->hasMany(Notification::class);
     }
 
     /**
@@ -167,7 +161,7 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         return $this->roles()->whereHas('permissions', function ($query) use ($permission) {
-            $query->where('name', $permission);
+            return $query->where('name', $permission);
         })->exists();
     }
 
@@ -177,7 +171,7 @@ class User extends Authenticatable
     public function hasAnyPermission(array $permissions): bool
     {
         return $this->roles()->whereHas('permissions', function ($query) use ($permissions) {
-            $query->whereIn('name', $permissions);
+            return $query->whereIn('name', $permissions);
         })->exists();
     }
 

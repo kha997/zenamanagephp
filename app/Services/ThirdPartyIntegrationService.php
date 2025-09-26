@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * ThirdPartyIntegrationService - Service cho third-party API integrations
@@ -479,12 +479,7 @@ class ThirdPartyIntegrationService
         try {
             $cacheKey = "weather_{$city}_" . now()->format('Y-m-d-H');
             
-            return Cache::remember($cacheKey, 3600, function () use ($apiKey, $city) {
-                $response = Http::get("https://api.openweathermap.org/data/2.5/weather", [
-                    'q' => $city,
-                    'appid' => $apiKey,
-                    'units' => 'metric'
-                ]);
+            return Cache::remember($cacheKey, 3600, function () 
 
                 if ($response->successful()) {
                     return [
@@ -520,8 +515,7 @@ class ThirdPartyIntegrationService
         try {
             $cacheKey = "currency_rates_{$baseCurrency}_" . now()->format('Y-m-d');
             
-            return Cache::remember($cacheKey, 86400, function () use ($apiKey, $baseCurrency) {
-                $response = Http::get("https://api.exchangerate-api.com/v4/latest/{$baseCurrency}");
+            return Cache::remember($cacheKey, 86400, function () 
 
                 if ($response->successful()) {
                     return [

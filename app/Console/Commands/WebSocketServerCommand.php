@@ -2,11 +2,11 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use Ratchet\Server\IoServer;
-use Ratchet\Http\HttpServer;
-use Ratchet\WebSocket\WsServer;
 use App\WebSocket\DashboardWebSocketHandler;
+use Illuminate\Console\Command;
+use Ratchet\Http\HttpServer;
+use Ratchet\Server\IoServer;
+use Ratchet\WebSocket\WsServer;
 
 /**
  * WebSocket Server Command

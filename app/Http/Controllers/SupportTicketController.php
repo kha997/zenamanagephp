@@ -1,16 +1,15 @@
 <?php
 
 namespace App\Http\Controllers;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Notification;
 use App\Notifications\SupportTicketCreated;
-use App\Notifications\SupportTicketUpdated;
 use App\Notifications\SupportTicketResolved;
+use App\Notifications\SupportTicketUpdated;
 use Carbon\Carbon;
 
 class SupportTicketController extends Controller
@@ -40,10 +39,7 @@ class SupportTicketController extends Controller
         // Search
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('subject', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('ticket_number', 'like', "%{$search}%");
+            $query->where(function($q) 
             });
         }
 
@@ -101,7 +97,7 @@ class SupportTicketController extends Controller
             'category' => $request->category,
             'priority' => $request->priority,
             'status' => 'open',
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'assigned_to' => null,
             'due_date' => $this->calculateDueDate($request->priority)
         ]);
@@ -142,7 +138,7 @@ class SupportTicketController extends Controller
         $ticket->load(['user', 'assignedTo', 'messages.user']);
 
         // Mark as read if user is assigned to or created the ticket
-        if (auth()->user()->can('view', $ticket)) {
+        if (Auth::user()->can('view', $ticket)) {
             $ticket->markAsRead();
         }
 
@@ -254,7 +250,7 @@ class SupportTicketController extends Controller
 
         $message = SupportTicketMessage::create([
             'ticket_id' => $ticket->id,
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'message' => $request->message,
             'is_internal' => $request->boolean('is_internal', false)
         ]);
@@ -275,7 +271,7 @@ class SupportTicketController extends Controller
         }
 
         // Update ticket status if message is from support agent
-        if (auth()->user()->hasRole(['support_agent', 'admin']) && !$request->boolean('is_internal')) {
+        if (Auth::user()->hasRole(['support_agent', 'admin']) && !$request->boolean('is_internal')) {
             $ticket->update(['status' => 'in_progress']);
         }
 
@@ -302,7 +298,7 @@ class SupportTicketController extends Controller
         $ticket->update([
             'status' => 'closed',
             'closed_at' => now(),
-            'closed_by' => auth()->id()
+            'closed_by' => Auth::id()
         ]);
 
         // Send notification

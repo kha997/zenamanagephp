@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskAssignment extends Model
 {
-    use HasFactory, HasUlids;
+    use HasUlids, HasFactory;
 
     protected $table = 'task_assignments';
     
@@ -31,6 +31,16 @@ class TaskAssignment extends Model
         'notes',
         'created_by',
         'updated_by',
+    ];
+
+    protected $attributes = [
+        'user_id' => null,
+        'team_id' => null,
+        'assignment_type' => 'user',
+        'role' => 'assignee',
+        'assigned_hours' => 0.0,
+        'actual_hours' => 0.0,
+        'status' => 'assigned',
     ];
 
     protected $casts = [
@@ -287,6 +297,6 @@ class TaskAssignment extends Model
      */
     public function getRemainingHoursAttribute(): float
     {
-        return max(0, ($this->assigned_hours ?? 0) - ($this->actual_hours ?? 0));
+        return ($this->assigned_hours ?? 0) - ($this->actual_hours ?? 0);
     }
 }

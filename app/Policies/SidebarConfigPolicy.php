@@ -2,13 +2,10 @@
 
 namespace App\Policies;
 
-use App\Models\SidebarConfig;
-use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class SidebarConfigPolicy
 {
-    use HandlesAuthorization;
 
     /**
      * Perform pre-authorization checks.

@@ -4,13 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Task;
-use App\Models\Project;
-use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
@@ -212,13 +209,13 @@ class TaskController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
 
-        $task = ZenaTask::with(['project', 'component', 'assignments.user', 'dependencies'])
+        $task = Task::with(['project', 'component', 'assignments.user', 'dependencies'])
             ->find($id);
 
         if (!$task) {
@@ -233,13 +230,13 @@ class TaskController extends Controller
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
 
-        $task = ZenaTask::find($id);
+        $task = Task::find($id);
 
         if (!$task) {
             return $this->error('Task not found', 404);
@@ -255,7 +252,7 @@ class TaskController extends Controller
             'estimated_hours' => 'nullable|numeric|min:0',
             'actual_hours' => 'nullable|numeric|min:0',
             'dependencies' => 'nullable|array',
-            'dependencies.*' => 'exists:zena_tasks,id',
+            'dependencies.*' => 'exists:tasks,id',
         ]);
 
         if ($validator->fails()) {
@@ -294,13 +291,13 @@ class TaskController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
 
-        $task = ZenaTask::find($id);
+        $task = Task::find($id);
 
         if (!$task) {
             return $this->error('Task not found', 404);
@@ -321,7 +318,7 @@ class TaskController extends Controller
      */
     public function updateStatus(Request $request, string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
@@ -335,7 +332,7 @@ class TaskController extends Controller
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $task = ZenaTask::find($id);
+        $task = Task::find($id);
 
         if (!$task) {
             return $this->error('Task not found', 404);
@@ -356,13 +353,13 @@ class TaskController extends Controller
      */
     public function getDependencies(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
 
-        $task = ZenaTask::with(['dependencies'])->find($id);
+        $task = Task::with(['dependencies'])->find($id);
 
         if (!$task) {
             return $this->error('Task not found', 404);

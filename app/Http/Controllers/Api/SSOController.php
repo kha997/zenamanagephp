@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\OIDCService;
+use App\Services\LService;
 use App\Services\SAMLService;
-use Illuminate\Http\Request;
+use App\Services\OIDCService;
 use Illuminate\Http\JsonResponse;
 
 /**

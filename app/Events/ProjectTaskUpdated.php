@@ -2,22 +2,15 @@
 
 namespace App\Events;
 
-use App\Models\Task;
-use App\Models\Project;
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
 
 /**
  * ProjectTaskUpdated Event - Broadcast khi task được cập nhật
  */
 class ProjectTaskUpdated implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public Task $task;
     public Project $project;

@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Services;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Models\Component;
 use App\Models\Project;
@@ -9,6 +11,7 @@ use App\Models\InteractionLog;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ComponentService
 {
@@ -21,7 +24,7 @@ class ComponentService
         
         try {
             $component = Component::create([
-                'id' => \Str::ulid(),
+                'id' => Str::ulid(),
                 'tenant_id' => $data['tenant_id'],
                 'project_id' => $data['project_id'],
                 'name' => $data['name'],
@@ -77,7 +80,7 @@ class ComponentService
             // Log the update
             $this->logInteraction([
                 'tenant_id' => $component->tenant_id,
-                'user_id' => $data['updated_by'] ?? auth()->id(),
+                'user_id' => $data['updated_by'] ?? Auth::id(),
                 'project_id' => $component->project_id,
                 'component_id' => $component->id,
                 'type' => 'component_updated',
@@ -413,7 +416,7 @@ class ComponentService
     private function logInteraction(array $data): void
     {
         InteractionLog::create([
-            'id' => \Str::ulid(),
+            'id' => Str::ulid(),
             'tenant_id' => $data['tenant_id'],
             'user_id' => $data['user_id'],
             'project_id' => $data['project_id'] ?? null,

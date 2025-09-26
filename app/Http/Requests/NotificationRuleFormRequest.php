@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Requests;
+use Illuminate\Support\Facades\Auth;
+
 
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -17,7 +19,7 @@ class NotificationRuleFormRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return auth()->check();
+        return Auth::check();
     }
     
     /**

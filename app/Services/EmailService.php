@@ -2,19 +2,14 @@
 
 namespace App\Services;
 
-use App\Models\Invitation;
-use App\Models\User;
-use App\Models\EmailTracking;
-use App\Mail\InvitationEmail;
-use App\Mail\WelcomeEmail;
 use App\Jobs\SendInvitationEmailJob;
 use App\Jobs\SendWelcomeEmailJob;
-use App\Services\EmailTemplateCacheService;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Str;
+use App\Mail\InvitationEmail;
+use App\Mail\WelcomeEmail;
+use App\Models\EmailTracking;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class EmailService
 {

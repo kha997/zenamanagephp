@@ -2,8 +2,6 @@
 
 namespace App\View\Components;
 
-use App\Services\SidebarService;
-use App\Services\BadgeService;
 use Illuminate\View\Component;
 use Illuminate\View\View;
 

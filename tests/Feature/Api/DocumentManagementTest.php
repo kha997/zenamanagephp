@@ -64,7 +64,7 @@ class DocumentManagementTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_documents', [
+        $this->assertDatabaseHas('documents', [
             'title' => 'Test Document',
             'project_id' => $this->project->id,
             'document_type' => 'drawing'
@@ -181,7 +181,7 @@ class DocumentManagementTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_documents', [
+        $this->assertDatabaseHas('documents', [
             'parent_document_id' => $document->id,
             'version' => '2.0',
             'change_notes' => 'Updated with new specifications'
@@ -256,7 +256,7 @@ class DocumentManagementTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_documents', [
+        $this->assertDatabaseHas('documents', [
             'id' => $document->id,
             'title' => 'Updated Document Title'
         ]);
@@ -282,7 +282,7 @@ class DocumentManagementTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('zena_documents', [
+        $this->assertDatabaseMissing('documents', [
             'id' => $document->id
         ]);
 

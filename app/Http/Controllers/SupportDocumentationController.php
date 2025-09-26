@@ -1,9 +1,10 @@
 <?php
 
 namespace App\Http\Controllers;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Models\SupportDocumentation;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -29,10 +30,7 @@ class SupportDocumentationController extends Controller
         // Search
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('content', 'like', "%{$search}%")
-                  ->orWhere('tags', 'like', "%{$search}%");
+            $query->where(function($q) 
             });
         }
 
@@ -104,7 +102,7 @@ class SupportDocumentationController extends Controller
             'category' => $request->category,
             'status' => $request->status,
             'tags' => $request->tags,
-            'author_id' => auth()->id(),
+            'author_id' => Auth::id(),
             'published_at' => $request->status === 'published' ? now() : null
         ]);
 
@@ -190,7 +188,7 @@ class SupportDocumentationController extends Controller
             'category' => $request->category,
             'status' => $request->status,
             'tags' => $request->tags,
-            'updated_by' => auth()->id(),
+            'updated_by' => Auth::id(),
             'published_at' => $request->status === 'published' && $document->status !== 'published' ? now() : $document->published_at
         ]);
 
@@ -243,7 +241,7 @@ class SupportDocumentationController extends Controller
             'title' => $document->title,
             'content' => $document->content,
             'version_number' => $document->versions()->count() + 1,
-            'created_by' => auth()->id()
+            'created_by' => Auth::id()
         ]);
     }
 
@@ -275,10 +273,7 @@ class SupportDocumentationController extends Controller
         }
 
         if ($query) {
-            $documents->where(function($q) use ($query) {
-                $q->where('title', 'like', "%{$query}%")
-                  ->orWhere('content', 'like', "%{$query}%")
-                  ->orWhere('tags', 'like', "%{$query}%");
+            $documents->where(function($q) 
             });
         }
 
@@ -352,8 +347,7 @@ class SupportDocumentationController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"'
         ];
 
-        $callback = function() use ($documents) {
-            $file = fopen('php://output', 'w');
+        $callback = function() 
             
             // Headers
             fputcsv($file, ['Title', 'Category', 'Status', 'Views', 'Created At', 'Updated At']);

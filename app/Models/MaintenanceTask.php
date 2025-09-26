@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MaintenanceTask extends Model
 {
-    use HasFactory;
 
     protected $fillable = [
         'task',

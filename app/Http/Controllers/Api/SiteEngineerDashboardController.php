@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\ZenaProject;
-use App\Models\ZenaTask;
-use App\Models\ZenaRfi;
-use App\Models\ZenaMaterialRequest;
-use App\Models\ZenaQcInspection;
-use Illuminate\Http\Request;
+use App\Models\MaterialRequest;
+use App\Models\Project;
+use App\Models\QcInspection;
+use App\Models\Rfi;
+use App\Models\Task;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class SiteEngineerDashboardController extends Controller
 {
@@ -18,7 +18,7 @@ class SiteEngineerDashboardController extends Controller
      */
     public function getOverview(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -30,7 +30,7 @@ class SiteEngineerDashboardController extends Controller
         $projectId = $request->input('project_id');
         
         // Get Site Engineer's projects
-        $projects = ZenaProject::whereHas('users', function ($q) use ($user) {
+        $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
 
@@ -41,28 +41,27 @@ class SiteEngineerDashboardController extends Controller
         $projects = $projects->get();
 
         $overview = [
-            'projects' => $projects->map(function ($project) use ($user) {
+            'projects' => $projects->map(function ($project) {
                 return [
                     'id' => $project->id,
                     'name' => $project->name,
                     'status' => $project->status,
-                    'site_tasks' => $this->getSiteTasksCount($project->id, $user->id),
-                    'material_requests' => ZenaMaterialRequest::where('project_id', $project->id)->count(),
-                    'qc_inspections' => ZenaQcInspection::where('project_id', $project->id)->count(),
+                    'progress' => $project->progress_percentage ?? 0,
+                    'site_tasks' => $project->tasks()->where('assigned_to', $user->id)->count(),
                 ];
             }),
             'summary' => [
                 'assigned_projects' => $projects->count(),
-                'site_tasks' => ZenaTask::whereIn('project_id', $projects->pluck('id'))
+                'site_tasks' => Task::whereIn('project_id', $projects->pluck('id'))
                     ->where('assigned_to', $user->id)
                     ->where('type', 'site')->count(),
-                'completed_site_tasks' => ZenaTask::whereIn('project_id', $projects->pluck('id'))
+                'completed_site_tasks' => Task::whereIn('project_id', $projects->pluck('id'))
                     ->where('assigned_to', $user->id)
                     ->where('type', 'site')
                     ->where('status', 'completed')->count(),
-                'material_requests' => ZenaMaterialRequest::whereIn('project_id', $projects->pluck('id'))
+                'material_requests' => MaterialRequest::whereIn('project_id', $projects->pluck('id'))
                     ->where('status', 'pending')->count(),
-                'qc_inspections' => ZenaQcInspection::whereIn('project_id', $projects->pluck('id'))
+                'qc_inspections' => QcInspection::whereIn('project_id', $projects->pluck('id'))
                     ->where('status', 'pending')->count(),
             ],
             'recent_activities' => $this->getRecentActivities($projects->pluck('id')->toArray()),
@@ -80,7 +79,7 @@ class SiteEngineerDashboardController extends Controller
      */
     public function getSiteTasks(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -93,7 +92,7 @@ class SiteEngineerDashboardController extends Controller
         $status = $request->input('status');
         $priority = $request->input('priority');
         
-        $query = ZenaTask::where('assigned_to', $user->id)
+        $query = Task::where('assigned_to', $user->id)
             ->where('type', 'site');
 
         if ($projectId) {
@@ -136,7 +135,7 @@ class SiteEngineerDashboardController extends Controller
      */
     public function getMaterialRequests(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -148,13 +147,13 @@ class SiteEngineerDashboardController extends Controller
         $projectId = $request->input('project_id');
         $status = $request->input('status');
         
-        $query = ZenaMaterialRequest::query();
+        $query = MaterialRequest::query();
 
         if ($projectId) {
             $query->where('project_id', $projectId);
         } else {
             // Get material requests from site engineer's projects
-            $projectIds = ZenaProject::whereHas('users', function ($q) use ($user) {
+            $projectIds = Project::whereHas('users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->pluck('id');
             
@@ -197,7 +196,7 @@ class SiteEngineerDashboardController extends Controller
      */
     public function getSiteRfis(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -209,13 +208,13 @@ class SiteEngineerDashboardController extends Controller
         $projectId = $request->input('project_id');
         $status = $request->input('status');
         
-        $query = ZenaRfi::query();
+        $query = Rfi::query();
 
         if ($projectId) {
             $query->where('project_id', $projectId);
         } else {
             // Get RFIs from site engineer's projects
-            $projectIds = ZenaProject::whereHas('users', function ($q) use ($user) {
+            $projectIds = Project::whereHas('users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->pluck('id');
             
@@ -255,7 +254,7 @@ class SiteEngineerDashboardController extends Controller
      */
     public function getQcInspections(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -267,13 +266,13 @@ class SiteEngineerDashboardController extends Controller
         $projectId = $request->input('project_id');
         $status = $request->input('status');
         
-        $query = ZenaQcInspection::query();
+        $query = QcInspection::query();
 
         if ($projectId) {
             $query->where('project_id', $projectId);
         } else {
             // Get inspections from site engineer's projects
-            $projectIds = ZenaProject::whereHas('users', function ($q) use ($user) {
+            $projectIds = Project::whereHas('users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })->pluck('id');
             
@@ -312,7 +311,7 @@ class SiteEngineerDashboardController extends Controller
      */
     public function getSiteSafetyStatus(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -324,7 +323,7 @@ class SiteEngineerDashboardController extends Controller
         $projectId = $request->input('project_id');
         
         // Get site engineer's projects
-        $projects = ZenaProject::whereHas('users', function ($q) use ($user) {
+        $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
 
@@ -352,7 +351,7 @@ class SiteEngineerDashboardController extends Controller
      */
     public function getDailySiteReport(Request $request): JsonResponse
     {
-        $user = auth('sanctum')->user();
+        $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -365,7 +364,7 @@ class SiteEngineerDashboardController extends Controller
         $date = $request->input('date', now()->format('Y-m-d'));
         
         // Get site engineer's projects
-        $projects = ZenaProject::whereHas('users', function ($q) use ($user) {
+        $projects = Project::whereHas('users', function ($q) use ($user) {
             $q->where('user_id', $user->id);
         });
 
@@ -396,7 +395,7 @@ class SiteEngineerDashboardController extends Controller
      */
     private function getSiteTasksCount(string $projectId, string $userId): int
     {
-        return ZenaTask::where('project_id', $projectId)
+        return Task::where('project_id', $projectId)
             ->where('assigned_to', $userId)
             ->where('type', 'site')
             ->count();

@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Requests;
+use Illuminate\Support\Facades\Auth;
+
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -83,9 +85,9 @@ class ProjectFormRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Thêm tenant_id từ authenticated user
-        if (auth()->check()) {
+        if (Auth::check()) {
             $this->merge([
-                'tenant_id' => auth()->user()->tenant_id,
+                'tenant_id' => Auth::user()->tenant_id,
             ]);
         }
     }

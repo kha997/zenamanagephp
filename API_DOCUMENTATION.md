@@ -1,858 +1,413 @@
-# 🔌 **ZENAMANAGE DASHBOARD SYSTEM - API DOCUMENTATION**
+# ZenaManage API Documentation
 
-## **API Overview**
+## Overview
+ZenaManage is a Laravel-based multi-tenant project management system with comprehensive API endpoints for managing projects, tasks, users, and system administration.
 
-**Base URL:** `https://api.zenamanage.com/v1`  
-**API Version:** 1.0.0  
-**Authentication:** Bearer Token (Laravel Sanctum)  
-**Rate Limiting:** 1000 requests per hour  
-**Response Format:** JSON  
-
----
-
-## 📋 **TABLE OF CONTENTS**
-
-1. [Authentication](#authentication)
-2. [Dashboard API](#dashboard-api)
-3. [Widget API](#widget-api)
-4. [User API](#user-api)
-5. [Support API](#support-api)
-6. [System API](#system-api)
-7. [WebSocket API](#websocket-api)
-8. [Error Handling](#error-handling)
-9. [Rate Limiting](#rate-limiting)
-10. [SDKs & Examples](#sdks--examples)
-
----
-
-## 🔐 **AUTHENTICATION**
-
-### **Getting Access Token**
-
-#### **Login Endpoint**
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-    "email": "user@example.com",
-    "password": "password123"
-}
+## Base URL
+```
+http://localhost:8002/api
 ```
 
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "user": {
-            "id": 1,
-            "name": "John Doe",
-            "email": "user@example.com",
-            "role": "user"
-        },
-        "token": "1|abcdef1234567890",
-        "expires_at": "2025-01-18T00:00:00Z"
-    }
-}
+## Authentication
+All API endpoints require authentication using Laravel Sanctum tokens.
+
+### Headers
 ```
-
-#### **Register Endpoint**
-```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-    "name": "John Doe",
-    "email": "user@example.com",
-    "password": "password123",
-    "password_confirmation": "password123"
-}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "user": {
-            "id": 1,
-            "name": "John Doe",
-            "email": "user@example.com",
-            "role": "user"
-        },
-        "token": "1|abcdef1234567890",
-        "expires_at": "2025-01-18T00:00:00Z"
-    }
-}
-```
-
-### **Using Access Token**
-
-Include the token in the Authorization header:
-
-```http
-Authorization: Bearer 1|abcdef1234567890
-```
-
-### **Token Refresh**
-
-```http
-POST /api/auth/refresh
-Authorization: Bearer 1|abcdef1234567890
-```
-
----
-
-## 📊 **DASHBOARD API**
-
-### **Dashboard Endpoints**
-
-#### **Get All Dashboards**
-```http
-GET /api/dashboards
 Authorization: Bearer {token}
+Content-Type: application/json
+Accept: application/json
 ```
 
-**Query Parameters:**
-- `page` (optional): Page number for pagination
-- `per_page` (optional): Items per page (default: 20)
-- `search` (optional): Search term
-- `category` (optional): Filter by category
-- `sort_by` (optional): Sort field (name, created_at, updated_at)
-- `sort_order` (optional): Sort direction (asc, desc)
+## API Endpoints
 
-**Response:**
+### Universal Frame APIs
+
+#### KPI Management
+```http
+GET /api/universal-frame/kpis
+POST /api/universal-frame/kpis/preferences
+POST /api/universal-frame/kpis/refresh
+GET /api/universal-frame/kpis/stats
+```
+
+**Response Example:**
 ```json
 {
-    "success": true,
-    "data": [
+  "kpis": [
         {
             "id": 1,
-            "name": "Sales Dashboard",
-            "description": "Monthly sales overview",
-            "layout": "grid",
-            "is_public": false,
-            "user_id": 1,
-            "created_at": "2025-01-17T10:00:00Z",
-            "updated_at": "2025-01-17T10:00:00Z",
-            "widgets_count": 5
-        }
-    ],
-    "meta": {
-        "current_page": 1,
-        "per_page": 20,
-        "total": 1,
-        "last_page": 1
+      "name": "Active Projects",
+      "value": 12,
+      "change": "+2",
+      "trend": "up",
+      "icon": "fas fa-folder"
     }
+  ]
 }
 ```
 
-#### **Get Single Dashboard**
+#### Alert Management
 ```http
-GET /api/dashboards/{id}
-Authorization: Bearer {token}
+GET /api/universal-frame/alerts
+POST /api/universal-frame/alerts/resolve
+POST /api/universal-frame/alerts/acknowledge
+POST /api/universal-frame/alerts/mute
+POST /api/universal-frame/alerts/dismiss-all
+POST /api/universal-frame/alerts/create
+GET /api/universal-frame/alerts/stats
 ```
 
-**Response:**
+**Response Example:**
 ```json
 {
-    "success": true,
-    "data": {
-        "id": 1,
-        "name": "Sales Dashboard",
-        "description": "Monthly sales overview",
-        "layout": "grid",
-        "is_public": false,
-        "user_id": 1,
-        "created_at": "2025-01-17T10:00:00Z",
-        "updated_at": "2025-01-17T10:00:00Z",
-        "widgets": [
+  "alerts": [
             {
                 "id": 1,
-                "type": "chart",
-                "title": "Sales Chart",
-                "config": {
-                    "chart_type": "line",
-                    "data_source": "sales_data"
-                },
-                "position": {
-                    "x": 0,
-                    "y": 0,
-                    "w": 6,
-                    "h": 4
-                }
-            }
-        ]
+      "type": "warning",
+      "title": "Project Deadline Approaching",
+      "message": "Project 'Website Redesign' is due in 3 days",
+      "priority": "high",
+      "created_at": "2025-09-24T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### Activity Management
+```http
+GET /api/universal-frame/activities
+POST /api/universal-frame/activities/create
+GET /api/universal-frame/activities/by-type
+GET /api/universal-frame/activities/stats
+POST /api/universal-frame/activities/clear-old
+```
+
+**Response Example:**
+```json
+{
+  "activities": [
+    {
+      "id": 1,
+      "type": "project_created",
+      "description": "John created project 'Website Redesign'",
+      "user": "John Doe",
+      "created_at": "2025-09-24T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Smart Tools APIs
+
+#### Search
+```http
+POST /api/universal-frame/search
+GET /api/universal-frame/search/suggestions
+GET /api/universal-frame/search/recent
+POST /api/universal-frame/search/recent
+```
+
+**Request Example:**
+```json
+{
+  "query": "website redesign",
+  "context": "projects",
+  "limit": 10
+}
+```
+
+**Response Example:**
+```json
+{
+  "results": [
+    {
+      "id": 1,
+      "type": "project",
+      "title": "Website Redesign",
+      "description": "Complete overhaul of company website",
+      "relevance": 0.95
+    }
+  ],
+  "suggestions": ["website", "redesign", "project"]
+}
+```
+
+#### Filters
+```http
+GET /api/universal-frame/filters/presets
+GET /api/universal-frame/filters/deep
+GET /api/universal-frame/filters/saved-views
+POST /api/universal-frame/filters/saved-views
+DELETE /api/universal-frame/filters/saved-views/{viewId}
+POST /api/universal-frame/filters/apply
+```
+
+**Response Example:**
+```json
+{
+  "presets": [
+    {
+      "id": 1,
+      "name": "My Projects",
+      "filters": {
+        "status": "in_progress",
+        "assignee": "current_user"
+      }
+    }
+  ]
+}
+```
+
+#### Analysis
+```http
+POST /api/universal-frame/analysis
+GET /api/universal-frame/analysis/{context}
+GET /api/universal-frame/analysis/{context}/metrics
+GET /api/universal-frame/analysis/{context}/charts
+GET /api/universal-frame/analysis/{context}/insights
+```
+
+**Response Example:**
+```json
+{
+  "metrics": {
+    "total_projects": 12,
+    "completed_tasks": 247,
+    "team_members": 8,
+    "documents": 156
+  },
+  "charts": [
+    {
+      "type": "pie",
+      "data": {
+        "labels": ["Completed", "In Progress", "Pending"],
+        "values": [45, 35, 20]
+      }
+    }
+  ],
+  "insights": [
+    "Project completion rate has increased by 15% this month"
+  ]
+}
+```
+
+#### Export
+```http
+POST /api/universal-frame/export
+POST /api/universal-frame/export/projects
+POST /api/universal-frame/export/tasks
+POST /api/universal-frame/export/documents
+POST /api/universal-frame/export/users
+POST /api/universal-frame/export/tenants
+GET /api/universal-frame/export/history
+DELETE /api/universal-frame/export/{filename}
+POST /api/universal-frame/export/clean-old
+```
+
+**Request Example:**
+```json
+{
+  "entity_type": "projects",
+  "format": "csv",
+  "columns": ["name", "status", "progress", "due_date"],
+  "filters": {
+    "status": "in_progress"
     }
 }
 ```
 
-#### **Create Dashboard**
-```http
-POST /api/dashboards
-Authorization: Bearer {token}
-Content-Type: application/json
+### Accessibility APIs
 
+#### Preferences
+```http
+GET /api/accessibility/preferences
+POST /api/accessibility/preferences
+POST /api/accessibility/preferences/reset
+```
+
+**Response Example:**
+```json
 {
-    "name": "New Dashboard",
-    "description": "Dashboard description",
-    "layout": "grid",
-    "is_public": false
+  "high_contrast_mode": false,
+  "reduced_motion": false,
+  "font_size": "medium",
+  "screen_reader_mode": false
 }
 ```
 
-**Response:**
+#### Compliance & Auditing
+```http
+GET /api/accessibility/compliance-report
+POST /api/accessibility/audit-page
+GET /api/accessibility/statistics
+POST /api/accessibility/check-color-contrast
+POST /api/accessibility/generate-report
+GET /api/accessibility/help
+```
+
+**Response Example:**
 ```json
 {
-    "success": true,
-    "data": {
-        "id": 2,
-        "name": "New Dashboard",
-        "description": "Dashboard description",
-        "layout": "grid",
-        "is_public": false,
-        "user_id": 1,
-        "created_at": "2025-01-17T10:00:00Z",
-        "updated_at": "2025-01-17T10:00:00Z"
+  "target": "WCAG 2.1 AA",
+  "score": 95,
+  "issues_found": 3,
+  "issues_resolved": 12,
+  "last_audit": "2025-09-24T10:00:00Z",
+  "recommendations": [
+    "Review custom components for ARIA attributes"
+  ]
+}
+```
+
+### Performance Optimization APIs
+
+#### Metrics & Analysis
+```http
+GET /api/performance/metrics
+GET /api/performance/analysis
+GET /api/performance/recommendations
+```
+
+**Response Example:**
+```json
+{
+  "page_load_time": 1.25,
+  "api_response_time": 0.18,
+  "cache_hit_rate": 94,
+  "database_query_time": 0.15,
+  "memory_usage": 45.2,
+  "cpu_usage": 35
+}
+```
+
+#### Optimization Actions
+```http
+POST /api/performance/optimize-database
+POST /api/performance/implement-caching
+POST /api/performance/optimize-api
+POST /api/performance/optimize-assets
+```
+
+**Response Example:**
+```json
+{
+  "status": "success",
+  "results": [
+    {
+      "optimization": "database_indexing",
+      "impact": "70% faster queries",
+      "applied_at": "2025-09-24T10:00:00Z"
     }
+  ]
 }
 ```
 
-#### **Update Dashboard**
-```http
-PUT /api/dashboards/{id}
-Authorization: Bearer {token}
-Content-Type: application/json
+## Error Handling
 
-{
-    "name": "Updated Dashboard",
-    "description": "Updated description"
-}
-```
-
-#### **Delete Dashboard**
-```http
-DELETE /api/dashboards/{id}
-Authorization: Bearer {token}
-```
-
-**Response:**
+### Standard Error Response
 ```json
 {
-    "success": true,
-    "message": "Dashboard deleted successfully"
-}
-```
-
----
-
-## 🧩 **WIDGET API**
-
-### **Widget Endpoints**
-
-#### **Get All Widgets**
-```http
-GET /api/widgets
-Authorization: Bearer {token}
-```
-
-**Query Parameters:**
-- `dashboard_id` (optional): Filter by dashboard
-- `type` (optional): Filter by widget type
-- `page` (optional): Page number
-- `per_page` (optional): Items per page
-
-#### **Get Single Widget**
-```http
-GET /api/widgets/{id}
-Authorization: Bearer {token}
-```
-
-#### **Create Widget**
-```http
-POST /api/widgets
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-    "dashboard_id": 1,
-    "type": "chart",
-    "title": "Sales Chart",
-    "config": {
-        "chart_type": "line",
-        "data_source": "sales_data"
+  "error": {
+    "id": "ERR_001",
+    "message": "Validation failed",
+    "details": {
+      "field": "email",
+      "rule": "required"
     },
-    "position": {
-        "x": 0,
-        "y": 0,
-        "w": 6,
-        "h": 4
+    "timestamp": "2025-09-24T10:00:00Z"
     }
 }
 ```
 
-#### **Update Widget**
-```http
-PUT /api/widgets/{id}
-Authorization: Bearer {token}
-Content-Type: application/json
+### HTTP Status Codes
+- `200` - Success
+- `201` - Created
+- `400` - Bad Request
+- `401` - Unauthorized
+- `403` - Forbidden
+- `404` - Not Found
+- `422` - Validation Error
+- `500` - Internal Server Error
 
-{
-    "title": "Updated Chart",
-    "config": {
-        "chart_type": "bar"
-    }
-}
-```
+## Rate Limiting
+- **Public APIs**: 60 requests per minute
+- **Authenticated APIs**: 1000 requests per minute
+- **Admin APIs**: 2000 requests per minute
 
-#### **Delete Widget**
-```http
-DELETE /api/widgets/{id}
-Authorization: Bearer {token}
-```
-
-### **Widget Types**
-
-#### **Chart Widget**
+## Pagination
 ```json
 {
-    "type": "chart",
-    "config": {
-        "chart_type": "line|bar|pie|area",
-        "data_source": "api_url|database|static",
-        "x_axis": "field_name",
-        "y_axis": "field_name",
-        "colors": ["#ff0000", "#00ff00"],
-        "animation": true
+  "data": [...],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total": 100,
+    "last_page": 5,
+    "from": 1,
+    "to": 20
     }
 }
 ```
 
-#### **Data Table Widget**
+## Filtering & Sorting
+```http
+GET /api/universal-frame/kpis?filter[status]=active&sort=created_at&order=desc
+```
+
+## Webhooks
 ```json
 {
-    "type": "table",
-    "config": {
-        "data_source": "api_url|database|static",
-        "columns": [
-            {"field": "name", "title": "Name"},
-            {"field": "value", "title": "Value"}
-        ],
-        "pagination": true,
-        "search": true,
-        "sorting": true
+  "event": "project.created",
+  "data": {
+    "project": {
+      "id": 1,
+      "name": "Website Redesign",
+      "status": "planning"
     }
+  },
+  "timestamp": "2025-09-24T10:00:00Z"
 }
 ```
 
-#### **Metric Widget**
-```json
-{
-    "type": "metric",
-    "config": {
-        "data_source": "api_url|database|static",
-        "value_field": "total_sales",
-        "format": "currency|number|percentage",
-        "trend": true,
-        "comparison_period": "previous_month"
-    }
-}
-```
+## SDK Examples
 
----
-
-## 👤 **USER API**
-
-### **User Endpoints**
-
-#### **Get User Profile**
-```http
-GET /api/user/profile
-Authorization: Bearer {token}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "id": 1,
-        "name": "John Doe",
-        "email": "user@example.com",
-        "role": "user",
-        "avatar": "https://example.com/avatar.jpg",
-        "created_at": "2025-01-17T10:00:00Z",
-        "updated_at": "2025-01-17T10:00:00Z"
-    }
-}
-```
-
-#### **Update User Profile**
-```http
-PUT /api/user/profile
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-    "name": "John Smith",
-    "avatar": "base64_encoded_image"
-}
-```
-
-#### **Change Password**
-```http
-POST /api/user/change-password
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-    "current_password": "oldpassword",
-    "new_password": "newpassword",
-    "new_password_confirmation": "newpassword"
-}
-```
-
-#### **Get User Dashboards**
-```http
-GET /api/user/dashboards
-Authorization: Bearer {token}
-```
-
-#### **Get User Statistics**
-```http
-GET /api/user/statistics
-Authorization: Bearer {token}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "dashboards_count": 5,
-        "widgets_count": 25,
-        "total_views": 150,
-        "last_login": "2025-01-17T10:00:00Z"
-    }
-}
-```
-
----
-
-## 🎫 **SUPPORT API**
-
-### **Support Ticket Endpoints**
-
-#### **Get Support Tickets**
-```http
-GET /api/support/tickets
-Authorization: Bearer {token}
-```
-
-#### **Create Support Ticket**
-```http
-POST /api/support/tickets
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-    "subject": "Need help with dashboard",
-    "description": "I'm having trouble creating a new dashboard",
-    "category": "technical",
-    "priority": "medium"
-}
-```
-
-#### **Get Support Ticket**
-```http
-GET /api/support/tickets/{id}
-Authorization: Bearer {token}
-```
-
-#### **Add Message to Ticket**
-```http
-POST /api/support/tickets/{id}/messages
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-    "message": "Additional information about the issue",
-    "is_internal": false
-}
-```
-
-### **Documentation Endpoints**
-
-#### **Get Documentation**
-```http
-GET /api/support/documentation
-Authorization: Bearer {token}
-```
-
-#### **Search Documentation**
-```http
-GET /api/support/documentation/search?q=search_term
-Authorization: Bearer {token}
-```
-
----
-
-## 🔧 **SYSTEM API**
-
-### **System Health Endpoints**
-
-#### **Get System Health**
-```http
-GET /api/health
-Authorization: Bearer {token}
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "data": {
-        "overall_status": "healthy",
-        "timestamp": "2025-01-17T10:00:00Z",
-        "services": {
-            "database": {
-                "status": "healthy",
-                "response_time_ms": 15
-            },
-            "redis": {
-                "status": "healthy",
-                "response_time_ms": 2
-            }
-        },
-        "metrics": {
-            "memory": {
-                "usage_percentage": 45.2
-            },
-            "cpu": {
-                "load_average_1min": 0.5
-            }
-        }
-    }
-}
-```
-
-#### **Get Performance Metrics**
-```http
-GET /api/health/performance
-Authorization: Bearer {token}
-```
-
-### **Maintenance Endpoints**
-
-#### **Get Maintenance Status**
-```http
-GET /api/maintenance/status
-Authorization: Bearer {token}
-```
-
-#### **Run Maintenance Task**
-```http
-POST /api/maintenance/run
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-    "task": "cache_clear|database_optimize|log_cleanup"
-}
-```
-
----
-
-## 🔌 **WEBSOCKET API**
-
-### **WebSocket Connection**
-
-#### **Authentication**
+### JavaScript/Node.js
 ```javascript
-// Get WebSocket token
-const response = await fetch('/api/websocket/auth', {
-    headers: {
-        'Authorization': 'Bearer ' + token
-    }
-});
-const { token: wsToken, socket_id, channel } = await response.json();
+const ZenaManageAPI = require('zenamanage-sdk');
 
-// Connect to WebSocket
-const socket = new WebSocket(`wss://ws.zenamanage.com:6001?token=${wsToken}`);
-```
-
-### **WebSocket Events**
-
-#### **Dashboard Updates**
-```javascript
-socket.on('dashboard.updated', (data) => {
-    console.log('Dashboard updated:', data);
-    // Update dashboard in UI
+const client = new ZenaManageAPI({
+  baseURL: 'http://localhost:8002/api',
+  token: 'your-api-token'
 });
 
-socket.on('dashboard.deleted', (data) => {
-    console.log('Dashboard deleted:', data);
-    // Remove dashboard from UI
+// Get KPIs
+const kpis = await client.kpis.list();
+
+// Create project
+const project = await client.projects.create({
+  name: 'New Project',
+  description: 'Project description'
 });
 ```
 
-#### **Widget Updates**
-```javascript
-socket.on('widget.updated', (data) => {
-    console.log('Widget updated:', data);
-    // Update widget in UI
-});
-
-socket.on('widget.deleted', (data) => {
-    console.log('Widget deleted:', data);
-    // Remove widget from UI
-});
-```
-
-#### **Real-time Data**
-```javascript
-socket.on('data.updated', (data) => {
-    console.log('Data updated:', data);
-    // Update widget data
-});
-```
-
-#### **User Presence**
-```javascript
-socket.on('user.joined', (data) => {
-    console.log('User joined:', data);
-    // Show user presence indicator
-});
-
-socket.on('user.left', (data) => {
-    console.log('User left:', data);
-    // Hide user presence indicator
-});
-```
-
----
-
-## ❌ **ERROR HANDLING**
-
-### **Error Response Format**
-
-```json
-{
-    "success": false,
-    "error": {
-        "code": "VALIDATION_ERROR",
-        "message": "The given data was invalid.",
-        "details": {
-            "name": ["The name field is required."],
-            "email": ["The email field must be a valid email address."]
-        }
-    }
-}
-```
-
-### **HTTP Status Codes**
-
-| Code | Description |
-|------|-------------|
-| 200 | Success |
-| 201 | Created |
-| 204 | No Content |
-| 400 | Bad Request |
-| 401 | Unauthorized |
-| 403 | Forbidden |
-| 404 | Not Found |
-| 422 | Validation Error |
-| 429 | Too Many Requests |
-| 500 | Internal Server Error |
-
-### **Error Codes**
-
-| Code | Description |
-|------|-------------|
-| `VALIDATION_ERROR` | Input validation failed |
-| `AUTHENTICATION_ERROR` | Authentication failed |
-| `AUTHORIZATION_ERROR` | Insufficient permissions |
-| `NOT_FOUND` | Resource not found |
-| `RATE_LIMIT_EXCEEDED` | Rate limit exceeded |
-| `INTERNAL_ERROR` | Internal server error |
-
----
-
-## ⚡ **RATE LIMITING**
-
-### **Rate Limits**
-
-| Endpoint | Limit |
-|----------|-------|
-| Authentication | 5 requests per minute |
-| API Endpoints | 1000 requests per hour |
-| File Upload | 20 requests per minute |
-| WebSocket | 100 connections per user |
-
-### **Rate Limit Headers**
-
-```http
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 999
-X-RateLimit-Reset: 1640995200
-```
-
-### **Rate Limit Exceeded Response**
-
-```json
-{
-    "success": false,
-    "error": {
-        "code": "RATE_LIMIT_EXCEEDED",
-        "message": "Too many requests. Please try again later.",
-        "retry_after": 3600
-    }
-}
-```
-
----
-
-## 💻 **SDKS & EXAMPLES**
-
-### **JavaScript SDK**
-
-```javascript
-import { ZenaManageAPI } from 'zenamanage-sdk';
-
-const api = new ZenaManageAPI({
-    baseURL: 'https://api.zenamanage.com/v1',
-    token: 'your-access-token'
-});
-
-// Get dashboards
-const dashboards = await api.dashboards.list();
-
-// Create dashboard
-const dashboard = await api.dashboards.create({
-    name: 'My Dashboard',
-    description: 'Dashboard description',
-    layout: 'grid'
-});
-
-// Update dashboard
-await api.dashboards.update(dashboard.id, {
-    name: 'Updated Dashboard'
-});
-
-// Delete dashboard
-await api.dashboards.delete(dashboard.id);
-```
-
-### **PHP SDK**
-
+### PHP
 ```php
-use ZenaManage\ZenaManageAPI;
+use ZenaManage\Client;
 
-$api = new ZenaManageAPI([
-    'base_url' => 'https://api.zenamanage.com/v1',
-    'token' => 'your-access-token'
+$client = new Client('http://localhost:8002/api', 'your-api-token');
+
+// Get KPIs
+$kpis = $client->kpis()->list();
+
+// Create project
+$project = $client->projects()->create([
+    'name' => 'New Project',
+    'description' => 'Project description'
 ]);
-
-// Get dashboards
-$dashboards = $api->dashboards()->list();
-
-// Create dashboard
-$dashboard = $api->dashboards()->create([
-    'name' => 'My Dashboard',
-    'description' => 'Dashboard description',
-    'layout' => 'grid'
-]);
-
-// Update dashboard
-$api->dashboards()->update($dashboard['id'], [
-    'name' => 'Updated Dashboard'
-]);
-
-// Delete dashboard
-$api->dashboards()->delete($dashboard['id']);
 ```
 
-### **Python SDK**
+## Testing
+Use the testing suite at `/testing-suite` to validate API endpoints and functionality.
 
-```python
-from zenamanage import ZenaManageAPI
-
-api = ZenaManageAPI(
-    base_url='https://api.zenamanage.com/v1',
-    token='your-access-token'
-)
-
-# Get dashboards
-dashboards = api.dashboards.list()
-
-# Create dashboard
-dashboard = api.dashboards.create({
-    'name': 'My Dashboard',
-    'description': 'Dashboard description',
-    'layout': 'grid'
-})
-
-# Update dashboard
-api.dashboards.update(dashboard['id'], {
-    'name': 'Updated Dashboard'
-})
-
-# Delete dashboard
-api.dashboards.delete(dashboard['id'])
-```
-
-### **cURL Examples**
-
-#### **Create Dashboard**
-```bash
-curl -X POST https://api.zenamanage.com/v1/dashboards \
-  -H "Authorization: Bearer your-access-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My Dashboard",
-    "description": "Dashboard description",
-    "layout": "grid"
-  }'
-```
-
-#### **Get Dashboards**
-```bash
-curl -X GET https://api.zenamanage.com/v1/dashboards \
-  -H "Authorization: Bearer your-access-token"
-```
-
-#### **Update Dashboard**
-```bash
-curl -X PUT https://api.zenamanage.com/v1/dashboards/1 \
-  -H "Authorization: Bearer your-access-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Updated Dashboard"
-  }'
-```
-
-#### **Delete Dashboard**
-```bash
-curl -X DELETE https://api.zenamanage.com/v1/dashboards/1 \
-  -H "Authorization: Bearer your-access-token"
-```
-
----
-
-## 📝 **POSTMAN COLLECTION**
-
-A complete Postman collection is available for testing the API:
-
-**Download:** [ZenaManage API Collection](https://api.zenamanage.com/postman/collection.json)
-
-**Environment Variables:**
-- `base_url`: https://api.zenamanage.com/v1
-- `token`: Your access token
-- `user_id`: Your user ID
-
----
-
-*API Documentation generated on: January 17, 2025*  
-*Version: 1.0.0*  
-*Last Updated: January 17, 2025*
+## Support
+For API support and questions, contact the development team or refer to the troubleshooting guide.

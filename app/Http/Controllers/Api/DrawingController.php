@@ -4,16 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
-use App\Models\Project;
-use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class DrawingController extends Controller
 {
@@ -60,8 +53,7 @@ class DrawingController extends Controller
                 $search = $request->input('search');
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%")
-                      ->orWhere('original_name', 'like', "%{$search}%");
+                      ->orWhere('description', 'like', "%{$search}%");
                 });
             }
 
@@ -94,7 +86,7 @@ class DrawingController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        
     }
 
     /**
@@ -105,7 +97,7 @@ class DrawingController extends Controller
      */
     public function show($id)
     {
-        //
+        
     }
 
     /**
@@ -117,7 +109,7 @@ class DrawingController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        
     }
 
     /**
@@ -128,6 +120,6 @@ class DrawingController extends Controller
      */
     public function destroy($id)
     {
-        //
+        
     }
 }

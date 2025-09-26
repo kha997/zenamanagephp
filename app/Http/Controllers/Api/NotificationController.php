@@ -1,10 +1,11 @@
 <?php
 
 namespace App\Http\Controllers\Api;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Http\Controllers\BaseApiController;
-use App\Models\ZenaNotification;
-use Illuminate\Http\Request;
+use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
@@ -15,13 +16,13 @@ class NotificationController extends BaseApiController
      */
     public function index(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $query = ZenaNotification::where('user_id', $user->id);
+        $query = Notification::where('user_id', $user->id);
 
         // Apply filters
         if ($request->has('type')) {
@@ -49,7 +50,7 @@ class NotificationController extends BaseApiController
      */
     public function store(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
@@ -70,7 +71,7 @@ class NotificationController extends BaseApiController
         }
 
         try {
-            $notification = ZenaNotification::create([
+            $notification = Notification::create([
                 'user_id' => $request->input('user_id'),
                 'type' => $request->input('type'),
                 'title' => $request->input('title'),
@@ -96,13 +97,13 @@ class NotificationController extends BaseApiController
      */
     public function show(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $notification = ZenaNotification::where('user_id', $user->id)
+        $notification = Notification::where('user_id', $user->id)
             ->find($id);
 
         if (!$notification) {
@@ -117,13 +118,13 @@ class NotificationController extends BaseApiController
      */
     public function markAsRead(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $notification = ZenaNotification::where('user_id', $user->id)
+        $notification = Notification::where('user_id', $user->id)
             ->find($id);
 
         if (!$notification) {
@@ -148,14 +149,14 @@ class NotificationController extends BaseApiController
      */
     public function markAllAsRead(): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
         try {
-            ZenaNotification::where('user_id', $user->id)
+            Notification::where('user_id', $user->id)
                 ->whereNull('read_at')
                 ->update([
                     'read_at' => now(),
@@ -174,13 +175,13 @@ class NotificationController extends BaseApiController
      */
     public function destroy(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $notification = ZenaNotification::where('user_id', $user->id)
+        $notification = Notification::where('user_id', $user->id)
             ->find($id);
 
         if (!$notification) {
@@ -202,13 +203,13 @@ class NotificationController extends BaseApiController
      */
     public function getUnreadCount(): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $count = ZenaNotification::where('user_id', $user->id)
+        $count = Notification::where('user_id', $user->id)
             ->whereNull('read_at')
             ->count();
 
@@ -220,21 +221,21 @@ class NotificationController extends BaseApiController
      */
     public function getStats(): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
         $stats = [
-            'total' => ZenaNotification::where('user_id', $user->id)->count(),
-            'unread' => ZenaNotification::where('user_id', $user->id)->whereNull('read_at')->count(),
-            'read' => ZenaNotification::where('user_id', $user->id)->whereNotNull('read_at')->count(),
-            'by_type' => ZenaNotification::where('user_id', $user->id)
+            'total' => Notification::where('user_id', $user->id)->count(),
+            'unread' => Notification::where('user_id', $user->id)->whereNull('read_at')->count(),
+            'read' => Notification::where('user_id', $user->id)->whereNotNull('read_at')->count(),
+            'by_type' => Notification::where('user_id', $user->id)
                 ->selectRaw('type, count(*) as count')
                 ->groupBy('type')
                 ->pluck('count', 'type'),
-            'by_priority' => ZenaNotification::where('user_id', $user->id)
+            'by_priority' => Notification::where('user_id', $user->id)
                 ->selectRaw('priority, count(*) as count')
                 ->groupBy('priority')
                 ->pluck('count', 'priority'),
@@ -246,7 +247,7 @@ class NotificationController extends BaseApiController
     /**
      * Broadcast notification via real-time channels
      */
-    private function broadcastNotification(ZenaNotification $notification): void
+    private function broadcastNotification(Notification $notification): void
     {
         try {
             // Broadcast via WebSocket
@@ -266,7 +267,7 @@ class NotificationController extends BaseApiController
     /**
      * Broadcast via WebSocket
      */
-    private function broadcastWebSocket(ZenaNotification $notification): void
+    private function broadcastWebSocket(Notification $notification): void
     {
         try {
             $message = [
@@ -298,7 +299,7 @@ class NotificationController extends BaseApiController
     /**
      * Broadcast via SSE
      */
-    private function broadcastSSE(ZenaNotification $notification): void
+    private function broadcastSSE(Notification $notification): void
     {
         try {
             $cacheKey = "sse_notification_{$notification->user_id}_" . time();

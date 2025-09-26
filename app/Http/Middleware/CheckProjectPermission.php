@@ -4,7 +4,6 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckProjectPermission
@@ -17,7 +16,7 @@ class CheckProjectPermission
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         // For now, bypass permission checking during development
-        // TODO: Implement proper permission checking
+        
         return $next($request);
 
         /*

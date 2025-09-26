@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Requests;
+use Illuminate\Support\Facades\Auth;
+
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -83,9 +85,9 @@ class InteractionLogFormRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Thêm created_by từ authenticated user
-        if (auth()->check()) {
+        if (Auth::check()) {
             $this->merge([
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
         }
 

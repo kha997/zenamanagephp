@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -146,9 +145,7 @@ class QueryOptimizationService
     public function processInChunks(Builder $query, callable $callback, int $chunkSize = 1000): void
     {
         $query->chunk($chunkSize, function ($records) use ($callback) {
-            foreach ($records as $record) {
-                $callback($record);
-            }
+            $callback($records);
         });
     }
 

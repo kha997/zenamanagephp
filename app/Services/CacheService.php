@@ -4,8 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Service quản lý caching strategy cho toàn bộ hệ thống
@@ -153,15 +151,11 @@ class CacheService
     public function warmUpUserCaches(int $userId): void
     {
         // Warm up user permissions
-        $this->cacheUserPermissions($userId, null, function () use ($userId) {
-            // Logic to load user permissions
-            return [];
+        $this->cacheUserPermissions($userId, null, function () 
         });
 
         // Warm up dashboard stats
-        $this->cacheDashboardStats($userId, function () use ($userId) {
-            // Logic to calculate dashboard stats
-            return [];
+        $this->cacheDashboardStats($userId, function () 
         });
     }
 

@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use Database\Seeders\MockDataSeeder;
+use Illuminate\Console\Command;
 
 class SeedMockData extends Command
 {

@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Collection;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * AdvancedReportingService - Service cho advanced reporting & export
@@ -365,15 +363,13 @@ class AdvancedReportingService
     private function generatePDF(array $data, array $options = []): string
     {
         // Implementation for PDF generation
-        // This would use a PDF library like TCPDF or DomPDF
-        return json_encode($data); // Placeholder
+        // This would  // Placeholder
     }
 
     private function generateExcel(array $data, array $options = []): string
     {
         // Implementation for Excel generation
-        // This would use a library like PhpSpreadsheet
-        return json_encode($data); // Placeholder
+        // This would  // Placeholder
     }
 
     private function generateCSV(array $data, array $options = []): string

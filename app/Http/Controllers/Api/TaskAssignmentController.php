@@ -1,11 +1,12 @@
 <?php
 
 namespace App\Http\Controllers\Api;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Http\Controllers\BaseApiController;
-use App\Models\ZenaTaskAssignment;
-use App\Models\ZenaTask;
-use Illuminate\Http\Request;
+use App\Models\Task;
+use App\Models\TaskAssignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,13 +17,13 @@ class TaskAssignmentController extends BaseApiController
      */
     public function index(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $query = ZenaTaskAssignment::with(['task', 'user', 'assignedBy']);
+        $query = TaskAssignment::with(['task', 'user', 'assignedBy']);
 
         // Apply filters
         if ($request->has('task_id')) {
@@ -54,14 +55,14 @@ class TaskAssignmentController extends BaseApiController
      */
     public function store(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
         $validator = Validator::make($request->all(), [
-            'task_id' => 'required|exists:zena_tasks,id',
+            'task_id' => 'required|exists:tasks,id',
             'user_id' => 'required|exists:users,id',
             'role' => 'required|in:assignee,reviewer,observer',
             'split_percent' => 'nullable|numeric|min:0|max:100',
@@ -73,13 +74,13 @@ class TaskAssignmentController extends BaseApiController
         }
 
         // Check if task exists
-        $task = ZenaTask::find($request->input('task_id'));
+        $task = Task::find($request->input('task_id'));
         if (!$task) {
             return $this->errorResponse('Task not found', 404);
         }
 
         // Check if user is already assigned to this task
-        $existingAssignment = ZenaTaskAssignment::where('task_id', $request->input('task_id'))
+        $existingAssignment = TaskAssignment::where('task_id', $request->input('task_id'))
             ->where('user_id', $request->input('user_id'))
             ->first();
 
@@ -88,7 +89,7 @@ class TaskAssignmentController extends BaseApiController
         }
 
         // Check total split percentage
-        $currentTotal = ZenaTaskAssignment::where('task_id', $request->input('task_id'))
+        $currentTotal = TaskAssignment::where('task_id', $request->input('task_id'))
             ->sum('split_percent');
         
         $newPercentage = $request->input('split_percent', 100);
@@ -101,7 +102,7 @@ class TaskAssignmentController extends BaseApiController
         }
 
         try {
-            $assignment = ZenaTaskAssignment::create([
+            $assignment = TaskAssignment::create([
                 'task_id' => $request->input('task_id'),
                 'user_id' => $request->input('user_id'),
                 'role' => $request->input('role'),
@@ -124,13 +125,13 @@ class TaskAssignmentController extends BaseApiController
      */
     public function show(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $assignment = ZenaTaskAssignment::with(['task', 'user', 'assignedBy'])
+        $assignment = TaskAssignment::with(['task', 'user', 'assignedBy'])
             ->find($id);
 
         if (!$assignment) {
@@ -145,13 +146,13 @@ class TaskAssignmentController extends BaseApiController
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $assignment = ZenaTaskAssignment::find($id);
+        $assignment = TaskAssignment::find($id);
 
         if (!$assignment) {
             return $this->errorResponse('Assignment not found', 404);
@@ -170,7 +171,7 @@ class TaskAssignmentController extends BaseApiController
 
         // Check total split percentage if updating split_percent
         if ($request->has('split_percent')) {
-            $currentTotal = ZenaTaskAssignment::where('task_id', $assignment->task_id)
+            $currentTotal = TaskAssignment::where('task_id', $assignment->task_id)
                 ->where('id', '!=', $id)
                 ->sum('split_percent');
             
@@ -201,13 +202,13 @@ class TaskAssignmentController extends BaseApiController
      */
     public function destroy(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $assignment = ZenaTaskAssignment::find($id);
+        $assignment = TaskAssignment::find($id);
 
         if (!$assignment) {
             return $this->errorResponse('Assignment not found', 404);
@@ -228,18 +229,18 @@ class TaskAssignmentController extends BaseApiController
      */
     public function getTaskAssignments(string $taskId): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $task = ZenaTask::find($taskId);
+        $task = Task::find($taskId);
         if (!$task) {
             return $this->errorResponse('Task not found', 404);
         }
 
-        $assignments = ZenaTaskAssignment::with(['user', 'assignedBy'])
+        $assignments = TaskAssignment::with(['user', 'assignedBy'])
             ->where('task_id', $taskId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -252,13 +253,13 @@ class TaskAssignmentController extends BaseApiController
      */
     public function getUserAssignments(string $userId): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $assignments = ZenaTaskAssignment::with(['task.project', 'assignedBy'])
+        $assignments = TaskAssignment::with(['task.project', 'assignedBy'])
             ->where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -271,13 +272,13 @@ class TaskAssignmentController extends BaseApiController
      */
     public function acceptAssignment(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $assignment = ZenaTaskAssignment::find($id);
+        $assignment = TaskAssignment::find($id);
 
         if (!$assignment) {
             return $this->errorResponse('Assignment not found', 404);
@@ -303,13 +304,13 @@ class TaskAssignmentController extends BaseApiController
      */
     public function rejectAssignment(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $assignment = ZenaTaskAssignment::find($id);
+        $assignment = TaskAssignment::find($id);
 
         if (!$assignment) {
             return $this->errorResponse('Assignment not found', 404);

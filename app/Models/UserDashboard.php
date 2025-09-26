@@ -2,12 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Src\Foundation\Traits\HasTimestamps;
 
 /**
  * Model UserDashboard - Quản lý dashboard của từng user
@@ -24,7 +23,7 @@ use Src\Foundation\Traits\HasTimestamps;
  */
 class UserDashboard extends Model
 {
-    use HasFactory, HasUlids, HasTimestamps;
+    use HasUlids, HasFactory;
 
     protected $table = 'user_dashboards';
     

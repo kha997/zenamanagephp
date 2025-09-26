@@ -13,8 +13,8 @@ return new class extends Migration
     {
         if (!Schema::hasTable('project_milestones')) {
             Schema::create('project_milestones', function (Blueprint $table) {
-            $table->id();
-            $table->string('project_id');
+            $table->ulid('id')->primary();
+            $table->ulid('project_id');
             $table->string('name');
             $table->text('description')->nullable();
             $table->date('target_date')->nullable();
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('status')->default('pending'); // pending, completed, overdue, cancelled
             $table->integer('order')->default(0);
             $table->json('metadata')->nullable();
-            $table->string('created_by')->nullable();
+            $table->ulid('created_by')->nullable();
             $table->timestamps();
 
             // Foreign keys

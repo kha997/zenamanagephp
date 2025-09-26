@@ -15,8 +15,10 @@
 </div>
 
 <div class="content-wrapper">
-    <form id="document-form" class="needs-validation" novalidate enctype="multipart/form-data">
+    <form id="document-form" class="needs-validation" novalidate enctype="multipart/form-data" method="POST">
+        @csrf
         @if(isset($document))
+            @method('PUT')
             <input type="hidden" id="document-id" value="{{ $document->id }}">
         @endif
         

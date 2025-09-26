@@ -2,23 +2,19 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TaskDependency extends Model
 {
-    use HasFactory;
 
     protected $table = 'task_dependencies';
     
     protected $fillable = [
+        'tenant_id',
         'task_id',
         'dependency_id',
-        'tenant_id',
-        'dependency_type',
-        'notes'
     ];
 
     protected $casts = [

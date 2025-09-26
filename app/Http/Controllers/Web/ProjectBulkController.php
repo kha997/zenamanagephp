@@ -4,13 +4,11 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
-use App\Models\Task;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Project Bulk Operations Controller
@@ -385,9 +383,7 @@ class ProjectBulkController extends Controller
      */
     private function exportToExcel($projects, $filePath): void
     {
-        // For now, use CSV format for Excel export
-        // In production, you would use a library like PhpSpreadsheet
-        $this->exportToCsv($projects, $filePath);
+        // For now, 
     }
 
     /**
@@ -396,8 +392,7 @@ class ProjectBulkController extends Controller
     private function exportToPdf($projects, $filePath): void
     {
         // For now, create a simple text file
-        // In production, you would use a library like DomPDF or TCPDF
-        $pdfContent = "PROJECT EXPORT REPORT\n";
+        // In production, you would 
         $pdfContent .= "Generated: " . now()->format('Y-m-d H:i:s') . "\n";
         $pdfContent .= "Total Projects: " . $projects->count() . "\n\n";
 

@@ -1,14 +1,16 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Http\Controllers\Controller;
+use App\Services\tService;
 use App\Models\SidebarConfig;
 use App\Services\PresetService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\View\View;
 use Illuminate\Support\Facades\Http;
+use Illuminate\View\View;
 
 class SidebarBuilderController extends Controller
 {
@@ -238,7 +240,7 @@ class SidebarBuilderController extends Controller
             if ($existingConfig) {
                 $existingConfig->update([
                     'config' => $validated['config'],
-                    'updated_by' => auth()->id(),
+                    'updated_by' => Auth::id(),
                 ]);
                 $config = $existingConfig;
             } else {
@@ -248,7 +250,7 @@ class SidebarBuilderController extends Controller
                     'tenant_id' => null,
                     'is_enabled' => true,
                     'version' => 1,
-                    'updated_by' => auth()->id(),
+                    'updated_by' => Auth::id(),
                 ]);
             }
 

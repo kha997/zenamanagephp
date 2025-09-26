@@ -14,13 +14,7 @@ class Kernel extends HttpKernel
      * @var array<int, class-string|string>
      */
     protected $middleware = [
-        \App\Http\Middleware\ForceHttps::class,        // \App\Http\Middleware\TrustHosts::class,
-        \App\Http\Middleware\TrustProxies::class,
-        \Illuminate\Http\Middleware\HandleCors::class,
-        \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
-        \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
-        \App\Http\Middleware\TrimStrings::class,
-        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        // Temporarily disabled all global middleware for debugging
     ];
 
     /**
@@ -39,7 +33,8 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
         ],
     ];
 
@@ -52,42 +47,44 @@ class Kernel extends HttpKernel
      */
     protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
-        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
-        'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
-        'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
-        'can' => \Illuminate\Auth\Middleware\Authorize::class,
-        'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
-        'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
-        'signed' => \App\Http\Middleware\ValidateSignature::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        // 'rbac' => \Src\RBAC\Middleware\RBACMiddleware::class, // Temporarily disabled
-        
-        // Custom middleware
-        'api.rate.limit' => \App\Http\Middleware\APIRateLimitMiddleware::class,
-        'simple.jwt.auth' => \App\Http\Middleware\SimpleJwtAuth::class,
-        'production.security' => \App\Http\Middleware\ProductionSecurityMiddleware::class,
+        'auth.api' => \App\Http\Middleware\ApiAuthenticationMiddleware::class,
+        'auth.session' => \App\Http\Middleware\SessionManagementMiddleware::class,
         'tenant.isolation' => \App\Http\Middleware\TenantIsolationMiddleware::class,
+        'rbac' => \App\Http\Middleware\RoleBasedAccessControlMiddleware::class,
+        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        'rate.limit' => \App\Http\Middleware\EnhancedRateLimitMiddleware::class,
+        'api.cache' => \App\Http\Middleware\ApiResponseCacheMiddleware::class,
+        'debug.gate' => \App\Http\Middleware\DebugGateMiddleware::class,
+        'cors' => \App\Http\Middleware\CorsMiddleware::class,
         'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
-        'enhanced.rate.limit' => \App\Http\Middleware\EnhancedRateLimitMiddleware::class,
         'input.sanitization' => \App\Http\Middleware\InputSanitizationMiddleware::class,
-        'cache.optimization' => \App\Http\Middleware\CacheMiddleware::class,
-        'performance.monitoring' => \App\Http\Middleware\PerformanceMonitoringMiddleware::class,
-        
-        // Invitation system middleware
-        'invitation.auth' => \App\Http\Middleware\InvitationAuth::class,
-        'role.permission' => \App\Http\Middleware\RolePermission::class,
+        'error.envelope' => \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
+        'legacy.route' => \App\Http\Middleware\LegacyRouteMiddleware::class,
+        'legacy.redirect' => \App\Http\Middleware\LegacyRedirectMiddleware::class,
+        'legacy.gone' => \App\Http\Middleware\LegacyGoneMiddleware::class,
     ];
     
-    // Comment hoặc xóa method này
-    /*
-    protected function sendRequestThroughRouter($request)
+    /**
+     * Override terminate to handle middleware resolution issues
+     */
+    public function terminate($request, $response)
     {
-        \Log::info('Middleware stack:', [
-            'middlewares' => $this->app['router']->getMiddleware()
-        ]);
-        
-        return parent::sendRequestThroughRouter($request);
+        try {
+            parent::terminate($request, $response);
+        } catch (\ReflectionException $e) {
+            // Log the error but don't break the application
+            \Log::warning('Middleware resolution error during terminate', [
+                'error' => $e->getMessage(),
+                'request_uri' => $request->getRequestUri(),
+                'method' => $request->getMethod()
+            ]);
+        } catch (\Illuminate\Contracts\Container\BindingResolutionException $e) {
+            // Log the error but don't break the application
+            \Log::warning('Middleware binding resolution error during terminate', [
+                'error' => $e->getMessage(),
+                'request_uri' => $request->getRequestUri(),
+                'method' => $request->getMethod()
+            ]);
+        }
     }
-    */
 }

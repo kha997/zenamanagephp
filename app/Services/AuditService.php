@@ -1,17 +1,12 @@
 <?php
 
 namespace App\Services;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Models\InteractionLog;
-use App\Models\User;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\Component;
-use App\Models\ChangeRequest;
-use App\Models\Document;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class AuditService
 {
@@ -42,8 +37,8 @@ class AuditService
     public function logCrudOperation(string $action, string $model, $modelId, array $data = []): void
     {
         $this->logAction([
-            'tenant_id' => $data['tenant_id'] ?? auth()->user()?->tenant_id,
-            'user_id' => $data['user_id'] ?? auth()->id(),
+            'tenant_id' => $data['tenant_id'] ?? Auth::user()?->tenant_id,
+            'user_id' => $data['user_id'] ?? Auth::id(),
             'project_id' => $data['project_id'] ?? null,
             'task_id' => $data['task_id'] ?? null,
             'component_id' => $data['component_id'] ?? null,
@@ -87,8 +82,8 @@ class AuditService
     public function logFileOperation(string $operation, string $filePath, array $data = []): void
     {
         $this->logAction([
-            'tenant_id' => $data['tenant_id'] ?? auth()->user()?->tenant_id,
-            'user_id' => $data['user_id'] ?? auth()->id(),
+            'tenant_id' => $data['tenant_id'] ?? Auth::user()?->tenant_id,
+            'user_id' => $data['user_id'] ?? Auth::id(),
             'project_id' => $data['project_id'] ?? null,
             'task_id' => $data['task_id'] ?? null,
             'component_id' => $data['component_id'] ?? null,
@@ -174,6 +169,7 @@ class AuditService
 
         return $query->with(['user', 'project', 'task', 'component'])
                    ->orderBy('created_at', 'desc')
+                   ->remember(300)
                    ->get();
     }
 
@@ -186,6 +182,7 @@ class AuditService
         
         $activities = InteractionLog::where('user_id', $userId)
             ->where('created_at', '>=', $startDate)
+            ->remember(300)
             ->get();
 
         $summary = [
@@ -222,6 +219,7 @@ class AuditService
         
         $activities = InteractionLog::where('project_id', $projectId)
             ->where('created_at', '>=', $startDate)
+            ->remember(300)
             ->get();
 
         $summary = [
@@ -260,6 +258,7 @@ class AuditService
         
         $activities = InteractionLog::where('tenant_id', $tenantId)
             ->where('created_at', '>=', $startDate)
+            ->remember(300)
             ->get();
 
         $report = [

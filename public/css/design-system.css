@@ -539,17 +539,32 @@ body {
 .zena-nav-logo {
   width: 2rem;
   height: 2rem;
-  display: flex;
+  display: flex !important;
   align-items: center;
   justify-content: center;
   margin-right: var(--spacing-sm);
   background-color: var(--primary-blue-light);
   border-radius: var(--radius-md);
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.zena-nav-logo div {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: flex !important;
+}
+
+.zena-nav-logo span {
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: inline-block !important;
 }
 
 .zena-nav-brand-text {
   font-size: 1.25rem;
   font-weight: 700;
+  color: var(--primary-blue-dark) !important;
 }
 
 .zena-nav-desktop {
@@ -680,6 +695,11 @@ body {
   box-shadow: var(--shadow-lg);
   min-width: 16rem;
   z-index: 50;
+}
+
+/* Alpine.js cloak to prevent flash of unstyled content */
+[x-cloak] {
+  display: none !important;
 }
 
 .zena-nav-user-info {

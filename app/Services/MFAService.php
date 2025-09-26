@@ -2,11 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
 use PragmaRX\Google2FA\Google2FA;
 
 /**

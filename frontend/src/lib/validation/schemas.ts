@@ -224,7 +224,7 @@ export const documentSchemas = {
     description: z.string().optional(),
     document_type: z.enum(['contract', 'proposal', 'report', 'invoice', 'other']),
     project_id: commonPatterns.ulid,
-    file: z.instanceof(File, 'File is required'),
+    file: z.instanceof(File, { message: 'File is required' }),
     tags: z.array(z.string()).optional(),
     is_public: z.boolean().optional(),
     tenant_id: commonPatterns.tenantId.optional(),
@@ -317,7 +317,7 @@ export const importExportSchemas = {
 
   // File upload for import
   importFile: z.object({
-    file: z.instanceof(File, 'File is required'),
+    file: z.instanceof(File).refine((f) => !!f, { message: 'File is required' }),
     options: z.object({
       tenant_id: commonPatterns.tenantId.optional(),
       skip_duplicates: z.boolean().optional(),

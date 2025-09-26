@@ -3,19 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\EmailTracking;
-use App\Services\EmailService;
-use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
 
 class EmailTrackingController extends Controller
 {
-    protected $emailService;
+    // protected $emailService;
 
-    public function __construct(EmailService $emailService)
-    {
-        $this->emailService = $emailService;
-    }
+    // public function __construct(EmailService $emailService)
+    // {
+    //     $this->emailService = $emailService;
+    // }
 
     /**
      * Track email open (pixel tracking)

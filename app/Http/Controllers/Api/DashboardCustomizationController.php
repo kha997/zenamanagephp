@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\DashboardCustomizationService;
-use Illuminate\Http\Request;
+use App\Services\nService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class DashboardCustomizationController extends Controller
 {
@@ -361,8 +360,8 @@ class DashboardCustomizationController extends Controller
             $permissions = $this->customizationService->getCustomizationPermissions($user);
 
             // Filter templates based on user permissions
-            $availableTemplates = array_filter($templates, function ($template) use ($user) {
-                return !isset($template['role']) || $template['role'] === $user->role;
+            $availableTemplates = array_filter($templates, function ($template) use ($permissions) {
+                return in_array($template['permission'], $permissions);
             });
 
             return response()->json([

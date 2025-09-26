@@ -3,20 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\UserPreferenceService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class UserPreferenceController extends Controller
 {
-    protected UserPreferenceService $userPreferenceService;
-
-    public function __construct(UserPreferenceService $userPreferenceService)
-    {
-        $this->userPreferenceService = $userPreferenceService;
-    }
-
     /**
      * Get user sidebar preferences.
      */

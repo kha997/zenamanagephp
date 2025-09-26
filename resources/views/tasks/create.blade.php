@@ -41,7 +41,7 @@
                                 name="name" 
                                 required 
                                 value="{{ old('name') }}"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Enter task title"
                             >
                         </div>
@@ -51,7 +51,7 @@
                             <textarea 
                                 name="description" 
                                 rows="4"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Describe the task..."
                             >{{ old('description') }}</textarea>
                         </div>
@@ -61,7 +61,7 @@
                             <select 
                                 name="project_id" 
                                 required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="">Select Project</option>
                                 @php
@@ -83,7 +83,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
                                 <select 
                                     name="priority" 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="low" {{ old('priority') == 'low' ? 'selected' : '' }}>Low</option>
                                     <option value="medium" {{ old('priority') == 'medium' ? 'selected' : '' }}>Medium</option>
@@ -95,7 +95,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
                                 <select 
                                     name="status" 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="pending" {{ old('status') == 'pending' ? 'selected' : '' }}>Pending</option>
                                     <option value="in_progress" {{ old('status') == 'in_progress' ? 'selected' : '' }}>In Progress</option>
@@ -112,7 +112,8 @@
                                     type="date" 
                                     name="start_date" 
                                     required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    value="{{ old('start_date') }}"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                                 >
                             </div>
                             <div>
@@ -121,7 +122,8 @@
                                     type="date" 
                                     name="end_date" 
                                     required 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    value="{{ old('end_date') }}"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                                 >
                             </div>
                         </div>
@@ -133,7 +135,8 @@
                                 name="estimated_hours" 
                                 min="0" 
                                 step="0.5"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value="{{ old('estimated_hours') }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Enter estimated hours"
                             >
                         </div>
@@ -150,35 +153,30 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Assigned To</label>
                             <select 
                                 name="assignee_id" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                             >
                                 <option value="">Select Assignee</option>
-                                <option value="1">John Smith (Project Manager)</option>
-                                <option value="2">Sarah Wilson (Designer)</option>
-                                <option value="3">Mike Johnson (Developer)</option>
-                                <option value="4">Alex Lee (Site Engineer)</option>
+                                @php
+                                    $users = \App\Models\User::select('id', 'name', 'email')->get();
+                                @endphp
+                                @foreach($users as $user)
+                                    <option value="{{ $user->id }}" {{ old('assignee_id') == $user->id ? 'selected' : '' }}>{{ $user->name }} ({{ $user->email }})</option>
+                                @endforeach
                             </select>
                         </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Watchers</label>
                             <div class="space-y-2">
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="watchers[]" value="1" class="mr-2">
-                                    <span class="text-sm">John Smith</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="watchers[]" value="2" class="mr-2">
-                                    <span class="text-sm">Sarah Wilson</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="watchers[]" value="3" class="mr-2">
-                                    <span class="text-sm">Mike Johnson</span>
-                                </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" name="watchers[]" value="4" class="mr-2">
-                                    <span class="text-sm">Alex Lee</span>
-                                </div>
+                                @php
+                                    $watchers = \App\Models\User::select('id', 'name', 'email')->get();
+                                @endphp
+                                @foreach($watchers as $watcher)
+                                    <div class="flex items-center">
+                                        <input type="checkbox" name="watchers[]" value="{{ $watcher->id }}" class="mr-2" {{ in_array($watcher->id, old('watchers', [])) ? 'checked' : '' }}>
+                                        <span class="text-sm text-gray-700">{{ $watcher->name }} ({{ $watcher->email }})</span>
+                                    </div>
+                                @endforeach
                             </div>
                         </div>
                     </div>
@@ -190,15 +188,15 @@
                         <div class="space-y-3">
                             <div class="flex items-center">
                                 <input type="checkbox" name="notifications" value="1" class="mr-2" checked>
-                                <span class="text-sm">Enable notifications</span>
+                                <span class="text-sm text-gray-700">Enable notifications</span>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" name="time_tracking" value="1" class="mr-2" checked>
-                                <span class="text-sm">Enable time tracking</span>
+                                <span class="text-sm text-gray-700">Enable time tracking</span>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" name="subtasks" value="1" class="mr-2">
-                                <span class="text-sm">Allow subtasks</span>
+                                <span class="text-sm text-gray-700">Allow subtasks</span>
                             </div>
                         </div>
                     </div>
@@ -212,7 +210,8 @@
                             <input 
                                 type="text" 
                                 name="tags" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                value="{{ old('tags') }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 text-gray-700 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Enter tags separated by commas"
                             >
                         </div>

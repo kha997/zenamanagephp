@@ -2,11 +2,10 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Storage;
+use Aws\S3\S3Client;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
-use Aws\S3\S3Client;
-use Aws\Exception\AwsException;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * CloudStorageService - Service cho cloud storage integrations

@@ -2,11 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use App\Models\MaintenanceTask;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class BackupCommand extends Command
 {

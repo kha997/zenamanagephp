@@ -2,8 +2,8 @@
 
 namespace App\View\Components;
 
-use Illuminate\View\Component;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\Component;
 
 class RoleBadge extends Component
 {
@@ -29,7 +29,7 @@ class RoleBadge extends Component
         }
 
         // For now, return a default role
-        // TODO: Implement proper role detection from database
+        
         return 'Project Manager';
     }
 

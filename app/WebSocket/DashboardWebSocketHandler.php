@@ -2,13 +2,11 @@
 
 namespace App\WebSocket;
 
-use Ratchet\MessageComponentInterface;
-use Ratchet\ConnectionInterface;
 use App\Models\User;
-use App\Models\DashboardAlert;
 use App\Services\DashboardService;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Ratchet\MessageComponentInterface;
 
 /**
  * Dashboard WebSocket Handler

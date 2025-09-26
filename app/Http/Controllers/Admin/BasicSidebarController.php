@@ -52,10 +52,7 @@ class BasicSidebarController extends Controller
     {
         // No auth check for testing
 
-        // Get config from database or use default
-        $dbConfig = \App\Models\SidebarConfig::where('role_name', $role)
-            ->where('is_enabled', true)
-            ->first();
+        // Get config from database or 
         
         if ($dbConfig) {
             $config = $dbConfig;
@@ -79,10 +76,7 @@ class BasicSidebarController extends Controller
     {
         // No auth check for testing
 
-        // Get config from database or use default
-        $dbConfig = \App\Models\SidebarConfig::where('role_name', $role)
-            ->where('is_enabled', true)
-            ->first();
+        // Get config from database or 
         
         if ($dbConfig) {
             $configData = $dbConfig->config;

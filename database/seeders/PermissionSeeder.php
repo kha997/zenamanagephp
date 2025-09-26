@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Src\RBAC\Models\Permission;
-use Src\RBAC\Models\Role;
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 
 /**

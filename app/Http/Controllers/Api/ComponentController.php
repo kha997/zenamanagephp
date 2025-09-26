@@ -4,14 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Component;
-use App\Models\Project;
-use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class ComponentController extends Controller
 {
@@ -91,15 +86,15 @@ class ComponentController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
         $validator = Validator::make($request->all(), [
-            'project_id' => 'required|exists:zena_projects,id',
-            'parent_id' => 'nullable|exists:zena_components,id',
+            'project_id' => 'required|exists:projects,id',
+            'parent_id' => 'nullable|exists:components,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'type' => 'required|string|max:100',
@@ -116,7 +111,7 @@ class ComponentController extends Controller
         }
 
         try {
-            $component = ZenaComponent::create([
+            $component = Component::create([
                 'project_id' => $request->input('project_id'),
                 'parent_id' => $request->input('parent_id'),
                 'name' => $request->input('name'),
@@ -143,13 +138,13 @@ class ComponentController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $component = ZenaComponent::with(['project', 'parent', 'children', 'createdBy', 'tasks'])
+        $component = Component::with(['project', 'parent', 'children', 'createdBy', 'tasks'])
             ->find($id);
 
         if (!$component) {
@@ -164,13 +159,13 @@ class ComponentController extends Controller
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $component = ZenaComponent::find($id);
+        $component = Component::find($id);
 
         if (!$component) {
             return $this->errorResponse('Component not found', 404);
@@ -210,13 +205,13 @@ class ComponentController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $component = ZenaComponent::find($id);
+        $component = Component::find($id);
 
         if (!$component) {
             return $this->errorResponse('Component not found', 404);
@@ -247,13 +242,13 @@ class ComponentController extends Controller
      */
     public function getHierarchy(string $id): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
-        $component = ZenaComponent::with(['children.children.children'])->find($id);
+        $component = Component::with(['children.children.children'])->find($id);
 
         if (!$component) {
             return $this->errorResponse('Component not found', 404);
@@ -267,21 +262,21 @@ class ComponentController extends Controller
      */
     public function getRootComponents(Request $request): JsonResponse
     {
-        $user = auth()->user();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->errorResponse('Unauthorized', 401);
         }
 
         $validator = Validator::make($request->all(), [
-            'project_id' => 'required|exists:zena_projects,id',
+            'project_id' => 'required|exists:projects,id',
         ]);
 
         if ($validator->fails()) {
             return $this->errorResponse('Validation failed', 422, $validator->errors());
         }
 
-        $components = ZenaComponent::with(['children.children'])
+        $components = Component::with(['children.children'])
             ->where('project_id', $request->input('project_id'))
             ->whereNull('parent_id')
             ->orderBy('name')

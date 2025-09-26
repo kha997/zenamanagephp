@@ -1,0 +1,894 @@
+view_path,view_name,dom_selector,label_or_icon,type,trigger,route_or_url,http_method,policy_middleware,required_role,tenant_scope,expected_result,side_effects,loading_disabled_state,error_states,notes
+navigation-demo,navigation-demo,.zena-nav-user-button,"
+                            AD
+                            Admin User
+                            
+                        ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+navigation-demo,navigation-demo,.zena-nav-mobile-toggle,"
+                    
+                    
+                    
+                ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+navigation-demo,navigation-demo,.zena-btn,"
+                            
+                            Refresh
+                        ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+navigation-demo,navigation-demo,.zena-nav-brand-link,"
+                        
+                            
+                        
+                        ZenaManage
+                    ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+navigation-demo,navigation-demo,.zena-nav-item,"
+                                
+                                Dashboard
+                                
+                            ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+navigation-demo,navigation-demo,.zena-nav-user-item,"
+                                
+                                Profile
+                            ",link,href,/profile,GET,default,authenticated,yes,navigation,none,no,"404,403",
+navigation-demo,navigation-demo,.zena-nav-mobile-link,"
+                                
+                                Dashboard
+                                
+                            ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+navigation-demo,navigation-demo,.zena-btn,"
+                                
+                                Profile
+                            ",link,href,/profile,GET,default,authenticated,yes,navigation,none,no,"404,403",
+navigation-demo,navigation-demo,.zena-breadcrumb-link,"
+                        
+                        Dashboard
+                    ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+navigation-demo,navigation-demo,button,"                        ",alpine-action,js,,GET,default,authenticated,yes,js_action,ui_change,yes,js_error,"Alpine.js action: open = !open"
+welcome,welcome,.zena-btn,"
+                        Đăng nhập
+                    ",link,href,"{{ route(",GET,default,authenticated,yes,navigation,none,no,"404,403",
+rbac.permissions,rbac.permissions,.btn,"
+                 Tạo Permission mới
+            ",button,click,,GET,default,authenticated,yes,creation,data_creation,no,"403,404",
+rbac.permissions,rbac.permissions,.btn-close,,button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Opens modal"
+rbac.permissions,rbac.permissions,.btn,"
+                         Lưu Permission
+                    ",form-submit,form,,POST,default,authenticated,yes,form_submission,data_change,yes,"422,500,403",
+rbac.user-roles,rbac.user-roles,.btn,"
+                         Gán vai trò
+                    ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Opens modal"
+rbac.user-roles,rbac.user-roles,#bulkActionsBtn,"
+                         Thao tác hàng loạt
+                    ",button,click,,GET,default,authenticated,yes,action,none,yes,"403,404",
+rbac.user-roles,rbac.user-roles,#applyFilters,"
+                                 Tìm kiếm
+                            ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+rbac.user-roles,rbac.user-roles,#resetFilters,"
+                                 Đặt lại
+                            ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+rbac.user-roles,rbac.user-roles,.btn-close,,button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Opens modal"
+rbac.user-roles,rbac.user-roles,#saveAssignment,"
+                     Gán vai trò
+                ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+rbac.user-roles,rbac.user-roles,#editUserRoles,"
+                     Chỉnh sửa
+                ",button,click,,GET,default,authenticated,yes,update,data_update,no,"403,404",
+rbac.user-roles,rbac.user-roles,#executeBulkAction,"
+                     Thực hiện
+                ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+rbac.roles,rbac.roles,.btn,"
+            Tạo Role mới
+        ",button,click,,GET,default,authenticated,yes,creation,data_creation,no,"403,404","Opens modal"
+rbac.roles,rbac.roles,.btn-close,,button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Opens modal"
+tasks.form,tasks.form,.btn,"
+                 Quay lại
+            ",button,click,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.index,tasks.index,.px-4,"
+                📊 Export
+                ⏳ Exporting...
+            ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,yes,"403,404",
+tasks.index,tasks.index,.px-3,"
+                    Clear Filters
+                ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.index,tasks.index,.text-blue-600,"
+                    Select All
+                ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.index,tasks.index,.text-gray-600,"
+                    Clear Selection
+                ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.index,tasks.index,.{,"
+                    
+                ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.index,tasks.index,.text-gray-400,"
+                            
+                        ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.index,tasks.index,.w-full,"
+                        Close
+                    ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.index,tasks.index,unknown,"                @click=""exportTasks()""",alpine-action,js,,GET,task,"project_manager,designer,site_engineer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: exportTasks()"
+tasks.index,tasks.index,.fixed,"            ",alpine-action,js,,GET,task,"project_manager,designer,site_engineer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: hideTaskModal()"
+tasks.index,tasks.index,button,"                            ",alpine-action,js,,GET,task,"project_manager,designer,site_engineer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: confirmArchive()"
+tasks.edit,tasks.edit,.ml-2,"
+                                
+                            ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.edit,tasks.edit,.px-4,"
+                        
+                    ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.edit,tasks.edit,.px-6,"
+                        
+                        Save Draft
+                    ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.edit,tasks.edit,.bg-red-600,"
+                Back to Tasks
+            ",link,href,/tasks,GET,task,"project_manager,designer,site_engineer",yes,navigation,none,no,"404,403",
+tasks.edit,tasks.edit,.bg-yellow-600,"
+                Back to Tasks
+            ",link,href,/tasks,GET,task,"project_manager,designer,site_engineer",yes,navigation,none,no,"404,403",
+tasks.edit,tasks.edit,.px-6,"
+                        
+                        Cancel
+                    ",link,href,/tasks,GET,task,"project_manager,designer,site_engineer",yes,navigation,none,no,"404,403",
+tasks.edit,tasks.edit,.ml-2,"                            ",alpine-action,js,,GET,task,"project_manager,designer,site_engineer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: removeTag(tag)"
+tasks.edit,tasks.edit,.px-4,"                    ",alpine-action,js,,GET,task,"project_manager,designer,site_engineer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: addTag()"
+tasks.edit,tasks.edit,unknown,"                        @click=""saveDraft()""",alpine-action,js,,GET,task,"project_manager,designer,site_engineer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: saveDraft()"
+tasks.create,tasks.create,.px-4,"
+                    Cancel
+                ",button,js,,GET,task,"project_manager,designer,site_engineer",yes,action,none,no,"403,404",
+tasks.create,tasks.create,.px-6,"
+                    📝 Create Task
+                    ⏳ Creating...
+                ",button,form,,GET,task,"project_manager,designer,site_engineer",yes,action,none,yes,"403,404",
+tasks.create,tasks.create,.px-6,"
+                    📝 Create Task
+                    ⏳ Creating...
+                ",form-submit,form,/tasks,POST,task,"project_manager,designer,site_engineer",yes,form_submission,data_change,yes,"422,500,403",
+tasks.create,tasks.create,unknown,"                    @click=""cancelCreate()""",alpine-action,js,,GET,task,"project_manager,designer,site_engineer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: cancelCreate()"
+tasks.show,tasks.show,.btn,"
+                         Edit Task
+                    ",button,click,,GET,task,"project_manager,designer,site_engineer",yes,update,data_update,no,"403,404",
+tasks.show,tasks.show,.logo,"🚀 ZENA",link,href,/dashboard,GET,task,"project_manager,designer,site_engineer",yes,navigation,none,no,"404,403",
+tasks.show,tasks.show,.nav-link,Dashboard,link,href,/dashboard,GET,task,"project_manager,designer,site_engineer",yes,navigation,none,no,"404,403",
+calendar.index,calendar.index,.bg-blue-600,"
+                            Add Event
+                        ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+calendar.index,calendar.index,.text-blue-600,"
+                             Back to Dashboard
+                        ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+auth.login,auth.login,#password-toggle,"
+                        
+                    ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+auth.login,auth.login,#login-btn,"
+                
+                Đăng nhập
+                
+            ",button,form,,GET,default,authenticated,yes,action,none,yes,"403,404",
+auth.login,auth.login,#login-btn,"
+                
+                Đăng nhập
+                
+            ",form-submit,form,/login,POST,default,authenticated,yes,form_submission,data_change,yes,"422,500,403",
+projects.form,projects.form,.btn,"
+                 Quay lại
+            ",button,click,/projects,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.form,projects.form,.btn,"
+                                 {{ isset($project) ? 'Cập nhật' : 'Tạo dự án' }}
+                            ",form-submit,form,,POST,project,"project_manager,admin",yes,form_submission,data_change,yes,"422,500,403",
+projects.index,projects.index,.px-4,"
+                📊 Export
+            ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.index,projects.index,.px-3,"
+                    Clear Filters
+                ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.index,projects.index,.text-blue-600,"
+                    Select All
+                ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.index,projects.index,.text-gray-600,"
+                    Clear Selection
+                ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.index,projects.index,.{,"
+                    
+                ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.index,projects.index,unknown,"                @click=""exportProjects()""",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: exportProjects()"
+projects.documents,projects.documents,.px-4,"
+                
+                Upload Document
+            ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.documents,projects.documents,.px-2,"
+                                
+                            ",button,click,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.documents,projects.documents,.px-3,"
+                            View
+                        ",button,click,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.documents,projects.documents,unknown,"                @click=""uploadDocument()""",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: uploadDocument()"
+projects.history,projects.history,.px-4,"
+                    
+                    Export
+                ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.history,projects.history,unknown,"                    @click=""exportHistory()""",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: exportHistory()"
+projects.edit,projects.edit,.ml-2,"
+                                
+                            ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.edit,projects.edit,.px-4,"
+                        
+                    ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.edit,projects.edit,.px-6,"
+                        
+                        Save Draft
+                    ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.edit,projects.edit,.px-6,"
+                        
+                        Cancel
+                    ",link,href,/projects,GET,project,"project_manager,admin",yes,navigation,none,no,"404,403",
+projects.edit,projects.edit,.px-6,"
+                        
+                        
+                        
+                    ",form-submit,form,,POST,project,"project_manager,admin",yes,form_submission,data_change,yes,"422,500,403",
+projects.edit,projects.edit,.ml-2,"                            ",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: removeTag(tag)"
+projects.edit,projects.edit,.px-4,"                    ",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: addTag()"
+projects.edit,projects.edit,unknown,"                        @click=""saveDraft()""",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: saveDraft()"
+projects.construction-project,projects.construction-project,.w-full,"
+                            Create Task
+                        ",button,js,,GET,project,"project_manager,admin",yes,creation,data_creation,no,"403,404",
+projects.construction-project,projects.construction-project,.px-3,"
+                        Add Phase
+                    ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.construction-project,projects.construction-project,.text-green-600,"
+                                            
+                                        ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.construction-project,projects.construction-project,.text-red-600,"
+                                            
+                                        ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.construction-project,projects.construction-project,.p-1,"
+                                            
+                                        ",button,js,,GET,project,"project_manager,admin",yes,update,data_update,no,"403,404",
+projects.construction-project,projects.construction-project,.px-4,"
+                    Create Task
+                ",button,js,,GET,project,"project_manager,admin",yes,creation,data_creation,no,"403,404",
+projects.construction-project,projects.construction-project,.ganttView,"
+                        Month View
+                    ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.construction-project,projects.construction-project,unknown,"                            @click=""createTask()""",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: createTask()"
+projects.create,projects.create,.zena-btn,"
+                    Cancel
+                ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.create,projects.create,.zena-btn,"
+                    🚀 Create Project
+                    ⏳ Creating...
+                ",form-submit,form,/projects,POST,project,"project_manager,admin",yes,form_submission,data_change,yes,"422,500,403",
+projects.create,projects.create,unknown,"                @click=""selectedTemplate = null""",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: selectedTemplate = null"
+projects.design-project,projects.design-project,.w-full,"
+                            Create Task
+                        ",button,js,,GET,project,"project_manager,admin",yes,creation,data_creation,no,"403,404",
+projects.design-project,projects.design-project,.px-3,"
+                        Add Phase
+                    ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.design-project,projects.design-project,.text-green-600,"
+                                            
+                                        ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.design-project,projects.design-project,.text-red-600,"
+                                            
+                                        ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.design-project,projects.design-project,.p-1,"
+                                            
+                                        ",button,js,,GET,project,"project_manager,admin",yes,update,data_update,no,"403,404",
+projects.design-project,projects.design-project,.px-4,"
+                    Create Task
+                ",button,js,,GET,project,"project_manager,admin",yes,creation,data_creation,no,"403,404",
+projects.design-project,projects.design-project,.ganttView,"
+                        Month View
+                    ",button,js,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+projects.design-project,projects.design-project,unknown,"                            @click=""createTask()""",alpine-action,js,,GET,project,"project_manager,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: createTask()"
+projects.show,projects.show,.text-gray-500,"
+                            
+                        ",link,href,"{{ route(",GET,project,"project_manager,admin",yes,navigation,none,no,"404,403",
+projects.show,projects.show,.bg-blue-600,"
+                            Edit Project
+                        ",link,href,"{{ route(",GET,project,"project_manager,admin",yes,navigation,none,no,"404,403",
+projects.show,projects.show,.text-blue-600,"id }}"" class=""text-blue-600 hover:text-blue-800"">Create the first task",link,href,"{{ route(",GET,project,"project_manager,admin",yes,navigation,none,no,"404,403",
+projects.show,projects.show,.w-full,"id }}"" class=""w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center"">
+                                Add Task
+                            ",link,href,"{{ route(",GET,project,"project_manager,admin",yes,navigation,none,no,"404,403",
+emails.welcome,emails.welcome,.btn,"
+        🏠 Go to Dashboard
+    ",link,href,"{{ $dashboardUrl }}",GET,default,authenticated,yes,navigation,none,no,"404,403",
+emails.verify-email-change,emails.verify-email-change,.button,"Confirm Email Change",link,href,"{{ $verificationUrl }}",GET,default,authenticated,yes,navigation,none,no,"404,403",
+emails.layout,emails.layout,.footer-link,"Visit Website",link,href,"{{ config(",GET,default,authenticated,yes,navigation,none,no,"404,403",
+emails.verify-email,emails.verify-email,.button,"Verify Email Address",link,href,"{{ $verificationUrl }}",GET,default,authenticated,yes,navigation,none,no,"404,403",
+emails.invitation,emails.invitation,.btn,"email_tracking_id ?? 'demo-tracking-id' }}/{{ urlencode($acceptUrl) }}"" class=""btn"" style=""font-size: 16px; padding: 16px 32px;"">
+        🚀 Accept Invitation
+    ",link,href,"{{ config(",GET,default,authenticated,yes,navigation,none,no,"404,403",
+admin.sidebar-builder,admin.sidebar-builder,#preview-btn,"
+                 Preview
+            ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.sidebar-builder,admin.sidebar-builder,#reset-btn,"
+                 Reset to Default
+            ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.sidebar-builder,admin.sidebar-builder,#save-btn,"
+                 Save Configuration
+            ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.sidebar-builder,admin.sidebar-builder,.fas,"
+                    
+                ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.sidebar-preview,admin.sidebar-preview,.text-gray-500,"
+                                
+                            ",link,href,"{{ route(",GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.projects,admin.projects,.bg-blue-600,"
+                                Create Project
+                            ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.projects,admin.projects,.text-blue-600,View,button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.projects,admin.projects,.text-green-600,Edit,button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.projects,admin.projects,.text-red-600,Delete,button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.projects,admin.projects,.text-blue-600,"
+                             Back to Dashboard
+                        ",link,href,/admin/super-admin-dashboard,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.sidebar-builder-edit,admin.sidebar-builder-edit,.bg-blue-600,"
+                            
+                            Save Changes
+                        ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.sidebar-builder-edit,admin.sidebar-builder-edit,.text-blue-600,"
+                                                    
+                                                ",button,click,,GET,admin,"super_admin,admin",yes,update,data_update,no,"403,404",
+admin.sidebar-builder-edit,admin.sidebar-builder-edit,.text-red-600,"
+                                                    
+                                                ",button,click,,GET,admin,"super_admin,admin",yes,deletion,data_deletion,no,"403,404,500",
+admin.sidebar-builder-edit,admin.sidebar-builder-edit,.w-full,"
+                                
+                                Add New Item
+                            ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.sidebar-builder-edit,admin.sidebar-builder-edit,.px-4,"
+                                    Cancel
+                                ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.sidebar-builder-edit,admin.sidebar-builder-edit,.text-gray-500,"
+                            
+                        ",link,href,"{{ route(",GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.sidebar-builder-edit,admin.sidebar-builder-edit,.bg-gray-100,"
+                            
+                            Preview
+                        ",link,href,"{{ route(",GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.sidebar-builder-edit,admin.sidebar-builder-edit,.px-4,"
+                                    Clone
+                                ",form-submit,form,,POST,admin,"super_admin,admin",yes,form_submission,data_change,yes,"422,500,403",
+admin.dashboard-index,admin.dashboard-index,.flex-1,"
+                            Live View
+                        ",link,href,/admin,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.dashboard-index,admin.dashboard-index,.inline-flex,"
+                
+                Back to Super Admin Dashboard
+            ",link,href,/admin,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.activities,admin.activities,.w-full,"
+                                Filter
+                            ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.activities,admin.activities,.text-blue-600,"View Details",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.activities,admin.activities,.text-blue-600,"
+                             Back to Dashboard
+                        ",link,href,/admin/super-admin-dashboard,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.security,admin.security,.w-full,"
+                                
+                                Run Security Scan
+                            ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.security,admin.security,.text-blue-600,"
+                             Back to Dashboard
+                        ",link,href,/admin/super-admin-dashboard,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.settings,admin.settings,.w-full,"
+                            Save Changes
+                        ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.settings,admin.settings,.flex,"
+                            
+                            Clear Cache
+                        ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.settings,admin.settings,.text-blue-600,"
+                             Back to Dashboard
+                        ",link,href,/admin/super-admin-dashboard,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.tenants,admin.tenants,.bg-blue-600,"
+                            Add Tenant
+                        ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.tenants,admin.tenants,.text-blue-600,Edit,button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.tenants,admin.tenants,.text-red-600,Suspend,button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.tenants,admin.tenants,.text-blue-600,"
+                             Back to Dashboard
+                        ",link,href,/admin/super-admin-dashboard,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.users,admin.users,.bg-blue-600,"
+                            Add User
+                        ",button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.users,admin.users,.text-blue-600,Edit,button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.users,admin.users,.text-red-600,Delete,button,click,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.users,admin.users,.text-blue-600,"
+                             Back to Dashboard
+                        ",link,href,/admin/super-admin-dashboard,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.alerts,admin.alerts,.bg-blue-600,"
+                                Create Alert
+                            ",button,js,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.alerts,admin.alerts,.text-blue-600,Acknowledge,button,js,,GET,admin,"super_admin,admin",yes,update,data_update,no,"403,404",
+admin.alerts,admin.alerts,.text-green-600,Resolve,button,js,,GET,admin,"super_admin,admin",yes,update,data_update,no,"403,404",
+admin.alerts,admin.alerts,.text-red-600,Delete,button,js,,GET,admin,"super_admin,admin",yes,deletion,data_deletion,no,"403,404,500",
+admin.alerts,admin.alerts,.text-gray-400,"
+                            
+                        ",button,js,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.alerts,admin.alerts,.px-4,"
+                                Cancel
+                            ",button,js,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.alerts,admin.alerts,.text-blue-600,"
+                             Back to Dashboard
+                        ",link,href,/admin/super-admin-dashboard,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.alerts,admin.alerts,.px-4,"
+                                Create Alert
+                            ",form-submit,form,,POST,admin,"super_admin,admin",yes,form_submission,data_change,yes,"422,500,403",
+admin.alerts,admin.alerts,.bg-blue-600,"                            ",alpine-action,js,,GET,admin,"super_admin,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: showCreateModal = true"
+admin.alerts,admin.alerts,.text-blue-600,"                                                Acknowledge",alpine-action,js,,GET,admin,"super_admin,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: updateAlertStatus(alert.id, "
+admin.alerts,admin.alerts,.text-red-600,"                                        Delete",alpine-action,js,,GET,admin,"super_admin,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: deleteAlert(alert.id)"
+admin.alerts,admin.alerts,.fixed,"            ",alpine-action,js,,GET,admin,"super_admin,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: showCreateModal = false"
+admin.simple-sidebar-builder,admin.simple-sidebar-builder,.bg-blue-600,"
+                            Back to Dashboard
+                        ",link,href,/dashboard,GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.simple-sidebar-builder,admin.simple-sidebar-builder,.bg-gray-600,"
+                                            Preview
+                                        ",link,href,"/admin/sidebar-builder/{{ $role }}/preview",GET,admin,"super_admin,admin",yes,navigation,none,no,"404,403",
+admin.email-config,admin.email-config,.px-4,"
+                    
+                    Statistics
+                ",button,js,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.email-config,admin.email-config,.px-6,"
+                    
+                    Test Configuration
+                ",button,js,,GET,admin,"super_admin,admin",yes,action,none,yes,"403,404",
+admin.email-config,admin.email-config,.px-6,"
+                    
+                    Save Configuration
+                ",form-submit,form,,POST,admin,"super_admin,admin",yes,form_submission,data_change,yes,"422,500,403",
+admin.email-config,admin.email-config,unknown,"                    @click=""getStatistics()""",alpine-action,js,,GET,admin,"super_admin,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: getStatistics()"
+admin.super-admin-dashboard,admin.super-admin-dashboard,.flex,"
+                        
+                        
+                    ",button,js,,GET,admin,"super_admin,admin",yes,action,none,yes,"403,404",
+admin.super-admin-dashboard,admin.super-admin-dashboard,.text-blue-600,"View All",button,js,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+admin.super-admin-dashboard,admin.super-admin-dashboard,unknown,"                        @click=""refreshData()"" ",alpine-action,js,,GET,admin,"super_admin,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: refreshData()"
+admin.super-admin-dashboard,admin.super-admin-dashboard,.text-blue-600,"                    View All",alpine-action,js,,GET,admin,"super_admin,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: navigateTo("
+change-requests.form,change-requests.form,.btn,"
+                 Quay lại
+            ",button,click,/change-requests,GET,default,authenticated,yes,action,none,no,"403,404",
+change-requests.form,change-requests.form,.close,"
+                    &times;
+                ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Opens modal"
+change-requests.index,change-requests.index,.btn,"
+                 Tạo yêu cầu mới
+            ",button,click,/change-requests/create,GET,default,authenticated,yes,creation,data_creation,no,"403,404",
+change-requests.index,change-requests.index,.close,"
+                    &times;
+                ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Opens modal"
+change-requests.show,change-requests.show,.btn,"
+                 Quay lại
+            ",button,click,/change-requests,GET,default,authenticated,yes,action,none,no,"403,404",
+change-requests.show,change-requests.show,#edit-cr-btn,"
+                 Chỉnh sửa
+            ",button,click,,GET,default,authenticated,yes,update,data_update,no,"403,404",
+change-requests.show,change-requests.show,.btn-close,,button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Opens modal"
+change-requests.show,change-requests.show,#confirm-decision,"Xác nhận",button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Requires confirmation"
+change-requests.show,change-requests.show,a,${cr.project.name},link,href,/projects/${cr.project.id},GET,default,authenticated,yes,navigation,none,no,"404,403",
+dashboard.index,dashboard.index,.zena-btn,"
+                    
+                    
+                ",button,js,,GET,default,authenticated,yes,action,none,yes,"403,404",
+dashboard.index,dashboard.index,.zena-btn,"                ",alpine-action,js,,GET,default,authenticated,yes,js_action,ui_change,yes,js_error,"Alpine.js action: refreshData()"
+components.breadcrumb,components.breadcrumb,.zena-breadcrumb-link,"
+                        @if(isset($item['icon']))
+                            
+                        @endif
+                        {{ $item['label'] }}
+                    ",link,href,"{{ $item[",GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.navigation,components.navigation,.zena-nav-user-button,"
+                    
+                        @yield('user-initials', 'U')
+                    
+                    @yield('user-name', 'User')
+                    
+                ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+components.navigation,components.navigation,.zena-nav-mobile-toggle,"
+            
+            
+            
+        ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+components.navigation,components.navigation,.zena-nav-brand-link,"
+                
+                    
+                
+                ZenaManage
+            ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.navigation,components.navigation,.zena-nav-item,"
+                        
+                        Dashboard
+                        @if($currentRoute === 'dashboard')
+                            
+                        @endif
+                    ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.navigation,components.navigation,.zena-nav-user-item,"
+                        
+                        Profile
+                    ",link,href,/profile,GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.navigation,components.navigation,.zena-nav-mobile-link,"
+                        
+                        Dashboard
+                        @if($currentRoute === 'dashboard')
+                            
+                        @endif
+                    ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.navigation,components.navigation,.zena-btn,"
+                        
+                        Profile
+                    ",link,href,/profile,GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.navigation,components.navigation,button,"                ",alpine-action,js,,GET,default,authenticated,yes,js_action,ui_change,yes,js_error,"Alpine.js action: open = !open"
+components.dynamic-sidebar,components.dynamic-sidebar,.nav-item,"
+                
+                ${item.label}
+                ${badgeHtml}
+            ",link,href,"${item.type === ",GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.sidebar,components.sidebar,.opacity-0,"
+                                        
+                                    ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+components.sidebar,components.sidebar,.sidebar-child-item,"
+                                        @if(isset($child['icon']))
+                                            
+                                        @endif
+                                        {{ $child['label'] }}
+                                        @if($child['type'] === 'external')
+                                            
+                                        @endif
+                                    ",link,href,"{{ $buildUrl($child) }}",GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.sidebar,components.sidebar,"#badge-{{ $item[","
+                            @if(isset($item['icon']))
+                                
+                            @endif
+                            {{ $item['label'] }}
+                            @if($shouldShowBadge($item))
+                                {{ $getBadgeCount($item) }}
+                            @endif
+                        ",link,href,"{{ $buildUrl($item) }}",GET,default,authenticated,yes,navigation,none,no,"404,403",
+components.sidebar,components.sidebar,.{{,"
+                        @if(isset($item['icon']))
+                            
+                        @endif
+                        {{ $item['label'] }}
+                        
+                    ",link,href,"{{ $buildUrl($item) }}",GET,default,authenticated,yes,navigation,none,no,"404,403",
+profile.index,profile.index,.tab-button,"📊 Overview",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+profile.index,profile.index,.btn,"Save Changes",button,form,,GET,default,authenticated,yes,action,none,no,"403,404",
+profile.index,profile.index,.btn,"Save Changes",form-submit,form,,POST,default,authenticated,yes,form_submission,data_change,yes,"422,500,403",
+layouts.dashboard,layouts.dashboard,.zena-btn,"
+                                
+                                Refresh
+                            ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.app,layouts.app,.menu-toggle,☰,button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.app,layouts.app,.notification-btn,"
+                        🔔
+                        3
+                    ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.app,layouts.app,.theme-toggle,🌙,button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.app,layouts.app,.nav-link,"is('dashboard') ? 'active' : '' }}"">
+                        📊
+                        Dashboard
+                    ",link,href,"{{ route(",GET,default,authenticated,yes,navigation,none,no,"404,403",
+layouts.app,layouts.app,a,"👤 Profile Settings",link,href,/profile,GET,default,authenticated,yes,navigation,none,no,"404,403",
+layouts.project-detail,layouts.project-detail,.p-2,"
+                            
+                        ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.project-detail,layouts.project-detail,.px-4,"
+                            Refresh
+                        ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.project-detail,layouts.project-detail,.activeTab,"
+                        Overview
+                    ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.project-detail,layouts.project-detail,unknown,"                            @click=""goBack()""",alpine-action,js,,GET,default,authenticated,yes,js_action,ui_change,yes,js_error,"Alpine.js action: goBack()"
+layouts.simple,layouts.simple,#menu-toggle,"
+                        
+                    ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.simple,layouts.simple,#dark-mode-toggle,"
+                        
+                    ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.simple,layouts.simple,#notifications-toggle,"
+                            
+                            3
+                        ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.simple,layouts.simple,.mark-all-read,"Đánh dấu tất cả",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.simple,layouts.simple,#user-menu-toggle,"
+                            
+                            {{ session('user')->name }}
+                        ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.simple,layouts.simple,.btn-close,,button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+layouts.simple,layouts.simple,.dropdown-item,"
+                                
+                                Đăng xuất
+                            ",link,href,"{{ route(",GET,default,authenticated,yes,navigation,none,no,"404,403",
+layouts.simple,layouts.simple,.btn,"
+                        
+                        Đăng nhập
+                    ",link,href,"{{ route(",GET,default,authenticated,yes,navigation,none,no,"404,403",
+team.index,team.index,.inline-flex,"
+                            
+                                
+                            
+                            Invite Member
+                        ",button,click,,GET,team,"admin,project_manager",yes,action,none,no,"403,404",
+team.index,team.index,.relative,"
+                        
+                            
+                                
+                                    
+                                
+                            
+                        
+                        
+                            
+                                
+                                Invite Member
+                            
+                            Send invitation to new team member
+                        
+                        
+                            
+                                
+                            
+                        
+                    ",button,click,,GET,team,"admin,project_manager",yes,action,none,no,"403,404",
+team.index,team.index,.inline-flex,"
+                            
+                                
+                            
+                            View All Users
+                        ",link,href,/team/users,GET,team,"admin,project_manager",yes,navigation,none,no,"404,403",
+team.index,team.index,.relative,"
+                        
+                            
+                                
+                                    
+                                
+                            
+                        
+                        
+                            
+                                
+                                View All Users
+                            
+                            Browse and manage all team members
+                        
+                        
+                            
+                                
+                            
+                        
+                    ",link,href,/team/users,GET,team,"admin,project_manager",yes,navigation,none,no,"404,403",
+team.invite,team.invite,.px-4,"
+                    Cancel
+                ",button,js,,GET,team,"admin,project_manager",yes,action,none,no,"403,404",
+team.invite,team.invite,.px-6,"
+                    📧 Send Invitation
+                    ⏳ Sending...
+                ",button,form,,GET,team,"admin,project_manager",yes,action,none,yes,"403,404",
+team.invite,team.invite,.px-6,"
+                    📧 Send Invitation
+                    ⏳ Sending...
+                ",form-submit,form,/team/invite,POST,team,"admin,project_manager",yes,form_submission,data_change,yes,"422,500,403",
+team.invite,team.invite,unknown,"                    @click=""cancelInvite()""",alpine-action,js,,GET,team,"admin,project_manager",yes,js_action,ui_change,yes,js_error,"Alpine.js action: cancelInvite()"
+team.users,team.users,.inline-flex,"
+                            
+                                
+                            
+                            Invite User
+                        ",button,click,,GET,team,"admin,project_manager",yes,action,none,no,"403,404",
+dashboards.pm,dashboards.pm,.text-blue-600,"View All",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.projects,dashboards.projects,.btn,"View Projects",button,click,,GET,project,"project_manager,admin",yes,action,none,no,"403,404",
+dashboards.projects,dashboards.projects,.logo,"🚀 ZENA",link,href,/dashboard,GET,project,"project_manager,admin",yes,navigation,none,no,"404,403",
+dashboards.projects,dashboards.projects,.nav-link,"
+                            
+                            Dashboard
+                        ",link,href,/dashboard,GET,project,"project_manager,admin",yes,navigation,none,no,"404,403",
+dashboards.designer,dashboards.designer,.text-blue-600,"View All",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.designer,dashboards.designer,.w-full,"
+                    
+                        
+                        AutoCAD
+                    
+                    
+                ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.subcontractor-lead,dashboards.subcontractor-lead,.text-blue-600,"View All",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.performance,dashboards.performance,.btn,"View Details",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.performance,dashboards.performance,.logo,"🚀 ZENA",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+dashboards.performance,dashboards.performance,.nav-link,"
+                            
+                            Dashboard
+                        ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+dashboards.sales,dashboards.sales,.text-blue-600,"View All",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.marketing,dashboards.marketing,.btn,"View Campaigns",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.marketing,dashboards.marketing,.logo,"🚀 ZENA",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+dashboards.marketing,dashboards.marketing,.nav-link,"
+                            
+                            Dashboard
+                        ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+dashboards.site-engineer,dashboards.site-engineer,.text-blue-600,"View All",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.users,dashboards.users,.btn,View,button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.users,dashboards.users,.logo,"🚀 ZENA",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+dashboards.users,dashboards.users,.nav-link,"
+                            
+                            Dashboard
+                        ",link,href,/dashboard,GET,default,authenticated,yes,navigation,none,no,"404,403",
+dashboards.finance,dashboards.finance,.text-blue-600,"View All",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.admin,dashboards.admin,.text-blue-600,"View All",button,js,,GET,admin,"super_admin,admin",yes,action,none,no,"403,404",
+dashboards.admin,dashboards.admin,.flex,"
+                
+                Create Project
+            ",button,js,,GET,admin,"super_admin,admin",yes,creation,data_creation,no,"403,404",
+dashboards.admin,dashboards.admin,.text-blue-600,"            View All",alpine-action,js,,GET,admin,"super_admin,admin",yes,js_action,ui_change,yes,js_error,"Alpine.js action: navigateTo("
+dashboards.qc-inspector,dashboards.qc-inspector,.text-blue-600,"View All",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+dashboards.client,dashboards.client,.text-blue-600,"View All",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+demo,demo,#login-btn,"
+                
+                Đăng nhập
+            ",button,form,,GET,default,authenticated,yes,action,none,no,"403,404",
+demo,demo,#login-btn,"
+                
+                Đăng nhập
+            ",form-submit,form,,POST,default,authenticated,yes,form_submission,data_change,yes,"422,500,403",
+templates.index,templates.index,.px-4,"
+                Design Builder
+            ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.index,templates.index,.selectedCategory,"
+            All Templates
+        ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.index,templates.index,.p-2,"
+                            
+                        ",button,js,,GET,template,"admin,project_manager",yes,update,data_update,no,"403,404",
+templates.index,templates.index,.flex-1,"
+                        Apply Template
+                    ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.index,templates.index,.px-3,"
+                        
+                    ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.index,templates.index,.text-gray-400,"
+                    
+                ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.index,templates.index,.ml-2,"
+                                            
+                                        ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.index,templates.index,.px-4,"
+                        
+                    ",form-submit,form,,POST,template,"admin,project_manager",yes,form_submission,data_change,yes,"422,500,403",
+templates.index,templates.index,unknown,"                @click=""goToBuilder()""",alpine-action,js,,GET,template,"admin,project_manager",yes,js_action,ui_change,yes,js_error,"Alpine.js action: goToBuilder()"
+templates.index,templates.index,.text-gray-400,"                ",alpine-action,js,,GET,template,"admin,project_manager",yes,js_action,ui_change,yes,js_error,"Alpine.js action: closeModal()"
+templates.analytics,templates.analytics,.px-4,"
+                Export Report
+            ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.analytics,templates.analytics,.text-blue-600,"
+                                        
+                                    ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.analytics,templates.analytics,.text-green-600,"
+                                        
+                                    ",button,js,,GET,template,"admin,project_manager",yes,update,data_update,no,"403,404",
+templates.analytics,templates.analytics,.text-purple-600,"
+                                        
+                                    ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.analytics,templates.analytics,unknown,"                @click=""exportReport()""",alpine-action,js,,GET,template,"admin,project_manager",yes,js_action,ui_change,yes,js_error,"Alpine.js action: exportReport()"
+templates.builder,templates.builder,.px-4,"
+                Save Template
+            ",button,js,,GET,template,"admin,project_manager",yes,action,none,yes,"403,404",
+templates.builder,templates.builder,.px-3,"
+                            Add Phase
+                        ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.builder,templates.builder,.p-1,"
+                                                
+                                            ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.builder,templates.builder,.text-gray-400,"
+                    
+                ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.builder,templates.builder,.px-4,"
+                        Save Task
+                    ",form-submit,form,,POST,template,"admin,project_manager",yes,form_submission,data_change,yes,"422,500,403",
+templates.builder,templates.builder,unknown,"                @click=""saveTemplate()""",alpine-action,js,,GET,template,"admin,project_manager",yes,js_action,ui_change,yes,js_error,"Alpine.js action: saveTemplate()"
+templates.builder,templates.builder,.text-gray-400,"                ",alpine-action,js,,GET,template,"admin,project_manager",yes,js_action,ui_change,yes,js_error,"Alpine.js action: closeTaskEditor()"
+templates.construction-builder,templates.construction-builder,.px-4,"
+                Save Template
+            ",button,js,,GET,template,"admin,project_manager",yes,action,none,yes,"403,404",
+templates.construction-builder,templates.construction-builder,.px-3,"
+                            Add Phase
+                        ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.construction-builder,templates.construction-builder,.p-1,"
+                                                
+                                            ",button,js,,GET,template,"admin,project_manager",yes,action,none,no,"403,404",
+templates.construction-builder,templates.construction-builder,unknown,"                @click=""saveTemplate()""",alpine-action,js,,GET,template,"admin,project_manager",yes,js_action,ui_change,yes,js_error,"Alpine.js action: saveTemplate()"
+documents.form,documents.form,.btn,"
+                 Quay lại
+            ",button,click,/documents,GET,document,"project_manager,designer",yes,action,none,no,"403,404",
+documents.form,documents.form,.btn,"
+                                 {{ isset($document) ? 'Cập nhật' : 'Upload tài liệu' }}
+                            ",form-submit,form,,POST,document,"project_manager,designer",yes,form_submission,data_change,yes,"422,500,403",
+documents.index,documents.index,.px-4,"
+                📁 Quick Upload
+            ",button,js,,GET,document,"project_manager,designer",yes,action,none,no,"403,404",
+documents.index,documents.index,.px-3,"
+                Clear Filters
+            ",button,js,,GET,document,"project_manager,designer",yes,action,none,no,"403,404",
+documents.index,documents.index,.p-1,"
+                            ✏️
+                        ",button,js,,GET,document,"project_manager,designer",yes,update,data_update,no,"403,404",
+documents.index,documents.index,unknown,"                @click=""quickUpload()""",alpine-action,js,,GET,document,"project_manager,designer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: quickUpload()"
+documents.index,documents.index,.dashboard-card,"            ",alpine-action,js,,GET,document,"project_manager,designer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: viewDocument(document)"
+documents.approvals,documents.approvals,.btn,"← Back to Documents",link,href,"{{ route(",GET,document,"project_manager,designer",yes,navigation,none,no,"404,403",
+documents.approvals,documents.approvals,a,"Upload a document",link,href,"{{ route(",GET,document,"project_manager,designer",yes,navigation,none,no,"404,403",
+documents.create,documents.create,.text-red-500,"
+                                    ✕
+                                ",button,js,,GET,document,"project_manager,designer",yes,action,none,no,"403,404",
+documents.create,documents.create,.px-4,"
+                    Cancel
+                ",button,js,,GET,document,"project_manager,designer",yes,action,none,no,"403,404",
+documents.create,documents.create,.px-6,"
+                    📤 Upload Document
+                    ⏳ Uploading...
+                ",button,form,,GET,document,"project_manager,designer",yes,action,none,yes,"403,404",
+documents.create,documents.create,.px-6,"
+                    📤 Upload Document
+                    ⏳ Uploading...
+                ",form-submit,form,/api/v1/upload-document,POST,document,"project_manager,designer",yes,form_submission,data_change,yes,"422,500,403",
+documents.create,documents.create,unknown,"                @click=""selectType('drawing')""",alpine-action,js,,GET,document,"project_manager,designer",yes,js_action,ui_change,yes,js_error,"Alpine.js action: selectType("
+documents.show,documents.show,.btn,"
+                 Quay lại
+            ",button,click,/documents,GET,document,"project_manager,designer",yes,action,none,no,"403,404",
+documents.show,documents.show,.close,"
+                    &times;
+                ",button,click,,GET,document,"project_manager,designer",yes,action,none,no,"403,404","Opens modal"
+documents.show,documents.show,a,"{{ $document->project->name }}",link,href,"/projects/{{ $document->project->id }}",GET,document,"project_manager,designer",yes,navigation,none,no,"404,403",
+documents.show,documents.show,.btn,Upload,form-submit,form,,POST,document,"project_manager,designer",yes,form_submission,data_change,yes,"422,500,403",
+notifications.index,notifications.index,.btn,"
+                 Đánh dấu tất cả đã đọc
+            ",button,click,,GET,default,authenticated,yes,action,none,no,"403,404",
+notifications.index,notifications.index,.btn-close,,button,click,,GET,default,authenticated,yes,action,none,no,"403,404","Opens modal"
+notifications.index,notifications.index,.btn,"Xem chi tiết",link,href,${notification.link_url},GET,default,authenticated,yes,navigation,none,no,"404,403",
+invitations.index,invitations.index,.px-4,"
+                    
+                    Bulk Invite
+                ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+invitations.index,invitations.index,.px-3,"id }})""
+                                        class=""px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors""
+                                        title=""Resend Invitation""
+                                    >
+                                        
+                                    ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+invitations.index,invitations.index,.px-4,"
+                    
+                    Send Invitation
+                ",link,href,/invitations/create,GET,default,authenticated,yes,navigation,none,no,"404,403",
+invitations.index,invitations.index,unknown,"                    @click=""showBulkInvite = true""",alpine-action,js,,GET,default,authenticated,yes,js_action,ui_change,yes,js_error,"Alpine.js action: showBulkInvite = true"
+invitations.manage,invitations.manage,.px-4,"
+                    
+                    Bulk Invite
+                ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+invitations.manage,invitations.manage,.px-3,"id }})""
+                                        class=""px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 transition-colors""
+                                        title=""Resend Invitation""
+                                    >
+                                        
+                                    ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+invitations.manage,invitations.manage,.px-4,"
+                    
+                    Send Invitation
+                ",link,href,/invitations/create,GET,default,authenticated,yes,navigation,none,no,"404,403",
+invitations.manage,invitations.manage,unknown,"                    @click=""showBulkInvite = true""",alpine-action,js,,GET,default,authenticated,yes,js_action,ui_change,yes,js_error,"Alpine.js action: showBulkInvite = true"
+invitations.accept,invitations.accept,.w-full,"
+                    
+                    
+                    
+                ",button,form,,GET,default,authenticated,yes,action,none,yes,"403,404",
+invitations.accept,invitations.accept,.w-full,"
+                    
+                    
+                    
+                ",form-submit,form,,POST,default,authenticated,yes,form_submission,data_change,yes,"422,500,403",
+invitations.create,invitations.create,.px-6,"
+                        
+                        Preview Email
+                    ",button,js,,GET,default,authenticated,yes,action,none,no,"403,404",
+invitations.create,invitations.create,.px-6,"
+                    
+                    Back to Invitations
+                ",link,href,/invitations,GET,default,authenticated,yes,navigation,none,no,"404,403",
+invitations.create,invitations.create,.px-6,"
+                        
+                        
+                        
+                    ",form-submit,form,,POST,default,authenticated,yes,form_submission,data_change,yes,"422,500,403",
+invitations.create,invitations.create,unknown,"                        @click=""previewInvitation()""",alpine-action,js,,GET,default,authenticated,yes,js_action,ui_change,yes,js_error,"Alpine.js action: previewInvitation()"

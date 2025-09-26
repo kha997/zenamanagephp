@@ -119,7 +119,7 @@ class TaskApiTest extends TestCase
                     ]
                 ]);
         
-        $this->assertDatabaseHas('zena_tasks', [
+        $this->assertDatabaseHas('tasks', [
             'id' => $task->id,
             'status' => 'in_progress'
         ]);

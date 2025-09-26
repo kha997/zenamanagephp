@@ -13,9 +13,9 @@ return new class extends Migration
     {
         if (!Schema::hasTable('task_watchers')) {
             Schema::create('task_watchers', function (Blueprint $table) {
-                $table->id();
-                $table->string('task_id');
-                $table->string('user_id');
+                $table->ulid('id')->primary();
+                $table->ulid('task_id');
+                $table->ulid('user_id');
                 $table->timestamps();
 
                 // Foreign keys

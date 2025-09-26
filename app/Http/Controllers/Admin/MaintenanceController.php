@@ -1,17 +1,17 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Http\Controllers\Controller;
-use App\Models\SystemLog;
 use App\Models\MaintenanceTask;
 use App\Models\PerformanceMetric;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
+use App\Models\SystemLog;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class MaintenanceController extends Controller
 {
@@ -420,7 +420,7 @@ class MaintenanceController extends Controller
         MaintenanceTask::create([
             'task' => $message,
             'level' => $level,
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'completed_at' => now()
         ]);
 
@@ -428,7 +428,7 @@ class MaintenanceController extends Controller
             'level' => $level,
             'message' => $message,
             'context' => ['maintenance' => true],
-            'user_id' => auth()->id()
+            'user_id' => Auth::id()
         ]);
     }
 

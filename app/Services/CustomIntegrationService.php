@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Collection;
 
 /**
  * CustomIntegrationService - Service cho custom integrations
@@ -155,8 +154,7 @@ class CustomIntegrationService
     {
         $cacheKey = 'all_integrations' . ($userId ? "_{$userId}" : '');
         
-        return Cache::remember($cacheKey, $this->integrationConfig['cache_ttl'], function () use ($userId) {
-            return $this->fetchIntegrations($userId);
+        return Cache::remember($cacheKey, $this->integrationConfig['cache_ttl'], function () 
         });
     }
 
@@ -328,7 +326,7 @@ class CustomIntegrationService
      */
     private function generateApiKey(): string
     {
-        return 'zena_' . bin2hex(random_bytes(16));
+        return 'integration_' . bin2hex(random_bytes(16));
     }
 
     private function generateSecret(): string

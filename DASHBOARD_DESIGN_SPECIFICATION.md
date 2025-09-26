@@ -381,7 +381,7 @@ Hệ thống ZENA Management có **7 role chính** với quyền hạn và trác
 ### 📱 **Responsive Design:**
 - **Desktop**: Full dashboard với sidebar
 - **Tablet**: Collapsible sidebar
-- **Mobile**: Bottom navigation với drawer
+- **Mobile**: Always visible navigation - NO hamburger menu
 
 ### 🔔 **Notification System:**
 - **In-app**: Toast notifications

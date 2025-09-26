@@ -3,12 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Project;
 use App\Services\ProjectService;
-use App\Repositories\ProjectRepository;
-use App\Http\Requests\ProjectFormRequest;
-use App\Http\Requests\IndexProjectRequest;
-use Illuminate\Http\Request;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -20,8 +16,7 @@ use Illuminate\Support\Facades\Log;
 class ProjectController extends Controller
 {
     public function __construct(
-        private ProjectService $projectService,
-        private ProjectRepository $projectRepository
+        private ProjectService $projectService
     ) {}
 
     /**

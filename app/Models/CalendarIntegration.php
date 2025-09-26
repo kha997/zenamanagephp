@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Carbon\Carbon;
 
 /**
  * CalendarIntegration Model - Calendar integrations cho users
@@ -27,7 +26,7 @@ use Carbon\Carbon;
  */
 class CalendarIntegration extends Model
 {
-    use HasFactory, HasUlids;
+    use HasUlids, HasFactory;
 
     protected $table = 'calendar_integrations';
     

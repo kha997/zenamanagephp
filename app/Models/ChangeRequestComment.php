@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Src\Foundation\Traits\HasTimestamps;
 
 /**
  * ChangeRequestComment Model - Comments on change requests
@@ -23,7 +21,6 @@ use Src\Foundation\Traits\HasTimestamps;
  */
 class ChangeRequestComment extends Model
 {
-    use HasFactory, HasUlids, HasTimestamps;
 
     protected $fillable = [
         'id',
@@ -47,7 +44,7 @@ class ChangeRequestComment extends Model
      */
     public function changeRequest(): BelongsTo
     {
-        return $this->belongsTo(ZenaChangeRequest::class, 'change_request_id');
+        return $this->belongsTo(ChangeRequest::class, 'change_request_id');
     }
 
     /**

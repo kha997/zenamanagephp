@@ -2,11 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
-use Carbon\Carbon;
 
 /**
  * Password Policy Service
@@ -136,7 +134,7 @@ class PasswordPolicyService
 
             // Update user
             $user->update([
-                'password' => Hash::make($newPassword),
+                'password' => bcrypt($newPassword),
                 'password_changed_at' => Carbon::now(),
                 'password_expires_at' => Carbon::now()->addDays($this->policyConfig['max_age_days']),
                 'password_failed_attempts' => 0,
@@ -335,10 +333,11 @@ class PasswordPolicyService
      */
     private function containsUserInfo(string $password, User $user): bool
     {
+        $emailParts = explode("\@", $user->email);
         $userInfo = [
             $user->name,
             $user->email,
-            explode('@', $user->email)[0] // email username part
+            $emailParts[0] // email username part
         ];
 
         $passwordLower = strtolower($password);

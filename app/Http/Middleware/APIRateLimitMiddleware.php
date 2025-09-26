@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
@@ -83,9 +82,7 @@ class APIRateLimitMiddleware
         $tenantLimit = Cache::remember(
             "rate_limit_{$tenantId}_{$limitType}",
             3600, // 1 hour
-            function () use ($tenantId, $limitType) {
-                // In real implementation, fetch from database
-                return null;
+            function () 
             }
         );
         

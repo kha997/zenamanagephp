@@ -4,13 +4,11 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Task;
-use App\Models\Project;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Task Bulk Operations Controller
@@ -372,9 +370,7 @@ class TaskBulkController extends Controller
      */
     private function exportToExcel($tasks, $filePath): void
     {
-        // For now, use CSV format for Excel export
-        // In production, you would use a library like PhpSpreadsheet
-        $this->exportToCsv($tasks, $filePath);
+        // For now, 
     }
 
     /**
@@ -383,8 +379,7 @@ class TaskBulkController extends Controller
     private function exportToPdf($tasks, $filePath): void
     {
         // For now, create a simple text file
-        // In production, you would use a library like DomPDF or TCPDF
-        $pdfContent = "TASK EXPORT REPORT\n";
+        // In production, you would 
         $pdfContent .= "Generated: " . now()->format('Y-m-d H:i:s') . "\n";
         $pdfContent .= "Total Tasks: " . $tasks->count() . "\n\n";
 

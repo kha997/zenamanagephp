@@ -15,6 +15,25 @@ interface ApiError {
 export const useApi = () => {
   const baseUrl = '/api'; // Adjust this to match your API base URL
   
+  // Get auth token from localStorage or use default test token
+  const getAuthToken = () => {
+    return localStorage.getItem('auth_token') || 'eyJ1c2VyX2lkIjoyOTE0LCJlbWFpbCI6InN1cGVyYWRtaW5AemVuYS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJleHBpcmVzIjoxNzU4NjE2OTIwfQ==';
+  };
+  
+  const getHeaders = (includeAuth = true) => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+    
+    if (includeAuth) {
+      headers['Authorization'] = `Bearer ${getAuthToken()}`;
+    }
+    
+    return headers;
+  };
+  
   const handleResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -33,62 +52,61 @@ export const useApi = () => {
     };
   };
 
-  const get = useCallback(async <T = any>(url: string): Promise<ApiResponse<T>> => {
+  const get = useCallback(async <T = any>(url: string, includeAuth = true): Promise<ApiResponse<T>> => {
     const response = await fetch(`${baseUrl}${url}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        // Add authorization header if needed
-        // 'Authorization': `Bearer ${token}`,
-      },
+      headers: getHeaders(includeAuth),
     });
     
     return handleResponse<T>(response);
   }, []);
 
-  const post = useCallback(async <T = any>(url: string, data?: any): Promise<ApiResponse<T>> => {
+  const post = useCallback(async <T = any>(url: string, data?: any, includeAuth = true): Promise<ApiResponse<T>> => {
     const response = await fetch(`${baseUrl}${url}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        // Add authorization header if needed
-        // 'Authorization': `Bearer ${token}`,
-      },
+      headers: getHeaders(includeAuth),
       body: data ? JSON.stringify(data) : undefined,
     });
     
     return handleResponse<T>(response);
   }, []);
 
-  const put = useCallback(async <T = any>(url: string, data?: any): Promise<ApiResponse<T>> => {
+  const put = useCallback(async <T = any>(url: string, data?: any, includeAuth = true): Promise<ApiResponse<T>> => {
     const response = await fetch(`${baseUrl}${url}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        // Add authorization header if needed
-        // 'Authorization': `Bearer ${token}`,
-      },
+      headers: getHeaders(includeAuth),
       body: data ? JSON.stringify(data) : undefined,
     });
     
     return handleResponse<T>(response);
   }, []);
 
-  const del = useCallback(async <T = any>(url: string): Promise<ApiResponse<T>> => {
+  const del = useCallback(async <T = any>(url: string, includeAuth = true): Promise<ApiResponse<T>> => {
     const response = await fetch(`${baseUrl}${url}`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        // Add authorization header if needed
-        // 'Authorization': `Bearer ${token}`,
-      },
+      headers: getHeaders(includeAuth),
     });
     
     return handleResponse<T>(response);
+  }, []);
+
+  // Dashboard API methods
+  const getAdminDashboard = useCallback(async (): Promise<ApiResponse> => {
+    const response = await fetch('/test-api-admin-dashboard', {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    
+    return handleResponse(response);
+  }, []);
+
+  const getAppDashboard = useCallback(async (): Promise<ApiResponse> => {
+    const response = await fetch('/test-api-app-dashboard', {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+    
+    return handleResponse(response);
   }, []);
 
   return {
@@ -96,5 +114,8 @@ export const useApi = () => {
     post,
     put,
     delete: del,
+    getAdminDashboard,
+    getAppDashboard,
+    getAuthToken,
   };
 };

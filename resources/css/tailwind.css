@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom ZENA styles */
+:root {
+    --primary-color: #2563eb;
+    --primary-dark: #1d4ed8;
+    --secondary-color: #64748b;
+    --success-color: #059669;
+    --warning-color: #d97706;
+    --danger-color: #dc2626;
+    --light-bg: #f8fafc;
+    --dark-bg: #1e293b;
+    --border-color: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --sidebar-width: 280px;
+}
+
+/* Custom components */
+.zena-btn {
+    @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200;
+}
+
+.zena-btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+}
+
+.zena-btn-secondary {
+    @apply bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500;
+}
+
+.zena-btn-success {
+    @apply bg-green-600 text-white hover:bg-green-700 focus:ring-green-500;
+}
+
+.zena-btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+}
+
+.zena-input {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-700;
+}
+
+.zena-form-input {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-700;
+}
+
+.zena-form-label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.zena-card {
+    @apply bg-white overflow-hidden shadow rounded-lg;
+}
+
+.zena-card-header {
+    @apply px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200;
+}
+
+.zena-card-body {
+    @apply px-4 py-5 sm:p-6;
+}
+
+.zena-nav-main {
+    @apply bg-white shadow-sm border-b border-gray-200;
+}
+
+.zena-nav-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.zena-nav-brand {
+    @apply flex items-center;
+}
+
+.zena-nav-brand-link {
+    @apply flex items-center text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors;
+}
+
+.zena-nav-logo {
+    @apply flex items-center mr-3;
+}
+
+.zena-nav-brand-text {
+    @apply ml-2;
+}
+
+.zena-nav-desktop {
+    @apply hidden md:flex space-x-8;
+}
+
+.zena-nav-link {
+    @apply text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors;
+}
+
+.zena-nav-link.active {
+    @apply text-blue-600 bg-blue-50;
+}
+
+/* Progress slider styles */
+.slider::-webkit-slider-thumb {
+    appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.slider::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: none;
+}

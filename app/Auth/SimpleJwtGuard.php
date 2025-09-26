@@ -5,7 +5,6 @@ namespace App\Auth;
 use Illuminate\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Auth\UserProvider;
-use Src\RBAC\Services\AuthService;
 
 class SimpleJwtGuard implements Guard
 {
@@ -63,7 +62,7 @@ class SimpleJwtGuard implements Guard
             
             // Fallback: return null if no request available
             return null;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return null;
         }
     }

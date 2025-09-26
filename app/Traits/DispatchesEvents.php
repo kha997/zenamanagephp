@@ -2,13 +2,13 @@
 
 namespace App\Traits;
 
-use App\Services\EventBusService;
-use App\Events\TaskCreated;
-use App\Events\TaskCompleted;
-use App\Events\TaskUpdated;
-use App\Events\ComponentCreated;
 use App\Events\ChangeRequested;
+use App\Events\ComponentCreated;
 use App\Events\DocumentUploaded;
+use App\Events\TaskCompleted;
+use App\Events\TaskCreated;
+use App\Events\TaskUpdated;
+use App\Services\EventBusService;
 
 trait DispatchesEvents
 {

@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Requests;
+use Illuminate\Support\Facades\Auth;
+
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -66,9 +68,9 @@ class ChangeRequestFormRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Thêm created_by từ authenticated user
-        if (auth()->check() && $this->isMethod('POST')) {
+        if (Auth::check() && $this->isMethod('POST')) {
             $this->merge([
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
         }
 

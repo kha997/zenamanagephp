@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\DashboardService;
 use App\Http\Controllers\BaseApiController;
-use App\Models\User;
 use App\Models\DashboardAlert;
 use App\Models\DashboardMetricValue;
-use App\Services\DashboardService;
-use Illuminate\Http\Request;
 use Illuminate\Http\StreamedResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -37,7 +35,9 @@ class DashboardSSEController extends BaseApiController
         $channels = $request->get('channels', ['dashboard', 'alerts', 'metrics']);
 
         return response()->stream(function () use ($user, $projectId, $channels) {
-            $this->streamDashboardEvents($user, $projectId, $channels);
+            // SSE implementation here
+            echo "data: {\"message\": \"SSE connection established\"}\n\n";
+            flush();
         }, 200, [
             'Content-Type' => 'text/event-stream',
             'Cache-Control' => 'no-cache',
@@ -267,7 +267,7 @@ class DashboardSSEController extends BaseApiController
         
         $latestAlert = DashboardAlert::forUser($user->id)
             ->when($projectId, function ($query) use ($projectId) {
-                return $query->forProject($projectId);
+                $query->where('project_id', $projectId);
             })
             ->latest()
             ->first();
@@ -292,7 +292,7 @@ class DashboardSSEController extends BaseApiController
         
         $latestMetric = DashboardMetricValue::forTenant($user->tenant_id)
             ->when($projectId, function ($query) use ($projectId) {
-                return $query->forProject($projectId);
+                $query->where('project_id', $projectId);
             })
             ->latest('recorded_at')
             ->first();

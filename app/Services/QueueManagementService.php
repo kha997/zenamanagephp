@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 
 class QueueManagementService
 {

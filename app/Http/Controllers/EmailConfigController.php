@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\View\View;
-use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
 
 class EmailConfigController extends Controller
 {
@@ -275,10 +274,9 @@ class EmailConfigController extends Controller
             $this->updateConfig($config);
 
             // Send test email
-            Mail::raw('This is a test email from ZenaManage. Your email configuration is working correctly!', function ($message) use ($email, $config) {
-                $message->to($email)
-                        ->subject('ZenaManage Email Test')
-                        ->from($config['from_address'], $config['from_name']);
+            Mail::raw('This is a test email from ZenaManage. Your email configuration is working correctly!', function ($message) {
+                $message->to($request->input('test_email'))
+                        ->subject('ZenaManage Email Configuration Test');
             });
 
             // Restore original config

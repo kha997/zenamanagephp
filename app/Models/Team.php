@@ -5,14 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Team extends Model
 {
-    use HasFactory, HasUlids, SoftDeletes;
+    use HasUlids, HasFactory;
 
     protected $table = 'teams';
     
@@ -190,8 +189,7 @@ class Team extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%")
-              ->orWhere('department', 'like', "%{$search}%");
+              ->orWhere('description', 'like', "%{$search}%");
         });
     }
 
@@ -271,8 +269,8 @@ class Team extends Model
             'total_members' => $this->activeMembers()->count(),
             'leaders' => $this->leaders()->count(),
             'members' => $this->activeMembers()->wherePivot('role', self::ROLE_MEMBER)->count(),
-            'active_tasks' => $this->tasks()->whereIn('status', ['todo', 'in_progress'])->count(),
-            'completed_tasks' => $this->tasks()->where('status', 'done')->count(),
+            'active_tasks' => $this->taskAssignments()->whereIn('status', ['assigned', 'in_progress'])->count(),
+            'completed_tasks' => $this->taskAssignments()->where('status', 'completed')->count(),
             'projects_count' => $this->projects()->count(),
         ];
     }

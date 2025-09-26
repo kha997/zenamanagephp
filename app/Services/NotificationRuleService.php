@@ -1,345 +1,337 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\NotificationRule;
-use App\Models\User;
-use App\Models\Project;
-use App\Models\Task;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
+use InvalidArgumentException;
+use Src\Foundation\EventBus;
+use Src\Notification\Models\NotificationRule;
 
+/**
+ * Service xử lý business logic cho Notification Rules
+ * 
+ * Chức năng chính:
+ * - Quản lý quy tắc thông báo
+ * - Đánh giá điều kiện thông báo
+ * - Xử lý logic rules engine
+ * - Quản lý preferences của user
+ */
 class NotificationRuleService
 {
     /**
-     * Create a new notification rule
+     * Tạo quy tắc thông báo mới
+     * 
+     * @param array $data
+     * @return NotificationRule
      */
     public function createRule(array $data): NotificationRule
     {
+        // Validate channels
+        $this->validateChannels($data['channels'] ?? []);
+        
+        // Validate conditions nếu có
+        if (!empty($data['conditions'])) {
+            $this->validateConditions($data['conditions']);
+        }
+
         $rule = NotificationRule::create([
-            'id' => \Str::ulid(),
-            'tenant_id' => $data['tenant_id'],
-            'created_by' => $data['created_by'],
-            'name' => $data['name'],
+            'user_id' => $data['user_id'],
+            'project_id' => $data['project_id'] ?? null,
+            'event_key' => $data['event_key'],
+            'min_priority' => $data['min_priority'] ?? 'normal',
+            'channels' => $data['channels'] ?? ['inapp'],
+            'is_enabled' => $data['is_enabled'] ?? true,
+            'conditions' => $data['conditions'] ?? null,
             'description' => $data['description'] ?? null,
-            'event_type' => $data['event_type'],
-            'conditions' => $data['conditions'] ?? [],
-            'notification_channels' => $data['notification_channels'] ?? ['in_app'],
-            'recipients' => $data['recipients'] ?? [],
-            'template' => $data['template'] ?? [],
-            'is_active' => $data['is_active'] ?? true,
-            'priority' => $data['priority'] ?? 'medium',
-            'cooldown_minutes' => $data['cooldown_minutes'] ?? 0,
         ]);
 
-        Log::info("Notification rule created: {$rule->name} for event: {$rule->event_type}");
-        
+        // Dispatch event
+        EventBus::dispatch('NotificationRule.Created', [
+            'ruleId' => $rule->ulid,
+            'userId' => $rule->user_id,
+            'projectId' => $rule->project_id,
+            'eventKey' => $rule->event_key,
+            'timestamp' => now()->toISOString()
+        ]);
+
         return $rule;
     }
 
     /**
-     * Update notification rule
+     * Cập nhật quy tắc thông báo
+     * 
+     * @param string $ruleId
+     * @param array $data
+     * @param int $userId
+     * @return NotificationRule|null
      */
-    public function updateRule(string $ruleId, array $data): NotificationRule
+    public function updateRule(string $ruleId, array $data, int $userId): ?NotificationRule
     {
-        $rule = NotificationRule::findOrFail($ruleId);
+        $rule = NotificationRule::where('ulid', $ruleId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$rule) {
+            return null;
+        }
+
+        // Validate channels nếu có update
+        if (isset($data['channels'])) {
+            $this->validateChannels($data['channels']);
+        }
+        
+        // Validate conditions nếu có update
+        if (isset($data['conditions'])) {
+            $this->validateConditions($data['conditions']);
+        }
+
+        $oldData = $rule->toArray();
         $rule->update($data);
-        
-        Log::info("Notification rule updated: {$rule->name}");
-        
+
+        // Dispatch event
+        EventBus::dispatch('NotificationRule.Updated', [
+            'ruleId' => $rule->ulid,
+            'userId' => $rule->user_id,
+            'projectId' => $rule->project_id,
+            'eventKey' => $rule->event_key,
+            'oldData' => $oldData,
+            'newData' => $rule->fresh()->toArray(),
+            'timestamp' => now()->toISOString()
+        ]);
+
         return $rule;
     }
 
     /**
-     * Delete notification rule
+     * Xóa quy tắc thông báo
+     * 
+     * @param string $ruleId
+     * @param int $userId
+     * @return bool
      */
-    public function deleteRule(string $ruleId): bool
+    public function deleteRule(string $ruleId, int $userId): bool
     {
-        $rule = NotificationRule::findOrFail($ruleId);
-        $ruleName = $rule->name;
+        $rule = NotificationRule::where('ulid', $ruleId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$rule) {
+            return false;
+        }
+
+        $ruleData = $rule->toArray();
         $rule->delete();
-        
-        Log::info("Notification rule deleted: {$ruleName}");
-        
-        return true;
-    }
 
-    /**
-     * Evaluate and trigger notification rules for an event
-     */
-    public function evaluateRules(string $eventType, array $eventData): void
-    {
-        $rules = NotificationRule::active()
-            ->forEvent($eventType)
-            ->get();
-
-        foreach ($rules as $rule) {
-            if ($this->shouldTriggerRule($rule, $eventData)) {
-                $this->triggerRule($rule, $eventData);
-            }
-        }
-    }
-
-    /**
-     * Check if rule should be triggered
-     */
-    private function shouldTriggerRule(NotificationRule $rule, array $eventData): bool
-    {
-        // Check if rule can trigger (cooldown, active status)
-        if (!$rule->canTrigger()) {
-            return false;
-        }
-
-        // Evaluate conditions
-        if (!$rule->evaluateConditions($eventData)) {
-            return false;
-        }
+        // Dispatch event
+        EventBus::dispatch('NotificationRule.Deleted', [
+            'ruleId' => $ruleId,
+            'userId' => $userId,
+            'ruleData' => $ruleData,
+            'timestamp' => now()->toISOString()
+        ]);
 
         return true;
     }
 
     /**
-     * Trigger notification rule
+     * Lấy danh sách quy tắc của user
+     * 
+     * @param int $userId
+     * @param int|null $projectId
+     * @param int $page
+     * @param int $perPage
+     * @return LengthAwarePaginator
      */
-    private function triggerRule(NotificationRule $rule, array $eventData): void
-    {
-        try {
-            // Get recipients
-            $recipients = $rule->getRecipients($eventData);
-            
-            if (empty($recipients)) {
-                Log::warning("No recipients found for rule: {$rule->name}");
-                return;
-            }
+    public function getUserRules(
+        int $userId,
+        ?int $projectId = null,
+        int $page = 1,
+        int $perPage = 20
+    ): LengthAwarePaginator {
+        $query = NotificationRule::query()
+            ->forUser($userId)
+            ->with(['user', 'project'])
+            ->orderBy('created_at', 'desc');
 
-            // Render template
-            $renderedTemplate = $rule->renderTemplate($eventData);
-
-            // Send notifications through different channels
-            foreach ($rule->notification_channels as $channel) {
-                $this->sendNotification($channel, $recipients, $renderedTemplate, $eventData);
-            }
-
-            // Update rule trigger count
-            $rule->incrementTriggerCount();
-
-            Log::info("Notification rule triggered: {$rule->name} for {$eventType}");
-
-        } catch (\Exception $e) {
-            Log::error("Failed to trigger notification rule {$rule->name}: " . $e->getMessage());
+        if ($projectId !== null) {
+            $query->forProject($projectId);
         }
+
+        return $query->paginate($perPage, ['*'], 'page', $page);
     }
 
     /**
-     * Send notification through specific channel
+     * Bật/tắt quy tắc thông báo
+     * 
+     * @param string $ruleId
+     * @param bool $enabled
+     * @param int $userId
+     * @return bool
      */
-    private function sendNotification(string $channel, array $recipients, array $template, array $eventData): void
+    public function toggleRule(string $ruleId, bool $enabled, int $userId): bool
     {
-        switch ($channel) {
-            case 'email':
-                $this->sendEmailNotification($recipients, $template, $eventData);
-                break;
-            case 'in_app':
-                $this->sendInAppNotification($recipients, $template, $eventData);
-                break;
-            case 'sms':
-                $this->sendSmsNotification($recipients, $template, $eventData);
-                break;
-            case 'webhook':
-                $this->sendWebhookNotification($recipients, $template, $eventData);
-                break;
-            default:
-                Log::warning("Unknown notification channel: {$channel}");
+        $rule = NotificationRule::where('ulid', $ruleId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$rule) {
+            return false;
         }
+
+        $rule->is_enabled = $enabled;
+        $rule->save();
+
+        // Dispatch event
+        EventBus::dispatch('NotificationRule.Toggled', [
+            'ruleId' => $rule->ulid,
+            'userId' => $rule->user_id,
+            'enabled' => $enabled,
+            'timestamp' => now()->toISOString()
+        ]);
+
+        return true;
     }
 
     /**
-     * Send email notification
+     * Lấy quy tắc áp dụng cho một event cụ thể
+     * 
+     * @param int $userId
+     * @param string $eventKey
+     * @param int|null $projectId
+     * @param string $priority
+     * @param array $eventData
+     * @return Collection
      */
-    private function sendEmailNotification(array $recipients, array $template, array $eventData): void
-    {
-        $users = User::whereIn('id', $recipients)->get();
-        
-        foreach ($users as $user) {
-            if ($user->email) {
-                Queue::push(function($job) use ($user, $template, $eventData) {
-                    Mail::send('emails.notification', [
-                        'user' => $user,
-                        'template' => $template,
-                        'eventData' => $eventData
-                    ], function($message) use ($user, $template) {
-                        $message->to($user->email)
-                               ->subject($template['subject'] ?? 'Notification');
-                    });
-                    
-                    $job->delete();
-                });
-            }
+    public function getApplicableRules(
+        int $userId,
+        string $eventKey,
+        ?int $projectId = null,
+        string $priority = 'normal',
+        array $eventData = []
+    ): Collection {
+        $query = NotificationRule::query()
+            ->forUser($userId)
+            ->forEventKey($eventKey)
+            ->enabled()
+            ->where(function ($q) 
+            });
+
+        // Lọc theo project - bao gồm cả global rules (project_id = null)
+        if ($projectId !== null) {
+            $query->where(function ($q) 
+            });
+        } else {
+            $query->whereNull('project_id');
         }
+
+        $rules = $query->get();
+
+        // Lọc theo conditions
+        return $rules->filter(function ($rule) 
+        });
     }
 
     /**
-     * Send in-app notification
+     * Tạo quy tắc mặc định cho user mới
+     * 
+     * @param int $userId
+     * @return Collection
      */
-    private function sendInAppNotification(array $recipients, array $template, array $eventData): void
-    {
-        // This would typically use a real-time system like WebSocket or Pusher
-        // For now, we'll log it
-        Log::info("In-app notification sent to users: " . implode(',', $recipients));
-        
-        // TODO: Implement real-time notification system
-        // Example: broadcast(new NotificationSent($recipients, $template, $eventData));
-    }
-
-    /**
-     * Send SMS notification
-     */
-    private function sendSmsNotification(array $recipients, array $template, array $eventData): void
-    {
-        $users = User::whereIn('id', $recipients)->whereNotNull('phone')->get();
-        
-        foreach ($users as $user) {
-            // TODO: Implement SMS service (Twilio, etc.)
-            Log::info("SMS notification would be sent to: {$user->phone}");
-        }
-    }
-
-    /**
-     * Send webhook notification
-     */
-    private function sendWebhookNotification(array $recipients, array $template, array $eventData): void
-    {
-        // TODO: Implement webhook system
-        Log::info("Webhook notification would be sent for recipients: " . implode(',', $recipients));
-    }
-
-    /**
-     * Get rules for specific event type
-     */
-    public function getRulesForEvent(string $eventType): \Illuminate\Database\Eloquent\Collection
-    {
-        return NotificationRule::active()
-            ->forEvent($eventType)
-            ->orderBy('priority', 'desc')
-            ->get();
-    }
-
-    /**
-     * Get all active rules
-     */
-    public function getActiveRules(): \Illuminate\Database\Eloquent\Collection
-    {
-        return NotificationRule::active()
-            ->orderBy('priority', 'desc')
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }
-
-    /**
-     * Test notification rule
-     */
-    public function testRule(string $ruleId, array $testEventData): array
-    {
-        $rule = NotificationRule::findOrFail($ruleId);
-        
-        $result = [
-            'rule_name' => $rule->name,
-            'event_type' => $rule->event_type,
-            'can_trigger' => $rule->canTrigger(),
-            'conditions_met' => $rule->evaluateConditions($testEventData),
-            'recipients' => $rule->getRecipients($testEventData),
-            'rendered_template' => $rule->renderTemplate($testEventData),
-            'channels' => $rule->notification_channels,
-        ];
-        
-        return $result;
-    }
-
-    /**
-     * Create default notification rules for a tenant
-     */
-    public function createDefaultRules(string $tenantId, int $createdBy): void
+    public function createDefaultRules(int $userId): Collection
     {
         $defaultRules = [
             [
-                'name' => 'Task Assignment Notification',
-                'description' => 'Notify when a task is assigned to a user',
-                'event_type' => 'task_assigned',
-                'conditions' => [],
-                'notification_channels' => ['in_app', 'email'],
-                'recipients' => [
-                    ['type' => 'task_assignee']
-                ],
-                'template' => [
-                    'subject' => 'New Task Assignment',
-                    'message' => 'You have been assigned to task: {{task_name}}',
-                    'priority' => 'medium'
-                ],
-                'priority' => 'medium',
-                'cooldown_minutes' => 0,
+                'user_id' => $userId,
+                'event_key' => 'Task.Assigned',
+                'min_priority' => 'normal',
+                'channels' => ['inapp', 'email'],
+                'description' => 'Thông báo khi được giao task mới'
             ],
             [
-                'name' => 'Task Deadline Approaching',
-                'description' => 'Notify when task deadline is approaching',
-                'event_type' => 'deadline_approaching',
-                'conditions' => [
-                    ['field' => 'days_until_deadline', 'operator' => 'less_than', 'value' => 3]
-                ],
-                'notification_channels' => ['in_app', 'email'],
-                'recipients' => [
-                    ['type' => 'task_assignee']
-                ],
-                'template' => [
-                    'subject' => 'Task Deadline Approaching',
-                    'message' => 'Task "{{task_name}}" deadline is approaching in {{days_until_deadline}} days',
-                    'priority' => 'high'
-                ],
-                'priority' => 'high',
-                'cooldown_minutes' => 1440, // 24 hours
+                'user_id' => $userId,
+                'event_key' => 'Project.StatusChanged',
+                'min_priority' => 'normal',
+                'channels' => ['inapp'],
+                'description' => 'Thông báo khi trạng thái dự án thay đổi'
             ],
             [
-                'name' => 'Project Status Change',
-                'description' => 'Notify project members when project status changes',
-                'event_type' => 'project_status_changed',
-                'conditions' => [],
-                'notification_channels' => ['in_app'],
-                'recipients' => [
-                    ['type' => 'project_members']
-                ],
-                'template' => [
-                    'subject' => 'Project Status Updated',
-                    'message' => 'Project "{{project_name}}" status changed to {{new_status}}',
-                    'priority' => 'medium'
-                ],
-                'priority' => 'medium',
-                'cooldown_minutes' => 0,
+                'user_id' => $userId,
+                'event_key' => 'ChangeRequest.Approved',
+                'min_priority' => 'normal',
+                'channels' => ['inapp', 'email'],
+                'description' => 'Thông báo khi yêu cầu thay đổi được phê duyệt'
             ],
+            [
+                'user_id' => $userId,
+                'event_key' => 'Document.Approved',
+                'min_priority' => 'normal',
+                'channels' => ['inapp'],
+                'description' => 'Thông báo khi tài liệu được phê duyệt'
+            ]
         ];
 
+        $rules = collect();
         foreach ($defaultRules as $ruleData) {
-            $ruleData['tenant_id'] = $tenantId;
-            $ruleData['created_by'] = $createdBy;
-            $this->createRule($ruleData);
+            $rules->push($this->createRule($ruleData));
         }
 
-        Log::info("Default notification rules created for tenant: {$tenantId}");
+        return $rules;
     }
 
     /**
-     * Get notification statistics
+     * Validate channels
+     * 
+     * @param array $channels
+     * @throws InvalidArgumentException
      */
-    public function getStatistics(string $tenantId): array
+    private function validateChannels(array $channels): void
     {
-        $rules = NotificationRule::where('tenant_id', $tenantId)->get();
+        $validChannels = ['inapp', 'email', 'webhook'];
         
-        return [
-            'total_rules' => $rules->count(),
-            'active_rules' => $rules->where('is_active', true)->count(),
-            'inactive_rules' => $rules->where('is_active', false)->count(),
-            'total_triggers' => $rules->sum('trigger_count'),
-            'rules_by_event' => $rules->groupBy('event_type')->map->count(),
-            'rules_by_priority' => $rules->groupBy('priority')->map->count(),
+        foreach ($channels as $channel) {
+            if (!in_array($channel, $validChannels)) {
+                throw new InvalidArgumentException("Invalid channel: {$channel}");
+            }
+        }
+    }
+
+    /**
+     * Validate conditions
+     * 
+     * @param array $conditions
+     * @throws InvalidArgumentException
+     */
+    private function validateConditions(array $conditions): void
+    {
+        // Validate cấu trúc conditions
+        // Ví dụ: ['field' => 'project_status', 'operator' => '=', 'value' => 'active']
+        foreach ($conditions as $condition) {
+            if (!isset($condition['field']) || !isset($condition['operator']) || !isset($condition['value'])) {
+                throw new InvalidArgumentException('Invalid condition structure');
+            }
+            
+            $validOperators = ['=', '!=', '>', '<', '>=', '<=', 'in', 'not_in', 'contains'];
+            if (!in_array($condition['operator'], $validOperators)) {
+                throw new InvalidArgumentException("Invalid operator: {$condition['operator']}");
+            }
+        }
+    }
+
+    /**
+     * Chuyển đổi priority thành level số
+     * 
+     * @param string $priority
+     * @return int
+     */
+    private function getPriorityLevel(string $priority): int
+    {
+        $levels = [
+            'low' => 1,
+            'normal' => 2,
+            'critical' => 3
         ];
+
+        return $levels[$priority] ?? 2;
     }
 }

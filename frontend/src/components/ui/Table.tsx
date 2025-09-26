@@ -3,7 +3,7 @@
  * Responsive table với sorting, pagination và selection
  */
 import React from 'react';
-import { cn } from '../../lib/utils/format';
+import { cn } from '../../lib/utils';
 
 interface Column<T> {
   key: keyof T | string;

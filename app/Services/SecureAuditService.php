@@ -1,11 +1,13 @@
 <?php
 
 namespace App\Services;
+use Illuminate\Support\Facades\Auth;
+
 
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 /**
  * Secure Audit Service
@@ -85,13 +87,13 @@ class SecureAuditService
         ?string $tenantId = null
     ): void {
         $this->logAction(
-            userId: $userId ?? auth()->id() ?? 'system',
+            userId: $userId ?? Auth::id() ?? 'system',
             action: $action,
             entityType: $model,
             entityId: $modelId,
             oldData: $oldData,
             newData: $newData,
-            tenantId: $tenantId ?? auth()->user()?->tenant_id
+            tenantId: $tenantId ?? Auth::user()?->tenant_id
         );
     }
 

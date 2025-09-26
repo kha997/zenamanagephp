@@ -95,7 +95,7 @@ class ChangeRequestApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'title' => 'Test Change Request',
             'project_id' => $this->project->id
         ]);
@@ -126,7 +126,7 @@ class ChangeRequestApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'submitted'
         ]);
@@ -166,7 +166,7 @@ class ChangeRequestApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'approved',
             'approved_cost' => 15000.00
@@ -205,7 +205,7 @@ class ChangeRequestApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'rejected',
             'rejection_reason' => 'Cost impact too high'
@@ -242,7 +242,7 @@ class ChangeRequestApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'implemented',
             'implementation_notes' => 'Change has been implemented successfully'
@@ -280,7 +280,7 @@ class ChangeRequestApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_change_requests', [
+        $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'title' => 'Updated Change Request Title'
         ]);
@@ -302,7 +302,7 @@ class ChangeRequestApiTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('zena_change_requests', [
+        $this->assertDatabaseMissing('change_requests', [
             'id' => $changeRequest->id
         ]);
     }

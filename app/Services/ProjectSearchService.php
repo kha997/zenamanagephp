@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
@@ -36,18 +35,9 @@ class ProjectSearchService
         }
         
         // Full-text search
-        $query->where(function ($q) use ($searchTerm) {
-            $q->where('name', 'like', "%{$searchTerm}%")
-              ->orWhere('description', 'like', "%{$searchTerm}%")
-              ->orWhere('code', 'like', "%{$searchTerm}%")
-              ->orWhereJsonContains('tags', $searchTerm)
-              ->orWhereHas('client', function ($clientQuery) use ($searchTerm) {
-                  $clientQuery->where('name', 'like', "%{$searchTerm}%")
-                             ->orWhere('email', 'like', "%{$searchTerm}%");
+        $query->where(function ($q) 
               })
-              ->orWhereHas('projectManager', function ($pmQuery) use ($searchTerm) {
-                  $pmQuery->where('name', 'like', "%{$searchTerm}%")
-                          ->orWhere('email', 'like', "%{$searchTerm}%");
+              ->orWhereHas('projectManager', function ($pmQuery) 
               });
         });
         
@@ -156,8 +146,7 @@ class ProjectSearchService
         
         // Team member filters
         if (!empty($teamCriteria['team_member_ids'])) {
-            $query->whereHas('teamMembers', function ($q) use ($teamCriteria) {
-                $q->whereIn('user_id', $teamCriteria['team_member_ids']);
+            $query->whereHas('teamMembers', function ($q) 
             });
         }
         
@@ -246,8 +235,7 @@ class ProjectSearchService
         // Client name suggestions
         $clientNames = Project::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->whereHas('client', function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%");
+            ->whereHas('client', function ($q) 
             })
             ->with('client')
             ->limit(5)
@@ -261,8 +249,7 @@ class ProjectSearchService
         // Project manager suggestions
         $pmNames = Project::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->whereHas('projectManager', function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%");
+            ->whereHas('projectManager', function ($q) 
             })
             ->with('projectManager')
             ->limit(5)
@@ -408,8 +395,7 @@ class ProjectSearchService
         }
         
         if (!empty($criteria['team_member_id'])) {
-            $query->whereHas('teamMembers', function ($q) use ($criteria) {
-                $q->where('user_id', $criteria['team_member_id']);
+            $query->whereHas('teamMembers', function ($q) 
             });
         }
         

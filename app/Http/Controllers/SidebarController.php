@@ -2,19 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\SidebarConfig;
-use App\Services\SidebarService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class SidebarController extends Controller
 {
-    protected $sidebarService;
+    // protected $sidebarService;
 
-    public function __construct(SidebarService $sidebarService)
-    {
-        $this->sidebarService = $sidebarService;
-    }
+    // public function __construct(SidebarService $sidebarService)
+    // {
+    //     $this->sidebarService = $sidebarService;
+    // }
 
     public function getSidebarConfig(Request $request)
     {

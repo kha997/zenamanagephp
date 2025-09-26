@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\DashboardWidget;
-use App\Models\UserDashboard;
 use App\Models\DashboardAlert;
 use App\Models\DashboardMetric;
+use App\Models\DashboardWidget;
 use App\Models\DashboardWidgetDataCache;
+use App\Models\User;
+use App\Models\UserDashboard;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 

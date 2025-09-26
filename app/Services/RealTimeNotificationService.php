@@ -2,10 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Project;
-use App\Models\User;
 use App\Models\ProjectActivity;
-use Illuminate\Support\Facades\Broadcast;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Pusher\Pusher;
 

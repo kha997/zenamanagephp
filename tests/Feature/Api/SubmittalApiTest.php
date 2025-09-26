@@ -90,7 +90,7 @@ class SubmittalApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_submittals', [
+        $this->assertDatabaseHas('submittals', [
             'title' => 'Test Submittal',
             'project_id' => $this->project->id
         ]);
@@ -121,7 +121,7 @@ class SubmittalApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_submittals', [
+        $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'status' => 'submitted'
         ]);
@@ -157,7 +157,7 @@ class SubmittalApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_submittals', [
+        $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'review_notes' => 'This submittal looks good',
             'status' => 'approved'
@@ -194,7 +194,7 @@ class SubmittalApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_submittals', [
+        $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'status' => 'approved',
             'approval_comments' => 'Approved with minor comments'
@@ -233,7 +233,7 @@ class SubmittalApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_submittals', [
+        $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'status' => 'rejected',
             'rejection_reason' => 'Does not meet specifications'
@@ -269,7 +269,7 @@ class SubmittalApiTest extends TestCase
                     ]
                 ]);
 
-        $this->assertDatabaseHas('zena_submittals', [
+        $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'title' => 'Updated Submittal Title'
         ]);
@@ -291,7 +291,7 @@ class SubmittalApiTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('zena_submittals', [
+        $this->assertDatabaseMissing('submittals', [
             'id' => $submittal->id
         ]);
     }

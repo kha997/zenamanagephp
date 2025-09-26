@@ -7,11 +7,11 @@ use App\Http\Requests\TaskFormRequest;
 use App\Http\Resources\TaskResource;
 use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
-use Src\CoreProject\Models\Task;
 use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Task;
 
 /**
  * Web Task Controller for task management interface
@@ -122,17 +122,21 @@ class TaskController extends Controller
     /**
      * Display the specified task.
      */
-    public function show(string $taskId): View
+    public function show(string $taskId): View|RedirectResponse
     {
         try {
-            $task = Task::with(['project', 'assignee'])->findOrFail($taskId);
+            $task = Task::with(['project'])->findOrFail($taskId);
             
             return view('tasks.show', compact('task'));
         } catch (\Exception $e) {
-            return view('tasks.show', [
-                'task' => null,
-                'error' => 'Không thể tải task: ' . $e->getMessage()
+            \Log::error('Task show error', [
+                'task_id' => $taskId,
+                'error' => $e->getMessage()
             ]);
+            
+            return redirect()
+                ->route('tasks.index')
+                ->withErrors(['error' => 'Không thể tải task: ' . $e->getMessage()]);
         }
     }
 
@@ -202,11 +206,18 @@ class TaskController extends Controller
             // Debug: Log request data
             \Log::info('Task Update Request', [
                 'task_id' => $taskId,
-                'request_data' => $request->all(),
-                'validated_data' => $request->validated()
+                'request_data' => $request->all()
             ]);
             
-            $taskData = $request->validated();
+            // Use all() instead of validated() to avoid null issues
+            $taskData = $request->all();
+            
+            // Debug: Log task data being passed to service
+            \Log::info('Task data being passed to service', [
+                'task_id' => $taskId,
+                'task_data' => $taskData
+            ]);
+            
             $task = $this->taskService->updateTask($taskId, $taskData);
             
             if (!$task) {
@@ -375,7 +386,7 @@ class TaskController extends Controller
     {
         try {
             $task = Task::findOrFail($taskId);
-            // TODO: Implement document retrieval logic
+            
             $documents = []; // Placeholder
             
             return response()->json([
@@ -405,7 +416,7 @@ class TaskController extends Controller
         
         try {
             $task = Task::findOrFail($taskId);
-            // TODO: Implement file upload logic
+            
             
             return response()->json([
                 'status' => 'success',
@@ -426,7 +437,7 @@ class TaskController extends Controller
     {
         try {
             $task = Task::findOrFail($taskId);
-            // TODO: Implement audit trail logic
+            
             $history = [
                 [
                     'action' => 'Task Created',

@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Requests;
+use Illuminate\Support\Facades\Auth;
 
+
+use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\InteractionLog;
 
 class UpdateInteractionLogRequest extends FormRequest
 {
@@ -33,7 +33,7 @@ class UpdateInteractionLogRequest extends FormRequest
                 'string',
                 'size:26',
                 Rule::exists('projects', 'id')->where(function ($query) {
-                    $query->where('tenant_id', auth()->user()->tenant_id);
+                    $query->where('tenant_id', Auth::user()->tenant_id);
                 })
             ],
             'linked_task_id' => [

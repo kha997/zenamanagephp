@@ -43,8 +43,7 @@ class SidebarService
 
         $cacheKey = "sidebar_user_{$user->id}_{$user->tenant_id}";
         
-        return Cache::remember($cacheKey, 300, function () use ($user) {
-            return $this->buildSidebarConfig($user);
+        return Cache::remember($cacheKey, 300, function () 
         });
     }
 
@@ -55,8 +54,7 @@ class SidebarService
     {
         $cacheKey = "sidebar_role_{$roleName}_{$tenantId}";
         
-        return Cache::remember($cacheKey, 600, function () use ($roleName, $tenantId) {
-            return $this->buildRoleSidebarConfig($roleName, $tenantId);
+        return Cache::remember($cacheKey, 600, function () 
         });
     }
 
@@ -127,7 +125,7 @@ class SidebarService
      */
     protected function getUserRole(User $user): string
     {
-        // TODO: Implement proper role detection from database
+        
         // For now, return a default role based on user attributes
         if ($user->email === 'admin@zena.com') {
             return 'super_admin';
@@ -141,7 +139,7 @@ class SidebarService
      */
     protected function getUserPreferences(User $user): array
     {
-        // TODO: Implement user preferences system
+        
         // This would come from a user_preferences table or similar
         return [];
     }
@@ -243,8 +241,6 @@ class SidebarService
         return $config;
     }
 
-
-
     /**
      * Get default sidebar configuration.
      */
@@ -289,7 +285,7 @@ class SidebarService
      */
     public function clearAllCaches(): void
     {
-        // TODO: Implement cache clearing for all sidebar configurations
+        
         Cache::flush();
     }
 }

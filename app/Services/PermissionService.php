@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
 class PermissionService
@@ -14,8 +13,7 @@ class PermissionService
     {
         $cacheKey = "user_permissions_{$user->id}";
         
-        $permissions = Cache::remember($cacheKey, 300, function () use ($user) {
-            return $this->getUserPermissions($user);
+        $permissions = Cache::remember($cacheKey, 300, function () 
         });
         
         return in_array($permission, $permissions);
@@ -73,7 +71,7 @@ class PermissionService
      */
     protected function getUserRoles(User $user): array
     {
-        // TODO: Implement proper role detection from database
+        
         // For now, return a default role based on user attributes
         if ($user->email === 'admin@zena.com') {
             return ['super_admin'];
@@ -246,17 +244,7 @@ class PermissionService
      */
     protected function extractRouteFromUrl(string $url): ?string
     {
-        // Simple route extraction - in a real app, you'd use Laravel's route resolution
-        $urlMap = [
-            '/dashboard' => 'dashboard',
-            '/projects' => 'projects.index',
-            '/projects/create' => 'projects.create',
-            '/tasks' => 'tasks.index',
-            '/tasks/create' => 'tasks.create',
-            '/users' => 'users.index',
-            '/users/create' => 'users.create',
-            '/admin/sidebar-builder' => 'admin.sidebar-builder',
-        ];
+        // Simple route extraction - in a real app, you'd 
         
         return $urlMap[$url] ?? null;
     }
@@ -275,7 +263,7 @@ class PermissionService
      */
     public function clearAllCaches(): void
     {
-        // TODO: Implement selective cache clearing
+        
         Cache::flush();
     }
 }

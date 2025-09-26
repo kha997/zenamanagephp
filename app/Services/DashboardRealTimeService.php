@@ -2,13 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\User;
-use App\Models\DashboardAlert;
-use App\Models\DashboardMetricValue;
 use App\Models\DashboardWidgetDataCache;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Dashboard Real-Time Service

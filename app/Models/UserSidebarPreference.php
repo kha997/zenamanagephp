@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Validator;
 
 class UserSidebarPreference extends Model
 {
-    use HasFactory, HasUlids;
+    use HasUlids, HasFactory;
 
     protected $table = 'user_sidebar_preferences';
 

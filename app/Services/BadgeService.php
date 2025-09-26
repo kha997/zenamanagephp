@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -22,8 +21,7 @@ class BadgeService
 
         $cacheKey = "badge_{$itemId}_user_{$user->id}";
         
-        return Cache::remember($cacheKey, 60, function () use ($itemId, $user) {
-            return $this->fetchBadgeCount($itemId, $user);
+        return Cache::remember($cacheKey, 60, function () 
         });
     }
 
@@ -109,7 +107,7 @@ class BadgeService
      */
     protected function getUserToken(User $user): string
     {
-        // TODO: Implement proper token generation
+        
         // For now, return a placeholder
         return 'user_token_' . $user->id;
     }
@@ -136,7 +134,7 @@ class BadgeService
         
         if ($user) {
             $cacheKey = "badge_*_user_{$user->id}";
-            // TODO: Implement selective cache clearing
+            
             Cache::flush();
         }
     }
@@ -147,7 +145,7 @@ class BadgeService
     public function clearItemBadgeCache(string $itemId): void
     {
         $cacheKey = "badge_{$itemId}_user_*";
-        // TODO: Implement selective cache clearing
+        
         Cache::flush();
     }
 

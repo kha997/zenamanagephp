@@ -3,12 +3,6 @@
 namespace App\Services;
 
 use App\Models\Project;
-use App\Models\ProjectMilestone;
-use App\Models\Task;
-use App\Models\User;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Collection;
-use Carbon\Carbon;
 
 /**
  * ProjectAnalyticsService - Advanced analytics for projects
@@ -384,18 +378,7 @@ class ProjectAnalyticsService
     private function identifyCriticalPath(Collection $tasks): array
     {
         // Simplified critical path calculation
-        // In a real implementation, this would use proper CPM algorithm
-        return $tasks->where('priority', 'high')
-                    ->where('status', '!=', 'completed')
-                    ->sortBy('due_date')
-                    ->take(5)
-                    ->map(function ($task) {
-                        return [
-                            'id' => $task->id,
-                            'name' => $task->name,
-                            'due_date' => $task->due_date,
-                            'priority' => $task->priority
-                        ];
+        // In a real implementation, this would 
                     })
                     ->toArray();
     }
@@ -454,8 +437,7 @@ class ProjectAnalyticsService
         
         $total = array_sum($distribution);
         
-        return array_map(function ($count) use ($total) {
-            return $total > 0 ? round(($count / $total) * 100, 2) : 0;
+        return array_map(function ($count) 
         }, $distribution);
     }
 

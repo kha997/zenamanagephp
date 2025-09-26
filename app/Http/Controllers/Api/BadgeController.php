@@ -3,19 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\BadgeService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class BadgeController extends Controller
 {
-    protected BadgeService $badgeService;
-
-    public function __construct(BadgeService $badgeService)
-    {
-        $this->badgeService = $badgeService;
-    }
-
     /**
      * Get badge count for a specific item.
      */

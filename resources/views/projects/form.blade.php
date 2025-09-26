@@ -15,8 +15,10 @@
 </div>
 
 <div class="content-wrapper">
-    <form id="project-form" class="needs-validation" novalidate>
+    <form id="project-form" class="needs-validation" novalidate method="POST">
+        @csrf
         @if(isset($project))
+            @method('PUT')
             <input type="hidden" id="project-id" value="{{ $project->id }}">
         @endif
         

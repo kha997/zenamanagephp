@@ -2,13 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\ChangeRequest;
+use App\Models\Component;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\Component;
-use App\Models\ChangeRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class CalculationService
 {

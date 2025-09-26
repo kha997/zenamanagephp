@@ -54,10 +54,22 @@ return [
             'engine' => 'InnoDB',
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-                PDO::ATTR_PERSISTENT => true,
-                PDO::ATTR_TIMEOUT => 30,
+                PDO::ATTR_PERSISTENT => env('DB_PERSISTENT', true),
+                PDO::ATTR_TIMEOUT => env('DB_TIMEOUT', 30),
                 PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET sql_mode='STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO'",
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::MYSQL_ATTR_LOCAL_INFILE => true,
             ]) : [],
+            // Connection pooling settings
+            'pool' => [
+                'min_connections' => env('DB_POOL_MIN', 5),
+                'max_connections' => env('DB_POOL_MAX', 20),
+                'connection_timeout' => env('DB_CONNECTION_TIMEOUT', 10),
+                'idle_timeout' => env('DB_IDLE_TIMEOUT', 300),
+                'max_lifetime' => env('DB_MAX_LIFETIME', 3600),
+            ],
         ],
 
         // Read replica for heavy SELECT queries
@@ -73,6 +85,22 @@ return [
             'prefix' => '',
             'strict' => true,
             'engine' => 'InnoDB',
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::ATTR_PERSISTENT => env('DB_PERSISTENT', true),
+                PDO::ATTR_TIMEOUT => env('DB_TIMEOUT', 30),
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET sql_mode='STRICT_TRANS_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO'",
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]) : [],
+            // Read replica connection pooling
+            'pool' => [
+                'min_connections' => env('DB_READ_POOL_MIN', 3),
+                'max_connections' => env('DB_READ_POOL_MAX', 15),
+                'connection_timeout' => env('DB_CONNECTION_TIMEOUT', 10),
+                'idle_timeout' => env('DB_IDLE_TIMEOUT', 300),
+                'max_lifetime' => env('DB_MAX_LIFETIME', 3600),
+            ],
         ],
     
         'testing' => [
@@ -103,6 +131,7 @@ return [
         ],
     ],
 
+    /*
     'redis' => [
         'client' => env('REDIS_CLIENT', 'predis'), // Thay đổi từ 'phpredis' thành 'predis'
         
@@ -117,6 +146,9 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
+            'timeout' => env('REDIS_TIMEOUT', 5),
+            'read_timeout' => env('REDIS_READ_TIMEOUT', 60),
+            'persistent' => env('REDIS_PERSISTENT', true),
         ],
         
         'cache' => [
@@ -125,8 +157,34 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
+            'timeout' => env('REDIS_TIMEOUT', 5),
+            'read_timeout' => env('REDIS_READ_TIMEOUT', 60),
+            'persistent' => env('REDIS_PERSISTENT', true),
+        ],
+        
+        'session' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_SESSION_DB', '2'),
+            'timeout' => env('REDIS_TIMEOUT', 5),
+            'read_timeout' => env('REDIS_READ_TIMEOUT', 60),
+            'persistent' => env('REDIS_PERSISTENT', true),
+        ],
+        
+        'queue' => [
+            'url' => env('REDIS_URL'),
+            'host' => env('REDIS_HOST', '127.0.0.1'),
+            'password' => env('REDIS_PASSWORD'),
+            'port' => env('REDIS_PORT', '6379'),
+            'database' => env('REDIS_QUEUE_DB', '3'),
+            'timeout' => env('REDIS_TIMEOUT', 5),
+            'read_timeout' => env('REDIS_READ_TIMEOUT', 60),
+            'persistent' => env('REDIS_PERSISTENT', true),
         ],
     ],
+    */
 
     /*
     |--------------------------------------------------------------------------

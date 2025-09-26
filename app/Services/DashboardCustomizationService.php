@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
-use App\Models\User;
+use App\Models\UserDashboard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -148,9 +147,7 @@ class DashboardCustomizationService
             
             // Find and remove widget instance
             $widgetInstance = null;
-            $layout = array_filter($layout, function($widget) use ($widgetInstanceId, &$widgetInstance) {
-                if ($widget['id'] === $widgetInstanceId) {
-                    $widgetInstance = $widget;
+            $layout = array_filter($layout, function($widget) 
                     return false; // Remove from array
                 }
                 return true;
@@ -325,8 +322,7 @@ class DashboardCustomizationService
                 throw new \Exception('Layout template not found');
             }
 
-            // Validate user can use this template
-            $this->validateTemplatePermission($user, $template);
+            // Validate user can 
 
             DB::beginTransaction();
 
@@ -480,8 +476,7 @@ class DashboardCustomizationService
             ->where('tenant_id', $user->tenant_id)
             ->get();
 
-        return $widgets->filter(function ($widget) use ($user) {
-            return $this->userCanAccessWidget($user, $widget);
+        return $widgets->filter(function ($widget) 
         })->map(function ($widget) {
             return [
                 'id' => $widget->id,

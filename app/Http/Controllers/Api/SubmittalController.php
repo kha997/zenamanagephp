@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\BaseApiController;
-use App\Models\ZenaSubmittal;
-use App\Models\ZenaProject;
-use Illuminate\Http\Request;
+use App\Models\Project;
+use App\Models\Submittal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -24,7 +23,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $query = ZenaSubmittal::with(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
+            $query = Submittal::with(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
 
             // Filter by project if specified
             if ($request->has('project_id')) {
@@ -45,7 +44,7 @@ class SubmittalController extends BaseApiController
             if ($request->has('search')) {
                 $search = $request->input('search');
                 $query->where(function ($q) use ($search) {
-                    $q->where('title', 'like', "%{$search}%")
+                    $q->where('name', 'like', "%{$search}%")
                       ->orWhere('description', 'like', "%{$search}%")
                       ->orWhere('submittal_number', 'like', "%{$search}%");
                 });
@@ -75,7 +74,7 @@ class SubmittalController extends BaseApiController
             }
 
             $validator = Validator::make($request->all(), [
-                'project_id' => 'required|exists:zena_projects,id',
+                'project_id' => 'required|exists:projects,id',
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
                 'submittal_type' => 'required|in:shop_drawing,material_sample,product_data,test_report,other',
@@ -89,7 +88,7 @@ class SubmittalController extends BaseApiController
                 return $this->validationError($validator->errors());
             }
 
-            $submittal = ZenaSubmittal::create([
+            $submittal = Submittal::create([
                 'project_id' => $request->input('project_id'),
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
@@ -123,7 +122,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = ZenaSubmittal::with(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name', 'attachments'])
+            $submittal = Submittal::with(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name', 'attachments'])
                 ->find($id);
 
             if (!$submittal) {
@@ -148,7 +147,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = ZenaSubmittal::find($id);
+            $submittal = Submittal::find($id);
 
             if (!$submittal) {
                 return $this->notFound('Submittal not found');
@@ -194,7 +193,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = ZenaSubmittal::find($id);
+            $submittal = Submittal::find($id);
 
             if (!$submittal) {
                 return $this->notFound('Submittal not found');
@@ -220,7 +219,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = ZenaSubmittal::find($id);
+            $submittal = Submittal::find($id);
 
             if (!$submittal) {
                 return $this->notFound('Submittal not found');
@@ -255,7 +254,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = ZenaSubmittal::find($id);
+            $submittal = Submittal::find($id);
 
             if (!$submittal) {
                 return $this->notFound('Submittal not found');
@@ -299,7 +298,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = ZenaSubmittal::find($id);
+            $submittal = Submittal::find($id);
 
             if (!$submittal) {
                 return $this->notFound('Submittal not found');
@@ -340,7 +339,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = ZenaSubmittal::find($id);
+            $submittal = Submittal::find($id);
 
             if (!$submittal) {
                 return $this->notFound('Submittal not found');
@@ -376,10 +375,10 @@ class SubmittalController extends BaseApiController
      */
     private function generateSubmittalNumber(string $projectId): string
     {
-        $project = ZenaProject::find($projectId);
+        $project = Project::find($projectId);
         $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
         
-        $lastSubmittal = ZenaSubmittal::where('project_id', $projectId)
+        $lastSubmittal = Submittal::where('project_id', $projectId)
             ->orderBy('created_at', 'desc')
             ->first();
         

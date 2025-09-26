@@ -4,8 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Collection;
-use Carbon\Carbon;
 
 /**
  * RealTimeDashboardService - Service cho real-time dashboard analytics
@@ -43,13 +41,7 @@ class RealTimeDashboardService
         $widgets = empty($widgets) ? array_keys($this->dashboardConfig['widgets']) : $widgets;
         $cacheKey = "dashboard_{$userId}_" . md5(implode(',', $widgets));
         
-        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($userId, $widgets) {
-            $dashboardData = [
-                'user_id' => $userId,
-                'widgets' => [],
-                'last_updated' => now()->toISOString(),
-                'refresh_interval' => $this->dashboardConfig['default_refresh_interval']
-            ];
+        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () 
 
             foreach ($widgets as $widget) {
                 $dashboardData['widgets'][$widget] = $this->getWidgetData($widget, $userId);
@@ -66,10 +58,7 @@ class RealTimeDashboardService
     {
         $cacheKey = "widget_{$widgetType}_{$userId}";
         
-        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($widgetType, $userId) {
-            switch ($widgetType) {
-                case 'project_overview':
-                    return $this->getProjectOverviewWidget($userId);
+        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () 
                 case 'task_status':
                     return $this->getTaskStatusWidget($userId);
                 case 'user_activity':
@@ -97,18 +86,7 @@ class RealTimeDashboardService
     {
         $cacheKey = "dashboard_analytics_{$userId}_{$period}";
         
-        return Cache::remember($cacheKey, $this->dashboardConfig['cache_ttl'], function () use ($userId, $period) {
-            return [
-                'period' => $period,
-                'analytics' => [
-                    'project_trends' => $this->getProjectTrends($userId, $period),
-                    'task_completion' => $this->getTaskCompletionTrends($userId, $period),
-                    'user_productivity' => $this->getUserProductivityTrends($userId, $period),
-                    'financial_trends' => $this->getFinancialTrends($userId, $period),
-                    'activity_patterns' => $this->getActivityPatterns($userId, $period)
-                ],
-                'generated_at' => now()->toISOString()
-            ];
+        return Cache::remember($cacheKey, $this->dashboardConfig['cache_ttl'], function () 
         });
     }
 
@@ -119,12 +97,7 @@ class RealTimeDashboardService
     {
         $cacheKey = "notifications_{$userId}";
         
-        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($userId) {
-            return [
-                'notifications' => $this->getUserNotifications($userId),
-                'unread_count' => $this->getUnreadNotificationCount($userId),
-                'last_checked' => now()->toISOString()
-            ];
+        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () 
         });
     }
 

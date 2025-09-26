@@ -101,7 +101,9 @@
     <div id="personal" class="tab-content">
         <div class="form-section">
             <h3 class="form-title">👤 Personal Information</h3>
-            <form>
+            <form method="POST">
+                @csrf
+                @method('PUT')
                 <div class="form-group">
                     <label class="form-label">Full Name</label>
                     <input type="text" class="form-input" value="Super Admin">

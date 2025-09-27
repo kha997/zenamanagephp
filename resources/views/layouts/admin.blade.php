@@ -6,11 +6,11 @@
     <title>@yield('title', 'Super Admin') - ZenaManage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
-<body class="bg-gray-50" x-data="adminApp()">
+<body class="bg-gray-50" x-data="adminApp()" x-init="console.log('Body initialized'); console.log('Sidebar collapsed:', sidebarCollapsed)">
     <!-- Topbar -->
     @include('layouts.partials._topbar')
     
@@ -130,7 +130,7 @@
         </div>
         
     <script>
-        function adminApp() {
+        window.adminApp = function() {
             return {
                 showModal: false,
                 modalTitle: '',

@@ -6,11 +6,11 @@
     <title><?php echo $__env->yieldContent('title', 'Super Admin'); ?> - ZenaManage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 </head>
-<body class="bg-gray-50" x-data="adminApp()">
+<body class="bg-gray-50" x-data="adminApp()" x-init="console.log('Body initialized')">
     <!-- Topbar -->
     <?php echo $__env->make('layouts.partials._topbar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     
@@ -23,7 +23,9 @@
         <!-- Debug Panel (temporary) -->
         <div class="fixed top-20 right-4 bg-yellow-100 p-2 rounded text-xs z-50" x-show="true">
             <div>Sidebar Collapsed: <span x-text="sidebarCollapsed"></span></div>
+            <div>Alpine Working: <span x-text="'Yes'"></span></div>
             <button @click="toggleSidebar" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Toggle</button>
+            <button @click="sidebarCollapsed = !sidebarCollapsed" class="bg-red-500 text-white px-2 py-1 rounded text-xs ml-1">Direct</button>
         </div>
         
         <!-- Main Content -->
@@ -128,7 +130,7 @@
         </div>
         
     <script>
-        function adminApp() {
+        window.adminApp = function() {
             return {
                 showModal: false,
                 modalTitle: '',

@@ -6,7 +6,7 @@
     <title>@yield('title', 'Super Admin') - ZenaManage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
@@ -18,8 +18,16 @@
         <!-- Sidebar - Desktop -->
         <div class="hidden lg:block">
             @include('layouts.partials._sidebar')
-                    </div>
+        </div>
                     
+        <!-- Debug Panel (temporary) -->
+        <div class="fixed top-20 right-4 bg-yellow-100 p-2 rounded text-xs z-50" x-show="true">
+            <div>Sidebar Collapsed: <span x-text="sidebarCollapsed"></span></div>
+            <div>Alpine Working: <span x-text="'Yes'"></span></div>
+            <button @click="toggleSidebar" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Toggle</button>
+            <button @click="sidebarCollapsed = !sidebarCollapsed" class="bg-red-500 text-white px-2 py-1 rounded text-xs ml-1">Direct</button>
+        </div>
+        
         <!-- Main Content -->
         <main class="flex-1 transition-all duration-300 pb-16 lg:pb-0" 
               :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'">
@@ -109,9 +117,8 @@
                     <button @click="executeModalAction" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         Confirm
                     </button>
-        </div>
-        </div>
-        </div>
+                </div>
+            </div>
         </div>
         
     <!-- Loading Overlay -->
@@ -151,14 +158,18 @@
                 globalSearchTimeout: null,
                 
                 init() {
+                    console.log('AdminApp initialized');
                     this.loadNotifications();
                     this.startRealTimeUpdates();
                     this.loadSidebarState();
+                    console.log('Sidebar collapsed state:', this.sidebarCollapsed);
                 },
                 
                 // Sidebar Collapse Functions
                 toggleSidebar() {
+                    console.log('Toggle sidebar clicked, current state:', this.sidebarCollapsed);
                     this.sidebarCollapsed = !this.sidebarCollapsed;
+                    console.log('New state:', this.sidebarCollapsed);
                     this.saveSidebarState();
                 },
                 

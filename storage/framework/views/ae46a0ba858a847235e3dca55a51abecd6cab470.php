@@ -15,7 +15,8 @@
                 </div>
                 <button @click="toggleSidebar" 
                         class="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-                        :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+                        :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+                        x-text="sidebarCollapsed ? 'Expand' : 'Collapse'">
                     <i :class="sidebarCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'" class="text-sm"></i>
                 </button>
             </div>

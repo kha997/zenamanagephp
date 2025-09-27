@@ -10,7 +10,19 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 </head>
-<body class="bg-gray-50" x-data="adminApp()" x-init="console.log('Body initialized')">
+<body class="bg-gray-50" x-data="{ 
+    sidebarCollapsed: false,
+    toggleSidebar() { 
+        this.sidebarCollapsed = !this.sidebarCollapsed; 
+        localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed);
+    }
+}" x-init="
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved !== null) {
+        this.sidebarCollapsed = JSON.parse(saved);
+    }
+    console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
+">
     <!-- Topbar -->
     <?php echo $__env->make('layouts.partials._topbar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     
@@ -20,13 +32,6 @@
             <?php echo $__env->make('layouts.partials._sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
         </div>
                     
-        <!-- Debug Panel (temporary) -->
-        <div class="fixed top-20 right-4 bg-yellow-100 p-2 rounded text-xs z-50" x-show="true">
-            <div>Sidebar Collapsed: <span x-text="sidebarCollapsed"></span></div>
-            <div>Alpine Working: <span x-text="'Yes'"></span></div>
-            <button @click="toggleSidebar" class="bg-blue-500 text-white px-2 py-1 rounded text-xs">Toggle</button>
-            <button @click="sidebarCollapsed = !sidebarCollapsed" class="bg-red-500 text-white px-2 py-1 rounded text-xs ml-1">Direct</button>
-        </div>
         
         <!-- Main Content -->
         <main class="flex-1 transition-all duration-300 pb-16 lg:pb-0" 
@@ -128,181 +133,6 @@
             <span class="text-gray-700">Loading...</span>
         </div>
         </div>
-        
-    <script>
-        window.adminApp = function() {
-            return {
-                showModal: false,
-                modalTitle: '',
-                modalContent: '',
-                currentModal: '',
-                isLoading: false,
-                sidebarOpen: true,
-                notifications: [],
-                unreadNotifications: 0,
-                showNotifications: false,
-                showUserMenu: false,
-                showMobileMenu: false,
-                
-                // Sidebar Collapse
-                sidebarCollapsed: false,
-                
-                // Global Search
-                globalSearchQuery: '',
-                globalSearchResults: {
-                    tenants: [],
-                    users: [],
-                    errors: []
-                },
-                showGlobalSearchResults: false,
-                globalSearchTimeout: null,
-                
-                init() {
-                    console.log('AdminApp initialized');
-                    this.loadNotifications();
-                    this.startRealTimeUpdates();
-                    this.loadSidebarState();
-                    console.log('Sidebar collapsed state:', this.sidebarCollapsed);
-                },
-                
-                // Sidebar Collapse Functions
-                toggleSidebar() {
-                    console.log('Toggle sidebar clicked, current state:', this.sidebarCollapsed);
-                    this.sidebarCollapsed = !this.sidebarCollapsed;
-                    console.log('New state:', this.sidebarCollapsed);
-                    this.saveSidebarState();
-                },
-                
-                loadSidebarState() {
-                    const saved = localStorage.getItem('sidebarCollapsed');
-                    if (saved !== null) {
-                        this.sidebarCollapsed = JSON.parse(saved);
-                    }
-                },
-                
-                saveSidebarState() {
-                    localStorage.setItem('sidebarCollapsed', JSON.stringify(this.sidebarCollapsed));
-                },
-                
-                // Global Search Functions
-                performGlobalSearch() {
-                    if (this.globalSearchQuery.length < 2) {
-                        this.showGlobalSearchResults = false;
-                        return;
-                    }
-                    
-                    // Simulate global search API call
-                    this.globalSearchResults = this.getGlobalSearchResults(this.globalSearchQuery);
-                    this.showGlobalSearchResults = true;
-                },
-                
-                getGlobalSearchResults(query) {
-                    // Mock global search data - in real implementation, this would call /api/search/global
-                    const mockTenants = [
-                        { id: 1, name: 'TechCorp', domain: 'techcorp.com', url: '/admin/tenants' },
-                        { id: 2, name: 'ABC Corp', domain: 'abccorp.com', url: '/admin/tenants' }
-                    ];
-                    
-                    const mockUsers = [
-                        { id: 1, name: 'John Smith', email: 'john@techcorp.com', url: '/admin/users' },
-                        { id: 2, name: 'Sarah Johnson', email: 'sarah@abccorp.com', url: '/admin/users' }
-                    ];
-                    
-                    const mockErrors = [
-                        { id: 1, message: 'Database Connection Error', time: '2 minutes ago', url: '/admin/alerts' },
-                        { id: 2, message: 'High Memory Usage', time: '15 minutes ago', url: '/admin/alerts' }
-                    ];
-                    
-                    return {
-                        tenants: mockTenants.filter(item => 
-                            item.name.toLowerCase().includes(query.toLowerCase()) ||
-                            item.domain.toLowerCase().includes(query.toLowerCase())
-                        ),
-                        users: mockUsers.filter(item => 
-                            item.name.toLowerCase().includes(query.toLowerCase()) ||
-                            item.email.toLowerCase().includes(query.toLowerCase())
-                        ),
-                        errors: mockErrors.filter(item => 
-                            item.message.toLowerCase().includes(query.toLowerCase())
-                        )
-                    };
-                },
-                
-                selectGlobalSearchResult(result) {
-                    this.globalSearchQuery = '';
-                    this.showGlobalSearchResults = false;
-                    window.location.href = result.url;
-                },
-                
-                loadNotifications() {
-                    // Simulate loading notifications
-                    this.notifications = [
-                        {
-                            id: 1,
-                            title: 'New Tenant Registration',
-                            message: 'ABC Corp registered for trial',
-                            type: 'info',
-                            time: '2 minutes ago'
-                        },
-                        {
-                            id: 2,
-                            title: 'System Alert',
-                            message: 'High memory usage detected',
-                            type: 'warning',
-                            time: '15 minutes ago'
-                        }
-                    ];
-                    this.unreadNotifications = this.notifications.length;
-                },
-                
-                startRealTimeUpdates() {
-                    // Simulate real-time updates
-                    setInterval(() => {
-                        // Update notifications, stats, etc.
-                    }, 30000);
-                },
-                
-                openModal(type, data = {}) {
-                    this.currentModal = type;
-                    this.showModal = true;
-                    this.modalTitle = data.title || 'Confirm Action';
-                    this.modalContent = data.content || 'Are you sure you want to proceed?';
-                },
-                
-                closeModal() {
-                    this.showModal = false;
-                    this.currentModal = '';
-                },
-                
-                executeModalAction() {
-                    console.log('Executing action:', this.currentModal);
-                    this.closeModal();
-                },
-                
-                showLoading() {
-                    this.isLoading = true;
-                },
-                
-                hideLoading() {
-                    this.isLoading = false;
-                },
-                
-                toggleSidebar() {
-                    this.sidebarOpen = !this.sidebarOpen;
-                },
-                
-                markNotificationAsRead(id) {
-                    this.notifications = this.notifications.filter(n => n.id !== id);
-                    this.unreadNotifications = this.notifications.length;
-                },
-                
-                markAllNotificationsAsRead() {
-                    this.notifications = [];
-                    this.unreadNotifications = 0;
-                }
-            }
-        }
-</script>
     
     <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>

@@ -15,28 +15,35 @@
     {{-- Page Header --}}
     <div class="flex items-center justify-between">
         <div>
+            <nav class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+                <span class="text-gray-900">Dashboard</span>
+                <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+                <span class="text-gray-500">Overview</span>
+            </nav>
             <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
             <p class="text-gray-600">System overview and key metrics</p>
         </div>
         <div class="flex items-center space-x-3">
             <!-- Quick Presets -->
-            <div class="flex items-center space-x-2">
-                <span class="text-sm text-gray-600">Quick Views:</span>
-                <button @click="applyPreset('critical')" 
-                        class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-md hover:bg-red-200 transition-colors">
-                    <i class="fas fa-exclamation-triangle mr-1"></i>Critical
-                </button>
-                <button @click="applyPreset('active')" 
-                        class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-md hover:bg-green-200 transition-colors">
-                    <i class="fas fa-check-circle mr-1"></i>Active
-                </button>
-                <button @click="applyPreset('recent')" 
-                        class="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-md hover:bg-blue-200 transition-colors">
-                    <i class="fas fa-clock mr-1"></i>Recent
-                </button>
+            <div class="flex items-center space-x-2 overflow-x-auto">
+                <span class="text-sm text-gray-600 whitespace-nowrap">Quick Views:</span>
+                <div class="flex space-x-2">
+                    <button @click="applyPreset('critical')" 
+                            class="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-md hover:bg-red-200 transition-colors whitespace-nowrap">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>Critical
+                    </button>
+                    <button @click="applyPreset('active')" 
+                            class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-md hover:bg-green-200 transition-colors whitespace-nowrap">
+                        <i class="fas fa-check-circle mr-1"></i>Active
+                    </button>
+                    <button @click="applyPreset('recent')" 
+                            class="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-md hover:bg-blue-200 transition-colors whitespace-nowrap">
+                        <i class="fas fa-clock mr-1"></i>Recent
+                    </button>
+                </div>
             </div>
             <button @click="refreshData" 
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
                 <i class="fas fa-sync-alt mr-2"></i>Refresh
             </button>
         </div>
@@ -195,13 +202,13 @@
             },
             
             initSparklines() {
-                // Sparkline data for each KPI
+                // Sparkline data for each KPI (30 days data)
                 const sparklineData = {
-                    tenants: [85, 87, 86, 88, 89, 89, 89],
-                    users: [1100, 1150, 1180, 1200, 1220, 1235, 1247],
-                    errors: [8, 10, 7, 9, 11, 10, 12],
-                    queue: [120, 140, 130, 150, 160, 155, 156],
-                    storage: [1.8, 1.9, 1.85, 1.95, 2.0, 2.05, 2.1]
+                    tenants: [82, 83, 84, 85, 86, 87, 88, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89],
+                    users: [1050, 1080, 1100, 1120, 1140, 1160, 1180, 1200, 1210, 1220, 1230, 1240, 1245, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247],
+                    errors: [5, 6, 7, 8, 9, 10, 11, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12],
+                    queue: [100, 110, 120, 130, 140, 150, 160, 170, 165, 160, 155, 150, 145, 140, 135, 130, 125, 120, 115, 110, 105, 100, 95, 90, 85, 80, 75, 70, 65, 156],
+                    storage: [1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1]
                 };
                 
                 // Create sparkline charts
@@ -244,11 +251,11 @@
             
             getSparklineColor(key, alpha = 1) {
                 const colors = {
-                    tenants: `rgba(59, 130, 246, ${alpha})`,
-                    users: `rgba(16, 185, 129, ${alpha})`,
-                    errors: `rgba(239, 68, 68, ${alpha})`,
-                    queue: `rgba(245, 158, 11, ${alpha})`,
-                    storage: `rgba(147, 51, 234, ${alpha})`
+                    tenants: `rgba(16, 185, 129, ${alpha})`, // Green #10B981
+                    users: `rgba(16, 185, 129, ${alpha})`,   // Green #10B981
+                    errors: `rgba(239, 68, 68, ${alpha})`,   // Red #EF4444
+                    queue: `rgba(245, 158, 11, ${alpha})`,    // Orange #F59E0B
+                    storage: `rgba(139, 92, 246, ${alpha})`   // Purple #8B5CF6
                 };
                 return colors[key] || `rgba(107, 114, 128, ${alpha})`;
             },

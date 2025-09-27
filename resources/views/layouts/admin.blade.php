@@ -15,11 +15,14 @@
     @include('layouts.partials._topbar')
     
     <div class="flex">
-        <!-- Sidebar -->
-        @include('layouts.partials._sidebar')
-        
+        <!-- Sidebar - Desktop -->
+        <div class="hidden lg:block">
+            @include('layouts.partials._sidebar')
+                    </div>
+                    
         <!-- Main Content -->
-        <main class="flex-1 ml-64">
+        <main class="flex-1 transition-all duration-300 pb-16 lg:pb-0" 
+              :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'">
             <!-- Breadcrumb -->
             <nav class="bg-white border-b border-gray-200 px-6 py-3">
                 <ol class="flex items-center space-x-2 text-sm text-gray-500">
@@ -35,6 +38,56 @@
         </main>
     </div>
     
+    <!-- Mobile Bottom Navigation -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+        <div class="flex items-center justify-around py-2">
+            <a href="/admin/dashboard" 
+               class="flex flex-col items-center py-2 px-3 text-xs {{ request()->is('admin/dashboard') ? 'text-blue-600' : 'text-gray-500' }}">
+                <i class="fas fa-tachometer-alt text-lg mb-1"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/admin/tenants" 
+               class="flex flex-col items-center py-2 px-3 text-xs {{ request()->is('admin/tenants*') ? 'text-blue-600' : 'text-gray-500' }}">
+                <i class="fas fa-building text-lg mb-1"></i>
+                <span>Tenants</span>
+            </a>
+            <a href="/admin/users" 
+               class="flex flex-col items-center py-2 px-3 text-xs {{ request()->is('admin/users*') ? 'text-blue-600' : 'text-gray-500' }}">
+                <i class="fas fa-users text-lg mb-1"></i>
+                <span>Users</span>
+            </a>
+            <div class="relative">
+                <button @click="showMobileMenu = !showMobileMenu" 
+                        class="flex flex-col items-center py-2 px-3 text-xs text-gray-500">
+                    <i class="fas fa-ellipsis-h text-lg mb-1"></i>
+                    <span>More</span>
+                </button>
+                
+                <!-- Mobile Menu Dropdown -->
+                <div x-show="showMobileMenu" @click.away="showMobileMenu = false" 
+                     class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200">
+                    <div class="py-1">
+                        <a href="/admin/security" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-shield-alt mr-2"></i>Security
+                        </a>
+                        <a href="/admin/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-cog mr-2"></i>Settings
+                        </a>
+                        <a href="/admin/billing" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-credit-card mr-2"></i>Billing
+                        </a>
+                        <a href="/admin/maintenance" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-tools mr-2"></i>Maintenance
+                        </a>
+                        <a href="/admin/alerts" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Alerts
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Footer -->
     @include('layouts.partials._footer')
     
@@ -47,7 +100,7 @@
                     <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
                         <i class="fas fa-times"></i>
                     </button>
-                </div>
+        </div>
                 <div x-html="modalContent"></div>
                 <div class="flex justify-end space-x-3 mt-6">
                     <button @click="closeModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">
@@ -56,19 +109,19 @@
                     <button @click="executeModalAction" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         Confirm
                     </button>
-                </div>
-            </div>
         </div>
-    </div>
-    
+        </div>
+        </div>
+        </div>
+        
     <!-- Loading Overlay -->
     <div x-show="isLoading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
             <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             <span class="text-gray-700">Loading...</span>
         </div>
-    </div>
-    
+        </div>
+        
     <script>
         function adminApp() {
             return {
@@ -82,49 +135,91 @@
                 unreadNotifications: 0,
                 showNotifications: false,
                 showUserMenu: false,
+                showMobileMenu: false,
                 
-                // Smart Search
-                searchQuery: '',
-                searchResults: [],
-                showSearchResults: false,
-                searchTimeout: null,
+                // Sidebar Collapse
+                sidebarCollapsed: false,
+                
+                // Global Search
+                globalSearchQuery: '',
+                globalSearchResults: {
+                    tenants: [],
+                    users: [],
+                    errors: []
+                },
+                showGlobalSearchResults: false,
+                globalSearchTimeout: null,
                 
                 init() {
                     this.loadNotifications();
                     this.startRealTimeUpdates();
+                    this.loadSidebarState();
                 },
                 
-                // Smart Search Functions
-                performSearch() {
-                    if (this.searchQuery.length < 2) {
-                        this.showSearchResults = false;
+                // Sidebar Collapse Functions
+                toggleSidebar() {
+                    this.sidebarCollapsed = !this.sidebarCollapsed;
+                    this.saveSidebarState();
+                },
+                
+                loadSidebarState() {
+                    const saved = localStorage.getItem('sidebarCollapsed');
+                    if (saved !== null) {
+                        this.sidebarCollapsed = JSON.parse(saved);
+                    }
+                },
+                
+                saveSidebarState() {
+                    localStorage.setItem('sidebarCollapsed', JSON.stringify(this.sidebarCollapsed));
+                },
+                
+                // Global Search Functions
+                performGlobalSearch() {
+                    if (this.globalSearchQuery.length < 2) {
+                        this.showGlobalSearchResults = false;
                         return;
                     }
                     
-                    // Simulate search results
-                    this.searchResults = this.getSearchResults(this.searchQuery);
-                    this.showSearchResults = true;
+                    // Simulate global search API call
+                    this.globalSearchResults = this.getGlobalSearchResults(this.globalSearchQuery);
+                    this.showGlobalSearchResults = true;
                 },
                 
-                getSearchResults(query) {
-                    // Mock search data - in real implementation, this would be an API call
-                    const mockData = [
-                        { id: 1, type: 'tenant', title: 'TechCorp', subtitle: 'Active tenant', icon: 'fas fa-building', color: 'text-blue-600', url: '/admin/tenants' },
-                        { id: 2, type: 'user', title: 'john@techcorp.com', subtitle: 'Project Manager', icon: 'fas fa-user', color: 'text-green-600', url: '/admin/users' },
-                        { id: 3, type: 'error', title: 'Database Connection Error', subtitle: 'High priority', icon: 'fas fa-exclamation-triangle', color: 'text-red-600', url: '/admin/alerts' },
-                        { id: 4, type: 'tenant', title: 'ABC Corp', subtitle: 'Trial tenant', icon: 'fas fa-building', color: 'text-blue-600', url: '/admin/tenants' },
-                        { id: 5, type: 'user', title: 'sarah@abccorp.com', subtitle: 'Design Lead', icon: 'fas fa-user', color: 'text-green-600', url: '/admin/users' }
+                getGlobalSearchResults(query) {
+                    // Mock global search data - in real implementation, this would call /api/search/global
+                    const mockTenants = [
+                        { id: 1, name: 'TechCorp', domain: 'techcorp.com', url: '/admin/tenants' },
+                        { id: 2, name: 'ABC Corp', domain: 'abccorp.com', url: '/admin/tenants' }
                     ];
                     
-                    return mockData.filter(item => 
-                        item.title.toLowerCase().includes(query.toLowerCase()) ||
-                        item.subtitle.toLowerCase().includes(query.toLowerCase())
-                    ).slice(0, 5);
+                    const mockUsers = [
+                        { id: 1, name: 'John Smith', email: 'john@techcorp.com', url: '/admin/users' },
+                        { id: 2, name: 'Sarah Johnson', email: 'sarah@abccorp.com', url: '/admin/users' }
+                    ];
+                    
+                    const mockErrors = [
+                        { id: 1, message: 'Database Connection Error', time: '2 minutes ago', url: '/admin/alerts' },
+                        { id: 2, message: 'High Memory Usage', time: '15 minutes ago', url: '/admin/alerts' }
+                    ];
+                    
+                    return {
+                        tenants: mockTenants.filter(item => 
+                            item.name.toLowerCase().includes(query.toLowerCase()) ||
+                            item.domain.toLowerCase().includes(query.toLowerCase())
+                        ),
+                        users: mockUsers.filter(item => 
+                            item.name.toLowerCase().includes(query.toLowerCase()) ||
+                            item.email.toLowerCase().includes(query.toLowerCase())
+                        ),
+                        errors: mockErrors.filter(item => 
+                            item.message.toLowerCase().includes(query.toLowerCase())
+                        )
+                    };
                 },
                 
-                selectSearchResult(result) {
-                    this.searchQuery = '';
-                    this.showSearchResults = false;
+                selectGlobalSearchResult(result) {
+                    this.globalSearchQuery = '';
+                    this.showGlobalSearchResults = false;
                     window.location.href = result.url;
                 },
                 
@@ -196,7 +291,7 @@
                 }
             }
         }
-    </script>
+</script>
     
     @stack('scripts')
 </body>

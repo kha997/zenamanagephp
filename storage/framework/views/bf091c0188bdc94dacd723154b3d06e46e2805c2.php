@@ -21,33 +21,76 @@
             
             <!-- Right Side -->
             <div class="flex items-center space-x-4">
-                <!-- Search -->
+                <!-- Global Search -->
                 <div class="hidden md:block relative">
                     <input type="text" 
-                           x-model="searchQuery"
-                           @input.debounce.250ms="performSearch"
+                           x-model="globalSearchQuery"
+                           @input.debounce.250ms="performGlobalSearch"
                            placeholder="Search tenants, users, errors..." 
                            class="w-64 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                           aria-label="Search">
+                           aria-label="Global Search">
                     <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                     
-                    <!-- Search Results Dropdown -->
-                    <div x-show="showSearchResults" 
-                         @click.away="showSearchResults = false"
-                         class="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-64 overflow-y-auto">
-                        <template x-for="result in searchResults" :key="result.id">
-                            <div class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                                 @click="selectSearchResult(result)">
-                                <div class="flex items-center space-x-3">
-                                    <i :class="result.icon" :class="result.color"></i>
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900" x-text="result.title"></p>
-                                        <p class="text-xs text-gray-500" x-text="result.subtitle"></p>
+                    <!-- Global Search Results Dropdown -->
+                    <div x-show="showGlobalSearchResults" 
+                         @click.away="showGlobalSearchResults = false"
+                         class="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-80 overflow-y-auto">
+                        <div class="p-3 border-b border-gray-200">
+                            <h3 class="text-sm font-semibold text-gray-900">Global Search Results</h3>
+                        </div>
+                        
+                        <!-- Tenants Results -->
+                        <div x-show="globalSearchResults.tenants.length > 0" class="p-3 border-b border-gray-100">
+                            <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Tenants</h4>
+                            <template x-for="result in globalSearchResults.tenants" :key="result.id">
+                                <div class="p-2 hover:bg-gray-50 cursor-pointer rounded"
+                                     @click="selectGlobalSearchResult(result)">
+                                    <div class="flex items-center space-x-3">
+                                        <i class="fas fa-building text-blue-600"></i>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900" x-text="result.name"></p>
+                                            <p class="text-xs text-gray-500" x-text="result.domain"></p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </template>
-                        <div x-show="searchResults.length === 0 && searchQuery.length > 0" 
+                            </template>
+                        </div>
+                        
+                        <!-- Users Results -->
+                        <div x-show="globalSearchResults.users.length > 0" class="p-3 border-b border-gray-100">
+                            <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Users</h4>
+                            <template x-for="result in globalSearchResults.users" :key="result.id">
+                                <div class="p-2 hover:bg-gray-50 cursor-pointer rounded"
+                                     @click="selectGlobalSearchResult(result)">
+                                    <div class="flex items-center space-x-3">
+                                        <i class="fas fa-user text-green-600"></i>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900" x-text="result.name"></p>
+                                            <p class="text-xs text-gray-500" x-text="result.email"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <!-- Errors Results -->
+                        <div x-show="globalSearchResults.errors.length > 0" class="p-3 border-b border-gray-100">
+                            <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Errors</h4>
+                            <template x-for="result in globalSearchResults.errors" :key="result.id">
+                                <div class="p-2 hover:bg-gray-50 cursor-pointer rounded"
+                                     @click="selectGlobalSearchResult(result)">
+                                    <div class="flex items-center space-x-3">
+                                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900" x-text="result.message"></p>
+                                            <p class="text-xs text-gray-500" x-text="result.time"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        
+                        <div x-show="globalSearchResults.tenants.length === 0 && globalSearchResults.users.length === 0 && globalSearchResults.errors.length === 0 && globalSearchQuery.length > 0" 
                              class="p-3 text-center text-gray-500 text-sm">
                             No results found
                         </div>

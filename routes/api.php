@@ -148,8 +148,8 @@ Route::get('/info', function () {
 */
 
 // API v1 Routes (prefix removed - already handled by RouteServiceProvider)
-Route::group([], function () {
-    // Simple documents endpoint without any middleware
+Route::group(['middleware' => ['auth:sanctum']], function () {
+    // Simple documents endpoint with authentication
     Route::get('/documents-simple', function () {
         return response()->json([
             'status' => 'success',
@@ -305,11 +305,11 @@ Route::get('test-simple', function () {
     return response()->json(['status' => 'success', 'message' => 'Simple test working']);
 });
 
-Route::group([], function () {
+Route::group(['middleware' => ['throttle:auth']], function () {
     
     /*
     |--------------------------------------------------------------------------
-    | Authentication Routes (Public)
+    | Authentication Routes (Public with rate limiting)
     |--------------------------------------------------------------------------
     */
     Route::prefix('auth')->group(function () {
@@ -395,9 +395,9 @@ Route::group([], function () {
     | Protected API Routes
     |--------------------------------------------------------------------------
     */
-    Route::group(['middleware' => []], function () {
+    Route::group(['middleware' => ['auth:sanctum']], function () {
         
-        // Test endpoint without authentication
+        // Test endpoint with authentication
         Route::get('test', function () {
             return response()->json([
                 'status' => 'success',
@@ -406,7 +406,7 @@ Route::group([], function () {
             ]);
         });
         
-        // Simple documents endpoint without authentication
+        // Simple documents endpoint with authentication
         Route::get('documents-simple', function () {
             return response()->json([
                 'status' => 'success',
@@ -1100,8 +1100,8 @@ Route::get('/analytics/dashboard', [AnalyticsController::class, 'getDashboardAna
 
 }); // Close the Route::group() at line 151
 
-// Admin Dashboard API Routes (no middleware for testing)
-Route::prefix('api/admin/dashboard')->group(function () {
+// Admin Dashboard API Routes (with proper authentication)
+Route::prefix('api/admin/dashboard')->middleware(['auth:sanctum', 'ability:admin'])->group(function () {
     Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
     Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
     Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);
@@ -1127,8 +1127,8 @@ Route::prefix('auth')->middleware([\App\Http\Middleware\EnhancedRateLimitMiddlew
 // CSRF Token endpoint (public - no authentication required)
 Route::get('csrf-token', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
 
-// Authenticated Routes (temporarily without middleware for testing)
-Route::group([], function () {
+// Authenticated Routes (with proper authentication)
+Route::group(['middleware' => ['auth:sanctum']], function () {
     // User info and permissions
     Route::prefix('auth')->group(function () {
         Route::get('me', [\App\Http\Controllers\Api\AuthenticationController::class, 'me']);

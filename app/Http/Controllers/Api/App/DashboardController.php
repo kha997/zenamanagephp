@@ -1,342 +1,301 @@
 <?php
 
 namespace App\Http\Controllers\Api\App;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Http\Controllers\Controller;
+use App\Services\DashboardService;
+use App\Services\CacheService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
+    protected $dashboardService;
+    protected $cacheService;
+
+    public function __construct(DashboardService $dashboardService, CacheService $cacheService)
+    {
+        $this->dashboardService = $dashboardService;
+        $this->cacheService = $cacheService;
+    }
+
     /**
-     * Get dashboard metrics for app users
+     * Get dashboard data
      */
-    public function getMetrics(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         try {
-            $period = $request->get('period', 30);
-            $tenantId = Auth::user()->tenant_id ?? 1; // Fallback for demo
-            
-            // Get real metrics from database
-            $metrics = [
-                'activeProjects' => \App\Models\Project::where('tenant_id', $tenantId)
-                    ->where('status', 'active')
-                    ->count(),
-                'openTasks' => \App\Models\Task::whereHas('project', function($q) use ($tenantId) {
-                    $q->where('tenant_id', $tenantId);
-                })->whereIn('status', ['pending', 'in_progress'])->count(),
-                'overdueTasks' => \App\Models\Task::whereHas('project', function($q) use ($tenantId) {
-                    $q->where('tenant_id', $tenantId);
-                })->where('due_date', '<', now())->whereNotIn('status', ['completed'])->count(),
-                'onSchedule' => \App\Models\Project::where('tenant_id', $tenantId)
-                    ->where('status', 'active')
-                    ->where('end_date', '>=', now())
-                    ->count(),
-                'projectsChange' => '+2',
-                'tasksChange' => '+5',
-                'overdueChange' => '-1',
-                'scheduleChange' => '+3'
-            ];
-            
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            // Get cached dashboard data
+            $data = $this->cacheService->cacheDashboardData($tenantId, function () use ($user, $tenantId) {
+                return $this->dashboardService->getDashboardData($user, $tenantId);
+            });
+
             return response()->json([
-                'success' => true,
-                'metrics' => $metrics,
-                'period' => $period,
+                'status' => 'success',
+                'data' => $data,
                 'timestamp' => now()->toISOString()
             ]);
-            
+
         } catch (\Exception $e) {
+            Log::error('Dashboard data fetch failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
-                'success' => false,
-                'message' => 'Failed to load dashboard metrics',
-                'error' => $e->getMessage()
+                'status' => 'error',
+                'message' => 'Failed to load dashboard data',
+                'error_id' => 'DASHBOARD_LOAD_ERROR'
             ], 500);
         }
     }
-    
+
     /**
-     * Get dashboard statistics for app users
+     * Get real-time dashboard updates
      */
-    public function getStats(Request $request): JsonResponse
+    public function updates(Request $request): JsonResponse
     {
         try {
-            $tenantId = Auth::user()->tenant_id ?? 1; // Fallback for demo
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            // Get incremental updates since last check
+            $lastUpdate = $request->get('last_update', now()->subMinutes(5)->toISOString());
             
-            $stats = [
-                'totalProjects' => \App\Models\Project::where('tenant_id', $tenantId)->count(),
-                'activeProjects' => \App\Models\Project::where('tenant_id', $tenantId)->where('status', 'active')->count(),
-                'completedProjects' => \App\Models\Project::where('tenant_id', $tenantId)->where('status', 'completed')->count(),
-                'totalTasks' => \App\Models\Task::whereHas('project', function($q) use ($tenantId) {
-                    $q->where('tenant_id', $tenantId);
-                })->count(),
-                'completedTasks' => \App\Models\Task::whereHas('project', function($q) use ($tenantId) {
-                    $q->where('tenant_id', $tenantId);
-                })->where('status', 'completed')->count(),
-                'teamMembers' => \App\Models\User::where('tenant_id', $tenantId)->count(),
-            ];
-            
+            $updates = $this->dashboardService->getIncrementalUpdates($user, $tenantId, $lastUpdate);
+
             return response()->json([
-                'success' => true,
-                'stats' => $stats,
+                'status' => 'success',
+                'data' => $updates,
                 'timestamp' => now()->toISOString()
             ]);
-            
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load dashboard stats',
+            Log::error('Dashboard updates fetch failed', [
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to load updates',
+                'error_id' => 'DASHBOARD_UPDATES_ERROR'
             ], 500);
         }
     }
-    
+
     /**
-     * Get dashboard activities for app users
+     * Get KPI data
      */
-    public function getActivities(Request $request): JsonResponse
+    public function kpis(Request $request): JsonResponse
     {
         try {
-            $limit = $request->get('limit', 10);
-            $tenantId = Auth::user()->tenant_id ?? 1; // Fallback for demo
-            
-            // Mock activities for now - can be replaced with real activity logs
-            $activities = [
-                [
-                    'id' => 1,
-                    'description' => 'John completed task "Design Homepage"',
-                    'time' => '2 minutes ago',
-                    'user' => 'John Doe',
-                    'type' => 'task_completed'
-                ],
-                [
-                    'id' => 2,
-                    'description' => 'Sarah created new project "Mobile App"',
-                    'time' => '15 minutes ago',
-                    'user' => 'Sarah Smith',
-                    'type' => 'project_created'
-                ],
-                [
-                    'id' => 3,
-                    'description' => 'Mike uploaded document "Project Plan.pdf"',
-                    'time' => '1 hour ago',
-                    'user' => 'Mike Wilson',
-                    'type' => 'document_uploaded'
-                ],
-                [
-                    'id' => 4,
-                    'description' => 'Lisa updated task "Fix Login Bug"',
-                    'time' => '2 hours ago',
-                    'user' => 'Lisa Johnson',
-                    'type' => 'task_updated'
-                ],
-                [
-                    'id' => 5,
-                    'description' => 'Tom joined the team',
-                    'time' => '3 hours ago',
-                    'user' => 'Tom Brown',
-                    'type' => 'user_joined'
-                ]
-            ];
-            
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            $kpis = $this->cacheService->cacheKPIs($tenantId, function () use ($user, $tenantId) {
+                return $this->dashboardService->getKPIData($user, $tenantId);
+            });
+
             return response()->json([
-                'success' => true,
-                'activities' => array_slice($activities, 0, $limit),
-                'total' => count($activities),
+                'status' => 'success',
+                'data' => $kpis,
                 'timestamp' => now()->toISOString()
             ]);
-            
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load dashboard activities',
+            Log::error('KPI data fetch failed', [
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to load KPI data',
+                'error_id' => 'KPI_LOAD_ERROR'
             ], 500);
         }
     }
-    
+
     /**
-     * Get dashboard alerts for app users
+     * Get activity feed
      */
-    public function getAlerts(Request $request): JsonResponse
+    public function activity(Request $request): JsonResponse
     {
         try {
-            $tenantId = Auth::user()->tenant_id ?? 1; // Fallback for demo
-            
-            $alerts = [
-                [
-                    'id' => 1,
-                    'message' => 'Project deadline approaching in 2 days',
-                    'priority' => 'high',
-                    'type' => 'deadline_warning',
-                    'created_at' => now()->subHours(2)->toISOString()
-                ],
-                [
-                    'id' => 2,
-                    'message' => '3 tasks are overdue',
-                    'priority' => 'high',
-                    'type' => 'overdue_tasks',
-                    'created_at' => now()->subHours(1)->toISOString()
-                ],
-                [
-                    'id' => 3,
-                    'message' => 'New team member joined',
-                    'priority' => 'medium',
-                    'type' => 'team_update',
-                    'created_at' => now()->subHours(3)->toISOString()
-                ],
-                [
-                    'id' => 4,
-                    'message' => 'Document approval required',
-                    'priority' => 'medium',
-                    'type' => 'approval_required',
-                    'created_at' => now()->subHours(4)->toISOString()
-                ]
-            ];
-            
-            return response()->json([
-                'success' => true,
-                'alerts' => $alerts,
-                'total' => count($alerts),
-                'timestamp' => now()->toISOString()
-            ]);
-            
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load dashboard alerts',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    /**
-     * Get dashboard notifications for app users
-     */
-    public function getNotifications(Request $request): JsonResponse
-    {
-        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
             $limit = $request->get('limit', 20);
-            $unreadOnly = $request->get('unread_only', false);
-            
-            // Mock notifications for now
-            $notifications = [
-                [
-                    'id' => 1,
-                    'title' => 'Task Assigned',
-                    'message' => 'You have been assigned to "Review Design Mockups"',
-                    'type' => 'task_assigned',
-                    'read' => false,
-                    'created_at' => now()->subMinutes(5)->toISOString()
-                ],
-                [
-                    'id' => 2,
-                    'title' => 'Project Update',
-                    'message' => 'Project "Website Redesign" has been updated',
-                    'type' => 'project_update',
-                    'read' => false,
-                    'created_at' => now()->subMinutes(15)->toISOString()
-                ],
-                [
-                    'id' => 3,
-                    'title' => 'Document Uploaded',
-                    'message' => 'New document uploaded to "Mobile App" project',
-                    'type' => 'document_uploaded',
-                    'read' => true,
-                    'created_at' => now()->subMinutes(30)->toISOString()
-                ]
-            ];
-            
-            if ($unreadOnly) {
-                $notifications = array_filter($notifications, function($notification) {
-                    return !$notification['read'];
-                });
+            $offset = $request->get('offset', 0);
+
+            $activity = $this->dashboardService->getActivityFeed($user, $tenantId, $limit, $offset);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $activity,
+                'timestamp' => now()->toISOString()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Activity feed fetch failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to load activity feed',
+                'error_id' => 'ACTIVITY_LOAD_ERROR'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get alerts
+     */
+    public function alerts(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            $alerts = $this->dashboardService->getAlerts($user, $tenantId);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $alerts,
+                'timestamp' => now()->toISOString()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Alerts fetch failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to load alerts',
+                'error_id' => 'ALERTS_LOAD_ERROR'
+            ], 500);
+        }
+    }
+
+    /**
+     * Dismiss alert
+     */
+    public function dismissAlert(Request $request, string $alertId): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            $result = $this->dashboardService->dismissAlert($user, $tenantId, $alertId);
+
+            if ($result) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Alert dismissed successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to dismiss alert',
+                    'error_id' => 'ALERT_DISMISS_ERROR'
+                ], 400);
             }
-            
-            return response()->json([
-                'success' => true,
-                'notifications' => array_slice($notifications, 0, $limit),
-                'total' => count($notifications),
-                'unread_count' => count(array_filter($notifications, function($n) { return !$n['read']; })),
-                'timestamp' => now()->toISOString()
-            ]);
-            
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load notifications',
+            Log::error('Alert dismiss failed', [
+                'user_id' => Auth::id(),
+                'alert_id' => $alertId,
                 'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to dismiss alert',
+                'error_id' => 'ALERT_DISMISS_ERROR'
             ], 500);
         }
     }
-    
+
     /**
-     * Update user dashboard preferences
+     * Get dashboard widgets configuration
      */
-    public function updatePreferences(Request $request): JsonResponse
+    public function widgets(Request $request): JsonResponse
     {
         try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            $widgets = $this->dashboardService->getUserWidgets($user, $tenantId);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $widgets,
+                'timestamp' => now()->toISOString()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Widgets fetch failed', [
+                'user_id' => Auth::id(),
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to load widgets',
+                'error_id' => 'WIDGETS_LOAD_ERROR'
+            ], 500);
+        }
+    }
+
+    /**
+     * Update dashboard layout
+     */
+    public function updateLayout(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
             $validated = $request->validate([
-                'layout' => 'sometimes|string',
-                'widgets' => 'sometimes|array',
-                'theme' => 'sometimes|string|in:light,dark,auto',
-                'notifications' => 'sometimes|array'
+                'layout' => 'required|array',
+                'widgets' => 'required|array'
             ]);
-            
-            // Store preferences in user preferences or session
-            // For now, just return success
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Preferences updated successfully',
-                'preferences' => $validated,
-                'timestamp' => now()->toISOString()
-            ]);
-            
+
+            $result = $this->dashboardService->updateUserLayout($user, $tenantId, $validated);
+
+            if ($result) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Dashboard layout updated successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to update layout',
+                    'error_id' => 'LAYOUT_UPDATE_ERROR'
+                ], 400);
+            }
+
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to update preferences',
+            Log::error('Layout update failed', [
+                'user_id' => Auth::id(),
                 'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-    
-    /**
-     * Get user dashboard preferences
-     */
-    public function getPreferences(Request $request): JsonResponse
-    {
-        try {
-            // Mock preferences for now
-            $preferences = [
-                'layout' => 'grid',
-                'theme' => 'light',
-                'widgets' => [
-                    'kpi_cards' => true,
-                    'recent_activities' => true,
-                    'alerts' => true,
-                    'quick_actions' => true
-                ],
-                'notifications' => [
-                    'email' => true,
-                    'push' => true,
-                    'in_app' => true
-                ]
-            ];
-            
-            return response()->json([
-                'success' => true,
-                'preferences' => $preferences,
-                'timestamp' => now()->toISOString()
             ]);
-            
-        } catch (\Exception $e) {
+
             return response()->json([
-                'success' => false,
-                'message' => 'Failed to load preferences',
-                'error' => $e->getMessage()
+                'status' => 'error',
+                'message' => 'Failed to update layout',
+                'error_id' => 'LAYOUT_UPDATE_ERROR'
             ], 500);
         }
     }

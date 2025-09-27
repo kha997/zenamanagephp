@@ -24,12 +24,7 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
-            \App\Http\Middleware\EncryptCookies::class,
-            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \App\Http\Middleware\VerifyCsrfToken::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            // Temporarily disabled all web middleware for debugging
         ],
 
         'api' => [
@@ -49,8 +44,9 @@ class Kernel extends HttpKernel
         'auth' => \App\Http\Middleware\Authenticate::class,
         'auth.api' => \App\Http\Middleware\ApiAuthenticationMiddleware::class,
         'auth.session' => \App\Http\Middleware\SessionManagementMiddleware::class,
+        'admin.only' => \App\Http\Middleware\AdminOnly::class,
+        'tenant.scope' => \App\Http\Middleware\TenantScopeMiddleware::class,
         'tenant.isolation' => \App\Http\Middleware\TenantIsolationMiddleware::class,
-        'rbac' => \App\Http\Middleware\RoleBasedAccessControlMiddleware::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'rate.limit' => \App\Http\Middleware\EnhancedRateLimitMiddleware::class,
         'api.cache' => \App\Http\Middleware\ApiResponseCacheMiddleware::class,

@@ -1,5 +1,5 @@
 <!-- Clean Dashboard Content -->
-<div x-data="cleanDashboard()" class="space-y-8">
+<div x-data="cleanDashboard()" class="space-y-6 md:space-y-8 mobile-content">
     
     <!-- Error State -->
     <div x-show="error" class="bg-red-50 border border-red-200 rounded-xl p-6">
@@ -337,6 +337,7 @@ function cleanDashboard() {
         init() {
             console.log('🚀 Clean Dashboard initialized');
             this.loadData();
+            this.setupRealTimeUpdates();
         },
 
         async loadData() {
@@ -346,7 +347,7 @@ function cleanDashboard() {
             try {
                 console.log('📊 Fetching dashboard data...');
                 
-                const response = await fetch('/_debug/dashboard-data');
+                const response = await fetch('/api/v1/app/dashboard');
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -509,6 +510,109 @@ function cleanDashboard() {
         dismiss() {
             console.log('❌ Error dismissed');
             this.error = null;
+        },
+
+        // Real-time updates
+        setupRealTimeUpdates() {
+            console.log('🔄 Setting up real-time updates...');
+            
+            // WebSocket connection for real-time updates
+            if (typeof WebSocket !== 'undefined') {
+                this.connectWebSocket();
+            }
+            
+            // Polling fallback
+            this.startPolling();
+        },
+
+        connectWebSocket() {
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/dashboard`;
+                
+                this.ws = new WebSocket(wsUrl);
+                
+                this.ws.onopen = () => {
+                    console.log('🔌 WebSocket connected');
+                };
+                
+                this.ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    this.handleRealTimeUpdate(data);
+                };
+                
+                this.ws.onclose = () => {
+                    console.log('🔌 WebSocket disconnected, retrying...');
+                    setTimeout(() => this.connectWebSocket(), 5000);
+                };
+                
+                this.ws.onerror = (error) => {
+                    console.error('🔌 WebSocket error:', error);
+                };
+            } catch (error) {
+                console.error('🔌 WebSocket connection failed:', error);
+            }
+        },
+
+        startPolling() {
+            // Poll for updates every 30 seconds
+            setInterval(() => {
+                this.pollForUpdates();
+            }, 30000);
+        },
+
+        async pollForUpdates() {
+            try {
+                const response = await fetch('/api/v1/app/dashboard/updates');
+                if (response.ok) {
+                    const data = await response.json();
+                    this.handleRealTimeUpdate(data);
+                }
+            } catch (error) {
+                console.error('📊 Polling error:', error);
+            }
+        },
+
+        handleRealTimeUpdate(data) {
+            console.log('🔄 Real-time update received:', data);
+            
+            if (data.type === 'kpi_update') {
+                this.updateKPIs(data.payload);
+            } else if (data.type === 'activity_update') {
+                this.updateActivity(data.payload);
+            } else if (data.type === 'alert_update') {
+                this.updateAlerts(data.payload);
+            }
+        },
+
+        updateKPIs(payload) {
+            Object.keys(payload).forEach(key => {
+                if (this.data.hasOwnProperty(key)) {
+                    this.data[key] = payload[key];
+                }
+            });
+        },
+
+        updateActivity(newActivity) {
+            this.data.activity = newActivity;
+        },
+
+        updateAlerts(newAlerts) {
+            this.data.alerts = newAlerts;
+        },
+
+        // Auto-refresh functionality
+        enableAutoRefresh() {
+            this.autoRefreshInterval = setInterval(() => {
+                this.loadData();
+            }, 60000); // Refresh every minute
+        },
+
+        disableAutoRefresh() {
+            if (this.autoRefreshInterval) {
+                clearInterval(this.autoRefreshInterval);
+                this.autoRefreshInterval = null;
+            }
         },
 
         // Alert management

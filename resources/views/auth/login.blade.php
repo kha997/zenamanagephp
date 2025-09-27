@@ -158,7 +158,7 @@
         @endif --}} <!-- Temporarily commented out for debugging -->
         
         <form method="POST" action="/login">
-            {{-- @csrf --}} <!-- Temporarily commented out for debugging -->
+            @csrf
             <div class="form-group">
                 <label for="email">Email</label>
                 <input type="email" id="email" name="email" required>

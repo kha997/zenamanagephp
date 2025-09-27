@@ -1,5 +1,5 @@
 <!-- App Calendar Content - Tenant Calendar for Project & Task Scheduling -->
-<div x-data="appCalendar()" x-init="init()">
+<div x-data="appCalendar()" x-init="init()" class="mobile-content">
     <!-- Loading State -->
     <div x-show="loading" class="flex justify-center items-center py-8">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

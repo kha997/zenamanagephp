@@ -57,7 +57,7 @@
     }
 </style>
 
-<div x-data="projectsPage()" x-init="loadProjects()" class="space-y-6">
+<div x-data="projectsPage()" x-init="loadProjects()" class="space-y-4 md:space-y-6 mobile-content">
     <!-- Page Header -->
     <div class="flex items-center justify-end">
         <div class="flex items-center space-x-6">
@@ -959,12 +959,140 @@
 
         <!-- Gantt View -->
         <div x-show="currentView === 'gantt'" x-transition>
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="text-center text-gray-500 py-8">
-                    <i class="fas fa-chart-gantt text-4xl mb-4"></i>
-                    <h3 class="text-lg font-medium mb-2">Gantt Chart View</h3>
-                    <p class="text-sm">Gantt chart visualization will be implemented soon</p>
-                    <p class="text-xs text-gray-400 mt-2">This will show project timelines, dependencies, and milestones</p>
+            <div class="bg-white rounded-lg shadow">
+                <!-- Gantt Header -->
+                <div class="border-b border-gray-200 p-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <h3 class="text-lg font-semibold text-gray-900">Project Timeline</h3>
+                            <div class="flex items-center space-x-2">
+                                <button @click="ganttView = 'month'" 
+                                        :class="ganttView === 'month' ? 'bg-blue-100 text-blue-700' : 'text-gray-600'"
+                                        class="px-3 py-1 rounded text-sm font-medium">
+                                    Month
+                                </button>
+                                <button @click="ganttView = 'quarter'" 
+                                        :class="ganttView === 'quarter' ? 'bg-blue-100 text-blue-700' : 'text-gray-600'"
+                                        class="px-3 py-1 rounded text-sm font-medium">
+                                    Quarter
+                                </button>
+                                <button @click="ganttView = 'year'" 
+                                        :class="ganttView === 'year' ? 'bg-blue-100 text-blue-700' : 'text-gray-600'"
+                                        class="px-3 py-1 rounded text-sm font-medium">
+                                    Year
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button @click="zoomGantt('out')" class="p-2 text-gray-600 hover:bg-gray-100 rounded">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
+                            <button @click="zoomGantt('in')" class="p-2 text-gray-600 hover:bg-gray-100 rounded">
+                                <i class="fas fa-search-plus"></i>
+                            </button>
+                            <button @click="exportGantt()" class="p-2 text-gray-600 hover:bg-gray-100 rounded">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gantt Chart Container -->
+                <div class="overflow-x-auto">
+                    <div class="min-w-full">
+                        <!-- Timeline Header -->
+                        <div class="flex border-b border-gray-200 bg-gray-50">
+                            <div class="w-80 p-3 border-r border-gray-200">
+                                <span class="text-sm font-medium text-gray-700">Project</span>
+                            </div>
+                            <div class="flex-1 p-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-medium text-gray-700">Timeline</span>
+                                    <div class="flex items-center space-x-2 text-xs text-gray-500">
+                                        <div class="flex items-center">
+                                            <div class="w-3 h-3 bg-blue-500 rounded mr-1"></div>
+                                            Active
+                                        </div>
+                                        <div class="flex items-center">
+                                            <div class="w-3 h-3 bg-green-500 rounded mr-1"></div>
+                                            Completed
+                                        </div>
+                                        <div class="flex items-center">
+                                            <div class="w-3 h-3 bg-yellow-500 rounded mr-1"></div>
+                                            Planning
+                                        </div>
+                                        <div class="flex items-center">
+                                            <div class="w-3 h-3 bg-red-500 rounded mr-1"></div>
+                                            On Hold
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Gantt Rows -->
+                        <div class="space-y-1">
+                            <template x-for="project in filteredProjects" :key="project.id">
+                                <div class="flex border-b border-gray-100 hover:bg-gray-50">
+                                    <!-- Project Info -->
+                                    <div class="w-80 p-3 border-r border-gray-200 flex items-center">
+                                        <div class="flex-1">
+                                            <div class="flex items-center space-x-2">
+                                                <div class="w-2 h-2 rounded-full" 
+                                                     :class="{
+                                                         'bg-blue-500': project.status === 'active',
+                                                         'bg-green-500': project.status === 'completed',
+                                                         'bg-yellow-500': project.status === 'planning',
+                                                         'bg-red-500': project.status === 'on_hold'
+                                                     }"></div>
+                                                <span class="text-sm font-medium text-gray-900" x-text="project.name"></span>
+                                            </div>
+                                            <div class="text-xs text-gray-500 mt-1" x-text="project.pm_name"></div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-xs text-gray-500" x-text="project.progress + '%'"></div>
+                                            <div class="w-16 bg-gray-200 rounded-full h-1 mt-1">
+                                                <div class="bg-blue-500 h-1 rounded-full" 
+                                                     :style="'width: ' + project.progress + '%'"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Timeline Bar -->
+                                    <div class="flex-1 p-3 relative">
+                                        <div class="relative h-8 bg-gray-100 rounded">
+                                            <!-- Project Duration Bar -->
+                                            <div class="absolute top-1 left-0 h-6 rounded flex items-center"
+                                                 :style="getGanttBarStyle(project)"
+                                                 :class="{
+                                                     'bg-blue-500': project.status === 'active',
+                                                     'bg-green-500': project.status === 'completed',
+                                                     'bg-yellow-500': project.status === 'planning',
+                                                     'bg-red-500': project.status === 'on_hold'
+                                                 }">
+                                                <span class="text-xs text-white px-2 truncate" x-text="project.name"></span>
+                                            </div>
+                                            
+                                            <!-- Milestones -->
+                                            <template x-for="milestone in getProjectMilestones(project.id)" :key="milestone.id">
+                                                <div class="absolute top-0 w-1 h-8 bg-purple-500"
+                                                     :style="'left: ' + getMilestonePosition(milestone) + '%'"
+                                                     :title="milestone.name">
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div x-show="filteredProjects.length === 0" class="text-center py-12">
+                            <i class="fas fa-chart-gantt text-4xl text-gray-300 mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No projects to display</h3>
+                            <p class="text-gray-500">Create a project to see it in the Gantt chart</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1833,6 +1961,12 @@ function projectsPage() {
         currentView: 'table', // table, kanban, gantt
         selectedProjects: [],
         bulkActionsVisible: false,
+        
+        // Gantt Chart Properties
+        ganttView: 'month', // month, quarter, year
+        ganttZoom: 1,
+        ganttStartDate: null,
+        ganttEndDate: null,
 
         async init() {
             console.log('🚀 Projects page init started');
@@ -2881,7 +3015,59 @@ function projectsPage() {
 
         viewProjectTimeline(projectId) {
             console.log('Viewing project timeline:', projectId);
-            // Implement timeline view
+            this.currentView = 'gantt';
+            // Focus on specific project in Gantt view
+        },
+
+        // Gantt Chart Methods
+        getGanttBarStyle(project) {
+            if (!project.start_date || !project.end_date) {
+                return 'display: none;';
+            }
+            
+            const startDate = new Date(project.start_date);
+            const endDate = new Date(project.end_date);
+            const now = new Date();
+            
+            // Calculate position and width based on timeline
+            const timelineStart = this.ganttStartDate || new Date(now.getFullYear(), now.getMonth(), 1);
+            const timelineEnd = this.ganttEndDate || new Date(now.getFullYear(), now.getMonth() + 3, 0);
+            
+            const totalDays = (timelineEnd - timelineStart) / (1000 * 60 * 60 * 24);
+            const projectStart = Math.max(0, (startDate - timelineStart) / (1000 * 60 * 60 * 24));
+            const projectDuration = (endDate - startDate) / (1000 * 60 * 60 * 24);
+            
+            const leftPercent = (projectStart / totalDays) * 100;
+            const widthPercent = (projectDuration / totalDays) * 100;
+            
+            return `left: ${leftPercent}%; width: ${Math.max(widthPercent, 2)}%;`;
+        },
+
+        getProjectMilestones(projectId) {
+            // Mock milestones data
+            return [
+                { id: 1, name: 'Kickoff', date: '2024-01-15', position: 10 },
+                { id: 2, name: 'Design Complete', date: '2024-02-15', position: 50 },
+                { id: 3, name: 'Development Complete', date: '2024-03-15', position: 80 }
+            ];
+        },
+
+        getMilestonePosition(milestone) {
+            return milestone.position || 0;
+        },
+
+        zoomGantt(direction) {
+            if (direction === 'in') {
+                this.ganttZoom = Math.min(this.ganttZoom * 1.2, 3);
+            } else {
+                this.ganttZoom = Math.max(this.ganttZoom / 1.2, 0.5);
+            }
+            console.log('Gantt zoom:', this.ganttZoom);
+        },
+
+        exportGantt() {
+            console.log('Exporting Gantt chart...');
+            // Implement Gantt export functionality
         },
 
         deleteProject(projectId) {

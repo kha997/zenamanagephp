@@ -27,6 +27,23 @@ class AuthServiceProvider extends ServiceProvider
         'App\Models\Template' => 'App\Policies\TemplatePolicy',
         'App\Models\Invitation' => 'App\Policies\InvitationPolicy',
         'App\Models\SidebarConfig' => 'App\Policies\SidebarConfigPolicy',
+        'App\Models\CalendarEvent' => 'App\Policies\CalendarEventPolicy',
+        'App\Models\EmailTracking' => 'App\Policies\EmailTrackingPolicy',
+        'App\Models\NotificationRule' => 'App\Policies\NotificationRulePolicy',
+        'App\Models\Organization' => 'App\Policies\OrganizationPolicy',
+        'App\Models\SupportTicket' => 'App\Policies\SupportTicketPolicy',
+        'App\Models\WorkTemplate' => 'App\Policies\WorkTemplatePolicy',
+        'App\Models\File' => 'App\Policies\FilePolicy',
+        'App\Models\Permission' => 'App\Policies\PermissionPolicy',
+        'App\Models\Role' => 'App\Policies\RolePolicy',
+        'App\Models\Tenant' => 'App\Policies\TenantPolicy',
+        'App\Models\OnboardingStep' => 'App\Policies\OnboardingStepPolicy',
+        'App\Models\ReportSchedule' => 'App\Policies\ReportSchedulePolicy',
+        'App\Models\ReportTemplate' => 'App\Policies\ReportTemplatePolicy',
+        'App\Models\SearchHistory' => 'App\Policies\SearchHistoryPolicy',
+        'App\Models\ProjectActivity' => 'App\Policies\ProjectActivityPolicy',
+        'App\Models\AuditLog' => 'App\Policies\AuditLogPolicy',
+        'App\Models\DashboardWidget' => 'App\Policies\DashboardWidgetPolicy',
     ];
 
     /**

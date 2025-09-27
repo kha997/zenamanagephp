@@ -113,15 +113,20 @@ class DashboardController extends Controller
             // Get alerts
             $alerts = $this->getAlerts($tenantId);
 
-            // Get activities
-            $activities = \App\Models\Activity::where('tenant_id', $tenantId)
+            // Get activities with eager loading to prevent N+1 queries
+            $activities = \App\Models\ProjectActivity::where('project_id', function($query) use ($tenantId) {
+                    $query->select('id')
+                          ->from('projects')
+                          ->where('tenant_id', $tenantId);
+                })
+                ->with('user:id,name') // Eager load only needed columns
                 ->orderBy('created_at', 'desc')
                 ->limit(20)
                 ->get()
                 ->map(function ($activity) {
                     return [
                         'id' => $activity->id,
-                        'type' => $activity->type,
+                        'type' => $activity->action,
                         'description' => $activity->description,
                         'user' => $activity->user->name ?? 'System',
                         'created_at' => $activity->created_at->toISOString(),
@@ -475,8 +480,10 @@ class DashboardController extends Controller
 
     private function getBudgetUsageData($tenantId)
     {
+        // Optimize by selecting only needed columns
         return \App\Models\Project::where('tenant_id', $tenantId)
             ->where('budget_total', '>', 0)
+            ->select('id', 'name', 'budget_total', 'actual_cost') // Only select needed columns
             ->get()
             ->map(function ($project) {
                 $usage = $project->actual_cost / $project->budget_total * 100;
@@ -491,19 +498,22 @@ class DashboardController extends Controller
 
     private function getTeamProductivityData($tenantId)
     {
+        // Optimize with single query using joins and aggregation
         return \App\Models\User::where('tenant_id', $tenantId)
             ->where('is_active', true)
+            ->withCount([
+                'assignedTasks as completed_tasks_count' => function ($query) {
+                    $query->where('status', 'completed')
+                          ->where('updated_at', '>=', now()->subWeek());
+                }
+            ])
+            ->select('id', 'name') // Only select needed columns
             ->limit(10)
             ->get()
             ->map(function ($user) {
-                $completedTasks = \App\Models\Task::where('assigned_to', $user->id)
-                    ->where('status', 'completed')
-                    ->where('updated_at', '>=', now()->subWeek())
-                    ->count();
-                    
                 return [
                     'name' => $user->name,
-                    'completed_tasks' => $completedTasks
+                    'completed_tasks' => $user->completed_tasks_count
                 ];
             });
     }

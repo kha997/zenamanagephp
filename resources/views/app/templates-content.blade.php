@@ -1,5 +1,5 @@
 <!-- App Templates Content -->
-<div class="bg-white rounded-lg shadow p-6">
+<div class="bg-white rounded-lg shadow p-4 md:p-6 mobile-content">
     <div class="flex items-center justify-between mb-6">
         <h3 class="text-lg font-semibold text-gray-900">Project Templates</h3>
         <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">

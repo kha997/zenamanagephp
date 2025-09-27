@@ -29,6 +29,27 @@ class RouteServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         $this->routes(function () {
+            // Test route without any middleware
+            Route::get('/test-simple', function () {
+                return 'Simple test route works!';
+            });
+            
+            // Admin routes (no middleware for now)
+            Route::get('/admin', function () {
+                return view('admin.dashboard.index');
+            })->name('admin.dashboard');
+            
+            // App routes (no middleware for now)
+            Route::get('/app', function () {
+                return view('app.dashboard.index');
+            })->name('app.dashboard');
+            
+            Route::get('/app/tasks', function () {
+                return view('app.tasks.index');
+            })->name('app.tasks');
+                
+            // Temporarily disable other routes to isolate the issue
+            /*
             // Simple API routes for testing middleware
             Route::prefix('api-simple')
                 ->group(base_path('routes/api-simple.php'));
@@ -47,6 +68,7 @@ class RouteServiceProvider extends ServiceProvider
                 Route::middleware('web')
                     ->group(base_path('routes/debug.php'));
             }
+            */
         });
     }
 

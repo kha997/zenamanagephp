@@ -42,6 +42,22 @@ Route::prefix('api/v1/admin')->middleware(['auth:sanctum', 'ability:admin', \App
         Route::get('/audit', [App\Http\Controllers\Api\Admin\ActivityController::class, 'audit']);
     });
     
+    // Performance optimization APIs
+    Route::prefix('performance')->group(function () {
+        Route::get('/metrics', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'metrics']);
+        Route::get('/health', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'health']);
+        Route::post('/clear-caches', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'clearCaches']);
+        Route::post('/optimize-tables', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'optimizeTables']);
+        Route::post('/analyze-tables', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'analyzeTables']);
+        Route::get('/slow-queries', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'getSlowQueries']);
+        Route::get('/cache-stats', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'getCacheStats']);
+        Route::get('/database-stats', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'getDatabaseStats']);
+        Route::get('/suggest-indexes', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'suggestIndexes']);
+        Route::get('/monitor-queries', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'monitorQueryPerformance']);
+        Route::get('/memory-stats', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'getMemoryStats']);
+        Route::post('/optimize-storage', [App\Http\Controllers\Api\Admin\PerformanceController::class, 'optimizeFileStorage']);
+    });
+    
     // Performance & Health APIs
     Route::prefix('perf')->group(function () {
         Route::get('/metrics', [App\Http\Controllers\PerformanceController::class, 'metrics']);
@@ -143,6 +159,38 @@ Route::prefix('api/v1/app')->middleware(['auth:sanctum', 'ability:tenant', 'tena
     // Templates APIs
     Route::apiResource('templates', App\Http\Controllers\Api\App\TemplateController::class);
     
+    // Dashboard APIs
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\App\DashboardController::class, 'index']);
+        Route::get('/updates', [App\Http\Controllers\Api\App\DashboardController::class, 'updates']);
+        Route::get('/kpis', [App\Http\Controllers\Api\App\DashboardController::class, 'kpis']);
+        Route::get('/activity', [App\Http\Controllers\Api\App\DashboardController::class, 'activity']);
+        Route::get('/alerts', [App\Http\Controllers\Api\App\DashboardController::class, 'alerts']);
+        Route::delete('/alerts/{alertId}', [App\Http\Controllers\Api\App\DashboardController::class, 'dismissAlert']);
+        Route::get('/widgets', [App\Http\Controllers\Api\App\DashboardController::class, 'widgets']);
+        Route::patch('/layout', [App\Http\Controllers\Api\App\DashboardController::class, 'updateLayout']);
+    });
+
+    // Notification APIs
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\App\NotificationController::class, 'index']);
+        Route::get('/unread-count', [App\Http\Controllers\Api\App\NotificationController::class, 'unreadCount']);
+        Route::patch('/{notificationId}/read', [App\Http\Controllers\Api\App\NotificationController::class, 'markAsRead']);
+        Route::patch('/mark-all-read', [App\Http\Controllers\Api\App\NotificationController::class, 'markAllAsRead']);
+        Route::delete('/{notificationId}', [App\Http\Controllers\Api\App\NotificationController::class, 'destroy']);
+        Route::get('/settings', [App\Http\Controllers\Api\App\NotificationController::class, 'settings']);
+        Route::patch('/settings', [App\Http\Controllers\Api\App\NotificationController::class, 'updateSettings']);
+        Route::post('/test', [App\Http\Controllers\Api\App\NotificationController::class, 'sendTest']);
+    });
+
+    // Search APIs
+    Route::prefix('search')->group(function () {
+        Route::post('/', [App\Http\Controllers\Api\App\SearchController::class, 'search']);
+        Route::get('/suggestions', [App\Http\Controllers\Api\App\SearchController::class, 'suggestions']);
+        Route::get('/recent', [App\Http\Controllers\Api\App\SearchController::class, 'recent']);
+        Route::post('/save', [App\Http\Controllers\Api\App\SearchController::class, 'save']);
+    });
+
     // Settings APIs
     Route::prefix('settings')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\App\SettingsController::class, 'index']);
@@ -153,6 +201,37 @@ Route::prefix('api/v1/app')->middleware(['auth:sanctum', 'ability:tenant', 'tena
         Route::patch('/security', [App\Http\Controllers\Api\App\SettingsController::class, 'updateSecurity']);
         Route::get('/notifications', [App\Http\Controllers\Api\App\SettingsController::class, 'notifications']);
         Route::patch('/notifications', [App\Http\Controllers\Api\App\SettingsController::class, 'updateNotifications']);
+    });
+    
+    // Chart routes
+    Route::prefix('charts')->group(function () {
+        Route::post('/{chartId}', [App\Http\Controllers\Api\App\ChartController::class, 'getChartData']);
+    });
+    
+    // File routes
+    Route::prefix('files')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\App\FileController::class, 'index']);
+        Route::post('/upload', [App\Http\Controllers\Api\App\FileController::class, 'upload']);
+        Route::get('/stats', [App\Http\Controllers\Api\App\FileController::class, 'stats']);
+        Route::get('/{id}', [App\Http\Controllers\Api\App\FileController::class, 'show']);
+        Route::put('/{id}', [App\Http\Controllers\Api\App\FileController::class, 'update']);
+        Route::delete('/{id}', [App\Http\Controllers\Api\App\FileController::class, 'destroy']);
+        Route::get('/{id}/download', [App\Http\Controllers\Api\App\FileController::class, 'download']);
+        Route::get('/{id}/preview', [App\Http\Controllers\Api\App\FileController::class, 'preview']);
+        Route::get('/{id}/versions', [App\Http\Controllers\Api\App\FileController::class, 'versions']);
+        Route::get('/{fileId}/versions/{versionId}/download', [App\Http\Controllers\Api\App\FileController::class, 'downloadVersion']);
+    });
+    
+    // Onboarding routes
+    Route::prefix('onboarding')->group(function () {
+        Route::get('/steps', [App\Http\Controllers\Api\App\OnboardingController::class, 'getSteps']);
+        Route::get('/current-step', [App\Http\Controllers\Api\App\OnboardingController::class, 'getCurrentStep']);
+        Route::get('/progress', [App\Http\Controllers\Api\App\OnboardingController::class, 'getProgress']);
+        Route::get('/is-completed', [App\Http\Controllers\Api\App\OnboardingController::class, 'isCompleted']);
+        Route::post('/steps/{stepId}/complete', [App\Http\Controllers\Api\App\OnboardingController::class, 'completeStep']);
+        Route::post('/steps/{stepId}/skip', [App\Http\Controllers\Api\App\OnboardingController::class, 'skipStep']);
+        Route::post('/reset', [App\Http\Controllers\Api\App\OnboardingController::class, 'reset']);
+        Route::get('/stats', [App\Http\Controllers\Api\App\OnboardingController::class, 'getStats']);
     });
 });
 

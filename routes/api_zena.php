@@ -325,13 +325,13 @@ Route::group(['prefix' => 'auth'], function () {
     });
     */
 
-    // Document Management routes (using SimpleDocumentController)
+    // Document Management routes (using DocumentController)
     Route::group(['prefix' => 'documents'], function () {
-        Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])->name('documents.index');
-        Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])->name('documents.store');
-        Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])->name('documents.show');
-        Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->name('documents.update');
-        Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->name('documents.destroy');
+        Route::get('/', [\App\Http\Controllers\Api\DocumentController::class, 'index'])->name('documents.index');
+        Route::post('/', [\App\Http\Controllers\Api\DocumentController::class, 'store'])->name('documents.store');
+        Route::get('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'show'])->name('documents.show');
+        Route::put('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'update'])->name('documents.update');
+        Route::delete('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'destroy'])->name('documents.destroy');
     });
 
     // Material Requests routes - DISABLED (Controller not implemented)
@@ -354,11 +354,11 @@ Route::group(['prefix' => 'auth'], function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('documents')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])->name('documents.index');
-        Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])->name('documents.store');
-        Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])->name('documents.show');
-        Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->name('documents.update');
-        Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->name('documents.destroy');
+        Route::get('/', [\App\Http\Controllers\Api\DocumentController::class, 'index'])->name('documents.index');
+        Route::post('/', [\App\Http\Controllers\Api\DocumentController::class, 'store'])->name('documents.store');
+        Route::get('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'show'])->name('documents.show');
+        Route::put('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'update'])->name('documents.update');
+        Route::delete('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'destroy'])->name('documents.destroy');
     });
 
     /*

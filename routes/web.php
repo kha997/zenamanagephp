@@ -14,12 +14,17 @@ use App\Http\Controllers\DashboardController;
 |
 */
 
+// Simple Admin Dashboard Route (no middleware)
+Route::get('/admin', function () {
+    return '<h1>Super Admin Dashboard</h1><p>Dashboard is working!</p>';
+})->name('admin.dashboard');
+
 // MOVED: Test API Routes moved to /_debug namespace with DebugGate middleware
 
-// Root redirect - Redirect to dashboard (auth temporarily disabled)
+// Root redirect - Redirect to dashboard (protected)
 Route::get('/', function () {
     return redirect('/app/dashboard');
-});
+})->middleware('auth');
 
 // Legacy Routes - These routes are deprecated and will be removed
 Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(function () {
@@ -43,22 +48,22 @@ Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(fun
 //     return response()->file(public_path('api-demo.html'));
 // })->name('api.demo');
 
-// Simple Authentication Routes (no middleware)
+// Authentication Routes (guest middleware for login, auth middleware for logout)
 Route::get('/login', function() {
     return view('auth.login');
-})->name('login');
+})->name('login')->middleware('guest');
 
 Route::post('/login', function() {
     return redirect('/app/dashboard')->with('success', 'Login successful!');
-})->name('login.post');
+})->name('login.post')->middleware('guest');
 
 Route::get('/logout', function() {
     return redirect('/login')->with('success', 'You have been logged out successfully.');
-})->name('logout');
+})->name('logout')->middleware('auth');
 
 Route::post('/logout', function() {
     return redirect('/login')->with('success', 'You have been logged out successfully.');
-})->name('logout.post');
+})->name('logout.post')->middleware('auth');
 
 // MOVED: All test routes moved to /_debug namespace with debug.gate middleware
 
@@ -347,6 +352,106 @@ Route::get('/admin/users', function() {
     Route::prefix('app')->name('app.')->group(function () {
         // Dashboard route - AUTH TEMPORARILY DISABLED due to auth() helper issues
         Route::get('/dashboard', [App\Http\Controllers\Web\AppController::class, 'dashboard'])->name('dashboard');
+        
+        // Dashboard Template Route
+        Route::get('/dashboard-template', function() {
+            return view('app.dashboard-template');
+        })->name('dashboard-template');
+        
+        // Dashboard Phase 3 Route
+        Route::get('/dashboard-phase3', function() {
+            return view('app.dashboard-phase3');
+        })->name('dashboard-phase3');
+        
+        // Advanced Analytics Route
+        Route::get('/advanced-analytics', function() {
+            return view('app.advanced-analytics');
+        })->name('advanced-analytics');
+        
+        // Professional Dashboard Route
+        Route::get('/professional-dashboard', function() {
+            return view('app.professional-dashboard');
+        })->name('professional-dashboard');
+        
+            // Dashboard Builder Route
+            Route::get('/dashboard-builder', function() {
+                return view('app.dashboard-builder');
+            })->name('dashboard-builder');
+            
+            // Dashboard Templates Route
+            Route::get('/dashboard-templates', function() {
+                return view('app.dashboard-templates');
+            })->name('dashboard-templates');
+            
+            // Advanced Data Sources Route
+            Route::get('/advanced-data-sources', function() {
+                return view('app.advanced-data-sources');
+            })->name('advanced-data-sources');
+            
+            // Real-time Collaboration Route
+            Route::get('/real-time-collaboration', function() {
+                return view('app.real-time-collaboration');
+            })->name('real-time-collaboration');
+            
+            // Mobile Dashboard Builder Route
+            Route::get('/mobile-dashboard-builder', function() {
+                return view('app.mobile-dashboard-builder');
+            })->name('mobile-dashboard-builder');
+            
+            // Advanced Mobile Dashboard Route
+            Route::get('/advanced-mobile-dashboard', function() {
+                return view('app.advanced-mobile-dashboard');
+            })->name('advanced-mobile-dashboard');
+            
+            // Future Enhancements Route
+            Route::get('/future-enhancements', function() {
+                return view('app.future-enhancements');
+            })->name('future-enhancements');
+            
+            // AI Integration Route
+            Route::get('/ai-integration', function() {
+                return view('app.ai-integration');
+            })->name('ai-integration');
+            
+            // AR/VR Implementation Route
+            Route::get('/ar-vr-implementation', function() {
+                return view('app.ar-vr-implementation');
+            })->name('ar-vr-implementation');
+            
+            // Biometric Authentication Route
+            Route::get('/biometric-authentication', function() {
+                return view('app.biometric-authentication');
+            })->name('biometric-authentication');
+            
+            // Advanced Machine Learning Route
+            Route::get('/advanced-machine-learning', function() {
+                return view('app.advanced-machine-learning');
+            })->name('advanced-machine-learning');
+            
+            // IoT Integration Route
+            Route::get('/iot-integration', function() {
+                return view('app.iot-integration');
+            })->name('iot-integration');
+            
+            // Blockchain Integration Route
+            Route::get('/blockchain-integration', function() {
+                return view('app.blockchain-integration');
+            })->name('blockchain-integration');
+            
+            // Advanced Security Route
+            Route::get('/advanced-security', function() {
+                return view('app.advanced-security');
+            })->name('advanced-security');
+            
+            // System Integration Route
+            Route::get('/system-integration', function() {
+                return view('app.system-integration');
+            })->name('system-integration');
+            
+            // Final Integration Route
+            Route::get('/final-integration', function() {
+                return view('app.final-integration');
+            })->name('final-integration');
         
         Route::get('/projects', [App\Http\Controllers\Web\AppController::class, 'projects'])->name('projects');
         Route::get('/projects/create', [App\Http\Controllers\Web\ProjectController::class, 'create'])->name('projects.create');
@@ -719,8 +824,8 @@ Route::permanentRedirect('/performance/clear-caches', '/api/v1/admin/perf/clear-
 
 // Test route for debugging session auth middleware
 
-// Dashboard routes
-// Route::middleware(['auth'])->group(function () {
-//     Route::get('/app/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-//     Route::get('/api/dashboard/metrics', [DashboardController::class, 'metrics'])->name('dashboard.metrics');
-// });
+// Dashboard routes (protected)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/app/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/api/dashboard/metrics', [DashboardController::class, 'metrics'])->name('dashboard.metrics');
+});

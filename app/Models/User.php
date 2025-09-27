@@ -85,7 +85,6 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id')
             ->using(UserRole::class)
-            ->withPivot('id')
             ->withTimestamps();
     }
 
@@ -110,7 +109,7 @@ class User extends Authenticatable
      */
     public function hasRole(string $role): bool
     {
-        return $this->roles()->where('name', $role)->exists();
+        return $this->roles()->where('name', 'like', $role . '_%')->exists();
     }
 
     /**
@@ -205,6 +204,46 @@ class User extends Authenticatable
     public function invitation(): BelongsTo
     {
         return $this->belongsTo(Invitation::class);
+    }
+
+    /**
+     * Relationship: User has many change requests
+     */
+    public function changeRequests(): HasMany
+    {
+        return $this->hasMany(ChangeRequest::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User has many assigned change requests
+     */
+    public function assignedChangeRequests(): HasMany
+    {
+        return $this->hasMany(ChangeRequest::class, 'assigned_to');
+    }
+
+    /**
+     * Relationship: User has many support tickets
+     */
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User has many assigned support tickets
+     */
+    public function assignedSupportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'assigned_to');
+    }
+
+    /**
+     * Relationship: User has many calendar events
+     */
+    public function calendarEvents(): HasMany
+    {
+        return $this->hasMany(CalendarEvent::class, 'created_by');
     }
 
     /**

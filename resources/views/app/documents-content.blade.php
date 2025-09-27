@@ -53,7 +53,7 @@
     }
 </style>
 
-<div x-data="documentsPage()" x-init="loadDocuments()" class="space-y-6">
+<div x-data="documentsPage()" x-init="loadDocuments()" class="space-y-4 md:space-y-6 mobile-content">
     <!-- Page Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>

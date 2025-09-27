@@ -1,402 +1,316 @@
 # ZENAMANAGE REFACTOR PLAN
+## Repository Cleanup & Standardization
 
-**Version:** 1.0  
-**Created:** 2024-12-19  
-**Status:** Ready for Execution  
-
-## 🎯 **OVERVIEW**
-
-This plan outlines the systematic refactoring of ZenaManage to comply with Non-Negotiable Principles. The refactoring is broken down into 7 sequential PRs, each focusing on specific aspects of the codebase.
-
-## 📋 **EXECUTION STRATEGY**
-
-### **Wave-Based Approach**
-- **Wave 1:** Routes & Middleware (PRs #1-2)
-- **Wave 2:** Code Structure (PRs #3-4)  
-- **Wave 3:** Quality & Performance (PRs #5-7)
-
-### **PR Size Limits**
-- Each PR: 300-500 lines maximum
-- Focused scope per PR
-- Clear rollback strategy
-- Comprehensive testing
+**Date**: January 24, 2025  
+**Branch**: chore/repo-cleanup-20250124  
+**Status**: Planning Phase  
+**Estimated Duration**: 4-6 weeks
 
 ---
 
-## 🚀 **PR EXECUTION PLAN**
+## 🎯 **OBJECTIVES**
+
+### **Primary Goals**
+1. **Standardize Architecture**: Ensure compliance with Project Rules
+2. **Remove Duplicates**: Eliminate duplicate controllers, views, and code
+3. **Fix Naming**: Standardize naming conventions across the codebase
+4. **Enhance Security**: Add missing authentication and authorization
+5. **Improve Performance**: Fix N+1 queries and add proper indexing
+6. **Strengthen Testing**: Add comprehensive test coverage
+7. **Update Documentation**: Ensure all APIs are documented
+
+### **Success Criteria**
+- [ ] All routes follow proper architecture (`/admin/*`, `/app/*`, `/_debug/*`, `/api/v1/*`)
+- [ ] Zero duplicate controllers or views
+- [ ] 100% naming convention compliance
+- [ ] All routes have proper middleware
+- [ ] Zero N+1 queries
+- [ ] 100% test coverage for critical paths
+- [ ] All APIs documented with OpenAPI
+
+---
+
+## 📋 **PR BREAKDOWN**
 
 ### **PR #1: Route Normalization**
-**Scope:** Routes, middleware, debug gates  
-**Estimated Lines:** 400-500  
-**Duration:** 2-3 days  
+**Scope**: Route structure and middleware
+**Estimated Effort**: 2-3 days
+**Files Changed**: ~20
 
-#### **Tasks:**
-1. **Fix Authentication Middleware**
-   - Add `auth` middleware to all protected routes
-   - Add `rbac:admin` to admin routes
-   - Add `tenant.isolation` to app routes
+#### **Tasks**
+- [ ] Fix route loading failures (SimpleDocumentController references)
+- [ ] Standardize route structure (`/admin/*`, `/app/*`, `/_debug/*`, `/api/v1/*`)
+- [ ] Add missing middleware (auth, rbac, tenant isolation)
+- [ ] Move debug routes to `/_debug/*` namespace
+- [ ] Add DebugGate middleware for debug routes
+- [ ] Update RouteServiceProvider
+- [ ] Fix route conflicts and duplicates
 
-2. **Move UI Side-Effects to API**
-   - Move POST operations from web routes to API routes
-   - Update form actions to use API endpoints
-   - Remove business logic from web controllers
-
-3. **Implement Debug Gates**
-   - Add `debug.gate` middleware to `/_debug/*` routes
-   - Ensure debug routes only work in non-production
-   - Add IP whitelisting for debug access
-
-4. **Standardize Route Prefixes**
-   - Ensure `/admin/*` for system-wide operations
-   - Ensure `/app/*` for tenant-scoped operations
-   - Ensure `/_debug/*` for development tools
-   - Ensure `/api/v1/*` for REST endpoints
-
-#### **Files Modified:**
-- `routes/web.php`
-- `routes/api.php`
-- `app/Http/Kernel.php`
-- `app/Http/Middleware/DebugGateMiddleware.php`
-
-#### **Testing:**
-- Verify all routes have proper middleware
-- Test debug gate functionality
-- Verify API endpoints work correctly
+#### **Acceptance Criteria**
+- [ ] `php artisan route:list` runs without errors
+- [ ] All routes follow proper architecture
+- [ ] All routes have appropriate middleware
+- [ ] Debug routes are properly isolated
+- [ ] No route conflicts
 
 ---
 
-### **PR #2: Naming Standardization**
-**Scope:** File names, class names, route names  
-**Estimated Lines:** 300-400  
-**Duration:** 2-3 days  
+### **PR #2: Naming Standards**
+**Scope**: File and class naming conventions
+**Estimated Effort**: 3-4 days
+**Files Changed**: ~50
 
-#### **Tasks:**
-1. **Apply Rename Map**
-   - Execute all renames from `rename-map.json`
-   - Update all imports and references
-   - Update route names to kebab-case
+#### **Tasks**
+- [ ] Rename controllers to follow PascalCase
+- [ ] Rename views to follow kebab-case
+- [ ] Fix namespace inconsistencies
+- [ ] Update import statements
+- [ ] Rename database tables to snake_case
+- [ ] Update model references
+- [ ] Fix route naming
 
-2. **Fix Controller Namespaces**
-   - Move controllers to proper namespaces
-   - Update all controller references
-   - Ensure consistent naming patterns
-
-3. **Update View Names**
-   - Standardize Blade view naming
-   - Update all view references
-   - Ensure consistent directory structure
-
-#### **Files Modified:**
-- All controller files (moved/renamed)
-- All view files (renamed)
-- All route definitions
-- All import statements
-
-#### **Testing:**
-- Verify all imports work correctly
-- Test all renamed routes
-- Verify view rendering works
+#### **Acceptance Criteria**
+- [ ] All PHP classes follow PascalCase
+- [ ] All Blade views follow kebab-case
+- [ ] All namespaces are consistent
+- [ ] All imports are correct
+- [ ] All database tables follow snake_case
 
 ---
 
 ### **PR #3: Remove Duplicates**
-**Scope:** Duplicate components, services, views  
-**Estimated Lines:** 400-500  
-**Duration:** 3-4 days  
+**Scope**: Duplicate code elimination
+**Estimated Effort**: 4-5 days
+**Files Changed**: ~30
 
-#### **Tasks:**
-1. **Consolidate Dashboard Views**
-   - Keep only `dashboard-clean.blade.php`
-   - Remove duplicate dashboard implementations
-   - Update all dashboard references
+#### **Tasks**
+- [ ] Remove duplicate controllers
+- [ ] Remove duplicate views
+- [ ] Remove duplicate services
+- [ ] Remove duplicate models
+- [ ] Update references to canonical versions
+- [ ] Remove orphaned files
+- [ ] Clean up unused code
 
-2. **Merge Duplicate Controllers**
-   - Consolidate `ProjectController` variants
-   - Merge `UserController` implementations
-   - Remove unused controller methods
-
-3. **Eliminate Duplicate Services**
-   - Identify and merge duplicate services
-   - Update all service references
-   - Ensure single source of truth
-
-4. **Clean Up Alpine.js Components**
-   - Resolve function name conflicts
-   - Consolidate duplicate components
-   - Ensure clean component structure
-
-#### **Files Modified:**
-- Multiple dashboard view files
-- Duplicate controller files
-- Service files
-- JavaScript/Alpine.js files
-
-#### **Testing:**
-- Verify dashboard functionality
-- Test all consolidated features
-- Ensure no broken references
+#### **Acceptance Criteria**
+- [ ] Zero duplicate controllers
+- [ ] Zero duplicate views
+- [ ] Zero duplicate services
+- [ ] Zero duplicate models
+- [ ] All references point to canonical versions
+- [ ] No orphaned files
 
 ---
 
-### **PR #4: Error Envelope & OpenAPI Sync**
-**Scope:** API responses, error handling, documentation  
-**Estimated Lines:** 300-400  
-**Duration:** 2-3 days  
+### **PR #4: Error Envelope & OpenAPI**
+**Scope**: API standardization and documentation
+**Estimated Effort**: 3-4 days
+**Files Changed**: ~25
 
-#### **Tasks:**
-1. **Implement Error Envelope**
-   - Standardize error response format
-   - Add error IDs and codes
-   - Implement i18n for error messages
+#### **Tasks**
+- [ ] Standardize error responses to use error envelope
+- [ ] Add error.id correlation to all errors
+- [ ] Implement i18n error messages
+- [ ] Generate OpenAPI documentation
+- [ ] Add API versioning
+- [ ] Update API documentation
+- [ ] Add error handling tests
 
-2. **Update API Responses**
-   - Ensure consistent response format
-   - Add proper HTTP status codes
-   - Implement retry-after headers
-
-3. **Regenerate OpenAPI Documentation**
-   - Update API documentation
-   - Ensure accuracy of endpoints
-   - Add proper examples
-
-#### **Files Modified:**
-- All API controllers
-- Error handling middleware
-- OpenAPI/Swagger files
-- Language files
-
-#### **Testing:**
-- Verify error envelope format
-- Test API documentation
-- Ensure proper error handling
+#### **Acceptance Criteria**
+- [ ] All APIs use standard error envelope
+- [ ] All errors have error.id correlation
+- [ ] Error messages are i18n ready
+- [ ] OpenAPI documentation is complete
+- [ ] API versioning is implemented
+- [ ] Error handling tests pass
 
 ---
 
-### **PR #5: Tests & A11y/Perf Gates**
-**Scope:** Testing, accessibility, performance  
-**Estimated Lines:** 400-500  
-**Duration:** 3-4 days  
+### **PR #5: Tests & CI/CD Gates**
+**Scope**: Testing and quality gates
+**Estimated Effort**: 5-6 days
+**Files Changed**: ~40
 
-#### **Tasks:**
-1. **Add Comprehensive Tests**
-   - Unit tests for all services
-   - Integration tests for API endpoints
-   - E2E tests for critical flows
+#### **Tasks**
+- [ ] Add unit tests for critical controllers
+- [ ] Add integration tests for API endpoints
+- [ ] Add E2E tests for critical user flows
+- [ ] Add accessibility tests (WCAG 2.1 AA)
+- [ ] Add performance tests
+- [ ] Update CI/CD pipeline
+- [ ] Add pre-commit hooks
+- [ ] Add code quality gates
 
-2. **Implement A11y Gates**
-   - Add Lighthouse CI integration
-   - Implement axe-core testing
-   - Ensure WCAG 2.1 AA compliance
-
-3. **Add Performance Monitoring**
-   - Implement performance budgets
-   - Add monitoring for p95 latency
-   - Ensure page load times < 500ms
-
-#### **Files Modified:**
-- Test files (new/updated)
-- CI/CD configuration
-- Performance monitoring setup
-- Accessibility testing
-
-#### **Testing:**
-- Run full test suite
-- Verify accessibility compliance
-- Check performance metrics
+#### **Acceptance Criteria**
+- [ ] Unit tests cover critical controllers
+- [ ] Integration tests cover API endpoints
+- [ ] E2E tests cover critical user flows
+- [ ] Accessibility tests pass
+- [ ] Performance tests pass
+- [ ] CI/CD pipeline is updated
+- [ ] Pre-commit hooks work
+- [ ] Code quality gates are enforced
 
 ---
 
-### **PR #6: Legacy Plan Implementation**
-**Scope:** Legacy route management, redirects  
-**Estimated Lines:** 300-400  
-**Duration:** 2-3 days  
+### **PR #6: Legacy Cleanup**
+**Scope**: Legacy code removal and migration
+**Estimated Effort**: 2-3 days
+**Files Changed**: ~20
 
-#### **Tasks:**
-1. **Implement Legacy Map**
-   - Add deprecation headers to legacy routes
-   - Implement 301 redirects
-   - Set up monitoring
+#### **Tasks**
+- [ ] Remove legacy Zena* prefixed classes
+- [ ] Remove legacy route files
+- [ ] Remove legacy views
+- [ ] Update legacy-map.json
+- [ ] Implement 301 redirects for legacy routes
+- [ ] Add deprecation warnings
+- [ ] Update migration documentation
 
-2. **Create Migration Guide**
-   - Document all breaking changes
-   - Provide migration instructions
-   - Create rollback procedures
-
-3. **Set Up Monitoring**
-   - Track legacy route usage
-   - Monitor redirect performance
-   - Set up alerts
-
-#### **Files Modified:**
-- Legacy route definitions
-- Migration documentation
-- Monitoring configuration
-- Alert setup
-
-#### **Testing:**
-- Test all redirects
-- Verify monitoring works
-- Test rollback procedures
+#### **Acceptance Criteria**
+- [ ] Legacy Zena* classes are removed
+- [ ] Legacy route files are removed
+- [ ] Legacy views are removed
+- [ ] Legacy-map.json is updated
+- [ ] 301 redirects work for legacy routes
+- [ ] Deprecation warnings are shown
+- [ ] Migration documentation is updated
 
 ---
 
-### **PR #7: Final Cleanups**
-**Scope:** Documentation, diagrams, scripts  
-**Estimated Lines:** 200-300  
-**Duration:** 1-2 days  
+### **PR #7: Final Polish**
+**Scope**: Documentation and final cleanup
+**Estimated Effort**: 2-3 days
+**Files Changed**: ~15
 
-#### **Tasks:**
-1. **Update Documentation**
-   - Complete API documentation
-   - Update architecture diagrams
-   - Create user guides
+#### **Tasks**
+- [ ] Update project documentation
+- [ ] Create Mermaid page tree diagram
+- [ ] Update README.md
+- [ ] Add developer documentation
+- [ ] Create command cheatsheet
+- [ ] Update final checklist
+- [ ] Perform final review
 
-2. **Create Mermaid Diagrams**
-   - Update page tree diagrams
-   - Create architecture diagrams
-   - Document data flow
-
-3. **Finalize Scripts**
-   - Complete command guide
-   - Add deployment scripts
-   - Create maintenance procedures
-
-#### **Files Modified:**
-- Documentation files
-- Diagram files
-- Script files
-- Configuration files
-
-#### **Testing:**
-- Verify all documentation
-- Test all scripts
-- Ensure diagrams are accurate
+#### **Acceptance Criteria**
+- [ ] Project documentation is updated
+- [ ] Mermaid page tree diagram is created
+- [ ] README.md is updated
+- [ ] Developer documentation is complete
+- [ ] Command cheatsheet is available
+- [ ] Final checklist is complete
+- [ ] Final review is passed
 
 ---
 
-## 🔧 **COMMANDS GUIDE**
+## 🔄 **EXECUTION TIMELINE**
 
-### **Development Commands**
-```bash
-# Code Quality
-./vendor/bin/pint --test
-./vendor/bin/phpstan analyse
-./vendor/bin/larastan analyse
+### **Week 1: Foundation**
+- **Day 1-2**: PR #1 - Route Normalization
+- **Day 3-4**: PR #2 - Naming Standards
+- **Day 5**: PR #3 - Remove Duplicates (start)
 
-# Testing
-php artisan test
-php artisan test --coverage
-./vendor/bin/phpunit
+### **Week 2: Core Refactoring**
+- **Day 1-2**: PR #3 - Remove Duplicates (complete)
+- **Day 3-4**: PR #4 - Error Envelope & OpenAPI
+- **Day 5**: PR #5 - Tests & CI/CD Gates (start)
 
-# Performance
-php artisan optimize:clear
-php artisan route:cache
-php artisan config:cache
-php artisan view:cache
+### **Week 3: Quality & Testing**
+- **Day 1-3**: PR #5 - Tests & CI/CD Gates (complete)
+- **Day 4-5**: PR #6 - Legacy Cleanup
 
-# Security
-php artisan route:list
-php artisan middleware:list
-php artisan auth:clear-resets
-```
-
-### **Refactoring Commands**
-```bash
-# Route Analysis
-php artisan route:list --columns=method,uri,name,middleware
-php artisan route:list --path=admin
-php artisan route:list --path=app
-
-# Cache Management
-php artisan cache:clear
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-
-# Database
-php artisan migrate:status
-php artisan db:seed
-php artisan tinker
-```
-
----
-
-## ✅ **SUCCESS CRITERIA**
-
-### **Route Normalization**
-- [ ] All routes have proper middleware
-- [ ] No UI side-effects in web routes
-- [ ] Debug gates working correctly
-- [ ] Route prefixes standardized
-
-### **Naming Standards**
-- [ ] All files follow naming conventions
-- [ ] All classes follow PascalCase
-- [ ] All routes follow kebab-case
-- [ ] All imports updated
-
-### **Duplicate Removal**
-- [ ] No duplicate dashboard views
-- [ ] No duplicate controllers
-- [ ] No duplicate services
-- [ ] No Alpine.js conflicts
-
-### **Error Handling**
-- [ ] Error envelope implemented
-- [ ] i18n error messages
-- [ ] Proper HTTP status codes
-- [ ] OpenAPI documentation updated
-
-### **Testing & Quality**
-- [ ] Comprehensive test coverage
-- [ ] A11y compliance verified
-- [ ] Performance budgets met
-- [ ] CI/CD gates working
-
-### **Legacy Management**
-- [ ] Legacy routes properly managed
-- [ ] Migration guide complete
-- [ ] Monitoring in place
-- [ ] Rollback procedures tested
+### **Week 4: Finalization**
+- **Day 1-2**: PR #7 - Final Polish
+- **Day 3-4**: Final testing and validation
+- **Day 5**: Documentation and handover
 
 ---
 
 ## 🚨 **RISK MITIGATION**
 
-### **High-Risk Changes**
-1. **Route Changes:** Could break existing functionality
-2. **Controller Moves:** Could break imports
-3. **Dashboard Consolidation:** Could break UI
+### **High-Risk Areas**
+1. **Route Changes**: Could break existing functionality
+2. **Database Changes**: Could affect data integrity
+3. **API Changes**: Could break client integrations
+4. **Authentication Changes**: Could lock out users
 
 ### **Mitigation Strategies**
-1. **Comprehensive Testing:** Test all changes thoroughly
-2. **Gradual Rollout:** Deploy changes incrementally
-3. **Rollback Plans:** Have rollback procedures ready
-4. **Monitoring:** Monitor for issues post-deployment
-
-### **Rollback Procedures**
-1. **Immediate:** Revert problematic changes
-2. **Short-term:** Restore previous functionality
-3. **Long-term:** Address root causes
+1. **Comprehensive Testing**: Test all changes thoroughly
+2. **Gradual Rollout**: Deploy changes incrementally
+3. **Rollback Plan**: Have rollback procedures ready
+4. **Monitoring**: Monitor system health during changes
+5. **Communication**: Keep stakeholders informed
 
 ---
 
-## 📊 **PROGRESS TRACKING**
+## 📊 **SUCCESS METRICS**
 
-### **Phase 1: Foundation (PRs #1-2)**
-- [ ] PR #1: Route Normalization
-- [ ] PR #2: Naming Standardization
+### **Code Quality**
+- **Duplicate Controllers**: 0 (from 15+)
+- **Naming Violations**: 0 (from 50+)
+- **Missing Tests**: 0 for critical paths (from 30+)
+- **Security Issues**: 0 (from 10+)
+- **Performance Issues**: 0 N+1 queries (from 20+)
 
-### **Phase 2: Structure (PRs #3-4)**
-- [ ] PR #3: Remove Duplicates
-- [ ] PR #4: Error Envelope & OpenAPI
+### **Architecture Compliance**
+- **Route Structure**: 100% compliant
+- **Middleware Usage**: 100% compliant
+- **Error Handling**: 100% consistent
+- **Documentation**: 100% coverage
 
-### **Phase 3: Quality (PRs #5-7)**
-- [ ] PR #5: Tests & A11y/Perf Gates
-- [ ] PR #6: Legacy Plan Implementation
-- [ ] PR #7: Final Cleanups
+### **Performance**
+- **Page Load Time**: < 500ms p95
+- **API Response Time**: < 300ms p95
+- **Database Queries**: No N+1 queries
+- **Cache Hit Rate**: > 80%
 
 ---
 
-**Status:** ✅ Plan Complete  
-**Next Action:** Begin PR #1 - Route Normalization
+## 🔍 **VALIDATION CHECKLIST**
+
+### **Before Each PR**
+- [ ] Code follows Project Rules
+- [ ] Tests are written and passing
+- [ ] Documentation is updated
+- [ ] Performance impact is assessed
+- [ ] Security implications are reviewed
+
+### **After Each PR**
+- [ ] All tests pass
+- [ ] Performance budgets are met
+- [ ] Security review is completed
+- [ ] Documentation is complete
+- [ ] Architecture compliance is verified
+
+### **Final Validation**
+- [ ] All PRs are merged
+- [ ] All tests pass
+- [ ] All performance budgets are met
+- [ ] All security requirements are met
+- [ ] All documentation is complete
+- [ ] All architecture requirements are met
+
+---
+
+## 📚 **RESOURCES**
+
+### **Documentation**
+- [Project Rules](/docs/project-rules.md)
+- [Repo Audit Report](/docs/refactor/repo-audit.md)
+- [Rename Map](/docs/refactor/rename-map.json)
+- [Legacy Map](/public/legacy-map.json)
+
+### **Tools**
+- [Command Cheatsheet](/docs/refactor/commands.md)
+- [Final Checklist](/docs/refactor/final-checklist.md)
+- [Testing Guide](/docs/testing/COMPREHENSIVE_TESTING_SUITE.md)
+
+### **Standards**
+- [UX/UI Design Rules](/UX_UI_DESIGN_RULES.md)
+- [Cursor Rules](/.cursorrules)
+- [API Documentation](/docs/api/API_DOCUMENTATION.md)
+
+---
+
+*This refactor plan serves as the roadmap for the repository cleanup and standardization effort.*
+*All changes must follow the Project Rules and maintain system stability.*

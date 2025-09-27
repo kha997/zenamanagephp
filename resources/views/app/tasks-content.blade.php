@@ -1,5 +1,5 @@
 <!-- App Tasks Management Content - Tenant Internal Task Operations -->
-<div x-data="appTasks()" x-init="init()">
+<div x-data="appTasks()" x-init="init()" class="mobile-content">
     <!-- Loading State -->
     <div x-show="loading" class="flex justify-center items-center py-8">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

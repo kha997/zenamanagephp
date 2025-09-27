@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 
 
 use App\Http\Controllers\Controller;
+use App\Services\PerformanceOptimizationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,12 @@ use Illuminate\Support\Facades\Log;
 
 class PerformanceController extends Controller
 {
+    protected $performanceService;
+
+    public function __construct(PerformanceOptimizationService $performanceService)
+    {
+        $this->performanceService = $performanceService;
+    }
     /**
      * Admin performance metrics endpoint
      * Requires authentication + admin ability
@@ -314,6 +321,223 @@ class PerformanceController extends Controller
                 'logging' => 'operational'
             ]
         ];
+    }
+
+    /**
+     * Optimize database tables
+     */
+    public function optimizeTables(): JsonResponse
+    {
+        try {
+            $results = $this->performanceService->optimizeTables();
+            
+            $this->logAudit('performance.optimize_tables', 'Optimized database tables', [
+                'user_id' => Auth::id(),
+                'results' => $results
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Database tables optimized successfully',
+                'data' => $results
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@optimizeTables error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to optimize tables'
+            ], 500);
+        }
+    }
+
+    /**
+     * Analyze database tables
+     */
+    public function analyzeTables(): JsonResponse
+    {
+        try {
+            $results = $this->performanceService->analyzeTables();
+            
+            $this->logAudit('performance.analyze_tables', 'Analyzed database tables', [
+                'user_id' => Auth::id(),
+                'results' => $results
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Database tables analyzed successfully',
+                'data' => $results
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@analyzeTables error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to analyze tables'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get slow queries
+     */
+    public function getSlowQueries(Request $request): JsonResponse
+    {
+        try {
+            $limit = $request->input('limit', 10);
+            $queries = $this->performanceService->getSlowQueries($limit);
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $queries
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@getSlowQueries error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get slow queries'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get cache statistics
+     */
+    public function getCacheStats(): JsonResponse
+    {
+        try {
+            $stats = $this->performanceService->getCacheStats();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $stats
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@getCacheStats error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get cache statistics'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get database statistics
+     */
+    public function getDatabaseStats(): JsonResponse
+    {
+        try {
+            $stats = $this->performanceService->getDatabaseStats();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $stats
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@getDatabaseStats error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get database statistics'
+            ], 500);
+        }
+    }
+
+    /**
+     * Suggest database indexes
+     */
+    public function suggestIndexes(): JsonResponse
+    {
+        try {
+            $suggestions = $this->performanceService->suggestIndexes();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $suggestions
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@suggestIndexes error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get index suggestions'
+            ], 500);
+        }
+    }
+
+    /**
+     * Monitor query performance
+     */
+    public function monitorQueryPerformance(): JsonResponse
+    {
+        try {
+            $metrics = $this->performanceService->monitorQueryPerformance();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $metrics
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@monitorQueryPerformance error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to monitor query performance'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get memory statistics
+     */
+    public function getMemoryStats(): JsonResponse
+    {
+        try {
+            $stats = $this->performanceService->getMemoryStats();
+            
+            return response()->json([
+                'status' => 'success',
+                'data' => $stats
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@getMemoryStats error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get memory statistics'
+            ], 500);
+        }
+    }
+
+    /**
+     * Optimize file storage
+     */
+    public function optimizeFileStorage(): JsonResponse
+    {
+        try {
+            $results = $this->performanceService->optimizeFileStorage();
+            
+            $this->logAudit('performance.optimize_storage', 'Optimized file storage', [
+                'user_id' => Auth::id(),
+                'results' => $results
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'File storage optimized successfully',
+                'data' => $results
+            ]);
+        } catch (\Exception $e) {
+            Log::error('PerformanceController@optimizeFileStorage error: ' . $e->getMessage());
+            
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to optimize file storage'
+            ], 500);
+        }
     }
 
     /**

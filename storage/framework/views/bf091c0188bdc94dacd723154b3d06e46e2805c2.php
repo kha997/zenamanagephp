@@ -23,9 +23,35 @@
             <div class="flex items-center space-x-4">
                 <!-- Search -->
                 <div class="hidden md:block relative">
-                    <input type="text" placeholder="Search..." 
-                           class="w-64 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <input type="text" 
+                           x-model="searchQuery"
+                           @input.debounce.250ms="performSearch"
+                           placeholder="Search tenants, users, errors..." 
+                           class="w-64 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           aria-label="Search">
                     <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    
+                    <!-- Search Results Dropdown -->
+                    <div x-show="showSearchResults" 
+                         @click.away="showSearchResults = false"
+                         class="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-64 overflow-y-auto">
+                        <template x-for="result in searchResults" :key="result.id">
+                            <div class="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                                 @click="selectSearchResult(result)">
+                                <div class="flex items-center space-x-3">
+                                    <i :class="result.icon" :class="result.color"></i>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900" x-text="result.title"></p>
+                                        <p class="text-xs text-gray-500" x-text="result.subtitle"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="searchResults.length === 0 && searchQuery.length > 0" 
+                             class="p-3 text-center text-gray-500 text-sm">
+                            No results found
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Notifications -->

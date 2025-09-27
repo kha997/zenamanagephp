@@ -80,10 +80,52 @@
                 sidebarOpen: true,
                 notifications: [],
                 unreadNotifications: 0,
+                showNotifications: false,
+                showUserMenu: false,
+                
+                // Smart Search
+                searchQuery: '',
+                searchResults: [],
+                showSearchResults: false,
+                searchTimeout: null,
                 
                 init() {
                     this.loadNotifications();
                     this.startRealTimeUpdates();
+                },
+                
+                // Smart Search Functions
+                performSearch() {
+                    if (this.searchQuery.length < 2) {
+                        this.showSearchResults = false;
+                        return;
+                    }
+                    
+                    // Simulate search results
+                    this.searchResults = this.getSearchResults(this.searchQuery);
+                    this.showSearchResults = true;
+                },
+                
+                getSearchResults(query) {
+                    // Mock search data - in real implementation, this would be an API call
+                    const mockData = [
+                        { id: 1, type: 'tenant', title: 'TechCorp', subtitle: 'Active tenant', icon: 'fas fa-building', color: 'text-blue-600', url: '/admin/tenants' },
+                        { id: 2, type: 'user', title: 'john@techcorp.com', subtitle: 'Project Manager', icon: 'fas fa-user', color: 'text-green-600', url: '/admin/users' },
+                        { id: 3, type: 'error', title: 'Database Connection Error', subtitle: 'High priority', icon: 'fas fa-exclamation-triangle', color: 'text-red-600', url: '/admin/alerts' },
+                        { id: 4, type: 'tenant', title: 'ABC Corp', subtitle: 'Trial tenant', icon: 'fas fa-building', color: 'text-blue-600', url: '/admin/tenants' },
+                        { id: 5, type: 'user', title: 'sarah@abccorp.com', subtitle: 'Design Lead', icon: 'fas fa-user', color: 'text-green-600', url: '/admin/users' }
+                    ];
+                    
+                    return mockData.filter(item => 
+                        item.title.toLowerCase().includes(query.toLowerCase()) ||
+                        item.subtitle.toLowerCase().includes(query.toLowerCase())
+                    ).slice(0, 5);
+                },
+                
+                selectSearchResult(result) {
+                    this.searchQuery = '';
+                    this.showSearchResults = false;
+                    window.location.href = result.url;
                 },
                 
                 loadNotifications() {

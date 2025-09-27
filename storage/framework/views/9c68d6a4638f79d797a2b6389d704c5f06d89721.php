@@ -1,35 +1,36 @@
-<?php $__env->startSection('title', 'Admin Dashboard'); ?>
+<?php $__env->startSection('title', 'Dashboard'); ?>
+
+<?php $__env->startSection('breadcrumb'); ?>
+<li class="flex items-center">
+    <i class="fas fa-chevron-right text-gray-400 mr-2"></i>
+    <span class="text-gray-900">Dashboard</span>
+</li>
+<?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="space-y-6">
+    
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p class="text-gray-600">System overview and key metrics</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <button @click="refreshData" 
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+        </div>
+    </div>
+    
     
     <?php echo $__env->make('admin.dashboard._kpis', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     
     
-    <?php echo $__env->make('admin.dashboard._alerts', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <?php echo $__env->make('admin.dashboard._charts', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <div class="lg:col-span-2 space-y-8">
-            
-            <?php echo $__env->make('admin.dashboard._charts', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
-            
-            
-            <?php echo $__env->make('admin.dashboard._activities', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
-        </div>
-        
-        
-        <div class="space-y-8">
-            
-            <?php echo $__env->make('admin.dashboard._quick-actions', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
-            
-            
-            <?php echo $__env->make('admin.dashboard._system-status', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
-            
-            
-            <?php echo $__env->make('admin.dashboard._activity-feed', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
-        </div>
-    </div>
+    
+    <?php echo $__env->make('admin.dashboard._activity', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
 </div>
 <?php $__env->stopSection(); ?>
 
@@ -37,269 +38,136 @@
 <script>
     function adminDashboard() {
         return {
-            showNotifications: false,
-            showUserMenu: false,
-            showAlerts: false,
-            showModal: false,
-            modalTitle: '',
-            modalContent: '',
-            currentModal: '',
-            chartPeriod: '30d',
-            unreadNotifications: 3,
-
             kpis: {
+                totalTenants: 89,
                 totalUsers: 1247,
-                userGrowth: '+12%',
-                activeTenants: 89,
-                tenantGrowth: '+5%',
-                systemHealth: '99.8%',
-                storageUsage: '67%'
+                errors24h: 12,
+                queueJobs: 156,
+                storageUsed: '2.1TB'
             },
-
-            alerts: [
-                {
-                    id: 1,
-                    title: 'High Memory Usage',
-                    message: 'Server memory usage is at 85%',
-                    icon: 'fas fa-exclamation-triangle',
-                    type: 'warning'
+            
+            chartData: {
+                signups: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    data: [45, 52, 48, 61, 55, 67]
                 },
-                {
-                    id: 2,
-                    title: 'SSL Certificate Expiring',
-                    message: 'SSL certificate expires in 15 days',
-                    icon: 'fas fa-certificate',
-                    type: 'warning'
+                errors: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    data: [2.1, 1.8, 2.3, 1.9, 2.0, 1.7]
                 }
-            ],
-
-            notifications: [
+            },
+            
+            recentActivity: [
                 {
                     id: 1,
-                    title: 'New User Registration',
-                    message: 'John Doe registered for tenant ABC Corp',
-                    icon: 'fas fa-user-plus',
-                    type: 'info',
-                    time: '2 minutes ago'
-                },
-                {
-                    id: 2,
-                    title: 'System Backup Complete',
-                    message: 'Daily backup completed successfully',
-                    icon: 'fas fa-download',
-                    type: 'success',
-                    time: '1 hour ago'
-                },
-                {
-                    id: 3,
-                    title: 'Security Alert',
-                    message: 'Multiple failed login attempts detected',
-                    icon: 'fas fa-shield-alt',
-                    type: 'warning',
-                    time: '3 hours ago'
-                }
-            ],
-
-            recentActivities: [
-                {
-                    id: 1,
-                    title: 'User Created',
-                    description: 'New user "Jane Smith" added to tenant "TechCorp"',
-                    icon: 'fas fa-user-plus',
-                    iconColor: 'text-blue-600',
-                    iconBg: 'bg-blue-100',
-                    time: '5 minutes ago'
-                },
-                {
-                    id: 2,
-                    title: 'Tenant Updated',
-                    description: 'Tenant "ABC Corp" settings updated',
+                    type: 'tenant_created',
+                    message: 'New tenant "TechCorp" registered',
+                    time: '2 minutes ago',
                     icon: 'fas fa-building',
-                    iconColor: 'text-green-600',
-                    iconBg: 'bg-green-100',
-                    time: '15 minutes ago'
-                },
-                {
-                    id: 3,
-                    title: 'System Backup',
-                    description: 'Daily system backup completed',
-                    icon: 'fas fa-download',
-                    iconColor: 'text-purple-600',
-                    iconBg: 'bg-purple-100',
-                    time: '1 hour ago'
-                }
-            ],
-
-            systemStatus: [
-                { name: 'Database', status: 'online' },
-                { name: 'Cache', status: 'online' },
-                { name: 'Queue', status: 'online' },
-                { name: 'Storage', status: 'online' },
-                { name: 'Email', status: 'online' }
-            ],
-
-            activityFeed: [
-                {
-                    id: 1,
-                    user: 'John Doe',
-                    action: ' created a new project',
-                    avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff',
-                    time: '2 minutes ago'
+                    color: 'text-green-600'
                 },
                 {
                     id: 2,
-                    user: 'Jane Smith',
-                    action: ' updated user permissions',
-                    avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff',
-                    time: '5 minutes ago'
+                    type: 'user_registered',
+                    message: 'User "john@techcorp.com" registered',
+                    time: '5 minutes ago',
+                    icon: 'fas fa-user-plus',
+                    color: 'text-blue-600'
                 },
                 {
                     id: 3,
-                    user: 'Admin',
-                    action: ' performed system backup',
-                    avatar: 'https://ui-avatars.com/api/?name=Admin&background=8b5cf6&color=ffffff',
-                    time: '1 hour ago'
+                    type: 'error_occurred',
+                    message: 'High memory usage detected on server-01',
+                    time: '15 minutes ago',
+                    icon: 'fas fa-exclamation-triangle',
+                    color: 'text-red-600'
+                },
+                {
+                    id: 4,
+                    type: 'backup_completed',
+                    message: 'Daily backup completed successfully',
+                    time: '1 hour ago',
+                    icon: 'fas fa-download',
+                    color: 'text-purple-600'
                 }
             ],
-
+            
             init() {
-                this.initChart();
-                this.startRealTimeUpdates();
+                this.initCharts();
             },
-
-            initChart() {
-                const ctx = document.getElementById('systemChart').getContext('2d');
-                this.chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                        datasets: [{
-                            label: 'Users',
-                            data: [1200, 1250, 1300, 1280, 1320, 1247],
-                            borderColor: 'rgb(59, 130, 246)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.4
-                        }, {
-                            label: 'Tenants',
-                            data: [80, 85, 88, 87, 89, 89],
-                            borderColor: 'rgb(16, 185, 129)',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            }
+            
+            initCharts() {
+                // Signups Chart
+                const signupsCtx = document.getElementById('signupsChart');
+                if (signupsCtx) {
+                    new Chart(signupsCtx, {
+                        type: 'line',
+                        data: {
+                            labels: this.chartData.signups.labels,
+                            datasets: [{
+                                label: 'New Signups',
+                                data: this.chartData.signups.data,
+                                borderColor: 'rgb(59, 130, 246)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
                         },
-                        scales: {
-                            y: {
-                                beginAtZero: true
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
                             }
                         }
-                    }
-                });
-            },
-
-            updateChart() {
-                console.log('Updating chart for period:', this.chartPeriod);
-            },
-
-            toggleNotifications() {
-                this.showNotifications = !this.showNotifications;
-                if (this.showNotifications) {
-                    this.unreadNotifications = 0;
+                    });
                 }
-            },
-
-            toggleUserMenu() {
-                this.showUserMenu = !this.showUserMenu;
-            },
-
-            dismissAlert(alertId) {
-                this.alerts = this.alerts.filter(alert => alert.id !== alertId);
-            },
-
-            dismissAllAlerts() {
-                this.alerts = [];
-            },
-
-            openModal(type) {
-                this.currentModal = type;
-                this.showModal = true;
                 
-                switch(type) {
-                    case 'addUser':
-                        this.modalTitle = 'Add New User';
-                        this.modalContent = `
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                                    <input type="text" class="w-full border border-gray-300 rounded-md px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                    <input type="email" class="w-full border border-gray-300 rounded-md px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                                    <select class="w-full border border-gray-300 rounded-md px-3 py-2">
-                                        <option>Admin</option>
-                                        <option>Project Manager</option>
-                                        <option>Member</option>
-                                    </select>
-                                </div>
-                            </div>
-                        `;
-                        break;
-                    case 'createTenant':
-                        this.modalTitle = 'Create New Tenant';
-                        this.modalContent = `
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                                    <input type="text" class="w-full border border-gray-300 rounded-md px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Domain</label>
-                                    <input type="text" class="w-full border border-gray-300 rounded-md px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Plan</label>
-                                    <select class="w-full border border-gray-300 rounded-md px-3 py-2">
-                                        <option>Basic</option>
-                                        <option>Professional</option>
-                                        <option>Enterprise</option>
-                                    </select>
-                                </div>
-                            </div>
-                        `;
-                        break;
+                // Error Rate Chart
+                const errorsCtx = document.getElementById('errorsChart');
+                if (errorsCtx) {
+                    new Chart(errorsCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: this.chartData.errors.labels,
+                            datasets: [{
+                                label: 'Error Rate %',
+                                data: this.chartData.errors.data,
+                                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                borderColor: 'rgb(239, 68, 68)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 3
+                                }
+                            }
+                        }
+                    });
                 }
             },
-
-            closeModal() {
-                this.showModal = false;
-                this.currentModal = '';
-            },
-
-            executeModalAction() {
-                console.log('Executing action:', this.currentModal);
-                this.closeModal();
-            },
-
-            refreshActivity() {
-                console.log('Refreshing activity feed');
-            },
-
-            startRealTimeUpdates() {
-                setInterval(() => {
-                    this.kpis.totalUsers += Math.floor(Math.random() * 3);
-                    this.kpis.activeTenants += Math.floor(Math.random() * 2);
-                }, 30000);
+            
+            refreshData() {
+                // Simulate data refresh
+                console.log('Refreshing dashboard data...');
+                // In real implementation, this would fetch fresh data from API
             }
         }
     }

@@ -34,10 +34,17 @@ class RouteServiceProvider extends ServiceProvider
                 return 'Simple test route works!';
             });
             
-            // Admin routes (no middleware for now)
-            Route::get('/admin', function () {
-                return view('admin.dashboard.index');
-            })->name('admin.dashboard');
+            // Admin routes (no middleware for now - will add later)
+            Route::prefix('admin')->name('admin.')->group(function () {
+                Route::view('/dashboard', 'admin.dashboard.index')->name('dashboard');
+                Route::view('/tenants', 'admin.tenants.index')->name('tenants.index');
+                Route::view('/users', 'admin.users.index')->name('users.index');
+                Route::view('/security', 'admin.security.index')->name('security.index');
+                Route::view('/settings', 'admin.settings.index')->name('settings.index');
+                Route::view('/billing', 'admin.billing.index')->name('billing.index');
+                Route::view('/maintenance', 'admin.maintenance.index')->name('maintenance.index');
+                Route::view('/alerts', 'admin.alerts.index')->name('alerts.index');
+            });
             
             // App routes (no middleware for now)
             Route::get('/app', function () {

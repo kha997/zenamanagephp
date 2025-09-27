@@ -3,30 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $__env->yieldContent('title', 'Dashboard'); ?> - ZenaManage</title>
+    <title>@yield('title', 'Admin Dashboard') - ZenaManage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-50" x-data="appDashboard()">
+<body class="bg-gray-50" x-data="adminDashboard()">
     <!-- Universal Header -->
     <header class="bg-white shadow-sm border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
                 <div class="flex items-center space-x-4">
                     <div class="flex items-center">
-                        <i class="fas fa-project-diagram text-blue-500 text-2xl mr-3"></i>
-                        <h1 class="text-2xl font-bold text-gray-900">ZenaManage</h1>
+                        <i class="fas fa-crown text-yellow-500 text-2xl mr-3"></i>
+                        <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
                     </div>
                     <div class="hidden md:flex items-center space-x-4">
                         <span class="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
                             <i class="fas fa-circle text-green-500 mr-1"></i>
-                            Online
+                            System Online
                         </span>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-4">
                     <div class="relative">
                         <button @click="toggleNotifications" class="relative p-2 text-gray-600 hover:text-gray-900 focus:outline-none">
                             <i class="fas fa-bell text-xl"></i>
@@ -39,7 +39,7 @@
                                 <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
                             </div>
                             <div class="max-h-64 overflow-y-auto">
-                                <template x-for="notification in notifications" :key="'app-' + notification.id">
+                                <template x-for="notification in notifications" :key="'admin-' + notification.id">
                                     <div class="p-4 border-b border-gray-100 hover:bg-gray-50">
                                         <div class="flex items-start space-x-3">
                                             <div class="flex-shrink-0">
@@ -58,9 +58,9 @@
                     </div>
                     <div class="relative">
                         <button @click="toggleUserMenu" class="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none">
-                            <img src="https://ui-avatars.com/api/?name=User&background=10b981&color=ffffff" 
-                                 alt="User" class="h-8 w-8 rounded-full">
-                            <span class="hidden md:block text-sm font-medium">User</span>
+                            <img src="https://ui-avatars.com/api/?name=Admin+User&background=3b82f6&color=ffffff" 
+                                 alt="Admin User" class="h-8 w-8 rounded-full">
+                            <span class="hidden md:block text-sm font-medium">Admin User</span>
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div x-show="showUserMenu" @click.away="showUserMenu = false" 
@@ -89,42 +89,42 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-3">
                 <div class="flex items-center space-x-8">
-                    <a href="/app" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-2">
+                    <a href="/admin" class="text-blue-600 font-medium border-b-2 border-blue-600 pb-2">
                         <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
                     </a>
-                    <a href="/app/projects" class="text-gray-600 hover:text-gray-900 font-medium">
+                    <a href="/admin/users" class="text-gray-600 hover:text-gray-900 font-medium">
+                        <i class="fas fa-users mr-2"></i>Users
+                    </a>
+                    <a href="/admin/tenants" class="text-gray-600 hover:text-gray-900 font-medium">
+                        <i class="fas fa-building mr-2"></i>Tenants
+                    </a>
+                    <a href="/admin/projects" class="text-gray-600 hover:text-gray-900 font-medium">
                         <i class="fas fa-project-diagram mr-2"></i>Projects
                     </a>
-                    <a href="/app/tasks" class="text-gray-600 hover:text-gray-900 font-medium">
-                        <i class="fas fa-tasks mr-2"></i>Tasks
+                    <a href="/admin/analytics" class="text-gray-600 hover:text-gray-900 font-medium">
+                        <i class="fas fa-chart-bar mr-2"></i>Analytics
                     </a>
-                    <a href="/app/calendar" class="text-gray-600 hover:text-gray-900 font-medium">
-                        <i class="fas fa-calendar mr-2"></i>Calendar
+                    <a href="/admin/security" class="text-gray-600 hover:text-gray-900 font-medium">
+                        <i class="fas fa-shield-alt mr-2"></i>Security
                     </a>
-                    <a href="/app/team" class="text-gray-600 hover:text-gray-900 font-medium">
-                        <i class="fas fa-users mr-2"></i>Team
-                    </a>
-                    <a href="/app/documents" class="text-gray-600 hover:text-gray-900 font-medium">
-                        <i class="fas fa-file-alt mr-2"></i>Documents
-                    </a>
-                    <a href="/app/settings" class="text-gray-600 hover:text-gray-900 font-medium">
+                    <a href="/admin/settings" class="text-gray-600 hover:text-gray-900 font-medium">
                         <i class="fas fa-cog mr-2"></i>Settings
                     </a>
-                </div>
+            </div>
                 <div class="flex items-center space-x-4">
                     <div class="relative">
                         <input type="text" placeholder="Search..." 
                                class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
-                    </div>
-                </div>
-            </div>
+        </div>
+        </div>
+        </div>
         </div>
     </nav>
 
     <!-- Main Content -->
     <main>
-        <?php echo $__env->yieldContent('content'); ?>
+        @yield('content')
     </main>
 
     <!-- Modals -->
@@ -136,7 +136,7 @@
                     <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
                         <i class="fas fa-times"></i>
                     </button>
-                </div>
+        </div>
                 <div x-html="modalContent"></div>
                 <div class="flex justify-end space-x-3 mt-6">
                     <button @click="closeModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">
@@ -145,13 +145,13 @@
                     <button @click="executeModalAction" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                         Confirm
                     </button>
-                </div>
-            </div>
         </div>
-    </div>
+        </div>
+        </div>
+        </div>
 
-    <script>
-        function appDashboard() {
+<script>
+        function adminDashboard() {
             return {
                 showNotifications: false,
                 showUserMenu: false,
@@ -159,24 +159,32 @@
                 modalTitle: '',
                 modalContent: '',
                 currentModal: '',
-                unreadNotifications: 2,
+                unreadNotifications: 3,
 
                 notifications: [
                     {
                         id: 1,
-                        title: 'Task Assigned',
-                        message: 'You have been assigned to "Update Documentation"',
-                        icon: 'fas fa-tasks',
+                        title: 'New User Registration',
+                        message: 'John Doe registered for tenant ABC Corp',
+                        icon: 'fas fa-user-plus',
                         type: 'info',
-                        time: '5 minutes ago'
+                        time: '2 minutes ago'
                     },
                     {
                         id: 2,
-                        title: 'Project Update',
-                        message: 'Project "Mobile App" status updated to "In Progress"',
-                        icon: 'fas fa-project-diagram',
+                        title: 'System Backup Complete',
+                        message: 'Daily backup completed successfully',
+                        icon: 'fas fa-download',
                         type: 'success',
                         time: '1 hour ago'
+                    },
+                    {
+                        id: 3,
+                        title: 'Security Alert',
+                        message: 'Multiple failed login attempts detected',
+                        icon: 'fas fa-shield-alt',
+                        type: 'warning',
+                        time: '3 hours ago'
                     }
                 ],
 
@@ -207,9 +215,8 @@
                 }
             }
         }
-    </script>
+</script>
 
-    <?php echo $__env->yieldPushContent('scripts'); ?>
+    @stack('scripts')
 </body>
 </html>
-<?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/layouts/app.blade.php ENDPATH**/ ?>

@@ -1,18 +1,15 @@
-{{-- Admin Users Index --}}
-@extends('layouts.admin')
+<?php $__env->startSection('title', 'Users'); ?>
 
-@section('title', 'Users')
-
-@section('breadcrumb')
+<?php $__env->startSection('breadcrumb'); ?>
 <li class="flex items-center">
     <i class="fas fa-chevron-right text-gray-400 mr-2"></i>
     <span class="text-gray-900">Users</span>
 </li>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="space-y-6">
-    {{-- Page Header --}}
+    
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Users</h1>
@@ -30,18 +27,18 @@
         </div>
     </div>
     
-    {{-- Filters --}}
-    @include('admin.users._filters')
     
-    {{-- Users Table --}}
-    @include('admin.users._table')
+    <?php echo $__env->make('admin.users._filters', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     
-    {{-- Pagination --}}
-    @include('admin.users._pagination')
+    
+    <?php echo $__env->make('admin.users._table', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    
+    
+    <?php echo $__env->make('admin.users._pagination', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
 
-@push('scripts')
+<?php $__env->startPush('scripts'); ?>
 <script>
     function usersPage() {
         return {
@@ -260,4 +257,6 @@
         }
     }
 </script>
-@endpush
+<?php $__env->stopPush(); ?>
+
+<?php echo $__env->make('layouts.admin', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/admin/users/index.blade.php ENDPATH**/ ?>

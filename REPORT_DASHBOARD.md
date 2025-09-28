@@ -161,20 +161,24 @@ ActivityItem {
 
 ## 4) API Endpoints Liên quan - v2
 
-**Hiện tại:** ✅ Mock API integration với proper error handling
+**Hiện tại:** ✅ Wired to mock service (no real DB). BE integration: PENDING.
 
 **Implemented:**
 ```
 GET /api/admin/dashboard/kpis?period=30d
 - Response: { data: DashboardViewModel['kpis'], meta: { generatedAt: ISO } }
 - Status: 200 OK
+- Headers: ETag, Cache-Control: public, max-age=60, stale-while-revalidate=30
 - Cache: 60s per-tenant
+- Feature Flag: dashboard.mockData (default: true)
 
 GET /api/admin/dashboard/charts/signups?period=30d
 GET /api/admin/dashboard/charts/errors?period=7d
 - Response: { data: DashboardViewModel['charts']['signups'|'errors'] }
 - Status: 200 OK
+- Headers: ETag, Cache-Control: public, max-age=120, stale-while-revalidate=30
 - Cache: 120s theo period
+- Downsample: BE nếu points > 365
 
 GET /api/admin/dashboard/activity?limit=20&since=<ISO>
 - Response: { data: ActivityItem[], meta: { nextSince: ISO } }
@@ -185,14 +189,16 @@ POST /api/admin/dashboard/export
 - Body: { type: 'signups'|'errors', format: 'csv'|'json', period: '7d'|'30d'|'90d'|'365d' }
 - Response: File download
 - Status: 200 OK
+- Rate Limit: 30 req/tenant/10min → 429 với Retry-After
 
 GET /api/admin/dashboard/health
-- Response: { db:'online'|'degraded', cache:'online'|'degraded', queue:'online'|'backlog', updatedAt: ISO }
+- Response: { db:'online'|'degraded', cache:'online'|'degraded', queue:'online'|'backlog', updatedAt: ISO, clockSkewMs: number }
 - Status: 200 OK
 - Used for: System Online badge in topbar
 
 Error Shape:
 4xx/5xx → { error: { code: string, message: string, details?: any } }
+304 Not Modified: If-None-Match support
 ```
 
 ---
@@ -209,35 +215,40 @@ Error Shape:
 | **Export-first** | ✅ **CÓ** | Export charts CSV/JSON với ISO timestamps |
 | **WCAG 2.1 AA** | ✅ **CÓ** | aria-labels, focus rings, contrast, keyboard nav |
 | **Performance: p95 < 500ms** | ✅ **CÓ** | Loading states, chart optimization |
-| **Realtime updates** | ✅ **CÓ** | Polling 30s, manual refresh |
+| **Realtime updates** | ✅ **CÓ** | Polling 30s, manual refresh, AbortController |
 | **Error handling** | ✅ **CÓ** | Error banner, retry, toast notifications |
 | **Loading states** | ✅ **CÓ** | Skeletons cho KPI, charts, activity |
-| **Drill-down navigation** | ✅ **CÓ** | KPI cards → filtered views |
+| **Drill-down navigation** | ✅ **CÓ** | KPI cards → filtered views với query params |
+| **Feature flags** | ✅ **CÓ** | dashboard.mockData cho mock vs real API |
+| **Analytics events** | ✅ **CÓ** | dashboard_load, preset_click, kpi_drilldown, export_click |
+| **Chart performance** | ✅ **CÓ** | Downsampling, cleanup, memory leak prevention |
+| **A11y compliance** | ✅ **CÓ** | aria-labels, keyboard navigation, focus order |
+| **i18n ready** | ✅ **CÓ** | Translation keys cho tất cả text |
 
 ---
 
 ## 6) Rủi ro/Nợ kỹ thuật hiện tại - v2
 
-- **Mock API:** Data vẫn hardcoded, chưa có real backend integration
-- **WebSocket:** Chưa implement real-time push notifications
-- **Chart performance:** Chưa test với large datasets (>365 points)
-- **i18n:** Text chưa qua translation layer
+- **Backend Integration:** Feature flag `dashboard.mockData=true`, cần implement real BE API
+- **WebSocket:** Chưa implement real-time push notifications (stub ready)
+- **SLO Monitoring:** Chưa có real performance metrics (p95 < 300ms API, < 500ms page)
+- **Analytics Backend:** Events chỉ log to console, cần analytics service
 - **Testing:** Chưa có unit tests cho Alpine.js components
-- **Memory leaks:** Chưa cleanup Chart.js instances khi unmount
+- **Rate Limiting:** Export rate limit chưa implement ở BE
 
 ---
 
 ## 7) Đề xuất ngắn - v2
 
 ### **Quick Wins (Ưu tiên cao)**
-- **Backend API integration** thay thế mock data
-- **WebSocket implementation** cho real-time push
-- **Chart.js cleanup** để tránh memory leaks
+- **Backend API integration** thay thế mock data (set `dashboard.mockData=false`)
+- **SLO monitoring** với real performance metrics
+- **Analytics backend** để collect events
 
 ### **Medium Impact (Ưu tiên trung bình)**
-- **i18n implementation** cho tất cả text
+- **WebSocket implementation** cho real-time push notifications
 - **Unit testing** cho Alpine.js components
-- **Performance testing** với large datasets
+- **Rate limiting** cho export endpoints
 
 ### **Hard (Ưu tiên thấp)**
 - **Advanced chart interactions** (zoom, drill-down)

@@ -30,6 +30,9 @@
         </div>
     </div>
     
+    {{-- KPI Strip --}}
+    @include('admin.tenants._kpis')
+    
     {{-- Filters --}}
     @include('admin.tenants._filters')
     
@@ -45,6 +48,44 @@
 <script>
     function tenantsPage() {
         return {
+            // Feature flag for mock data
+            mockData: true, // Set to false to use real BE API
+            
+            // KPI Data Contract v2
+            kpis: {
+                totalTenants: { 
+                    value: 89, 
+                    deltaPct: 5.2, 
+                    period: '30d',
+                    series: [82, 83, 84, 86, 89]
+                },
+                activeTenants: { 
+                    value: 76, 
+                    deltaPct: 3.1, 
+                    period: '30d',
+                    series: [70, 72, 74, 75, 76]
+                },
+                disabledTenants: { 
+                    value: 8, 
+                    deltaAbs: 2, 
+                    period: '7d',
+                    series: [5, 6, 7, 8, 8]
+                },
+                newTenants: { 
+                    value: 12, 
+                    deltaPct: 20.0, 
+                    period: '30d',
+                    series: [8, 9, 10, 11, 12]
+                },
+                trialExpiring: { 
+                    value: 3, 
+                    deltaAbs: 3, 
+                    period: '7d',
+                    series: [1, 2, 2, 3, 3]
+                }
+            },
+            
+            // Data
             tenants: [
                 {
                     id: 1,
@@ -84,21 +125,394 @@
                 }
             ],
             
+            // Server-side state
             filteredTenants: [],
             searchQuery: '',
-            statusFilter: 'all',
-            planFilter: 'all',
+            statusFilter: '',
+            planFilter: '',
+            dateFrom: '',
+            dateTo: '',
             sortBy: 'name',
             sortOrder: 'asc',
+            page: 1,
+            perPage: 20,
+            total: 0,
+            lastPage: 1,
+            isLoading: false,
+            error: null,
+            abortController: null,
+            
+            // UI state
             selectedTenants: [],
+            activePreset: '',
             showCreateModal: false,
             showEditModal: false,
             showDeleteModal: false,
             currentTenant: null,
+            chartInstances: {},
             
             init() {
-                this.filteredTenants = [...this.tenants];
-                this.sortTenants();
+                this.parseUrlParams();
+                this.loadTenants();
+                this.initCharts();
+                this.logEvent('tenants_view_loaded', { 
+                    query: this.getCurrentQuery(), 
+                    page: this.page, 
+                    per_page: this.perPage 
+                });
+            },
+            
+            // URL state management
+            parseUrlParams() {
+                const urlParams = new URLSearchParams(window.location.search);
+                this.searchQuery = urlParams.get('q') || '';
+                this.statusFilter = urlParams.get('status') || '';
+                this.planFilter = urlParams.get('plan') || '';
+                this.dateFrom = urlParams.get('from') || '';
+                this.dateTo = urlParams.get('to') || '';
+                this.sortBy = urlParams.get('sort')?.replace('-', '') || 'name';
+                this.sortOrder = urlParams.get('sort')?.startsWith('-') ? 'desc' : 'asc';
+                this.page = parseInt(urlParams.get('page')) || 1;
+                this.perPage = parseInt(urlParams.get('per_page')) || 20;
+            },
+            
+            updateUrl() {
+                const params = new URLSearchParams();
+                if (this.searchQuery) params.set('q', this.searchQuery);
+                if (this.statusFilter) params.set('status', this.statusFilter);
+                if (this.planFilter) params.set('plan', this.planFilter);
+                if (this.dateFrom) params.set('from', this.dateFrom);
+                if (this.dateTo) params.set('to', this.dateTo);
+                if (this.sortBy) params.set('sort', this.sortOrder === 'desc' ? `-${this.sortBy}` : this.sortBy);
+                if (this.page > 1) params.set('page', this.page);
+                if (this.perPage !== 20) params.set('per_page', this.perPage);
+                
+                const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+                window.history.replaceState({}, '', newUrl);
+            },
+            
+            // Server-side API calls
+            async loadTenants() {
+                if (this.abortController) {
+                    this.abortController.abort();
+                }
+                
+                this.abortController = new AbortController();
+                this.isLoading = true;
+                this.error = null;
+                
+                try {
+                    if (this.mockData) {
+                        // Mock API response
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        this.filteredTenants = [...this.tenants];
+                        this.total = this.tenants.length;
+                        this.lastPage = Math.ceil(this.total / this.perPage);
+                    } else {
+                        // Real API call
+                        const params = new URLSearchParams({
+                            q: this.searchQuery,
+                            status: this.statusFilter,
+                            plan: this.planFilter,
+                            from: this.dateFrom,
+                            to: this.dateTo,
+                            sort: this.sortOrder === 'desc' ? `-${this.sortBy}` : this.sortBy,
+                            page: this.page,
+                            per_page: this.perPage
+                        });
+                        
+                        const response = await fetch(`/api/admin/tenants?${params}`, {
+                            signal: this.abortController.signal,
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const data = await response.json();
+                        this.filteredTenants = data.data;
+                        this.total = data.meta.total;
+                        this.lastPage = data.meta.last_page;
+                    }
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        this.error = error.message;
+                        console.error('Failed to load tenants:', error);
+                    }
+                } finally {
+                    this.isLoading = false;
+                    this.abortController = null;
+                }
+            },
+            
+            // Search and filter functions
+            async performServerSearch() {
+                this.page = 1;
+                this.updateUrl();
+                await this.loadTenants();
+            },
+            
+            async applyFilters() {
+                this.page = 1;
+                this.activePreset = '';
+                this.updateUrl();
+                await this.loadTenants();
+            },
+            
+            async applyPreset(preset) {
+                this.activePreset = preset;
+                this.page = 1;
+                
+                switch (preset) {
+                    case 'active':
+                        this.statusFilter = 'active';
+                        this.sortBy = 'lastActive';
+                        this.sortOrder = 'desc';
+                        break;
+                    case 'disabled':
+                        this.statusFilter = 'suspended';
+                        break;
+                    case 'new':
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        this.dateFrom = thirtyDaysAgo.toISOString().split('T')[0];
+                        this.sortBy = 'createdAt';
+                        this.sortOrder = 'desc';
+                        break;
+                    case 'trial':
+                        this.statusFilter = 'trial';
+                        const sevenDaysFromNow = new Date();
+                        sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+                        this.dateTo = sevenDaysFromNow.toISOString().split('T')[0];
+                        break;
+                }
+                
+                this.updateUrl();
+                await this.loadTenants();
+                this.logEvent('tenants_preset_click', { preset });
+            },
+            
+            clearFilters() {
+                this.searchQuery = '';
+                this.statusFilter = '';
+                this.planFilter = '';
+                this.dateFrom = '';
+                this.dateTo = '';
+                this.sortBy = 'name';
+                this.sortOrder = 'asc';
+                this.activePreset = '';
+                this.page = 1;
+                this.updateUrl();
+                this.loadTenants();
+            },
+            
+            get hasActiveFilters() {
+                return this.searchQuery || this.statusFilter || this.planFilter || this.dateFrom || this.dateTo;
+            },
+            
+            // Server-side sorting
+            async setSort(column) {
+                if (this.sortBy === column) {
+                    this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortBy = column;
+                    this.sortOrder = 'asc';
+                }
+                this.page = 1;
+                this.updateUrl();
+                await this.loadTenants();
+            },
+            
+            // Pagination
+            async changePage(newPage) {
+                if (newPage >= 1 && newPage <= this.lastPage) {
+                    this.page = newPage;
+                    this.updateUrl();
+                    await this.loadTenants();
+                }
+            },
+            
+            getVisiblePages() {
+                const pages = [];
+                const start = Math.max(1, this.page - 2);
+                const end = Math.min(this.lastPage, this.page + 2);
+                
+                for (let i = start; i <= end; i++) {
+                    pages.push(i);
+                }
+                return pages;
+            },
+            
+            // Utility functions
+            formatDate(dateString) {
+                if (!dateString) return 'Never';
+                const date = new Date(dateString);
+                return date.toLocaleDateString();
+            },
+            
+            // Per-row actions
+            viewTenant(tenant) {
+                window.location.href = `/admin/tenants/${tenant.id}`;
+                this.logEvent('tenant_row_action', { action: 'view', tenantId: tenant.id });
+            },
+            
+            async toggleTenantStatus(tenant) {
+                const newStatus = tenant.status === 'active' ? 'suspended' : 'active';
+                const action = newStatus === 'active' ? 'activate' : 'suspend';
+                
+                try {
+                    if (this.mockData) {
+                        // Mock API call
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        tenant.status = newStatus;
+                    } else {
+                        // Real API call
+                        const response = await fetch(`/api/admin/tenants/${tenant.id}:${action}`, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const data = await response.json();
+                        tenant.status = data.data.status;
+                    }
+                    
+                    this.logEvent('tenant_row_action', { action, tenantId: tenant.id });
+                } catch (error) {
+                    console.error('Failed to toggle tenant status:', error);
+                    this.error = error.message;
+                }
+            },
+            
+            // Chart initialization
+            initCharts() {
+                this.$nextTick(() => {
+                    // Destroy existing charts
+                    Object.values(this.chartInstances).forEach(chart => {
+                        if (chart) chart.destroy();
+                    });
+                    this.chartInstances = {};
+                    
+                    // Initialize sparkline charts
+                    this.createSparkline('totalTenantsSparkline', this.kpis.totalTenants.series, '#3B82F6');
+                    this.createSparkline('activeTenantsSparkline', this.kpis.activeTenants.series, '#10B981');
+                    this.createSparkline('disabledTenantsSparkline', this.kpis.disabledTenants.series, '#EF4444');
+                    this.createSparkline('newTenantsSparkline', this.kpis.newTenants.series, '#8B5CF6');
+                    this.createSparkline('trialExpiringSparkline', this.kpis.trialExpiring.series, '#F59E0B');
+                });
+            },
+            
+            createSparkline(canvasId, data, color) {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                this.chartInstances[canvasId] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map((_, i) => ''),
+                        datasets: [{
+                            data: data,
+                            borderColor: color,
+                            backgroundColor: color + '20',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false }
+                        },
+                        scales: {
+                            x: { display: false },
+                            y: { display: false }
+                        },
+                        interaction: {
+                            intersect: false
+                        }
+                    }
+                });
+            },
+            
+            // Drill-down functions
+            drillDownTotal() {
+                window.location.href = '/admin/tenants?sort=-created_at';
+                this.logEvent('kpi_drilldown', { kpi: 'total', target: 'tenants_list' });
+            },
+            
+            drillDownActive() {
+                window.location.href = '/admin/tenants?status=active&sort=-last_active';
+                this.logEvent('kpi_drilldown', { kpi: 'active', target: 'tenants_list' });
+            },
+            
+            drillDownDisabled() {
+                window.location.href = '/admin/tenants?status=suspended';
+                this.logEvent('kpi_drilldown', { kpi: 'disabled', target: 'tenants_list' });
+            },
+            
+            drillDownNew() {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const from = thirtyDaysAgo.toISOString().split('T')[0];
+                window.location.href = `/admin/tenants?from=${from}&sort=-created_at`;
+                this.logEvent('kpi_drilldown', { kpi: 'new', target: 'tenants_list' });
+            },
+            
+            drillDownTrialExpiring() {
+                const sevenDaysFromNow = new Date();
+                sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+                const to = sevenDaysFromNow.toISOString().split('T')[0];
+                window.location.href = `/admin/tenants?status=trial&to=${to}`;
+                this.logEvent('kpi_drilldown', { kpi: 'trial', target: 'tenants_list' });
+            },
+            
+            // Utility functions
+            getAriaLabel(type, value, delta, period) {
+                const deltaText = typeof delta === 'number' ? 
+                    (delta > 0 ? `up ${delta}${type === 'total' || type === 'active' || type === 'new' ? '%' : ''}` : 
+                     delta < 0 ? `down ${Math.abs(delta)}${type === 'total' || type === 'active' || type === 'new' ? '%' : ''}` : 'no change') : 
+                    `change ${delta}`;
+                return `View ${type} tenants — ${value} total, ${deltaText} in ${period}`;
+            },
+            
+            getCurrentQuery() {
+                return {
+                    q: this.searchQuery,
+                    status: this.statusFilter,
+                    plan: this.planFilter,
+                    sort: this.sortBy,
+                    order: this.sortOrder
+                };
+            },
+            
+            // Analytics
+            logEvent(eventName, meta = {}) {
+                const event = {
+                    event: eventName,
+                    timestamp: new Date().toISOString(),
+                    meta: {
+                        view: 'tenants',
+                        ...meta
+                    }
+                };
+                console.log('Analytics Event:', event);
+                // In real implementation, send to analytics service
             },
             
             filterTenants() {
@@ -222,43 +636,228 @@
                 this.filterTenants();
             },
             
-            bulkAction(action) {
+            async bulkAction(action) {
                 if (this.selectedTenants.length === 0) return;
                 
+                const count = this.selectedTenants.length;
+                let confirmMessage = '';
+                let successMessage = '';
+                
                 switch(action) {
-                    case 'suspend':
-                        this.selectedTenants.forEach(tenant => {
-                            const index = this.tenants.findIndex(t => t.id === tenant.id);
-                            if (index > -1) {
-                                this.tenants[index].status = 'suspended';
-                            }
-                        });
-                        break;
                     case 'activate':
-                        this.selectedTenants.forEach(tenant => {
-                            const index = this.tenants.findIndex(t => t.id === tenant.id);
-                            if (index > -1) {
-                                this.tenants[index].status = 'active';
-                            }
-                        });
+                        confirmMessage = `Are you sure you want to activate ${count} tenant(s)?`;
+                        successMessage = `${count} tenant(s) activated successfully`;
+                        break;
+                    case 'suspend':
+                        confirmMessage = `Are you sure you want to suspend ${count} tenant(s)?`;
+                        successMessage = `${count} tenant(s) suspended successfully`;
                         break;
                     case 'delete':
-                        this.selectedTenants.forEach(tenant => {
-                            const index = this.tenants.findIndex(t => t.id === tenant.id);
-                            if (index > -1) {
-                                this.tenants.splice(index, 1);
-                            }
-                        });
+                        confirmMessage = `Are you sure you want to delete ${count} tenant(s)? This action cannot be undone.`;
+                        successMessage = `${count} tenant(s) deleted successfully`;
                         break;
+                    case 'change-plan':
+                        confirmMessage = `Are you sure you want to change plan for ${count} tenant(s)?`;
+                        successMessage = `${count} tenant(s) plan changed successfully`;
+                        break;
+                    case 'export':
+                        await this.exportSelectedTenants();
+                        return;
                 }
                 
-                this.selectedTenants = [];
-                this.filterTenants();
+                if (!confirm(confirmMessage)) return;
+                
+                try {
+                    let successCount = 0;
+                    let errorCount = 0;
+                    
+                    for (const tenant of this.selectedTenants) {
+                        try {
+                            if (this.mockData) {
+                                // Mock API call
+                                await new Promise(resolve => setTimeout(resolve, 200));
+                                
+                                switch(action) {
+                                    case 'activate':
+                                        tenant.status = 'active';
+                                        break;
+                                    case 'suspend':
+                                        tenant.status = 'suspended';
+                                        break;
+                                    case 'delete':
+                                        const index = this.tenants.findIndex(t => t.id === tenant.id);
+                                        if (index > -1) {
+                                            this.tenants.splice(index, 1);
+                                        }
+                                        break;
+                                    case 'change-plan':
+                                        tenant.plan = 'Professional'; // Mock plan change
+                                        break;
+                                }
+                                successCount++;
+                            } else {
+                                // Real API call
+                                let endpoint = '';
+                                let method = 'POST';
+                                
+                                switch(action) {
+                                    case 'activate':
+                                        endpoint = `/api/admin/tenants/${tenant.id}:activate`;
+                                        break;
+                                    case 'suspend':
+                                        endpoint = `/api/admin/tenants/${tenant.id}:suspend`;
+                                        break;
+                                    case 'delete':
+                                        endpoint = `/api/admin/tenants/${tenant.id}`;
+                                        method = 'DELETE';
+                                        break;
+                                    case 'change-plan':
+                                        endpoint = `/api/admin/tenants/${tenant.id}:change-plan`;
+                                        break;
+                                }
+                                
+                                const response = await fetch(endpoint, {
+                                    method,
+                                    headers: {
+                                        'Accept': 'application/json',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: action === 'change-plan' ? JSON.stringify({ plan: 'Professional' }) : undefined
+                                });
+                                
+                                if (!response.ok) {
+                                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                                }
+                                
+                                const data = await response.json();
+                                if (action !== 'delete') {
+                                    Object.assign(tenant, data.data);
+                                }
+                                successCount++;
+                            }
+                        } catch (error) {
+                            console.error(`Failed to ${action} tenant ${tenant.id}:`, error);
+                            errorCount++;
+                        }
+                    }
+                    
+                    // Show results
+                    if (errorCount === 0) {
+                        alert(successMessage);
+                    } else {
+                        alert(`${successCount} tenant(s) processed successfully, ${errorCount} failed`);
+                    }
+                    
+                    this.selectedTenants = [];
+                    await this.loadTenants();
+                    this.logEvent('tenants_bulk_action', { action, count, successCount, errorCount });
+                    
+                } catch (error) {
+                    console.error('Bulk action failed:', error);
+                    alert('Bulk action failed. Please try again.');
+                }
             },
             
-            exportTenants() {
-                console.log('Exporting tenants...');
-                // In real implementation, this would generate and download CSV/Excel
+            async exportSelectedTenants() {
+                if (this.selectedTenants.length === 0) return;
+                
+                try {
+                    const tenantIds = this.selectedTenants.map(t => t.id);
+                    const params = new URLSearchParams({
+                        format: 'csv',
+                        ids: tenantIds.join(',')
+                    });
+                    
+                    if (this.mockData) {
+                        // Mock export
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        alert(`Exporting ${tenantIds.length} selected tenants...`);
+                    } else {
+                        // Real API call
+                        const response = await fetch(`/api/admin/tenants/export?${params}`, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            if (response.status === 429) {
+                                const retryAfter = response.headers.get('Retry-After');
+                                throw new Error(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
+                            }
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `tenants-export-${new Date().toISOString().split('T')[0]}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }
+                    
+                    this.logEvent('tenants_export', { format: 'csv', filtered: false, count: tenantIds.length });
+                    
+                } catch (error) {
+                    console.error('Export failed:', error);
+                    alert(`Export failed: ${error.message}`);
+                }
+            },
+            
+            async exportTenants() {
+                try {
+                    const params = new URLSearchParams({
+                        format: 'csv',
+                        q: this.searchQuery,
+                        status: this.statusFilter,
+                        plan: this.planFilter,
+                        from: this.dateFrom,
+                        to: this.dateTo,
+                        sort: this.sortOrder === 'desc' ? `-${this.sortBy}` : this.sortBy
+                    });
+                    
+                    if (this.mockData) {
+                        // Mock export
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        alert('Exporting all tenants with current filters...');
+                    } else {
+                        // Real API call
+                        const response = await fetch(`/api/admin/tenants/export?${params}`, {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            if (response.status === 429) {
+                                const retryAfter = response.headers.get('Retry-After');
+                                throw new Error(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
+                            }
+                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `tenants-export-${new Date().toISOString().split('T')[0]}.csv`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }
+                    
+                    this.logEvent('tenants_export', { format: 'csv', filtered: this.hasActiveFilters, count: this.total });
+                    
+                } catch (error) {
+                    console.error('Export failed:', error);
+                    alert(`Export failed: ${error.message}`);
+                }
             }
         }
     }

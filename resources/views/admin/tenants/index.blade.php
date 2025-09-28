@@ -457,7 +457,7 @@
             
             // Drill-down functions
             drillDownTotal() {
-                window.location.href = '/admin/tenants?sort=-created_at';
+                window.location.href = '/admin/tenants?sort=-createdAt';
                 this.logEvent('kpi_drilldown', { kpi: 'total', target: 'tenants_list' });
             },
             

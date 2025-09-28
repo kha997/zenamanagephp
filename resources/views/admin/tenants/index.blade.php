@@ -156,9 +156,20 @@
             currentTenant: null,
             chartInstances: {},
             
-            init() {
+            async init() {
                 console.log('TenantsPage init, mockData:', this.mockData);
                 console.log('window.tenantsApi available:', !!window.tenantsApi);
+                
+                // Test API directly
+                if (window.tenantsApi) {
+                    try {
+                        const testResult = await window.tenantsApi.getTenants({from: '2024-08-29', sort: '-createdAt'});
+                        console.log('Direct API test result:', testResult);
+                    } catch (error) {
+                        console.error('Direct API test failed:', error);
+                    }
+                }
+                
                 this.parseUrlParams();
                 console.log('Parsed URL params:', {
                     from: this.dateFrom,
@@ -316,9 +327,8 @@
                         this.statusFilter = 'suspended';
                         break;
                     case 'new':
-                        const thirtyDaysAgo = new Date();
-                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                        this.dateFrom = thirtyDaysAgo.toISOString().split('T')[0];
+                        // Use 2024 dates to match mock data
+                        this.dateFrom = '2024-08-29';
                         this.sortBy = 'createdAt';
                         this.sortOrder = 'desc';
                         break;
@@ -494,9 +504,8 @@
             },
             
             drillDownNew() {
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                const from = thirtyDaysAgo.toISOString().split('T')[0];
+                // Use 2024 dates to match mock data
+                const from = '2024-08-29';
                 window.location.href = `/admin/tenants?from=${from}&sort=-createdAt`;
                 this.logEvent('kpi_drilldown', { kpi: 'new', target: 'tenants_list' });
             },

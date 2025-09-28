@@ -42,6 +42,11 @@
     
     
     <?php echo $__env->make('admin.tenants._pagination', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    
+    <!-- Modals -->
+    <?php echo $__env->make('admin.tenants._create_modal', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <?php echo $__env->make('admin.tenants._edit_modal', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <?php echo $__env->make('admin.tenants._delete_modal', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
 </div>
 <?php $__env->stopSection(); ?>
 
@@ -151,6 +156,13 @@
             showEditModal: false,
             showDeleteModal: false,
             currentTenant: null,
+            newTenant: {
+                name: '',
+                domain: '',
+                ownerName: '',
+                ownerEmail: '',
+                plan: 'Basic'
+            },
             chartInstances: {},
             
             async init() {
@@ -610,13 +622,95 @@
             
             openCreateModal() {
                 this.showCreateModal = true;
-                this.currentTenant = {
+                this.newTenant = {
                     name: '',
                     domain: '',
-                    owner: '',
+                    ownerName: '',
                     ownerEmail: '',
                     plan: 'Basic'
                 };
+            },
+            
+            async createTenant() {
+                try {
+                    if (this.mockData) {
+                        // Mock API call
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        const newTenant = {
+                            id: Date.now().toString(),
+                            ...this.newTenant,
+                            status: 'active',
+                            usersCount: 0,
+                            projectsCount: 0,
+                            lastActiveAt: new Date().toISOString(),
+                            createdAt: new Date().toISOString()
+                        };
+                        this.filteredTenants.unshift(newTenant);
+                        this.total++;
+                    } else {
+                        // Real API call
+                        const data = await window.tenantsApi.createTenant(this.newTenant);
+                        this.filteredTenants.unshift(data.data);
+                        this.total++;
+                    }
+                    
+                    this.closeModals();
+                    this.logEvent('tenant_created', { tenantId: this.newTenant.id });
+                    alert('Tenant created successfully!');
+                } catch (error) {
+                    console.error('Failed to create tenant:', error);
+                    alert(`Failed to create tenant: ${error.message}`);
+                }
+            },
+            
+            async updateTenant() {
+                try {
+                    if (this.mockData) {
+                        // Mock API call
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        const index = this.filteredTenants.findIndex(t => t.id === this.currentTenant.id);
+                        if (index !== -1) {
+                            this.filteredTenants[index] = { ...this.currentTenant };
+                        }
+                    } else {
+                        // Real API call
+                        const data = await window.tenantsApi.updateTenant(this.currentTenant.id, this.currentTenant);
+                        const index = this.filteredTenants.findIndex(t => t.id === this.currentTenant.id);
+                        if (index !== -1) {
+                            this.filteredTenants[index] = data.data;
+                        }
+                    }
+                    
+                    this.closeModals();
+                    this.logEvent('tenant_updated', { tenantId: this.currentTenant.id });
+                    alert('Tenant updated successfully!');
+                } catch (error) {
+                    console.error('Failed to update tenant:', error);
+                    alert(`Failed to update tenant: ${error.message}`);
+                }
+            },
+            
+            async deleteTenant() {
+                try {
+                    if (this.mockData) {
+                        // Mock API call
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        this.filteredTenants = this.filteredTenants.filter(t => t.id !== this.currentTenant.id);
+                        this.total--;
+                    } else {
+                        // Real API call
+                        await window.tenantsApi.deleteTenant(this.currentTenant.id);
+                        this.filteredTenants = this.filteredTenants.filter(t => t.id !== this.currentTenant.id);
+                        this.total--;
+                    }
+                    
+                    this.closeModals();
+                    this.logEvent('tenant_deleted', { tenantId: this.currentTenant.id });
+                    alert('Tenant deleted successfully!');
+                } catch (error) {
+                    console.error('Failed to delete tenant:', error);
+                    alert(`Failed to delete tenant: ${error.message}`);
+                }
             },
             
             openEditModal(tenant) {
@@ -634,39 +728,13 @@
                 this.showEditModal = false;
                 this.showDeleteModal = false;
                 this.currentTenant = null;
-            },
-            
-            saveTenant() {
-                if (this.showCreateModal) {
-                    // Create new tenant
-                    const newTenant = {
-                        ...this.currentTenant,
-                        id: this.tenants.length + 1,
-                        status: 'active',
-                        users: 0,
-                        createdAt: new Date().toISOString().split('T')[0],
-                        lastActive: new Date().toISOString().split('T')[0]
-                    };
-                    this.tenants.push(newTenant);
-                } else if (this.showEditModal) {
-                    // Update existing tenant
-                    const index = this.tenants.findIndex(t => t.id === this.currentTenant.id);
-                    if (index > -1) {
-                        this.tenants[index] = { ...this.currentTenant };
-                    }
-                }
-                
-                this.closeModals();
-                this.filterTenants();
-            },
-            
-            deleteTenant() {
-                const index = this.tenants.findIndex(t => t.id === this.currentTenant.id);
-                if (index > -1) {
-                    this.tenants.splice(index, 1);
-                }
-                this.closeModals();
-                this.filterTenants();
+                this.newTenant = {
+                    name: '',
+                    domain: '',
+                    ownerName: '',
+                    ownerEmail: '',
+                    plan: 'Basic'
+                };
             },
             
             async bulkAction(action) {

@@ -40,6 +40,7 @@ class RouteServiceProvider extends ServiceProvider
                 Route::view('/tenants', 'admin.tenants.index')->name('tenants.index');
                 Route::view('/tenants/{id}', 'admin.tenants.show')->name('tenants.show');
                 Route::view('/users', 'admin.users.index')->name('users.index');
+                Route::view('/users/{id}', 'admin.users.show')->name('users.show');
                 Route::view('/security', 'admin.security.index')->name('security.index');
                 Route::view('/settings', 'admin.settings.index')->name('settings.index');
                 Route::view('/billing', 'admin.billing.index')->name('billing.index');
@@ -68,6 +69,29 @@ class RouteServiceProvider extends ServiceProvider
                 Route::get('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'show'])->name('tenants.show');
                 Route::patch('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'update'])->name('tenants.update');
                 Route::delete('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'destroy'])->name('tenants.destroy');
+                
+                // Users API
+                Route::get('/users', [\App\Http\Controllers\Admin\UsersApiController::class, 'index'])->name('users.index');
+                Route::post('/users', [\App\Http\Controllers\Admin\UsersApiController::class, 'store'])->name('users.store');
+                
+                // Export (must be before {id} route)
+                Route::get('/users/export', [\App\Http\Controllers\Admin\UsersApiController::class, 'export'])->name('users.export');
+                
+                // Bulk actions
+                Route::post('/users:bulk', [\App\Http\Controllers\Admin\UsersApiController::class, 'bulk'])->name('users.bulk');
+                
+                // User actions
+                Route::post('/users/{id}:enable', [\App\Http\Controllers\Admin\UsersApiController::class, 'enable'])->name('users.enable');
+                Route::post('/users/{id}:disable', [\App\Http\Controllers\Admin\UsersApiController::class, 'disable'])->name('users.disable');
+                Route::post('/users/{id}:unlock', [\App\Http\Controllers\Admin\UsersApiController::class, 'unlock'])->name('users.unlock');
+                Route::post('/users/{id}:change-role', [\App\Http\Controllers\Admin\UsersApiController::class, 'changeRole'])->name('users.change-role');
+                Route::post('/users/{id}:force-mfa', [\App\Http\Controllers\Admin\UsersApiController::class, 'forceMfa'])->name('users.force-mfa');
+                Route::post('/users/{id}:send-reset-link', [\App\Http\Controllers\Admin\UsersApiController::class, 'sendResetLink'])->name('users.send-reset-link');
+                
+                // User CRUD (must be after specific routes)
+                Route::get('/users/{id}', [\App\Http\Controllers\Admin\UsersApiController::class, 'show'])->name('users.show');
+                Route::patch('/users/{id}', [\App\Http\Controllers\Admin\UsersApiController::class, 'update'])->name('users.update');
+                Route::delete('/users/{id}', [\App\Http\Controllers\Admin\UsersApiController::class, 'destroy'])->name('users.destroy');
             });
             
             // App routes (no middleware for now)

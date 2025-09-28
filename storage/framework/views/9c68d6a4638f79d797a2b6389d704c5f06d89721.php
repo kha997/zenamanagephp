@@ -40,20 +40,86 @@
                 </div>
             </div>
             <button @click="refreshData" 
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
-                <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    :disabled="isRefreshing"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed">
+                <i :class="isRefreshing ? 'fas fa-spinner fa-spin' : 'fas fa-sync-alt'" class="mr-2"></i>
+                <span x-text="isRefreshing ? 'Refreshing...' : 'Refresh'">Refresh</span>
             </button>
         </div>
     </div>
     
     
-    <?php echo $__env->make('admin.dashboard._kpis', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <div x-show="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                <p class="text-red-800" x-text="error"></p>
+            </div>
+            <button @click="loadDashboardData()" 
+                    class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700">
+                Retry
+            </button>
+        </div>
+    </div>
     
     
-    <?php echo $__env->make('admin.dashboard._charts', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <div x-show="isLoading" class="space-y-6">
+        <!-- KPI Skeletons -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
+            <template x-for="i in 5" :key="i">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="space-y-2">
+                            <div class="h-4 bg-gray-200 rounded w-20"></div>
+                            <div class="h-8 bg-gray-200 rounded w-16"></div>
+                            <div class="h-3 bg-gray-200 rounded w-24"></div>
+                        </div>
+                        <div class="w-12 h-12 bg-gray-200 rounded-full"></div>
+                    </div>
+                    <div class="h-8 bg-gray-200 rounded mb-3"></div>
+                    <div class="h-8 bg-gray-200 rounded"></div>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Chart Skeletons -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <template x-for="i in 2" :key="i">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+                    <div class="h-6 bg-gray-200 rounded w-32 mb-6"></div>
+                    <div class="h-64 bg-gray-200 rounded"></div>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Activity Skeleton -->
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 animate-pulse">
+            <div class="h-6 bg-gray-200 rounded w-32 mb-6"></div>
+            <div class="space-y-4">
+                <template x-for="i in 4" :key="i">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-gray-200 rounded-full"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                            <div class="h-3 bg-gray-200 rounded w-1/4"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
     
     
-    <?php echo $__env->make('admin.dashboard._activity', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <div x-show="!isLoading" class="space-y-6">
+        
+        <?php echo $__env->make('admin.dashboard._kpis', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+        
+        
+        <?php echo $__env->make('admin.dashboard._charts', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+        
+        
+        <?php echo $__env->make('admin.dashboard._activity', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    </div>
 </div>
 <?php $__env->stopSection(); ?>
 
@@ -61,22 +127,62 @@
 <script>
     function adminDashboard() {
         return {
+            // Data Contract v2
             kpis: {
-                totalTenants: 89,
-                totalUsers: 1247,
-                errors24h: 12,
-                queueJobs: 156,
-                storageUsed: '2.1TB'
+                totalTenants: { 
+                    value: 89, 
+                    deltaPct: 5.2, 
+                    series: [82, 83, 84, 85, 86, 87, 88, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89], 
+                    period: '30d' 
+                },
+                totalUsers: { 
+                    value: 1247, 
+                    deltaPct: 12.1, 
+                    series: [1050, 1080, 1100, 1120, 1140, 1160, 1180, 1200, 1210, 1220, 1230, 1240, 1245, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247], 
+                    period: '30d' 
+                },
+                errors24h: { 
+                    value: 12, 
+                    deltaAbs: 3, 
+                    series: [5, 6, 7, 8, 9, 10, 11, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12], 
+                    period: '24h' 
+                },
+                queueJobs: { 
+                    value: 156, 
+                    status: 'processing', 
+                    series: [100, 110, 120, 130, 140, 150, 160, 170, 165, 160, 155, 150, 145, 140, 135, 130, 125, 120, 115, 110, 105, 100, 95, 90, 85, 80, 75, 70, 65, 156], 
+                    period: '24h' 
+                },
+                storage: { 
+                    usedBytes: 2200000000000, // 2.2TB in bytes
+                    capacityBytes: 3200000000000, // 3.2TB in bytes
+                    series: [1500000000000, 1600000000000, 1700000000000, 1800000000000, 1900000000000, 2000000000000, 2100000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000, 2200000000000], 
+                    period: '30d' 
+                }
             },
             
-            chartData: {
+            charts: {
                 signups: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    data: [45, 52, 48, 61, 55, 67]
+                    points: [
+                        { ts: '2024-01-01T00:00:00Z', value: 45 },
+                        { ts: '2024-01-02T00:00:00Z', value: 52 },
+                        { ts: '2024-01-03T00:00:00Z', value: 48 },
+                        { ts: '2024-01-04T00:00:00Z', value: 61 },
+                        { ts: '2024-01-05T00:00:00Z', value: 55 },
+                        { ts: '2024-01-06T00:00:00Z', value: 67 }
+                    ],
+                    period: '30d'
                 },
                 errors: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    data: [2.1, 1.8, 2.3, 1.9, 2.0, 1.7]
+                    points: [
+                        { ts: '2024-01-01T00:00:00Z', value: 2.1 },
+                        { ts: '2024-01-02T00:00:00Z', value: 1.8 },
+                        { ts: '2024-01-03T00:00:00Z', value: 2.3 },
+                        { ts: '2024-01-04T00:00:00Z', value: 1.9 },
+                        { ts: '2024-01-05T00:00:00Z', value: 2.0 },
+                        { ts: '2024-01-06T00:00:00Z', value: 1.7 }
+                    ],
+                    period: '7d'
                 }
             },
             
@@ -88,43 +194,129 @@
             errorsRange: '30',
             currentExportType: '',
             
-            recentActivity: [
+            activity: [
                 {
-                    id: 1,
+                    id: 'act_001',
                     type: 'tenant_created',
                     message: 'New tenant "TechCorp" registered',
-                    time: '2 minutes ago',
-                    icon: 'fas fa-building',
-                    color: 'text-green-600'
+                    ts: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
+                    actor: 'system',
+                    target: { type: 'tenant', id: 'tenant_001', name: 'TechCorp' },
+                    severity: 'info'
                 },
                 {
-                    id: 2,
+                    id: 'act_002',
                     type: 'user_registered',
                     message: 'User "john@techcorp.com" registered',
-                    time: '5 minutes ago',
-                    icon: 'fas fa-user-plus',
-                    color: 'text-blue-600'
+                    ts: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+                    actor: 'john@techcorp.com',
+                    target: { type: 'user', id: 'user_001', name: 'John Smith' },
+                    severity: 'info'
                 },
                 {
-                    id: 3,
-                    type: 'error_occurred',
+                    id: 'act_003',
+                    type: 'error_raised',
                     message: 'High memory usage detected on server-01',
-                    time: '15 minutes ago',
-                    icon: 'fas fa-exclamation-triangle',
-                    color: 'text-red-600'
+                    ts: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+                    actor: 'system',
+                    target: { type: 'server', id: 'server_01', name: 'server-01' },
+                    severity: 'warning'
                 },
                 {
-                    id: 4,
-                    type: 'backup_completed',
-                    message: 'Daily backup completed successfully',
-                    time: '1 hour ago',
-                    icon: 'fas fa-download',
-                    color: 'text-purple-600'
+                    id: 'act_004',
+                    type: 'job_failed',
+                    message: 'Daily backup job failed',
+                    ts: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+                    actor: 'system',
+                    target: { type: 'job', id: 'backup_001', name: 'Daily Backup' },
+                    severity: 'error'
                 }
             ],
             
+            // State management
+            isLoading: false,
+            isRefreshing: false,
+            error: null,
+            lastUpdated: null,
+            pollingInterval: null,
+            
             init() {
+                this.loadDashboardData();
+                this.startPolling();
                 this.initCharts();
+            },
+            
+            // API Integration
+            async loadDashboardData() {
+                this.isLoading = true;
+                this.error = null;
+                
+                try {
+                    // Simulate API calls
+                    await Promise.all([
+                        this.loadKPIs(),
+                        this.loadCharts(),
+                        this.loadActivity()
+                    ]);
+                    this.lastUpdated = new Date().toISOString();
+                } catch (err) {
+                    this.error = err.message || 'Failed to load dashboard data';
+                } finally {
+                    this.isLoading = false;
+                }
+            },
+            
+            async loadKPIs() {
+                // Simulate API call to /api/admin/dashboard/kpis?period=30d
+                return new Promise(resolve => setTimeout(resolve, 300));
+            },
+            
+            async loadCharts() {
+                // Simulate API calls to /api/admin/dashboard/charts/*
+                return new Promise(resolve => setTimeout(resolve, 200));
+            },
+            
+            async loadActivity() {
+                // Simulate API call to /api/admin/dashboard/activity?limit=20
+                return new Promise(resolve => setTimeout(resolve, 150));
+            },
+            
+            // Polling
+            startPolling() {
+                this.pollingInterval = setInterval(() => {
+                    this.loadDashboardData();
+                }, 30000); // 30s for KPIs
+            },
+            
+            stopPolling() {
+                if (this.pollingInterval) {
+                    clearInterval(this.pollingInterval);
+                    this.pollingInterval = null;
+                }
+            },
+            
+            // Manual refresh
+            async refreshData() {
+                this.isRefreshing = true;
+                try {
+                    await this.loadDashboardData();
+                    this.showToast('Dashboard refreshed successfully');
+                } catch (err) {
+                    this.showToast('Failed to refresh dashboard', 'error');
+                } finally {
+                    this.isRefreshing = false;
+                }
+            },
+            
+            showToast(message, type = 'success') {
+                // Simple toast implementation
+                const toast = document.createElement('div');
+                toast.className = `fixed top-4 right-4 px-4 py-2 rounded-lg text-white z-50 ${
+                    type === 'error' ? 'bg-red-500' : 'bg-green-500'
+                }`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
             },
             
             initCharts() {
@@ -134,10 +326,10 @@
                     new Chart(signupsCtx, {
                         type: 'line',
                         data: {
-                            labels: this.chartData.signups.labels,
+                            labels: this.charts.signups.points.map(p => new Date(p.ts).toLocaleDateString()),
                             datasets: [{
                                 label: 'New Signups',
-                                data: this.chartData.signups.data,
+                                data: this.charts.signups.points.map(p => p.value),
                                 borderColor: 'rgb(59, 130, 246)',
                                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                                 tension: 0.4,
@@ -167,10 +359,10 @@
                     new Chart(errorsCtx, {
                         type: 'bar',
                         data: {
-                            labels: this.chartData.errors.labels,
+                            labels: this.charts.errors.points.map(p => new Date(p.ts).toLocaleDateString()),
                             datasets: [{
                                 label: 'Error Rate %',
-                                data: this.chartData.errors.data,
+                                data: this.charts.errors.points.map(p => p.value),
                                 backgroundColor: 'rgba(239, 68, 68, 0.8)',
                                 borderColor: 'rgb(239, 68, 68)',
                                 borderWidth: 1
@@ -199,25 +391,19 @@
             },
             
             initSparklines() {
-                // Sparkline data for each KPI (30 days data)
-                const sparklineData = {
-                    tenants: [82, 83, 84, 85, 86, 87, 88, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89, 89],
-                    users: [1050, 1080, 1100, 1120, 1140, 1160, 1180, 1200, 1210, 1220, 1230, 1240, 1245, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247, 1247],
-                    errors: [5, 6, 7, 8, 9, 10, 11, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12],
-                    queue: [100, 110, 120, 130, 140, 150, 160, 170, 165, 160, 155, 150, 145, 140, 135, 130, 125, 120, 115, 110, 105, 100, 95, 90, 85, 80, 75, 70, 65, 156],
-                    storage: [1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1]
-                };
+                // Create sparkline charts from KPI data
+                const sparklineKeys = ['tenants', 'users', 'errors24h', 'queueJobs', 'storage'];
                 
-                // Create sparkline charts
-                Object.keys(sparklineData).forEach(key => {
+                sparklineKeys.forEach(key => {
                     const canvas = document.getElementById(key + 'Sparkline');
-                    if (canvas) {
+                    if (canvas && this.kpis[key]) {
+                        const series = this.kpis[key].series;
                         new Chart(canvas, {
                             type: 'line',
                             data: {
-                                labels: Array(sparklineData[key].length).fill(''),
+                                labels: Array(series.length).fill(''),
                                 datasets: [{
-                                    data: sparklineData[key],
+                                    data: series,
                                     borderColor: this.getSparklineColor(key),
                                     backgroundColor: this.getSparklineColor(key, 0.1),
                                     borderWidth: 2,
@@ -248,19 +434,116 @@
             
             getSparklineColor(key, alpha = 1) {
                 const colors = {
-                    tenants: `rgba(16, 185, 129, ${alpha})`, // Green #10B981
-                    users: `rgba(16, 185, 129, ${alpha})`,   // Green #10B981
-                    errors: `rgba(239, 68, 68, ${alpha})`,   // Red #EF4444
-                    queue: `rgba(245, 158, 11, ${alpha})`,    // Orange #F59E0B
-                    storage: `rgba(139, 92, 246, ${alpha})`   // Purple #8B5CF6
+                    totalTenants: `rgba(16, 185, 129, ${alpha})`, // Green #10B981
+                    totalUsers: `rgba(16, 185, 129, ${alpha})`,   // Green #10B981
+                    errors24h: `rgba(239, 68, 68, ${alpha})`,     // Red #EF4444
+                    queueJobs: `rgba(245, 158, 11, ${alpha})`,    // Orange #F59E0B
+                    storage: `rgba(139, 92, 246, ${alpha})`       // Purple #8B5CF6
                 };
                 return colors[key] || `rgba(107, 114, 128, ${alpha})`;
             },
             
-            refreshData() {
-                // Simulate data refresh
-                console.log('Refreshing dashboard data...');
-                // In real implementation, this would fetch fresh data from API
+            // Utility functions
+            formatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            },
+            
+            formatTimeAgo(isoString) {
+                const now = new Date();
+                const time = new Date(isoString);
+                const diffMs = now - time;
+                const diffMins = Math.floor(diffMs / 60000);
+                const diffHours = Math.floor(diffMs / 3600000);
+                const diffDays = Math.floor(diffMs / 86400000);
+                
+                if (diffMins < 1) return 'Just now';
+                if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+                if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+            },
+            
+            getSeverityColor(severity) {
+                const colors = {
+                    info: 'text-blue-600',
+                    warning: 'text-yellow-600',
+                    error: 'text-red-600'
+                };
+                return colors[severity] || 'text-gray-600';
+            },
+            
+            getSeverityIcon(severity) {
+                const icons = {
+                    info: 'fas fa-info-circle',
+                    warning: 'fas fa-exclamation-triangle',
+                    error: 'fas fa-times-circle'
+                };
+                return icons[severity] || 'fas fa-circle';
+            },
+            
+            // Quick Presets Implementation
+            applyPreset(preset) {
+                switch(preset) {
+                    case 'critical':
+                        this.applyCriticalPreset();
+                        break;
+                    case 'active':
+                        this.applyActivePreset();
+                        break;
+                    case 'recent':
+                        this.applyRecentPreset();
+                        break;
+                }
+            },
+            
+            applyCriticalPreset() {
+                // Set chart period to 7d for errors
+                this.charts.errors.period = '7d';
+                this.errorsRange = '7';
+                
+                // Navigate to Alerts with critical filter
+                window.location.href = '/admin/alerts?severity=error&range=24h';
+            },
+            
+            applyActivePreset() {
+                // Set signups period to 30d
+                this.charts.signups.period = '30d';
+                this.signupsRange = '30';
+                
+                // Highlight top signup days (mock implementation)
+                console.log('Highlighting top signup days...');
+            },
+            
+            applyRecentPreset() {
+                // Load recent activity and show drawer
+                this.loadActivity();
+                // In real implementation, would open activity drawer
+                console.log('Loading recent activity...');
+            },
+            
+            // Drill-down functions
+            drillDownTenants() {
+                window.location.href = '/admin/tenants?sort=-created_at';
+            },
+            
+            drillDownUsers() {
+                window.location.href = '/admin/users?filter=active&sort=-last_login';
+            },
+            
+            drillDownErrors() {
+                window.location.href = '/admin/alerts?severity=error&range=24h';
+            },
+            
+            drillDownQueue() {
+                window.location.href = '/admin/maintenance/tasks?tab=queue&filter=stalled|backlog';
+            },
+            
+            drillDownStorage() {
+                window.location.href = '/admin/settings?tab=storage';
+                // In real implementation, would open "Top consumers" modal
             },
             
             // Export Functions
@@ -285,14 +568,12 @@
             getExportData() {
                 const baseData = {
                     signups: {
-                        labels: this.chartData.signups.labels,
-                        data: this.chartData.signups.data,
-                        range: this.signupsRange
+                        points: this.charts.signups.points,
+                        period: this.charts.signups.period
                     },
                     errors: {
-                        labels: this.chartData.errors.labels,
-                        data: this.chartData.errors.data,
-                        range: this.errorsRange
+                        points: this.charts.errors.points,
+                        period: this.charts.errors.period
                     }
                 };
                 
@@ -301,8 +582,8 @@
             
             downloadCSV(data, filename) {
                 let csv = 'Date,Value\n';
-                data.labels.forEach((label, index) => {
-                    csv += `${label},${data.data[index]}\n`;
+                data.points.forEach(point => {
+                    csv += `${point.ts},${point.value}\n`;
                 });
                 
                 const blob = new Blob([csv], { type: 'text/csv' });
@@ -325,49 +606,15 @@
             },
             
             updateSignupsChart() {
-                // In real implementation, this would fetch new data based on range
-                console.log('Updating signups chart for range:', this.signupsRange);
+                // Update chart period and reload data
+                this.charts.signups.period = this.signupsRange + 'd';
+                this.loadCharts();
             },
             
             updateErrorsChart() {
-                // In real implementation, this would fetch new data based on range
-                console.log('Updating errors chart for range:', this.errorsRange);
-            },
-            
-            // Quick Presets
-            applyPreset(preset) {
-                switch(preset) {
-                    case 'critical':
-                        // Filter to show only critical items
-                        this.filterCriticalItems();
-                        break;
-                    case 'active':
-                        // Show only active/healthy items
-                        this.filterActiveItems();
-                        break;
-                    case 'recent':
-                        // Show recent activity
-                        this.filterRecentItems();
-                        break;
-                }
-            },
-            
-            filterCriticalItems() {
-                // In real implementation, this would filter KPIs and charts to show critical items
-                console.log('Filtering critical items...');
-                // Example: Highlight error rates, show only problematic tenants, etc.
-            },
-            
-            filterActiveItems() {
-                // In real implementation, this would filter to show active/healthy items
-                console.log('Filtering active items...');
-                // Example: Show only active tenants, healthy system metrics, etc.
-            },
-            
-            filterRecentItems() {
-                // In real implementation, this would filter to show recent activity
-                console.log('Filtering recent items...');
-                // Example: Show recent signups, recent errors, recent activity, etc.
+                // Update chart period and reload data
+                this.charts.errors.period = this.errorsRange + 'd';
+                this.loadCharts();
             }
         }
     }

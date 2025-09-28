@@ -11,10 +11,10 @@
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Total Tenants</p>
-                <p class="text-2xl font-bold text-gray-900" x-text="kpis.totalTenants">89</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="kpis.totalTenants.value">89</p>
                 <p class="text-sm text-green-600">
                     <i class="fas fa-arrow-up mr-1"></i>
-                    +5% from last month
+                    <span x-text="'+' + kpis.totalTenants.deltaPct + '%'">+5.2%</span> from last month
                 </p>
             </div>
             <div class="bg-blue-100 rounded-full p-3">
@@ -38,10 +38,10 @@
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Total Users</p>
-                <p class="text-2xl font-bold text-gray-900" x-text="kpis.totalUsers">1,247</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="kpis.totalUsers.value">1,247</p>
                 <p class="text-sm text-green-600">
                     <i class="fas fa-arrow-up mr-1"></i>
-                    +12% from last month
+                    <span x-text="'+' + kpis.totalUsers.deltaPct + '%'">+12.1%</span> from last month
                 </p>
             </div>
             <div class="bg-green-100 rounded-full p-3">
@@ -64,10 +64,10 @@
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Errors (24h)</p>
-                <p class="text-2xl font-bold text-gray-900" x-text="kpis.errors24h">12</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="kpis.errors24h.value">12</p>
                 <p class="text-sm text-red-600">
                     <i class="fas fa-arrow-up mr-1"></i>
-                    +3 from yesterday
+                    <span x-text="'+' + kpis.errors24h.deltaAbs">+3</span> from yesterday
                 </p>
             </div>
             <div class="bg-red-100 rounded-full p-3">
@@ -90,10 +90,10 @@
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Queue Jobs</p>
-                <p class="text-2xl font-bold text-gray-900" x-text="kpis.queueJobs">156</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="kpis.queueJobs.value">156</p>
                 <p class="text-sm text-yellow-600">
                     <i class="fas fa-clock mr-1"></i>
-                    Processing
+                    <span x-text="kpis.queueJobs.status">Processing</span>
                 </p>
             </div>
             <div class="bg-yellow-100 rounded-full p-3">
@@ -116,10 +116,10 @@
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Storage Used</p>
-                <p class="text-2xl font-bold text-gray-900" x-text="kpis.storageUsed">2.1TB</p>
+                <p class="text-2xl font-bold text-gray-900" x-text="formatBytes(kpis.storage.usedBytes)">2.2TB</p>
                 <p class="text-sm text-gray-600">
                     <i class="fas fa-database mr-1"></i>
-                    67% of 3.2TB
+                    <span x-text="Math.round((kpis.storage.usedBytes / kpis.storage.capacityBytes) * 100)">69</span>% of <span x-text="formatBytes(kpis.storage.capacityBytes)">3.2TB</span>
                 </p>
             </div>
             <div class="bg-purple-100 rounded-full p-3">

@@ -130,6 +130,9 @@
 <script>
     function adminDashboard() {
         return {
+            // Feature flag for mock data
+            mockData: true, // Set to false to use real BE API
+            
             // Data Contract v2
             kpis: {
                 totalTenants: { 
@@ -242,6 +245,8 @@
             error: null,
             lastUpdated: null,
             pollingInterval: null,
+            abortController: null,
+            chartInstances: {},
             
             init() {
                 this.loadDashboardData();
@@ -251,19 +256,36 @@
             
             // API Integration
             async loadDashboardData() {
+                // Abort previous request if still pending
+                if (this.abortController) {
+                    this.abortController.abort();
+                }
+                
+                this.abortController = new AbortController();
                 this.isLoading = true;
                 this.error = null;
                 
                 try {
-                    // Simulate API calls
-                    await Promise.all([
-                        this.loadKPIs(),
-                        this.loadCharts(),
-                        this.loadActivity()
-                    ]);
+                    if (this.mockData) {
+                        // Use mock data
+                        await Promise.all([
+                            this.loadKPIs(),
+                            this.loadCharts(),
+                            this.loadActivity()
+                        ]);
+                    } else {
+                        // Use real BE API
+                        await Promise.all([
+                            this.loadKPIsFromAPI(),
+                            this.loadChartsFromAPI(),
+                            this.loadActivityFromAPI()
+                        ]);
+                    }
                     this.lastUpdated = new Date().toISOString();
                 } catch (err) {
-                    this.error = err.message || 'Failed to load dashboard data';
+                    if (err.name !== 'AbortError') {
+                        this.error = err.message || 'Failed to load dashboard data';
+                    }
                 } finally {
                     this.isLoading = false;
                 }
@@ -282,6 +304,72 @@
             async loadActivity() {
                 // Simulate API call to /api/admin/dashboard/activity?limit=20
                 return new Promise(resolve => setTimeout(resolve, 150));
+            },
+            
+            // Real BE API methods
+            async loadKPIsFromAPI() {
+                const response = await fetch('/api/admin/dashboard/kpis?period=30d', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    signal: this.abortController.signal
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                this.kpis = data.data;
+                
+                // Check clock skew
+                if (data.meta && data.meta.generatedAt) {
+                    this.checkClockSkew(data.meta.generatedAt);
+                }
+                
+                return data;
+            },
+            
+            async loadChartsFromAPI() {
+                const [signupsRes, errorsRes] = await Promise.all([
+                    fetch('/api/admin/dashboard/charts/signups?period=30d', {
+                        signal: this.abortController.signal
+                    }),
+                    fetch('/api/admin/dashboard/charts/errors?period=7d', {
+                        signal: this.abortController.signal
+                    })
+                ]);
+                
+                if (!signupsRes.ok || !errorsRes.ok) {
+                    throw new Error('Failed to load charts');
+                }
+                
+                const [signupsData, errorsData] = await Promise.all([
+                    signupsRes.json(),
+                    errorsRes.json()
+                ]);
+                
+                this.charts.signups = signupsData.data;
+                this.charts.errors = errorsData.data;
+            },
+            
+            async loadActivityFromAPI() {
+                const response = await fetch('/api/admin/dashboard/activity?limit=20', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    signal: this.abortController.signal
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                this.activity = data.data;
+                return data;
             },
             
             // Polling
@@ -323,10 +411,13 @@
             },
             
             initCharts() {
+                // Destroy existing charts
+                this.destroyCharts();
+                
                 // Signups Chart
                 const signupsCtx = document.getElementById('signupsChart');
                 if (signupsCtx) {
-                    new Chart(signupsCtx, {
+                    this.chartInstances.signups = new Chart(signupsCtx, {
                         type: 'line',
                         data: {
                             labels: this.charts.signups.points.map(p => new Date(p.ts).toLocaleDateString()),
@@ -359,7 +450,7 @@
                 // Error Rate Chart
                 const errorsCtx = document.getElementById('errorsChart');
                 if (errorsCtx) {
-                    new Chart(errorsCtx, {
+                    this.chartInstances.errors = new Chart(errorsCtx, {
                         type: 'bar',
                         data: {
                             labels: this.charts.errors.points.map(p => new Date(p.ts).toLocaleDateString()),
@@ -391,6 +482,15 @@
                 
                 // Initialize Sparkline Charts
                 this.initSparklines();
+            },
+            
+            destroyCharts() {
+                Object.values(this.chartInstances).forEach(chart => {
+                    if (chart) {
+                        chart.destroy();
+                    }
+                });
+                this.chartInstances = {};
             },
             
             initSparklines() {
@@ -469,6 +569,32 @@
                 return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
             },
             
+            // Timezone utilities
+            formatDateTime(isoString, options = {}) {
+                const date = new Date(isoString);
+                const defaultOptions = {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                };
+                
+                return new Intl.DateTimeFormat('en-US', { ...defaultOptions, ...options }).format(date);
+            },
+            
+            checkClockSkew(serverTime, clientTime = new Date()) {
+                const skew = new Date(serverTime) - clientTime;
+                const skewMs = Math.abs(skew);
+                
+                if (skewMs > 2000) { // > 2 seconds
+                    console.warn(`Clock skew detected: ${skewMs}ms between server and client`);
+                }
+                
+                return skewMs;
+            },
+            
             getSeverityColor(severity) {
                 const colors = {
                     info: 'text-blue-600',
@@ -508,7 +634,10 @@
                 this.errorsRange = '7';
                 
                 // Navigate to Alerts with critical filter
-                window.location.href = '/admin/alerts?severity=error&range=24h';
+                window.location.href = '/admin/alerts?severity=critical&range=24h&sort=-created_at';
+                
+                // Log analytics event
+                this.logEvent('preset_click', { preset: 'critical', target: 'alerts' });
             },
             
             applyActivePreset() {
@@ -516,37 +645,53 @@
                 this.charts.signups.period = '30d';
                 this.signupsRange = '30';
                 
-                // Highlight top signup days (mock implementation)
-                console.log('Highlighting top signup days...');
+                // Navigate to Users with active filter
+                window.location.href = '/admin/users?status=active&sort=-last_login';
+                
+                // Log analytics event
+                this.logEvent('preset_click', { preset: 'active', target: 'users' });
             },
             
             applyRecentPreset() {
                 // Load recent activity and show drawer
                 this.loadActivity();
+                
+                // Deep-link to dashboard with drawer
+                const url = new URL(window.location);
+                url.searchParams.set('drawer', 'recent');
+                window.history.pushState({}, '', url);
+                
                 // In real implementation, would open activity drawer
                 console.log('Loading recent activity...');
+                
+                // Log analytics event
+                this.logEvent('preset_click', { preset: 'recent', target: 'activity_drawer' });
             },
             
             // Drill-down functions
             drillDownTenants() {
                 window.location.href = '/admin/tenants?sort=-created_at';
+                this.logEvent('kpi_drilldown', { kpi: 'tenants', target: 'tenants_list' });
             },
             
             drillDownUsers() {
-                window.location.href = '/admin/users?filter=active&sort=-last_login';
+                window.location.href = '/admin/users?status=active&sort=-last_login';
+                this.logEvent('kpi_drilldown', { kpi: 'users', target: 'users_list' });
             },
             
             drillDownErrors() {
                 window.location.href = '/admin/alerts?severity=error&range=24h';
+                this.logEvent('kpi_drilldown', { kpi: 'errors', target: 'alerts_list' });
             },
             
             drillDownQueue() {
-                window.location.href = '/admin/maintenance/tasks?tab=queue&filter=stalled|backlog';
+                window.location.href = '/admin/maintenance/tasks?tab=queue&filter=stalled,backlog';
+                this.logEvent('kpi_drilldown', { kpi: 'queue', target: 'maintenance_tasks' });
             },
             
             drillDownStorage() {
-                window.location.href = '/admin/settings?tab=storage';
-                // In real implementation, would open "Top consumers" modal
+                window.location.href = '/admin/settings?tab=storage&modal=top-consumers';
+                this.logEvent('kpi_drilldown', { kpi: 'storage', target: 'storage_settings' });
             },
             
             // Export Functions
@@ -618,6 +763,63 @@
                 // Update chart period and reload data
                 this.charts.errors.period = this.errorsRange + 'd';
                 this.loadCharts();
+            },
+            
+            // Analytics
+            logEvent(eventName, meta = {}) {
+                const event = {
+                    event: eventName,
+                    timestamp: new Date().toISOString(),
+                    page: 'admin.dashboard',
+                    ...meta
+                };
+                
+                console.log('Analytics Event:', event);
+                
+                // In real implementation, send to analytics service
+                // fetch('/api/analytics/events', {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify(event)
+                // });
+            },
+            
+            // i18n placeholder
+            t(key, params = {}) {
+                const translations = {
+                    'admin.dashboard.title': 'Dashboard',
+                    'admin.dashboard.subtitle': 'System overview and key metrics',
+                    'admin.dashboard.kpi.tenants': 'Total Tenants',
+                    'admin.dashboard.kpi.users': 'Total Users',
+                    'admin.dashboard.kpi.errors': 'Errors (24h)',
+                    'admin.dashboard.kpi.queue': 'Queue Jobs',
+                    'admin.dashboard.kpi.storage': 'Storage Used',
+                    'admin.dashboard.preset.critical': 'Critical',
+                    'admin.dashboard.preset.active': 'Active',
+                    'admin.dashboard.preset.recent': 'Recent',
+                    'admin.dashboard.action.refresh': 'Refresh',
+                    'admin.dashboard.action.view_tenants': 'View Tenants',
+                    'admin.dashboard.action.manage_users': 'Manage Users',
+                    'admin.dashboard.action.view_errors': 'View Errors',
+                    'admin.dashboard.action.monitor_queue': 'Monitor Queue',
+                    'admin.dashboard.action.manage_storage': 'Manage Storage'
+                };
+                
+                let text = translations[key] || key;
+                
+                // Replace parameters
+                Object.keys(params).forEach(param => {
+                    text = text.replace(`{${param}}`, params[param]);
+                });
+                
+                return text;
+            },
+            
+            // A11y helpers
+            getAriaLabel(kpi, value, delta, period) {
+                const kpiName = this.t(`admin.dashboard.kpi.${kpi}`);
+                const deltaText = delta > 0 ? `up ${delta}%` : `down ${Math.abs(delta)}%`;
+                return `View ${kpiName} — ${value} total, ${deltaText} in ${period}`;
             }
         }
     }

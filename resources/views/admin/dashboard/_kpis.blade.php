@@ -5,7 +5,7 @@
          @click="window.location.href='/admin/tenants'"
          role="button"
          tabindex="0"
-         aria-label="Total Tenants: 89, increased by 5% from last month. Click to view tenants."
+         :aria-label="getAriaLabel('tenants', kpis.totalTenants.value, kpis.totalTenants.deltaPct, kpis.totalTenants.period)"
          @keydown.enter="window.location.href='/admin/tenants'"
          @keydown.space.prevent="window.location.href='/admin/tenants'">
         <div class="flex items-center justify-between mb-4">
@@ -27,7 +27,7 @@
         </div>
         <!-- Primary Action Button -->
         <button class="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                aria-label="View all tenants">
+                :aria-label="getAriaLabel('tenants', kpis.totalTenants.value, kpis.totalTenants.deltaPct, kpis.totalTenants.period)">
             <i class="fas fa-eye mr-1" aria-hidden="true"></i>View Tenants
         </button>
     </div>

@@ -5,15 +5,7 @@
     <div class="h-full overflow-y-auto">
         <!-- Sidebar Header with Toggle -->
         <div class="p-3 border-b border-gray-200">
-            <div class="flex items-center justify-between">
-                <!-- Logo placeholder (empty when collapsed) -->
-                <div x-show="!sidebarCollapsed" class="flex items-center">
-                    <span class="text-lg font-bold text-gray-900">Zena</span>
-                </div>
-                <div x-show="sidebarCollapsed" class="flex justify-center">
-                    <span class="text-lg font-bold text-gray-900">Z</span>
-                </div>
-                
+            <div class="flex items-center justify-end">
                 <!-- Collapse Toggle Button -->
                 <button @click="toggleSidebar" 
                         class="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"

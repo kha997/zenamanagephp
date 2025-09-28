@@ -154,7 +154,16 @@
             chartInstances: {},
             
             init() {
+                console.log('TenantsPage init, mockData:', this.mockData);
+                console.log('window.tenantsApi available:', !!window.tenantsApi);
                 this.parseUrlParams();
+                console.log('Parsed URL params:', {
+                    from: this.dateFrom,
+                    to: this.dateTo,
+                    status: this.statusFilter,
+                    sort: this.sortBy,
+                    sortOrder: this.sortOrder
+                });
                 this.loadTenants();
                 this.initCharts();
                 this.logEvent('tenants_view_loaded', { 
@@ -223,7 +232,15 @@
                             per_page: this.perPage
                         };
                         
+                        console.log('API call params:', params);
+                        console.log('window.tenantsApi check:', !!window.tenantsApi);
+                        
+                        if (!window.tenantsApi) {
+                            throw new Error('TenantsApi service not available');
+                        }
+                        
                         const data = await window.tenantsApi.getTenants(params);
+                        console.log('API response:', data);
                         this.filteredTenants = data.data;
                         this.total = data.meta.total;
                         this.lastPage = data.meta.last_page;
@@ -454,7 +471,7 @@
             
             // Drill-down functions
             drillDownTotal() {
-                window.location.href = '/admin/tenants?sort=-created_at';
+                window.location.href = '/admin/tenants?sort=-createdAt';
                 this.logEvent('kpi_drilldown', { kpi: 'total', target: 'tenants_list' });
             },
             

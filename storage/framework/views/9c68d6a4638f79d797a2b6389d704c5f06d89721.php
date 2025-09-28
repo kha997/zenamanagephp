@@ -8,7 +8,7 @@
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="space-y-6">
+<div class="space-y-6" x-data="adminDashboard()">
     
     <div class="flex items-center justify-between">
         <div>

@@ -153,9 +153,20 @@
             currentTenant: null,
             chartInstances: {},
             
-            init() {
+            async init() {
                 console.log('TenantsPage init, mockData:', this.mockData);
                 console.log('window.tenantsApi available:', !!window.tenantsApi);
+                
+                // Test API directly
+                if (window.tenantsApi) {
+                    try {
+                        const testResult = await window.tenantsApi.getTenants({from: '2024-08-29', sort: '-createdAt'});
+                        console.log('Direct API test result:', testResult);
+                    } catch (error) {
+                        console.error('Direct API test failed:', error);
+                    }
+                }
+                
                 this.parseUrlParams();
                 console.log('Parsed URL params:', {
                     from: this.dateFrom,

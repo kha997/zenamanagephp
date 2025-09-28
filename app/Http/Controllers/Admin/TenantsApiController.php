@@ -16,30 +16,35 @@ class TenantsApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
+        // Sanitize and validate parameters
+        $validated = $request->validate([
             'q' => 'nullable|string|max:255',
             'status' => 'nullable|in:active,suspended,trial,disabled',
             'plan' => 'nullable|in:Basic,Professional,Enterprise',
             'from' => 'nullable|date',
-            'to' => 'nullable|date|after_or_equal:from',
+            'to' => 'nullable|date',
             'sort' => 'nullable|string|in:name,-name,domain,-domain,plan,-plan,status,-status,usersCount,-usersCount,lastActiveAt,-lastActiveAt,createdAt,-createdAt',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100'
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'error' => [
-                    'code' => 'VALIDATION_ERROR',
-                    'message' => 'Invalid request parameters',
-                    'details' => $validator->errors()
-                ]
-            ], 422);
+        // Filter out empty values
+        $validated = array_filter($validated, function($value) {
+            return $value !== null && $value !== '' && $value !== 'undefined';
+        });
+
+        // Log debug info for troubleshooting
+        if ($request->hasAny(['from', 'to', 'status'])) {
+            \Log::info('[tenants] API request params', [
+                'original' => $request->all(),
+                'validated' => $validated,
+                'ip' => $request->ip()
+            ]);
         }
 
-        $page = $request->get('page', 1);
-        $perPage = $request->get('per_page', 20);
-        $sort = $request->get('sort', 'name');
+        $page = $validated['page'] ?? 1;
+        $perPage = $validated['per_page'] ?? 20;
+        $sort = $validated['sort'] ?? 'name';
         
         // Generate cache key based on query parameters
         $cacheKey = 'tenants_list_' . md5(serialize($request->query()));
@@ -54,7 +59,7 @@ class TenantsApiController extends Controller
         $tenants = $this->getMockTenants();
         
         // Apply filters
-        $filteredTenants = $this->applyFilters($tenants, $request);
+        $filteredTenants = $this->applyFilters($tenants, $validated);
         
         // Apply sorting
         $sortedTenants = $this->applySorting($filteredTenants, $sort);
@@ -354,7 +359,7 @@ class TenantsApiController extends Controller
     /**
      * Export tenants
      */
-    public function export(Request $request): JsonResponse
+    public function export(Request $request)
     {
         // Rate limiting check (mock)
         $rateLimitKey = 'export_rate_limit_' . $request->ip();
@@ -374,7 +379,18 @@ class TenantsApiController extends Controller
 
         // Get filtered tenants
         $tenants = $this->getMockTenants();
-        $filteredTenants = $this->applyFilters($tenants, $request);
+        $validated = $request->validate([
+            'q' => 'nullable|string|max:255',
+            'status' => 'nullable|in:active,suspended,trial,disabled',
+            'plan' => 'nullable|in:Basic,Professional,Enterprise',
+            'from' => 'nullable|date',
+            'to' => 'nullable|date',
+            'sort' => 'nullable|string'
+        ]);
+        $validated = array_filter($validated, function($value) {
+            return $value !== null && $value !== '' && $value !== 'undefined';
+        });
+        $filteredTenants = $this->applyFilters($tenants, $validated);
         
         // Generate CSV
         $csv = "ID,Name,Domain,Owner,Owner Email,Plan,Status,Users,Projects,Last Active,Created\n";
@@ -475,13 +491,13 @@ class TenantsApiController extends Controller
         return null;
     }
 
-    private function applyFilters(array $tenants, Request $request): array
+    private function applyFilters(array $tenants, array $validated): array
     {
-        $query = $request->get('q');
-        $status = $request->get('status');
-        $plan = $request->get('plan');
-        $from = $request->get('from');
-        $to = $request->get('to');
+        $query = $validated['q'] ?? null;
+        $status = $validated['status'] ?? null;
+        $plan = $validated['plan'] ?? null;
+        $from = $validated['from'] ?? null;
+        $to = $validated['to'] ?? null;
 
         return array_filter($tenants, function ($tenant) use ($query, $status, $plan, $from, $to) {
             // Search query

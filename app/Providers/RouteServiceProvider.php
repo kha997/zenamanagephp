@@ -52,20 +52,22 @@ class RouteServiceProvider extends ServiceProvider
                 // Tenants API
                 Route::get('/tenants', [\App\Http\Controllers\Admin\TenantsApiController::class, 'index'])->name('tenants.index');
                 Route::post('/tenants', [\App\Http\Controllers\Admin\TenantsApiController::class, 'store'])->name('tenants.store');
-                Route::get('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'show'])->name('tenants.show');
-                Route::patch('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'update'])->name('tenants.update');
-                Route::delete('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'destroy'])->name('tenants.destroy');
+                
+                // Export (must be before {id} route)
+                Route::get('/tenants/export', [\App\Http\Controllers\Admin\TenantsApiController::class, 'export'])->name('tenants.export');
+                
+                // Bulk actions
+                Route::post('/tenants:bulk', [\App\Http\Controllers\Admin\TenantsApiController::class, 'bulk'])->name('tenants.bulk');
                 
                 // Tenant actions
                 Route::post('/tenants/{id}:enable', [\App\Http\Controllers\Admin\TenantsApiController::class, 'enable'])->name('tenants.enable');
                 Route::post('/tenants/{id}:disable', [\App\Http\Controllers\Admin\TenantsApiController::class, 'disable'])->name('tenants.disable');
                 Route::post('/tenants/{id}:change-plan', [\App\Http\Controllers\Admin\TenantsApiController::class, 'changePlan'])->name('tenants.change-plan');
                 
-                // Bulk actions
-                Route::post('/tenants:bulk', [\App\Http\Controllers\Admin\TenantsApiController::class, 'bulk'])->name('tenants.bulk');
-                
-                // Export
-                Route::get('/tenants/export', [\App\Http\Controllers\Admin\TenantsApiController::class, 'export'])->name('tenants.export');
+                // Tenant CRUD (must be after specific routes)
+                Route::get('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'show'])->name('tenants.show');
+                Route::patch('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'update'])->name('tenants.update');
+                Route::delete('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'destroy'])->name('tenants.destroy');
             });
             
             // App routes (no middleware for now)

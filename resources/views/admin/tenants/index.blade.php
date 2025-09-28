@@ -235,6 +235,21 @@
                     if (error.name !== 'AbortError') {
                         this.error = error.message;
                         console.error('Failed to load tenants:', error);
+                        
+                        // Debug log for 422 errors
+                        if (error.message.includes('422')) {
+                            console.warn('[tenants] 422 params', {
+                                searchQuery: this.searchQuery,
+                                statusFilter: this.statusFilter,
+                                planFilter: this.planFilter,
+                                dateFrom: this.dateFrom,
+                                dateTo: this.dateTo,
+                                sortBy: this.sortBy,
+                                sortOrder: this.sortOrder,
+                                page: this.page,
+                                perPage: this.perPage
+                            });
+                        }
                     }
                 } finally {
                     this.isLoading = false;
@@ -260,10 +275,19 @@
                 this.activePreset = preset;
                 this.page = 1;
                 
+                // Clear existing filters first
+                this.searchQuery = '';
+                this.statusFilter = '';
+                this.planFilter = '';
+                this.dateFrom = '';
+                this.dateTo = '';
+                this.sortBy = 'name';
+                this.sortOrder = 'asc';
+                
                 switch (preset) {
                     case 'active':
                         this.statusFilter = 'active';
-                        this.sortBy = 'lastActive';
+                        this.sortBy = 'lastActiveAt';
                         this.sortOrder = 'desc';
                         break;
                     case 'disabled':
@@ -438,7 +462,7 @@
             },
             
             drillDownActive() {
-                window.location.href = '/admin/tenants?status=active&sort=-last_active';
+                window.location.href = '/admin/tenants?status=active&sort=-lastActiveAt';
                 this.logEvent('kpi_drilldown', { kpi: 'active', target: 'tenants_list' });
             },
             
@@ -451,7 +475,7 @@
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
                 const from = thirtyDaysAgo.toISOString().split('T')[0];
-                window.location.href = `/admin/tenants?from=${from}&sort=-created_at`;
+                window.location.href = `/admin/tenants?from=${from}&sort=-createdAt`;
                 this.logEvent('kpi_drilldown', { kpi: 'new', target: 'tenants_list' });
             },
             

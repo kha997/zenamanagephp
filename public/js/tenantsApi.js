@@ -35,7 +35,24 @@ class TenantsApiService {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                
+                // Try to parse error details for 422
+                if (response.status === 422) {
+                    try {
+                        const errorData = await response.json();
+                        if (errorData.error?.message) {
+                            errorMessage = errorData.error.message;
+                        }
+                        if (errorData.error?.details) {
+                            console.warn('[tenants] 422 details:', errorData.error.details);
+                        }
+                    } catch (e) {
+                        // Ignore JSON parse errors
+                    }
+                }
+                
+                throw new Error(errorMessage);
             }
 
             return await response.json();

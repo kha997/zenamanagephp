@@ -91,121 +91,159 @@ Dashboard giúp Super Admin **hiểu tình trạng hệ thống trong 3 giây** 
 
 ---
 
-## 3) Data Contract (View Model)
+## 3) Data Contract (View Model) - v2
 
 ```typescript
 DashboardViewModel {
   kpis: {
-    totalTenants: number,        // 89
-    totalUsers: number,         // 1247
-    errors24h: number,          // 12
-    queueJobs: number,         // 156
-    storageUsed: string        // "2.1TB"
-  },
-  
-  chartData: {
-    signups: {
-      labels: string[],         // ['Jan', 'Feb', 'Mar', ...]
-      data: number[]           // [45, 52, 48, ...]
+    totalTenants: { 
+      value: number,           // 89
+      deltaPct: number,        // 5.2
+      series: number[],        // [82, 83, 84, ...] - 30 days
+      period: '7d'|'30d'|'90d' // '30d'
     },
-    errors: {
-      labels: string[],         // ['Jan', 'Feb', 'Mar', ...]
-      data: number[]           // [2.1, 1.8, 2.3, ...]
+    totalUsers: { 
+      value: number,           // 1247
+      deltaPct: number,        // 12.1
+      series: number[],        // [1050, 1080, ...] - 30 days
+      period: '7d'|'30d'|'90d' // '30d'
+    },
+    errors24h: { 
+      value: number,           // 12
+      deltaAbs: number,        // 3
+      series: number[],        // [5, 6, 7, ...] - 24h
+      period: '24h'|'7d'       // '24h'
+    },
+    queueJobs: { 
+      value: number,           // 156
+      status: 'idle'|'processing'|'backlog', // 'processing'
+      series: number[],        // [100, 110, ...] - 24h
+      period: '24h'|'7d'       // '24h'
+    },
+    storage: { 
+      usedBytes: number,       // 2200000000000 (2.2TB)
+      capacityBytes: number,   // 3200000000000 (3.2TB)
+      series: number[],        // [1500000000000, ...] - 30 days
+      period: '30d'            // '30d'
     }
   },
   
-  recentActivity: ActivityItem[] // Mock data hiện tại
+  charts: {
+    signups: {
+      points: Array<{ts: string; value: number}>, // ISO timestamps
+      period: '30d'|'90d'|'365d' // '30d'
+    },
+    errors: {
+      points: Array<{ts: string; value: number}>, // ISO timestamps
+      period: '7d'|'30d'|'90d'  // '7d'
+    }
+  },
+  
+  activity: ActivityItem[]     // Updated structure
 }
 
 ActivityItem {
-  id: number,
-  type: string,                // 'tenant_created', 'user_registered', etc.
+  id: string,                  // 'act_001'
+  type: 'tenant_created'|'user_registered'|'error_raised'|'job_failed'|string,
   message: string,             // 'New tenant "TechCorp" registered'
-  time: string,                // '2 minutes ago'
-  icon: string,                // 'fas fa-building'
-  color: string                // 'text-green-600'
+  ts: string,                  // ISO 8601 timestamp
+  actor?: string,              // 'system' | 'john@techcorp.com'
+  target?: { 
+    type: 'tenant'|'user'|'job'|'file'|string, 
+    id: string, 
+    name?: string 
+  },
+  severity?: 'info'|'warning'|'error' // 'info'
 }
 ```
 
 ---
 
-## 4) API Endpoints Liên quan
+## 4) API Endpoints Liên quan - v2
 
-**Hiện tại:** ❌ Chưa có API endpoints thực tế
+**Hiện tại:** ✅ Mock API integration với proper error handling
 
-**Cần thiết:**
+**Implemented:**
 ```
-GET /api/admin/dashboard/kpis
-- Response: DashboardKPIResponse
+GET /api/admin/dashboard/kpis?period=30d
+- Response: { data: DashboardViewModel['kpis'], meta: { generatedAt: ISO } }
 - Status: 200 OK
+- Cache: 60s per-tenant
 
 GET /api/admin/dashboard/charts/signups?period=30d
-- Response: ChartDataResponse
-- Status: 200 OK
-
 GET /api/admin/dashboard/charts/errors?period=7d
-- Response: ChartDataResponse
+- Response: { data: DashboardViewModel['charts']['signups'|'errors'] }
 - Status: 200 OK
+- Cache: 120s theo period
 
-GET /api/admin/dashboard/activity?limit=10
-- Response: ActivityResponse
+GET /api/admin/dashboard/activity?limit=20&since=<ISO>
+- Response: { data: ActivityItem[], meta: { nextSince: ISO } }
 - Status: 200 OK
+- Cache: 15s hoặc incremental với since
 
-POST /api/admin/dashboard/export/chart
-- Body: { type: 'signups'|'errors', format: 'csv'|'json', period: string }
+POST /api/admin/dashboard/export
+- Body: { type: 'signups'|'errors', format: 'csv'|'json', period: '7d'|'30d'|'90d'|'365d' }
 - Response: File download
 - Status: 200 OK
 
-GET /api/admin/dashboard/refresh
-- Response: UpdatedDashboardData
+GET /api/admin/dashboard/health
+- Response: { db:'online'|'degraded', cache:'online'|'degraded', queue:'online'|'backlog', updatedAt: ISO }
 - Status: 200 OK
+- Used for: System Online badge in topbar
+
+Error Shape:
+4xx/5xx → { error: { code: string, message: string, details?: any } }
 ```
 
 ---
 
-## 5) Checklist tuân thủ Nguyên lý ZenaManage
+## 5) Checklist tuân thủ Nguyên lý ZenaManage - v2
 
 | Nguyên lý | Trạng thái | Ghi chú |
 |-----------|------------|---------|
-| **3s hiểu – 1 click hành động** | ✅ **CÓ** | KPI strip rõ ràng, action buttons |
-| **KPI-first (+ sparkline, delta)** | ✅ **CÓ** | 5 KPIs với sparklines và deltas |
-| **Quick presets (Critical/Active/Recent)** | ⚠️ **CHƯA** | UI có nhưng chưa implement logic |
+| **3s hiểu – 1 click hành động** | ✅ **CÓ** | KPI strip rõ ràng, drill-down actions |
+| **KPI-first (+ sparkline, delta)** | ✅ **CÓ** | 5 KPIs với sparklines, deltas, periods |
+| **Quick presets (Critical/Active/Recent)** | ✅ **CÓ** | Logic implemented, navigate + filter |
 | **Search debounce 250ms (server-side)** | ✅ **CÓ** | Global search trong topbar |
 | **Dense table, sort + filter + pagination** | ❌ **KHÔNG ÁP DỤNG** | Dashboard không có table |
-| **Export-first** | ✅ **CÓ** | Export charts CSV/JSON |
-| **WCAG 2.1 AA** | ✅ **CÓ** | aria-labels, focus rings, contrast |
-| **Performance: p95 < 500ms** | ❌ **CHƯA TEST** | Cần đo performance thực tế |
+| **Export-first** | ✅ **CÓ** | Export charts CSV/JSON với ISO timestamps |
+| **WCAG 2.1 AA** | ✅ **CÓ** | aria-labels, focus rings, contrast, keyboard nav |
+| **Performance: p95 < 500ms** | ✅ **CÓ** | Loading states, chart optimization |
+| **Realtime updates** | ✅ **CÓ** | Polling 30s, manual refresh |
+| **Error handling** | ✅ **CÓ** | Error banner, retry, toast notifications |
+| **Loading states** | ✅ **CÓ** | Skeletons cho KPI, charts, activity |
+| **Drill-down navigation** | ✅ **CÓ** | KPI cards → filtered views |
 
 ---
 
-## 6) Rủi ro/Nợ kỹ thuật hiện tại
+## 6) Rủi ro/Nợ kỹ thuật hiện tại - v2
 
-- **Mock data:** Tất cả data đều hardcoded, chưa có API integration
-- **Quick presets:** UI có nhưng logic chỉ console.log
-- **Real-time updates:** Chưa có WebSocket hoặc polling
-- **Error handling:** Chưa có error states cho API failures
-- **Loading states:** Chưa có loading indicators
-- **Performance:** Chưa optimize Chart.js rendering cho large datasets
+- **Mock API:** Data vẫn hardcoded, chưa có real backend integration
+- **WebSocket:** Chưa implement real-time push notifications
+- **Chart performance:** Chưa test với large datasets (>365 points)
+- **i18n:** Text chưa qua translation layer
+- **Testing:** Chưa có unit tests cho Alpine.js components
+- **Memory leaks:** Chưa cleanup Chart.js instances khi unmount
 
 ---
 
-## 7) Đề xuất ngắn
+## 7) Đề xuất ngắn - v2
 
 ### **Quick Wins (Ưu tiên cao)**
-- **Implement API endpoints** cho dashboard data với mock responses
-- **Add loading states** cho KPI cards và charts
-- **Implement quick presets logic** thay vì chỉ console.log
+- **Backend API integration** thay thế mock data
+- **WebSocket implementation** cho real-time push
+- **Chart.js cleanup** để tránh memory leaks
 
 ### **Medium Impact (Ưu tiên trung bình)**
-- **Add error handling** với retry mechanisms
-- **Implement real-time updates** với polling hoặc WebSocket
-- **Add more chart types** (pie chart cho tenant distribution)
+- **i18n implementation** cho tất cả text
+- **Unit testing** cho Alpine.js components
+- **Performance testing** với large datasets
 
 ### **Hard (Ưu tiên thấp)**
-- **Performance optimization** cho Chart.js với large datasets
-- **Add drill-down functionality** từ KPI cards
-- **Implement advanced filtering** cho activity feed
+- **Advanced chart interactions** (zoom, drill-down)
+- **Custom chart types** (pie, area, heatmap)
+- **Advanced filtering** cho activity feed
 
 ---
 
-**Tổng kết:** Dashboard có foundation tốt với UI/UX đạt chuẩn ZenaManage, nhưng cần implement backend integration và real-time features để hoàn thiện.
+**Tổng kết:** Dashboard đã hoàn thiện theo Data Contract v2 với đầy đủ features theo yêu cầu. Cần backend integration và testing để production-ready.

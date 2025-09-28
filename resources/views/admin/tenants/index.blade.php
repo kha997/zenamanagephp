@@ -19,6 +19,10 @@
             <p class="text-gray-600">Manage all tenant organizations</p>
         </div>
         <div class="flex items-center space-x-3">
+            <!-- Mock Data Badge -->
+            <div x-show="mockData" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                <i class="fas fa-flask mr-1"></i>Mock Data
+            </div>
             <button @click="exportTenants" 
                     class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
                 <i class="fas fa-download mr-2"></i>Export
@@ -45,11 +49,12 @@
 @endsection
 
 @push('scripts')
+<script src="/js/tenantsApi.js"></script>
 <script>
     function tenantsPage() {
         return {
             // Feature flag for mock data
-            mockData: true, // Set to false to use real BE API
+            mockData: false, // Set to false to use real BE API
             
             // KPI Data Contract v2
             kpis: {
@@ -209,8 +214,8 @@
                         this.total = this.tenants.length;
                         this.lastPage = Math.ceil(this.total / this.perPage);
                     } else {
-                        // Real API call
-                        const params = new URLSearchParams({
+                        // Real API call using service layer
+                        const params = {
                             q: this.searchQuery,
                             status: this.statusFilter,
                             plan: this.planFilter,
@@ -219,21 +224,9 @@
                             sort: this.sortOrder === 'desc' ? `-${this.sortBy}` : this.sortBy,
                             page: this.page,
                             per_page: this.perPage
-                        });
+                        };
                         
-                        const response = await fetch(`/api/admin/tenants?${params}`, {
-                            signal: this.abortController.signal,
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        
-                        const data = await response.json();
+                        const data = await window.tenantsApi.getTenants(params);
                         this.filteredTenants = data.data;
                         this.total = data.meta.total;
                         this.lastPage = data.meta.last_page;
@@ -362,7 +355,7 @@
             
             async toggleTenantStatus(tenant) {
                 const newStatus = tenant.status === 'active' ? 'suspended' : 'active';
-                const action = newStatus === 'active' ? 'activate' : 'suspend';
+                const action = newStatus === 'active' ? 'enable' : 'disable';
                 
                 try {
                     if (this.mockData) {
@@ -370,20 +363,8 @@
                         await new Promise(resolve => setTimeout(resolve, 500));
                         tenant.status = newStatus;
                     } else {
-                        // Real API call
-                        const response = await fetch(`/api/admin/tenants/${tenant.id}:${action}`, {
-                            method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        
-                        const data = await response.json();
+                        // Real API call using service layer
+                        const data = await window.tenantsApi[`${action}Tenant`](tenant.id);
                         tenant.status = data.data.status;
                     }
                     
@@ -668,13 +649,13 @@
                 if (!confirm(confirmMessage)) return;
                 
                 try {
-                    let successCount = 0;
-                    let errorCount = 0;
-                    
-                    for (const tenant of this.selectedTenants) {
-                        try {
-                            if (this.mockData) {
-                                // Mock API call
+                    if (this.mockData) {
+                        // Mock bulk action
+                        let successCount = 0;
+                        let errorCount = 0;
+                        
+                        for (const tenant of this.selectedTenants) {
+                            try {
                                 await new Promise(resolve => setTimeout(resolve, 200));
                                 
                                 switch(action) {
@@ -695,62 +676,37 @@
                                         break;
                                 }
                                 successCount++;
-                            } else {
-                                // Real API call
-                                let endpoint = '';
-                                let method = 'POST';
-                                
-                                switch(action) {
-                                    case 'activate':
-                                        endpoint = `/api/admin/tenants/${tenant.id}:activate`;
-                                        break;
-                                    case 'suspend':
-                                        endpoint = `/api/admin/tenants/${tenant.id}:suspend`;
-                                        break;
-                                    case 'delete':
-                                        endpoint = `/api/admin/tenants/${tenant.id}`;
-                                        method = 'DELETE';
-                                        break;
-                                    case 'change-plan':
-                                        endpoint = `/api/admin/tenants/${tenant.id}:change-plan`;
-                                        break;
-                                }
-                                
-                                const response = await fetch(endpoint, {
-                                    method,
-                                    headers: {
-                                        'Accept': 'application/json',
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    },
-                                    body: action === 'change-plan' ? JSON.stringify({ plan: 'Professional' }) : undefined
-                                });
-                                
-                                if (!response.ok) {
-                                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                                }
-                                
-                                const data = await response.json();
-                                if (action !== 'delete') {
-                                    Object.assign(tenant, data.data);
-                                }
-                                successCount++;
+                            } catch (error) {
+                                console.error(`Failed to ${action} tenant ${tenant.id}:`, error);
+                                errorCount++;
                             }
-                        } catch (error) {
-                            console.error(`Failed to ${action} tenant ${tenant.id}:`, error);
-                            errorCount++;
                         }
-                    }
-                    
-                    // Show results
-                    if (errorCount === 0) {
-                        alert(successMessage);
+                        
+                        // Show results
+                        if (errorCount === 0) {
+                            alert(successMessage);
+                        } else {
+                            alert(`${successCount} tenant(s) processed successfully, ${errorCount} failed`);
+                        }
                     } else {
-                        alert(`${successCount} tenant(s) processed successfully, ${errorCount} failed`);
+                        // Real API call using service layer
+                        const ids = this.selectedTenants.map(t => t.id);
+                        const result = await window.tenantsApi.bulkAction(action, ids, 'Professional');
+                        
+                        // Show results
+                        const successCount = result.ok.length;
+                        const errorCount = result.failed.length;
+                        
+                        if (errorCount === 0) {
+                            alert(successMessage);
+                        } else {
+                            alert(`${successCount} tenant(s) processed successfully, ${errorCount} failed`);
+                        }
                     }
                     
                     this.selectedTenants = [];
                     await this.loadTenants();
-                    this.logEvent('tenants_bulk_action', { action, count, successCount, errorCount });
+                    this.logEvent('tenants_bulk_action', { action, count, successCount: this.mockData ? 0 : result.ok.length, errorCount: this.mockData ? 0 : result.failed.length });
                     
                 } catch (error) {
                     console.error('Bulk action failed:', error);
@@ -763,41 +719,14 @@
                 
                 try {
                     const tenantIds = this.selectedTenants.map(t => t.id);
-                    const params = new URLSearchParams({
-                        format: 'csv',
-                        ids: tenantIds.join(',')
-                    });
                     
                     if (this.mockData) {
                         // Mock export
                         await new Promise(resolve => setTimeout(resolve, 1000));
                         alert(`Exporting ${tenantIds.length} selected tenants...`);
                     } else {
-                        // Real API call
-                        const response = await fetch(`/api/admin/tenants/export?${params}`, {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        
-                        if (!response.ok) {
-                            if (response.status === 429) {
-                                const retryAfter = response.headers.get('Retry-After');
-                                throw new Error(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
-                            }
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `tenants-export-${new Date().toISOString().split('T')[0]}.csv`;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
+                        // Real API call using service layer
+                        await window.tenantsApi.exportSelectedTenants(tenantIds);
                     }
                     
                     this.logEvent('tenants_export', { format: 'csv', filtered: false, count: tenantIds.length });
@@ -810,46 +739,22 @@
             
             async exportTenants() {
                 try {
-                    const params = new URLSearchParams({
-                        format: 'csv',
+                    const params = {
                         q: this.searchQuery,
                         status: this.statusFilter,
                         plan: this.planFilter,
                         from: this.dateFrom,
                         to: this.dateTo,
                         sort: this.sortOrder === 'desc' ? `-${this.sortBy}` : this.sortBy
-                    });
+                    };
                     
                     if (this.mockData) {
                         // Mock export
                         await new Promise(resolve => setTimeout(resolve, 1000));
                         alert('Exporting all tenants with current filters...');
                     } else {
-                        // Real API call
-                        const response = await fetch(`/api/admin/tenants/export?${params}`, {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        
-                        if (!response.ok) {
-                            if (response.status === 429) {
-                                const retryAfter = response.headers.get('Retry-After');
-                                throw new Error(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
-                            }
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        
-                        const blob = await response.blob();
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `tenants-export-${new Date().toISOString().split('T')[0]}.csv`;
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        document.body.removeChild(a);
+                        // Real API call using service layer
+                        await window.tenantsApi.exportTenants(params);
                     }
                     
                     this.logEvent('tenants_export', { format: 'csv', filtered: this.hasActiveFilters, count: this.total });

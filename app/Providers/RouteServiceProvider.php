@@ -38,12 +38,34 @@ class RouteServiceProvider extends ServiceProvider
             Route::prefix('admin')->name('admin.')->group(function () {
                 Route::view('/dashboard', 'admin.dashboard.index')->name('dashboard');
                 Route::view('/tenants', 'admin.tenants.index')->name('tenants.index');
+                Route::view('/tenants/{id}', 'admin.tenants.show')->name('tenants.show');
                 Route::view('/users', 'admin.users.index')->name('users.index');
                 Route::view('/security', 'admin.security.index')->name('security.index');
                 Route::view('/settings', 'admin.settings.index')->name('settings.index');
                 Route::view('/billing', 'admin.billing.index')->name('billing.index');
                 Route::view('/maintenance', 'admin.maintenance.index')->name('maintenance.index');
                 Route::view('/alerts', 'admin.alerts.index')->name('alerts.index');
+            });
+            
+            // API routes
+            Route::prefix('api/admin')->name('api.admin.')->group(function () {
+                // Tenants API
+                Route::get('/tenants', [\App\Http\Controllers\Admin\TenantsApiController::class, 'index'])->name('tenants.index');
+                Route::post('/tenants', [\App\Http\Controllers\Admin\TenantsApiController::class, 'store'])->name('tenants.store');
+                Route::get('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'show'])->name('tenants.show');
+                Route::patch('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'update'])->name('tenants.update');
+                Route::delete('/tenants/{id}', [\App\Http\Controllers\Admin\TenantsApiController::class, 'destroy'])->name('tenants.destroy');
+                
+                // Tenant actions
+                Route::post('/tenants/{id}:enable', [\App\Http\Controllers\Admin\TenantsApiController::class, 'enable'])->name('tenants.enable');
+                Route::post('/tenants/{id}:disable', [\App\Http\Controllers\Admin\TenantsApiController::class, 'disable'])->name('tenants.disable');
+                Route::post('/tenants/{id}:change-plan', [\App\Http\Controllers\Admin\TenantsApiController::class, 'changePlan'])->name('tenants.change-plan');
+                
+                // Bulk actions
+                Route::post('/tenants:bulk', [\App\Http\Controllers\Admin\TenantsApiController::class, 'bulk'])->name('tenants.bulk');
+                
+                // Export
+                Route::get('/tenants/export', [\App\Http\Controllers\Admin\TenantsApiController::class, 'export'])->name('tenants.export');
             });
             
             // App routes (no middleware for now)

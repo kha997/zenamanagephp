@@ -5,7 +5,7 @@
         <div class="flex space-x-2">
             <button 
                 @click="changePeriod('7d')" 
-                :class="{'bg-indigo-600 text-white': period === '7d', 'bg-gray-200 text-gray-700': period !== '7d'}"
+                :class="{'bg-indigo-600 text-white': chartPeriod === '7d', 'bg-gray-200 text-gray-700': chartPeriod !== '7d'}"
                 class="px-3 py-1 rounded text-sm font-medium transition-colors"
                 aria-label="7 days period"
             >
@@ -13,7 +13,7 @@
             </button>
             <button 
                 @click="changePeriod('30d')" 
-                :class="{'bg-indigo-600 text-white': period === '30d', 'bg-gray-200 text-gray-700': period !== '30d'}"
+                :class="{'bg-indigo-600 text-white': chartPeriod === '30d', 'bg-gray-200 text-gray-700': chartPeriod !== '30d'}"
                 class="px-3 py-1 rounded text-sm font-medium transition-colors"
                 aria-label="30 days period"
             >
@@ -21,7 +21,7 @@
             </button>
             <button 
                 @click="changePeriod('90d')" 
-                :class="{'bg-indigo-600 text-white': period === '90d', 'bg-gray-200 text-gray-700': period !== '90d'}"
+                :class="{'bg-indigo-600 text-white': chartPeriod === '90d', 'bg-gray-200 text-gray-700': chartPeriod !== '90d'}"
                 class="px-3 py-1 rounded text-sm font-medium transition-colors"
                 aria-label="90 days period"
             >
@@ -43,7 +43,6 @@
                         id="mfa-adoption-chart" 
                         class="security-chart"
                         aria-label="MFA adoption percentage over time"
-                        x-ref="mfaChart"
                         x-show="!loading"
                     ></canvas>
                     <!-- Skeleton -->
@@ -69,7 +68,6 @@
                         id="successful-logins-chart" 
                         class="security-chart"
                         aria-label="Successful login attempts over time"
-                        x-ref="successfulChart"
                         x-show="!loading"
                     ></canvas>
                     <!-- Skeleton -->
@@ -95,7 +93,6 @@
                         id="active-sessions-chart" 
                         class="security-chart"
                         aria-label="Active sessions count over time"
-                        x-ref="sessionsChart"
                         x-show="!loading"
                     ></canvas>
                     <!-- Skeleton -->
@@ -121,7 +118,6 @@
                         id="failed-logins-chart" 
                         class="security-chart"
                         aria-label="Failed login attempts over time"
-                        x-ref="failedChart"
                         x-show="!loading"
                     ></canvas>
                     <!-- Skeleton -->
@@ -135,242 +131,18 @@
             </div>
         </div>
     </div>
-</div>
 
-<script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('securityCharts', () => ({
-        period: '30d',
-        loading: true,
-        chartError: null,
-        chartData: {},
-        charts: {},
-        
-        init() {
-            console.log('Security charts component initialized');
-            
-            // Wait for Chart.js to be available
-            const waitForChart = () => {
-                if (typeof Chart !== 'undefined') {
-                    this.loadCharts();
-                } else {
-                    setTimeout(waitForChart, 50);
-                }
-            };
-            
-            // Use requestIdleCallback for non-critical initial chart rendering
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(() => {
-                    waitForChart();
-                }, { timeout: 700 });
-            } else {
-                setTimeout(() => {
-                    waitForChart();
-                }, 100);
-            }
-        },
-        
-        async loadCharts() {
-            this.loading = true;
-            this.chartError = null;
-            
-            try {
-                const params = new URLSearchParams();
-                params.set('period', this.period);
-                
-                const response = await fetch(`/api/admin/security/charts-bypass?${params}`, {
-                    headers: { 'Accept': 'application/json' }
-                });
-                
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const data = await response.json();
-                this.chartData = data.data || {};
-                
-                console.log('Chart data loaded:', this.chartData);
-                
-                // Render charts with requestAnimationFrame for smooth updates
-                requestAnimationFrame(() => {
-                    this.renderCharts();
-                });
-                
-            } catch (error) {
-                console.error('Chart loading error:', error);
-                this.chartError = error.message;
-            } finally {
-                this.loading = false;
-            }
-        },
-        
-        renderCharts() {
-            try {
-                console.log('Rendering charts with data:', this.chartData);
-                
-                // Destroy any existing charts to prevent memory leaks
-                Object.values(this.charts).forEach(chart => {
-                    if (chart && typeof chart.destroy === 'function') {
-                        chart.destroy();
-                    }
-                });
-                this.charts = {};
-                
-                // Base Chart.js options
-                const baseOptions = {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 220 },
-                    interaction: { mode: 'index', intersect: false },
-                    elements: { 
-                        point: { radius: 0 }, 
-                        line: { borderWidth: 2, tension: 0.2 } 
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        decimation: { enabled: true, algorithm: 'lttb', threshold: 365 },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => {
-                                    const date = new Date(context.label).toLocaleDateString('en-GB');
-                                    const value = context.parsed.y;
-                                    return `${date}: ${value}`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: { 
-                            type: 'time', 
-                            time: { 
-                                unit: this.period === '7d' ? 'day' : this.period === '90d' ? 'week' : 'day'
-                            },
-                            grid: { display: false },
-                            ticks: {
-                                source: 'auto',
-                                maxRotation: 0,
-                                callback: function(value, index, values) {
-                                    const date = new Date(value);
-                                    return date.toLocaleDateString('en-GB');
-                                }
-                            }
-                        },
-                        y: { 
-                            beginAtZero: true,
-                            grid: { display: false },
-                            ticks: { precision: 0 },
-                            border: { display: false }
-                        }
-                    }
-                };
-                
-                // MFA Adoption Chart (Blue)
-                console.log('MFA Chart data:', this.chartData.mfaAdoption);
-                console.log('MFA Chart ref:', this.$refs.mfaChart);
-                if (this.chartData.mfaAdoption && this.$refs.mfaChart) {
-                    const chartConfig = {
-                        ...baseOptions,
-                        scales: {
-                            ...baseOptions.scales,
-                            y: {
-                                ...baseOptions.scales.y,
-                                ticks: {
-                                    ...baseOptions.scales.y.ticks,
-                                    callback: (value) => `${value}%`
-                                }
-                            }
-                        }
-                    };
-                    
-                    try {
-                        this.charts.mfaAdoption = new Chart(this.$refs.mfaChart, {
-                        type: 'line',
-                        data: {
-                            labels: this.chartData.mfaAdoption.map(d => d.date),
-                            datasets: [{
-                                data: this.chartData.mfaAdoption.map(d => d.value),
-                                borderColor: '#3B82F6',
-                                backgroundColor: '#3B82F622',
-                                tension: 0.2,
-                                fill: false
-                            }]
-                        },
-                        options: chartConfig
-                    });
-                    } catch (error) {
-                        console.error('Error creating MFA chart:', error);
-                    }
-                }
-                
-                // Successful Logins Chart (Green)
-                if (this.chartData.successfulLogins && this.$refs.successfulChart) {
-                    try {
-                        this.charts.successfulLogins = new Chart(this.$refs.successfulChart, {
-                        type: 'line',
-                        data: {
-                            labels: this.chartData.successfulLogins.map(d => d.date),
-                            datasets: [{
-                                data: this.chartData.successfulLogins.map(d => d.value),
-                                borderColor: '#10B981',
-                                backgroundColor: '#10B98122',
-                                tension: 0.2,
-                                fill: false
-                            }]
-                        },
-                        options: baseOptions
-                    });
-                    } catch (error) {
-                        console.error('Error creating Successful Logins chart:', error);
-                    }
-                }
-                
-                // Active Sessions Chart (Indigo with fill)
-                if (this.chartData.activeSessions && this.$refs.sessionsChart) {
-                    try {
-                        this.charts.activeSessions = new Chart(this.$refs.sessionsChart, {
-                        type: 'line',
-                        data: {
-                            labels: this.chartData.activeSessions.map(d => d.date),
-                            datasets: [{
-                                data: this.chartData.activeSessions.map(d => d.value),
-                                borderColor: '#6366F1',
-                                backgroundColor: '#6366F122',
-                                tension: 0.2,
-                                fill: true
-                            }]
-                        },
-                        options: baseOptions
-                    });
-                }
-                
-                // Failed Logins Chart (Red)
-                if (this.chartData.failedLogins && this.$refs.failedChart) {
-                    this.charts.failedLogins = new Chart(this.$refs.failedChart, {
-                        type: 'line',
-                        data: {
-                            labels: this.chartData.failedLogins.map(d => d.date),
-                            datasets: [{
-                                data: this.chartData.failedLogins.map(d => d.value),
-                                borderColor: '#EF4444',
-                                backgroundColor: '#EF444422',
-                                tension: 0.2,
-                                fill: false
-                            }]
-                        },
-                        options: baseOptions
-                    });
-                }
-                
-            } catch (error) {
-                console.error('Chart rendering error:', error);
-                this.chartError = 'Failed to render charts. Please try again.';
-            }
-        },
-        
-        changePeriod(newPeriod) {
-            if (newPeriod !== this.period) {
-                this.period = newPeriod;
-                this.loadCharts();
-            }
-        }
-    }));
-});
-</script>
+    <!-- Chart Error -->
+    <div x-show="chartError" class="bg-red-50 border border-red-200 rounded-md p-4 mx-6 mb-6">
+        <div class="flex">
+            <i class="fas fa-exclamation-circle text-red-400 mt-0.5"></i>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">Chart Error</h3>
+                <p class="mt-1 text-sm text-red-700" x-text="chartError"></p>
+                <button @click="loadCharts()" class="mt-2 text-sm text-red-600 hover:text-red-500 underline">
+                    Retry
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

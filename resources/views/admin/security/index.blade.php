@@ -56,7 +56,7 @@
     </div>
 
     <!-- Charts -->
-    <div class="security-panels" x-data="securityCharts()" x-init="init()">
+    <div class="security-panels">
         @include('admin.security._charts')
     </div>
 
@@ -195,6 +195,12 @@ document.addEventListener('alpine:init', () => {
             sessions: { page: 1, per_page: 20, total: 0 }
         },
 
+        // Charts
+        charts: {},
+        chartData: {},
+        chartError: null,
+        chartPeriod: '30d',
+
         // Modals
         showForceMfaModal: false,
         showRevokeKeyModal: false,
@@ -210,8 +216,244 @@ document.addEventListener('alpine:init', () => {
             // Delay initial load to prevent flash
             setTimeout(() => {
                 this.loadSecurityData();
+                this.initCharts();
             }, 100);
             this.logEvent('security_view_loaded', { query: this.getCurrentQuery(), panel: this.activePanel });
+        },
+
+        // Chart methods
+        initCharts() {
+            console.log('Security charts initializing...');
+            
+            // Wait for Chart.js to be available
+            const waitForChart = () => {
+                if (typeof Chart !== 'undefined') {
+                    this.loadCharts();
+                } else {
+                    setTimeout(waitForChart, 50);
+                }
+            };
+            
+            // Use requestIdleCallback for non-critical initial chart rendering
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => {
+                    waitForChart();
+                }, { timeout: 700 });
+            } else {
+                setTimeout(() => {
+                    waitForChart();
+                }, 100);
+            }
+        },
+
+        async loadCharts() {
+            this.chartError = null;
+            
+            try {
+                const params = new URLSearchParams();
+                params.set('period', this.chartPeriod);
+                
+                const response = await fetch(`/api/admin/security/charts-bypass?`+params, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                this.chartData = data.data || {};
+                
+                console.log('Chart data loaded:', this.chartData);
+                
+                // Render charts with requestAnimationFrame for smooth updates
+                requestAnimationFrame(() => {
+                    this.renderCharts();
+                });
+                
+            } catch (error) {
+                console.error('Chart loading error:', error);
+                this.chartError = error.message;
+            }
+        },
+
+        renderCharts() {
+            try {
+                console.log('Rendering charts with data:', this.chartData);
+                
+                // Destroy any existing charts to prevent memory leaks
+                Object.values(this.charts).forEach(chart => {
+                    if (chart && typeof chart.destroy === 'function') {
+                        chart.destroy();
+                    }
+                });
+                this.charts = {};
+                
+                // Base Chart.js options
+                const baseOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 220 },
+                    interaction: { mode: 'index', intersect: false },
+                    elements: { 
+                        point: { radius: 0 }, 
+                        line: { borderWidth: 2, tension: 0.2 } 
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        decimation: { enabled: true, algorithm: 'lttb', threshold: 365 },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const date = new Date(context.label).toLocaleDateString('en-GB');
+                                    const value = context.parsed.y;
+                                    return `${date}: ${value}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            type: 'time', 
+                            time: { 
+                                unit: this.chartPeriod === '7d' ? 'day' : this.chartPeriod === '90d' ? 'week' : 'day'
+                            },
+                            grid: { display: false },
+                            ticks: {
+                                source: 'auto',
+                                maxRotation: 0,
+                                callback: function(value, index, values) {
+                                    const date = new Date(value);
+                                    return date.toLocaleDateString('en-GB');
+                                }
+                            }
+                        },
+                        y: { 
+                            beginAtZero: true,
+                            grid: { display: false },
+                            ticks: { precision: 0 },
+                            border: { display: false }
+                        }
+                    }
+                };
+
+                // MFA Adoption Chart (Blue)
+                console.log('MFA Chart data:', this.chartData.mfaAdoption);
+                const mfaChartEl = document.getElementById('mfa-adoption-chart');
+                console.log('MFA Chart ref:', mfaChartEl);
+                if (this.chartData.mfaAdoption && mfaChartEl) {
+                    const chartConfig = {
+                        ...baseOptions,
+                        scales: {
+                            ...baseOptions.scales,
+                            y: {
+                                ...baseOptions.scales.y,
+                                ticks: {
+                                    ...baseOptions.scales.y.ticks,
+                                    callback: (value) => `${value}%`
+                                }
+                            }
+                        }
+                    };
+                    
+                    try {
+                        this.charts.mfaAdoption = new Chart(mfaChartEl, {
+                            type: 'line',
+                            data: {
+                                labels: this.chartData.mfaAdoption.map(d => d.date),
+                                datasets: [{
+                                    data:	this.chartData.mfaAdoption.map(d => d.value),
+                                    borderColor: '#3B82F6',
+                                    backgroundColor: '#3B82F622',
+                                    tension: 0.2,
+                                    fill: false
+                                }]
+                            },
+                            options: chartConfig
+                        });
+                    } catch (error) {
+                        console.error('Error creating MFA chart:', error);
+                    }
+                }
+
+                // Successful Logins Chart (Green)
+                const successfulChartEl = document.getElementById('successful-logins-chart');
+                if (this.chartData.successfulLogins && successfulChartEl) {
+                    try {
+                        this.charts.successfulLogins = new Chart(successfulChartEl, {
+                            type: 'line',
+                            data: {
+                                labels: this.chartData.successfulLogins.map(d => d.date),
+                                datasets: [{
+                                    data: this.chartData.successfulLogins.map(d => d.value),
+                                    borderColor: '#10B981',
+                                    backgroundColor: '#10B98122',
+                                    tension: 0.2,
+                                    fill: false
+                                }]
+                            },
+                            options: baseOptions
+                        });
+                    } catch (error) {
+                        console.error('Error creating Successful Logins chart:', error);
+                    }
+                }
+
+                // Active Sessions Chart (Indigo with fill)
+                const sessionsChartEl = document.getElementById('active-sessions-chart');
+                if (this.chartData.activeSessions && sessionsChartEl) {
+                    try {
+                        this.charts.activeSessions = new Chart(sessionsChartEl, {
+                            type: 'line',
+                            data: {
+                                labels: this.chartData.activeSessions.map(d => d.date),
+                                datasets: [{
+                                    data: this.chartData.activeSessions.map(d => d.value),
+                                    borderColor: '#6366F1',
+                                    backgroundColor: '#6366F122',
+                                    tension: 0.2,
+                                    fill: true
+                                }]
+                            },
+                            options: baseOptions
+                        });
+                    } catch (error) {
+                        console.error('Error creating Active Sessions chart:', error);
+                    }
+                }
+
+                // Failed Logins Chart (Red)
+                const failedChartEl = document.getElementById('failed-logins-chart');
+                if (this.chartData.failedLogins && failedChartEl) {
+                    try {
+                        this.charts.failedLogins = new Chart(failedChartEl, {
+                            type: 'line',
+                            data: {
+                                labels: this.chartData.failedLogins.map(d => d.date),
+                                datasets: [{
+                                    data: this.chartData.failedLogins.map(d => d.value),
+                                    borderColor: '#EF4444',
+                                    backgroundColor: '#EF444422',
+                                    tension: 0.2,
+                                    fill: false
+                                }]
+                            },
+                            options: baseOptions
+                        });
+                    } catch (error) {
+                        console.error('Error creating Failed Logins chart:', error);
+                    }
+                }
+
+            } catch (error) {
+                console.error('Chart rendering error:', error);
+                this.chartError = 'Failed to render charts. Please try again.';
+            }
+        },
+
+        changePeriod(newPeriod) {
+            if (newPeriod !== this.chartPeriod) {
+                this.chartPeriod = newPeriod;
+                this.loadCharts();
+            }
         },
 
         // Reset all modal states to prevent flash

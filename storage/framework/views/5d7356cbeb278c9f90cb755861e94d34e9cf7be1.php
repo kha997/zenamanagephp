@@ -43,10 +43,10 @@
                         id="mfa-adoption-chart" 
                         class="security-chart"
                         aria-label="MFA adoption percentage over time"
-                        x-show="!loading"
+                        x-show="!chartError"
                     ></canvas>
                     <!-- Skeleton -->
-                    <div x-show="loading" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
+                    <div x-show="loading && chartError === null" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
                     <!-- Empty State -->
                     <div x-show="!loading && !chartData?.mfaAdoption?.length" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                         <i class="fas fa-chart-line text-3xl mb-2"></i>
@@ -68,10 +68,10 @@
                         id="successful-logins-chart" 
                         class="security-chart"
                         aria-label="Successful login attempts over time"
-                        x-show="!loading"
+                        x-show="!chartError"
                     ></canvas>
                     <!-- Skeleton -->
-                    <div x-show="loading" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
+                    <div x-show="loading && chartError === null" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
                     <!-- Empty State -->
                     <div x-show="!loading && !chartData?.successfulLogins?.length" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                         <i class="fas fa-chart-line text-3xl mb-2"></i>
@@ -93,10 +93,10 @@
                         id="active-sessions-chart" 
                         class="security-chart"
                         aria-label="Active sessions count over time"
-                        x-show="!loading"
+                        x-show="!chartError"
                     ></canvas>
                     <!-- Skeleton -->
-                    <div x-show="loading" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
+                    <div x-show="loading && chartError === null" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
                     <!-- Empty State -->
                     <div x-show="!loading && !chartData?.activeSessions?.length" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                         <i class="fas fa-chart-line text-3xl mb-2"></i>
@@ -118,10 +118,10 @@
                         id="failed-logins-chart" 
                         class="security-chart"
                         aria-label="Failed login attempts over time"
-                        x-show="!loading"
+                        x-show="!chartError"
                     ></canvas>
                     <!-- Skeleton -->
-                    <div x-show="loading" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
+                    <div x-show="loading && chartError === null" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
                     <!-- Empty State -->
                     <div x-show="!loading && !chartData?.failedLogins?.length" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                         <i class="fas fa-chart-line text-3xl mb-2"></i>

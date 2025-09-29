@@ -200,6 +200,7 @@ document.addEventListener('alpine:init', () => {
         chartData: {},
         chartError: null,
         chartPeriod: '30d',
+        chartsInitialized: false,
 
         // Modals
         showForceMfaModal: false,
@@ -225,29 +226,29 @@ document.addEventListener('alpine:init', () => {
         initCharts() {
             console.log('Security charts initializing...');
             
-            // Wait for Chart.js to be available
-            const waitForChart = () => {
-                if (typeof Chart !== 'undefined') {
-                    this.loadCharts();
-                } else {
-                    setTimeout(waitForChart, 50);
-                }
-            };
-            
-            // Use requestIdleCallback for non-critical initial chart rendering
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(() => {
-                    waitForChart();
-                }, { timeout: 700 });
-            } else {
+            // Immediate DOM check and load
+            this.$nextTick(() => {
+                // Wait for Chart.js to be available
+                const waitForChart = () => {
+                    if (typeof Chart !== 'undefined') {
+                        console.log('Chart.js detected, loading charts...');
+                        this.loadCharts();
+                    } else {
+                        console.log('Chart.js not yet available, retrying...');
+                        setTimeout(waitForChart, 50);
+                    }
+                };
+                
+                // Use shorter timeout for initial load
                 setTimeout(() => {
                     waitForChart();
-                }, 100);
-            }
+                }, 50);
+            });
         },
 
         async loadCharts() {
             this.chartError = null;
+            this.loading = true;
             
             try {
                 const params = new URLSearchParams();
@@ -272,6 +273,8 @@ document.addEventListener('alpine:init', () => {
             } catch (error) {
                 console.error('Chart loading error:', error);
                 this.chartError = error.message;
+            } finally {
+                this.loading = false;
             }
         },
 
@@ -279,13 +282,17 @@ document.addEventListener('alpine:init', () => {
             try {
                 console.log('Rendering charts with data:', this.chartData);
                 
-                // Destroy any existing charts to prevent memory leaks
-                Object.values(this.charts).forEach(chart => {
-                    if (chart && typeof chart.destroy === 'function') {
-                        chart.destroy();
-                    }
-                });
-                this.charts = {};
+                // Ensure DOM is ready
+                this.$nextTick(() => {
+                    console.log('DOM ready, destroying existing charts...');
+                    
+                    // Destroy any existing charts to prevent memory leaks
+                    Object.values(this.charts).forEach(chart => {
+                        if (chart && typeof chart.destroy === 'function') {
+                            chart.destroy();
+                        }
+                    });
+                    this.charts = {};
                 
                 // Base Chart.js options
                 const baseOptions = {
@@ -443,10 +450,14 @@ document.addEventListener('alpine:init', () => {
                     }
                 }
 
-            } catch (error) {
-                console.error('Chart rendering error:', error);
-                this.chartError = 'Failed to render charts. Please try again.';
-            }
+                } catch (error) {
+                    console.error('Chart rendering error:', error);
+                    this.chartError = 'Failed to render charts. Please try again.';
+                }
+                
+                // Mark charts as initialized to prevent flash on subsequent renders
+                this.chartsInitialized = true;
+            });
         },
 
         changePeriod(newPeriod) {

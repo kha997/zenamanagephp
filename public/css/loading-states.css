@@ -1,0 +1,243 @@
+/* Modern Loading States - No Global Overlay */
+
+/* Disable old global loading overlay */
+.page-loading-overlay {
+    display: none !important;
+}
+
+/* Top Progress Bar */
+#nprogress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+#nprogress .bar {
+    position: absolute;
+    top: 0;
+    right: 100%;
+    width: 100%;
+    height: 100%;
+    background: #3B82F6;
+    box-shadow: 0 0 10px #3B82F6, 0 0 5px #3B82F6;
+    border-radius: 0 10px 10px 0;
+    animation: nprogress-pulse 2s ease-in-out infinite;
+}
+
+@keyframes nprogress-pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.8; }
+    100% { opacity: 1; }
+}
+
+#nprogress .spinner {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: nprogress-spinner 1s linear infinite;
+}
+
+@keyframes nprogress-spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Scoped Loading States */
+[data-loading] {
+    opacity: 0.75;
+    transition: opacity 0.12s ease;
+    pointer-events: none;
+}
+
+[data-loading="true"] {
+    position: relative;
+}
+
+[data-loading="true"]::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 100;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Table Loading States */
+.table-loading {
+    position: relative;
+    opacity: 0.6;
+}
+
+.table-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    margin: -12px 0 0 -12px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 100;
+}
+
+/* Card/KPI Loading States */
+.card-loading {
+    opacity: 0.8;
+    position: relative;
+}
+
+.card-loading::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Skeleton Loading - Zero CLS */
+.table-skeleton {
+    min-height: 260px;
+    position: relative;
+}
+
+.card-skeleton {
+    min-height: 220px;
+    position: relative;
+}
+
+.skeleton-pulse {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-row {
+    height: 60px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+}
+
+.skeleton-cell {
+    height: 40px;
+    margin: 10px;
+    border-radius: 6px;
+}
+
+.skeleton-line {
+    height: 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.skeleton-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+/* Modal Backdrop - Only for modals */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+}
+
+.modal-backdrop.fade {
+    transition: opacity 0.15s ease;
+}
+
+.modal-backdrop.fade.show {
+    opacity: 1;
+}
+
+.modal-backdrop.fade.hide {
+    opacity: 0;
+}
+
+/* Chart Loading States - No overlay on charts */
+.chart-loading {
+    opacity: 0.7;
+    position: relative;
+}
+
+.chart-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 10;
+}
+
+/* Focus-friendly loading */
+.loading-focusable {
+    pointer-events: none;
+}
+
+.loading-focusable [data-loading] {
+    visibility: visible;
+}
+
+/* Accessibility */
+[aria-busy="true"] {
+    opacity: 0.9;
+}
+
+[aria-busy="true"]::before {
+    content: 'Loading...';
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #nprogress .spinner {
+        top: 10px;
+        right: 10px;
+        width: 16px;
+        height: 16px;
+    }
+}

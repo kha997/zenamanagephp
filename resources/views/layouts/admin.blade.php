@@ -10,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Core Page Refresh CSS -->
     <link rel="stylesheet" href="{{ asset('css/page-refresh.css') }}">
+    <!-- Loading States CSS -->
+    <link rel="stylesheet" href="{{ asset('css/loading-states.css') }}">
     @stack('styles')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @yield('styles')
@@ -129,14 +131,6 @@
                 </div>
             </div>
         </div>
-        
-    <!-- Loading Overlay -->
-    <div x-show="isLoading" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
-            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span class="text-gray-700">Loading...</span>
-        </div>
-        </div>
     
     @stack('scripts')
     
@@ -250,6 +244,9 @@
     
     <!-- Page Auto-Initialization -->
     <script src="{{ asset('js/core/page-auto-init.js') }}" defer></script>
+    
+    <!-- NProgress for loading bars -->
+    <script src="{{ asset('js/nprogress.js') }}" defer></script>
     
     @stack('scripts')
 </body>

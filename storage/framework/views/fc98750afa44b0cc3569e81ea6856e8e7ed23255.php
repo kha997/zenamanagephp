@@ -248,6 +248,9 @@
     <!-- Page Refresh Manager for CRUD pages -->
     <script src="<?php echo e(asset('js/core/page-refresh-manager.js')); ?>" defer></script>
     
+    <!-- Page Auto-Initialization -->
+    <script src="<?php echo e(asset('js/core/page-auto-init.js')); ?>" defer></script>
+    
     <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 </html>

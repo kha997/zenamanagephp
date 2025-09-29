@@ -150,6 +150,7 @@
             total: 0,
             lastPage: 1,
             isLoading: false,
+            usersLoading: false,
             error: null,
             abortController: null,
             
@@ -227,8 +228,13 @@
                 }
                 
                 this.abortController = new AbortController();
-                this.isLoading = true;
+                this.usersLoading = true;
                 this.error = null;
+                
+                // Start progress bar
+                if (window.NProgress) {
+                    window.NProgress.start();
+                }
                 
                 try {
                     if (this.mockData) {
@@ -260,7 +266,12 @@
                         console.error('Failed to load users:', error);
                     }
                 } finally {
-                    this.isLoading = false;
+                    this.usersLoading = false;
+                    
+                    // Stop progress bar
+                    if (window.NProgress) {
+                        window.NProgress.done();
+                    }
                 }
             },
             

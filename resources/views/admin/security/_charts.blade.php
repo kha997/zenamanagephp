@@ -149,14 +149,23 @@ document.addEventListener('alpine:init', () => {
         init() {
             console.log('Security charts component initialized');
             
+            // Wait for Chart.js to be available
+            const waitForChart = () => {
+                if (typeof Chart !== 'undefined') {
+                    this.loadCharts();
+                } else {
+                    setTimeout(waitForChart, 50);
+                }
+            };
+            
             // Use requestIdleCallback for non-critical initial chart rendering
             if ('requestIdleCallback' in window) {
                 requestIdleCallback(() => {
-                    this.loadCharts();
+                    waitForChart();
                 }, { timeout: 700 });
             } else {
                 setTimeout(() => {
-                    this.loadCharts();
+                    waitForChart();
                 }, 100);
             }
         },
@@ -196,6 +205,14 @@ document.addEventListener('alpine:init', () => {
         renderCharts() {
             try {
                 console.log('Rendering charts with data:', this.chartData);
+                
+                // Destroy any existing charts to prevent memory leaks
+                Object.values(this.charts).forEach(chart => {
+                    if (chart && typeof chart.destroy === 'function') {
+                        chart.destroy();
+                    }
+                });
+                this.charts = {};
                 
                 // Base Chart.js options
                 const baseOptions = {
@@ -246,6 +263,8 @@ document.addEventListener('alpine:init', () => {
                 };
                 
                 // MFA Adoption Chart (Blue)
+                console.log('MFA Chart data:', this.chartData.mfaAdoption);
+                console.log('MFA Chart ref:', this.$refs.mfaChart);
                 if (this.chartData.mfaAdoption && this.$refs.mfaChart) {
                     const chartConfig = {
                         ...baseOptions,
@@ -261,7 +280,8 @@ document.addEventListener('alpine:init', () => {
                         }
                     };
                     
-                    this.charts.mfaAdoption = new Chart(this.$refs.mfaChart, {
+                    try {
+                        this.charts.mfaAdoption = new Chart(this.$refs.mfaChart, {
                         type: 'line',
                         data: {
                             labels: this.chartData.mfaAdoption.map(d => d.date),
@@ -275,11 +295,15 @@ document.addEventListener('alpine:init', () => {
                         },
                         options: chartConfig
                     });
+                    } catch (error) {
+                        console.error('Error creating MFA chart:', error);
+                    }
                 }
                 
                 // Successful Logins Chart (Green)
                 if (this.chartData.successfulLogins && this.$refs.successfulChart) {
-                    this.charts.successfulLogins = new Chart(this.$refs.successfulChart, {
+                    try {
+                        this.charts.successfulLogins = new Chart(this.$refs.successfulChart, {
                         type: 'line',
                         data: {
                             labels: this.chartData.successfulLogins.map(d => d.date),
@@ -293,11 +317,15 @@ document.addEventListener('alpine:init', () => {
                         },
                         options: baseOptions
                     });
+                    } catch (error) {
+                        console.error('Error creating Successful Logins chart:', error);
+                    }
                 }
                 
                 // Active Sessions Chart (Indigo with fill)
                 if (this.chartData.activeSessions && this.$refs.sessionsChart) {
-                    this.charts.activeSessions = new Chart(this.$refs.sessionsChart, {
+                    try {
+                        this.charts.activeSessions = new Chart(this.$refs.sessionsChart, {
                         type: 'line',
                         data: {
                             labels: this.chartData.activeSessions.map(d => d.date),

@@ -149,14 +149,23 @@ document.addEventListener('alpine:init', () => {
         init() {
             console.log('Security charts component initialized');
             
+            // Wait for Chart.js to be available
+            const waitForChart = () => {
+                if (typeof Chart !== 'undefined') {
+                    this.loadCharts();
+                } else {
+                    setTimeout(waitForChart, 50);
+                }
+            };
+            
             // Use requestIdleCallback for non-critical initial chart rendering
             if ('requestIdleCallback' in window) {
                 requestIdleCallback(() => {
-                    this.loadCharts();
+                    waitForChart();
                 }, { timeout: 700 });
             } else {
                 setTimeout(() => {
-                    this.loadCharts();
+                    waitForChart();
                 }, 100);
             }
         },
@@ -196,6 +205,14 @@ document.addEventListener('alpine:init', () => {
         renderCharts() {
             try {
                 console.log('Rendering charts with data:', this.chartData);
+                
+                // Destroy any existing charts to prevent memory leaks
+                Object.values(this.charts).forEach(chart => {
+                    if (chart && typeof chart.destroy === 'function') {
+                        chart.destroy();
+                    }
+                });
+                this.charts = {};
                 
                 // Base Chart.js options
                 const baseOptions = {
@@ -246,6 +263,8 @@ document.addEventListener('alpine:init', () => {
                 };
                 
                 // MFA Adoption Chart (Blue)
+                console.log('MFA Chart data:', this.chartData.mfaAdoption);
+                console.log('MFA Chart ref:', this.$refs.mfaChart);
                 if (this.chartData.mfaAdoption && this.$refs.mfaChart) {
                     const chartConfig = {
                         ...baseOptions,

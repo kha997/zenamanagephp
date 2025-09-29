@@ -55,6 +55,11 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
         
+        // Define super-admin gate
+        \Gate::define('super-admin', function ($user) {
+            return $user->isSuperAdmin();
+        });
+        
         // Temporarily disable Spatie Permission to fix cache issues
         // $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->registerPermissions();
     }

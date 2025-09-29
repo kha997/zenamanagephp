@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasRoles;
 
@@ -29,7 +30,7 @@ use App\Traits\HasRoles;
  */
 class User extends Authenticatable
 {
-    use HasUlids, HasFactory, HasApiTokens, HasRoles;
+    use HasUlids, HasFactory, HasApiTokens, Notifiable, HasRoles;
 
     /**
      * Cấu hình ULID primary key

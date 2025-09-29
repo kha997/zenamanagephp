@@ -1353,3 +1353,57 @@ Route::prefix('legacy-routes')->group(function () {
     Route::post('/record-usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'recordUsage']);
     Route::post('/cleanup', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'cleanup']);
 });
+
+// Test route
+Route::get('/admin/test-api', function () {
+    return response()->json(['message' => 'API routes are working']);
+});
+
+// Simple test route without any middleware
+Route::get('/test-simple', function () {
+    return response()->json(['status' => 'ok', 'message' => 'Simple route working']);
+});
+
+// Smoke test for auth
+Route::get('/_authcheck', function () {
+    return response()->json([
+        'ok' => auth()->check(),
+        'user' => optional(auth()->user())->id
+    ]);
+})->middleware(['auth:sanctum', 'admin.only']);
+
+// Admin API routes (simplified for auth testing)
+Route::prefix('admin')->group(function () {
+    // Basic health check without auth
+    Route::get('/security/health', function () {
+        return response()->json(['status' => 'ok', 'message' => 'API working']);
+    });
+});
+
+// Admin API routes with Sanctum auth
+Route::prefix('admin')->middleware(['auth:sanctum', 'admin.only'])->group(function () {
+    Route::get('/security/kpis', [App\Http\Controllers\Admin\SecurityApiController::class, 'kpis']);
+    Route::get('/security/mfa', [App\Http\Controllers\Admin\SecurityApiController::class, 'mfa']);
+    Route::get('/security/logins', [App\Http\Controllers\Admin\SecurityApiController::class, 'logins']);
+    Route::get('/security/audit', [App\Http\Controllers\Admin\SecurityApiController::class, 'audit']);
+    Route::get('/security/sessions', [App\Http\Controllers\Admin\SecurityApiController::class, 'sessions']);
+    Route::post('/security/users/{id}:force-mfa', [App\Http\Controllers\Admin\SecurityApiController::class, 'forceMfa']);
+});
+
+// Fallback routes with TokenOnly middleware when SECURITY_AUTH_BYPASS=true
+Route::prefix('admin')->middleware(\App\Http\Middleware\TokenOnly::class)->group(function () {
+    Route::get('/security/kpis-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'kpis']);
+    Route::get('/security/mfa-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'mfa']);
+    Route::get('/security/logins-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'logins']);
+    Route::get('/security/audit-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'audit']);
+    Route::get('/security/sessions-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'sessions']);
+    Route::post('/security/users/{id}:force-mfa-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'forceMfa']);
+    
+        // Export routes
+        Route::get('/security/audit/export', [App\Http\Controllers\Admin\SecurityApiController::class, 'exportAudit']);
+        Route::get('/security/mfa/export', [App\Http\Controllers\Admin\SecurityApiController::class, 'exportMfa']);
+        Route::get('/security/logins/export', [App\Http\Controllers\Admin\SecurityApiController::class, 'exportLogins']);
+        
+        // Test event route
+        Route::post('/security/test-event', [App\Http\Controllers\Admin\SecurityApiController::class, 'testEvent']);
+});

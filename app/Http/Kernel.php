@@ -24,12 +24,17 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
-            // Temporarily disabled all web middleware for debugging
+            \App\Http\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \App\Http\Middleware\VerifyCsrfToken::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
 
         'api' => [
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
+            // \Illuminate\Routing\Middleware\SubstituteBindings::class, // Temporarily disabled
+            // \App\Http\Middleware\ErrorEnvelopeMiddleware::class, // Temporarily disabled
         ],
     ];
 
@@ -41,7 +46,7 @@ class Kernel extends HttpKernel
      * @var array<string, class-string|string>
      */
     protected $middlewareAliases = [
-        'auth' => \App\Http\Middleware\Authenticate::class,
+        'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
         'auth.api' => \App\Http\Middleware\ApiAuthenticationMiddleware::class,
         'auth.session' => \App\Http\Middleware\SessionManagementMiddleware::class,
         'admin.only' => \App\Http\Middleware\AdminOnly::class,
@@ -52,12 +57,14 @@ class Kernel extends HttpKernel
         'api.cache' => \App\Http\Middleware\ApiResponseCacheMiddleware::class,
         'debug.gate' => \App\Http\Middleware\DebugGateMiddleware::class,
         'cors' => \App\Http\Middleware\CorsMiddleware::class,
+        'token.only' => \App\Http\Middleware\TokenOnly::class,
         'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
         'input.sanitization' => \App\Http\Middleware\InputSanitizationMiddleware::class,
         'error.envelope' => \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
         'legacy.route' => \App\Http\Middleware\LegacyRouteMiddleware::class,
         'legacy.redirect' => \App\Http\Middleware\LegacyRedirectMiddleware::class,
         'legacy.gone' => \App\Http\Middleware\LegacyGoneMiddleware::class,
+        'auth.conditional' => \App\Http\Middleware\ConditionalAuthMiddleware::class,
     ];
     
     /**

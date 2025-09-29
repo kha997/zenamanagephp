@@ -98,7 +98,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -121,7 +133,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -143,7 +167,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -165,7 +201,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -187,7 +235,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -209,7 +269,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -232,7 +304,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -254,7 +338,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -276,7 +372,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -301,7 +409,19 @@ class UsersApiService {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid parameters';
+                    const details = errorData.error?.details;
+                    throw new Error(details ? `${message}: ${details}` : message);
+                }
+                
+                const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
 
@@ -341,6 +461,18 @@ class UsersApiService {
                     const retryAfter = response.headers.get('Retry-After');
                     throw new Error(`Rate limit exceeded. Please try again in ${retryAfter} seconds.`);
                 }
+                
+                // Handle 404/422 with friendly messages
+                if (response.status === 404) {
+                    throw new Error('Export endpoint not found. Please contact support.');
+                }
+                
+                if (response.status === 422) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const message = errorData.error?.message || 'Invalid export parameters';
+                    throw new Error(`Export failed: ${message}`);
+                }
+                
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 

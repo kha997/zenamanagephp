@@ -20,6 +20,7 @@
         <nav class="p-3 space-y-1">
             <!-- Dashboard -->
             <a href="/admin/dashboard" 
+               data-soft-refresh="dashboard"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/dashboard') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Dashboard' : ''"
                :aria-label="sidebarCollapsed ? 'Dashboard' : ''">
@@ -29,6 +30,7 @@
             
             <!-- Tenants -->
             <a href="/admin/tenants" 
+               data-soft-refresh="tenants"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/tenants*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Tenants' : ''"
                :aria-label="sidebarCollapsed ? 'Tenants' : ''">
@@ -38,6 +40,7 @@
             
             <!-- Users -->
             <a href="/admin/users" 
+               data-soft-refresh="users"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/users*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Users' : ''"
                :aria-label="sidebarCollapsed ? 'Users' : ''">
@@ -47,15 +50,17 @@
             
             <!-- Security -->
             <a href="/admin/security" 
+               data-soft-refresh="security"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/security*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Security' : ''"
                :aria-label="sidebarCollapsed ? 'Security' : ''">
-                <i class="fas fa-shield-alt mr-3 w-5 flex-shrink-0"></i>
-                <span x-show="!sidebarCollapsed" class="truncate">Security</span>
+               <i class="fas fa-shield-alt mr-3 w-5 flex-shrink-0"></i>
+               <span x-show="!sidebarCollapsed" class="truncate">Security</span>
             </a>
             
             <!-- Settings -->
             <a href="/admin/settings" 
+               data-soft-refresh="settings"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/settings*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Settings' : ''"
                :aria-label="sidebarCollapsed ? 'Settings' : ''">
@@ -65,6 +70,7 @@
             
             <!-- Billing -->
             <a href="/admin/billing" 
+               data-soft-refresh="billing"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/billing*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Billing' : ''"
                :aria-label="sidebarCollapsed ? 'Billing' : ''">
@@ -74,6 +80,7 @@
             
             <!-- Maintenance -->
             <a href="/admin/maintenance" 
+               data-soft-refresh="maintenance"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/maintenance*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Maintenance' : ''"
                :aria-label="sidebarCollapsed ? 'Maintenance' : ''">
@@ -83,6 +90,7 @@
             
             <!-- Alerts -->
             <a href="/admin/alerts" 
+               data-soft-refresh="alerts"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/alerts*') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Alerts' : ''"
                :aria-label="sidebarCollapsed ? 'Alerts' : ''">

@@ -8,7 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Core Page Refresh CSS -->
+    <link rel="stylesheet" href="{{ asset('css/page-refresh.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @yield('styles')
 </head>
 <body class="bg-gray-50" x-data="{ 
     sidebarCollapsed: false,
@@ -135,5 +138,107 @@
         </div>
     
     @stack('scripts')
+    
+    <!-- Global Soft Refresh Orchestrator -->
+    <script type="module">
+        import { installSoftRefresh } from '/js/core/soft-refresh.js';
+        
+        // Install soft refresh for all admin pages
+        const softRefreshConfigs = [
+            { 
+                linkSelector: '[data-soft-refresh="dashboard"]', 
+                route: '/admin/dashboard', 
+                refreshFn: () => window.Dashboard?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="tenants"]', 
+                route: '/admin/tenants', 
+                refreshFn: () => window.Tenants?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="users"]', 
+                route: '/admin/users', 
+                refreshFn: () => window.Users?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="security"]', 
+                route: '/admin/security', 
+                refreshFn: () => window.Security?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="settings"]', 
+                route: '/admin/settings', 
+                refreshFn: () => window.Settings?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="billing"]', 
+                route: '/admin/billing', 
+                refreshFn: () => window.Billing?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="maintenance"]', 
+                route: '/admin/maintenance', 
+                refreshFn: () => window.Maintenance?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="alerts"]', 
+                route: '/admin/alerts', 
+                refreshFn: () => window.Alerts?.refresh() 
+            }
+        ];
+        
+        // Install all soft refresh handlers
+        softRefreshConfigs.forEach(config => {
+            try {
+                installSoftRefresh(config);
+            } catch (error) {
+                console.error(`Failed to install soft refresh for ${config.route}:`, error);
+            }
+        });
+        
+        // Global refresh state management
+        window.AdminRefresh = window.AdminRefresh || {
+            // Track active refreshes globally
+            activeRefreshes: new Set(),
+            
+            // Show loading state
+            setLoading: (isLoading) => {
+                document.body.classList.toggle('page-reloading', isLoading);
+                
+                // Update aria-busy for accessibility
+                const main = document.querySelector('main');
+                if (main) {
+                    main.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+                }
+                
+                if (isLoading) {
+                    // Track active refresh with timestamp
+                    const id = Date.now();
+                    this.activeRefreshes.add(id);
+                    
+                    // Auto-cleanup after 10 seconds
+                    setTimeout(() => {
+                        this.activeRefreshes.delete(id);
+                        // If no more active refreshes, ensure loading state is off
+                        if (this.activeRefreshes.size === 0) {
+                            document.body.classList.remove('page-reloading');
+                            if (main) main.setAttribute('aria-busy', 'false');
+                        }
+                    }, 10000);
+                }
+            },
+            
+            // Get global refresh health
+            getHealth: () => {
+                return {
+                    activeRefreshes: this.activeRefreshes.size,
+                    timestamp: new Date().toISOString(),
+                    debugMode: window.SoftRefresh?.debug || false
+                };
+            }
+        };
+        
+        console.log('🎯 Global soft refresh orchestrator loaded');
+    </script>
 </body>
 </html>

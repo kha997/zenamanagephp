@@ -238,22 +238,8 @@
                         this.total = this.users.length;
                         this.lastPage = Math.ceil(this.total / this.perPage);
                     } else {
-                        // Real API call using service layer
-                        const params = {
-                            q: this.searchQuery,
-                            tenant: this.tenantFilter,
-                            role: this.roleFilter,
-                            status: this.statusFilter,
-                            mfa: this.mfaFilter,
-                            activeWithin: this.activeWithinFilter,
-                            lastLoginFrom: this.lastLoginFrom,
-                            lastLoginTo: this.lastLoginTo,
-                            createdFrom: this.createdFrom,
-                            createdTo: this.createdTo,
-                            sort: this.sortOrder === 'desc' ? `-${this.sortBy}` : this.sortBy,
-                            page: this.page,
-                            per_page: this.perPage
-                        };
+                        // Real API call using service layer - map camelCase to snake_case
+                        const params = this.buildApiParams();
                         
                         if (!window.usersApi) {
                             console.error('window.usersApi is not available, falling back to mock data');
@@ -276,6 +262,36 @@
                 } finally {
                     this.isLoading = false;
                 }
+            },
+            
+            // Build API params with snake_case mapping and sanitization
+            buildApiParams() {
+                const params = {};
+                
+                // Map camelCase to snake_case and sanitize
+                if (this.searchQuery) params.q = this.searchQuery;
+                if (this.tenantFilter) params.tenant = this.tenantFilter;
+                if (this.roleFilter) params.role = this.roleFilter;
+                if (this.statusFilter) params.status = this.statusFilter;
+                if (this.mfaFilter) params.mfa = this.mfaFilter;
+                if (this.activeWithinFilter) params.active_within = this.activeWithinFilter;
+                if (this.lastLoginFrom) params.last_login_from = this.lastLoginFrom;
+                if (this.lastLoginTo) params.last_login_to = this.lastLoginTo;
+                if (this.createdFrom) params.created_from = this.createdFrom;
+                if (this.createdTo) params.created_to = this.createdTo;
+                
+                // Sort field mapping
+                let sortField = this.sortBy;
+                if (sortField === 'lastLoginAt') sortField = 'last_login_at';
+                if (sortField === 'createdAt') sortField = 'created_at';
+                if (sortField === 'tenantName') sortField = 'tenant';
+                if (sortField === 'mfaEnabled') sortField = 'mfa';
+                
+                params.sort = this.sortOrder === 'desc' ? `-${sortField}` : sortField;
+                params.page = this.page;
+                params.per_page = this.perPage;
+                
+                return params;
             },
             
             // Search and filters
@@ -699,19 +715,9 @@
             // Export
             async exportUsers() {
                 try {
-                    const params = {
-                        q: this.searchQuery,
-                        tenant: this.tenantFilter,
-                        role: this.roleFilter,
-                        status: this.statusFilter,
-                        mfa: this.mfaFilter,
-                        activeWithin: this.activeWithinFilter,
-                        lastLoginFrom: this.lastLoginFrom,
-                        lastLoginTo: this.lastLoginTo,
-                        createdFrom: this.createdFrom,
-                        createdTo: this.createdTo,
-                        sort: this.sortOrder === 'desc' ? `-${this.sortBy}` : this.sortBy
-                    };
+                    const params = this.buildApiParams();
+                    delete params.page;
+                    delete params.per_page;
                     
                     if (this.mockData) {
                         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -730,12 +736,12 @@
             
             // KPI drill-down
             drillDownTotal() {
-                window.location.href = '/admin/users?sort=-createdAt';
+                window.location.href = '/admin/users?sort=-created_at';
                 this.logEvent('kpi_drilldown', { kpi: 'total', target: 'users_list' });
             },
             
             drillDownActive() {
-                window.location.href = '/admin/users?status=active&activeWithin=7d&sort=-lastLoginAt';
+                window.location.href = '/admin/users?status=active&active_within=7d&sort=-last_login_at';
                 this.logEvent('kpi_drilldown', { kpi: 'active', target: 'users_list' });
             },
             

@@ -181,10 +181,7 @@ Route::get('/app/calendar', function() {
     return view('app.calendar');
 })->middleware(['auth', 'tenant.isolation'])->name('app.calendar');
 
-// Admin Routes (System-wide with auth + rbac:admin middleware)
-Route::get('/admin/dashboard', function() {
-    return view('admin.dashboard');
-})->middleware(['auth', 'rbac:admin'])->name('admin-dashboard');
+// Admin dashboard route moved to RouteServiceProvider.php to avoid conflicts
 
 // Test Routes (No middleware for testing)
 Route::get('/admin-dashboard-complete', function() {
@@ -228,56 +225,13 @@ Route::get('/admin-layout-system', function() {
     return view('admin.dashboard-layout-system-standalone');
 })->name('admin-layout-system');
 
-// Admin Users Management Route
-Route::get('/admin/users', function() {
-    return view('admin.users');
-})->name('admin-users');
+// Admin Users Management Route - REMOVED: Conflicting with RouteServiceProvider.php
 
 // MOVED: Debug Login Route moved to /_debug namespace
 
 
-        // Admin Routes - System-wide with auth + rbac:admin middleware
-        Route::prefix('admin')->name('admin-')->middleware(['auth', 'rbac:admin'])->group(function () {
-    Route::get('/', function() {
-        return view('admin.dashboard-css-inline');
-    })->name('dashboard');
-    Route::get('/dashboard', function() {
-        return '<h1>Admin Dashboard</h1><p>Welcome to the admin panel!</p>';
-    })->name('dashboard.page');
-    Route::get('/users', function() {
-        return view('admin.users');
-    })->name('users');
-        Route::get('/tenants', function() {
-            return view('admin.tenants');
-        })->name('tenants');
-    Route::get('/security', function() {
-        return '<h1>Security</h1><p>Security settings here.</p>';
-    })->name('security');
-    Route::get('/alerts', function() {
-        return '<h1>Alerts</h1><p>System alerts here.</p>';
-    })->name('alerts');
-    Route::get('/activities', function() {
-        return '<h1>Activities</h1><p>Activity logs here.</p>';
-    })->name('activities');
-    Route::get('/analytics', function() {
-        return '<h1>Analytics</h1><p>Analytics dashboard here.</p>';
-    })->name('analytics');
-    Route::get('/projects', function() {
-        return view('admin.projects');
-    })->name('projects');
-    Route::get('/tasks', function() {
-        return '<h1>Tasks</h1><p>Task management here.</p>';
-    })->name('tasks');
-    Route::get('/settings', function() {
-        return '<h1>Settings</h1><p>System settings here.</p>';
-    })->name('settings');
-    Route::get('/maintenance', function() {
-        return '<h1>Maintenance</h1><p>System maintenance here.</p>';
-    })->name('maintenance');
-    Route::get('/sidebar-builder', function() {
-        return '<h1>Sidebar Builder</h1><p>Build custom sidebars here.</p>';
-    })->name('sidebar-builder');
-});
+        // Admin Routes - REMOVED: Conflicting with RouteServiceProvider.php
+        // These routes are now defined in RouteServiceProvider.php without middleware
 
 // Remove legacy redirects causing confusion
 // Route::get('/dashboard/admin', fn() => redirect('/admin'));

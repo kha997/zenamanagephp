@@ -30,6 +30,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Security Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for security-related features
+    |
+    */
+
+    'security_auth_bypass' => env('SECURITY_AUTH_BYPASS', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Debug Mode
     |--------------------------------------------------------------------------
     |
@@ -174,26 +185,26 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        App\Providers\CustomServiceProvider::class,
+        // App\Providers\CustomServiceProvider::class, // Temporarily disabled
         
         /*
          * Z.E.N.A Custom Service Providers
          */
-        App\Foundation\Providers\EventServiceProvider::class,
+        // App\Foundation\Providers\EventServiceProvider::class, // Temporarily disabled
         // ... Z.E.N.A Event System
-        Src\Foundation\Providers\EventBusServiceProvider::class,
+        // Src\Foundation\Providers\EventBusServiceProvider::class, // Temporarily disabled
         
         /*
-         * Custom Module Service Providers...
+         * Custom Module Service Providers... (All temporarily disabled)
          */
-        Src\CoreProject\Providers\CoreProjectServiceProvider::class,
-        Src\Notification\Providers\NotificationServiceProvider::class,
-        Src\RBAC\Providers\RBACServiceProvider::class,
-        Src\WorkTemplate\Providers\WorkTemplateServiceProvider::class,
-        Src\Compensation\Providers\CompensationServiceProvider::class,
-        Src\InteractionLogs\Providers\InteractionLogServiceProvider::class,
-        Src\ChangeRequest\Providers\ChangeRequestServiceProvider::class,
-        Src\DocumentManagement\Providers\DocumentManagementServiceProvider::class, // Thêm dòng này
+        // Src\CoreProject\Providers\CoreProjectServiceProvider::class,
+        // Src\Notification\Providers\NotificationServiceProvider::class,
+        // Src\RBAC\Providers\RBACServiceProvider::class,
+        // Src\WorkTemplate\Providers\WorkTemplateServiceProvider::class,
+        // Src\Compensation\Providers\CompensationServiceProvider::class,
+        // Src\InteractionLogs\Providers\InteractionLogServiceProvider::class,
+        // Src\ChangeRequest\Providers\ChangeRequestServiceProvider::class,
+        // Src\DocumentManagement\Providers\DocumentManagementServiceProvider::class,
         // Thêm các service providers khác của modules ở đây
 
     ],

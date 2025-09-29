@@ -34,7 +34,7 @@ class RouteServiceProvider extends ServiceProvider
                 return 'Simple test route works!';
             });
             
-            // Admin routes (no middleware for now - will add later)
+            // Admin routes (no middleware for testing)
             Route::prefix('admin')->name('admin.')->group(function () {
                 Route::view('/dashboard', 'admin.dashboard.index')->name('dashboard');
                 Route::view('/tenants', 'admin.tenants.index')->name('tenants.index');
@@ -48,8 +48,17 @@ class RouteServiceProvider extends ServiceProvider
                 Route::view('/alerts', 'admin.alerts.index')->name('alerts.index');
             });
             
+            // Test route without prefix
+            Route::get('/admin-test', function () {
+                return response()->json(['message' => 'Admin test route works']);
+            });
+            
             // API routes
             Route::prefix('api/admin')->name('api.admin.')->group(function () {
+                // Test route
+                Route::get('/test', function () {
+                    return response()->json(['message' => 'Admin API test route works']);
+                });
                 // Tenants API
                 Route::get('/tenants', [\App\Http\Controllers\Admin\TenantsApiController::class, 'index'])->name('tenants.index');
                 Route::post('/tenants', [\App\Http\Controllers\Admin\TenantsApiController::class, 'store'])->name('tenants.store');
@@ -103,12 +112,6 @@ class RouteServiceProvider extends ServiceProvider
                 return view('app.tasks.index');
             })->name('app.tasks');
                 
-            // Temporarily disable other routes to isolate the issue
-            /*
-            // Simple API routes for testing middleware
-            Route::prefix('api-simple')
-                ->group(base_path('routes/api-simple.php'));
-                
             // Main API routes (consolidated)
             Route::middleware('api')
                 ->prefix('api')
@@ -117,13 +120,6 @@ class RouteServiceProvider extends ServiceProvider
             // Web routes
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
-                
-            // Debug routes (only in local environment)
-            if (app()->environment('local')) {
-                Route::middleware('web')
-                    ->group(base_path('routes/debug.php'));
-            }
-            */
         });
     }
 

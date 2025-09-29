@@ -16,19 +16,19 @@ class UsersApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // Validate request parameters
+        // Validate request parameters with snake_case
         $validated = $request->validate([
             'q' => 'nullable|string|max:255',
             'tenant' => 'nullable|string',
             'role' => 'nullable|string|in:SuperAdmin,TenantAdmin,PM,Staff,Viewer',
-            'status' => 'nullable|string|in:active,disabled,locked,invited',
+            'status' => 'nullable|string', // Allow comma-separated values
             'mfa' => 'nullable|string|in:true,false',
-            'activeWithin' => 'nullable|string|in:7d,30d,90d',
-            'lastLoginFrom' => 'nullable|date',
-            'lastLoginTo' => 'nullable|date',
-            'createdFrom' => 'nullable|date',
-            'createdTo' => 'nullable|date',
-            'sort' => 'nullable|string|in:name,tenantName,role,status,mfaEnabled,lastLoginAt,createdAt,-name,-tenantName,-role,-status,-mfaEnabled,-lastLoginAt,-createdAt',
+            'active_within' => 'nullable|string|in:7d,30d,90d',
+            'last_login_from' => 'nullable|date',
+            'last_login_to' => 'nullable|date',
+            'created_from' => 'nullable|date',
+            'created_to' => 'nullable|date',
+            'sort' => 'nullable|string|in:name,tenant,role,status,mfa,last_login_at,created_at,-name,-tenant,-role,-status,-mfa,-last_login_at,-created_at',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100'
         ]);
@@ -99,30 +99,35 @@ class UsersApiController extends Controller
     }
 
     /**
-     * Create a new user
+     * Create a new user (invite)
      */
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
-            'tenantId' => 'required|string',
-            'role' => 'required|string|in:SuperAdmin,TenantAdmin,PM,Staff,Viewer'
+            'tenant' => 'required|string|max:255',
+            'role' => 'required|string|in:super_admin,pm,member,client'
         ]);
 
-        // Mock creation
+        // Mock creation with status=invited
         $newUser = [
-            'id' => (string) (count($this->getMockUsers()) + 1),
-            'name' => $validated['name'],
+            'id' => 'user_' . uniqid(),
+            'name' => 'Pending Invite',
             'email' => $validated['email'],
-            'tenantId' => $validated['tenantId'],
-            'tenantName' => $this->getTenantName($validated['tenantId']),
+            'tenantName' => $validated['tenant'],
             'role' => $validated['role'],
             'status' => 'invited',
             'mfaEnabled' => false,
             'lastLoginAt' => null,
             'createdAt' => now()->toISOString()
         ];
+
+        // TODO: Send invitation email
+        \Log::info('User invitation sent', [
+            'email' => $validated['email'],
+            'tenant' => $validated['tenant'],
+            'role' => $validated['role']
+        ]);
 
         return response()->json([
             'data' => $newUser
@@ -376,18 +381,18 @@ class UsersApiController extends Controller
 
         Cache::put($key, $attempts + 1, 600); // 10 minutes
 
-        // Get filtered users
+        // Get filtered users with snake_case params
         $validated = $request->validate([
             'q' => 'nullable|string|max:255',
             'tenant' => 'nullable|string',
             'role' => 'nullable|string',
             'status' => 'nullable|string',
             'mfa' => 'nullable|string',
-            'activeWithin' => 'nullable|string',
-            'lastLoginFrom' => 'nullable|date',
-            'lastLoginTo' => 'nullable|date',
-            'createdFrom' => 'nullable|date',
-            'createdTo' => 'nullable|date',
+            'active_within' => 'nullable|string',
+            'last_login_from' => 'nullable|date',
+            'last_login_to' => 'nullable|date',
+            'created_from' => 'nullable|date',
+            'created_to' => 'nullable|date',
             'sort' => 'nullable|string'
         ]);
 
@@ -517,9 +522,10 @@ class UsersApiController extends Controller
                 }
             }
 
-            // Status filter
+            // Status filter - support comma-separated values
             if (isset($filters['status']) && $filters['status']) {
-                if ($user['status'] !== $filters['status']) {
+                $statuses = array_map('trim', explode(',', $filters['status']));
+                if (!in_array($user['status'], $statuses)) {
                     return false;
                 }
             }
@@ -533,8 +539,8 @@ class UsersApiController extends Controller
             }
 
             // Active within filter
-            if (isset($filters['activeWithin']) && $filters['activeWithin']) {
-                $days = (int) str_replace('d', '', $filters['activeWithin']);
+            if (isset($filters['active_within']) && $filters['active_within']) {
+                $days = (int) str_replace('d', '', $filters['active_within']);
                 $cutoff = now()->subDays($days);
                 if (!$user['lastLoginAt'] || strtotime($user['lastLoginAt']) < $cutoff->timestamp) {
                     return false;
@@ -542,27 +548,27 @@ class UsersApiController extends Controller
             }
 
             // Last login date range
-            if (isset($filters['lastLoginFrom']) && $filters['lastLoginFrom']) {
-                if (!$user['lastLoginAt'] || strtotime($user['lastLoginAt']) < strtotime($filters['lastLoginFrom'])) {
+            if (isset($filters['last_login_from']) && $filters['last_login_from']) {
+                if (!$user['lastLoginAt'] || strtotime($user['lastLoginAt']) < strtotime($filters['last_login_from'])) {
                     return false;
                 }
             }
 
-            if (isset($filters['lastLoginTo']) && $filters['lastLoginTo']) {
-                if (!$user['lastLoginAt'] || strtotime($user['lastLoginAt']) > strtotime($filters['lastLoginTo'])) {
+            if (isset($filters['last_login_to']) && $filters['last_login_to']) {
+                if (!$user['lastLoginAt'] || strtotime($user['lastLoginAt']) > strtotime($filters['last_login_to'])) {
                     return false;
                 }
             }
 
             // Created date range
-            if (isset($filters['createdFrom']) && $filters['createdFrom']) {
-                if (strtotime($user['createdAt']) < strtotime($filters['createdFrom'])) {
+            if (isset($filters['created_from']) && $filters['created_from']) {
+                if (strtotime($user['createdAt']) < strtotime($filters['created_from'])) {
                     return false;
                 }
             }
 
-            if (isset($filters['createdTo']) && $filters['createdTo']) {
-                if (strtotime($user['createdAt']) > strtotime($filters['createdTo'])) {
+            if (isset($filters['created_to']) && $filters['created_to']) {
+                if (strtotime($user['createdAt']) > strtotime($filters['created_to'])) {
                     return false;
                 }
             }
@@ -579,9 +585,19 @@ class UsersApiController extends Controller
         $sortField = ltrim($sort, '-');
         $sortOrder = str_starts_with($sort, '-') ? 'desc' : 'asc';
 
-        usort($users, function ($a, $b) use ($sortField, $sortOrder) {
-            $aValue = $a[$sortField] ?? '';
-            $bValue = $b[$sortField] ?? '';
+        // Map snake_case sort fields to camelCase user fields
+        $fieldMapping = [
+            'last_login_at' => 'lastLoginAt',
+            'created_at' => 'createdAt',
+            'tenant' => 'tenantName',
+            'mfa' => 'mfaEnabled'
+        ];
+
+        $actualField = $fieldMapping[$sortField] ?? $sortField;
+
+        usort($users, function ($a, $b) use ($actualField, $sortOrder) {
+            $aValue = $a[$actualField] ?? '';
+            $bValue = $b[$actualField] ?? '';
 
             if (is_string($aValue)) {
                 $aValue = strtolower($aValue);

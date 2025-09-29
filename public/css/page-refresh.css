@@ -1,0 +1,244 @@
+/**
+ * Universal Page Refresh Styles
+ * Shared CSS for soft refresh functionality across admin pages
+ */
+
+/* Soft reloading state - subtle dimming */
+body.page-reloading .card:not(.no-dim-during-refresh),
+body.page-reloading .panel:not(.no-dim-during-refresh),
+body.page-reloading .chart-box,
+body.page-reloading .chart,
+body.page-reloading .table:not(.no-dim-during-refresh),
+body.page-reloading [data-refreshable="true"] {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+/* Disable dimming for specific elements */
+body.page-reloading .navigation,
+body.page-reloading .sidebar,
+body.page-reloading .main-header,
+body.page-reloading .breadcrumb {
+    opacity: 1 !important;
+}
+
+/* Anti-CLS: fixed chart heights */
+.chart-box {
+    min-height: 280px;
+    position: relative;
+    transition: opacity 0.15s ease;
+}
+
+.chart-box.no-data {
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6B7280;
+    font-size: 14px;
+}
+
+/* Smooth chart transitions */
+.chart {
+    transition: opacity 0.15s ease;
+}
+
+.chart-updating {
+    opacity: 0.8;
+}
+
+/* Content visibility optimization for below-fold sections */
+.below-fold {
+    content-visibility: auto;
+    contain-intrinsic-size: 800px;
+}
+
+/* Table optimization - prevent height jumping */
+.table-container {
+    min-height: 400px;
+    transition: opacity 0.2s ease;
+}
+
+.table-skeleton {
+    opacity: 0.6;
+    transition: opacity 0.3s ease;
+}
+
+/* Refresh indicator (subtle progress) */
+.refresh-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+    transform-origin: left;
+    animation: refresh-pulse 1s ease-in-out infinite;
+    z-index: 9999;
+    opacity: 0.8;
+}
+
+@keyframes refresh-pulse {
+    0% { 
+        transform: scaleX(0); 
+        opacity: 0; 
+    }
+    50% { 
+        transform: scaleX(0.5); 
+        opacity: 0.8; 
+    }
+    100% { 
+        transform: scaleX(1); 
+        opacity: 0.6; 
+    }
+}
+
+/* Cache status indicator for debugging */
+.cache-indicator {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: monospace;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.cache-indicator.show {
+    opacity: 1;
+}
+
+.cache-indicator.from-cache {
+    background: rgba(34, 197, 94, 0.8);
+}
+
+.cache-indicator.from-network {
+    background: rgba(59, 130, 246, 0.8);
+}
+
+.cache-indicator.error {
+    background: rgba(239, 68, 68, 0.8);
+}
+
+/* Loading states */
+.data-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.data-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 100;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* List/KPI optimizations */
+.kpi-refreshing .card {
+    opacity: 0.8;
+}
+
+.list-refreshing .table-row {
+    opacity: 0.7;
+}
+
+.panel-refreshing .panel-content {
+    opacity: 0.75;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chart-box {
+        min-height: 200px;
+    }
+    
+    .below-fold {
+        contain-intrinsic-size: 400px;
+    }
+    
+    .table-container {
+        min-height: 300px;
+    }
+    
+    .cache-indicator {
+        bottom: 60px; /* Above mobile navigation */
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    body.page-reloading .card:not(.no-dim-during-refresh),
+    body.page-reloading .panel:not(.no-dim-during-refresh),
+    body.page-reloading .chart-box,
+    body.page-reloading .table:not(.no-dim-during-refresh) {
+        opacity: 0.8;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    body.page-reloading .card:not(.no-dim-during-refresh),
+    body.page-reloading .panel:not(.no-dim-during-refresh),
+    body.page-reloading .chart-box,
+    body.page-reloading .table:not(.no-dim-during-refresh) {
+        transition: none;
+        opacity: 0.9;
+    }
+    
+    .chart {
+        transition: none;
+    }
+    
+    .refresh-progress {
+        animation: none;
+        opacity: 0.7;
+    }
+    
+    @keyframes refresh-pulse {
+        0%, 100% { 
+            opacity: 0.7; 
+        }
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .cache-indicator {
+        background: rgba(255, 255, 255, 0.9);
+        color: rgba(0, 0, 0, 0.9);
+    }
+    
+    .cache-indicator.from-cache {
+        background: rgba(34, 197, 94, 0.9);
+        color: white;
+    }
+    
+    .cache-indicator.from-network {
+        background: rgba(59, 130, 246, 0.9);
+        color: white;
+    }
+    
+    .cache-indicator.error {
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+    }
+}

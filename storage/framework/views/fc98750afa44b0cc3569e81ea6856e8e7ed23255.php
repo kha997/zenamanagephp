@@ -30,7 +30,7 @@
         this.sidebarCollapsed = JSON.parse(saved);
     }
     console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
-">
+" x-cloak>
     <!-- Topbar -->
     <?php echo $__env->make('layouts.partials._topbar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     
@@ -138,6 +138,9 @@
     </template>
         
     <?php echo $__env->yieldPushContent('scripts'); ?>
+    
+    <!-- Admin Global Alpine State -->
+    <script src="<?php echo e(asset('js/admin-global-state.js')); ?>" defer></script>
     
     <!-- Global Soft Refresh Orchestrator -->
     <script type="module">

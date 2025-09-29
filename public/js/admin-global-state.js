@@ -35,6 +35,7 @@ document.addEventListener('alpine:init', () => {
             if (saved !== null) {
                 this.sidebarCollapsed = JSON.parse(saved);
             }
+            console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
 
             // Load notifications (mock data)
             this.loadNotifications();

@@ -24,7 +24,13 @@
         this.sidebarCollapsed = !this.sidebarCollapsed; 
         localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed);
     }
-}, x-cloak: ''">
+}" x-init="
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved !== null) {
+        this.sidebarCollapsed = JSON.parse(saved);
+    }
+    console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
+" x-cloak>
     <!-- Topbar -->
     @include('layouts.partials._topbar')
     

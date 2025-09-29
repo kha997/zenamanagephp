@@ -19,16 +19,112 @@
     <?php echo $__env->yieldContent('styles'); ?>
 </head>
 <body class="bg-gray-50" x-data="{ 
+    // Sidebar State
     sidebarCollapsed: false,
     toggleSidebar() { 
         this.sidebarCollapsed = !this.sidebarCollapsed; 
         localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed);
+    },
+    
+    // Global Search State
+    globalSearchQuery: '',
+    showGlobalSearchResults: false,
+    globalSearchResults: {
+        tenants: [],
+        users: [],
+        errors: []
+    },
+    
+    async search(query) {
+        if (!query || query.length < 2) {
+            this.showGlobalSearchResults = false;
+            return;
+        }
+        this.globalSearchQuery = query;
+        
+        // Mock search results
+        this.globalSearchResults = {
+            tenants: [{ id: 1, name: 'Demo Tenant', domain: 'demo.example.com' }],
+            users: [{ id: 1, name: 'Demo User', email: 'demo@example.com' }],
+            errors: [{ id: 1, message: 'Demo Error', timestamp: new Date().toISOString() }]
+        };
+        this.showGlobalSearchResults = true;
+    },
+    
+    clearGlobalSearch() {
+        this.globalSearchQuery = '';
+        this.showGlobalSearchResults = false;
+        this.globalSearchResults = { tenants: [], users: [], errors: [] };
+    },
+
+    // Notification State
+    unreadNotifications: 2,
+    showNotifications: false,
+    notifications: [
+        { id: 1, title: 'New tenant registered', message: 'TechCorp has registered', read: false },
+        { id: 2, title: 'System maintenance', message: 'Scheduled tonight', read: false }
+    ],
+
+    loadNotifications() {
+        this.unreadNotifications = this.notifications.filter(n => !n.read).length;
+    },
+
+    markAllNotificationsRead() {
+        this.notifications.forEach(n => n.read = true);
+        this.unreadNotifications = 0;
+    },
+
+    toggleNotifications() {
+        this.showNotifications = !this.showNotifications;
+    },
+
+    // User Menu State
+    showUserMenu: false,
+    toggleUserMenu() {
+        this.showUserMenu = !this.showUserMenu;
+    },
+
+    // Mobile Menu State
+    showMobileMenu: false,
+    toggleMobileMenu() {
+        this.showMobileMenu = !this.showMobileMenu;
+    },
+
+    // Global Modal State
+    showModal: false,
+    modalTitle: '',
+    modalContent: '',
+    modalAction: null,
+
+    closeModal() {
+        this.showModal = false;
+        this.modalTitle = '';
+        this.modalContent = '';
+        this.modalAction = null;
+    },
+
+    openModal(title, content, action = null) {
+        this.modalTitle = title;
+        this.modalContent = content;
+        this.modalAction = action;
+        this.showModal = true;
+    },
+
+    executeModalAction() {
+        if (this.modalAction && typeof this.modalAction === 'function') {
+            this.modalAction();
+        }
+        this.closeModal();
     }
 }" x-init="
     const saved = localStorage.getItem('sidebarCollapsed');
     if (saved !== null) {
         this.sidebarCollapsed = JSON.parse(saved);
     }
+    
+    // Initialize notifications count
+    this.unreadNotifications = 2;
+    
     console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
 " x-cloak>
     <!-- Topbar -->
@@ -122,7 +218,7 @@
                         <button @click="closeModal" class="text-gray-400 hover:text-gray-600" aria-label="Close modal">
                             <i class="fas fa-times"></i>
                         </button>
-                    </div>
+        </div>
                     <div x-html="modalContent"></div>
                     <div class="flex justify-end space-x-3 mt-6">
                         <button @click="closeModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">
@@ -131,9 +227,9 @@
                         <button @click="executeModalAction" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
                             Confirm
                         </button>
-                    </div>
-                </div>
-            </div>
+        </div>
+        </div>
+        </div>
         </div>
     </template>
         

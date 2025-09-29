@@ -871,4 +871,7 @@
     }
 </script>
 <?php $__env->stopPush(); ?>
+
+<!-- Users Page Module -->
+<script src="<?php echo e(asset('js/pages/users.js')); ?>" defer></script>
 <?php echo $__env->make('layouts.admin', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/admin/users/index.blade.php ENDPATH**/ ?>

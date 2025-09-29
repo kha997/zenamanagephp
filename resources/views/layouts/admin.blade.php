@@ -24,13 +24,7 @@
         this.sidebarCollapsed = !this.sidebarCollapsed; 
         localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed);
     }
-}" x-init="
-    const saved = localStorage.getItem('sidebarCollapsed');
-    if (saved !== null) {
-        this.sidebarCollapsed = JSON.parse(saved);
-    }
-    console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
-">
+}, x-cloak: ''">
     <!-- Topbar -->
     @include('layouts.partials._topbar')
     
@@ -138,6 +132,9 @@
     </template>
         
     @stack('scripts')
+    
+    <!-- Admin Global Alpine State -->
+    <script src="{{ asset('js/admin-global-state.js') }}" defer></script>
     
     <!-- Global Soft Refresh Orchestrator -->
     <script type="module">

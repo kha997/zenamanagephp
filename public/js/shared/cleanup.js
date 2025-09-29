@@ -9,7 +9,6 @@ class CleanupManager {
     init() {
         this.setupGlobalCleanup();
         this.setupBodyStateCleanup();
-        this.setupMemoryCleanup();
         console.log('[Cleanup] Manager initialized');
     }
 

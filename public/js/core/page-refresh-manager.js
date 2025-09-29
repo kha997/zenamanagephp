@@ -101,7 +101,8 @@ class PageRefreshManager {
             
         } catch (error) {
             console.error(`${this.pageName}: initial data load failed:`, error);
-            this.showError('Failed to load data. Please refresh the page.');
+            // Don't show error toast during navigation to prevent flash
+            // Only log the error silently
         }
     }
 
@@ -612,31 +613,9 @@ class PageRefreshManager {
     }
 
     showError(message) {
-        // Create or update error banner
-        let errorBanner = document.querySelector(`[data-${this.pageName}-error]`);
-        if (!errorBanner) {
-            errorBanner = document.createElement('div');
-            errorBanner.setAttribute(`data-${this.pageName}-error`, 'true');
-            errorBanner.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-            document.body.appendChild(errorBanner);
-        }
-        
-        errorBanner.innerHTML = `
-            <div class="flex items-center">
-                <i class="fas fa-exclamation-triangle mr-2"></i>
-                <span>${message}</span>
-                <button onclick="this.parentNode.parentNode.remove()" class="ml-3 text-white hover:text-gray-200">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            if (errorBanner.parentNode) {
-                errorBanner.remove();
-            }
-        }, 5000);
+        // Remove error banner to prevent flash during navigation
+        // Only log to console
+        console.warn(`${this.pageName}: ${message}`);
     }
 
     destroy() {

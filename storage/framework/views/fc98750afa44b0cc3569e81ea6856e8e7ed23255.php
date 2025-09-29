@@ -38,7 +38,7 @@
         <!-- Sidebar - Desktop -->
         <div class="hidden lg:block">
             <?php echo $__env->make('layouts.partials._sidebar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
-        </div>
+                    </div>
                     
         
         <!-- Main Content -->
@@ -112,28 +112,31 @@
     <!-- Footer -->
     <?php echo $__env->make('layouts.partials._footer', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
     
-    <!-- Modals -->
-    <div x-show="showModal" x-transition class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900" x-text="modalTitle"></h3>
-                    <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                    </button>
-        </div>
-                <div x-html="modalContent"></div>
-                <div class="flex justify-end space-x-3 mt-6">
-                    <button @click="closeModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">
-                        Cancel
-                    </button>
-                    <button @click="executeModalAction" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Confirm
-                    </button>
+    <!-- Global Modal Template - Only Mounts When Open -->
+    <template x-if="showModal">
+        <div x-cloak x-transition.opacity class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.stop>
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900" x-text="modalTitle"></h3>
+                        <button @click="closeModal" class="text-gray-400 hover:text-gray-600" aria-label="Close modal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div x-html="modalContent"></div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button @click="closeModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                            Cancel
+                        </button>
+                        <button @click="executeModalAction" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Confirm
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    
+    </template>
+        
     <?php echo $__env->yieldPushContent('scripts'); ?>
     
     <!-- Global Soft Refresh Orchestrator -->
@@ -236,7 +239,7 @@
         };
         
         console.log('🎯 Global soft refresh orchestrator loaded');
-    </script>
+</script>
     
     <!-- Security Charts Module -->
     <script src="<?php echo e(asset('js/security/charts.js')); ?>" defer></script>
@@ -247,11 +250,12 @@
     <!-- Page Auto-Initialization -->
     <script src="<?php echo e(asset('js/core/page-auto-init.js')); ?>" defer></script>
     
-    <!-- Panel Fetch Utils -->
-    <script type="module" src="<?php echo e(asset('js/common/fetch-utils.js')); ?>" defer></script>
-    
-    <!-- NProgress for loading bars -->
-    <script src="<?php echo e(asset('js/nprogress.js')); ?>" defer></script>
+    <!-- Shared Modules for No-Flash Architecture -->
+    <script type="module" src="<?php echo e(asset('js/shared/swr.js')); ?>" defer></script>
+    <script type="module" src="<?php echo e(asset('js/shared/panel-fetch.js')); ?>" defer></script>
+    <script type="module" src="<?php echo e(asset('js/shared/soft-refresh.js')); ?>" defer></script>
+    <script type="module" src="<?php echo e(asset('js/shared/progress.js')); ?>" defer></script>
+    <script type="module" src="<?php echo e(asset('js/shared/cleanup.js')); ?>" defer></script>
     
     <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>

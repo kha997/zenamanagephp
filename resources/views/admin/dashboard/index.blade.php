@@ -393,6 +393,9 @@ function adminDashboard() {
 
         updateChartsData(chartData) {
             try {
+                // Store chart data in component state
+                this.chartData = chartData;
+                
                 // Use requestAnimationFrame to avoid Alpine.js reactivity issues
                 requestAnimationFrame(() => {
                     // Get chart instances directly from DOM to avoid Alpine.js proxy

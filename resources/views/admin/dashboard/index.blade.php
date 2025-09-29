@@ -164,8 +164,8 @@
                         </button>
                     </div>
                 </div>
-                <div class="h-64">
-                    <canvas id="signups-chart"></canvas>
+                <div class="chart-container" style="height: 280px; position: relative;">
+                    <canvas id="signups-chart" width="400" height="280" aria-label="New signups chart"></canvas>
                 </div>
             </div>
 
@@ -184,8 +184,8 @@
                         </button>
                     </div>
                 </div>
-                <div class="h-64">
-                    <canvas id="errors-chart"></canvas>
+                <div class="chart-container" style="height: 280px; position: relative;">
+                    <canvas id="errors-chart" width="400" height="280" aria-label="Error rate chart"></canvas>
                 </div>
             </div>
         </div>

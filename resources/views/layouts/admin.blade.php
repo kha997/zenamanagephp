@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Core Page Refresh CSS -->
     <link rel="stylesheet" href="{{ asset('css/page-refresh.css') }}">
+    @stack('styles')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @yield('styles')
 </head>
@@ -240,5 +241,10 @@
         
         console.log('🎯 Global soft refresh orchestrator loaded');
     </script>
+    
+    <!-- Security Charts Module -->
+    <script src="{{ asset('js/security/charts.js') }}" defer></script>
+    
+    @stack('scripts')
 </body>
 </html>

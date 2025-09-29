@@ -1,26 +1,23 @@
-{{-- Security KPI Charts - Simplified Design --}}
-<div class="bg-white shadow-md rounded-lg mb-6">
+{{-- Security KPI Charts - CLS Protected Design --}}
+<div class="bg-white shadow-md rounded-lg mb-6" data-charts-container>
     <div class="flex justify-between items-center p-6 pb-4">
         <h3 class="text-lg font-semibold text-gray-900">Security Trends</h3>
         <div class="flex space-x-2">
             <button 
-                @click="chartPeriod = '7d'; loadCharts()" 
-                :class="{'bg-indigo-600 text-white': chartPeriod === '7d', 'bg-gray-200 text-gray-700': chartPeriod !== '7d'}"
-                class="px-3 py-1 rounded text-sm font-medium transition-colors"
+               data-period="7d"
+                class="px-3 py-1 rounded text-sm font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
             >
                 7d
             </button>
             <button 
-                @click="chartPeriod = '30d'; loadCharts()" 
-                :class="{'bg-indigo-600 text-white': chartPeriod === '30d', 'bg-gray-200 text-gray-700': chartPeriod !== '30d'}"
-                class="px-3 py-1 rounded text-sm font-medium transition-colors"
+                data-period="30d"
+                class="px-3 py-1 rounded text-sm font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
             >
                 30d
             </button>
             <button 
-                @click="chartPeriod = '90d'; loadCharts()" 
-                :class="{'bg-indigo-600 text-white': chartPeriod === '90d', 'bg-gray-200 text-gray-700': chartPeriod !== '90d'}"
-                class="px-3 py-1 rounded text-sm font-medium transition-colors"
+                data-period="90d"
+                class="px-3 py-1 rounded text-sm font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
             >
                 90d
             </button>

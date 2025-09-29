@@ -1397,7 +1397,6 @@ Route::prefix('admin')->middleware(\App\Http\Middleware\TokenOnly::class)->group
     Route::get('/security/logins-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'logins']);
     Route::get('/security/audit-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'audit']);
     Route::get('/security/sessions-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'sessions']);
-    Route::get('/security/charts-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'charts']);
     Route::post('/security/users/{id}:force-mfa-bypass', [App\Http\Controllers\Admin\SecurityApiController::class, 'forceMfa']);
     
         // Export routes

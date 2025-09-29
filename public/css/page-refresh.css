@@ -29,14 +29,23 @@ body.page-reloading .breadcrumb {
     transition: opacity 0.15s ease;
 }
 
-/* Chart Card Styling */
+/* Chart Card Styling - CLS Prevention */
 .chart-card {
     min-height: 300px;
     display: flex;
     flex-direction: column;
+    /* Ensure fixed height to prevent CLS */
+    height: 320px;
 }
 
 .chart-wrap {
+    position: relative;
+    height: 220px; /* Fixed chart container height */
+    width: 100%;
+    flex: 1;
+}
+
+.chart-box {
     position: relative;
     height: 100%;
     width: 100%;
@@ -45,6 +54,20 @@ body.page-reloading .breadcrumb {
 .chart-box canvas {
     height: 100% !important;
     width: 100% !important;
+    display: block; /* Remove inline spacing */
+}
+
+/* Security chart specific */
+.security-chart {
+    position: relative;
+}
+
+.chart-error {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
 }
 
 /* Security-specific chart improvements */

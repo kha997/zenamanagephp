@@ -163,9 +163,9 @@ class DashboardMonitor {
                     });
                 }
                 
-                if (event.target.closest('[data-export]')) {
-                    this.trackEvent('export_click', {
-                        type: event.target.closest('[data-export]').dataset.export
+                if (event.target.closest('[data-// export]')) {
+                    this.trackEvent('// export_click', {
+                        type: event.target.closest('[data-// export]').dataset.// export
                     });
                 }
                 
@@ -352,10 +352,10 @@ class DashboardMonitor {
     /**
      * Export metrics for analysis
      */
-    exportMetrics() {
+    // exportMetrics() {
         const summary = this.getPerformanceSummary();
         
-        const exportData = {
+        const // exportData = {
             timestamp: new Date().toISOString(),
             userAgent: navigator.userAgent,
             viewport: {
@@ -369,7 +369,7 @@ class DashboardMonitor {
             ...summary
         };
         
-        return exportData;
+        return // exportData;
     }
 
     /**

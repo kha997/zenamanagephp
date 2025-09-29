@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.min.js" defer></script>
     <!-- Core Page Refresh CSS -->
     <link rel="stylesheet" href="<?php echo e(asset('css/page-refresh.css')); ?>">
     <!-- Loading States CSS -->
@@ -343,12 +343,13 @@
         console.log('🎯 Global soft refresh orchestrator loaded');
 </script>
     
-    <!-- Security Charts Module -->
+    <!-- Security Charts Module (only on Security page) -->
+    <?php if(request()->is('admin/security')): ?>
     <script src="<?php echo e(asset('js/security/charts.js')); ?>" defer></script>
+    <?php endif; ?>
     
     <!-- Dashboard Modules (only load on dashboard)-->
     <?php if(request()->is('admin') || request()->is('admin/dashboard')): ?>
-    <script src="<?php echo e(asset('js/pages/dashboard.js')); ?>" defer></script>
     <script src="<?php echo e(asset('js/dashboard/charts.js')); ?>" defer></script>
     <script src="<?php echo e(asset('js/shared/dashboard-monitor.js')); ?>" defer></script>
     <?php endif; ?>
@@ -356,11 +357,11 @@
     <!-- Re-enabled for dashboard functionality -->
     <script src="<?php echo e(asset('js/core/page-refresh-manager.js')); ?>" defer></script>
     <script src="<?php echo e(asset('js/core/page-auto-init.js')); ?>" defer></script>
-    <script type="module" src="<?php echo e(asset('js/shared/swr.js')); ?>" defer></script>
-    <script type="module" src="<?php echo e(asset('js/shared/panel-fetch.js')); ?>" defer></script>
-    <script type="module" src="<?php echo e(asset('js/shared/soft-refresh.js')); ?>" defer></script>
-    <script type="module" src="<?php echo e(asset('js/shared/progress.js')); ?>" defer></script>
-    <script type="module" src="<?php echo e(asset('js/shared/cleanup.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/shared/swr.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/shared/panel-fetch.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/shared/soft-refresh.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/shared/progress.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/shared/cleanup.js')); ?>" defer></script>
     
     <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>

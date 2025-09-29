@@ -1,5 +1,5 @@
 // Panel Fetch Manager - Non-blocking data loading with consistent patterns
-import { getWithETag } from './swr.js';
+// import { getWithETag } from './swr.js'; // Converted to regular script
 
 class PanelFetchManager {
     constructor(config = {}) {
@@ -57,7 +57,7 @@ class PanelFetchManager {
             this.activeRequests.set(cacheKey, abortController);
 
             // Make request with SWR
-            const result = await getWithETag(cacheKey, url, {
+            const result = await window.SWRCache.getWithETag(cacheKey, url, {
                 ...swrOptions,
                 signal: abortController.signal,
                 onStart: () => {}, // Handled above
@@ -181,20 +181,20 @@ class PanelFetchManager {
 const panelFetch = new PanelFetchManager();
 
 // Convenience functions
-export function fetchPanel(panelSelector, url, options = {}) {
+window. fetchPanel(panelSelector, url, options = {}) {
     return panelFetch.fetchPanel(panelSelector, url, options);
 }
 
-export function setPanelLoading(panelSelector, loading, options = {}) {
+window. setPanelLoading(panelSelector, loading, options = {}) {
     return panelFetch.setPanelLoading(panelSelector, loading, options);
 }
 
-export function dispatchPanelEvent(panelSelector, event, detail = {}) {
+window. dispatchPanelEvent(panelSelector, event, detail = {}) {
     return panelFetch.dispatchPanelEvent(panelSelector, event, detail);
 }
 
 // Utility functions
-export function createPanelWrapper(id, cssClass = 'panel-wrapper') {
+window. createPanelWrapper(id, cssClass = 'panel-wrapper') {
     const wrapper = document.createElement('section');
     wrapper.id = id;
     wrapper.className = cssClass;
@@ -202,7 +202,7 @@ export function createPanelWrapper(id, cssClass = 'panel-wrapper') {
     return wrapper;
 }
 
-export function wrapPanel(panelSelector, options = {}) {
+window. wrapPanel(panelSelector, options = {}) {
     const panel = typeof panelSelector === 'string' 
         ? document.querySelector(panelSelector)
         : panelSelector;

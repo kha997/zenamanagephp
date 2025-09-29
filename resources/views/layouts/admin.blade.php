@@ -343,8 +343,10 @@
         console.log('🎯 Global soft refresh orchestrator loaded');
 </script>
     
-    <!-- Security Charts Module -->
+    <!-- Security Charts Module (only on Security page) -->
+    @if(request()->is('admin/security'))
     <script src="{{ asset('js/security/charts.js') }}" defer></script>
+    @endif
     
     <!-- Dashboard Modules (only load on dashboard)-->
     @if(request()->is('admin') || request()->is('admin/dashboard'))
@@ -355,11 +357,11 @@
     <!-- Re-enabled for dashboard functionality -->
     <script src="{{ asset('js/core/page-refresh-manager.js') }}" defer></script>
     <script src="{{ asset('js/core/page-auto-init.js') }}" defer></script>
-    <script type="module" src="{{ asset('js/shared/swr.js') }}" defer></script>
-    <script type="module" src="{{ asset('js/shared/panel-fetch.js') }}" defer></script>
-    <script type="module" src="{{ asset('js/shared/soft-refresh.js') }}" defer></script>
-    <script type="module" src="{{ asset('js/shared/progress.js') }}" defer></script>
-    <script type="module" src="{{ asset('js/shared/cleanup.js') }}" defer></script>
+    <script src="{{ asset('js/shared/swr.js') }}" defer></script>
+    <script src="{{ asset('js/shared/panel-fetch.js') }}" defer></script>
+    <script src="{{ asset('js/shared/soft-refresh.js') }}" defer></script>
+    <script src="{{ asset('js/shared/progress.js') }}" defer></script>
+    <script src="{{ asset('js/shared/cleanup.js') }}" defer></script>
     
     @stack('scripts')
 </body>

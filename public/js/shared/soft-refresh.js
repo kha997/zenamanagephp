@@ -203,20 +203,20 @@ class SoftRefreshManager {
 const softRefresh = new SoftRefreshManager();
 
 // Convenience functions
-export function registerRefreshHandler(pageKey, handler) {
+window. registerRefreshHandler(pageKey, handler) {
     return softRefresh.registerRefreshHandler(pageKey, handler);
 }
 
-export function unregisterRefreshHandler(pageKey) {
+window. unregisterRefreshHandler(pageKey) {
     return softRefresh.unregisterRefreshHandler(pageKey);
 }
 
-export function cancelActiveRefreshes(pageKey = null) {
+window. cancelActiveRefreshes(pageKey = null) {
     return softRefresh.cancelActiveRefreshes(pageKey);
 }
 
 // Helper to create refresh handler for standard page patterns
-export function createStandardRefreshHandler(pageKey, options = {}) {
+window. createStandardRefreshHandler(pageKey, options = {}) {
     const { 
         apiEndpoint, 
         dataSelector, 

@@ -2,7 +2,7 @@
  * Dashboard Page Module - Soft Refresh Implementation with SWR
  */
 
-import { getWithETag } from '/js/shared/swr.js';
+// import { getWithETag } from '/js/shared/swr.js'; // Converted to regular script
 
 const API = {
   summary: (range='30d') => `/api/admin/dashboard/summary?range=${range}`,
@@ -72,7 +72,7 @@ class DashboardManager {
 
     async loadSummary(range) {
         try {
-            const data = await getWithETag(
+            const data = await window.SWRCache.getWithETag(
                 `dashboard-summary-${range}`, 
                 API.summary(range), 
                 { signal: this.abortController.signal }
@@ -85,7 +85,7 @@ class DashboardManager {
 
     async loadCharts(range) {
         try {
-            const data = await getWithETag(
+            const data = await window.SWRCache.getWithETag(
                 `dashboard-charts-${range}`, 
                 API.charts(range), 
                 { signal: this.abortController.signal }
@@ -98,7 +98,7 @@ class DashboardManager {
 
     async loadActivity() {
         try {
-            const data = await getWithETag(
+            const data = await window.SWRCache.getWithETag(
                 'dashboard-activity', 
                 API.activity(), 
                 { signal: this.abortController.signal }

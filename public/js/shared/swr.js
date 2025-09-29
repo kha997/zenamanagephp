@@ -207,18 +207,17 @@ class SWRCacheManager {
 const swr = new SWRCacheManager(30000); // 30s default
 
 // Convenience function
-export async function getWithETag(key, url, options = {}) {
+window.getWithETag = async function getWithETag(key, url, options = {}) {
     return swr.getWithETag(key, url, options);
-}
+};
 
 // Expose globally for dashboard integration
 if (typeof window !== 'undefined') {
-    window.swr = swr;
-    window.getWithETag = getWithETag;
+    window.SWRCache = swr;
 }
 
 // Specialized helpers
-export async function getWithProgress(key, url, options = {}) {
+window.getWithProgress = async function getWithProgress(key, url, options = {}) {
     const progressOptions = {
         ...options,
         onStart: () => {
@@ -231,12 +230,10 @@ export async function getWithProgress(key, url, options = {}) {
         }
     };
     
-    return getWithETag(key, url, progressOptions);
-}
+    return window.getWithETag(key, url, progressOptions);
+};
 
-// Export for global access
+// Final global exports
 window.SWRCache = swr;
-window.getWithETag = getWithETag;
-window.getWithProgress = getWithProgress;
 
 console.log('[SWR] Cache manager initialized');

@@ -293,14 +293,14 @@ class CleanupManager {
 const cleanup = new CleanupManager();
 
 // Utility functions
-export function forceModalCleanup() {
+window. forceModalCleanup() {
     return cleanup.forceCleanup('[x-show*="Modal"]', (modal) => {
         modal.style.display = 'none';
         modal.classList.add('hidden');
     });
 }
 
-export function forceLoadingCleanup() {
+window. forceLoadingCleanup() {
     return cleanup.forceCleanup('.loading-active, .abs-spinner', (element) => {
         element.classList.remove('loading-active');
         if (element.classList.contains('abs-spinner')) {
@@ -309,12 +309,12 @@ export function forceLoadingCleanup() {
     });
 }
 
-export function cleanupBodyState() {
+window. cleanupBodyState() {
     document.body.classList.remove('overflow-hidden', 'modal-open');
     document.documentElement.classList.remove('overflow-hidden');
 }
 
-export function subscribeCleanup(eventType, handler) {
+window. subscribeCleanup(eventType, handler) {
     return cleanup.subscribe(eventType, handler);
 }
 

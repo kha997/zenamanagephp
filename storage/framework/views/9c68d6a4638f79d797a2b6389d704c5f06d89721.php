@@ -390,24 +390,32 @@ function adminDashboard() {
 
         updateChartsData(chartData) {
             try {
-                // Use setTimeout to avoid Alpine.js reactivity issues
-                setTimeout(() => {
-                    if (this.charts.signups && chartData.signups) {
-                        // Direct Chart.js data assignment without Alpine.js interference
-                        const signupsChart = this.charts.signups;
-                        signupsChart.data.labels = [...(chartData.signups.labels || [])];
-                        signupsChart.data.datasets = [...(chartData.signups.datasets || [])];
-                        signupsChart.update('none');
+                // Use requestAnimationFrame to avoid Alpine.js reactivity issues
+                requestAnimationFrame(() => {
+                    // Get chart instances directly from DOM to avoid Alpine.js proxy
+                    const signupsCanvas = document.getElementById('signups-chart');
+                    const errorsCanvas = document.getElementById('errors-chart');
+                    
+                    if (signupsCanvas && chartData.signups) {
+                        // Get Chart.js instance directly from canvas
+                        const chartInstance = Chart.getChart(signupsCanvas);
+                        if (chartInstance) {
+                            chartInstance.data.labels = chartData.signups.labels || [];
+                            chartInstance.data.datasets = chartData.signups.datasets || [];
+                            chartInstance.update('none');
+                        }
                     }
 
-                    if (this.charts.errors && chartData.error_rate) {
-                        // Direct Chart.js data assignment without Alpine.js interference
-                        const errorsChart = this.charts.errors;
-                        errorsChart.data.labels = [...(chartData.error_rate.labels || [])];
-                        errorsChart.data.datasets = [...(chartData.error_rate.datasets || [])];
-                        errorsChart.update('none');
+                    if (errorsCanvas && chartData.error_rate) {
+                        // Get Chart.js instance directly from canvas
+                        const chartInstance = Chart.getChart(errorsCanvas);
+                        if (chartInstance) {
+                            chartInstance.data.labels = chartData.error_rate.labels || [];
+                            chartInstance.data.datasets = chartData.error_rate.datasets || [];
+                            chartInstance.update('none');
+                        }
                     }
-                }, 0);
+                });
             } catch (error) {
                 console.error('Error updating charts:', error);
             }

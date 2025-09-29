@@ -425,29 +425,25 @@ function adminDashboard() {
         },
 
         updateSparklines() {
-            if (this.kpis.tenants?.sparkline && this.sparklines.tenants) {
-                this.sparklines.tenants.data.datasets[0].data = this.kpis.tenants.sparkline;
-                this.sparklines.tenants.update();
-            }
-
-            if (this.kpis.users?.sparkline && this.sparklines.users) {
-                this.sparklines.users.data.datasets[0].data = this.kpis.users.sparkline;
-                this.sparklines.users.update();
-            }
-
-            if (this.kpis.errors?.sparkline && this.sparklines.errors) {
-                this.sparklines.errors.data.datasets[0].data = this.kpis.errors.sparkline;
-                this.sparklines.errors.update();
-            }
-
-            if (this.kpis.queue?.sparkline && this.sparklines.queue) {
-                this.sparklines.queue.data.datasets[0].data = this.kpis.queue.sparkline;
-                this.sparklines.queue.update();
-            }
-
-            if (this.kpis.storage?.sparkline && this.sparklines.storage) {
-                this.sparklines.storage.data.datasets[0].data = this.kpis.storage.sparkline;
-                this.sparklines.storage.update();
+            try {
+                // Use requestAnimationFrame to avoid Alpine.js reactivity issues
+                requestAnimationFrame(() => {
+                    const sparklineIds = ['tenants', 'users', 'errors', 'queue', 'storage'];
+                    
+                    sparklineIds.forEach(id => {
+                        const canvas = document.getElementById(id + '-sparkline');
+                        if (canvas && this.kpis[id]?.sparkline) {
+                            // Get Chart.js instance directly from canvas
+                            const chartInstance = Chart.getChart(canvas);
+                            if (chartInstance) {
+                                chartInstance.data.datasets[0].data = [...this.kpis[id].sparkline];
+                                chartInstance.update('none');
+                            }
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error updating sparklines:', error);
             }
         },
 

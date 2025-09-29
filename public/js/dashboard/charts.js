@@ -47,7 +47,7 @@ class DashboardCharts {
     }
 
     updateSignupsChart(data) {
-        const ctx = document.getElementById('chart-signups');
+        const ctx = document.getElementById('signupsChart');
         if (!ctx) return;
 
         if (this.instances.signups) {
@@ -98,7 +98,7 @@ class DashboardCharts {
     }
 
     updateErrorRateChart(data) {
-        const ctx = document.getElementById('chart-errors');
+        const ctx = document.getElementById('errorsChart');
         if (!ctx) return;
 
         if (this.instances.errors) {
@@ -136,7 +136,7 @@ class DashboardCharts {
 
     // Sparklines Management
     initSparklines() {
-        const sparklineKeys = ['tenantsSparkline', 'usersSparkline', 'errorsSparkline', 'queueSparkline', 'storageSparkline'];
+        const sparklineKeys = ['totalTenantsSparkline', 'totalUsersSparkline', 'errors24hSparkline', 'queueJobsSparkline', 'storageSparkline'];
         sparklineKeys.forEach(key => {
             const canvas = document.getElementById(key);
             if (canvas && !this.instances[key]) {
@@ -184,11 +184,11 @@ class DashboardCharts {
     updateSparklines(data) {
         if (!data) return;
 
-        const kpiKeys = ['tenants', 'users', 'errors', 'queue', 'storage'];
+        const kpiKeys = ['totalTenants', 'totalUsers', 'errors24h', 'queueJobs', 'storage'];
         kpiKeys.forEach(kpi => {
             const sparklineKey = kpi + 'Sparkline';
-            if (this.instances[sparklineKey] && data[kpi]?.sparkline) {
-                this.instances[sparklineKey].data.datasets[0].data = data[kpi].sparkline;
+            if (this.instances[sparklineKey] && data[kpi]?.series) {
+                this.instances[sparklineKey].data.datasets[0].data = data[kpi].series;
                 this.instances[sparklineKey].update('none');
             }
         });
@@ -196,11 +196,11 @@ class DashboardCharts {
 
     getSparklineColor(key, alpha = 1) {
         const colors = {
-            tenantsSparkline: `rgba(16, 185, 129, ${alpha})`, // Green
-            usersSparkline: `rgba(16, 185, 129, ${alpha})`,   // Green
-            errorsSparkline: `rgba(239, 68, 68, ${alpha})`,  // Red
-            queueSparkline: `rgba(245, 158, 11, ${alpha})`,   // Orange
-            storageSparkline: `rgba(139, 92, 246, ${alpha})`  // Purple
+            totalTenantsSparkline: `rgba(16, 185, 129, ${alpha})`, // Green
+            totalUsersSparkline: `rgba(16, 185, 129, ${alpha})`,   // Green
+            errors24hSparkline: `rgba(239, 68, 68, ${alpha})`,     // Red
+            queueJobsSparkline: `rgba(245, 158, 11, ${alpha})`,    // Orange
+            storageSparkline: `rgba(139, 92, 246, ${alpha})`       // Purple
         };
         return colors[key] || `rgba(107, 114, 128, ${alpha})`;
     }

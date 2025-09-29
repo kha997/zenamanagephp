@@ -873,3 +873,6 @@
     }
 </script>
 @endpush
+
+<!-- Users Page Module -->
+<script src="{{ asset('js/pages/users.js') }}" defer></script>

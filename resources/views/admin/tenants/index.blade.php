@@ -898,3 +898,6 @@
     }
 </script>
 @endpush
+
+<!-- Tenants Page Module -->
+<script src="{{ asset('js/pages/tenants.js') }}" defer></script>

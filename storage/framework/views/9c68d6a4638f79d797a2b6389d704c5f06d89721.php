@@ -287,6 +287,16 @@ function adminDashboard() {
                     return;
                 }
 
+                // Destroy existing charts if they exist
+                if (this.charts.signups) {
+                    this.charts.signups.destroy();
+                    this.charts.signups = null;
+                }
+                if (this.charts.errors) {
+                    this.charts.errors.destroy();
+                    this.charts.errors = null;
+                }
+
                 // Initialize Chart.js charts
                 const signupsCtx = document.getElementById('signups-chart');
                 const errorsCtx = document.getElementById('errors-chart');
@@ -334,9 +344,16 @@ function adminDashboard() {
                     return;
                 }
 
-                // Initialize sparkline charts
+                // Destroy existing sparklines if they exist
                 const sparklineIds = ['tenants', 'users', 'errors', 'queue', 'storage'];
-                
+                sparklineIds.forEach(id => {
+                    if (this.sparklines[id]) {
+                        this.sparklines[id].destroy();
+                        this.sparklines[id] = null;
+                    }
+                });
+
+                // Initialize sparkline charts
                 sparklineIds.forEach(id => {
                     const canvas = document.getElementById(id + '-sparkline');
                     if (canvas) {

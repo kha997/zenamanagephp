@@ -391,6 +391,9 @@ document.addEventListener('alpine:init', () => {
         async loadSecurityData() {
             this.loading = true;
             this.error = null;
+            
+            // Dispatch panel loading events
+            this.dispatchPanelEvent('security-panel', 'loading');
 
             try {
                 // Load KPIs (silent - no toast)
@@ -409,7 +412,19 @@ document.addEventListener('alpine:init', () => {
                 // Don't show toast for initial load errors
             } finally {
                 this.loading = false;
+                // Dispatch panel ready events
+                this.dispatchPanelEvent('security-panel', 'ready');
             }
+        },
+        
+        // Panel event dispatcher
+        dispatchPanelEvent(panelId, event, data = null) {
+            const customEvent = new CustomEvent(`panel:${event}`, {
+                detail: { panelId, data },
+                bubbles: true,
+                cancelable: true
+            });
+            document.dispatchEvent(customEvent);
         },
 
         async loadKpis() {

@@ -152,10 +152,13 @@
             error: null,
             abortController: null,
             
-            // UI state
+            // UI state - Non-blocking loading
             selectedUsers: [],
             activePreset: '',
             showEditModal: false,
+            
+            // Modal management with proper cloaking
+            modalOpen: false,
             showChangeRoleModal: false,
             showForceMfaModal: false,
             showInviteModal: false,
@@ -219,22 +222,20 @@
                 window.history.replaceState({}, '', newUrl);
             },
             
-            // Data loading
+            // Data loading - Non-blocking with Panel Fetch
             async loadUsers() {
-                if (this.abortController) {
-                    this.abortController.abort();
-                }
-                
-                this.abortController = new AbortController();
-                this.usersLoading = true;
-                this.error = null;
-                
-                // Start progress bar
-                if (window.NProgress) {
-                    window.NProgress.start();
-                }
-                
                 try {
+                    this.error = null;
+                    
+                    // Use Panel Fetch for non-blocking load
+                    const result = await window.panelFetch('/api/admin/users?' + this.buildApiParams(), {
+                        onStart: () => { this.usersLoading = true; },
+                        onEnd: () => { this.usersLoading = false; },
+                        panelId: 'users-table',
+                        cacheKey: 'users-list'
+                    });
+                    
+                    // Handle response data
                     if (this.mockData) {
                         // Mock API response
                         await new Promise(resolve => setTimeout(resolve, 300));
@@ -260,15 +261,8 @@
                     }
                 } catch (error) {
                     if (error.name !== 'AbortError') {
+                        console.error('Users loading error:', error);
                         this.error = error.message;
-                        console.error('Failed to load users:', error);
-                    }
-                } finally {
-                    this.usersLoading = false;
-                    
-                    // Stop progress bar
-                    if (window.NProgress) {
-                        window.NProgress.done();
                     }
                 }
             },

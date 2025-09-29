@@ -1,11 +1,12 @@
 
 <section id="users-table" 
-         :data-loading="usersLoading ? 'users-table' : ''" 
+         data-panel-id="users-table"
+         :class="usersLoading ? 'panel-wrapper panel-loading soft-dim' : 'panel-wrapper'"
          :aria-busy="usersLoading ? 'true' : 'false'"
          class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
     
-    <!-- Loading State - Scoped to table -->
-    <div x-show="usersLoading" class="table-skeleton p-6">
+    <!-- Loading State - Non-blocking local dimmer -->
+    <div x-show="usersLoading" class="table-skeleton p-6" aria-live="polite">
         <div class="space-y-4">
             <template x-for="i in 8" :key="i">
                 <div class="flex items-center space-x-4 skeleton-pulse">

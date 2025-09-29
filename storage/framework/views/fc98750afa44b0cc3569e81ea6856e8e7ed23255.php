@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="<?php echo e(asset('css/page-refresh.css')); ?>">
     <!-- Loading States CSS -->
     <link rel="stylesheet" href="<?php echo e(asset('css/loading-states.css')); ?>">
+    <!-- UI Loading Styles -->
+    <link rel="stylesheet" href="<?php echo e(asset('css/ui-loading.css')); ?>">
     <?php echo $__env->yieldPushContent('styles'); ?>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <?php echo $__env->yieldContent('styles'); ?>
@@ -244,6 +246,9 @@
     
     <!-- Page Auto-Initialization -->
     <script src="<?php echo e(asset('js/core/page-auto-init.js')); ?>" defer></script>
+    
+    <!-- Panel Fetch Utils -->
+    <script type="module" src="<?php echo e(asset('js/common/fetch-utils.js')); ?>" defer></script>
     
     <!-- NProgress for loading bars -->
     <script src="<?php echo e(asset('js/nprogress.js')); ?>" defer></script>

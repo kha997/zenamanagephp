@@ -393,19 +393,24 @@ function adminDashboard() {
 
         updateChartsData(chartData) {
             try {
-                if (this.charts.signups && chartData.signups) {
-                    // Use Chart.js update method to avoid Alpine.js reactivity issues
-                    this.charts.signups.data.labels = chartData.signups.labels || [];
-                    this.charts.signups.data.datasets = chartData.signups.datasets || [];
-                    this.charts.signups.update('none'); // 'none' prevents animation
-                }
+                // Use setTimeout to avoid Alpine.js reactivity issues
+                setTimeout(() => {
+                    if (this.charts.signups && chartData.signups) {
+                        // Direct Chart.js data assignment without Alpine.js interference
+                        const signupsChart = this.charts.signups;
+                        signupsChart.data.labels = [...(chartData.signups.labels || [])];
+                        signupsChart.data.datasets = [...(chartData.signups.datasets || [])];
+                        signupsChart.update('none');
+                    }
 
-                if (this.charts.errors && chartData.error_rate) {
-                    // Use Chart.js update method to avoid Alpine.js reactivity issues
-                    this.charts.errors.data.labels = chartData.error_rate.labels || [];
-                    this.charts.errors.data.datasets = chartData.error_rate.datasets || [];
-                    this.charts.errors.update('none'); // 'none' prevents animation
-                }
+                    if (this.charts.errors && chartData.error_rate) {
+                        // Direct Chart.js data assignment without Alpine.js interference
+                        const errorsChart = this.charts.errors;
+                        errorsChart.data.labels = [...(chartData.error_rate.labels || [])];
+                        errorsChart.data.datasets = [...(chartData.error_rate.datasets || [])];
+                        errorsChart.update('none');
+                    }
+                }, 0);
             } catch (error) {
                 console.error('Error updating charts:', error);
             }

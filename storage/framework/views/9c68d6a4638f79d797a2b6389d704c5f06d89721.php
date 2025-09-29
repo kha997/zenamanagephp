@@ -389,14 +389,22 @@ function adminDashboard() {
         },
 
         updateChartsData(chartData) {
-            if (this.charts.signups && chartData.signups) {
-                this.charts.signups.data = chartData.signups;
-                this.charts.signups.update();
-            }
+            try {
+                if (this.charts.signups && chartData.signups) {
+                    // Use Chart.js update method to avoid Alpine.js reactivity issues
+                    this.charts.signups.data.labels = chartData.signups.labels || [];
+                    this.charts.signups.data.datasets = chartData.signups.datasets || [];
+                    this.charts.signups.update('none'); // 'none' prevents animation
+                }
 
-            if (this.charts.errors && chartData.error_rate) {
-                this.charts.errors.data = chartData.error_rate;
-                this.charts.errors.update();
+                if (this.charts.errors && chartData.error_rate) {
+                    // Use Chart.js update method to avoid Alpine.js reactivity issues
+                    this.charts.errors.data.labels = chartData.error_rate.labels || [];
+                    this.charts.errors.data.datasets = chartData.error_rate.datasets || [];
+                    this.charts.errors.update('none'); // 'none' prevents animation
+                }
+            } catch (error) {
+                console.error('Error updating charts:', error);
             }
         },
 

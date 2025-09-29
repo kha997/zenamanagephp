@@ -11,7 +11,7 @@
 @endsection
 
 @section('content')
-<div class="space-y-6" x-data="adminDashboard()">
+<div class="space-y-6" x-data="adminDashboard()" x-init="init()">
     {{-- Page Header --}}
     <div class="flex items-center justify-between">
         <div>
@@ -813,8 +813,8 @@
                 return `View ${kpiName} — ${value} total, ${deltaText} in ${period}`;
             },
 
-            // Initialize dashboard
-            init() {
+            // Initialize dashboard (second init method - REMOVE THIS DUPLICATE)
+            initDashboard() {
                 const startTime = performance.now();
                 
                 console.log('Initializing dashboard...');

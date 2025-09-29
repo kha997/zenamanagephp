@@ -282,71 +282,96 @@ function adminDashboard() {
         },
 
         initializeCharts() {
-            // Initialize Chart.js charts
-            const signupsCtx = document.getElementById('signups-chart');
-            const errorsCtx = document.getElementById('errors-chart');
+            // Wait for Chart.js to load
+            const initCharts = () => {
+                if (typeof Chart === 'undefined') {
+                    console.log('Chart.js not ready, retrying...');
+                    setTimeout(initCharts, 100);
+                    return;
+                }
 
-            if (signupsCtx && typeof Chart !== 'undefined') {
-                this.charts.signups = new Chart(signupsCtx, {
-                    type: 'line',
-                    data: { labels: [], datasets: [] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true }
-                        }
-                    }
-                });
-            }
+                // Initialize Chart.js charts
+                const signupsCtx = document.getElementById('signups-chart');
+                const errorsCtx = document.getElementById('errors-chart');
 
-            if (errorsCtx && typeof Chart !== 'undefined') {
-                this.charts.errors = new Chart(errorsCtx, {
-                    type: 'line',
-                    data: { labels: [], datasets: [] },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true }
-                        }
-                    }
-                });
-            }
-        },
-
-        initializeSparklines() {
-            // Initialize sparkline charts
-            const sparklineIds = ['tenants', 'users', 'errors', 'queue', 'storage'];
-            
-            sparklineIds.forEach(id => {
-                const canvas = document.getElementById(id + '-sparkline');
-                if (canvas && typeof Chart !== 'undefined') {
-                    this.sparklines[id] = new Chart(canvas, {
+                if (signupsCtx) {
+                    this.charts.signups = new Chart(signupsCtx, {
                         type: 'line',
-                        data: {
-                            labels: [],
-                            datasets: [{
-                                data: [],
-                                borderColor: this.getSparklineColor(id),
-                                backgroundColor: this.getSparklineColor(id, 0.1),
-                                borderWidth: 2,
-                                pointRadius: 0,
-                                tension: 0.4
-                            }]
-                        },
+                        data: { labels: [], datasets: [] },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
                             scales: {
-                                x: { display: false },
-                                y: { display: false }
+                                y: { beginAtZero: true }
                             }
                         }
                     });
+                    console.log('Signups chart initialized');
                 }
-            });
+
+                if (errorsCtx) {
+                    this.charts.errors = new Chart(errorsCtx, {
+                        type: 'line',
+                        data: { labels: [], datasets: [] },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                    console.log('Errors chart initialized');
+                }
+            };
+
+            initCharts();
+        },
+
+        initializeSparklines() {
+            // Wait for Chart.js to load
+            const initSparklines = () => {
+                if (typeof Chart === 'undefined') {
+                    console.log('Chart.js not ready for sparklines, retrying...');
+                    setTimeout(initSparklines, 100);
+                    return;
+                }
+
+                // Initialize sparkline charts
+                const sparklineIds = ['tenants', 'users', 'errors', 'queue', 'storage'];
+                
+                sparklineIds.forEach(id => {
+                    const canvas = document.getElementById(id + '-sparkline');
+                    if (canvas) {
+                        this.sparklines[id] = new Chart(canvas, {
+                            type: 'line',
+                            data: {
+                                labels: [],
+                                datasets: [{
+                                    data: [],
+                                    borderColor: this.getSparklineColor(id),
+                                    backgroundColor: this.getSparklineColor(id, 0.1),
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { display: false },
+                                    y: { display: false }
+                                }
+                            }
+                        });
+                        console.log(`${id} sparkline initialized`);
+                    }
+                });
+            };
+
+            initSparklines();
         },
 
         updateChartsData(chartData) {

@@ -1,5 +1,5 @@
 {{-- Admin Dashboard KPIs --}}
-<div id="kpi-strip" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6" aria-live="polite">
+<div id="kpi-strip" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6 w-full" aria-live="polite" style="grid-template-columns: repeat(5, 1fr);">
     <!-- Total Tenants -->
     <div class="kpi-panel bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
          @click="window.location.href='/admin/tenants'"

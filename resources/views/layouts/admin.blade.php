@@ -245,6 +245,9 @@
     <!-- Security Charts Module -->
     <script src="{{ asset('js/security/charts.js') }}" defer></script>
     
+    <!-- Page Refresh Manager for CRUD pages -->
+    <script src="{{ asset('js/core/page-refresh-manager.js') }}" defer></script>
+    
     @stack('scripts')
 </body>
 </html>

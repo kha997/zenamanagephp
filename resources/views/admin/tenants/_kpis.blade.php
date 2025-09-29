@@ -5,14 +5,15 @@
          @click="drillDownTotal"
          role="button"
          tabindex="0"
+         data-kpi="totalTenants"
          :aria-label="getAriaLabel('total', kpis.totalTenants.value, kpis.totalTenants.deltaPct, kpis.totalTenants.period)"
          @keydown.enter="drillDownTotal"
          @keydown.space.prevent="drillDownTotal">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Total Tenants</p>
-                <p class="text-2xl font-bold text-gray-900" x-text="kpis.totalTenants.value">89</p>
-                <p class="text-sm text-green-600">
+                <p class="text-2xl font-bold text-gray-900 value" x-text="kpis.totalTenants.value">89</p>
+                <p class="text-sm text-green-600 delta">
                     <i class="fas fa-arrow-up mr-1"></i>
                     <span x-text="'+' + kpis.totalTenants.deltaPct + '%'">+5.2%</span> from last month
                 </p>

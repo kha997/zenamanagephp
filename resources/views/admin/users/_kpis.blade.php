@@ -1,14 +1,14 @@
 {{-- Users KPI Strip --}}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
     <!-- Total Users -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" data-kpi="totalUsers">
         <div class="flex items-center justify-between">
             <div>
                 <p class="text-sm font-medium text-gray-600">Total Users</p>
-                <p class="text-2xl font-bold text-gray-900" x-text="kpis.totalUsers.value.toLocaleString()"></p>
+                <p class="text-2xl font-bold text-gray-900 value" x-text="kpis.totalUsers.value.toLocaleString()"></p>
                 <div class="flex items-center mt-1">
                     <span :class="kpis.totalUsers.deltaPct >= 0 ? 'text-green-600' : 'text-red-600'" 
-                          class="text-sm font-medium">
+                          class="text-sm font-medium delta">
                         <i :class="kpis.totalUsers.deltaPct >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'" class="mr-1"></i>
                         <span x-text="Math.abs(kpis.totalUsers.deltaPct).toFixed(1) + '%'"></span>
                     </span>

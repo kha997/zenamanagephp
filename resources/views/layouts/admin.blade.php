@@ -248,6 +248,9 @@
     <!-- Page Refresh Manager for CRUD pages -->
     <script src="{{ asset('js/core/page-refresh-manager.js') }}" defer></script>
     
+    <!-- Page Auto-Initialization -->
+    <script src="{{ asset('js/core/page-auto-init.js') }}" defer></script>
+    
     @stack('scripts')
 </body>
 </html>

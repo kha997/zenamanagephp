@@ -1,5 +1,5 @@
 
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" data-tenants-table>
     <!-- Loading State -->
     <div x-show="isLoading" class="p-6">
         <div class="space-y-4">

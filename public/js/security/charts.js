@@ -10,7 +10,17 @@ class SecurityChartsManager {
         this.maxRetries = 3;
         this.chartData = {};
         
+        // Store reference on container for external access
+        if (containerEl) {
+            containerEl.chartsManager = this;
+        }
+        
         this.init();
+    }
+
+    // Add refresh method for external access
+    refreshPage() {
+        this.loadChartData();
     }
 
     init() {
@@ -116,15 +126,15 @@ class SecurityChartsManager {
             
             // Base Chart.js configuration
             const baseOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
+            responsive: true,
+            maintainAspectRatio: false,
                 animation: { duration: prefersReducedMotion ? 0 : 220 },
                 interaction: { mode: 'index', intersect: false },
                 elements: { 
                     point: { radius: 0 }, 
                     line: { borderWidth: 2, tension: 0.2 } 
-                },
-                plugins: {
+            },
+            plugins: { 
                     legend: { display: false },
                     decimation: { 
                         enabled: true, 
@@ -136,11 +146,11 @@ class SecurityChartsManager {
                             label: (context) => this.formatTooltip(context)
                         }
                     }
-                },
-                scales: {
-                    x: { 
-                        type: 'time', 
-                        time: { 
+            },
+            scales: { 
+                x: { 
+                    type: 'time',
+                    time: {
                             unit: this.getTimeUnit()
                         },
                         grid: { display: false },

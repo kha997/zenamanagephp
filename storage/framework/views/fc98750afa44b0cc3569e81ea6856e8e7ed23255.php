@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Core Page Refresh CSS -->
     <link rel="stylesheet" href="<?php echo e(asset('css/page-refresh.css')); ?>">
+    <?php echo $__env->yieldPushContent('styles'); ?>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <?php echo $__env->yieldContent('styles'); ?>
 </head>
@@ -240,6 +241,14 @@
         
         console.log('🎯 Global soft refresh orchestrator loaded');
     </script>
+    
+    <!-- Security Charts Module -->
+    <script src="<?php echo e(asset('js/security/charts.js')); ?>" defer></script>
+    
+    <!-- Page Refresh Manager for CRUD pages -->
+    <script src="<?php echo e(asset('js/core/page-refresh-manager.js')); ?>" defer></script>
+    
+    <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 </html>
 <?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/layouts/admin.blade.php ENDPATH**/ ?>

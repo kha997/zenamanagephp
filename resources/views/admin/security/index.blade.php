@@ -230,12 +230,10 @@ document.addEventListener('alpine:init', () => {
             this.showEditPolicyModal = false;
         },
 
-        // Simple Chart Methods
+        // Chart Management - Delegates to SecurityChartsManager
         initCharts() {
-            console.log('Initializing charts...');
-            setTimeout(() => {
-                this.loadCharts();
-            }, 100);
+            console.log('Security page: delegating chart initialization to SecurityChartsManager');
+            // Charts are now handled by SecurityChartsManager module
         },
 
         async loadCharts() {

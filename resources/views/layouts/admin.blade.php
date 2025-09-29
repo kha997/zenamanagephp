@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="{{ asset('css/ui-loading.css') }}">
     <!-- Enhanced Dashboard Styles -->
     <link rel="stylesheet" href="{{ asset('css/dashboard-enhanced.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/tenants-enhanced.css') }}">
     @stack('styles')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @yield('styles')

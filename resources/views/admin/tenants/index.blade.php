@@ -11,7 +11,7 @@
 @endsection
 
 @section('content')
-<div class="space-y-6" x-data="tenantsPage()">
+<div class="space-y-6 tenants-container" x-data="tenantsPage()">
     {{-- Page Header --}}
     <div class="flex items-center justify-between">
         <div>
@@ -23,8 +23,7 @@
             <div x-show="mockData" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
                 <i class="fas fa-flask mr-1"></i>Mock Data
             </div>
-            <button @click="exportTenants" 
-                    class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+            <button class="export-btn px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <i class="fas fa-download mr-2"></i>Export
             </button>
             <button @click="openCreateModal" 
@@ -50,6 +49,9 @@
     @include('admin.tenants._create_modal')
     @include('admin.tenants._edit_modal')
     @include('admin.tenants._delete_modal')
+    
+    <!-- Aria live region for screen readers -->
+    <div aria-live="polite" aria-atomic="true"></div>
 </div>
 @endsection
 

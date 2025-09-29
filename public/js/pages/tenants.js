@@ -16,6 +16,9 @@ class TenantsPage {
     init() {
         console.log('TenantsPage initialized with soft refresh support');
         
+        // Parse URL parameters first
+        this.parseUrlParams();
+        
         // Initialize soft refresh for tenants
         this.initSoftRefresh();
         
@@ -28,8 +31,21 @@ class TenantsPage {
         // Initialize pagination
         this.initPagination();
         
+        // Initialize export button
+        this.initExport();
+        
         // Load initial data
         this.loadTenants();
+    }
+
+    /**
+     * Initialize export button
+     */
+    initExport() {
+        const exportBtn = document.querySelector('.export-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.exportTenants());
+        }
     }
 
     /**
@@ -177,6 +193,16 @@ class TenantsPage {
      * Initialize filters
      */
     initFilters() {
+        // Date range validation
+        const fromInput = document.querySelector('[data-filter="dateFrom"]');
+        const toInput = document.querySelector('[data-filter="dateTo"]');
+        
+        if (fromInput && toInput) {
+            fromInput.addEventListener('change', () => this.validateDateRange());
+            toInput.addEventListener('change', () => this.validateDateRange());
+        }
+
+        // Filter elements
         const filterElements = document.querySelectorAll('[data-filter]');
         filterElements.forEach(element => {
             element.addEventListener('change', (e) => {
@@ -185,10 +211,86 @@ class TenantsPage {
                 
                 this[filterType] = filterValue;
                 this.page = 1; // Reset to first page
+                
+                // Validate date range before API call
+                if (filterType === 'dateFrom' || filterType === 'dateTo') {
+                    if (!this.validateDateRange()) return;
+                }
+                
                 this.loadTenants();
                 this.updateUrl();
             });
         });
+
+        // Filter chips
+        const filterChips = document.querySelectorAll('[data-filter-chip]');
+        filterChips.forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.preventDefault();
+                const filterType = chip.dataset.filterChip;
+                const filterValue = chip.dataset.filterValue;
+                
+                // Toggle chip state
+                const isActive = chip.classList.contains('active');
+                chip.classList.toggle('active');
+                chip.setAttribute('aria-pressed', !isActive);
+                
+                // Apply filter
+                this[filterType] = isActive ? '' : filterValue;
+                this.page = 1;
+                this.loadTenants();
+                this.updateUrl();
+            });
+        });
+    }
+
+    /**
+     * Validate date range
+     */
+    validateDateRange() {
+        const fromInput = document.querySelector('[data-filter="dateFrom"]');
+        const toInput = document.querySelector('[data-filter="dateTo"]');
+        
+        if (!fromInput || !toInput) return true;
+        
+        const fromDate = new Date(fromInput.value);
+        const toDate = new Date(toInput.value);
+        
+        if (fromInput.value && toInput.value && fromDate > toDate) {
+            // Show error tooltip
+            this.showDateRangeError(fromInput, 'From date must be before To date');
+            return false;
+        }
+        
+        // Clear error
+        this.clearDateRangeError(fromInput);
+        return true;
+    }
+
+    /**
+     * Show date range error
+     */
+    showDateRangeError(input, message) {
+        // Remove existing error
+        this.clearDateRangeError(input);
+        
+        // Add error class
+        input.classList.add('error');
+        
+        // Create tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'error-tooltip';
+        tooltip.textContent = message;
+        input.parentNode.appendChild(tooltip);
+    }
+
+    /**
+     * Clear date range error
+     */
+    clearDateRangeError(input) {
+        input.classList.remove('error');
+        const tooltip = input.parentNode.querySelector('.error-tooltip');
+        if (tooltip) tooltip.remove();
     }
 
     /**
@@ -292,6 +394,24 @@ class TenantsPage {
         const tbody = document.querySelector('#tenants-table tbody');
         if (!tbody) return;
 
+        if (tenants.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        <div class="empty-content">
+                            <i class="fas fa-inbox text-gray-400 text-4xl mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">No tenants found</h3>
+                            <p class="text-gray-500 mb-4">Try adjusting your filters or search terms.</p>
+                            <button onclick="window.tenants.clearFilters()" class="btn-primary">
+                                Clear filters
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
         tbody.innerHTML = tenants.map(tenant => `
             <tr>
                 <td>${tenant.name}</td>
@@ -316,6 +436,12 @@ class TenantsPage {
                 </td>
             </tr>
         `).join('');
+
+        // Update aria-live region
+        const ariaLive = document.querySelector('[aria-live="polite"]');
+        if (ariaLive) {
+            ariaLive.textContent = `${tenants.length} results loaded`;
+        }
     }
 
     /**
@@ -328,20 +454,27 @@ class TenantsPage {
         const pages = this.getVisiblePages(meta.current_page, meta.last_page);
         
         pagination.innerHTML = `
-            <button ${meta.current_page <= 1 ? 'disabled' : ''} 
-                    onclick="window.tenants.goToPage(${meta.current_page - 1})">
-                Previous
-            </button>
-            ${pages.map(page => `
-                <button ${page === meta.current_page ? 'class="active"' : ''} 
-                        onclick="window.tenants.goToPage(${page})">
-                    ${page}
+            <div class="pagination-info">
+                <span class="text-sm text-gray-600">
+                    Showing ${((meta.current_page - 1) * meta.per_page) + 1} to ${Math.min(meta.current_page * meta.per_page, meta.total)} of ${meta.total} results
+                </span>
+            </div>
+            <div class="pagination-controls">
+                <button ${meta.current_page <= 1 ? 'disabled' : ''} 
+                        onclick="window.tenants.goToPage(${meta.current_page - 1})">
+                    Previous
                 </button>
-            `).join('')}
-            <button ${meta.current_page >= meta.last_page ? 'disabled' : ''} 
-                    onclick="window.tenants.goToPage(${meta.current_page + 1})">
-                Next
-            </button>
+                ${pages.map(page => `
+                    <button ${page === meta.current_page ? 'class="active"' : ''} 
+                            onclick="window.tenants.goToPage(${page})">
+                        ${page}
+                    </button>
+                `).join('')}
+                <button ${meta.current_page >= meta.last_page ? 'disabled' : ''} 
+                        onclick="window.tenants.goToPage(${meta.current_page + 1})">
+                    Next
+                </button>
+            </div>
         `;
     }
 
@@ -349,14 +482,100 @@ class TenantsPage {
      * Update KPI cards
      */
     updateKPIs(meta) {
-        // Update total tenants
-        const totalElement = document.querySelector('[data-kpi="total"]');
-        if (totalElement) {
-            totalElement.textContent = meta.total;
+        // KPI data structure
+        const kpis = {
+            total: meta.total,
+            active: meta.active || 0,
+            disabled: meta.disabled || 0,
+            new30d: meta.new30d || 0,
+            trialExpiring: meta.trialExpiring || 0,
+            deltas: {
+                total: meta.deltaTotal || 0,
+                active: meta.deltaActive || 0,
+                disabled: meta.deltaDisabled || 0,
+                new30d: meta.deltaNew30d || 0,
+                trialExpiring: meta.deltaTrialExpiring || 0
+            }
+        };
+
+        // Update KPI cards with values, deltas, and sparklines
+        this.updateKPICard('total', kpis.total, kpis.deltas.total, kpis.total > 0);
+        this.updateKPICard('active', kpis.active, kpis.deltas.active, kpis.active > 0);
+        this.updateKPICard('disabled', kpis.disabled, kpis.deltas.disabled, kpis.disabled > 0);
+        this.updateKPICard('new30d', kpis.new30d, kpis.deltas.new30d, kpis.new30d > 0);
+        this.updateKPICard('trialExpiring', kpis.trialExpiring, kpis.deltas.trialExpiring, kpis.trialExpiring > 0);
+    }
+
+    /**
+     * Update individual KPI card
+     */
+    updateKPICard(type, value, delta, hasData) {
+        const card = document.querySelector(`[data-kpi="${type}"]`);
+        if (!card) return;
+
+        // Update value
+        const valueEl = card.querySelector('.kpi-value');
+        if (valueEl) valueEl.textContent = value.toLocaleString();
+
+        // Update delta
+        const deltaEl = card.querySelector('.kpi-delta');
+        if (deltaEl) {
+            const deltaText = delta > 0 ? `+${delta}%` : delta < 0 ? `${delta}%` : '0%';
+            deltaEl.textContent = deltaText;
+            deltaEl.className = `kpi-delta ${delta > 0 ? 'positive' : delta < 0 ? 'negative' : ''}`;
         }
 
-        // Update other KPIs based on filtered data
-        // This would need to be calculated from the actual data
+        // Update sparkline
+        const sparklineEl = card.querySelector('.sparkline-container');
+        if (sparklineEl && hasData) {
+            this.createSparkline(sparklineEl, this.generateSparklineData(value, delta), this.getKPIColor(type));
+        }
+
+        // Update aria-label
+        const button = card.querySelector('button');
+        if (button) {
+            button.setAttribute('aria-label', this.getKPIAriaLabel(type, value, delta));
+        }
+    }
+
+    /**
+     * Generate sparkline data
+     */
+    generateSparklineData(value, delta) {
+        const data = [];
+        const baseValue = Math.max(1, value - delta);
+        for (let i = 0; i < 5; i++) {
+            data.push(baseValue + (delta * i / 4));
+        }
+        return data;
+    }
+
+    /**
+     * Get KPI color
+     */
+    getKPIColor(type) {
+        const colors = {
+            total: '#3B82F6',
+            active: '#10B981',
+            disabled: '#EF4444',
+            new30d: '#8B5CF6',
+            trialExpiring: '#F59E0B'
+        };
+        return colors[type] || '#6B7280';
+    }
+
+    /**
+     * Get KPI aria-label
+     */
+    getKPIAriaLabel(type, value, delta) {
+        const labels = {
+            total: `View all tenants — ${value} total`,
+            active: `Filter active tenants — ${value} active`,
+            disabled: `Filter disabled tenants — ${value} disabled`,
+            new30d: `Filter new tenants — ${value} new in 30 days`,
+            trialExpiring: `Filter trial expiring — ${value} expiring`
+        };
+        return labels[type] || `View ${type} tenants — ${value} total`;
     }
 
     /**
@@ -389,7 +608,7 @@ class TenantsPage {
         if (this.perPage !== 20) params.set('per_page', this.perPage);
         
         const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-        window.history.replaceState({}, '', newUrl);
+        window.history.pushState({ per_page: this.perPage }, '', newUrl);
     }
 
     /**
@@ -413,6 +632,117 @@ class TenantsPage {
     }
 
     /**
+     * Export tenants with current filters
+     */
+    async exportTenants() {
+        const exportBtn = document.querySelector('.export-btn');
+        if (!exportBtn) return;
+
+        // Disable button during loading
+        exportBtn.disabled = true;
+        exportBtn.textContent = 'Exporting...';
+
+        try {
+            const url = this.buildApiUrl().replace('/api/admin/tenants', '/api/admin/tenants/export.csv');
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'text/csv',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            });
+
+            if (response.status === 429) {
+                const retryAfter = response.headers.get('Retry-After');
+                this.showToast(`Export rate limited. Please try again in ${retryAfter} seconds.`, 'warning');
+                return;
+            }
+
+            if (!response.ok) {
+                throw new Error(`Export failed: ${response.statusText}`);
+            }
+
+            // Download the CSV
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `tenants_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            this.showToast('Export completed successfully', 'success');
+
+        } catch (error) {
+            console.error('Export failed:', error);
+            this.showToast(`Export failed: ${error.message}`, 'error');
+        } finally {
+            // Re-enable button
+            exportBtn.disabled = false;
+            exportBtn.textContent = 'Export';
+        }
+    }
+
+    /**
+     * Show toast notification
+     */
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        // Auto remove after 3 seconds
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 3000);
+    }
+
+    /**
+     * Clear all filters
+     */
+    clearFilters() {
+        this.searchQuery = '';
+        this.statusFilter = '';
+        this.planFilter = '';
+        this.dateFrom = '';
+        this.dateTo = '';
+        this.sortBy = 'name';
+        this.sortOrder = 'asc';
+        this.page = 1;
+        
+        // Update UI
+        const searchInput = document.querySelector('#search-input');
+        if (searchInput) searchInput.value = '';
+        
+        const filterSelects = document.querySelectorAll('[data-filter]');
+        filterSelects.forEach(select => {
+            if (select.type === 'select-one') {
+                select.selectedIndex = 0;
+            } else {
+                select.value = '';
+            }
+        });
+        
+        // Clear filter chips
+        const filterChips = document.querySelectorAll('[data-filter-chip]');
+        filterChips.forEach(chip => {
+            chip.classList.remove('active');
+            chip.setAttribute('aria-pressed', 'false');
+        });
+        
+        this.loadTenants();
+        this.updateUrl();
+    }
+
+    /**
      * Parse URL parameters on page load
      */
     parseUrlParams() {
@@ -425,7 +755,7 @@ class TenantsPage {
         this.sortBy = urlParams.get('sort')?.replace('-', '') || 'name';
         this.sortOrder = urlParams.get('sort')?.startsWith('-') ? 'desc' : 'asc';
         this.page = parseInt(urlParams.get('page')) || 1;
-        this.perPage = parseInt(urlParams.get('per_page')) || 20;
+        this.perPage = parseInt(urlParams.get('per_page') ?? '20', 10) || 20;
     }
 }
 

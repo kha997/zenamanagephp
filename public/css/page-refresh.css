@@ -29,6 +29,31 @@ body.page-reloading .breadcrumb {
     transition: opacity 0.15s ease;
 }
 
+/* Chart Card Styling */
+.chart-card {
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-wrap {
+    position: relative;
+    height: 100%;
+    width: 100%;
+}
+
+.chart-box canvas {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+/* Security-specific chart improvements */
+.security-chart {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
 .chart-box.no-data {
     min-height: 280px;
     display: flex;

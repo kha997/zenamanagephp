@@ -755,4 +755,149 @@ class SecurityApiController
             ]);
         }
     }
+
+    /**
+     * Get chart data for Security Trends
+     */
+    public function charts(Request $request): JsonResponse
+    {
+        $period = $this->validatePeriod($request->get('period', '30d'));
+        $days = $this->getDaysFromPeriod($period);
+        
+        // Calculate date ranges
+        $endDate = now();
+        $startDate = now()->subDays($days);
+        
+        // Generate mock chart data with proper structure
+        $chartData = [
+            'mfaAdoption' => $this->generateMfaAdoptionChartData($startDate, $endDate),
+            'successfulLogins' => $this->generateSuccessfulLoginsChartData($startDate, $endDate),
+            'activeSessions' => $this->generateActiveSessionsChartData($startDate, $endDate),
+            'failedLogins' => $this->generateFailedLoginsChartData($startDate, $endDate)
+        ];
+        
+        return response()->json([
+            'data' => $chartData,
+            'meta' => [
+                'period' => $period,
+                'days' => $days,
+                'startDate' => $startDate->toISOString(),
+                'endDate' => $endDate->toISOString(),
+                'generatedAt' => now()->toISOString()
+            ]
+        ]);
+    }
+    
+    /**
+     * Generate MFA Adoption chart data
+     */
+    private function generateMfaAdoptionChartData($startDate, $endDate): array
+    {
+        $data = [];
+        $current = $startDate->copy();
+        $baseValue = 85; // Starting MFA adoption %
+        
+        while ($current->lte($endDate)) {
+            // Simulate gradual growth with some noise
+            $noise = (mt_rand(-500, 500) / 100);
+            $value = max(0, min(100, $baseValue + ($noise * 0.3)));
+            
+            $data[] = [
+                'date' => $current->format('Y-m-d'),
+                'value' => round($value, 1)
+            ];
+            
+            $baseValue += 0.2; // Gradual improvement
+            $current->addDay();
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Generate Successful Logins chart data
+     */
+    private function generateSuccessfulLoginsChartData($startDate, $endDate): array
+    {
+        $data = [];
+        $current = $startDate->copy();
+        $baseValue = 1500;
+        
+        while ($current->lte($endDate)) {
+            // Simulate daily login patterns with weekend dips
+            $dayOfWeek = $current->dayOfWeek;
+            $weekendFactor = in_array($dayOfWeek, [0, 6]) ? 0.6 : 1.0;
+            
+            $value = (int)($baseValue * $weekendFactor + mt_rand(-200, 200));
+            $value = max(500, $value); // Minimum logins
+            
+            $data[] = [
+                'date' => $current->format('Y-m-d'),
+                'value' => $value
+            ];
+            
+            $baseValue += mt_rand(-50, 50); // Slow growth trend
+            $current->addDay();
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Generate Active Sessions chart data
+     */
+    private function generateActiveSessionsChartData($startDate, $endDate): array
+    {
+        $data = [];
+        $current = $startDate->copy();
+        $baseValue = 200;
+        
+        while ($current->lte($endDate)) {
+            // Simulate typical workday patterns
+            $dayOfWeek = $current->dayOfWeek;
+            $weekendFactor = in_array($dayOfWeek, [0, 6]) ? 0.3 : 1.0;
+            
+            $value = (int)($baseValue * $weekendFactor + mt_rand(-20, 40));
+            $value = max(10, $value);
+            
+            $data[] = [
+                'date' => $current->format('Y-m-d'),
+                'value' => $value
+            ];
+            
+            $baseValue += mt_rand(-10, 10);
+            $current->addDay();
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Generate Failed Logins chart data
+     */
+    private function generateFailedLoginsChartData($startDate, $endDate): array
+    {
+        $data = [];
+        $current = $startDate->copy();
+        $baseValue = 25;
+        
+        while ($current->lte($endDate)) {
+            // Simulate failed login spikes (security incidents)
+            $spikeChance = mt_rand(1, 100);
+            $spikeFactor = $spikeChance > 95 ? 3.0 : 1.0;
+            
+            $value = (int)(($baseValue * $spikeFactor) + mt_rand(-10, 15));
+            $value = max(0, $value);
+            
+            $data[] = [
+                'date' => $current->format('Y-m-d'),
+                'value' => $value
+            ];
+            
+            $baseValue += mt_rand(-2, 2);
+            $current->addDay();
+        }
+        
+        return $data;
+    }
 }

@@ -27,16 +27,28 @@ class AdminOnly
         
         $user = Auth::guard('sanctum')->user();
         
+        if (!$user) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'User not found.'], 401);
+            }
+            return redirect()->route('login');
+        }
+        
         // Check if user has admin ability or super admin role
         $hasAdminAccess = false;
         
         // Check token ability
-        if ($request->user()->currentAccessToken() && $request->user()->currentAccessToken()->can('admin')) {
+        if ($user->currentAccessToken() && $user->currentAccessToken()->can('admin')) {
             $hasAdminAccess = true;
         }
         
         // Check user role
-        if ($user->isSuperAdmin()) {
+        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+            $hasAdminAccess = true;
+        }
+        
+        // Check is_admin field as fallback
+        if (isset($user->is_admin) && $user->is_admin) {
             $hasAdminAccess = true;
         }
         

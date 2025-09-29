@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="<?php echo e(asset('css/ui-loading.css')); ?>">
     <!-- Enhanced Dashboard Styles -->
     <link rel="stylesheet" href="<?php echo e(asset('css/dashboard-enhanced.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset('css/tenants-enhanced.css')); ?>">
     <?php echo $__env->yieldPushContent('styles'); ?>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <?php echo $__env->yieldContent('styles'); ?>

@@ -51,7 +51,7 @@ class SecurityCharts {
         this.error = null;
 
         try {
-            const url = `/api/admin/security/kpis-bypass?period=${this.chartPeriod}`;
+            const url = `/api/admin/security/kpis?period=${this.chartPeriod}`;
             console.log('SecurityCharts: Loading data from', url);
 
             const response = await fetch(url, {

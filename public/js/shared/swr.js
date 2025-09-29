@@ -211,6 +211,12 @@ export async function getWithETag(key, url, options = {}) {
     return swr.getWithETag(key, url, options);
 }
 
+// Expose globally for dashboard integration
+if (typeof window !== 'undefined') {
+    window.swr = swr;
+    window.getWithETag = getWithETag;
+}
+
 // Specialized helpers
 export async function getWithProgress(key, url, options = {}) {
     const progressOptions = {

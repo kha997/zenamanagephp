@@ -1,5 +1,6 @@
 
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+<div id="activity-section" class="activity-panel bg-white rounded-lg shadow-sm border border-gray-200 p-6" 
+     role="log" aria-live="polite" aria-label="Recent system activity feed">
     <div class="flex items-center justify-between mb-6">
         <h3 class="text-lg font-semibold text-gray-900">Recent Activity</h3>
         <a href="/admin/activity" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
@@ -7,9 +8,10 @@
         </a>
     </div>
     
-    <div class="space-y-4">
+    <div class="space-y-4 min-h-table min-h-[420px]">
         <template x-for="item in activity" :key="item.id">
-            <div class="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg">
+            <div class="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg" 
+                 role="log" aria-label="Activity item">
                 <div class="flex-shrink-0">
                     <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                         <i :class="getSeverityIcon(item.severity)" :class="getSeverityColor(item.severity)"></i>

@@ -1338,11 +1338,20 @@ Route::prefix('websocket')->group(function () {
 });
 
 // Admin Dashboard API Routes (temporarily without middleware for testing)
-Route::prefix('api/admin/dashboard')->group(function () {
+Route::prefix('admin/dashboard')->group(function () {
     Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
     Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
     Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);
     Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics']);
+    
+    // New consolidated endpoints with ETag support
+    Route::get('/summary', [App\Http\Controllers\Api\Admin\DashboardController::class, 'summary']);
+    Route::get('/charts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'charts']);
+    Route::get('/activity', [App\Http\Controllers\Api\Admin\DashboardController::class, 'activity']);
+    
+    // Export endpoints with rate limiting
+    Route::get('/signups/export.csv', [App\Http\Controllers\Api\Admin\DashboardController::class, 'exportSignups']);
+    Route::get('/errors/export.csv', [App\Http\Controllers\Api\Admin\DashboardController::class, 'exportErrors']);
 });
 
 // Legacy Route Monitoring Routes (temporarily without middleware for testing)
@@ -1388,6 +1397,20 @@ Route::prefix('admin')->middleware(['auth:sanctum', 'admin.only'])->group(functi
     Route::get('/security/audit', [App\Http\Controllers\Admin\SecurityApiController::class, 'audit']);
     Route::get('/security/sessions', [App\Http\Controllers\Admin\SecurityApiController::class, 'sessions']);
     Route::post('/security/users/{id}:force-mfa', [App\Http\Controllers\Admin\SecurityApiController::class, 'forceMfa']);
+    
+    // Tenants API with proper middleware chain
+    Route::middleware(['tenant.isolation'])
+        ->prefix('tenants')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\Admin\TenantController::class, 'index'])->name('tenants.index');
+            Route::get('/{id}', [\App\Http\Controllers\Api\Admin\TenantController::class, 'show'])->name('tenants.show');
+            Route::post('/', [\App\Http\Controllers\Api\Admin\TenantController::class, 'store'])->name('tenants.store');
+            Route::put('/{id}', [\App\Http\Controllers\Api\Admin\TenantController::class, 'update'])->name('tenants.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\Admin\TenantController::class, 'destroy'])->name('tenants.destroy');
+            
+            // Export with rate limiting
+            Route::get('/export.csv', [\App\Http\Controllers\Api\Admin\TenantExportController::class, 'export'])
+                ->middleware('throttle:tenants-exports')->name('tenants.export');
+        });
 });
 
 // Fallback routes with TokenOnly middleware when SECURITY_AUTH_BYPASS=true

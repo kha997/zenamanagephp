@@ -19,7 +19,7 @@
         <!-- Navigation -->
         <nav class="p-3 space-y-1">
             <!-- Dashboard -->
-            <a href="/admin/dashboard" 
+            <a href="/admin" 
                data-soft-refresh="dashboard"
                class="flex items-center px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors <?php echo e(request()->is('admin/dashboard') ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' : ''); ?>"
                :title="sidebarCollapsed ? 'Dashboard' : ''"

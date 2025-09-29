@@ -21,6 +21,8 @@
             <p class="text-gray-600">System overview and key metrics</p>
         </div>
         <div class="flex items-center space-x-3">
+            
+            <span class="text-xs text-gray-500 refresh-indicator">Last updated: <span x-text="lastRefresh"></span></span>
             <!-- Quick Presets -->
             <div class="flex items-center space-x-2 overflow-x-auto">
                 <span class="text-sm text-gray-600 whitespace-nowrap">Quick Views:</span>
@@ -127,6 +129,11 @@
 <script>
     function adminDashboard() {
         return {
+            // State management
+            isLoading: false,
+            lastRefresh: '',
+            activityCursor: '',
+            
             // Feature flag for mock data
             mockData: true, // Set to false to use real BE API
             
@@ -164,37 +171,12 @@
                 }
             },
             
-            charts: {
-                signups: {
-                    points: [
-                        { ts: '2024-01-01T00:00:00Z', value: 45 },
-                        { ts: '2024-01-02T00:00:00Z', value: 52 },
-                        { ts: '2024-01-03T00:00:00Z', value: 48 },
-                        { ts: '2024-01-04T00:00:00Z', value: 61 },
-                        { ts: '2024-01-05T00:00:00Z', value: 55 },
-                        { ts: '2024-01-06T00:00:00Z', value: 67 }
-                    ],
-                    period: '30d'
-                },
-                errors: {
-                    points: [
-                        { ts: '2024-01-01T00:00:00Z', value: 2.1 },
-                        { ts: '2024-01-02T00:00:00Z', value: 1.8 },
-                        { ts: '2024-01-03T00:00:00Z', value: 2.3 },
-                        { ts: '2024-01-04T00:00:00Z', value: 1.9 },
-                        { ts: '2024-01-05T00:00:00Z', value: 2.0 },
-                        { ts: '2024-01-06T00:00:00Z', value: 1.7 }
-                    ],
-                    period: '7d'
-                }
-            },
+            // Charts moved to standalone implementation
             
             // Export functionality
             showExportModal: false,
             exportFormat: 'csv',
             exportRange: '30',
-            signupsRange: '30',
-            errorsRange: '30',
             currentExportType: '',
             
             activity: [
@@ -248,7 +230,7 @@
             init() {
                 this.loadDashboardData();
                 this.startPolling();
-                this.initCharts();
+                // Charts handled independently
             },
             
             // API Integration
@@ -267,14 +249,12 @@
                         // Use mock data
                         await Promise.all([
                             this.loadKPIs(),
-                            this.loadCharts(),
                             this.loadActivity()
                         ]);
                     } else {
                         // Use real BE API
                         await Promise.all([
                             this.loadKPIsFromAPI(),
-                            this.loadChartsFromAPI(),
                             this.loadActivityFromAPI()
                         ]);
                     }
@@ -628,7 +608,6 @@
             applyCriticalPreset() {
                 // Set chart period to 7d for errors
                 this.charts.errors.period = '7d';
-                this.errorsRange = '7';
                 
                 // Navigate to Alerts with critical filter
                 window.location.href = '/admin/alerts?severity=critical&range=24h&sort=-created_at';
@@ -640,7 +619,6 @@
             applyActivePreset() {
                 // Set signups period to 30d
                 this.charts.signups.period = '30d';
-                this.signupsRange = '30';
                 
                 // Navigate to Users with active filter
                 window.location.href = '/admin/users?status=active&sort=-last_login';
@@ -691,11 +669,7 @@
                 this.logEvent('kpi_drilldown', { kpi: 'storage', target: 'storage_settings' });
             },
             
-            // Export Functions
-            exportChart(type) {
-                this.currentExportType = type;
-                this.showExportModal = true;
-            },
+            // Export Functions removed - moved to standalone charts
             
             downloadExport() {
                 const data = this.getExportData();
@@ -812,11 +786,82 @@
                 return text;
             },
             
+            // Dashboard refresh functionality
+            refresh() {
+                if (window.Dashboard) {
+                    window.Dashboard.refresh();
+                }
+            },
+
+            formatTime(date) {
+                return date.toLocaleTimeString();
+            },
+
+            updateRefreshTime() {
+                this.lastRefresh = this.formatTime(new Date());
+            },
+
+            // Chart management removed - standalone implementation
+
             // A11y helpers
             getAriaLabel(kpi, value, delta, period) {
                 const kpiName = this.t(`admin.dashboard.kpi.${kpi}`);
                 const deltaText = delta > 0 ? `up ${delta}%` : `down ${Math.abs(delta)}%`;
                 return `View ${kpiName} — ${value} total, ${deltaText} in ${period}`;
+            },
+
+            // Initialize dashboard
+            init() {
+                const startTime = performance.now();
+                
+                console.log('Initializing dashboard...');
+                
+                // Initialize refresh time
+                this.lastRefresh = new Date().toLocaleTimeString();
+                
+                // Set up event listeners for enhanced modules
+                this.setupEventListeners();
+                
+                // Trigger charts initialization
+                setTimeout(() => {
+                    const chartInitTime = performance.now();
+                    
+                    if (window.DashboardCharts) {
+                        window.DashboardCharts.initialize();
+                    }
+                    
+                    // Record dashboard load performance
+                    const endTime = performance.now();
+                    if (window.DashboardMonitor) {
+                        window.DashboardMonitor.recordDashboardLoad(startTime, endTime);
+                        window.DashboardMonitor.recordRefresh('initial');
+                    }
+                }, 100);
+                
+                console.log('Dashboard initialized');
+            },
+
+            // Set up event listeners for integration
+            setupEventListeners() {
+                // Listen for refresh events
+                document.addEventListener('dashboard:refreshed', () => {
+                    this.updateRefreshTime();
+                });
+
+                // Listen for KPI updates
+                document.addEventListener('dashboard:kpisUpdated', (event) => {
+                    console.log('KPIs updated:', event.detail.data);
+                });
+
+                // Listen for chart updates  
+                document.addEventListener('dashboard:chartsUpdated', (event) => {
+                    console.log('Charts updated:', event.detail.data);
+                });
+
+                // Listen for activity updates
+                document.addEventListener('dashboard:activityUpdated', (event) => {
+                    console.log('Activity updated:', event.detail.data);
+                });
             }
         }
     }

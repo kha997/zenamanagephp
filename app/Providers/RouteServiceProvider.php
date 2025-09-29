@@ -136,5 +136,11 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user('api')?->id ?: $request->ip());
         });
         */
+        
+        // Tenants export rate limiting
+        RateLimiter::for('tenants-exports', function (Request $request) {
+            return Limit::perMinute(config('security.rate_limit_export_per_min', 10))
+                ->by(optional($request->user())->id ?: $request->ip());
+        });
     }
 }

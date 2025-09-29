@@ -119,7 +119,7 @@ const inFlightRequests = {};
 
 // Cancelable fetch wrappers
 async function fetchKpis(options = {}) {
-    const url = `/api/admin/security/kpis-bypass?period=${options.period || '30d'}`;
+    const url = `/api/admin/security/kpis?period=${options.period || '30d'}`;
     
     if (inFlightRequests.kpis) {
         inFlightRequests.kpis.abort();

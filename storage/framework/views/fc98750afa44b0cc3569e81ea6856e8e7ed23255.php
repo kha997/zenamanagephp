@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="<?php echo e(asset('css/loading-states.css')); ?>">
     <!-- UI Loading Styles -->
     <link rel="stylesheet" href="<?php echo e(asset('css/ui-loading.css')); ?>">
+    <!-- Enhanced Dashboard Styles -->
+    <link rel="stylesheet" href="<?php echo e(asset('css/dashboard-enhanced.css')); ?>">
     <?php echo $__env->yieldPushContent('styles'); ?>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <?php echo $__env->yieldContent('styles'); ?>
@@ -343,13 +345,16 @@
     <!-- Security Charts Module -->
     <script src="<?php echo e(asset('js/security/charts.js')); ?>" defer></script>
     
-    <!-- Page Refresh Manager for CRUD pages -->
+    <!-- Dashboard Modules (only load on dashboard)-->
+    <?php if(request()->is('admin') || request()->is('admin/dashboard')): ?>
+    <script src="<?php echo e(asset('js/pages/dashboard.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/dashboard/charts.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/shared/dashboard-monitor.js')); ?>" defer></script>
+    <?php endif; ?>
+    
+    <!-- Re-enabled for dashboard functionality -->
     <script src="<?php echo e(asset('js/core/page-refresh-manager.js')); ?>" defer></script>
-    
-    <!-- Page Auto-Initialization -->
     <script src="<?php echo e(asset('js/core/page-auto-init.js')); ?>" defer></script>
-    
-    <!-- Shared Modules for No-Flash Architecture -->
     <script type="module" src="<?php echo e(asset('js/shared/swr.js')); ?>" defer></script>
     <script type="module" src="<?php echo e(asset('js/shared/panel-fetch.js')); ?>" defer></script>
     <script type="module" src="<?php echo e(asset('js/shared/soft-refresh.js')); ?>" defer></script>

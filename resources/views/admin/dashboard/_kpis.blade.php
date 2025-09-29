@@ -1,13 +1,15 @@
 {{-- Admin Dashboard KPIs --}}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
+<div id="kpi-strip" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6" aria-live="polite">
     <!-- Total Tenants -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
+    <div class="kpi-panel bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
          @click="window.location.href='/admin/tenants'"
          role="button"
          tabindex="0"
+         data-testid="kpi-tenants"
          :aria-label="getAriaLabel('tenants', kpis.totalTenants.value, kpis.totalTenants.deltaPct, kpis.totalTenants.period)"
          @keydown.enter="window.location.href='/admin/tenants'"
-         @keydown.space.prevent="window.location.href='/admin/tenants'">
+         @keydown.space.prevent="window.location.href='/admin/tenants'"
+         aria-live="polite">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Total Tenants</p>
@@ -22,8 +24,8 @@
             </div>
         </div>
         <!-- Sparkline Chart -->
-        <div class="h-8 mb-3">
-            <canvas id="tenantsSparkline" class="w-full h-full"></canvas>
+        <div class="sparkline-container h-8 mb-3">
+            <canvas id="tenantsSparkline" class="w-full h-full" role="img" aria-label="Tenants trend sparkline"></canvas>
         </div>
         <!-- Primary Action Button -->
         <button class="w-full px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -33,8 +35,9 @@
     </div>
     
     <!-- Total Users -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
-         @click="window.location.href='/admin/users'">
+    <div class="kpi-panel bg-white rounded-md shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
+         @click="window.location.href='/admin/users'"
+         data-testid="kpi-users">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Total Users</p>
@@ -49,8 +52,8 @@
             </div>
         </div>
         <!-- Sparkline Chart -->
-        <div class="h-8 mb-3">
-            <canvas id="usersSparkline" class="w-full h-full"></canvas>
+        <div class="sparkline-container h-8 mb-3">
+            <canvas id="usersSparkline" class="w-full h-full" role="img" aria-label="Users trend sparkline"></canvas>
         </div>
         <!-- Primary Action Button -->
         <button class="w-full px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
@@ -59,8 +62,9 @@
     </div>
     
     <!-- Errors 24h -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
-         @click="window.location.href='/admin/alerts'">
+    <div class="kpi-panel bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
+         @click="window.location.href='/admin/alerts'"
+         data-testid="kpi-errors">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Errors (24h)</p>
@@ -75,8 +79,8 @@
             </div>
         </div>
         <!-- Sparkline Chart -->
-        <div class="h-8 mb-3">
-            <canvas id="errorsSparkline" class="w-full h-full"></canvas>
+        <div class="sparkline-container h-8 mb-3">
+            <canvas id="errorsSparkline" class="w-full h-full" role="img" aria-label="Errors trend sparkline"></canvas>
         </div>
         <!-- Primary Action Button -->
         <button class="w-full px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors">
@@ -85,8 +89,9 @@
     </div>
     
     <!-- Queue Jobs -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
-         @click="window.location.href='/admin/maintenance'">
+    <div class="kpi-panel bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
+         @click="window.location.href='/admin/maintenance'"
+         data-testid="kpi-queue">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Queue Jobs</p>
@@ -101,8 +106,8 @@
             </div>
         </div>
         <!-- Sparkline Chart -->
-        <div class="h-8 mb-3">
-            <canvas id="queueSparkline" class="w-full h-full"></canvas>
+        <div class="sparkline-container h-8 mb-3">
+            <canvas id="queueSparkline" class="w-full h-full" role="img" aria-label="Queue trend sparkline"></canvas>
         </div>
         <!-- Primary Action Button -->
         <button class="w-full px-3 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors">
@@ -111,8 +116,9 @@
     </div>
     
     <!-- Storage Used -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
-         @click="window.location.href='/admin/maintenance'">
+    <div class="kpi-panel bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" 
+         @click="window.location.href='/admin/maintenance'"
+         data-testid="kpi-storage">
         <div class="flex items-center justify-between mb-4">
             <div>
                 <p class="text-sm font-medium text-gray-600">Storage Used</p>
@@ -127,8 +133,8 @@
             </div>
         </div>
         <!-- Sparkline Chart -->
-        <div class="h-8 mb-3">
-            <canvas id="storageSparkline" class="w-full h-full"></canvas>
+        <div class="sparkline-container h-8 mb-3">
+            <canvas id="storageSparkline" class="w-full h-full" role="img" aria-label="Storage trend sparkline"></canvas>
         </div>
         <!-- Primary Action Button -->
         <button class="w-full px-3 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">

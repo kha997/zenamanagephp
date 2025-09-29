@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const container = document.querySelector('[data-charts-container]');
                     if (container) {
                         console.log('Initializing SecurityChartsManager');
-                        new window.SecurityChartsManager(container, '/api/admin/security/kpis-bypass');
+                        new window.SecurityChartsManager(container, '/api/admin/security/kpis');
                     }
                 } else {
                     console.log('SecurityChartsManager not yet available, retrying...');

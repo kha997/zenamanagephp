@@ -318,9 +318,12 @@ document.addEventListener('alpine:init', () => {
 
         async loadKpis() {
             try {
-                // Use bypass endpoint to avoid auth issues (silent)
-                const response = await fetch(`/api/admin/security/kpis-bypass?period=${this.filters.range}`, {
-                    headers: { 'Accept': 'application/json' }
+                // Use official security KPIs endpoint
+                const response = await fetch(`/api/admin/security/kpis?period=${this.filters.range}`, {
+                    headers: { 
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+                    }
                 });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();

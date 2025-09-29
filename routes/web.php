@@ -14,10 +14,20 @@ use App\Http\Controllers\DashboardController;
 |
 */
 
-// Simple Admin Dashboard Route (no middleware)
+// Admin routes with views
 Route::get('/admin', function () {
-    return '<h1>Super Admin Dashboard</h1><p>Dashboard is working!</p>';
+    return view('admin.dashboard.index');
 })->name('admin.dashboard');
+
+// Test route
+Route::get('/admin/test', function () {
+    return view('admin.dashboard.test');
+})->name('admin.test');
+
+// Simple dashboard test
+Route::get('/admin/simple', function () {
+    return view('admin.dashboard.simple');
+})->name('admin.simple');
 
 // MOVED: Test API Routes moved to /_debug namespace with DebugGate middleware
 

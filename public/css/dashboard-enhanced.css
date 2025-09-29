@@ -1,0 +1,154 @@
+/**
+ * Dashboard Enhanced Styles - Zero CLS & Smooth Refresh
+ */
+
+/* Zero-CLS Fixed Heights */
+.min-h-chart {
+    min-height: 280px;
+}
+
+.min-h-table {
+    min-height: 420px;
+}
+
+/* Panel Soft Refresh States */
+.soft-dim {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.soft-dim::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 5;
+    border-radius: inherit;
+}
+
+/* Panel Spinner */
+.panel-spinner {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+    opacity: 1;
+}
+
+.panel-spinner .animate-spin {
+    color: #3B82F6;
+}
+
+/* KPI Panel Styles */
+.kpi-panel {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.kpi-panel:focus-within {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Chart Panel Styles */
+.chart-panel {
+    position: relative;
+    overflow: hidden;
+}
+
+.chart-panel canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Activity Panel Styles */
+.activity-panel .space-y-4 > * {
+    transition: background-color 0.2s ease;
+}
+
+.activity-panel .space-y-4 > *:hover {
+    background-color: rgba(249, 250, 251, 0.8);
+}
+
+/* Sparkline Container */
+.sparkline-container {
+    height: 32px;
+    width: 100%;
+    position: relative;
+}
+
+/* Accessibility Improvements */
+[aria-busy="true"] {
+    cursor: wait;
+}
+
+[data-testid] {
+    /* Test automation support */
+}
+
+/* Refresh Indicator */
+.refresh-indicator {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Loading States */
+.loading-skeleton {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .min-h-chart {
+        min-height: 240px;
+    }
+    
+    .min-h-table {
+        min-height: 320px;
+    }
+    
+    .kpi-panel {
+        padding: 1rem;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .soft-dim::before {
+        background: rgba(17, 24, 39, 0.8);
+    }
+    
+    .chart-panel {
+        background-color: rgb(31, 41, 55);
+        border-color: rgb(55, 65, 81);
+    }
+}
+
+/* Export Button Styles */
+button[data-export] {
+    transition: all 0.2s ease;
+}
+
+button[data-export]:hover {
+    transform: translateY(-1px);
+}
+
+button[data-export]:active {
+    transform: translateY(0);
+}

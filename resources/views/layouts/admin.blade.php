@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="{{ asset('css/loading-states.css') }}">
     <!-- UI Loading Styles -->
     <link rel="stylesheet" href="{{ asset('css/ui-loading.css') }}">
+    <!-- Enhanced Dashboard Styles -->
+    <link rel="stylesheet" href="{{ asset('css/dashboard-enhanced.css') }}">
     @stack('styles')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @yield('styles')
@@ -343,13 +345,16 @@
     <!-- Security Charts Module -->
     <script src="{{ asset('js/security/charts.js') }}" defer></script>
     
-    <!-- Page Refresh Manager for CRUD pages -->
+    <!-- Dashboard Modules (only load on dashboard)-->
+    @if(request()->is('admin') || request()->is('admin/dashboard'))
+    <script src="{{ asset('js/pages/dashboard.js') }}" defer></script>
+    <script src="{{ asset('js/dashboard/charts.js') }}" defer></script>
+    <script src="{{ asset('js/shared/dashboard-monitor.js') }}" defer></script>
+    @endif
+    
+    <!-- Re-enabled for dashboard functionality -->
     <script src="{{ asset('js/core/page-refresh-manager.js') }}" defer></script>
-    
-    <!-- Page Auto-Initialization -->
     <script src="{{ asset('js/core/page-auto-init.js') }}" defer></script>
-    
-    <!-- Shared Modules for No-Flash Architecture -->
     <script type="module" src="{{ asset('js/shared/swr.js') }}" defer></script>
     <script type="module" src="{{ asset('js/shared/panel-fetch.js') }}" defer></script>
     <script type="module" src="{{ asset('js/shared/soft-refresh.js') }}" defer></script>

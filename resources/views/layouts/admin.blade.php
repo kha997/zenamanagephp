@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.min.js" defer></script>
     <!-- Core Page Refresh CSS -->
     <link rel="stylesheet" href="{{ asset('css/page-refresh.css') }}">
     <!-- Loading States CSS -->
@@ -348,7 +348,6 @@
     
     <!-- Dashboard Modules (only load on dashboard)-->
     @if(request()->is('admin') || request()->is('admin/dashboard'))
-    <script src="{{ asset('js/pages/dashboard.js') }}" defer></script>
     <script src="{{ asset('js/dashboard/charts.js') }}" defer></script>
     <script src="{{ asset('js/shared/dashboard-monitor.js') }}" defer></script>
     @endif

@@ -8,7 +8,7 @@
 <?php $__env->stopSection(); ?>
 
 <?php $__env->startSection('content'); ?>
-<div class="space-y-6" x-data="adminDashboard()">
+<div class="space-y-6" x-data="adminDashboard()" x-init="init()">
     
     <div class="flex items-center justify-between">
         <div>
@@ -457,8 +457,7 @@
                     });
                 }
                 
-                // Initialize Sparkline Charts
-                this.initSparklines();
+                // Sparklines handled by DashboardCharts class
             },
             
             destroyCharts() {
@@ -470,58 +469,9 @@
                 this.chartInstances = {};
             },
             
-            initSparklines() {
-                // Create sparkline charts from KPI data
-                const sparklineKeys = ['tenants', 'users', 'errors24h', 'queueJobs', 'storage'];
-                
-                sparklineKeys.forEach(key => {
-                    const canvas = document.getElementById(key + 'Sparkline');
-                    if (canvas && this.kpis[key]) {
-                        const series = this.kpis[key].series;
-                        new Chart(canvas, {
-                            type: 'line',
-                            data: {
-                                labels: Array(series.length).fill(''),
-                                datasets: [{
-                                    data: series,
-                                    borderColor: this.getSparklineColor(key),
-                                    backgroundColor: this.getSparklineColor(key, 0.1),
-                                    borderWidth: 2,
-                                    pointRadius: 0,
-                                    pointHoverRadius: 3,
-                                    tension: 0.4,
-                                    fill: true
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: { display: false }
-                                },
-                                scales: {
-                                    x: { display: false },
-                                    y: { display: false }
-                                },
-                                elements: {
-                                    point: { radius: 0 }
-                                }
-                            }
-                        });
-                    }
-                });
-            },
+            // REMOVED: initSparklines() - handled by DashboardCharts class
             
-            getSparklineColor(key, alpha = 1) {
-                const colors = {
-                    totalTenants: `rgba(16, 185, 129, ${alpha})`, // Green #10B981
-                    totalUsers: `rgba(16, 185, 129, ${alpha})`,   // Green #10B981
-                    errors24h: `rgba(239, 68, 68, ${alpha})`,     // Red #EF4444
-                    queueJobs: `rgba(245, 158, 11, ${alpha})`,    // Orange #F59E0B
-                    storage: `rgba(139, 92, 246, ${alpha})`       // Purple #8B5CF6
-                };
-                return colors[key] || `rgba(107, 114, 128, ${alpha})`;
-            },
+            // REMOVED: getSparklineColor() - handled by DashboardCharts class
             
             // Utility functions
             formatBytes(bytes) {
@@ -810,8 +760,8 @@
                 return `View ${kpiName} — ${value} total, ${deltaText} in ${period}`;
             },
 
-            // Initialize dashboard
-            init() {
+            // Initialize dashboard (second init method - REMOVE THIS DUPLICATE)
+            initDashboard() {
                 const startTime = performance.now();
                 
                 console.log('Initializing dashboard...');

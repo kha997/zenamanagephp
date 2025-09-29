@@ -146,6 +146,7 @@
             total: 0,
             lastPage: 1,
             isLoading: false,
+            tenantsLoading: false,
             error: null,
             abortController: null,
             
@@ -232,8 +233,13 @@
                 }
                 
                 this.abortController = new AbortController();
-                this.isLoading = true;
+                this.tenantsLoading = true;
                 this.error = null;
+                
+                // Start progress bar
+                if (window.NProgress) {
+                    window.NProgress.start();
+                }
                 
                 try {
                     if (this.mockData) {
@@ -294,8 +300,14 @@
                         }
                     }
                 } finally {
-                    this.isLoading = false;
+                    this.tenantsLoading = false;
                     this.abortController = null;
+                    
+                    // Stop progress bar
+                    if (window.NProgress) {
+                        window.NProgress.done();
+                    }
+                }
                 }
             },
             

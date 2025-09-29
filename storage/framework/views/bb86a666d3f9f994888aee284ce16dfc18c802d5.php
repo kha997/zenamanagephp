@@ -1,28 +1,31 @@
 
-<div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden" data-tenants-table>
-    <!-- Loading State -->
-    <div x-show="isLoading" class="p-6">
+<section id="tenants-table" 
+         :data-loading="tenantsLoading ? 'tenants-table' : ''" 
+         :aria-busy="tenantsLoading ? 'true' : 'false'"
+         class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+         data-tenants-table>
+    
+    <!-- Loading State - Scoped to table -->
+    <div x-show="tenantsLoading" class="table-skeleton p-6">
         <div class="space-y-4">
             <template x-for="i in 8" :key="i">
-                <div class="flex items-center space-x-4 animate-pulse">
-                    <div class="w-4 h-4 bg-gray-200 rounded"></div>
-                    <div class="w-8 h-8 bg-gray-200 rounded-full"></div>
+                <div class="flex items-center space-x-4 skeleton-pulse">
+                    <div class="w-4 h-4 bg-gray-200 rounded skeleton-circle"></div>
+                    <div class="w-8 h-8 bg-gray-200 rounded-full skeleton-circle"></div>
                     <div class="flex-1 space-y-2">
-                        <div class="h-4 bg-gray-200 rounded w-1/4"></div>
-                        <div class="h-3 bg-gray-200 rounded w-1/6"></div>
+                        <div class="h-4 bg-gray-200 rounded skeleton-line"></div>
+                        <div class="h-3 bg-gray-200 rounded skeleton-line"></div>
                     </div>
-                    <div class="h-4 bg-gray-200 rounded w-1/5"></div>
-                    <div class="h-4 bg-gray-200 rounded w-1/6"></div>
-                    <div class="h-4 bg-gray-200 rounded w-1/8"></div>
-                    <div class="h-4 bg-gray-200 rounded w-1/8"></div>
-                    <div class="h-4 bg-gray-200 rounded w-1/8"></div>
+                    <div class="h-4 bg-gray-200 rounded skeleton-cell"></div>
+                    <div class="h-4 bg-gray-200 rounded skeleton-cell"></div>
+                    <div class="h-4 bg-gray-200 rounded skeleton-cell"></div>
                 </div>
             </template>
         </div>
     </div>
     
     <!-- Error State -->
-    <div x-show="error && !isLoading" class="p-6 text-center">
+    <div x-show="error && !tenantsLoading" class="p-6 text-center">
         <div class="bg-red-50 border border-red-200 rounded-lg p-4">
             <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
             <h3 class="text-lg font-medium text-red-900 mb-2">Error loading tenants</h3>
@@ -35,7 +38,7 @@
     </div>
     
     <!-- Table Content -->
-    <div x-show="!isLoading && !error" class="overflow-x-auto">
+    <div x-show="!tenantsLoading && !error" class="overflow-x-auto table-container" aria-live="polite">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>

@@ -231,20 +231,18 @@
             
             // Server-side API calls
             async loadTenants() {
-                if (this.abortController) {
-                    this.abortController.abort();
-                }
-                
-                this.abortController = new AbortController();
-                this.tenantsLoading = true;
-                this.error = null;
-                
-                // Start progress bar
-                if (window.NProgress) {
-                    window.NProgress.start();
-                }
-                
                 try {
+                    this.error = null;
+                    
+                    // Use Panel Fetch for non-blocking load
+                    const result = await window.panelFetch('/api/admin/tenants?' + this.buildApiParams(), {
+                        onStart: () => { this.tenantsLoading = true; },
+                        onEnd: () => { this.tenantsLoading = false; },
+                        panelId: 'tenants-table',
+                        cacheKey: 'tenants-list'
+                    });
+                    
+                    // Handle response data
                     if (this.mockData) {
                         // Mock API response
                         await new Promise(resolve => setTimeout(resolve, 300));
@@ -302,13 +300,10 @@
                             });
                         }
                     }
-                } finally {
-                    this.tenantsLoading = false;
-                    this.abortController = null;
-                    
-                    // Stop progress bar
-                    if (window.NProgress) {
-                        window.NProgress.done();
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error('Tenants loading error:', error);
+                        this.error = error.message;
                     }
                 }
                 }

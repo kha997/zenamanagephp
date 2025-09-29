@@ -155,6 +155,7 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('securityPage', () => ({
         // State
         loading: true,
+        chartsLoading: false,
         error: null,
         activePanel: null,
         kpis: {},

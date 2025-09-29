@@ -1,12 +1,13 @@
-{{-- Tenants Table with Scoped Loading --}}
+{{-- Tenants Table with Non-blocking Panel Loading --}}
 <section id="tenants-table" 
-         :data-loading="tenantsLoading ? 'tenants-table' : ''" 
+         data-panel-id="tenants-table"
+         :class="tenantsLoading ? 'panel-wrapper panel-loading soft-dim' : 'panel-wrapper'"
          :aria-busy="tenantsLoading ? 'true' : 'false'"
          class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
          data-tenants-table>
     
-    <!-- Loading State - Scoped to table -->
-    <div x-show="tenantsLoading" class="table-skeleton p-6">
+    <!-- Loading State - Non-blocking local dimmer -->
+    <div x-show="tenantsLoading" class="table-skeleton p-6" aria-live="polite">
         <div class="space-y-4">
             <template x-for="i in 8" :key="i">
                 <div class="flex items-center space-x-4 skeleton-pulse">

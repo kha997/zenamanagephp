@@ -12,6 +12,8 @@
     <link rel="stylesheet" href="{{ asset('css/page-refresh.css') }}">
     <!-- Loading States CSS -->
     <link rel="stylesheet" href="{{ asset('css/loading-states.css') }}">
+    <!-- UI Loading Styles -->
+    <link rel="stylesheet" href="{{ asset('css/ui-loading.css') }}">
     @stack('styles')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @yield('styles')
@@ -244,6 +246,9 @@
     
     <!-- Page Auto-Initialization -->
     <script src="{{ asset('js/core/page-auto-init.js') }}" defer></script>
+    
+    <!-- Panel Fetch Utils -->
+    <script type="module" src="{{ asset('js/common/fetch-utils.js') }}" defer></script>
     
     <!-- NProgress for loading bars -->
     <script src="{{ asset('js/nprogress.js') }}" defer></script>

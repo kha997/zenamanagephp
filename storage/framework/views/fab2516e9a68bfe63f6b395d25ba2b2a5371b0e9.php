@@ -198,6 +198,7 @@ document.addEventListener('alpine:init', () => {
         chartData: {},
         chartError: null,
         chartPeriod: '30d',
+        chartsInitialized: false,
 
         // Modals
         showForceMfaModal: false,
@@ -451,6 +452,9 @@ document.addEventListener('alpine:init', () => {
                     console.error('Chart rendering error:', error);
                     this.chartError = 'Failed to render charts. Please try again.';
                 }
+                
+                // Mark charts as initialized to prevent flash on subsequent renders
+                this.chartsInitialized = true;
             });
         },
 

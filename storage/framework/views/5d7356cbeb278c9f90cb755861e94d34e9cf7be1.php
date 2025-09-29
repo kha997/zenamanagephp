@@ -46,7 +46,7 @@
                         x-show="!chartError"
                     ></canvas>
                     <!-- Skeleton -->
-                    <div x-show="loading && chartError === null" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
+                    <div x-show="loading && chartError === null && !chartsInitialized" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
                     <!-- Empty State -->
                     <div x-show="!loading && !chartData?.mfaAdoption?.length" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                         <i class="fas fa-chart-line text-3xl mb-2"></i>
@@ -71,7 +71,7 @@
                         x-show="!chartError"
                     ></canvas>
                     <!-- Skeleton -->
-                    <div x-show="loading && chartError === null" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
+                    <div x-show="loading && chartError === null && !chartsInitialized" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
                     <!-- Empty State -->
                     <div x-show="!loading && !chartData?.successfulLogins?.length" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                         <i class="fas fa-chart-line text-3xl mb-2"></i>
@@ -96,7 +96,7 @@
                         x-show="!chartError"
                     ></canvas>
                     <!-- Skeleton -->
-                    <div x-show="loading && chartError === null" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
+                    <div x-show="loading && chartError === null && !chartsInitialized" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
                     <!-- Empty State -->
                     <div x-show="!loading && !chartData?.activeSessions?.length" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                         <i class="fas fa-chart-line text-3xl mb-2"></i>
@@ -121,7 +121,7 @@
                         x-show="!chartError"
                     ></canvas>
                     <!-- Skeleton -->
-                    <div x-show="loading && chartError === null" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
+                    <div x-show="loading && chartError === null && !chartsInitialized" class="absolute inset-0 bg-gray-100 animate-pulse rounded"></div>
                     <!-- Empty State -->
                     <div x-show="!loading && !chartData?.failedLogins?.length" class="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                         <i class="fas fa-chart-line text-3xl mb-2"></i>

@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,43 +12,36 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tenants', function (Blueprint $table) {
-            // Status and active index for filtering
-            $table->index(['status', 'is_active'], 'idx_tenants_status_active');
-            
-            // Search index for name, domain, status
-            $table->index(['name', 'domain', 'status'], 'idx_tenants_search');
-            
-            // Created at index for date range filtering
-            $table->index('created_at', 'idx_tenants_created_at');
-            
-            // Domain uniqueness index
-            $table->unique('domain', 'idx_tenants_domain_unique');
-        });
-
-        Schema::table('users', function (Blueprint $table) {
-            // Tenant and status index for user queries
-            $table->index(['tenant_id', 'status'], 'idx_users_tenant_status');
-            
-            // Email index for user lookups
-            $table->index('email', 'idx_users_email');
-        });
-
-        Schema::table('projects', function (Blueprint $table) {
-            // Tenant and active index for project queries
-            $table->index(['tenant_id', 'is_active'], 'idx_projects_tenant_active');
-            
-            // Tenant and created at for sorting
-            $table->index(['tenant_id', 'created_at'], 'idx_projects_tenant_created');
-        });
-
-        Schema::table('tasks', function (Blueprint $table) {
-            // Tenant and status index for task queries
-            $table->index(['tenant_id', 'status'], 'idx_tasks_tenant_status');
-            
-            // Tenant and project for task filtering
-            $table->index(['tenant_id', 'project_id'], 'idx_tasks_tenant_project');
-        });
+        // Use raw SQL to check and add indexes safely
+        $this->addIndexIfNotExists('tenants', 'idx_tenants_status_active', 'status, is_active');
+        $this->addIndexIfNotExists('tenants', 'idx_tenants_search', 'name, domain, status');
+        $this->addIndexIfNotExists('tenants', 'idx_tenants_created_at', 'created_at');
+        $this->addUniqueIfNotExists('tenants', 'idx_tenants_domain_unique', 'domain');
+        
+        $this->addIndexIfNotExists('users', 'idx_users_tenant_status', 'tenant_id, status');
+        $this->addIndexIfNotExists('users', 'idx_users_email', 'email');
+        
+        $this->addIndexIfNotExists('projects', 'idx_projects_tenant_active', 'tenant_id, status');
+        $this->addIndexIfNotExists('projects', 'idx_projects_tenant_created', 'tenant_id, created_at');
+        
+        $this->addIndexIfNotExists('tasks', 'idx_tasks_tenant_status', 'tenant_id, status');
+        $this->addIndexIfNotExists('tasks', 'idx_tasks_tenant_project', 'tenant_id, project_id');
+    }
+    
+    private function addIndexIfNotExists($table, $indexName, $columns)
+    {
+        $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = '{$indexName}'");
+        if (empty($indexes)) {
+            DB::statement("ALTER TABLE {$table} ADD INDEX {$indexName} ({$columns})");
+        }
+    }
+    
+    private function addUniqueIfNotExists($table, $indexName, $columns)
+    {
+        $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = '{$indexName}'");
+        if (empty($indexes)) {
+            DB::statement("ALTER TABLE {$table} ADD UNIQUE {$indexName} ({$columns})");
+        }
     }
 
     /**

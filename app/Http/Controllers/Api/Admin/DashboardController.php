@@ -245,8 +245,9 @@ class DashboardController extends Controller
         $cursor = $request->get('cursor', '');
         $limit = 20;
         
-        $query = DB::table('activity_logs')
-            ->select('id', 'message', 'severity', 'created_at')
+        // Use project_activities table instead of activity_logs
+        $query = DB::table('project_activities')
+            ->select('id', 'description as message', 'action as severity', 'created_at')
             ->orderBy('created_at', 'desc')
             ->limit($limit);
 

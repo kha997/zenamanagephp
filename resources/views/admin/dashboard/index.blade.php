@@ -269,6 +269,9 @@ function adminDashboard() {
                 }
 
                 this.lastRefresh = new Date().toLocaleTimeString();
+                
+                // Update sparklines after loading KPI data
+                this.updateSparklines();
             } catch (error) {
                 console.error('Failed to load dashboard data:', error);
             } finally {
@@ -505,6 +508,11 @@ function adminDashboard() {
                             // Get Chart.js instance directly from canvas
                             const chartInstance = Chart.getChart(canvas);
                             if (chartInstance) {
+                                // Create labels array for sparkline data
+                                const labels = this.kpis[id].sparkline.map((_, index) => index);
+                                
+                                // Update both labels and data
+                                chartInstance.data.labels = labels;
                                 chartInstance.data.datasets[0].data = [...this.kpis[id].sparkline];
                                 chartInstance.update('none');
                             }

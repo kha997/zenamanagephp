@@ -296,10 +296,24 @@ function adminDashboard() {
                     this.charts.errors.destroy();
                     this.charts.errors = null;
                 }
-
-                // Initialize Chart.js charts
+                
+                // Also destroy any existing Chart.js instances on the canvas
                 const signupsCtx = document.getElementById('signups-chart');
                 const errorsCtx = document.getElementById('errors-chart');
+                
+                if (signupsCtx) {
+                    const existingChart = Chart.getChart(signupsCtx);
+                    if (existingChart) {
+                        existingChart.destroy();
+                    }
+                }
+                
+                if (errorsCtx) {
+                    const existingChart = Chart.getChart(errorsCtx);
+                    if (existingChart) {
+                        existingChart.destroy();
+                    }
+                }
 
                 if (signupsCtx) {
                     this.charts.signups = new Chart(signupsCtx, {
@@ -308,8 +322,29 @@ function adminDashboard() {
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
+                            animation: {
+                                duration: 0 // Disable animation for faster updates
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            },
                             scales: {
-                                y: { beginAtZero: true }
+                                x: {
+                                    display: true,
+                                    grid: {
+                                        display: true
+                                    }
+                                },
+                                y: { 
+                                    beginAtZero: true,
+                                    grid: {
+                                        display: true
+                                    }
+                                }
+                            },
+                            interaction: {
+                                intersect: false,
+                                mode: 'index'
                             }
                         }
                     });
@@ -318,13 +353,29 @@ function adminDashboard() {
 
                 if (errorsCtx) {
                     this.charts.errors = new Chart(errorsCtx, {
-                        type: 'line',
+                        type: 'bar',
                         data: { labels: [], datasets: [] },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
+                            animation: { duration: 0 },
+                            plugins: {
+                                legend: { display: false }
+                            },
                             scales: {
-                                y: { beginAtZero: true }
+                                x: {
+                                    display: true,
+                                    grid: {
+                                        display: true
+                                    }
+                                },
+                                y: { 
+                                    beginAtZero: true,
+                                    max: 5,
+                                    grid: {
+                                        display: true
+                                    }
+                                }
                             }
                         }
                     });

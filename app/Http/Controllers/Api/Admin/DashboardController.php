@@ -408,21 +408,31 @@ class DashboardController extends Controller
      */
     private function getTenantsStats(int $days): array
     {
-        // Get current count - using table if exists
-        $total = DB::table('tenants')->exists() ? DB::table('tenants')->count() : 89;
+        // Get current total tenants
+        $total = DB::table('tenants')->count();
         
-        // Mock previous period for demonstration
-        $prevTotal = $total - rand(1, 10);
+        // Get total from last month for comparison
+        $lastMonth = now()->subMonth();
+        $prevTotal = DB::table('tenants')
+            ->where('created_at', '<', $lastMonth)
+            ->count();
         
-        // Generate mock sparkline data
+        // Calculate growth rate
+        $growthRate = $prevTotal > 0 ? round((($total - $prevTotal) / $prevTotal) * 100, 1) : 0;
+        
+        // Generate sparkline data from actual tenant creation dates
         $sparkline = [];
-        for ($i = 0; $i < $days; $i++) {
-            $sparkline[] = rand(0, 5);
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $count = DB::table('tenants')
+                ->whereDate('created_at', $date)
+                ->count();
+            $sparkline[] = $count;
         }
 
         return [
             'total' => $total,
-            'growth_rate' => $prevTotal > 0 ? round((($total - $prevTotal) / $prevTotal) * 100, 1) : 5.2,
+            'growth_rate' => $growthRate,
             'sparkline' => $sparkline
         ];
     }
@@ -432,17 +442,31 @@ class DashboardController extends Controller
      */
     private function getUsersStats(int $days): array
     {
-        $total = DB::table('users')->exists() ? DB::table('users')->count() : 1247;
-        $prevTotal = $total - rand(50, 150);
+        // Get current total users
+        $total = DB::table('users')->count();
         
+        // Get total from last month for comparison
+        $lastMonth = now()->subMonth();
+        $prevTotal = DB::table('users')
+            ->where('created_at', '<', $lastMonth)
+            ->count();
+        
+        // Calculate growth rate
+        $growthRate = $prevTotal > 0 ? round((($total - $prevTotal) / $prevTotal) * 100, 1) : 0;
+        
+        // Generate sparkline data from actual user creation dates
         $sparkline = [];
-        for ($i = 0; $i < $days; $i++) {
-            $sparkline[] = rand(8, 25);
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $count = DB::table('users')
+                ->whereDate('created_at', $date)
+                ->count();
+            $sparkline[] = $count;
         }
 
         return [
             'total' => $total,
-            'growth_rate' => $prevTotal > 0 ? round((($total - $prevTotal) / $prevTotal) * 100, 1) : 12.1,
+            'growth_rate' => $growthRate,
             'sparkline' => $sparkline
         ];
     }
@@ -452,13 +476,29 @@ class DashboardController extends Controller
      */
     private function getErrorsStats(int $days): array
     {
-        $errors24h = rand(8, 18);
-        $errorsYesterday = $errors24h - rand(-5, 5);
+        // Get errors from last 24 hours
+        $errors24h = DB::table('project_activities')
+            ->where('action', 'error')
+            ->where('created_at', '>=', now()->subDay())
+            ->count();
+        
+        // Get errors from previous day (24-48 hours ago)
+        $errorsYesterday = DB::table('project_activities')
+            ->where('action', 'error')
+            ->whereBetween('created_at', [now()->subDays(2), now()->subDay()])
+            ->count();
+        
         $change = $errors24h - $errorsYesterday;
 
+        // Generate sparkline data from actual error counts
         $sparkline = [];
-        for ($i = 0; $i < $days; $i++) {
-            $sparkline[] = rand(5, 25);
+        for ($i = $days - 1; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $count = DB::table('project_activities')
+                ->where('action', 'error')
+                ->whereDate('created_at', $date)
+                ->count();
+            $sparkline[] = $count;
         }
 
         return [
@@ -473,7 +513,21 @@ class DashboardController extends Controller
      */
     private function getQueueStats(): array
     {
-        $activeJobs = rand(100, 200);
+        // Get active jobs from jobs table if exists
+        $activeJobs = 0;
+        if (DB::getSchemaBuilder()->hasTable('jobs')) {
+            $activeJobs = DB::table('jobs')
+                ->where('available_at', '<=', now()->timestamp)
+                ->where('reserved_at', '>', 0)
+                ->count();
+        }
+        
+        // If no jobs table, use failed_jobs as fallback
+        if ($activeJobs === 0 && DB::getSchemaBuilder()->hasTable('failed_jobs')) {
+            $activeJobs = DB::table('failed_jobs')
+                ->where('failed_at', '>=', now()->subDay())
+                ->count();
+        }
         
         $status = match (true) {
             $activeJobs === 0 => 'Idle',
@@ -482,9 +536,19 @@ class DashboardController extends Controller
             default => 'Processing'
         };
 
+        // Generate sparkline data from actual job counts
         $sparkline = [];
-        for ($i = 0; $i < 30; $i++) {
-            $sparkline[] = rand(20, 80);
+        for ($i = 29; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $count = 0;
+            
+            if (DB::getSchemaBuilder()->hasTable('jobs')) {
+                $count = DB::table('jobs')
+                    ->whereDate('created_at', $date)
+                    ->count();
+            }
+            
+            $sparkline[] = $count;
         }
 
         return [
@@ -499,19 +563,72 @@ class DashboardController extends Controller
      */
     private function getStorageStats(): array
     {
-        $usedBytes = rand(1.5e12, 2.5e12);
-        $capacityBytes = 2.9e12;
+        // Calculate storage usage from file uploads and attachments
+        $usedBytes = 0;
+        $capacityBytes = 2.9e12; // 2.9 TB default capacity
+        
+        // Get storage from file uploads if table exists
+        if (DB::getSchemaBuilder()->hasTable('file_uploads')) {
+            $usedBytes = DB::table('file_uploads')
+                ->sum('file_size');
+        }
+        
+        // Get storage from project attachments if table exists
+        if (DB::getSchemaBuilder()->hasTable('project_attachments')) {
+            $usedBytes += DB::table('project_attachments')
+                ->sum('file_size');
+        }
+        
+        // If no file tables, estimate based on database size
+        if ($usedBytes === 0) {
+            $usedBytes = $this->getDatabaseSize();
+        }
+        
+        // Calculate percentage
+        $percentage = $capacityBytes > 0 ? ($usedBytes / $capacityBytes) * 100 : 0;
 
+        // Generate sparkline data showing storage growth over time
         $sparkline = [];
-        for ($i = 0; $i < 30; $i++) {
-            $sparkline[] = ($usedBytes / $capacityBytes) * 100 + rand(-2, 2);
+        for ($i = 29; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $dailyUsage = 0;
+            
+            if (DB::getSchemaBuilder()->hasTable('file_uploads')) {
+                $dailyUsage = DB::table('file_uploads')
+                    ->whereDate('created_at', $date)
+                    ->sum('file_size');
+            }
+            
+            // Add to previous day's usage for cumulative effect
+            $previousUsage = $i < 29 ? $sparkline[29 - $i - 1] : 0;
+            $sparkline[] = $previousUsage + ($dailyUsage / $capacityBytes) * 100;
         }
 
         return [
             'used_bytes' => $usedBytes,
             'capacity_bytes' => $capacityBytes,
+            'percentage' => round($percentage, 1),
             'sparkline' => $sparkline
         ];
+    }
+    
+    /**
+     * Get database size in bytes
+     */
+    private function getDatabaseSize(): int
+    {
+        try {
+            $databaseName = config('database.connections.mysql.database');
+            $result = DB::select("
+                SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) AS 'DB Size in MB' 
+                FROM information_schema.tables 
+                WHERE table_schema = ?
+            ", [$databaseName]);
+            
+            return isset($result[0]) ? $result[0]->{'DB Size in MB'} * 1024 * 1024 : 0;
+        } catch (\Exception $e) {
+            return 0;
+        }
     }
 
     /**

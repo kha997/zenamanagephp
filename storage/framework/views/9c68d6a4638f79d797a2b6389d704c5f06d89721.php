@@ -237,9 +237,9 @@ function adminDashboard() {
         activities: [],
 
         async init() {
-            await this.loadDashboardData();
             this.initializeCharts();
             this.initializeSparklines();
+            await this.loadDashboardData();
         },
 
         async loadDashboardData() {

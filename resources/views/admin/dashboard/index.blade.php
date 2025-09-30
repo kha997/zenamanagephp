@@ -47,102 +47,152 @@
         {{-- KPI Cards --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 lg:gap-6">
             {{-- Total Tenants --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-blue-300 transition-all duration-200 cursor-pointer group"
+                 @click="drillDownToTenants()"
+                 @keydown.enter="drillDownToTenants()"
+                 @keydown.space.prevent="drillDownToTenants()"
+                 tabindex="0"
+                 role="button"
+                 aria-label="View Total Tenants details"
+                 title="Click to view tenant details with current time range filter">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Total Tenants</p>
-                        <p class="text-2xl font-bold text-gray-900" x-text="kpis.tenants?.total || 0">0</p>
+                        <p class="text-sm font-medium text-gray-600 group-hover:text-blue-600 transition-colors">Total Tenants</p>
+                        <p class="text-2xl font-bold text-gray-900 group-hover:text-blue-700 transition-colors" x-text="kpis.tenants?.total || 0">0</p>
                         <p class="text-sm" :class="(kpis.tenants?.growth_rate || 0) >= 0 ? 'text-green-600' : 'text-red-600'">
                             <i :class="(kpis.tenants?.growth_rate || 0) >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'" class="mr-1"></i>
                             <span x-text="Math.abs(kpis.tenants?.growth_rate || 0) + '%'">0%</span> from last month
                         </p>
                     </div>
-                    <div class="bg-blue-100 rounded-full p-3">
+                    <div class="bg-blue-100 rounded-full p-3 group-hover:bg-blue-200 transition-colors">
                         <i class="fas fa-building text-blue-600 text-xl"></i>
                     </div>
                 </div>
                 <div class="h-8 w-full">
                     <canvas id="tenants-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
+                <div class="mt-2 text-xs text-gray-500 group-hover:text-blue-500 transition-colors">
+                    <i class="fas fa-external-link-alt mr-1"></i>Click to view details
+                </div>
             </div>
 
             {{-- Total Users --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-green-300 transition-all duration-200 cursor-pointer group"
+                 @click="drillDownToUsers()"
+                 @keydown.enter="drillDownToUsers()"
+                 @keydown.space.prevent="drillDownToUsers()"
+                 tabindex="0"
+                 role="button"
+                 aria-label="View Total Users details"
+                 title="Click to view user details with current time range filter">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Total Users</p>
-                        <p class="text-2xl font-bold text-gray-900" x-text="kpis.users?.total || 0">0</p>
+                        <p class="text-sm font-medium text-gray-600 group-hover:text-green-600 transition-colors">Total Users</p>
+                        <p class="text-2xl font-bold text-gray-900 group-hover:text-green-700 transition-colors" x-text="kpis.users?.total || 0">0</p>
                         <p class="text-sm" :class="(kpis.users?.growth_rate || 0) >= 0 ? 'text-green-600' : 'text-red-600'">
                             <i :class="(kpis.users?.growth_rate || 0) >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'" class="mr-1"></i>
                             <span x-text="Math.abs(kpis.users?.growth_rate || 0) + '%'">0%</span> from last month
                         </p>
                     </div>
-                    <div class="bg-green-100 rounded-full p-3">
+                    <div class="bg-green-100 rounded-full p-3 group-hover:bg-green-200 transition-colors">
                         <i class="fas fa-users text-green-600 text-xl"></i>
                     </div>
                 </div>
                 <div class="h-8 w-full">
                     <canvas id="users-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
+                <div class="mt-2 text-xs text-gray-500 group-hover:text-green-500 transition-colors">
+                    <i class="fas fa-external-link-alt mr-1"></i>Click to view details
+                </div>
             </div>
 
             {{-- Errors 24h --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-red-300 transition-all duration-200 cursor-pointer group"
+                 @click="drillDownToErrors()"
+                 @keydown.enter="drillDownToErrors()"
+                 @keydown.space.prevent="drillDownToErrors()"
+                 tabindex="0"
+                 role="button"
+                 aria-label="View Errors details"
+                 title="Click to view error details for the last 24 hours">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Errors (24h)</p>
-                        <p class="text-2xl font-bold text-gray-900" x-text="kpis.errors?.last_24h || 0">0</p>
+                        <p class="text-sm font-medium text-gray-600 group-hover:text-red-600 transition-colors">Errors (24h)</p>
+                        <p class="text-2xl font-bold text-gray-900 group-hover:text-red-700 transition-colors" x-text="kpis.errors?.last_24h || 0">0</p>
                         <p class="text-sm" :class="(kpis.errors?.change_from_yesterday || 0) >= 0 ? 'text-red-600' : 'text-green-600'">
                             <i :class="(kpis.errors?.change_from_yesterday || 0) >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down'" class="mr-1"></i>
                             <span x-text="Math.abs(kpis.errors?.change_from_yesterday || 0)">0</span> from yesterday
                         </p>
                     </div>
-                    <div class="bg-red-100 rounded-full p-3">
+                    <div class="bg-red-100 rounded-full p-3 group-hover:bg-red-200 transition-colors">
                         <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
                     </div>
                 </div>
                 <div class="h-8 w-full">
                     <canvas id="errors-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
+                <div class="mt-2 text-xs text-gray-500 group-hover:text-red-500 transition-colors">
+                    <i class="fas fa-external-link-alt mr-1"></i>Click to view details
+                </div>
             </div>
 
             {{-- Queue Jobs --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-yellow-300 transition-all duration-200 cursor-pointer group"
+                 @click="drillDownToQueue()"
+                 @keydown.enter="drillDownToQueue()"
+                 @keydown.space.prevent="drillDownToQueue()"
+                 tabindex="0"
+                 role="button"
+                 aria-label="View Queue Jobs details"
+                 title="Click to view queue jobs with processing status">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Queue Jobs</p>
-                        <p class="text-2xl font-bold text-gray-900" x-text="kpis.queue?.active_jobs || 0">0</p>
+                        <p class="text-sm font-medium text-gray-600 group-hover:text-yellow-600 transition-colors">Queue Jobs</p>
+                        <p class="text-2xl font-bold text-gray-900 group-hover:text-yellow-700 transition-colors" x-text="kpis.queue?.active_jobs || 0">0</p>
                         <p class="text-sm text-gray-600">
                             <i class="fas fa-clock mr-1"></i>
                             <span x-text="kpis.queue?.status || 'Unknown'">Unknown</span>
                         </p>
                     </div>
-                    <div class="bg-yellow-100 rounded-full p-3">
+                    <div class="bg-yellow-100 rounded-full p-3 group-hover:bg-yellow-200 transition-colors">
                         <i class="fas fa-tasks text-yellow-600 text-xl"></i>
                     </div>
                 </div>
                 <div class="h-8 w-full">
                     <canvas id="queue-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
+                <div class="mt-2 text-xs text-gray-500 group-hover:text-yellow-500 transition-colors">
+                    <i class="fas fa-external-link-alt mr-1"></i>Click to view details
+                </div>
             </div>
 
             {{-- Storage Used --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-lg hover:border-purple-300 transition-all duration-200 cursor-pointer group"
+                 @click="drillDownToStorage()"
+                 @keydown.enter="drillDownToStorage()"
+                 @keydown.space.prevent="drillDownToStorage()"
+                 tabindex="0"
+                 role="button"
+                 aria-label="View Storage details"
+                 title="Click to view storage usage details with current time range">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">Storage Used</p>
-                        <p class="text-2xl font-bold text-gray-900" x-text="formatBytes(kpis.storage?.used_bytes || 0)">0 B</p>
+                        <p class="text-sm font-medium text-gray-600 group-hover:text-purple-600 transition-colors">Storage Used</p>
+                        <p class="text-2xl font-bold text-gray-900 group-hover:text-purple-700 transition-colors" x-text="formatBytes(kpis.storage?.used_bytes || 0)">0 B</p>
                         <p class="text-sm text-gray-600">
                             <i class="fas fa-database mr-1"></i>
                             <span x-text="Math.round(((kpis.storage?.used_bytes || 0) / (kpis.storage?.capacity_bytes || 1)) * 100)">0</span>% of <span x-text="formatBytes(kpis.storage?.capacity_bytes || 0)">0 B</span>
                         </p>
                     </div>
-                    <div class="bg-purple-100 rounded-full p-3">
+                    <div class="bg-purple-100 rounded-full p-3 group-hover:bg-purple-200 transition-colors">
                         <i class="fas fa-database text-purple-600 text-xl"></i>
                     </div>
                 </div>
                 <div class="h-8 w-full">
                     <canvas id="storage-sparkline" width="200" height="32" class="w-full h-full"></canvas>
+                </div>
+                <div class="mt-2 text-xs text-gray-500 group-hover:text-purple-500 transition-colors">
+                    <i class="fas fa-external-link-alt mr-1"></i>Click to view details
                 </div>
             </div>
         </div>
@@ -597,6 +647,56 @@ function adminDashboard() {
             const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+
+        // Drill-down functions for KPI cards
+        drillDownToTenants() {
+            this.trackKPIClick('tenants');
+            const url = `/admin/tenants?range=${this.chartRange}&sort=created_at:desc`;
+            window.location.href = url;
+        },
+
+        drillDownToUsers() {
+            this.trackKPIClick('users');
+            const url = `/admin/users?range=${this.chartRange}&sort=created_at:desc`;
+            window.location.href = url;
+        },
+
+        drillDownToErrors() {
+            this.trackKPIClick('errors');
+            const url = `/admin/errors?range=24h&group=hour`;
+            window.location.href = url;
+        },
+
+        drillDownToQueue() {
+            this.trackKPIClick('queue');
+            const url = `/admin/queue?status=processing`;
+            window.location.href = url;
+        },
+
+        drillDownToStorage() {
+            this.trackKPIClick('storage');
+            const url = `/admin/storage?range=${this.chartRange}`;
+            window.location.href = url;
+        },
+
+        // Analytics tracking for KPI clicks
+        trackKPIClick(kpi) {
+            try {
+                // Send analytics event
+                if (typeof gtag !== 'undefined') {
+                    gtag('event', 'kpi_click', {
+                        'kpi': kpi,
+                        'range': this.chartRange,
+                        'user_role': 'admin'
+                    });
+                }
+                
+                // Console log for debugging
+                console.log(`KPI clicked: ${kpi}, range: ${this.chartRange}`);
+            } catch (error) {
+                console.error('Analytics tracking failed:', error);
+            }
         }
     };
 }

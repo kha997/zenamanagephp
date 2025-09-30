@@ -275,9 +275,10 @@ class DashboardController extends Controller
         $etag = md5(json_encode($data));
 
         if ($request->header('If-None-Match') === $etag) {
-            return response('', 304)
-                ->header('ETag', $etag)
-                ->header('Cache-Control', 'private, max-age=10');
+            return response()->json([], 304, [
+                'ETag' => $etag,
+                'Cache-Control' => 'private, max-age=10'
+            ]);
         }
 
         return response()->json($data, 200, [
@@ -642,7 +643,12 @@ class DashboardController extends Controller
         for ($i = $days; $i >= 0; $i--) {
             $date = now()->subDays($i)->format('Y-m-d');
             $labels[] = $date;
-            $values[] = rand(40, 65);
+            
+            // Get actual user signups for this date
+            $signups = DB::table('users')
+                ->whereDate('created_at', $date)
+                ->count();
+            $values[] = $signups;
         }
 
         return [
@@ -669,8 +675,21 @@ class DashboardController extends Controller
         for ($i = $days; $i >= 0; $i--) {
             $date = now()->subDays($i)->format('Y-m-d');
             $labels[] = $date;
-            // Generate realistic error rate percentages (0.1% to 2.5%)
-            $values[] = round(rand(1, 25) / 10, 1);
+            
+            // Get actual error count for this date
+            $errorCount = DB::table('project_activities')
+                ->where('action', 'error')
+                ->whereDate('created_at', $date)
+                ->count();
+            
+            // Get total activities for this date to calculate error rate
+            $totalActivities = DB::table('project_activities')
+                ->whereDate('created_at', $date)
+                ->count();
+            
+            // Calculate error rate percentage
+            $errorRate = $totalActivities > 0 ? round(($errorCount / $totalActivities) * 100, 1) : 0;
+            $values[] = $errorRate;
         }
 
         return [

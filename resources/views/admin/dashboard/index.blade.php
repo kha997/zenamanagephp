@@ -61,8 +61,8 @@
                         <i class="fas fa-building text-blue-600 text-xl"></i>
                     </div>
                 </div>
-                <div class="h-8">
-                    <canvas id="tenants-sparkline" class="w-full h-full"></canvas>
+                <div class="h-8 w-full">
+                    <canvas id="tenants-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
             </div>
 
@@ -81,8 +81,8 @@
                         <i class="fas fa-users text-green-600 text-xl"></i>
                     </div>
                 </div>
-                <div class="h-8">
-                    <canvas id="users-sparkline" class="w-full h-full"></canvas>
+                <div class="h-8 w-full">
+                    <canvas id="users-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
             </div>
 
@@ -101,8 +101,8 @@
                         <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
                     </div>
                 </div>
-                <div class="h-8">
-                    <canvas id="errors-sparkline" class="w-full h-full"></canvas>
+                <div class="h-8 w-full">
+                    <canvas id="errors-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
             </div>
 
@@ -121,8 +121,8 @@
                         <i class="fas fa-tasks text-yellow-600 text-xl"></i>
                     </div>
                 </div>
-                <div class="h-8">
-                    <canvas id="queue-sparkline" class="w-full h-full"></canvas>
+                <div class="h-8 w-full">
+                    <canvas id="queue-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
             </div>
 
@@ -141,8 +141,8 @@
                         <i class="fas fa-database text-purple-600 text-xl"></i>
                     </div>
                 </div>
-                <div class="h-8">
-                    <canvas id="storage-sparkline" class="w-full h-full"></canvas>
+                <div class="h-8 w-full">
+                    <canvas id="storage-sparkline" width="200" height="32" class="w-full h-full"></canvas>
                 </div>
             </div>
         </div>
@@ -398,7 +398,7 @@ function adminDashboard() {
         },
 
         initializeSparklines() {
-            // Wait for Chart.js to load
+            // Wait for Chart.js to load and DOM to be ready
             const initSparklines = () => {
                 if (typeof Chart === 'undefined') {
                     console.log('Chart.js not ready for sparklines, retrying...');
@@ -415,36 +415,44 @@ function adminDashboard() {
                     }
                 });
 
-                // Initialize sparkline charts
-                sparklineIds.forEach(id => {
-                    const canvas = document.getElementById(id + '-sparkline');
-                    if (canvas) {
-                        this.sparklines[id] = new Chart(canvas, {
-                            type: 'line',
-                            data: {
-                                labels: [],
-                                datasets: [{
-                                    data: [],
-                                    borderColor: this.getSparklineColor(id),
-                                    backgroundColor: this.getSparklineColor(id, 0.1),
-                                    borderWidth: 2,
-                                    pointRadius: 0,
-                                    tension: 0.4
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: { legend: { display: false } },
-                                scales: {
-                                    x: { display: false },
-                                    y: { display: false }
+                // Initialize sparkline charts with delay to ensure DOM is ready
+                setTimeout(() => {
+                    sparklineIds.forEach(id => {
+                        const canvas = document.getElementById(id + '-sparkline');
+                        if (canvas) {
+                            // Force canvas dimensions
+                            canvas.width = 200;
+                            canvas.height = 32;
+                            canvas.style.width = '200px';
+                            canvas.style.height = '32px';
+                            
+                            this.sparklines[id] = new Chart(canvas, {
+                                type: 'line',
+                                data: {
+                                    labels: [],
+                                    datasets: [{
+                                        data: [],
+                                        borderColor: this.getSparklineColor(id),
+                                        backgroundColor: this.getSparklineColor(id, 0.1),
+                                        borderWidth: 2,
+                                        pointRadius: 0,
+                                        tension: 0.4
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        x: { display: false },
+                                        y: { display: false }
+                                    }
                                 }
-                            }
-                        });
-                        console.log(`${id} sparkline initialized`);
-                    }
-                });
+                            });
+                            console.log(`${id} sparkline initialized with dimensions:`, canvas.width, 'x', canvas.height);
+                        }
+                    });
+                }, 200);
             };
 
             initSparklines();

@@ -466,6 +466,14 @@ function adminDashboard() {
                         if (chartInstance) {
                             chartInstance.data.labels = chartData.error_rate.labels || [];
                             chartInstance.data.datasets = chartData.error_rate.datasets || [];
+                            
+                            // Ensure bar chart has proper styling
+                            if (chartInstance.data.datasets[0]) {
+                                chartInstance.data.datasets[0].backgroundColor = 'rgba(239, 68, 68, 0.8)';
+                                chartInstance.data.datasets[0].borderColor = '#EF4444';
+                                chartInstance.data.datasets[0].borderWidth = 1;
+                            }
+                            
                             chartInstance.update('none');
                         }
                     }

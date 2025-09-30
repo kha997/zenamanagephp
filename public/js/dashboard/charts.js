@@ -47,7 +47,7 @@ class DashboardCharts {
     }
 
     updateSignupsChart(data) {
-        const ctx = document.getElementById('signupsChart');
+        const ctx = document.getElementById('signups-chart');
         if (!ctx) return;
 
         if (this.instances.signups) {
@@ -98,7 +98,7 @@ class DashboardCharts {
     }
 
     updateErrorRateChart(data) {
-        const ctx = document.getElementById('errorsChart');
+        const ctx = document.getElementById('errors-chart');
         if (!ctx) return;
 
         if (this.instances.errors) {

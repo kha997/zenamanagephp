@@ -552,13 +552,14 @@ class DashboardController extends Controller
         for ($i = $days; $i >= 0; $i--) {
             $date = now()->subDays($i)->format('Y-m-d');
             $labels[] = $date;
-            $values[] = rand(8, 35);
+            // Generate realistic error rate percentages (0.1% to 2.5%)
+            $values[] = round(rand(1, 25) / 10, 1);
         }
 
         return [
             'labels' => $labels,
             'datasets' => [[
-                'label' => 'Error Rate',
+                'label' => 'Error Rate (%)',
                 'data' => $values,
                 'borderColor' => '#EF4444',
                 'backgroundColor' => 'rgba(239, 68, 68, 0.1)',

@@ -356,7 +356,7 @@ function adminDashboard() {
 
                 if (errorsCtx) {
                     this.charts.errors = new Chart(errorsCtx, {
-                        type: 'bar',
+                        type: 'line',
                         data: { labels: [], datasets: [] },
                         options: {
                             responsive: true,
@@ -374,7 +374,12 @@ function adminDashboard() {
                                 },
                                 y: { 
                                     beginAtZero: true,
-                                    max: 5,
+                                    max: 3,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + '%';
+                                        }
+                                    },
                                     grid: {
                                         display: true
                                     }
@@ -470,11 +475,13 @@ function adminDashboard() {
                             chartInstance.data.labels = chartData.error_rate.labels || [];
                             chartInstance.data.datasets = chartData.error_rate.datasets || [];
                             
-                            // Ensure bar chart has proper styling
+                            // Ensure line chart has proper styling for error rate
                             if (chartInstance.data.datasets[0]) {
-                                chartInstance.data.datasets[0].backgroundColor = 'rgba(239, 68, 68, 0.8)';
+                                chartInstance.data.datasets[0].backgroundColor = 'rgba(239, 68, 68, 0.1)';
                                 chartInstance.data.datasets[0].borderColor = '#EF4444';
-                                chartInstance.data.datasets[0].borderWidth = 1;
+                                chartInstance.data.datasets[0].borderWidth = 2;
+                                chartInstance.data.datasets[0].fill = true;
+                                chartInstance.data.datasets[0].tension = 0.4;
                             }
                             
                             chartInstance.update('none');

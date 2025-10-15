@@ -1,78 +1,26 @@
-{{-- Admin Maintenance Index --}}
 @extends('layouts.admin')
 
 @section('title', 'Maintenance')
 
-@section('breadcrumb')
-<li class="flex items-center">
-    <i class="fas fa-chevron-right text-gray-400 mr-2"></i>
-    <span class="text-gray-900">Maintenance</span>
-</li>
-@endsection
-
 @section('content')
-<div class="space-y-6">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Maintenance</h1>
-            <p class="text-gray-600">System maintenance and health checks</p>
-        </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Maintenance</h1>
+        <p class="mt-2 text-gray-600">System maintenance and management</p>
     </div>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Health Checks</h3>
-            <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-700">Database</span>
-                    <span class="flex items-center text-green-600">
-                        <i class="fas fa-check-circle mr-1"></i>
-                        Healthy
-                    </span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-700">Cache</span>
-                    <span class="flex items-center text-green-600">
-                        <i class="fas fa-check-circle mr-1"></i>
-                        Healthy
-                    </span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium text-gray-700">Queue</span>
-                    <span class="flex items-center text-green-600">
-                        <i class="fas fa-check-circle mr-1"></i>
-                        Healthy
-                    </span>
-                </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="text-center py-8">
+            <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-tools text-2xl text-gray-400"></i>
             </div>
-        </div>
-        
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Maintenance Tasks</h3>
-            <div class="space-y-3">
-                <button @click="runTask('reindex')" 
-                        class="w-full text-left px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    <i class="fas fa-search mr-2"></i>Reindex Search
-                </button>
-                <button @click="runTask('retry-jobs')" 
-                        class="w-full text-left px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
-                    <i class="fas fa-redo mr-2"></i>Retry Failed Jobs
-                </button>
-                <button @click="runTask('clear-cache')" 
-                        class="w-full text-left px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                    <i class="fas fa-broom mr-2"></i>Clear Cache
-                </button>
-            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Maintenance Dashboard</h3>
+            <p class="text-gray-500 mb-4">System maintenance tools and utilities.</p>
+            <a href="{{ route('admin.maintenance.backup') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                <i class="fas fa-download mr-2"></i>
+                Backup System
+            </a>
         </div>
     </div>
 </div>
-
-<script>
-    function runTask(task) {
-        if (confirm('Are you sure you want to run this task?')) {
-            console.log('Running task:', task);
-            // In real implementation, this would call API endpoint
-        }
-    }
-</script>
 @endsection

@@ -19,15 +19,20 @@ class TenantFactory extends Factory
      */
     public function definition(): array
     {
+        $companyName = $this->faker->company();
+        $slug = \Illuminate\Support\Str::slug($companyName) . '-' . $this->faker->unique()->randomNumber(4);
+        
         return [
             'id' => \Illuminate\Support\Str::ulid(),
-            'name' => $this->faker->company(),
+            'name' => $companyName,
+            'slug' => $slug,
             'domain' => $this->faker->domainName(),
             'settings' => json_encode([
                 'timezone' => 'Asia/Ho_Chi_Minh',
                 'currency' => 'VND'
             ]),
             'is_active' => true,
+            'status' => $this->faker->randomElement(['trial', 'active', 'suspended', 'cancelled']),
         ];
     }
 }

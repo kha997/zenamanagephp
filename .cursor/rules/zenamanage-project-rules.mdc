@@ -1,0 +1,128 @@
+alwaysApply: true
+Last Updated: 2025-10-05
+Reference: Luôn tham chiếu và tuân thủ DOCUMENTATION_INDEX.md để xem danh mục và đọc tất cả tài liệu liên quan.
+🎯 PROJECT CONTEXT
+Laravel-based multi-tenant project management system với strict architectural principles, clear separation UI/API, và single source of truth trong cả code lẫn documentation.
+1. ARCHITECTURE COMPLIANCE
+UI renders only — all business logic trong API/Services.
+Web routes: session auth + tenant scope only.
+API routes: auth:sanctum + ability (admin/tenant).
+No side-effects trong UI routes → mọi write qua API.
+Separation rõ: /admin/* (system-wide) ≠ /app/* (tenant-scoped).
+Blade Views: 1 endpoint = 1 deterministic view (resources/views/app/<domain>/index.blade.php).
+Tái sử dụng UI bằng Blade components (resources/views/components/**).
+2. NAMING CONVENTIONS
+Routes: kebab-case (/app/projects), plural cho lists, singular+id cho detail.
+Controllers/Services: PascalCase + verbs (ProjectService.updateBudget).
+DB schema: snake_case, có FK, deleted_at cho soft delete.
+Enums: fixed sets (status ∈ {planning, active, on_hold, completed, cancelled}).
+Views: resources/views/app/<domain>/<action>.blade.php.
+Components: resources/views/components/<domain>/<component>.blade.php, gọi qua <x-domain.component />.
+3. ERROR HANDLING & API CONTRACTS
+Mọi API response phải dùng App\Support\ApiResponse:
+Envelope chuẩn, i18n-ready.
+Luôn include error.id (map với logs / X-Request-Id).
+HTTP mapping:
+400 validation, 401 auth, 403 authz, 404 not found, 409 conflict,
+422 domain validation, 429 rate limit, 500 internal, 503 maintenance.
+Retry-After header bắt buộc với 429/503.
+4. MULTI-TENANT ISOLATION
+Mọi query bắt buộc filter tenant_id.
+Enforcement tại Repository/Service layer.
+Test isolation: prove tenant A không đọc được dữ liệu tenant B.
+DB indexes: composite (tenant_id, foreign_key).
+5. TESTING REQUIREMENTS
+Unit: Services, mappers, validators.
+Integration: Controllers + DB + auth + RBAC + tenant.
+E2E: login → dashboard → projects → tasks.
+Isolation tests: tenant separation.
+Smoke/Deterministic tests: ngăn “2 view/endpoint”.
+CI gate: tất cả tests pass, không flaky.
+6. PERFORMANCE STANDARDS
+Pages: p95 < 500ms (20–50 rows).
+APIs: p95 < 300ms.
+Cache strategy: KPI/insights 60s per tenant.
+Feature flags: cache 300s per tenant.
+Optimize queries: avoid N+1, projections, eager load.
+7. SECURITY REQUIREMENTS
+RBAC theo config/permissions.php (roles: super_admin, PM, Member, Client).
+Auth: Admin API (auth:sanctum + ability:admin), App API (auth:sanctum + ability:tenant).
+Protection: CSRF cho web, tokens cho API.
+Headers: CSP, CORS, HSTS, Secure cookies (middleware SecureHeaders).
+Rate limiting: throttle:public cho endpoints công khai.
+2FA optional (feature flag).
+8. LOGGING & MONITORING
+Structured logs (JSON): timestamp, level, tenant_id, user_id, X-Request-Id, route, latency, result.
+Middleware RequestId: propagate + log correlation.
+Severity: DEBUG, INFO, WARN, ERROR, CRITICAL.
+Redaction policy: mask secrets/PII trong logs & errors.
+🚫 ABSOLUTE PROHIBITIONS
+❌ Routes không middleware.
+❌ Query không filter tenant_id.
+❌ Error handling generic, bỏ error.id.
+❌ Commit code không có tests.
+❌ Hardcoded values / magic numbers.
+❌ Duplicate functionality.
+❌ Bỏ qua security validation.
+❌ Vi phạm performance budgets.
+❌ Debug code trong production.
+❌ Orphaned data.
+❌ Tạo view song song cho cùng endpoint.
+❌ Sửa file docs trong mục LEGACY.
+✅ MANDATORY ACTIONS
+Validate inputs với schema.
+Error handling qua ApiResponse + error.id.
+Add tenant_id cho mọi query.
+Test cho mọi tính năng mới.
+Update docs → COMPLETE_SYSTEM_DOCUMENTATION.md + DOCUMENTATION_INDEX.md.
+Theo naming conventions.
+Logging correlation IDs.
+Performance impact check.
+Security review.
+Multi-tenant isolation verified.
+ADR update khi thay đổi kiến trúc.
+🔍 CODE REVIEW CHECKLIST
+Before Any Change
+ Architecture compliance
+ Security implications
+ Performance impact
+ Tenant isolation
+ Error handling plan
+During Development
+ Tests written & passing
+ Naming conventions ok
+ Error handling via ApiResponse
+ Logging with RequestId
+ Docs updated (index + complete)
+Before Completion
+ All tests pass
+ Performance budgets met
+ Security review done
+ Docs complete & consistent
+ ADRs updated if needed
+📊 SUCCESS METRICS
+Code
+100% coverage cho code mới.
+0 security vulnerabilities.
+<500ms p95 pages, <300ms p95 APIs.
+0 tenant isolation violations.
+Docs
+100% endpoints documented (OpenAPI).
+Errors có example.
+ADRs cập nhật.
+Benchmarks lưu trong docs/PERFORMANCE_BENCHMARKS.md.
+Documentation index nhất quán.
+🚨 ESCALATION RULES
+CRITICAL (Block All): Security holes, data isolation broken, performance regression, architecture violation.
+HIGH (Block Merge): Missing tests, docs gaps, error handling gaps.
+MEDIUM (Fix in PR): Naming/style violations, minor optimizations.
+🎯 AI ASSISTANT COMMITMENT
+Tôi commit:
+Tuân thủ nghiêm kiến trúc, rule & docs index.
+Không bao giờ compromise security/performance.
+Luôn validate multi-tenant isolation.
+Luôn dùng ApiResponse cho errors.
+Viết test & cập nhật docs (bao gồm DOCUMENTATION_INDEX.md).
+Duy trì code quality.
+Ưu tiên user experience.
+Đảm bảo reliability.

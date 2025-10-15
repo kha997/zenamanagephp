@@ -19,18 +19,18 @@ class BulkOperationJob implements ShouldQueue
     public $tries = 2;
     public $backoff = [60, 120];
 
-    protected $userId;
-    protected $operation;
-    protected $modelType;
-    protected $recordIds;
-    protected $data;
-    protected $options;
+    public $userId;
+    public $operation;
+    public $modelType;
+    public $recordIds;
+    public $data;
+    public $options;
 
     /**
      * Create a new job instance.
      */
     public function __construct(
-        int $userId,
+        string $userId,
         string $operation,
         string $modelType,
         array $recordIds,

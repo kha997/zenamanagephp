@@ -139,7 +139,7 @@ class DashboardSoftRefreshTest extends DuskTestCase
     /**
      * Test soft refresh shows proper timestamps
      */
-    public function test_refresh_up<｜tool▁sep｜>timestamp(): void
+    public function test_refresh_updates_timestamp(): void
     {
         $this->browse(function (Browser $browser) {
             $browser->visit('/admin')
@@ -237,7 +237,7 @@ class DashboardSoftRefreshTest extends DuskTestCase
                     ->waitFor('.space-y-6', 5)
                     
                     // Disable JavaScript network requests to simulate error
-                    $browser->script("window.fetch = () => Promise.reject(new Error('Network error'));")
+                    ->script("window.fetch = () => Promise.reject(new Error('Network error'));")
                     
                     ->click('[data-testid="refresh-data"]')
                     ->pause(1000)

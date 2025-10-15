@@ -41,7 +41,8 @@ class DocumentPolicyTest extends TestCase
         $this->document = Document::factory()->create([
             'tenant_id' => $this->tenant->id,
             'name' => 'Test Document',
-            'file_path' => '/test/document.pdf'
+            'file_path' => '/test/document.pdf',
+            'uploaded_by' => $this->user->id
         ]);
     }
 
@@ -71,9 +72,36 @@ class DocumentPolicyTest extends TestCase
 
     public function test_user_can_create_document_with_proper_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
         
-        $this->assertTrue($this->policy->create($this->user));
+        // Create a new user with project_manager role directly
+        $userWithRole = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'email' => 'pm@example-' . uniqid() . '.com'
+        ]);
+        
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $userWithRole->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // Debug information
+        $this->assertTrue($userWithRole->hasRole('project_manager'), 'User should have project_manager role');
+        $this->assertNotNull($userWithRole->tenant_id, 'User should have tenant_id');
+        $this->assertTrue($userWithRole->hasAnyRole(['super_admin', 'admin', 'project_manager', 'designer', 'site_engineer', 'qc_engineer', 'procurement']), 'User should have any of the allowed roles');
+        
+        $this->assertTrue($this->policy->create($userWithRole));
     }
 
     public function test_user_cannot_create_document_without_proper_role()
@@ -85,9 +113,31 @@ class DocumentPolicyTest extends TestCase
 
     public function test_user_can_update_document_with_proper_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
         
-        $this->assertTrue($this->policy->update($this->user, $this->document));
+        // Create a new user with project_manager role directly
+        $userWithRole = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'email' => 'pm@example-' . uniqid() . '.com'
+        ]);
+        
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $userWithRole->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        $this->assertTrue($this->policy->update($userWithRole, $this->document));
     }
 
     public function test_user_cannot_update_document_in_different_tenant()
@@ -109,16 +159,73 @@ class DocumentPolicyTest extends TestCase
 
     public function test_user_can_delete_document_with_admin_role()
     {
-        $this->user->assignRole('admin');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'admin'],
+            [
+                'scope' => 'system',
+                'allow_override' => false,
+                'description' => 'Administrator - System management',
+            ]
+        );
         
-        $this->assertTrue($this->policy->delete($this->user, $this->document));
+        // Create a new user with admin role directly
+        $userWithRole = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'email' => 'admin@example-' . uniqid() . '.com'
+        ]);
+        
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $userWithRole->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        $this->assertTrue($this->policy->delete($userWithRole, $this->document));
     }
 
     public function test_user_cannot_delete_document_without_admin_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'engineer'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Engineer - Engineering work',
+            ]
+        );
         
-        $this->assertFalse($this->policy->delete($this->user, $this->document));
+        // Create a new user with engineer role (not admin)
+        $userWithRole = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'email' => 'engineer@example-' . uniqid() . '.com'
+        ]);
+        
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $userWithRole->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // Create a document uploaded by someone else (not this user)
+        $otherUser = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'email' => 'other@example-' . uniqid() . '.com'
+        ]);
+        
+        $otherDocument = Document::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Other Document',
+            'file_path' => '/test/other.pdf',
+            'uploaded_by' => $otherUser->id
+        ]);
+        
+        $this->assertFalse($this->policy->delete($userWithRole, $otherDocument));
     }
 
     public function test_user_can_download_document_with_proper_role()
@@ -147,9 +254,31 @@ class DocumentPolicyTest extends TestCase
 
     public function test_user_can_approve_document_with_management_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
         
-        $this->assertTrue($this->policy->approve($this->user, $this->document));
+        // Create a new user with project_manager role directly
+        $userWithRole = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'email' => 'pm@example-' . uniqid() . '.com'
+        ]);
+        
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $userWithRole->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        $this->assertTrue($this->policy->approve($userWithRole, $this->document));
     }
 
     public function test_user_cannot_approve_document_without_management_role()
@@ -161,14 +290,36 @@ class DocumentPolicyTest extends TestCase
 
     public function test_super_admin_can_perform_all_actions()
     {
-        $this->user->assignRole('super_admin');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'super_admin'],
+            [
+                'scope' => 'system',
+                'allow_override' => true,
+                'description' => 'Super Administrator - Full system access',
+            ]
+        );
         
-        $this->assertTrue($this->policy->view($this->user, $this->document));
-        $this->assertTrue($this->policy->create($this->user));
-        $this->assertTrue($this->policy->update($this->user, $this->document));
-        $this->assertTrue($this->policy->delete($this->user, $this->document));
-        $this->assertTrue($this->policy->download($this->user, $this->document));
-        $this->assertTrue($this->policy->approve($this->user, $this->document));
-        $this->assertTrue($this->policy->forceDelete($this->user, $this->document));
+        // Create a new user with super_admin role directly
+        $userWithRole = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'email' => 'superadmin@example-' . uniqid() . '.com'
+        ]);
+        
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $userWithRole->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        $this->assertTrue($this->policy->view($userWithRole, $this->document));
+        $this->assertTrue($this->policy->create($userWithRole));
+        $this->assertTrue($this->policy->update($userWithRole, $this->document));
+        $this->assertTrue($this->policy->delete($userWithRole, $this->document));
+        $this->assertTrue($this->policy->download($userWithRole, $this->document));
+        $this->assertTrue($this->policy->approve($userWithRole, $this->document));
+        $this->assertTrue($this->policy->forceDelete($userWithRole, $this->document));
     }
 }

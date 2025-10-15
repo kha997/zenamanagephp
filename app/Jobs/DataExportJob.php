@@ -20,17 +20,17 @@ class DataExportJob implements ShouldQueue
     public $tries = 2;
     public $backoff = [60, 120];
 
-    protected $userId;
-    protected $exportType;
-    protected $filters;
-    protected $format;
-    protected $options;
+    public $userId;
+    public $exportType;
+    public $filters;
+    public $format;
+    public $options;
 
     /**
      * Create a new job instance.
      */
     public function __construct(
-        int $userId,
+        string $userId,
         string $exportType,
         array $filters = [],
         string $format = 'excel',

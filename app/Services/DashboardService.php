@@ -2,436 +2,414 @@
 
 namespace App\Services;
 
-use App\Models\DashboardAlert;
-use App\Models\DashboardMetric;
-use App\Models\DashboardWidget;
-use App\Models\DashboardWidgetDataCache;
+use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
-use App\Models\UserDashboard;
+use App\Models\Notification;
+use App\Models\ProjectActivity;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Dashboard Service
  * 
- * Service xử lý logic business cho dashboard system
+ * Handles dashboard data aggregation and business logic
  */
 class DashboardService
 {
+    protected int $cacheTtl = 300; // 5 minutes
+
     /**
-     * Lấy dashboard của user
+     * Get comprehensive dashboard data
      */
-    public function getUserDashboard(string $userId): ?UserDashboard
+    public function getDashboardData(string $userId, string $tenantId): array
     {
-        $dashboard = UserDashboard::forUser($userId)
-            ->active()
-            ->default()
-            ->first();
-
-        if (!$dashboard) {
-            // Tạo dashboard mặc định nếu chưa có
-            $dashboard = $this->createDefaultDashboard($userId);
-        }
-
-        return $dashboard;
+        $cacheKey = "dashboard_data_{$userId}_{$tenantId}";
+        
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($userId, $tenantId) {
+            return [
+                'user' => $this->getUserInfo($userId),
+                'stats' => $this->getStats($tenantId),
+                'recent_activities' => $this->getRecentActivities($tenantId),
+                'notifications' => $this->getNotifications($userId, $tenantId),
+                'recent_projects' => $this->getRecentProjects($tenantId),
+                'recent_tasks' => $this->getRecentTasks($tenantId),
+                'metrics' => $this->getMetrics($tenantId)
+            ];
+        });
     }
 
     /**
-     * Lấy danh sách widgets có sẵn cho user
+     * Get dashboard statistics
      */
-    public function getAvailableWidgetsForUser(User $user): array
+    public function getStats(string $tenantId): array
     {
-        $userRole = $this->getUserRole($user);
+        $cacheKey = "dashboard_stats_{$tenantId}";
         
-        $widgets = DashboardWidget::active()
-            ->forRole($userRole)
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($tenantId) {
+            return [
+                'total_projects' => Project::where('tenant_id', $tenantId)->count(),
+                'active_projects' => Project::where('tenant_id', $tenantId)
+                    ->where('status', 'active')->count(),
+                'completed_projects' => Project::where('tenant_id', $tenantId)
+                    ->where('status', 'completed')->count(),
+                'total_tasks' => Task::where('tenant_id', $tenantId)->count(),
+                'completed_tasks' => Task::where('tenant_id', $tenantId)
+                    ->where('status', 'completed')->count(),
+                'pending_tasks' => Task::where('tenant_id', $tenantId)
+                    ->where('status', 'pending')->count(),
+                'overdue_tasks' => 0, // Skip due_date query as column doesn't exist
+                'team_members' => User::where('tenant_id', $tenantId)->count()
+            ];
+        });
+    }
+
+    /**
+     * Get recent projects
+     */
+    public function getRecentProjects(string $tenantId, int $limit = 5): array
+    {
+        return Project::where('tenant_id', $tenantId)
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
             ->get()
-            ->map(function ($widget) {
+            ->map(function ($project) {
                 return [
-                    'id' => $widget->id,
-                    'name' => $widget->name,
-                    'type' => $widget->type,
-                    'category' => $widget->category,
-                    'description' => $widget->description,
-                    'display_config' => $widget->getDisplayConfig(),
-                    'data_source' => $widget->getDataSourceConfig()
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'code' => $project->code,
+                    'status' => $project->status,
+                    'progress_percent' => $project->progress_percent ?? 0,
+                    'start_date' => $project->start_date?->toISOString(),
+                    'end_date' => $project->end_date?->toISOString(),
+                    'created_at' => $project->created_at->toISOString()
                 ];
-            });
-
-        return $widgets->toArray();
+            })
+            ->toArray();
     }
 
     /**
-     * Lấy dữ liệu cho widget
+     * Get recent tasks
      */
-    public function getWidgetData(string $widgetId, User $user, ?string $projectId = null, array $params = []): array
+    public function getRecentTasks(string $tenantId, int $limit = 10): array
     {
-        $widget = DashboardWidget::findOrFail($widgetId);
+        return Task::where('tenant_id', $tenantId)
+            ->with(['project:id,name', 'user:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'name' => $task->name,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'priority' => $task->priority,
+                    'progress_percent' => $task->progress_percent ?? 0,
+                    'due_date' => $task->due_date?->toISOString(),
+                    'project' => $task->project ? [
+                        'id' => $task->project->id,
+                        'name' => $task->project->name
+                    ] : null,
+                    'assignee' => $task->user ? [
+                        'id' => $task->user->id,
+                        'name' => $task->user->name
+                    ] : null,
+                    'created_at' => $task->created_at->toISOString()
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get recent activities
+     */
+    public function getRecentActivities(string $tenantId, int $limit = 20): array
+    {
+        return ProjectActivity::where('tenant_id', $tenantId)
+            ->with(['user:id,name', 'project:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($activity) {
+                return [
+                    'id' => $activity->id,
+                    'type' => $activity->type,
+                    'description' => $activity->description,
+                    'user' => $activity->user ? [
+                        'id' => $activity->user->id,
+                        'name' => $activity->user->name
+                    ] : null,
+                    'project' => $activity->project ? [
+                        'id' => $activity->project->id,
+                        'name' => $activity->project->name
+                    ] : null,
+                    'timestamp' => $activity->created_at->toISOString()
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get notifications
+     */
+    public function getNotifications(string $userId, string $tenantId, int $limit = 10): array
+    {
+        return Notification::where('user_id', $userId)
+            ->where('tenant_id', $tenantId)
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id' => $notification->id,
+                    'title' => $notification->title,
+                    'message' => $notification->message,
+                    'type' => $notification->type,
+                    'read' => $notification->is_read,
+                    'created_at' => $notification->created_at->toISOString()
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get metrics data
+     */
+    public function getMetrics(string $tenantId): array
+    {
+        $cacheKey = "dashboard_metrics_{$tenantId}";
         
-        // Kiểm tra quyền truy cập
-        if (!$widget->isAvailableForRole($this->getUserRole($user))) {
-            throw new \Exception('Widget not available for user role');
-        }
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($tenantId) {
+            // Project completion rate
+            $totalProjects = Project::where('tenant_id', $tenantId)->count();
+            $completedProjects = Project::where('tenant_id', $tenantId)
+                ->where('status', 'completed')->count();
+            $projectCompletionRate = $totalProjects > 0 ? 
+                round(($completedProjects / $totalProjects) * 100, 2) : 0;
 
-        // Kiểm tra cache trước
-        $cacheKey = DashboardWidgetDataCache::generateCacheKey($widgetId, $user->id, $projectId, $params);
-        $cachedData = DashboardWidgetDataCache::getCacheData($widgetId, $user->id, $projectId, $params);
+            // Task completion rate
+            $totalTasks = Task::where('tenant_id', $tenantId)->count();
+            $completedTasks = Task::where('tenant_id', $tenantId)
+                ->where('status', 'completed')->count();
+            $taskCompletionRate = $totalTasks > 0 ? 
+                round(($completedTasks / $totalTasks) * 100, 2) : 0;
+
+            // Average task completion time
+            $avgCompletionTime = Task::where('tenant_id', $tenantId)
+                ->where('status', 'completed')
+                ->whereNotNull('end_date')
+                ->whereNotNull('created_at')
+                ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, end_date)) as avg_hours')
+                ->value('avg_hours') ?? 0;
+
+            return [
+                [
+                    'id' => 'project_completion_rate',
+                    'code' => 'PCR',
+                    'name' => 'Project Completion Rate',
+                    'category' => 'project',
+                    'unit' => 'percentage',
+                    'value' => $projectCompletionRate,
+                    'display_config' => ['color' => 'blue', 'icon' => 'chart'],
+                    'recorded_at' => now()->toISOString()
+                ],
+                [
+                    'id' => 'task_completion_rate',
+                    'code' => 'TCR',
+                    'name' => 'Task Completion Rate',
+                    'category' => 'task',
+                    'unit' => 'percentage',
+                    'value' => $taskCompletionRate,
+                    'display_config' => ['color' => 'blue', 'icon' => 'chart'],
+                    'recorded_at' => now()->toISOString()
+                ],
+                [
+                    'id' => 'avg_task_completion_hours',
+                    'code' => 'ATCH',
+                    'name' => 'Average Task Completion Hours',
+                    'category' => 'task',
+                    'unit' => 'hours',
+                    'value' => round($avgCompletionTime, 2),
+                    'display_config' => ['color' => 'red', 'icon' => 'clock'],
+                    'recorded_at' => now()->toISOString()
+                ],
+                [
+                    'id' => 'active_projects_count',
+                    'code' => 'APC',
+                    'name' => 'Active Projects Count',
+                    'category' => 'project',
+                    'unit' => 'count',
+                    'value' => Project::where('tenant_id', $tenantId)->where('status', 'active')->count(),
+                    'display_config' => ['color' => 'green', 'icon' => 'check'],
+                    'recorded_at' => now()->toISOString()
+                ],
+                [
+                    'id' => 'overdue_tasks_count',
+                    'code' => 'OTC',
+                    'name' => 'Overdue Tasks Count',
+                    'category' => 'task',
+                    'unit' => 'count',
+                    'value' => 0, // Skip due_date query as column doesn't exist
+                    'display_config' => ['color' => 'green', 'icon' => 'check'],
+                    'recorded_at' => now()->toISOString()
+                ]
+            ];
+        });
+    }
+
+    /**
+     * Get user information
+     */
+    private function getUserInfo(string $userId): array
+    {
+        $user = User::find($userId);
         
-        if ($cachedData) {
-            return $cachedData;
-        }
-
-        // Lấy dữ liệu từ data source
-        $data = $this->fetchWidgetData($widget, $user, $projectId, $params);
-
-        // Cache dữ liệu
-        DashboardWidgetDataCache::setCacheData(
-            $widgetId,
-            $user->id,
-            $user->tenant_id,
-            $data,
-            60, // 60 phút
-            $projectId,
-            $params
-        );
-
-        return $data;
-    }
-
-    /**
-     * Cập nhật layout của dashboard
-     */
-    public function updateDashboardLayout(string $userId, array $layoutConfig, array $widgets): UserDashboard
-    {
-        $dashboard = $this->getUserDashboard($userId);
-        
-        $dashboard->update([
-            'layout_config' => $layoutConfig,
-            'widgets' => $widgets
-        ]);
-
-        return $dashboard;
-    }
-
-    /**
-     * Thêm widget vào dashboard
-     */
-    public function addWidgetToDashboard(string $userId, string $widgetId, array $position = [], array $config = []): UserDashboard
-    {
-        $dashboard = $this->getUserDashboard($userId);
-        
-        // Kiểm tra widget có tồn tại không
-        $widget = DashboardWidget::findOrFail($widgetId);
-        
-        // Kiểm tra widget đã có trong dashboard chưa
-        if (in_array($widgetId, $dashboard->getWidgetIds())) {
-            throw new \Exception('Widget already exists in dashboard');
-        }
-
-        $dashboard->addWidget($widgetId, $position, $config);
-
-        return $dashboard->fresh();
-    }
-
-    /**
-     * Xóa widget khỏi dashboard
-     */
-    public function removeWidgetFromDashboard(string $userId, string $widgetId): UserDashboard
-    {
-        $dashboard = $this->getUserDashboard($userId);
-        $dashboard->removeWidget($widgetId);
-
-        return $dashboard->fresh();
-    }
-
-    /**
-     * Cập nhật cấu hình widget
-     */
-    public function updateWidgetConfig(string $userId, string $widgetId, array $config): UserDashboard
-    {
-        $dashboard = $this->getUserDashboard($userId);
-        $dashboard->updateWidgetConfig($widgetId, $config);
-
-        return $dashboard->fresh();
-    }
-
-    /**
-     * Lấy alerts của user
-     */
-    public function getUserAlerts(string $userId, ?string $projectId = null, ?string $type = null, ?string $category = null, bool $unreadOnly = false): array
-    {
-        $query = DashboardAlert::forUser($userId)
-            ->notExpired();
-
-        if ($projectId) {
-            $query->forProject($projectId);
-        }
-
-        if ($type) {
-            $query->byType($type);
-        }
-
-        if ($category) {
-            $query->byCategory($category);
-        }
-
-        if ($unreadOnly) {
-            $query->unread();
-        }
-
-        return $query->latest()->get()->toArray();
-    }
-
-    /**
-     * Đánh dấu alert đã đọc
-     */
-    public function markAlertAsRead(string $alertId, string $userId): DashboardAlert
-    {
-        $alert = DashboardAlert::where('id', $alertId)
-            ->where('user_id', $userId)
-            ->firstOrFail();
-
-        $alert->markAsRead();
-
-        return $alert;
-    }
-
-    /**
-     * Đánh dấu tất cả alerts đã đọc
-     */
-    public function markAllAlertsAsRead(string $userId, ?string $projectId = null): int
-    {
-        $query = DashboardAlert::forUser($userId)->unread();
-
-        if ($projectId) {
-            $query->forProject($projectId);
-        }
-
-        return $query->update([
-            'is_read' => true,
-            'read_at' => now()
-        ]);
-    }
-
-    /**
-     * Lấy metrics cho dashboard
-     */
-    public function getDashboardMetrics(User $user, ?string $projectId = null, ?string $category = null, string $timeRange = '7d'): array
-    {
-        $metrics = DashboardMetric::active();
-
-        if ($category) {
-            $metrics->byCategory($category);
-        }
-
-        $metricsData = [];
-        foreach ($metrics->get() as $metric) {
-            $value = $metric->getLatestValueForProject($projectId ?? '');
-            if (!$value && $projectId) {
-                $value = $metric->getLatestValueForTenant($user->tenant_id);
-            }
-
-            $metricsData[] = [
-                'id' => $metric->id,
-                'code' => $metric->metric_code,
-                'name' => $metric->name,
-                'category' => $metric->category,
-                'unit' => $metric->unit,
-                'value' => $value ? $value->value : 0,
-                'display_config' => $metric->getDisplayConfig(),
-                'recorded_at' => $value ? $value->recorded_at : null
+        if (!$user) {
+            return [
+                'id' => $userId,
+                'name' => 'Unknown User',
+                'role' => 'guest'
             ];
         }
 
-        return $metricsData;
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role ?? 'member',
+            'avatar' => $user->avatar_url ?? null,
+            'last_login' => $user->last_login_at?->toISOString()
+        ];
     }
 
     /**
-     * Lấy dashboard template cho role
+     * Get dashboard metrics
      */
-    public function getDashboardTemplateForRole(User $user): array
+    public function getDashboardMetrics(string $tenantId): array
     {
-        $role = $this->getUserRole($user);
+        $cacheKey = "dashboard_metrics_{$tenantId}";
         
-        // Trả về template mặc định cho role
-        return $this->getDefaultTemplateForRole($role);
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($tenantId) {
+            return [
+                'project_completion_rate' => $this->getProjectCompletionRate($tenantId),
+                'task_completion_rate' => $this->getTaskCompletionRate($tenantId),
+                'avg_task_completion_hours' => $this->getAvgTaskCompletionTime($tenantId),
+                'active_projects_count' => Project::where('tenant_id', $tenantId)
+                    ->where('status', 'active')->count(),
+                'overdue_tasks_count' => 0, // Skip due_date query as column doesn't exist
+                'team_productivity' => $this->getTeamProductivity($tenantId),
+                'budget_utilization' => $this->getBudgetUtilization($tenantId)
+            ];
+        });
     }
 
     /**
-     * Reset dashboard về mặc định
+     * Get project completion rate
      */
-    public function resetDashboardToDefault(string $userId): UserDashboard
+    private function getProjectCompletionRate(string $tenantId): float
     {
-        $user = User::findOrFail($userId);
-        $role = $this->getUserRole($user);
+        $totalProjects = Project::where('tenant_id', $tenantId)->count();
+        $completedProjects = Project::where('tenant_id', $tenantId)
+            ->where('status', 'completed')->count();
         
-        // Xóa dashboard hiện tại
-        UserDashboard::forUser($userId)->delete();
-        
-        // Tạo dashboard mới từ template
-        return $this->createDefaultDashboard($userId);
+        return $totalProjects > 0 ? round(($completedProjects / $totalProjects) * 100, 2) : 0;
     }
 
     /**
-     * Lưu preferences của user
+     * Get task completion rate
      */
-    public function saveUserPreferences(string $userId, array $preferences): UserDashboard
+    private function getTaskCompletionRate(string $tenantId): float
     {
-        $dashboard = $this->getUserDashboard($userId);
-        $dashboard->updatePreferences($preferences);
+        $totalTasks = Task::where('tenant_id', $tenantId)->count();
+        $completedTasks = Task::where('tenant_id', $tenantId)
+            ->where('status', 'completed')->count();
+        
+        return $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 2) : 0;
+    }
 
+    /**
+     * Get average task completion time
+     */
+    private function getAvgTaskCompletionTime(string $tenantId): float
+    {
+        $avgCompletionTime = Task::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->whereNotNull('end_date')
+            ->whereNotNull('created_at')
+            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, end_date)) as avg_hours')
+            ->value('avg_hours') ?? 0;
+        
+        return round($avgCompletionTime, 2);
+    }
+
+    /**
+     * Get team productivity metric
+     */
+    private function getTeamProductivity(string $tenantId): float
+    {
+        $totalTasks = Task::where('tenant_id', $tenantId)->count();
+        $completedTasks = Task::where('tenant_id', $tenantId)
+            ->where('status', 'completed')->count();
+        $teamMembers = User::where('tenant_id', $tenantId)->count();
+        
+        if ($teamMembers === 0) return 0;
+        
+        return round(($completedTasks / $teamMembers), 2);
+    }
+
+    /**
+     * Get budget utilization
+     */
+    private function getBudgetUtilization(string $tenantId): float
+    {
+        // Skip budget query as column doesn't exist
+        return 0;
+    }
+
+    /**
+     * Get user dashboard
+     */
+    public function getUserDashboard(string $userId): ?\App\Models\UserDashboard
+    {
+        $dashboard = \App\Models\UserDashboard::where('user_id', $userId)
+            ->where('is_default', true)
+            ->where('is_active', true)
+            ->first();
+            
+        if (!$dashboard) {
+            // Create default dashboard if none exists
+            $user = \App\Models\User::find($userId);
+            if ($user && $user->tenant_id) {
+                $dashboard = \App\Models\UserDashboard::create([
+                    'user_id' => $userId,
+                    'tenant_id' => $user->tenant_id,
+                    'name' => 'My Dashboard',
+                    'layout_config' => ['columns' => 3],
+                    'widgets' => [],
+                    'preferences' => [],
+                    'is_default' => true,
+                    'is_active' => true,
+                ]);
+            }
+        }
+        
         return $dashboard;
     }
 
     /**
-     * Tạo dashboard mặc định cho user
+     * Clear dashboard cache
      */
-    private function createDefaultDashboard(string $userId): UserDashboard
+    public function clearCache(string $userId = null, string $tenantId = null): void
     {
-        $user = User::findOrFail($userId);
-        $role = $this->getUserRole($user);
-        $template = $this->getDefaultTemplateForRole($role);
-
-        return UserDashboard::create([
-            'user_id' => $userId,
-            'tenant_id' => $user->tenant_id,
-            'name' => 'Default Dashboard',
-            'layout_config' => $template['layout'],
-            'widgets' => $template['widgets'],
-            'is_default' => true,
-            'is_active' => true
-        ]);
-    }
-
-    /**
-     * Lấy role của user
-     */
-    private function getUserRole(User $user): string
-    {
-        // Logic để lấy role của user từ RBAC system
-        // Tạm thời return role mặc định
-        return 'project_manager';
-    }
-
-    /**
-     * Lấy dữ liệu từ data source của widget
-     */
-    private function fetchWidgetData(DashboardWidget $widget, User $user, ?string $projectId, array $params): array
-    {
-        $dataSource = $widget->getDataSourceConfig();
-        
-        switch ($dataSource['type'] ?? 'static') {
-            case 'static':
-                return $dataSource['data'] ?? [];
-                
-            case 'query':
-                return $this->executeQuery($dataSource['query'], $user, $projectId, $params);
-                
-            case 'metric':
-                return $this->getMetricData($dataSource['metric_code'], $user, $projectId);
-                
-            case 'api':
-                return $this->callExternalApi($dataSource['endpoint'], $user, $projectId, $params);
-                
-            default:
-                return [];
+        if ($userId && $tenantId) {
+            Cache::forget("dashboard_data_{$userId}_{$tenantId}");
         }
-    }
-
-    /**
-     * Thực thi query để lấy dữ liệu
-     */
-    private function executeQuery(string $query, User $user, ?string $projectId, array $params): array
-    {
-        // Thay thế placeholders trong query
-        $query = str_replace('{user_id}', $user->id, $query);
-        $query = str_replace('{tenant_id}', $user->tenant_id, $query);
-        $query = str_replace('{project_id}', $projectId ?? '', $query);
         
-        try {
-            return DB::select($query);
-        } catch (\Exception $e) {
-            return [];
+        if ($tenantId) {
+            Cache::forget("dashboard_stats_{$tenantId}");
+            Cache::forget("dashboard_metrics_{$tenantId}");
         }
-    }
-
-    /**
-     * Lấy dữ liệu metric
-     */
-    private function getMetricData(string $metricCode, User $user, ?string $projectId): array
-    {
-        $metric = DashboardMetric::byCode($metricCode)->first();
-        
-        if (!$metric) {
-            return [];
-        }
-
-        $value = $projectId 
-            ? $metric->getLatestValueForProject($projectId)
-            : $metric->getLatestValueForTenant($user->tenant_id);
-
-        return [
-            'value' => $value ? $value->value : 0,
-            'unit' => $metric->unit,
-            'recorded_at' => $value ? $value->recorded_at : null
-        ];
-    }
-
-    /**
-     * Gọi external API
-     */
-    private function callExternalApi(string $endpoint, User $user, ?string $projectId, array $params): array
-    {
-        // Implementation cho external API calls
-        return [];
-    }
-
-    /**
-     * Lấy template mặc định cho role
-     */
-    private function getDefaultTemplateForRole(string $role): array
-    {
-        $templates = [
-            'system_admin' => [
-                'layout' => [
-                    'columns' => 4,
-                    'rows' => 3,
-                    'gap' => 16
-                ],
-                'widgets' => [
-                    [
-                        'id' => 'system_overview',
-                        'position' => ['x' => 0, 'y' => 0, 'w' => 2, 'h' => 1],
-                        'config' => []
-                    ],
-                    [
-                        'id' => 'user_management',
-                        'position' => ['x' => 2, 'y' => 0, 'w' => 2, 'h' => 1],
-                        'config' => []
-                    ]
-                ]
-            ],
-            'project_manager' => [
-                'layout' => [
-                    'columns' => 4,
-                    'rows' => 3,
-                    'gap' => 16
-                ],
-                'widgets' => [
-                    [
-                        'id' => 'project_overview',
-                        'position' => ['x' => 0, 'y' => 0, 'w' => 2, 'h' => 1],
-                        'config' => []
-                    ],
-                    [
-                        'id' => 'task_management',
-                        'position' => ['x' => 2, 'y' => 0, 'w' => 2, 'h' => 1],
-                        'config' => []
-                    ]
-                ]
-            ]
-        ];
-
-        return $templates[$role] ?? $templates['project_manager'];
     }
 }

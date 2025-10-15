@@ -1,25 +1,27 @@
-@extends('layouts.app')
+@extends('layouts.app-layout')
 
-@section('title', 'System Settings')
+@section('title', __('settings.title'))
+
+@section('kpi-strip')
+{{-- <x-kpi.strip :kpis="$kpis" /> --}}
+@endsection
 
 @section('content')
-<div class="min-h-screen bg-gray-50">
-    <!-- Header with Logo -->
-    <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                @include('components.zena-logo', ['subtitle' => 'System Settings'])
-                
-                <!-- Header Actions -->
-                <div class="flex items-center space-x-4">
-                    <a href="/admin" class="zena-btn zena-btn-outline zena-btn-sm">
-                        <i class="fas fa-arrow-left mr-2"></i>
-                        Back to Admin
-                    </a>
-                </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">{{ __('settings.title') }}</h1>
+                <p class="mt-2 text-gray-600">{{ __('settings.subtitle') }}</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="/admin" class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                    <i class="fas fa-arrow-left mr-2"></i>{{ __('settings.back_to_admin') }}
+                </a>
             </div>
         </div>
-    </header>
+    </div>
     
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div x-data="settingsDashboard()" x-init="init()">
@@ -193,9 +195,10 @@
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 </div>
 
+@push('scripts')
 <script>
     function settingsDashboard() {
         return {
@@ -205,4 +208,5 @@
         }
     }
 </script>
+@endpush
 @endsection

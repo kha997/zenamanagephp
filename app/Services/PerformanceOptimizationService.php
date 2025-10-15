@@ -131,6 +131,14 @@ class PerformanceOptimizationService
     public function getCacheStats(): array
     {
         try {
+            // Check if Redis driver is available
+            if (config('cache.default') !== 'redis') {
+                return [
+                    'error' => 'Redis not available',
+                    'cache_driver' => config('cache.default')
+                ];
+            }
+            
             $redis = Cache::getRedis();
             
             return [
@@ -223,7 +231,7 @@ class PerformanceOptimizationService
             
             // Check for tables without primary keys
             $tablesWithoutPK = DB::select("
-                SELECT table_name
+                SELECT t.table_name
                 FROM information_schema.tables t
                 LEFT JOIN information_schema.table_constraints tc 
                     ON t.table_name = tc.table_name 

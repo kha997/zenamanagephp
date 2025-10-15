@@ -70,9 +70,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 // App Routes - Tenant users only
 Route::prefix('app')->middleware(['auth', 'tenant.scope'])->name('app.')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('app.dashboard');
-    })->name('dashboard');
+    // REMOVED: Duplicate route /dashboard - violates single source of truth
     
     Route::get('/projects', [App\Http\Controllers\ProjectController::class, 'index'])->name('projects');
     Route::get('/projects/create', [App\Http\Controllers\ProjectController::class, 'create'])->name('projects.create');

@@ -39,6 +39,7 @@ class Tenant extends Model
         'domain',
         'database_name',
         'settings',
+        'preferences',
         'status',
         'is_active',
         'trial_ends_at',
@@ -51,6 +52,7 @@ class Tenant extends Model
      */
     protected $casts = [
         'settings' => 'array',
+        'preferences' => 'array',
         'is_active' => 'boolean',
         'trial_ends_at' => 'datetime',
     ];

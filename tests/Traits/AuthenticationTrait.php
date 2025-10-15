@@ -5,7 +5,6 @@ namespace Tests\Traits;
 use App\Models\User;
 use App\Models\Tenant;
 use Src\RBAC\Models\Role;
-use Src\RBAC\Services\AuthService;
 
 /**
  * Trait để hỗ trợ authentication trong tests
@@ -13,7 +12,7 @@ use Src\RBAC\Services\AuthService;
 trait AuthenticationTrait
 {
     /**
-     * Tạo user với JWT token cho testing
+     * Tạo user với Sanctum token cho testing
      *
      * @param array $attributes
      * @param array $roles
@@ -39,15 +38,15 @@ trait AuthenticationTrait
     }
     
     /**
-     * Authenticate user và set JWT token
+     * Authenticate user và set Sanctum token
      *
      * @param User $user
      * @return string
      */
     protected function authenticateUser(User $user): string
     {
-        $authService = app(AuthService::class);
-        $token = $authService->createTokenForUser($user);
+        // Create Sanctum token
+        $token = $user->createToken('test-token')->plainTextToken;
         $this->withHeader('Authorization', 'Bearer ' . $token);
         
         return $token;

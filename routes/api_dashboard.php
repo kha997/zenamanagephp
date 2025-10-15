@@ -16,7 +16,7 @@ use App\Http\Controllers\Api\DashboardController;
 Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
     
     // Dashboard chính
-    Route::get('/dashboard', [DashboardController::class, 'getUserDashboard']);
+    // REMOVED: Duplicate route /dashboard - violates single source of truth
     Route::get('/dashboard/template', [DashboardController::class, 'getDashboardTemplate']);
     Route::post('/dashboard/reset', [DashboardController::class, 'resetDashboard']);
     

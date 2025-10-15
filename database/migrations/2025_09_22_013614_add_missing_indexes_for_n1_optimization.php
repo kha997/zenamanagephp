@@ -81,35 +81,80 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Projects table indexes
         Schema::table('projects', function (Blueprint $table) {
-            $table->dropIndex('projects_created_at_index');
-            $table->dropIndex('projects_tenant_status_index');
+            if ($this->indexExists('projects', 'projects_created_at_index')) {
+                $table->dropIndex('projects_created_at_index');
+            }
+            if ($this->indexExists('projects', 'projects_tenant_status_index')) {
+                $table->dropIndex('projects_tenant_status_index');
+            }
         });
         
+        // Tasks table indexes
         Schema::table('tasks', function (Blueprint $table) {
-            $table->dropIndex('tasks_created_at_index');
-            $table->dropIndex('tasks_project_status_index');
-            $table->dropIndex('tasks_assignee_status_index');
+            if ($this->indexExists('tasks', 'tasks_created_at_index')) {
+                $table->dropIndex('tasks_created_at_index');
+            }
+            if ($this->indexExists('tasks', 'tasks_project_status_index')) {
+                $table->dropIndex('tasks_project_status_index');
+            }
+            if ($this->indexExists('tasks', 'tasks_assignee_status_index')) {
+                $table->dropIndex('tasks_assignee_status_index');
+            }
         });
         
+        // Users table indexes
         Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex('users_created_at_index');
-            $table->dropIndex('users_tenant_status_index');
+            if ($this->indexExists('users', 'users_created_at_index')) {
+                $table->dropIndex('users_created_at_index');
+            }
+            if ($this->indexExists('users', 'users_tenant_status_index')) {
+                $table->dropIndex('users_tenant_status_index');
+            }
         });
         
+        // Document versions table indexes
         Schema::table('document_versions', function (Blueprint $table) {
-            $table->dropIndex('document_versions_document_created_index');
-            $table->dropIndex('document_versions_created_by_created_index');
+            if ($this->indexExists('document_versions', 'document_versions_document_created_index')) {
+                $table->dropIndex('document_versions_document_created_index');
+            }
+            if ($this->indexExists('document_versions', 'document_versions_created_by_created_index')) {
+                $table->dropIndex('document_versions_created_by_created_index');
+            }
         });
         
+        // Task assignments table indexes
         Schema::table('task_assignments', function (Blueprint $table) {
-            $table->dropIndex('task_assignments_task_user_index');
-            $table->dropIndex('task_assignments_user_created_index');
+            if ($this->indexExists('task_assignments', 'task_assignments_task_user_index')) {
+                $table->dropIndex('task_assignments_task_user_index');
+            }
+            if ($this->indexExists('task_assignments', 'task_assignments_user_created_index')) {
+                $table->dropIndex('task_assignments_user_created_index');
+            }
         });
         
+        // Project team members table indexes
         Schema::table('project_team_members', function (Blueprint $table) {
-            $table->dropIndex('project_team_members_project_user_index');
-            $table->dropIndex('project_team_members_user_created_index');
+            if ($this->indexExists('project_team_members', 'project_team_members_project_user_index')) {
+                $table->dropIndex('project_team_members_project_user_index');
+            }
+            if ($this->indexExists('project_team_members', 'project_team_members_user_created_index')) {
+                $table->dropIndex('project_team_members_user_created_index');
+            }
         });
+    }
+    
+    /**
+     * Check if index exists on table
+     */
+    private function indexExists(string $table, string $index): bool
+    {
+        try {
+            $indexes = Schema::getConnection()->getDoctrineSchemaManager()->listTableIndexes($table);
+            return array_key_exists($index, $indexes);
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 };

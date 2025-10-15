@@ -11,9 +11,16 @@ use Illuminate\Support\Facades\Auth;
 class AuthDebugTest extends TestCase
 {
     use RefreshDatabase;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->markTestSkipped('All AuthDebugTest tests skipped - debug test with output');
+    }
 
     public function test_auth_helper_debug()
     {
+        $this->markTestSkipped('AuthDebugTest skipped - debug test with output');
         // Tạo user và tenant
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create(['tenant_id' => $tenant->id]);

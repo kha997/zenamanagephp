@@ -19,14 +19,15 @@ class SyncJob implements ShouldQueue
     public $tries = 3;
     public $backoff = [30, 60, 120];
 
-    protected $userId;
-    protected $syncType;
-    protected $options;
+    public $userId;
+    public $syncType;
+    public $options;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(int $userId, string $syncType, array $options = [])
+    public function __construct(string $userId, string $syncType, array $options = [])
+    
     {
         $this->userId = $userId;
         $this->syncType = $syncType;

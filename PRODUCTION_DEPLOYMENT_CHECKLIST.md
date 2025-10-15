@@ -1,297 +1,182 @@
-# 🚀 ZENAMANAGE PRODUCTION DEPLOYMENT CHECKLIST
+# ZenaManage Production Deployment Checklist
 
-## 📋 **PRE-DEPLOYMENT CHECKLIST**
+## 🚀 **Pre-Deployment Checklist**
 
-### **🔧 System Configuration**
-- [ ] Set `APP_ENV=production`
-- [ ] Set `APP_DEBUG=false`
-- [ ] Set `APP_URL=https://yourdomain.com`
-- [ ] Configure database credentials
-- [ ] Set up Redis cache (if using)
-- [ ] Configure mail settings
-- [ ] Set up file storage (S3/Local)
+### **Environment Configuration**
+- [ ] Update `.env` file for production:
+  - [ ] `APP_ENV=production`
+  - [ ] `APP_DEBUG=false`
+  - [ ] `APP_URL=https://your-domain.com`
+  - [ ] Generate new `APP_KEY` for production
+  - [ ] Update database credentials
+  - [ ] Configure Redis for production
+  - [ ] Set secure session configuration
 
-### **🛡️ Security Configuration**
-- [ ] Generate new `APP_KEY`
-- [ ] Set secure session configuration
-- [ ] Configure CORS settings
-- [ ] Set up rate limiting
-- [ ] Enable HTTPS
-- [ ] Configure firewall rules
-- [ ] Set up SSL certificates
+### **Security Configuration**
+- [ ] Enable all security middleware:
+  - [x] Security headers middleware
+  - [x] CSRF protection
+  - [x] Rate limiting
+  - [x] Input validation & sanitization
+- [ ] Configure HTTPS redirects
+- [ ] Set secure cookie settings
+- [ ] Enable CORS for production domains
 
-### **🗄️ Database Setup**
-- [ ] Run migrations: `php artisan migrate`
-- [ ] Seed demo data: `php artisan db:seed --class=DemoUsersSeeder`
-- [ ] Create production users
-- [ ] Set up database backups
-- [ ] Configure database monitoring
+### **Database & Performance**
+- [ ] Run migrations: `php artisan migrate --force`
+- [ ] Seed production data: `php artisan db:seed --class=ProductionSeeder`
+- [ ] Optimize database indexes
+- [ ] Configure query caching
+- [ ] Set up Redis for sessions and cache
 
-### **📁 File Permissions**
-- [ ] Set correct permissions on `storage/` directory
-- [ ] Set correct permissions on `bootstrap/cache/` directory
-- [ ] Ensure web server can write to logs
-- [ ] Set up log rotation
+### **File Permissions**
+- [ ] Set correct permissions:
+  - [ ] `storage/` - writable by web server
+  - [ ] `bootstrap/cache/` - writable by web server
+  - [ ] `public/` - readable by web server
+- [ ] Ensure `.env` is not publicly accessible
 
----
+### **Asset Compilation**
+- [ ] Build production assets: `npm run build`
+- [ ] Verify Vite assets are compiled
+- [ ] Test asset loading in production
 
-## 🎯 **ROUTE VERIFICATION CHECKLIST**
+### **Monitoring & Logging**
+- [ ] Configure production logging
+- [ ] Set up error tracking (Sentry, Bugsnag, etc.)
+- [ ] Configure performance monitoring
+- [ ] Set up health checks
 
-### **✅ UI Routes (No Side Effects)**
-- [ ] `/admin/*` - Super Admin only
-- [ ] `/app/*` - Tenant users only
-- [ ] All UI routes return views only
-- [ ] No POST/PATCH/DELETE on UI routes
-- [ ] Business actions moved to API
+### **Testing**
+- [ ] Run full test suite: `php artisan test`
+- [ ] Run smoke tests
+- [ ] Test authentication flow
+- [ ] Test all main routes
+- [ ] Verify tenant isolation
 
-### **✅ API Routes (Business Logic)**
-- [ ] `/api/v1/admin/*` - Super Admin API
-- [ ] `/api/v1/app/*` - Tenant API
-- [ ] `/api/v1/public/*` - Public API (rate limited)
-- [ ] `/api/v1/auth/*` - Authentication API
-- [ ] `/api/v1/invitations/*` - Invitation API
+## 🔧 **Deployment Commands**
 
-### **✅ Legacy Routes (301 Redirects)**
-- [ ] `/dashboard` → `/app/dashboard`
-- [ ] `/projects` → `/app/projects`
-- [ ] `/tasks` → `/app/tasks`
-- [ ] `/users` → `/app/team`
-- [ ] `/tenants` → `/admin/tenants`
-- [ ] All legacy routes return 301 status
-
-### **✅ Debug Routes (Local Only)**
-- [ ] `/_debug/*` - Local environment only
-- [ ] IP allowlist configured
-- [ ] Debug middleware active
-- [ ] No debug routes in production
-
----
-
-## 🔐 **PERMISSION VERIFICATION CHECKLIST**
-
-### **✅ Middleware Configuration**
-- [ ] `auth` - Authentication required
-- [ ] `admin.only` - Super Admin only
-- [ ] `tenant.scope` - Tenant context required
-- [ ] `debug.gate` - Debug access control
-- [ ] `throttle` - Rate limiting active
-
-### **✅ Role-Based Access**
-- [ ] Super Admin can access `/admin/*`
-- [ ] Tenant users can access `/app/*`
-- [ ] Super Admin cannot access `/app/*`
-- [ ] Tenant users cannot access `/admin/*`
-- [ ] Unauthenticated users redirected to login
-
-### **✅ API Permissions**
-- [ ] Admin API requires `auth:sanctum` + `ability:admin`
-- [ ] App API requires `auth:sanctum` + `ability:tenant`
-- [ ] Public API has rate limiting
-- [ ] Auth API handles login/logout
-- [ ] Invitation API handles token validation
-
----
-
-## 📊 **PERFORMANCE VERIFICATION CHECKLIST**
-
-### **✅ Caching**
-- [ ] Route cache: `php artisan route:cache`
-- [ ] Config cache: `php artisan config:cache`
-- [ ] View cache: `php artisan view:cache`
-- [ ] Application cache: `php artisan cache:cache`
-- [ ] Clear all caches after deployment
-
-### **✅ Monitoring**
-- [ ] Health check: `/api/v1/public/health`
-- [ ] Performance metrics: `/api/v1/admin/perf/metrics`
-- [ ] System health: `/api/v1/admin/perf/health`
-- [ ] Cache management: `/api/v1/admin/perf/clear-caches`
-
-### **✅ Rate Limiting**
-- [ ] Public API: 30 requests/minute
-- [ ] App API: 120 requests/minute
-- [ ] Admin API: 60 requests/minute
-- [ ] Auth API: 10 requests/minute
-
----
-
-## 🧪 **TESTING CHECKLIST**
-
-### **✅ E2E Tests**
-- [ ] Navigation `/app/*` keeps header fixed
-- [ ] Content swaps without page reload
-- [ ] 403 errors for unauthorized access
-- [ ] Legacy 301 redirects work correctly
-- [ ] API endpoints return proper responses
-
-### **✅ Permission Tests**
-- [ ] Super Admin login → `/admin` access
-- [ ] Tenant user login → `/app/dashboard` access
-- [ ] Unauthorized access → 403 error
-- [ ] Cross-tenant access → 403 error
-- [ ] API authentication → proper tokens
-
-### **✅ Legacy Tests**
-- [ ] `/dashboard` → redirects to correct dashboard
-- [ ] `/projects` → redirects to `/app/projects`
-- [ ] `/tasks` → redirects to `/app/tasks`
-- [ ] `/users` → redirects to `/app/team`
-- [ ] `/tenants` → redirects to `/admin/tenants`
-
----
-
-## 📚 **DOCUMENTATION CHECKLIST**
-
-### **✅ API Documentation**
-- [ ] OpenAPI/Swagger documentation
-- [ ] Example requests/responses
-- [ ] Authentication examples
-- [ ] Error code documentation
-- [ ] Rate limiting documentation
-
-### **✅ System Documentation**
-- [ ] `SYSTEM_DOCUMENTATION.md` updated
-- [ ] `ZENAMANAGE_PAGE_TREE_DIAGRAM.md` current
-- [ ] `PROJECT_COMPLETION_SUMMARY.md` complete
-- [ ] `legacy-map.json` accurate
-- [ ] Deployment guide available
-
-### **✅ User Documentation**
-- [ ] Login instructions
-- [ ] Role-based access guide
-- [ ] API usage examples
-- [ ] Troubleshooting guide
-- [ ] Support contact information
-
----
-
-## 🚀 **DEPLOYMENT STEPS**
-
-### **1. Pre-Deployment**
+### **1. Environment Setup**
 ```bash
-# Backup database
-mysqldump -u username -p database_name > backup.sql
+# Copy production environment
+cp .env.production .env
 
-# Backup files
-tar -czf files_backup.tar.gz storage/ public/
+# Generate application key
+php artisan key:generate
 
-# Test locally
-php artisan test
-php artisan route:list
-```
-
-### **2. Production Deployment**
-```bash
-# Pull latest code
-git pull origin main
-
-# Install dependencies
-composer install --no-dev --optimize-autoloader
-npm install --production
-npm run build
-
-# Run migrations
-php artisan migrate --force
-
-# Clear and cache
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-php artisan cache:cache
-
-# Set permissions
-chmod -R 755 storage bootstrap/cache
-chown -R www-data:www-data storage bootstrap/cache
-```
-
-### **3. Post-Deployment**
-```bash
-# Verify deployment
-curl -I https://yourdomain.com/api/v1/public/health
-
-# Test legacy redirects
-curl -I https://yourdomain.com/dashboard
-curl -I https://yourdomain.com/projects
-
-# Test API endpoints
-curl -H "Authorization: Bearer token" https://yourdomain.com/api/v1/app/projects
-
-# Monitor logs
-tail -f storage/logs/laravel.log
-```
-
----
-
-## 🔍 **MONITORING CHECKLIST**
-
-### **✅ System Health**
-- [ ] Database connectivity
-- [ ] Cache functionality
-- [ ] File storage access
-- [ ] Mail delivery
-- [ ] Queue processing
-
-### **✅ Application Health**
-- [ ] Route loading
-- [ ] Middleware execution
-- [ ] Permission checks
-- [ ] API responses
-- [ ] Error handling
-
-### **✅ Performance Metrics**
-- [ ] Response times
-- [ ] Memory usage
-- [ ] Database queries
-- [ ] Cache hit rates
-- [ ] Error rates
-
----
-
-## 🆘 **ROLLBACK PLAN**
-
-### **Emergency Rollback**
-```bash
-# Restore database
-mysql -u username -p database_name < backup.sql
-
-# Restore files
-tar -xzf files_backup.tar.gz
-
-# Clear caches
-php artisan cache:clear
+# Clear all caches
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
-
-# Restart services
-sudo systemctl restart nginx
-sudo systemctl restart php-fpm
+php artisan cache:clear
 ```
 
-### **Rollback Triggers**
-- [ ] High error rate (>5%)
-- [ ] Performance degradation (>2s response)
-- [ ] Security incidents
-- [ ] Data corruption
-- [ ] Service unavailability
+### **2. Database Setup**
+```bash
+# Run migrations
+php artisan migrate --force
+
+# Seed production data
+php artisan db:seed --class=ProductionSeeder
+
+# Optimize for production
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+### **3. Asset Compilation**
+```bash
+# Install dependencies
+npm ci
+
+# Build production assets
+npm run build
+
+# Verify build
+ls -la public/build/
+```
+
+### **4. Final Verification**
+```bash
+# Test health endpoint
+curl -I https://your-domain.com/_debug/health
+
+# Test authentication
+curl -I https://your-domain.com/login
+
+# Test main routes
+curl -I https://your-domain.com/app/dashboard
+```
+
+## 📊 **Post-Deployment Verification**
+
+### **Health Checks**
+- [ ] Health endpoint returns 200
+- [ ] Database connectivity
+- [ ] Redis connectivity
+- [ ] File system permissions
+- [ ] Asset loading
+
+### **Security Verification**
+- [ ] HTTPS redirects working
+- [ ] Security headers present
+- [ ] CSRF protection active
+- [ ] Rate limiting functional
+- [ ] Authentication working
+
+### **Performance Verification**
+- [ ] Page load times < 500ms
+- [ ] API response times < 300ms
+- [ ] Database queries optimized
+- [ ] Caching working
+- [ ] Asset compression active
+
+### **Functional Testing**
+- [ ] Login/logout flow
+- [ ] All main routes accessible
+- [ ] Tenant isolation working
+- [ ] Data persistence
+- [ ] Error handling
+
+## 🚨 **Rollback Plan**
+
+### **If Issues Occur**
+1. **Immediate**: Revert to previous deployment
+2. **Database**: Restore from backup
+3. **Assets**: Revert to previous build
+4. **Configuration**: Restore previous .env
+5. **Investigation**: Check logs and monitoring
+
+### **Emergency Contacts**
+- [ ] System Administrator
+- [ ] Database Administrator
+- [ ] Security Team
+- [ ] Monitoring Team
+
+## 📈 **Success Metrics**
+
+### **Performance Targets**
+- Page load time: < 500ms (p95)
+- API response time: < 300ms (p95)
+- Database query time: < 100ms (p95)
+- Error rate: < 0.1%
+
+### **Security Targets**
+- All security headers present
+- Zero authentication bypasses
+- Zero SQL injection attempts
+- Zero XSS attempts
+
+### **Reliability Targets**
+- Uptime: > 99.9%
+- Zero data loss
+- Zero security incidents
+- All health checks passing
 
 ---
 
-## ✅ **FINAL VERIFICATION**
-
-### **Production Readiness**
-- [ ] All checklists completed
-- [ ] All tests passing
-- [ ] Documentation updated
-- [ ] Monitoring active
-- [ ] Rollback plan ready
-- [ ] Team notified
-- [ ] Go-live approved
-
-**🎉 SYSTEM READY FOR PRODUCTION!** 🚀
-
----
-
-**Last Updated:** 2025-09-21  
-**Version:** 1.0.0  
-**Status:** Ready for Production
+**Deployment Date**: _______________
+**Deployed By**: _______________
+**Verified By**: _______________
+**Status**: _______________

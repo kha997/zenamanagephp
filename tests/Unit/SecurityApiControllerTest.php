@@ -171,9 +171,10 @@ class SecurityApiControllerTest extends TestCase
         for ($i = 0; $i < 6; $i++) {
             try {
                 $method->invoke($this->controller, $request, 'test_key', 10, 60);
-            } catch (\Exception $e) {
-                $this->assertInstanceOf(\Illuminate\Http\JsonResponse::class, $e);
-                $this->assertEquals(429, $e->getStatusCode());
+            } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+                $response = $e->getResponse();
+                $this->assertInstanceOf(\Illuminate\Http\JsonResponse::class, $response);
+                $this->assertEquals(429, $response->getStatusCode());
                 break;
             }
         }

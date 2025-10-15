@@ -17,13 +17,10 @@ class PermissionFactory extends Factory
     public function definition()
     {
         return [
-            'name' => $this->faker->words(2, true),
             'code' => $this->faker->word() . '.' . $this->faker->randomElement(['create', 'read', 'update', 'delete']),
             'description' => $this->faker->sentence(),
             'module' => $this->faker->randomElement(['task', 'project', 'user', 'document']),
             'action' => $this->faker->randomElement(['create', 'read', 'update', 'delete']),
-            'is_active' => true,
-            'tenant_id' => null,
         ];
     }
 }

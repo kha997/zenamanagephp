@@ -1,5 +1,7 @@
 import './bootstrap';
 import './alpine-data-functions';
+import './focus-mode';
+import './rewards';
 
 // Z.E.N.A Project Management - Main JavaScript
 class ZenaApp {

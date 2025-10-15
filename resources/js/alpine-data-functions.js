@@ -405,53 +405,55 @@ document.addEventListener('alpine:init', () => {
                 this.error = null;
                 console.log('📊 Loading dashboard data...');
                 
-                // Mock data for now
-                this.kpis = {
-                    totalProjects: 12,
-                    activeProjects: 8,
-                    onTimeRate: 85,
-                    overdueProjects: 2,
-                    budgetUsage: 75,
-                    overBudgetProjects: 1,
-                    healthSnapshot: 90,
-                    atRiskProjects: 1
-                };
+                // Fetch real data from API
+                const response = await fetch('/api/v1/universal-frame/dashboard-data', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    credentials: 'same-origin'
+                });
                 
-                this.alerts = [
-                    {
-                        id: 1,
-                        type: 'warning',
-                        title: 'Project Deadline Approaching',
-                        message: 'Website Redesign project deadline in 2 days',
-                        time: '2 hours ago'
-                    }
-                ];
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
-                this.nowPanelActions = [
-                    {
-                        id: 1,
-                        title: 'Review Project Proposal',
-                        priority: 'high',
-                        due: 'Today'
-                    }
-                ];
+                const data = await response.json();
                 
-                this.activity = [
-                    {
-                        id: 1,
-                        type: 'task_completed',
-                        message: 'Task "Update Documentation" completed',
-                        time: '1 hour ago'
-                    }
-                ];
+                if (data.success) {
+                    this.kpis = data.data.kpis;
+                    this.alerts = data.data.alerts || [];
+                    this.nowPanelActions = data.data.nowPanelActions || [];
+                    this.activity = data.data.activity || [];
+                    
+                    console.log('✅ Dashboard data loaded successfully');
+                } else {
+                    throw new Error(data.message || 'Failed to load dashboard data');
+                }
                 
                 this.loading = false;
-                console.log('✅ Dashboard data loaded successfully');
                 
             } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                this.error = 'Failed to load dashboard data. Please try again.';
+                console.error('❌ Error loading dashboard data:', error);
+                this.error = error.message;
                 this.loading = false;
+                
+                // Fallback to empty data
+                this.kpis = {
+                    totalProjects: 0,
+                    activeProjects: 0,
+                    onTimeRate: 0,
+                    overdueProjects: 0,
+                    budgetUsage: 0,
+                    overBudgetProjects: 0,
+                    healthSnapshot: 0,
+                    atRiskProjects: 0
+                };
+                this.alerts = [];
+                this.nowPanelActions = [];
+                this.activity = [];
             }
         },
         
@@ -656,18 +658,20 @@ document.addEventListener('alpine:init', () => {
             this.loading = true;
             this.error = null;
             try {
-                // Mock data for now
-                this.tasks = [
-                    {
-                        id: 1,
-                        title: 'Update Documentation',
-                        status: 'completed',
-                        priority: 'medium',
-                        assignee: 'John Doe',
-                        project: 'Website Redesign',
-                        due_date: '2024-01-15'
+                const response = await fetch('/api/tasks', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                     }
-                ];
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch tasks');
+                }
+                
+                const data = await response.json();
+                this.tasks = data.data || [];
             } catch (error) {
                 this.error = 'Failed to load tasks';
                 console.error('Error loading tasks:', error);

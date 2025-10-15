@@ -19,13 +19,20 @@ class TaskRepository
     }
 
     /**
-     * Get all tasks with pagination.
+     * Get all tasks with pagination - MANDATORY tenant isolation
      */
     public function getAll(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = $this->model->query();
 
-        // Apply filters
+        // MANDATORY: Every query must filter by tenant_id
+        if (!isset($filters['tenant_id']) || !$filters['tenant_id']) {
+            throw new \InvalidArgumentException('tenant_id is required for all queries');
+        }
+
+        $query->where('tenant_id', $filters['tenant_id']);
+
+        // Apply other filters
         if (isset($filters['project_id'])) {
             $query->where('project_id', $filters['project_id']);
         }
@@ -61,55 +68,62 @@ class TaskRepository
     }
 
     /**
-     * Get task by ID.
+     * Get task by ID - MANDATORY tenant isolation
      */
-    public function getById(int $id): ?Task
+    public function getById(string $id, string $tenantId): ?Task
     {
-        return $this->model->with(['project', 'assignee', 'creator', 'dependencies'])->find($id);
+        return $this->model->where('id', $id)
+                          ->where('tenant_id', $tenantId)
+                          ->with(['project', 'assignee', 'creator', 'dependencies'])
+                          ->first();
     }
 
     /**
-     * Get tasks by project ID.
+     * Get tasks by project ID - MANDATORY tenant isolation
      */
-    public function getByProjectId(int $projectId): Collection
+    public function getByProjectId(string $projectId, string $tenantId): Collection
     {
         return $this->model->where('project_id', $projectId)
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get tasks by assignee ID.
+     * Get tasks by assignee ID - MANDATORY tenant isolation
      */
-    public function getByAssigneeId(int $assigneeId): Collection
+    public function getByAssigneeId(string $assigneeId, string $tenantId): Collection
     {
         return $this->model->where('assignee_id', $assigneeId)
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get tasks by status.
+     * Get tasks by status - MANDATORY tenant isolation
      */
-    public function getByStatus(string $status): Collection
+    public function getByStatus(string $status, string $tenantId): Collection
     {
         return $this->model->where('status', $status)
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get tasks by priority.
+     * Get tasks by priority - MANDATORY tenant isolation
      */
-    public function getByPriority(string $priority): Collection
+    public function getByPriority(string $priority, string $tenantId): Collection
     {
         return $this->model->where('priority', $priority)
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Create a new task.
+     * Create a new task
      */
     public function create(array $data): Task
     {
@@ -124,18 +138,21 @@ class TaskRepository
             'task_id' => $task->id,
             'name' => $task->name,
             'project_id' => $task->project_id,
-            'assignee_id' => $task->assignee_id
+            'assignee_id' => $task->assignee_id,
+            'tenant_id' => $task->tenant_id
         ]);
 
         return $task->load(['project', 'assignee', 'creator', 'dependencies']);
     }
 
     /**
-     * Update task.
+     * Update task - MANDATORY tenant isolation
      */
-    public function update(int $id, array $data): ?Task
+    public function update(string $id, array $data, string $tenantId): ?Task
     {
-        $task = $this->model->find($id);
+        $task = $this->model->where('id', $id)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return null;
@@ -151,18 +168,21 @@ class TaskRepository
         Log::info('Task updated', [
             'task_id' => $task->id,
             'name' => $task->name,
-            'project_id' => $task->project_id
+            'project_id' => $task->project_id,
+            'tenant_id' => $task->tenant_id
         ]);
 
         return $task->load(['project', 'assignee', 'creator', 'dependencies']);
     }
 
     /**
-     * Delete task.
+     * Delete task - MANDATORY tenant isolation
      */
-    public function delete(int $id): bool
+    public function delete(string $id, string $tenantId): bool
     {
-        $task = $this->model->find($id);
+        $task = $this->model->where('id', $id)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return false;
@@ -173,18 +193,21 @@ class TaskRepository
         Log::info('Task deleted', [
             'task_id' => $id,
             'name' => $task->name,
-            'project_id' => $task->project_id
+            'project_id' => $task->project_id,
+            'tenant_id' => $task->tenant_id
         ]);
 
         return true;
     }
 
     /**
-     * Soft delete task.
+     * Soft delete task - MANDATORY tenant isolation
      */
-    public function softDelete(int $id): bool
+    public function softDelete(string $id, string $tenantId): bool
     {
-        $task = $this->model->find($id);
+        $task = $this->model->where('id', $id)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return false;
@@ -195,18 +218,22 @@ class TaskRepository
         Log::info('Task soft deleted', [
             'task_id' => $id,
             'name' => $task->name,
-            'project_id' => $task->project_id
+            'project_id' => $task->project_id,
+            'tenant_id' => $task->tenant_id
         ]);
 
         return true;
     }
 
     /**
-     * Restore soft deleted task.
+     * Restore soft deleted task - MANDATORY tenant isolation
      */
-    public function restore(int $id): bool
+    public function restore(string $id, string $tenantId): bool
     {
-        $task = $this->model->withTrashed()->find($id);
+        $task = $this->model->withTrashed()
+                           ->where('id', $id)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return false;
@@ -217,84 +244,93 @@ class TaskRepository
         Log::info('Task restored', [
             'task_id' => $id,
             'name' => $task->name,
-            'project_id' => $task->project_id
+            'project_id' => $task->project_id,
+            'tenant_id' => $task->tenant_id
         ]);
 
         return true;
     }
 
     /**
-     * Get pending tasks.
+     * Get pending tasks - MANDATORY tenant isolation
      */
-    public function getPending(): Collection
+    public function getPending(string $tenantId): Collection
     {
         return $this->model->where('status', 'pending')
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get in progress tasks.
+     * Get in progress tasks - MANDATORY tenant isolation
      */
-    public function getInProgress(): Collection
+    public function getInProgress(string $tenantId): Collection
     {
         return $this->model->where('status', 'in_progress')
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get completed tasks.
+     * Get completed tasks - MANDATORY tenant isolation
      */
-    public function getCompleted(): Collection
+    public function getCompleted(string $tenantId): Collection
     {
         return $this->model->where('status', 'completed')
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get overdue tasks.
+     * Get overdue tasks - MANDATORY tenant isolation
      */
-    public function getOverdue(): Collection
+    public function getOverdue(string $tenantId): Collection
     {
         return $this->model->where('due_date', '<', now())
                           ->where('status', '!=', 'completed')
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get tasks due soon.
+     * Get tasks due soon - MANDATORY tenant isolation
      */
-    public function getDueSoon(int $days = 3): Collection
+    public function getDueSoon(string $tenantId, int $days = 3): Collection
     {
         $dueDate = now()->addDays($days);
 
         return $this->model->where('due_date', '<=', $dueDate)
                           ->where('due_date', '>=', now())
                           ->where('status', '!=', 'completed')
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get high priority tasks.
+     * Get high priority tasks - MANDATORY tenant isolation
      */
-    public function getHighPriority(): Collection
+    public function getHighPriority(string $tenantId): Collection
     {
         return $this->model->where('priority', 'high')
                           ->where('status', '!=', 'completed')
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Update task status.
+     * Update task status - MANDATORY tenant isolation
      */
-    public function updateStatus(int $id, string $status): bool
+    public function updateStatus(string $id, string $status, string $tenantId): bool
     {
-        $task = $this->model->find($id);
+        $task = $this->model->where('id', $id)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return false;
@@ -307,18 +343,21 @@ class TaskRepository
 
         Log::info('Task status updated', [
             'task_id' => $id,
-            'status' => $status
+            'status' => $status,
+            'tenant_id' => $tenantId
         ]);
 
         return true;
     }
 
     /**
-     * Assign task to user.
+     * Assign task to user - MANDATORY tenant isolation
      */
-    public function assignToUser(int $taskId, int $userId): bool
+    public function assignToUser(string $taskId, string $userId, string $tenantId): bool
     {
-        $task = $this->model->find($taskId);
+        $task = $this->model->where('id', $taskId)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return false;
@@ -331,18 +370,21 @@ class TaskRepository
 
         Log::info('Task assigned to user', [
             'task_id' => $taskId,
-            'user_id' => $userId
+            'user_id' => $userId,
+            'tenant_id' => $tenantId
         ]);
 
         return true;
     }
 
     /**
-     * Add dependency to task.
+     * Add dependency to task - MANDATORY tenant isolation
      */
-    public function addDependency(int $taskId, int $dependencyId): bool
+    public function addDependency(string $taskId, string $dependencyId, string $tenantId): bool
     {
-        $task = $this->model->find($taskId);
+        $task = $this->model->where('id', $taskId)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return false;
@@ -352,18 +394,21 @@ class TaskRepository
 
         Log::info('Task dependency added', [
             'task_id' => $taskId,
-            'dependency_id' => $dependencyId
+            'dependency_id' => $dependencyId,
+            'tenant_id' => $tenantId
         ]);
 
         return true;
     }
 
     /**
-     * Remove dependency from task.
+     * Remove dependency from task - MANDATORY tenant isolation
      */
-    public function removeDependency(int $taskId, int $dependencyId): bool
+    public function removeDependency(string $taskId, string $dependencyId, string $tenantId): bool
     {
-        $task = $this->model->find($taskId);
+        $task = $this->model->where('id', $taskId)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return false;
@@ -373,18 +418,19 @@ class TaskRepository
 
         Log::info('Task dependency removed', [
             'task_id' => $taskId,
-            'dependency_id' => $dependencyId
+            'dependency_id' => $dependencyId,
+            'tenant_id' => $tenantId
         ]);
 
         return true;
     }
 
     /**
-     * Get task statistics.
+     * Get task statistics - MANDATORY tenant isolation
      */
-    public function getStatistics(int $projectId = null): array
+    public function getStatistics(string $tenantId, string $projectId = null): array
     {
-        $query = $this->model->query();
+        $query = $this->model->where('tenant_id', $tenantId);
 
         if ($projectId) {
             $query->where('project_id', $projectId);
@@ -405,64 +451,74 @@ class TaskRepository
     }
 
     /**
-     * Search tasks.
+     * Search tasks - MANDATORY tenant isolation
      */
-    public function search(string $term, int $limit = 10): Collection
+    public function search(string $term, string $tenantId, int $limit = 10): Collection
     {
-        return $this->model->where(function ($q) use ($term) {
-            $q->where('name', 'like', '%' . $term . '%')
-              ->orWhere('description', 'like', '%' . $term . '%');
-        })->with(['project', 'assignee', 'creator', 'dependencies'])
-          ->limit($limit)
-          ->get();
+        return $this->model->where('tenant_id', $tenantId)
+                          ->where(function ($q) use ($term) {
+                              $q->where('name', 'like', '%' . $term . '%')
+                                ->orWhere('description', 'like', '%' . $term . '%');
+                          })->with(['project', 'assignee', 'creator', 'dependencies'])
+                            ->limit($limit)
+                            ->get();
     }
 
     /**
-     * Get tasks by multiple IDs.
+     * Get tasks by multiple IDs - MANDATORY tenant isolation
      */
-    public function getByIds(array $ids): Collection
+    public function getByIds(array $ids, string $tenantId): Collection
     {
         return $this->model->whereIn('id', $ids)
+                          ->where('tenant_id', $tenantId)
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Bulk update tasks.
+     * Bulk update tasks - MANDATORY tenant isolation
      */
-    public function bulkUpdate(array $ids, array $data): int
+    public function bulkUpdate(array $ids, array $data, string $tenantId): int
     {
-        $updated = $this->model->whereIn('id', $ids)->update($data);
+        $updated = $this->model->whereIn('id', $ids)
+                              ->where('tenant_id', $tenantId)
+                              ->update($data);
 
         Log::info('Tasks bulk updated', [
             'count' => $updated,
-            'ids' => $ids
+            'ids' => $ids,
+            'tenant_id' => $tenantId
         ]);
 
         return $updated;
     }
 
     /**
-     * Bulk delete tasks.
+     * Bulk delete tasks - MANDATORY tenant isolation
      */
-    public function bulkDelete(array $ids): int
+    public function bulkDelete(array $ids, string $tenantId): int
     {
-        $deleted = $this->model->whereIn('id', $ids)->delete();
+        $deleted = $this->model->whereIn('id', $ids)
+                              ->where('tenant_id', $tenantId)
+                              ->delete();
 
         Log::info('Tasks bulk deleted', [
             'count' => $deleted,
-            'ids' => $ids
+            'ids' => $ids,
+            'tenant_id' => $tenantId
         ]);
 
         return $deleted;
     }
 
     /**
-     * Get task progress.
+     * Get task progress - MANDATORY tenant isolation
      */
-    public function getProgress(int $id): array
+    public function getProgress(string $id, string $tenantId): array
     {
-        $task = $this->model->find($id);
+        $task = $this->model->where('id', $id)
+                           ->where('tenant_id', $tenantId)
+                           ->first();
 
         if (!$task) {
             return [];
@@ -508,11 +564,14 @@ class TaskRepository
     }
 
     /**
-     * Get task timeline.
+     * Get task timeline - MANDATORY tenant isolation
      */
-    public function getTimeline(int $id): array
+    public function getTimeline(string $id, string $tenantId): array
     {
-        $task = $this->model->with(['dependencies'])->find($id);
+        $task = $this->model->where('id', $id)
+                           ->where('tenant_id', $tenantId)
+                           ->with(['dependencies'])
+                           ->first();
 
         if (!$task) {
             return [];
@@ -567,21 +626,23 @@ class TaskRepository
     }
 
     /**
-     * Get tasks with dependencies.
+     * Get tasks with dependencies - MANDATORY tenant isolation
      */
-    public function getWithDependencies(): Collection
+    public function getWithDependencies(string $tenantId): Collection
     {
-        return $this->model->whereHas('dependencies')
+        return $this->model->where('tenant_id', $tenantId)
+                          ->whereHas('dependencies')
                           ->with(['project', 'assignee', 'creator', 'dependencies'])
                           ->get();
     }
 
     /**
-     * Get tasks without dependencies.
+     * Get tasks without dependencies - MANDATORY tenant isolation
      */
-    public function getWithoutDependencies(): Collection
+    public function getWithoutDependencies(string $tenantId): Collection
     {
-        return $this->model->whereDoesntHave('dependencies')
+        return $this->model->where('tenant_id', $tenantId)
+                          ->whereDoesntHave('dependencies')
                           ->with(['project', 'assignee', 'creator'])
                           ->get();
     }

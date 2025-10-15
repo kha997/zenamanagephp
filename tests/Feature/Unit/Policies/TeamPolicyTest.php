@@ -42,7 +42,24 @@ class TeamPolicyTest extends TestCase
 
     public function test_user_can_view_team_with_proper_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
+
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
         $this->assertTrue($this->policy->view($this->user, $this->team));
     }
 
@@ -51,25 +68,93 @@ class TeamPolicyTest extends TestCase
         $otherTenant = Tenant::factory()->create(['slug' => 'other-tenant-' . uniqid()]);
         $otherTeam = Team::factory()->create(['tenant_id' => $otherTenant->id]);
         
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
+
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
         $this->assertFalse($this->policy->view($this->user, $otherTeam));
     }
 
     public function test_user_can_create_team_with_proper_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
+
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
         $this->assertTrue($this->policy->create($this->user));
     }
 
     public function test_user_can_invite_members_with_proper_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
+
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
         $this->assertTrue($this->policy->invite($this->user, $this->team));
     }
 
     public function test_user_can_delete_team_with_admin_role()
     {
-        $this->user->assignRole('admin');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'admin'],
+            [
+                'scope' => 'system',
+                'allow_override' => true,
+                'description' => 'Admin - System administration',
+            ]
+        );
+
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
         $this->assertTrue($this->policy->delete($this->user, $this->team));
     }
 }

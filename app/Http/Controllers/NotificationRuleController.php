@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Src\Foundation\Helpers\AuthHelper;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\Notification\Models\NotificationRule;
 use Src\Notification\Resources\NotificationRuleCollection;
 use Src\Notification\Resources\NotificationRuleResource;
@@ -60,7 +60,7 @@ class NotificationRuleController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $projectId = $request->get('project_id');
@@ -74,11 +74,11 @@ class NotificationRuleController
                 $isEnabled
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationRuleCollection($rules)
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách quy tắc thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy danh sách quy tắc thông báo: ' . $e->getMessage());
         }
     }
 
@@ -93,7 +93,7 @@ class NotificationRuleController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $data = $request->validated();
@@ -101,13 +101,13 @@ class NotificationRuleController
             
             $rule = $this->notificationRuleService->createRule($data);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationRuleResource($rule),
                 'Quy tắc thông báo đã được tạo thành công',
                 201
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể tạo quy tắc thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể tạo quy tắc thông báo: ' . $e->getMessage());
         }
     }
 
@@ -122,20 +122,20 @@ class NotificationRuleController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $rule = $this->notificationRuleService->getRuleById($ulid);
 
             if (!$rule || $rule->user_id !== $userId) {
-                return JSendResponse::error('Quy tắc thông báo không tồn tại', 404);
+                return ApiResponse::error('Quy tắc thông báo không tồn tại', 404);
             }
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationRuleResource($rule)
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin quy tắc thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy thông tin quy tắc thông báo: ' . $e->getMessage());
         }
     }
 
@@ -151,7 +151,7 @@ class NotificationRuleController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $rule = $this->notificationRuleService->updateRule(
@@ -160,12 +160,12 @@ class NotificationRuleController
                 $userId
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationRuleResource($rule),
                 'Quy tắc thông báo đã được cập nhật thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể cập nhật quy tắc thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể cập nhật quy tắc thông báo: ' . $e->getMessage());
         }
     }
 
@@ -180,7 +180,7 @@ class NotificationRuleController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $rule = NotificationRule::where('ulid', $ulid)
@@ -188,17 +188,17 @@ class NotificationRuleController
                 ->first();
 
             if (!$rule) {
-                return JSendResponse::error('Quy tắc thông báo không tồn tại', 404);
+                return ApiResponse::error('Quy tắc thông báo không tồn tại', 404);
             }
 
             $rule->delete();
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 null,
                 'Quy tắc thông báo đã được xóa thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể xóa quy tắc thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể xóa quy tắc thông báo: ' . $e->getMessage());
         }
     }
 
@@ -213,18 +213,18 @@ class NotificationRuleController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $rule = $this->notificationRuleService->toggleRule($ulid, $userId);
 
             $status = $rule->is_enabled ? 'bật' : 'tắt';
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationRuleResource($rule),
                 "Quy tắc thông báo đã được {$status}"
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể thay đổi trạng thái quy tắc thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể thay đổi trạng thái quy tắc thông báo: ' . $e->getMessage());
         }
     }
 
@@ -239,7 +239,7 @@ class NotificationRuleController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $request->validate([
@@ -251,12 +251,12 @@ class NotificationRuleController
                 $request->get('project_id')
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 NotificationRuleResource::collection($rules),
                 'Quy tắc thông báo mặc định đã được tạo thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể tạo quy tắc mặc định: ' . $e->getMessage());
+            return ApiResponse::error('Không thể tạo quy tắc mặc định: ' . $e->getMessage());
         }
     }
 
@@ -277,7 +277,7 @@ class NotificationRuleController
             
             $currentUserId = $this->getUserId();
             if (!$currentUserId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $result = $this->notificationRuleService->testRule(
@@ -287,12 +287,12 @@ class NotificationRuleController
                 $request->get('priority')
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 $result,
                 'Test quy tắc thông báo hoàn thành'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể test quy tắc thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể test quy tắc thông báo: ' . $e->getMessage());
         }
     }
 
@@ -306,11 +306,11 @@ class NotificationRuleController
         try {
             $events = $this->notificationRuleService->getAvailableEvents();
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'events' => $events
             ]);
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách events: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy danh sách events: ' . $e->getMessage());
         }
     }
 
@@ -325,7 +325,7 @@ class NotificationRuleController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $rules = $this->notificationRuleService->getRulesByProject(
@@ -333,11 +333,11 @@ class NotificationRuleController
                 $projectId
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationRuleCollection($rules)
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy quy tắc thông báo theo project: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy quy tắc thông báo theo project: ' . $e->getMessage());
         }
     }
 }

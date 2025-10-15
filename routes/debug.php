@@ -1,18 +1,39 @@
 <?php
 
-/*
-|--------------------------------------------------------------------------
-| Debug Routes
-|--------------------------------------------------------------------------
-|
-| These routes are only available in local environment for debugging
-| and testing purposes. They should never be accessible in production.
-|
-*/
-
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HealthController;
 
-// EMERGENCY: Debug routes completely disabled due to service container issues
-// All debug functionality temporarily unavailable
-// Issue: Target class [request] does not exist in Laravel's service container
-// This requires deep debugging of service providers and container bindings
+Route::prefix('_debug')->name('debug.')->middleware('web')->group(function () {
+    // Health check endpoints
+    Route::get('/health', [HealthController::class, 'health'])->name('health');
+    Route::get('/ping', [HealthController::class, 'ping'])->name('ping');
+    Route::get('/info', [HealthController::class, 'info'])->name('info');
+    
+    // Performance monitoring
+    Route::get('/performance', function () {
+        return response()->json([
+            'memory_usage' => memory_get_usage(true),
+            'peak_memory' => memory_get_peak_usage(true),
+            'execution_time' => microtime(true) - LARAVEL_START,
+        ]);
+    })->name('performance');
+    
+    // Cache management
+    Route::get('/clear-cache', function () {
+        \Artisan::call('cache:clear');
+        \Artisan::call('config:clear');
+        \Artisan::call('route:clear');
+        \Artisan::call('view:clear');
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'All caches cleared',
+            'timestamp' => now()->toISOString(),
+        ]);
+    })->name('clear-cache');
+    
+    // Simple test route
+    Route::get('/test-simple', function () {
+        return 'Debug route works!';
+    })->name('simple');
+});

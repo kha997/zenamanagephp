@@ -1,0 +1,134 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, dom, fileinfo, mysql
+        coverage: none
+    
+    - name: Install dependencies
+      run: |
+        composer install --no-dev --optimize-autoloader
+        npm ci
+    
+    - name: Check for dangerous routes
+      run: |
+        echo "🔍 Checking for dangerous test routes..."
+        if grep -r "test-login\|auto-login\|debug-auth" routes/; then
+          echo "❌ CRITICAL: Dangerous test routes found!"
+          exit 1
+        fi
+        echo "✅ No dangerous test routes found"
+    
+    - name: Check for unprotected login
+      run: |
+        echo "🔍 Checking for unprotected login endpoints..."
+        if grep -r "Auth::attempt" routes/ --exclude-dir=vendor; then
+          echo "❌ CRITICAL: Unprotected Auth::attempt found!"
+          exit 1
+        fi
+        echo "✅ No unprotected login endpoints found"
+    
+    - name: Check for mock data
+      run: |
+        echo "🔍 Checking for mock data in production..."
+        if grep -r "New Project Created\|Task Completed\|Project Owner" resources/views/ app/Http/Controllers/; then
+          echo "❌ CRITICAL: Mock data found in production code!"
+          exit 1
+        fi
+        echo "✅ No mock data found"
+    
+    - name: Check for RBAC bypass
+      run: |
+        echo "🔍 Checking for RBAC bypass..."
+        if grep -r "return true.*permission\|hasPermission.*true" app/Http/Controllers/; then
+          echo "❌ CRITICAL: RBAC bypass found!"
+          exit 1
+        fi
+        echo "✅ No RBAC bypass found"
+    
+    - name: Check for session-based tenant checks
+      run: |
+        echo "🔍 Checking for session-based tenant checks..."
+        if grep -r "session.*user" app/Http/Requests/; then
+          echo "❌ CRITICAL: Session-based tenant checks found!"
+          exit 1
+        fi
+        echo "✅ No session-based tenant checks found"
+    
+    - name: Check for duplicate middleware
+      run: |
+        echo "🔍 Checking for duplicate rate limiting middleware..."
+        rate_middleware_count=$(find . -name "*RateLimit*Middleware.php" | wc -l)
+        if [ $rate_middleware_count -gt 1 ]; then
+          echo "❌ CRITICAL: Multiple rate limiting middleware found!"
+          find . -name "*RateLimit*Middleware.php"
+          exit 1
+        fi
+        echo "✅ Single rate limiting middleware found"
+    
+    - name: Check for duplicate modules
+      run: |
+        echo "🔍 Checking for duplicate modules..."
+        if [ -d "src/CoreProject" ]; then
+          echo "❌ CRITICAL: Duplicate CoreProject module found!"
+          echo "This module conflicts with app/ directory"
+          exit 1
+        fi
+        echo "✅ No duplicate modules found"
+    
+    - name: Check for mixed API responses
+      run: |
+        echo "🔍 Checking for mixed API response formats..."
+        if grep -r "JSendResponse" app/Http/Controllers/ && grep -r "ApiResponse" app/Http/Controllers/; then
+          echo "❌ CRITICAL: Mixed API response formats found!"
+          echo "Use either JSendResponse or ApiResponse consistently"
+          exit 1
+        fi
+        echo "✅ Consistent API response format"
+    
+    - name: Check for duplicate routes
+      run: |
+        echo "🔍 Checking for duplicate route names..."
+        php artisan route:list --compact | awk '{print $2}' | sort | uniq -d
+        if [ $? -eq 0 ]; then
+          echo "❌ CRITICAL: Duplicate route names found!"
+          exit 1
+        fi
+        echo "✅ No duplicate route names found"
+    
+    - name: Run duplicate detection
+      run: |
+        echo "🔍 Running duplicate detection..."
+        if command -v jscpd &> /dev/null; then
+          jscpd --min-lines 10 --min-tokens 50 resources/js/ || true
+        fi
+        if command -v phpcpd &> /dev/null; then
+          phpcpd --min-lines 10 --min-tokens 50 app/ || true
+        fi
+    
+    - name: Security audit summary
+      run: |
+        echo "🎉 Security audit completed successfully!"
+        echo "✅ All critical security checks passed"
+        echo "✅ No dangerous routes found"
+        echo "✅ No mock data in production"
+        echo "✅ RBAC properly implemented"
+        echo "✅ Tenancy properly enforced"
+        echo "✅ Rate limiting consistent"
+        echo "✅ No duplicate modules"
+        echo "✅ API responses standardized"

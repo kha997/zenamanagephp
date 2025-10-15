@@ -7,8 +7,6 @@
             </div>
             <div class="flex items-center space-x-4 text-sm text-gray-500">
                 <span>Version 1.0.0</span>
-                <span>•</span>
-                <span>Last updated: <?php echo e(date('M d, Y')); ?></span>
             </div>
         </div>
     </div>

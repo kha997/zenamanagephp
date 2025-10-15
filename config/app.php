@@ -108,6 +108,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Available Locales
+    |--------------------------------------------------------------------------
+    |
+    | This array contains all of the locales that your application supports.
+    | These locales are used by the translation service to determine which
+    | language files to load.
+    |
+    */
+
+    'locales' => ['en', 'vi'],
+
+    /*
+    |--------------------------------------------------------------------------
     | Faker Locale
     |--------------------------------------------------------------------------
     |
@@ -182,9 +195,13 @@ return [
          */
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
+        // App\Providers\TranslationServiceProvider::class,
+        // App\Providers\NotificationServiceProvider::class,
+        // App\Providers\ViewServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
+        // App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
+        // App\Providers\TelescopeServiceProvider::class, // Disabled - causes "Target class [request] does not exist" error
         // App\Providers\CustomServiceProvider::class, // Temporarily disabled
         
         /*

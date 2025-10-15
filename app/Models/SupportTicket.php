@@ -11,26 +11,19 @@ class SupportTicket extends Model
 {
 
     protected $fillable = [
-        'ticket_number',
         'subject',
         'description',
         'category',
         'priority',
         'status',
         'user_id',
+        'tenant_id',
         'assigned_to',
-        'due_date',
-        'closed_at',
-        'closed_by',
-        'attachments',
-        'metadata'
+        'resolved_at'
     ];
 
     protected $casts = [
-        'due_date' => 'datetime',
-        'closed_at' => 'datetime',
-        'attachments' => 'array',
-        'metadata' => 'array'
+        'resolved_at' => 'datetime'
     ];
 
     /**
@@ -50,11 +43,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Get the user who closed the ticket
+     * Get the tenant for the ticket
      */
-    public function closedBy(): BelongsTo
+    public function tenant(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'closed_by');
+        return $this->belongsTo(Tenant::class);
     }
 
     /**
@@ -381,29 +374,4 @@ class SupportTicket extends Model
         };
     }
 
-    /**
-     * Boot the model
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($ticket) {
-            if (!$ticket->ticket_number) {
-                $ticket->ticket_number = static::generateTicketNumber();
-            }
-        });
-    }
-
-    /**
-     * Generate unique ticket number
-     */
-    public static function generateTicketNumber()
-    {
-        do {
-            $number = 'TKT-' . date('Y') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
-        } while (static::where('ticket_number', $number)->exists());
-
-        return $number;
-    }
 }

@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\RBAC\Services\AuthService;
 
 /**
@@ -38,19 +38,19 @@ class AuthController
             $result = $this->authService->login($credentials);
 
             if (!$result['success']) {
-                return JSendResponse::fail([
+                return ApiResponse::fail([
                     'message' => $result['message']
                 ], 401);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'user' => $result['user'],
                 'token' => $result['token'],
                 'token_type' => 'bearer',
                 'expires_in' => config('jwt.ttl') * 60
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Đăng nhập thất bại: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Đăng nhập thất bại: ' . $e->getMessage(), 500);
         }
     }
 
@@ -70,12 +70,12 @@ class AuthController
             $result = $this->authService->register($userData, $tenantData);
 
             if (!$result['success']) {
-                return JSendResponse::fail([
+                return ApiResponse::fail([
                     'message' => $result['message']
                 ], 400);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'user' => $result['user'],
                 'tenant' => $result['tenant'],
                 'token' => $result['token'],
@@ -84,7 +84,7 @@ class AuthController
                 'message' => 'Đăng ký thành công'
             ], 201);
         } catch (\Exception $e) {
-            return JSendResponse::error('Đăng ký thất bại: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Đăng ký thất bại: ' . $e->getMessage(), 500);
         }
     }
 
@@ -101,16 +101,16 @@ class AuthController
             $user = $this->authService->getCurrentUser();
             
             if (!$user) {
-                return JSendResponse::fail([
+                return ApiResponse::fail([
                     'message' => 'User không tồn tại'
                 ], 404);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'user' => $user
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin user: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy thông tin user: ' . $e->getMessage(), 500);
         }
     }
 
@@ -126,18 +126,18 @@ class AuthController
             $result = $this->authService->refreshToken();
 
             if (!$result['success']) {
-                return JSendResponse::fail([
+                return ApiResponse::fail([
                     'message' => $result['message']
                 ], 401);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'token' => $result['token'],
                 'token_type' => 'bearer',
                 'expires_in' => config('jwt.ttl') * 60
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể refresh token: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể refresh token: ' . $e->getMessage(), 500);
         }
     }
 
@@ -153,16 +153,16 @@ class AuthController
             $result = $this->authService->logout();
 
             if (!$result['success']) {
-                return JSendResponse::fail([
+                return ApiResponse::fail([
                     'message' => $result['message']
                 ], 400);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'message' => 'Đăng xuất thành công'
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Đăng xuất thất bại: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Đăng xuất thất bại: ' . $e->getMessage(), 500);
         }
     }
 
@@ -181,7 +181,7 @@ class AuthController
         ]);
 
         if ($validator->fails()) {
-            return JSendResponse::fail($validator->errors(), 422);
+            return ApiResponse::fail($validator->errors(), 422);
         }
 
         try {
@@ -190,13 +190,13 @@ class AuthController
             
             $hasPermission = $this->authService->checkPermission($permission, $projectId);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'has_permission' => $hasPermission,
                 'permission' => $permission,
                 'project_id' => $projectId
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể kiểm tra quyền: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể kiểm tra quyền: ' . $e->getMessage(), 500);
         }
     }
 }

@@ -46,13 +46,16 @@ class BackgroundJobsUnitTest extends TestCase
         $user->name = 'Test User';
         
         $welcomeJob = new SendWelcomeEmailJob($user);
-        $this->assertEquals('emails-welcome', $welcomeJob->onQueue);
+        $welcomeJob->onQueue('emails-welcome');
+        $this->assertEquals('emails-welcome', $welcomeJob->queue);
         
         $cleanupJob = new CleanupJob();
-        $this->assertEquals('cleanup', $cleanupJob->onQueue);
+        $cleanupJob->onQueue('cleanup');
+        $this->assertEquals('cleanup', $cleanupJob->queue);
         
         $backupJob = new BackupJob('full');
-        $this->assertEquals('backup', $backupJob->onQueue);
+        $backupJob->onQueue('backup');
+        $this->assertEquals('backup', $backupJob->queue);
     }
 
     /** @test */

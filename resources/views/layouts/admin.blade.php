@@ -6,6 +6,12 @@
     <title>@yield('title', 'Super Admin') - ZenaManage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Suppress Tailwind CSS production warning
+        tailwind.config = {
+            suppressWarnings: true
+        };
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="{{ asset('js/chart.umd.js') }}"></script>
     <!-- Core Page Refresh CSS -->
@@ -17,6 +23,10 @@
     <!-- Enhanced Dashboard Styles -->
     <link rel="stylesheet" href="{{ asset('css/dashboard-enhanced.css') }}">
     <link rel="stylesheet" href="{{ asset('css/tenants-enhanced.css') }}">
+    <script src="{{ asset('js/tenants/performance.js') }}" defer></script>
+    <script src="{{ asset('js/tenants/advanced-filters.js') }}" defer></script>
+    <script src="{{ asset('js/tenants/bulk-operations.js') }}" defer></script>
+    <script src="{{ asset('js/tenants/export-enhancements.js') }}" defer></script>
     @stack('styles')
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @yield('styles')
@@ -130,8 +140,14 @@
     
     console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
 " x-cloak>
-    <!-- Topbar -->
-    @include('layouts.partials._topbar')
+    <!-- Unified HeaderShell for Admin -->
+    <x-shared.header-wrapper 
+        variant="admin"
+        :user="Auth::user()"
+        :tenant="Auth::user()->tenant ?? null"
+        :alert-count="$alertCount ?? 0"
+        :theme="$theme ?? 'light'"
+    />
     
     <div class="flex">
         <!-- Sidebar - Desktop -->
@@ -159,7 +175,7 @@
     </div>
     
     <!-- Mobile Bottom Navigation -->
-    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-mobile-nav">
         <div class="flex items-center justify-around py-2">
             <a href="/admin/dashboard" 
                class="flex flex-col items-center py-2 px-3 text-xs {{ request()->is('admin/dashboard') ? 'text-blue-600' : 'text-gray-500' }}">

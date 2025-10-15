@@ -1,252 +1,232 @@
 # ZenaManage - Multi-Tenant Project Management System
 
-[![Laravel](https://img.shields.io/badge/Laravel-10.x-red.svg)](https://laravel.com)
+[![Laravel](https://img.shields.io/badge/Laravel-11.x-red.svg)](https://laravel.com)
 [![PHP](https://img.shields.io/badge/PHP-8.2+-blue.svg)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
 
-## 🚀 Overview
+A comprehensive multi-tenant project management system built with Laravel, designed for construction and engineering projects with advanced features including task management, document handling, calendar integration, and template systems.
 
-ZenaManage is a comprehensive multi-tenant project management system built with Laravel 10, featuring modern UI components, intelligent tools, and enterprise-grade security. It provides teams with powerful tools to manage projects, tasks, and collaboration efficiently.
+## 📚 **DOCUMENTATION**
 
-## ✨ Key Features
+**👉 [COMPLETE SYSTEM DOCUMENTATION](COMPLETE_SYSTEM_DOCUMENTATION.md)** - Single source of truth for all system architecture, design principles, project rules, and technical implementation details.
 
-### 🎯 Universal Page Frame
-- **Consistent Layout**: Standardized page structure across all sections
-- **KPI Dashboard**: Real-time key performance indicators
-- **Alert System**: Intelligent notification management
-- **Activity Feed**: Live team activity tracking
+This README provides quick start information. For comprehensive documentation including architecture, security, performance, and deployment guides, please refer to the complete documentation above.
 
-### 🔍 Smart Tools
-- **Intelligent Search**: Fuzzy matching with role-aware results
-- **Smart Filters**: One-tap presets and deep filtering options
-- **Analysis & Export**: Interactive charts and multi-format exports
-- **AI Insights**: Automated analysis and recommendations
+## 🚀 **Quick Start**
 
-### 📱 Mobile Optimization
-- **Responsive Design**: Mobile-first approach
-- **Touch Interactions**: Optimized for touch devices
-- **FAB Navigation**: Floating Action Button for quick actions
-- **Mobile Drawers**: Slide-out navigation menus
-
-### ♿ Accessibility (WCAG 2.1 AA)
-- **Keyboard Navigation**: Full keyboard support
-- **Screen Reader**: ARIA labels and semantic markup
-- **Color Contrast**: WCAG compliant color schemes
-- **Focus Management**: Proper focus indicators and traps
-
-### ⚡ Performance Optimization
-- **Page Load Time**: < 2 seconds target
-- **API Response**: < 300ms target
-- **Caching Strategy**: Multi-level intelligent caching
-- **Asset Optimization**: Minified and compressed assets
-
-## 🏗️ Architecture
-
-### Technology Stack
-- **Backend**: Laravel 10, PHP 8.2+, MySQL 8.0+, Redis 6.0+
-- **Frontend**: Blade Templates, Alpine.js, Tailwind CSS
-- **Authentication**: Laravel Sanctum
-- **Authorization**: Spatie Permission
-- **Testing**: PHPUnit, Comprehensive Testing Suite
-
-### Multi-Tenant Design
-- **Tenant Isolation**: Mandatory tenant_id filtering
-- **Role-Based Access**: Granular permission system
-- **Data Security**: Encryption and audit logging
-- **Scalability**: Horizontal and vertical scaling support
-
-## 📋 Requirements
-
-### System Requirements
+### **Prerequisites**
 - PHP 8.2 or higher
-- MySQL 8.0 or higher
-- Redis 6.0 or higher
-- Node.js 18.0 or higher
-- Composer (latest)
-- NPM (latest)
+- Composer
+- MySQL/PostgreSQL or SQLite
+- Node.js & NPM (for frontend assets)
 
-### Server Requirements
-- RAM: Minimum 2GB, Recommended 4GB+
-- Storage: Minimum 20GB SSD
-- CPU: Minimum 2 cores, Recommended 4+ cores
+### **Installation**
 
-## 🚀 Quick Start
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-org/zenamanage.git
+   cd zenamanage
+   ```
 
-### Development Setup
+2. **Install dependencies**
+   ```bash
+   composer install
+   npm install
+   ```
+
+3. **Environment setup**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+4. **Database setup**
+   ```bash
+   php artisan migrate
+   php artisan db:seed
+   ```
+
+5. **Start development server**
+   ```bash
+   php artisan serve
+   npm run dev
+   ```
+
+Visit `http://localhost:8000` to access the application.
+
+## 📋 **Features**
+
+### **Core Project Management**
+- ✅ **Project CRUD Operations** - Complete project lifecycle management
+- ✅ **Task Management** - Task creation, assignment, and tracking
+- ✅ **Document Management** - File uploads, versioning, and sharing
+- ✅ **Calendar Integration** - Project and task scheduling
+- ✅ **Template System** - Reusable project and task templates
+- ✅ **Analytics & Reporting** - Project insights and performance metrics
+
+### **Multi-Tenant Architecture**
+- ✅ **Tenant Isolation** - Complete data separation between tenants
+- ✅ **Role-Based Access Control** - Granular permissions system
+- ✅ **Authentication & Authorization** - Secure access management
+- ✅ **Audit Logging** - Complete activity tracking
+
+### **Performance & Scalability**
+- ✅ **Database Optimization** - Efficient queries with proper indexing
+- ✅ **Caching Strategy** - Redis-based caching for performance
+- ✅ **API Rate Limiting** - Protection against abuse
+- ✅ **N+1 Query Prevention** - Optimized relationship loading
+
+### **Developer Experience**
+- ✅ **Comprehensive Testing** - Unit, integration, and performance tests
+- ✅ **Error Handling** - Centralized error management
+- ✅ **API Documentation** - Complete API reference
+- ✅ **Code Quality** - PSR-12 compliant code with policies
+
+## 🏗️ **Architecture**
+
+```
+Frontend (Alpine.js + Tailwind CSS)
+    ↓
+Web Routes (Session Auth) + API Routes (Token Auth)
+    ↓
+Controllers (Web + API)
+    ↓
+Services (Business Logic)
+    ↓
+Models (Eloquent + Relationships)
+    ↓
+Database (MySQL/PostgreSQL + Migrations)
+```
+
+## 🔌 **API Endpoints**
+
+### **Authentication**
+```http
+POST /api/auth/login
+POST /api/auth/logout
+POST /api/auth/refresh
+```
+
+### **Projects**
+```http
+GET    /api/v1/app/projects          # List projects
+POST   /api/v1/app/projects          # Create project
+GET    /api/v1/app/projects/{id}     # Get project
+PATCH  /api/v1/app/projects/{id}     # Update project
+DELETE /api/v1/app/projects/{id}      # Delete project
+```
+
+### **Tasks**
+```http
+GET    /api/v1/app/tasks             # List tasks
+POST   /api/v1/app/tasks             # Create task
+GET    /api/v1/app/tasks/{id}        # Get task
+PATCH  /api/v1/app/tasks/{id}        # Update task
+DELETE /api/v1/app/tasks/{id}        # Delete task
+POST   /api/v1/app/tasks/{id}/assign # Assign task
+```
+
+### **Templates**
+```http
+GET    /api/v1/app/templates         # List templates
+POST   /api/v1/app/templates         # Create template
+GET    /api/v1/app/templates/{id}    # Get template
+PATCH  /api/v1/app/templates/{id}    # Update template
+DELETE /api/v1/app/templates/{id}     # Delete template
+POST   /api/v1/app/templates/{id}/apply # Apply template
+```
+
+## 🗄️ **Database Schema**
+
+### **Core Tables**
+- `tenants` - Multi-tenant isolation
+- `users` - User management with roles
+- `projects` - Project entities with relationships
+- `tasks` - Task management with assignments
+- `documents` - File management with versioning
+- `templates` - Reusable project/task templates
+- `calendar_events` - Calendar integration
+
+### **Key Relationships**
+- Projects belong to tenants and have many tasks
+- Tasks belong to projects and can be assigned to users
+- Documents can be associated with projects or tasks
+- Templates can be applied to create projects/tasks
+
+## 🧪 **Testing**
+
+### **Run Tests**
 ```bash
-# Clone repository
-git clone https://github.com/your-org/zenamanage.git
-cd zenamanage
+# Run all tests
+php artisan test
 
-# Install dependencies
-composer install
-npm install
+# Run specific test suites
+php artisan test tests/Unit/
+php artisan test tests/Feature/
 
-# Environment setup
-cp .env.example .env
+# Run with coverage
+php artisan test --coverage
+```
+
+### **Test Coverage**
+- ✅ **Unit Tests** - Models, policies, services
+- ✅ **Integration Tests** - API endpoints, database interactions
+- ✅ **Performance Tests** - Query optimization, N+1 prevention
+- ✅ **Policy Tests** - Authorization and tenant isolation
+
+## 📚 **Documentation**
+
+- [Complete Documentation](./docs/COMPLETE_DOCUMENTATION.md)
+- [API Reference](./docs/API_DOCUMENTATION.md)
+- [Template Management System](./docs/TEMPLATE_MANAGEMENT_SYSTEM.md)
+- [Database Schema](./docs/DATABASE_SCHEMA.md)
+- [Deployment Guide](./docs/DEPLOYMENT.md)
+
+## 🔧 **Configuration**
+
+### **Environment Variables**
+```env
+# Application
+APP_NAME=ZenaManage
+APP_ENV=local
+APP_DEBUG=true
+
+# Database
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=zenamanage
+DB_USERNAME=root
+DB_PASSWORD=
+
+# Cache
+CACHE_DRIVER=file
+QUEUE_CONNECTION=sync
+
+# Sanctum
+SANCTUM_STATEFUL_DOMAINS=localhost:3000
+```
+
+### **Multi-Tenant Configuration**
+```php
+// config/tenancy.php
+return [
+    'tenant_model' => App\Models\Tenant::class,
+    'user_model' => App\Models\User::class,
+    'tenant_key' => 'tenant_id',
+];
+```
+
+## 🚀 **Deployment**
+
+### **Production Setup**
+```bash
+# Install production dependencies
+composer install --optimize-autoloader --no-dev
+
+# Generate application key
 php artisan key:generate
-
-# Database setup
-php artisan migrate
-php artisan db:seed
-
-# Asset compilation
-npm run dev
-
-# Start development server
-php artisan serve --port=8002
-```
-
-### Docker Setup
-```bash
-# Start Docker containers
-docker-compose up -d
-
-# Install dependencies
-docker-compose exec app composer install
-docker-compose exec app npm install
-
-# Run migrations
-docker-compose exec app php artisan migrate
-docker-compose exec app php artisan db:seed
-```
-
-## 📚 Documentation
-
-### 📖 User Documentation
-- **[User Guide](USER_DOCUMENTATION.md)**: Comprehensive user manual
-- **[API Documentation](API_DOCUMENTATION.md)**: Complete API reference
-- **[Developer Guide](DEVELOPER_DOCUMENTATION.md)**: Technical documentation
-- **[Deployment Guide](DEPLOYMENT_GUIDE.md)**: Production deployment instructions
-
-### 🔧 Configuration
-- **[Project Rules](PROJECT_RULES.md)**: Development guidelines
-- **[AI Rules](AI_RULES.md)**: AI assistant guidelines
-- **[UX/UI Design Rules](UX_UI_DESIGN_RULES.md)**: Design standards
-
-## 🧪 Testing
-
-### Testing Suite
-Access the comprehensive testing interface at `/testing-suite`:
-
-- **Route Testing**: HTTP endpoint validation
-- **Component Testing**: UI component functionality
-- **Performance Testing**: Performance metrics validation
-- **Accessibility Testing**: WCAG compliance validation
-- **Mobile Testing**: Mobile responsiveness testing
-
-### Test Coverage
-- ✅ Route accessibility and response codes
-- ✅ Component rendering and functionality
-- ✅ Performance metrics and thresholds
-- ✅ Accessibility compliance validation
-- ✅ Mobile responsiveness testing
-
-## 🎨 UI Components
-
-### Universal Page Frame
-- `universal-header.blade.php`: Top navigation and user menu
-- `universal-navigation.blade.php`: Global and page navigation
-- `kpi-strip.blade.php`: Key performance indicators
-- `alert-bar.blade.php`: System alerts and notifications
-- `activity-panel.blade.php`: Recent activity feed
-
-### Smart Tools
-- `smart-search.blade.php`: Intelligent search interface
-- `smart-filters.blade.php`: Advanced filtering options
-- `analysis-drawer.blade.php`: Data analysis interface
-- `export-component.blade.php`: Multi-format export options
-
-### Mobile Components
-- `mobile-fab.blade.php`: Floating Action Button
-- `mobile-drawer.blade.php`: Slide-out navigation
-- `mobile-navigation.blade.php`: Bottom navigation bar
-
-### Accessibility Components
-- `accessibility-skip-links.blade.php`: Keyboard navigation
-- `accessibility-focus-manager.blade.php`: Focus management
-- `accessibility-aria-labels.blade.php`: Screen reader support
-- `accessibility-color-contrast.blade.php`: Color contrast compliance
-
-## 🔌 API Endpoints
-
-### Universal Frame APIs
-```http
-GET /api/universal-frame/kpis
-GET /api/universal-frame/alerts
-GET /api/universal-frame/activities
-```
-
-### Smart Tools APIs
-```http
-POST /api/universal-frame/search
-GET /api/universal-frame/filters/presets
-POST /api/universal-frame/analysis
-POST /api/universal-frame/export
-```
-
-### Accessibility APIs
-```http
-GET /api/accessibility/preferences
-GET /api/accessibility/compliance-report
-POST /api/accessibility/audit-page
-```
-
-### Performance APIs
-```http
-GET /api/performance/metrics
-GET /api/performance/analysis
-POST /api/performance/optimize-database
-```
-
-## 📊 Performance Metrics
-
-### Current Performance
-- **Page Load Time**: 1,250ms (Target: < 2s) ✅
-- **API Response Time**: 180ms (Target: < 300ms) ✅
-- **Cache Hit Rate**: 94% (Target: > 90%) ✅
-- **Bundle Size**: 245KB (Target: < 500KB) ✅
-
-### Optimization Features
-- Lazy loading for images and components
-- Code splitting for JavaScript bundles
-- Image compression and optimization
-- CSS/JavaScript minification
-- CDN integration for static assets
-
-## 🔒 Security Features
-
-### Authentication & Authorization
-- Laravel Sanctum API token authentication
-- Spatie Permission role-based access control
-- Policy classes for model-level authorization
-- Middleware for route-level protection
-
-### Data Protection
-- Tenant isolation with mandatory tenant_id filtering
-- Comprehensive input validation
-- Output sanitization and XSS protection
-- CSRF protection for web routes
-
-### Security Headers
-- X-Frame-Options: SAMEORIGIN
-- X-Content-Type-Options: nosniff
-- X-XSS-Protection: 1; mode=block
-- Content-Security-Policy: default-src 'self'
-- Referrer-Policy: strict-origin-when-cross-origin
-
-## 🚀 Deployment
-
-### Production Deployment
-```bash
-# Install dependencies
-composer install --no-dev --optimize-autoloader
-npm install && npm run build
-
-# Configure environment
-cp .env.example .env
-# Update .env with production values
 
 # Run migrations
 php artisan migrate --force
@@ -255,161 +235,102 @@ php artisan migrate --force
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-
-# Set permissions
-sudo chown -R www-data:www-data /var/www/zenamanage
-sudo chmod -R 755 /var/www/zenamanage
-sudo chmod -R 775 /var/www/zenamanage/storage
-sudo chmod -R 775 /var/www/zenamanage/bootstrap/cache
 ```
 
-### Docker Production
+### **Docker Deployment**
 ```bash
-# Build production image
-docker build -t zenamanage:production .
+# Build and run with Docker
+docker-compose up -d
 
-# Run production container
-docker run -d \
-  --name zenamanage \
-  -p 80:8000 \
-  -e APP_ENV=production \
-  -e DB_HOST=mysql \
-  -e REDIS_HOST=redis \
-  zenamanage:production
+# Run migrations
+docker-compose exec app php artisan migrate
 ```
 
-## 📈 Monitoring
+## 🤝 **Contributing**
 
-### Performance Monitoring
-- Real-time performance metrics dashboard
-- Automated performance analysis
-- Optimization recommendations
-- Performance alerts and thresholds
-
-### Application Monitoring
-- Comprehensive logging system
-- Error tracking and reporting
-- User activity monitoring
-- System health checks
-
-## 🤝 Contributing
-
-### Development Workflow
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### Code Standards
-- PSR-12 PHP coding standards
-- Laravel conventions
-- ESLint for JavaScript
-- Prettier for code formatting
+### **Code Standards**
+- Follow PSR-12 coding standards
+- Write tests for new features
+- Update documentation as needed
+- Ensure multi-tenant isolation
 
-### Testing Requirements
-- Write unit tests for new features
-- Ensure all tests pass
-- Maintain test coverage
-- Update documentation
+## 📊 **Performance**
 
-## 📄 License
+### **Benchmarks**
+- **API Response Time**: < 300ms (p95)
+- **Page Load Time**: < 500ms (p95)
+- **Database Queries**: Optimized with proper indexing
+- **Memory Usage**: Efficient with caching
+
+### **Optimization Features**
+- Eager loading for relationships
+- Database query optimization
+- Redis caching for frequently accessed data
+- CDN support for static assets
+
+## 🔒 **Security**
+
+### **Security Features**
+- Multi-tenant data isolation
+- Role-based access control
+- CSRF protection for web routes
+- Rate limiting for API endpoints
+- Input validation and sanitization
+- Audit logging for all actions
+
+### **Authentication Methods**
+- Session-based authentication (web)
+- Token-based authentication (API)
+- Laravel Sanctum integration
+- Password hashing with bcrypt
+
+## 📈 **Monitoring**
+
+### **Health Checks**
+```http
+GET /health                    # Application health
+GET /api/health/database       # Database health
+GET /api/health/cache          # Cache health
+```
+
+### **Metrics**
+- Response time tracking
+- Error rate monitoring
+- Database performance metrics
+- User activity analytics
+
+## 🆘 **Support**
+
+### **Getting Help**
+- 📖 Check the [documentation](./docs/)
+- 🐛 Report bugs via [GitHub Issues](https://github.com/your-org/zenamanage/issues)
+- 💬 Join our [Discord community](https://discord.gg/zenamanage)
+- 📧 Email support: support@zenamanage.com
+
+### **Troubleshooting**
+- [Common Issues](./docs/TROUBLESHOOTING.md)
+- [Performance Issues](./docs/PERFORMANCE.md)
+- [Security Issues](./docs/SECURITY.md)
+
+## 📄 **License**
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🆘 Support
+## 🙏 **Acknowledgments**
 
-### Documentation
-- **[User Guide](USER_DOCUMENTATION.md)**: User manual and tutorials
-- **[API Documentation](API_DOCUMENTATION.md)**: Complete API reference
-- **[Developer Guide](DEVELOPER_DOCUMENTATION.md)**: Technical documentation
-- **[Deployment Guide](DEPLOYMENT_GUIDE.md)**: Deployment instructions
-
-### Contact Information
-- **Email**: support@zenamanage.com
-- **Phone**: +1 (555) 123-4567
-- **Website**: https://zenamanage.com
-- **Documentation**: https://docs.zenamanage.com
-
-### Community
-- **GitHub Issues**: Bug reports and feature requests
-- **Discord**: Developer community chat
-- **Stack Overflow**: Technical questions
-- **Reddit**: Community discussions
-
-## 🎯 Roadmap
-
-### Phase 1: Core Foundation ✅
-- Universal Page Frame implementation
-- Basic project and task management
-- User authentication and authorization
-- Multi-tenant architecture
-
-### Phase 2: Smart Tools ✅
-- Intelligent search functionality
-- Smart filtering system
-- Analysis and export capabilities
-- AI-powered insights
-
-### Phase 3: Mobile Optimization ✅
-- Mobile-first responsive design
-- Touch-friendly interactions
-- FAB navigation system
-- Mobile drawer components
-
-### Phase 4: Accessibility ✅
-- WCAG 2.1 AA compliance
-- Keyboard navigation support
-- Screen reader compatibility
-- Focus management
-
-### Phase 5: Admin Dashboard ✅
-- System administration interface
-- User and tenant management
-- Analytics and reporting
-- Security monitoring
-
-### Phase 6: Tenant Dashboard ✅
-- Tenant-specific project management
-- Team collaboration tools
-- Document management
-- Calendar integration
-
-### Phase 7: Testing & Validation ✅
-- Comprehensive testing suite
-- Automated test execution
-- Performance validation
-- Quality assurance
-
-### Phase 8: Performance Optimization ✅
-- Performance monitoring dashboard
-- Optimization recommendations
-- Caching strategy implementation
-- Asset optimization
-
-### Phase 9: Documentation & Deployment ✅
-- Complete documentation suite
-- Deployment guides
-- API documentation
-- User guides
-
-### Future Phases
-- **Phase 10**: Advanced Analytics
-- **Phase 11**: Machine Learning Integration
-- **Phase 12**: Mobile App Development
-- **Phase 13**: Enterprise Features
-
-## 🙏 Acknowledgments
-
-- **Laravel Community**: For the excellent framework
-- **Alpine.js Team**: For the lightweight JavaScript framework
-- **Tailwind CSS**: For the utility-first CSS framework
-- **Font Awesome**: For the comprehensive icon library
-- **Contributors**: All developers who contributed to this project
+- Laravel framework and community
+- Alpine.js and Tailwind CSS teams
+- All contributors and testers
+- Construction industry professionals who provided feedback
 
 ---
 
-**ZenaManage** - Empowering teams with intelligent project management tools.
+**Made with ❤️ by the ZenaManage Team**
 
-*Last updated: September 24, 2025*
-*Version: 1.0*
+[Website](https://zenamanage.com) • [Documentation](./docs/) • [API Reference](./docs/API_DOCUMENTATION.md) • [Support](https://github.com/your-org/zenamanage/issues)

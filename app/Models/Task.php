@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -35,7 +36,7 @@ use Src\Foundation\Helpers\AuthHelper;
  */
 class Task extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids, HasFactory, BelongsToTenant;
     
     protected $table = 'tasks';
     
@@ -49,6 +50,7 @@ class Task extends Model
         'component_id',
         'phase_id',
         'name',
+        'title',
         'description',
         'start_date',
         'end_date',
@@ -85,8 +87,8 @@ class Task extends Model
     ];
 
     protected $attributes = [
-        'status' => 'pending',
-        'priority' => 'medium',
+        'status' => 'backlog',
+        'priority' => 'normal',
         'is_hidden' => false,
         'estimated_hours' => 0.0,
         'actual_hours' => 0.0,
@@ -98,35 +100,53 @@ class Task extends Model
     ];
 
     /**
-     * Các trạng thái hợp lệ
+     * Các trạng thái hợp lệ (MVP 1.5)
      */
-    public const STATUS_PENDING = 'pending';
+    public const STATUS_BACKLOG = 'backlog';
     public const STATUS_IN_PROGRESS = 'in_progress';
-    public const STATUS_COMPLETED = 'completed';
-    public const STATUS_ON_HOLD = 'on_hold';
-    public const STATUS_CANCELLED = 'cancelled';
+    public const STATUS_BLOCKED = 'blocked';
+    public const STATUS_DONE = 'done';
+    public const STATUS_CANCELED = 'canceled';
+
+    /**
+     * Accessors for consistent field names
+     */
+    public function getTitleAttribute(): string
+    {
+        return $this->name;
+    }
+
+    public function getDueDateAttribute(): ?string
+    {
+        return $this->end_date?->toDateString();
+    }
+
+    public function getProgressAttribute(): float
+    {
+        return $this->progress_percent;
+    }
 
     public const VALID_STATUSES = [
-        self::STATUS_PENDING,
+        self::STATUS_BACKLOG,
         self::STATUS_IN_PROGRESS,
-        self::STATUS_COMPLETED,
-        self::STATUS_ON_HOLD,
-        self::STATUS_CANCELLED,
+        self::STATUS_BLOCKED,
+        self::STATUS_DONE,
+        self::STATUS_CANCELED,
     ];
 
     /**
-     * Các mức độ ưu tiên
+     * Các mức độ ưu tiên (MVP 1.5)
      */
     public const PRIORITY_LOW = 'low';
-    public const PRIORITY_MEDIUM = 'medium';
+    public const PRIORITY_NORMAL = 'normal';
     public const PRIORITY_HIGH = 'high';
-    public const PRIORITY_CRITICAL = 'critical';
+    public const PRIORITY_URGENT = 'urgent';
 
     public const VALID_PRIORITIES = [
         self::PRIORITY_LOW,
-        self::PRIORITY_MEDIUM,
+        self::PRIORITY_NORMAL,
         self::PRIORITY_HIGH,
-        self::PRIORITY_CRITICAL,
+        self::PRIORITY_URGENT,
     ];
 
     /**
@@ -150,7 +170,7 @@ class Task extends Model
      */
     public function assignee(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_to');
+        return $this->belongsTo(User::class, 'assignee_id');
     }
 
     /**
@@ -183,7 +203,7 @@ class Task extends Model
     public function assignedUsers(): BelongsToMany
     {
         return $this->belongsToMany(
-            \App\Models\User::class,
+            User::class,
             'task_assignments',
             'task_id',
             'user_id'
@@ -197,7 +217,7 @@ class Task extends Model
     public function watchers(): BelongsToMany
     {
         return $this->belongsToMany(
-            \App\Models\User::class,
+            User::class,
             'task_watchers',
             'task_id',
             'user_id'
@@ -205,11 +225,19 @@ class Task extends Model
     }
 
     /**
-     * Relationship: Task có nhiều interaction logs
+     * Relationship: Task có nhiều dependencies
      */
-    public function interactionLogs(): HasMany
+    public function dependencies(): HasMany
     {
-        return $this->hasMany(\Src\InteractionLogs\Models\InteractionLog::class, 'linked_task_id');
+        return $this->hasMany(TaskDependency::class, 'task_id');
+    }
+
+    /**
+     * Relationship: Task có nhiều dependents
+     */
+    public function dependents(): HasMany
+    {
+        return $this->hasMany(TaskDependency::class, 'depends_on_task_id');
     }
 
     /**
@@ -229,9 +257,9 @@ class Task extends Model
         $this->update(['progress_percent' => $newProgress]);
         
         // Auto update status based on progress
-        if ($newProgress >= 100 && $this->status !== self::STATUS_COMPLETED) {
-            $this->update(['status' => self::STATUS_COMPLETED]);
-        } elseif ($newProgress > 0 && $this->status === self::STATUS_PENDING) {
+        if ($newProgress >= 100 && $this->status !== self::STATUS_DONE) {
+            $this->update(['status' => self::STATUS_DONE]);
+        } elseif ($newProgress > 0 && $this->status === self::STATUS_BACKLOG) {
             $this->update(['status' => self::STATUS_IN_PROGRESS]);
         }
         
@@ -258,7 +286,7 @@ class Task extends Model
         $dependentTasks = Task::whereIn('ulid', $this->dependencies)->get();
         
         return $dependentTasks->every(function ($task) {
-            return $task->status === self::STATUS_COMPLETED;
+            return $task->status === self::STATUS_DONE;
         });
     }
 
@@ -317,7 +345,7 @@ class Task extends Model
      */
     public function scopeCanStart($query)
     {
-        return $query->where('status', self::STATUS_PENDING)
+        return $query->where('status', self::STATUS_BACKLOG)
                     ->where(function($q) {
                         $q->whereNull('dependencies')
                           ->orWhereJsonLength('dependencies', 0);

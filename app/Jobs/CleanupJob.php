@@ -30,7 +30,15 @@ class CleanupJob implements ShouldQueue, ShouldBeUnique
      */
     public function __construct()
     {
-        $this->onQueue('cleanup');
+    }
+    
+    /**
+     * Get the queue the job should be sent to.
+     */
+    public function onQueue($queue)
+    {
+        $this->queue = $queue;
+        return $this;
     }
 
     /**

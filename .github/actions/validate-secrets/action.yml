@@ -1,0 +1,23 @@
+name: 'Validate Required Secrets'
+description: 'Validate that all required secrets are configured'
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate required secrets
+      shell: bash
+      run: |
+        # Validate required secrets are set
+        # Note: Secrets are validated by checking if they exist in the context
+        if [ -z "${{ secrets.PRODUCTION_HOST }}" ]; then
+          echo "Error: PRODUCTION_HOST secret is not set"
+          exit 1
+        fi
+        if [ -z "${{ secrets.PRODUCTION_USERNAME }}" ]; then
+          echo "Error: PRODUCTION_USERNAME secret is not set"
+          exit 1
+        fi
+        if [ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]; then
+          echo "Error: PRODUCTION_SSH_KEY secret is not set"
+          exit 1
+        fi
+        echo "All required secrets are configured"

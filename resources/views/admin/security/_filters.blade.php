@@ -43,12 +43,14 @@
                     id="tenant-filter"
                     x-model="filters.tenant"
                     @change="performSearch()"
-                    class="block w-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    :disabled="optionsLoading"
+                    class="block w-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                     <option value="">All Tenants</option>
-                    <option value="techstart">TechStart</option>
-                    <option value="innovate">InnovateCorp</option>
-                    <option value="global">GlobalTech</option>
+                    <template x-for="tenant in filterOptions.tenants" :key="tenant.id">
+                        <option :value="tenant.id" x-text="tenant.name"></option>
+                    </template>
+                    <option x-show="filterOptions.tenants.length === 0 && !optionsLoading" value="" disabled>No tenants found</option>
                 </select>
             </div>
 
@@ -59,13 +61,14 @@
                     id="severity-filter"
                     x-model="filters.severity"
                     @change="performSearch()"
-                    class="block w-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    :disabled="optionsLoading"
+                    class="block w-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                     <option value="">All</option>
-                    <option value="info">Info</option>
-                    <option value="warning">Warning</option>
-                    <option value="error">Error</option>
-                    <option value="critical">Critical</option>
+                    <template x-for="severity in filterOptions.severity" :key="severity">
+                        <option :value="severity" x-text="severity.charAt(0).toUpperCase() + severity.slice(1)"></option>
+                    </template>
+                    <option x-show="filterOptions.severity.length === 0 && !optionsLoading" value="" disabled>No severity levels</option>
                 </select>
             </div>
 
@@ -76,12 +79,14 @@
                     id="source-filter"
                     x-model="filters.source"
                     @change="performSearch()"
-                    class="block w-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    :disabled="optionsLoading"
+                    class="block w-32 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
                     <option value="">All</option>
-                    <option value="web">Web</option>
-                    <option value="api">API</option>
-                    <option value="mobile">Mobile</option>
+                    <template x-for="source in filterOptions.sources" :key="source">
+                        <option :value="source" x-text="source.charAt(0).toUpperCase() + source.slice(1).replace('_', ' ')"></option>
+                    </template>
+                    <option x-show="filterOptions.sources.length === 0 && !optionsLoading" value="" disabled>No sources found</option>
                 </select>
             </div>
         </div>

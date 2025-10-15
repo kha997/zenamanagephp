@@ -60,6 +60,10 @@
                 <div x-show="chartError" class="absolute inset-0 flex flex-col items-center justify-center text-red-500">
                     <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
                     <p class="text-sm">Chart Error</p>
+                    <p class="text-xs mt-1" x-text="chartError"></p>
+                    <button @click="initCharts()" class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                        Retry
+                    </button>
                 </div>
                 
                 {{-- Empty State --}}
@@ -97,6 +101,10 @@
                 <div x-show="chartError" class="absolute inset-0 flex flex-col items-center justify-center text-red-500">
                     <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
                     <p class="text-sm">Chart Error</p>
+                    <p class="text-xs mt-1" x-text="chartError"></p>
+                    <button @click="initCharts()" class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                        Retry
+                    </button>
                 </div>
                 
                 {{-- Empty State --}}
@@ -134,6 +142,10 @@
                 <div x-show="chartError" class="absolute inset-0 flex flex-col items-center justify-center text-red-500">
                     <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
                     <p class="text-sm">Chart Error</p>
+                    <p class="text-xs mt-1" x-text="chartError"></p>
+                    <button @click="initCharts()" class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                        Retry
+                    </button>
                 </div>
                 
                 {{-- Empty State --}}
@@ -171,6 +183,10 @@
                 <div x-show="chartError" class="absolute inset-0 flex flex-col items-center justify-center text-red-500">
                     <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
                     <p class="text-sm">Chart Error</p>
+                    <p class="text-xs mt-1" x-text="chartError"></p>
+                    <button @click="initCharts()" class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                        Retry
+                    </button>
                 </div>
                 
                 {{-- Empty State --}}

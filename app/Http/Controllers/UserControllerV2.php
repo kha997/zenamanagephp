@@ -63,7 +63,7 @@ class UserControllerV2 extends Controller
             $perPage = min($request->get('per_page', 15), 100);
             $users = $query->paginate($perPage);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'users' => $users->items(),
                 'pagination' => [
                     'current_page' => $users->currentPage(),
@@ -74,7 +74,7 @@ class UserControllerV2 extends Controller
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách users: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy danh sách users: ' . $e->getMessage(), 500);
         }
     }
 
@@ -96,7 +96,7 @@ class UserControllerV2 extends Controller
             ]);
 
             if ($validator->fails()) {
-                return JSendResponse::fail($validator->errors(), 422);
+                return ApiResponse::fail($validator->errors(), 422);
             }
 
             $user = User::create([
@@ -107,13 +107,13 @@ class UserControllerV2 extends Controller
                 'status' => 'active'
             ]);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'user' => $user->load('tenant'),
                 'message' => 'User đã được tạo thành công'
             ], 201);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo user: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể tạo user: ' . $e->getMessage(), 500);
         }
     }
 
@@ -133,15 +133,15 @@ class UserControllerV2 extends Controller
             // Kiểm tra tenant access
             $tenantId = $request->get('tenant_context');
             if ($tenantId && $user->tenant_id !== $tenantId) {
-                return JSendResponse::error('Không có quyền truy cập user này', 403);
+                return ApiResponse::error('Không có quyền truy cập user này', 403);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'user' => $user
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin user: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy thông tin user: ' . $e->getMessage(), 500);
         }
     }
 
@@ -161,7 +161,7 @@ class UserControllerV2 extends Controller
             // Kiểm tra tenant access
             $tenantId = $request->get('tenant_context');
             if ($tenantId && $user->tenant_id !== $tenantId) {
-                return JSendResponse::error('Không có quyền cập nhật user này', 403);
+                return ApiResponse::error('Không có quyền cập nhật user này', 403);
             }
 
             $validator = Validator::make($request->all(), [
@@ -172,7 +172,7 @@ class UserControllerV2 extends Controller
             ]);
 
             if ($validator->fails()) {
-                return JSendResponse::fail($validator->errors(), 422);
+                return ApiResponse::fail($validator->errors(), 422);
             }
 
             $updateData = $request->only(['name', 'email', 'status']);
@@ -183,13 +183,13 @@ class UserControllerV2 extends Controller
 
             $user->update($updateData);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'user' => $user->fresh(['tenant']),
                 'message' => 'User đã được cập nhật thành công'
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể cập nhật user: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể cập nhật user: ' . $e->getMessage(), 500);
         }
     }
 
@@ -209,23 +209,23 @@ class UserControllerV2 extends Controller
             // Kiểm tra tenant access
             $tenantId = $request->get('tenant_context');
             if ($tenantId && $user->tenant_id !== $tenantId) {
-                return JSendResponse::error('Không có quyền xóa user này', 403);
+                return ApiResponse::error('Không có quyền xóa user này', 403);
             }
 
             // Không cho phép xóa chính mình
             $currentUser = $request->get('auth_user');
             if ($currentUser && $currentUser->id === $id) {
-                return JSendResponse::error('Không thể xóa chính mình', 400);
+                return ApiResponse::error('Không thể xóa chính mình', 400);
             }
 
             $user->delete();
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'message' => 'User đã được xóa thành công'
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể xóa user: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể xóa user: ' . $e->getMessage(), 500);
         }
     }
 
@@ -241,15 +241,15 @@ class UserControllerV2 extends Controller
         try {
             $user = $request->get('auth_user');
             if (!$user) {
-                return JSendResponse::error('User chưa đăng nhập', 401);
+                return ApiResponse::error('User chưa đăng nhập', 401);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'user' => $user->load('tenant')
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy profile: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy profile: ' . $e->getMessage(), 500);
         }
     }
 }

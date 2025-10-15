@@ -1,380 +1,920 @@
-# 📚 **ZENAMANAGE API DOCUMENTATION**
+# ZENAMANAGE API DOCUMENTATION
 
-## 📋 **OVERVIEW**
+## 🔌 COMPLETE API REFERENCE
 
-This document provides comprehensive API documentation for the ZenaManage system, including all endpoints, authentication, error handling, and examples.
+**Version**: 2.0  
+**Last Updated**: 2025-01-08  
+**Base URL**: `https://zenamanage.com/api`
 
-## 🔐 **AUTHENTICATION**
+---
 
-### **API Authentication**
-ZenaManage uses Laravel Sanctum for API authentication with token-based authentication.
+## 🎯 TABLE OF CONTENTS
 
-```bash
-# Login to get token
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password"
-  }'
+1. [API Overview](#api-overview)
+2. [Authentication](#authentication)
+3. [Rate Limiting](#rate-limiting)
+4. [API Versioning](#api-versioning)
+5. [Error Handling](#error-handling)
+6. [Endpoints](#endpoints)
+7. [Request/Response Examples](#requestresponse-examples)
+8. [SDKs & Libraries](#sdks--libraries)
+9. [Webhooks](#webhooks)
+10. [Testing](#testing)
 
-# Use token in requests
-curl -H "Authorization: Bearer <token>" \
-  -H "Accept: application/json" \
-  http://localhost:8000/api/v1/auth/me
+---
+
+## 🔌 API OVERVIEW
+
+### Base URL
+All API requests should be made to:
+```
+https://zenamanage.com/api
 ```
 
-### **Authentication Endpoints**
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/logout` - User logout
-- `POST /api/v1/auth/refresh` - Refresh token
-- `GET /api/v1/auth/me` - Get current user
-- `GET /api/v1/auth/permissions` - Get user permissions
+### API Versioning
+The API uses URL-based versioning:
+```
+https://zenamanage.com/api/v1/
+https://zenamanage.com/api/v2/
+```
 
-## 📊 **DASHBOARD API**
-
-### **Project Manager Dashboard**
-- `GET /api/v1/project-manager/dashboard/stats` - Dashboard statistics
-- `GET /api/v1/project-manager/dashboard/timeline` - Project timeline
-
-### **Admin Dashboard**
-- `GET /api/v1/admin/dashboard/stats` - Admin dashboard statistics
-- `GET /api/v1/admin/dashboard/activities` - System activities
-- `GET /api/v1/admin/dashboard/alerts` - System alerts
-- `GET /api/v1/admin/dashboard/metrics` - System metrics
-
-## 🏗️ **PROJECT MANAGEMENT API**
-
-### **Projects**
-- `GET /api/v1/projects` - List projects
-- `POST /api/v1/projects` - Create project
-- `GET /api/v1/projects/{id}` - Get project
-- `PUT /api/v1/projects/{id}` - Update project
-- `DELETE /api/v1/projects/{id}` - Delete project
-
-### **Tasks**
-- `GET /api/v1/tasks` - List tasks
-- `POST /api/v1/tasks` - Create task
-- `GET /api/v1/tasks/{id}` - Get task
-- `PUT /api/v1/tasks/{id}` - Update task
-- `DELETE /api/v1/tasks/{id}` - Delete task
-
-### **Users**
-- `GET /api/v1/users` - List users
-- `POST /api/v1/users` - Create user
-- `GET /api/v1/users/{id}` - Get user
-- `PUT /api/v1/users/{id}` - Update user
-- `DELETE /api/v1/users/{id}` - Delete user
-
-## 🔄 **LEGACY ROUTE MONITORING API**
-
-### **Monitoring Endpoints**
-- `GET /api/v1/legacy-routes/usage` - Usage statistics
-- `GET /api/v1/legacy-routes/migration-phase` - Migration phase info
-- `GET /api/v1/legacy-routes/report` - Comprehensive report
-- `POST /api/v1/legacy-routes/record-usage` - Record usage
-- `POST /api/v1/legacy-routes/cleanup` - Clean old data
-
-## 📈 **UNIVERSAL FRAME API**
-
-### **KPIs**
-- `GET /api/v1/universal-frame/kpis` - Get KPIs
-- `GET /api/v1/universal-frame/kpis/preferences` - Get KPI preferences
-- `POST /api/v1/universal-frame/kpis/preferences` - Save KPI preferences
-- `POST /api/v1/universal-frame/kpis/refresh` - Refresh KPIs
-- `GET /api/v1/universal-frame/kpis/stats` - KPI statistics
-
-### **Alerts**
-- `GET /api/v1/universal-frame/alerts` - Get alerts
-- `POST /api/v1/universal-frame/alerts/resolve` - Resolve alert
-- `POST /api/v1/universal-frame/alerts/acknowledge` - Acknowledge alert
-- `POST /api/v1/universal-frame/alerts/mute` - Mute alert
-- `POST /api/v1/universal-frame/alerts/dismiss-all` - Dismiss all alerts
-- `POST /api/v1/universal-frame/alerts/create` - Create alert
-- `GET /api/v1/universal-frame/alerts/stats` - Alert statistics
-
-### **Activities**
-- `GET /api/v1/universal-frame/activities` - Get activities
-- `POST /api/v1/universal-frame/activities/create` - Create activity
-- `GET /api/v1/universal-frame/activities/by-type` - Get activities by type
-- `GET /api/v1/universal-frame/activities/stats` - Activity statistics
-- `POST /api/v1/universal-frame/activities/clear-old` - Clear old activities
-
-## 🔍 **SMART TOOLS API**
-
-### **Search**
-- `POST /api/v1/universal-frame/search` - Search
-- `GET /api/v1/universal-frame/search/suggestions` - Get search suggestions
-- `GET /api/v1/universal-frame/search/recent` - Get recent searches
-- `POST /api/v1/universal-frame/search/recent` - Save recent search
-
-### **Filters**
-- `GET /api/v1/universal-frame/filters/presets` - Get filter presets
-- `GET /api/v1/universal-frame/filters/deep` - Get deep filters
-- `GET /api/v1/universal-frame/filters/saved-views` - Get saved views
-- `POST /api/v1/universal-frame/filters/saved-views` - Save view
-- `DELETE /api/v1/universal-frame/filters/saved-views/{viewId}` - Delete view
-- `POST /api/v1/universal-frame/filters/apply` - Apply filters
-
-### **Analysis**
-- `POST /api/v1/universal-frame/analysis` - Run analysis
-- `GET /api/v1/universal-frame/analysis/{context}` - Get context analysis
-- `GET /api/v1/universal-frame/analysis/{context}/metrics` - Get context metrics
-- `GET /api/v1/universal-frame/analysis/{context}/charts` - Get context charts
-- `GET /api/v1/universal-frame/analysis/{context}/insights` - Get context insights
-
-### **Export**
-- `POST /api/v1/universal-frame/export` - Export data
-- `POST /api/v1/universal-frame/export/projects` - Export projects
-- `POST /api/v1/universal-frame/export/tasks` - Export tasks
-- `POST /api/v1/universal-frame/export/documents` - Export documents
-- `POST /api/v1/universal-frame/export/users` - Export users
-- `POST /api/v1/universal-frame/export/tenants` - Export tenants
-- `GET /api/v1/universal-frame/export/history` - Get export history
-- `DELETE /api/v1/universal-frame/export/{filename}` - Delete export
-- `POST /api/v1/universal-frame/export/clean-old` - Clean old exports
-
-## ♿ **ACCESSIBILITY API**
-
-### **Accessibility Management**
-- `GET /api/v1/accessibility/preferences` - Get accessibility preferences
-- `POST /api/v1/accessibility/preferences` - Save accessibility preferences
-- `POST /api/v1/accessibility/preferences/reset` - Reset preferences
-- `GET /api/v1/accessibility/compliance-report` - Get compliance report
-- `POST /api/v1/accessibility/audit-page` - Audit page accessibility
-- `GET /api/v1/accessibility/statistics` - Get accessibility statistics
-- `POST /api/v1/accessibility/check-color-contrast` - Check color contrast
-- `POST /api/v1/accessibility/generate-report` - Generate accessibility report
-- `GET /api/v1/accessibility/help` - Get accessibility help
-
-## ⚡ **PERFORMANCE API**
-
-### **Performance Optimization**
-- `GET /api/v1/performance/metrics` - Get performance metrics
-- `GET /api/v1/performance/analysis` - Get performance analysis
-- `POST /api/v1/performance/optimize-database` - Optimize database
-- `POST /api/v1/performance/implement-caching` - Implement caching
-- `POST /api/v1/performance/optimize-api` - Optimize API
-- `POST /api/v1/performance/optimize-assets` - Optimize assets
-- `GET /api/v1/performance/recommendations` - Get performance recommendations
-
-## 🚀 **FINAL INTEGRATION API**
-
-### **Launch Management**
-- `GET /api/v1/final-integration/launch-status` - Get launch status
-- `POST /api/v1/final-integration/system-integration-checks` - Run system checks
-- `POST /api/v1/final-integration/production-readiness-checks` - Run readiness checks
-- `POST /api/v1/final-integration/launch-preparation-tasks` - Run preparation tasks
-- `GET /api/v1/final-integration/go-live-checklist` - Get go-live checklist
-- `POST /api/v1/final-integration/pre-launch-actions` - Execute pre-launch actions
-- `POST /api/v1/final-integration/launch-actions` - Execute launch actions
-- `POST /api/v1/final-integration/validate-integration` - Validate integration
-- `POST /api/v1/final-integration/run-production-check` - Run production check
-- `POST /api/v1/final-integration/complete-launch-task` - Complete launch task
-- `POST /api/v1/final-integration/toggle-checklist-item` - Toggle checklist item
-- `POST /api/v1/final-integration/execute-action` - Execute action
-- `GET /api/v1/final-integration/launch-metrics` - Get launch metrics
-- `GET /api/v1/final-integration/launch-report` - Generate launch report
-
-## 🔧 **CACHE MANAGEMENT API**
-
-### **Cache Operations**
-- `GET /api/v1/cache/stats` - Get cache statistics
-- `GET /api/v1/cache/config` - Get cache configuration
-- `POST /api/v1/cache/invalidate/key` - Invalidate cache by key
-- `POST /api/v1/cache/invalidate/tags` - Invalidate cache by tags
-- `POST /api/v1/cache/invalidate/pattern` - Invalidate cache by pattern
-- `POST /api/v1/cache/warmup` - Warm up cache
-- `POST /api/v1/cache/clear` - Clear all cache
-
-## 🌐 **WEBSOCKET API**
-
-### **WebSocket Management**
-- `GET /api/v1/websocket/info` - Get WebSocket info
-- `GET /api/v1/websocket/stats` - Get WebSocket statistics
-- `GET /api/v1/websocket/channels` - Get WebSocket channels
-- `POST /api/v1/websocket/test` - Test WebSocket connection
-- `POST /api/v1/websocket/online` - Set user online
-- `POST /api/v1/websocket/offline` - Set user offline
-- `GET /api/v1/websocket/activity` - Get WebSocket activity
-- `POST /api/v1/websocket/broadcast` - Broadcast message
-- `POST /api/v1/websocket/notification` - Send notification
-
-## 📝 **ERROR HANDLING**
-
-### **Error Envelope Format**
-All API responses follow a standardized error envelope format:
+### Response Format
+All API responses follow a consistent JSON format:
 
 ```json
 {
-  "error": {
-    "id": "req_12345678",
-    "code": "E422.VALIDATION",
-    "message": "Validation failed",
-    "details": {
-      "validation": {
-        "email": ["The email field is required."],
-        "password": ["The password field is required."]
-      }
+  "success": true,
+  "data": {
+    // Response data
+  },
+  "meta": {
+    "pagination": {
+      "current_page": 1,
+      "per_page": 20,
+      "total": 100,
+      "last_page": 5
     }
   }
 }
 ```
 
-### **Error Codes**
-- `E400.BAD_REQUEST` - Bad request
-- `E401.AUTHENTICATION` - Authentication required
-- `E403.AUTHORIZATION` - Authorization failed
-- `E404.NOT_FOUND` - Resource not found
-- `E409.CONFLICT` - Resource conflict
-- `E422.VALIDATION` - Validation failed
-- `E429.RATE_LIMIT` - Rate limit exceeded
-- `E500.SERVER_ERROR` - Internal server error
-- `E503.SERVICE_UNAVAILABLE` - Service unavailable
+### Error Format
+Error responses follow this format:
 
-### **HTTP Status Codes**
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request
-- `401` - Unauthorized
-- `403` - Forbidden
-- `404` - Not Found
-- `409` - Conflict
-- `422` - Unprocessable Entity
-- `429` - Too Many Requests
-- `500` - Internal Server Error
-- `503` - Service Unavailable
-
-## 🔒 **RATE LIMITING**
-
-### **Rate Limits**
-- **Authentication endpoints:** 5 requests per minute
-- **API endpoints:** 60 requests per minute
-- **Public endpoints:** 30 requests per minute
-
-### **Rate Limit Headers**
+```json
+{
+  "success": false,
+  "error": {
+    "id": "error-uuid",
+    "message": "Error description",
+    "code": "ERROR_CODE",
+    "details": {
+      // Additional error details
+    },
+    "timestamp": "2025-01-08T10:30:00Z"
+  }
+}
 ```
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 59
-X-RateLimit-Reset: 1640995200
-X-RateLimit-Window: 60
-X-RateLimit-Burst: false
-```
-
-## 🏢 **MULTI-TENANT ISOLATION**
-
-### **Tenant Scoping**
-All API endpoints automatically scope data by `tenant_id` to ensure multi-tenant isolation.
-
-### **Tenant Headers**
-```
-X-Tenant-ID: tenant_123
-X-Tenant-Name: Acme Corp
-```
-
-## 📊 **PERFORMANCE BUDGETS**
-
-### **API Performance Targets**
-- **Dashboard Stats API:** < 300ms
-- **Project Timeline API:** < 300ms
-- **Authentication Check:** < 50ms
-- **Error Responses:** < 100ms
-
-### **Response Size Limits**
-- **List endpoints:** < 1MB
-- **Detail endpoints:** < 500KB
-- **Export endpoints:** < 10MB
-
-## 🔍 **TESTING**
-
-### **API Testing**
-```bash
-# Test authentication
-curl -X POST http://localhost:8000/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "password": "password"}'
-
-# Test dashboard stats
-curl -H "Authorization: Bearer <token>" \
-  -H "Accept: application/json" \
-  http://localhost:8000/api/v1/project-manager/dashboard/stats
-
-# Test error handling
-curl -H "Authorization: Bearer <token>" \
-  -H "Accept: application/json" \
-  http://localhost:8000/api/v1/nonexistent-endpoint
-```
-
-### **Performance Testing**
-```bash
-# Test API performance
-curl -w "@curl-format.txt" -o /dev/null -s \
-  http://localhost:8000/api/v1/project-manager/dashboard/stats
-```
-
-## 📚 **EXAMPLES**
-
-### **Project Creation**
-```bash
-curl -X POST http://localhost:8000/api/v1/projects \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "name": "New Project",
-    "description": "Project description",
-    "budget_planned": 50000,
-    "start_date": "2024-01-01",
-    "end_date": "2024-06-30"
-  }'
-```
-
-### **Task Update**
-```bash
-curl -X PUT http://localhost:8000/api/v1/tasks/123 \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json" \
-  -d '{
-    "title": "Updated Task",
-    "status": "in_progress",
-    "priority": "high"
-  }'
-```
-
-### **Legacy Route Monitoring**
-```bash
-# Get usage statistics
-curl -H "Authorization: Bearer <token>" \
-  -H "Accept: application/json" \
-  http://localhost:8000/api/v1/legacy-routes/usage
-
-# Generate report
-curl -H "Authorization: Bearer <token>" \
-  -H "Accept: application/json" \
-  http://localhost:8000/api/v1/legacy-routes/report
-```
-
-## 🔗 **RESOURCES**
-
-### **Documentation**
-- [API Reference](../../docs/api/README.md)
-- [Authentication Guide](../../docs/auth/README.md)
-- [Error Handling](../../docs/errors/README.md)
-- [Rate Limiting](../../docs/rate-limiting/README.md)
-
-### **Tools**
-- **API Testing:** Postman, Insomnia, curl
-- **Documentation:** Swagger UI, OpenAPI
-- **Monitoring:** New Relic, DataDog
-
-### **Support**
-- **Email:** api-support@zenamanage.com
-- **Slack:** #api-support
-- **Documentation:** /docs/api
 
 ---
 
-**Last Updated:** December 19, 2024  
-**Version:** 1.0  
-**Maintainer:** ZenaManage Development Team
+## 🔐 AUTHENTICATION
+
+### Authentication Methods
+ZenaManage API supports multiple authentication methods:
+
+#### 1. Personal Access Tokens (Recommended)
+```http
+Authorization: Bearer your-personal-access-token
+```
+
+#### 2. API Keys
+```http
+X-API-Key: your-api-key
+```
+
+#### 3. Session Authentication
+```http
+Cookie: zenamanage_session=your-session-token
+```
+
+### Getting Access Tokens
+
+#### Create Personal Access Token
+```http
+POST /api/auth/tokens
+Content-Type: application/json
+
+{
+  "name": "My API Token",
+  "abilities": ["projects:read", "tasks:write"],
+  "expires_at": "2025-12-31T23:59:59Z"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "1|abcdef1234567890",
+    "name": "My API Token",
+    "abilities": ["projects:read", "tasks:write"],
+    "expires_at": "2025-12-31T23:59:59Z",
+    "created_at": "2025-01-08T10:30:00Z"
+  }
+}
+```
+
+#### Login and Get Token
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "password": "password"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "1|abcdef1234567890",
+    "user": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "user@example.com",
+      "role": "project_manager",
+      "tenant_id": 1
+    }
+  }
+}
+```
+
+### Token Abilities
+Tokens can have specific abilities:
+
+| Ability | Description |
+|---------|-------------|
+| `projects:read` | Read project data |
+| `projects:write` | Create/update projects |
+| `projects:delete` | Delete projects |
+| `tasks:read` | Read task data |
+| `tasks:write` | Create/update tasks |
+| `tasks:delete` | Delete tasks |
+| `clients:read` | Read client data |
+| `clients:write` | Create/update clients |
+| `users:read` | Read user data |
+| `users:write` | Create/update users |
+| `admin` | Full admin access |
+
+---
+
+## ⚡ RATE LIMITING
+
+### Rate Limits
+API requests are rate limited per user:
+
+| Endpoint Type | Rate Limit |
+|---------------|------------|
+| Authentication | 60 requests/minute |
+| General API | 1000 requests/hour |
+| File Upload | 100 requests/hour |
+| Admin Endpoints | 500 requests/hour |
+
+### Rate Limit Headers
+Rate limit information is included in response headers:
+
+```http
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1641648000
+```
+
+### Rate Limit Exceeded
+When rate limit is exceeded:
+
+```json
+{
+  "success": false,
+  "error": {
+    "id": "rate-limit-exceeded",
+    "message": "Rate limit exceeded",
+    "code": "RATE_LIMIT_EXCEEDED",
+    "retry_after": 3600
+  }
+}
+```
+
+---
+
+## 🔄 API VERSIONING
+
+### Version Headers
+Specify API version using headers:
+
+```http
+X-API-Version: v2
+Accept: application/vnd.api.v2+json
+```
+
+### Version in URL
+```http
+GET /api/v2/projects
+```
+
+### Version Deprecation
+Deprecated versions include warning headers:
+
+```http
+X-API-Deprecation-Date: 2025-06-01
+X-API-Deprecation-Warning: API version v1 is deprecated
+```
+
+---
+
+## ❌ ERROR HANDLING
+
+### HTTP Status Codes
+Standard HTTP status codes are used:
+
+| Code | Description |
+|------|-------------|
+| 200 | Success |
+| 201 | Created |
+| 400 | Bad Request |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 404 | Not Found |
+| 422 | Validation Error |
+| 429 | Rate Limit Exceeded |
+| 500 | Internal Server Error |
+
+### Error Examples
+
+#### Validation Error (422)
+```json
+{
+  "success": false,
+  "error": {
+    "id": "validation-error-uuid",
+    "message": "Validation failed",
+    "code": "VALIDATION_ERROR",
+    "details": {
+      "name": ["The name field is required."],
+      "email": ["The email must be a valid email address."]
+    }
+  }
+}
+```
+
+#### Unauthorized (401)
+```json
+{
+  "success": false,
+  "error": {
+    "id": "unauthorized-uuid",
+    "message": "Unauthorized",
+    "code": "UNAUTHORIZED",
+    "details": {
+      "reason": "Invalid or expired token"
+    }
+  }
+}
+```
+
+#### Forbidden (403)
+```json
+{
+  "success": false,
+  "error": {
+    "id": "forbidden-uuid",
+    "message": "Forbidden",
+    "code": "FORBIDDEN",
+    "details": {
+      "reason": "Insufficient permissions",
+      "required_permission": "projects:write"
+    }
+  }
+}
+```
+
+---
+
+## 📡 ENDPOINTS
+
+### Projects API
+
+#### List Projects
+```http
+GET /api/projects
+```
+
+**Query Parameters:**
+- `page` (integer): Page number
+- `per_page` (integer): Items per page (max 100)
+- `status` (string): Filter by status
+- `client_id` (integer): Filter by client
+- `user_id` (integer): Filter by user
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Website Redesign",
+      "description": "Complete website redesign project",
+      "status": "active",
+      "budget_total": 50000,
+      "budget_used": 25000,
+      "progress_pct": 50,
+      "start_date": "2025-01-01",
+      "end_date": "2025-03-31",
+      "client": {
+        "id": 1,
+        "name": "Acme Corp",
+        "email": "contact@acme.com"
+      },
+      "user": {
+        "id": 1,
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-08T10:30:00Z"
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "current_page": 1,
+      "per_page": 20,
+      "total": 1,
+      "last_page": 1
+    }
+  }
+}
+```
+
+#### Get Project
+```http
+GET /api/projects/{id}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Website Redesign",
+    "description": "Complete website redesign project",
+    "status": "active",
+    "budget_total": 50000,
+    "budget_used": 25000,
+    "progress_pct": 50,
+    "start_date": "2025-01-01",
+    "end_date": "2025-03-31",
+    "client": {
+      "id": 1,
+      "name": "Acme Corp",
+      "email": "contact@acme.com"
+    },
+    "user": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com"
+    },
+    "tasks": [
+      {
+        "id": 1,
+        "name": "Design Mockups",
+        "status": "completed",
+        "progress_percent": 100
+      }
+    ],
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-08T10:30:00Z"
+  }
+}
+```
+
+#### Create Project
+```http
+POST /api/projects
+Content-Type: application/json
+
+{
+  "name": "New Project",
+  "description": "Project description",
+  "budget_total": 30000,
+  "start_date": "2025-01-15",
+  "end_date": "2025-04-15",
+  "client_id": 1
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "name": "New Project",
+    "description": "Project description",
+    "status": "planning",
+    "budget_total": 30000,
+    "budget_used": 0,
+    "progress_pct": 0,
+    "start_date": "2025-01-15",
+    "end_date": "2025-04-15",
+    "client_id": 1,
+    "user_id": 1,
+    "created_at": "2025-01-08T10:30:00Z",
+    "updated_at": "2025-01-08T10:30:00Z"
+  }
+}
+```
+
+#### Update Project
+```http
+PUT /api/projects/{id}
+Content-Type: application/json
+
+{
+  "name": "Updated Project Name",
+  "status": "active",
+  "progress_pct": 25
+}
+```
+
+#### Delete Project
+```http
+DELETE /api/projects/{id}
+```
+
+### Tasks API
+
+#### List Tasks
+```http
+GET /api/tasks
+```
+
+**Query Parameters:**
+- `project_id` (integer): Filter by project
+- `user_id` (integer): Filter by assignee
+- `status` (string): Filter by status
+- `priority` (string): Filter by priority
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Design Mockups",
+      "description": "Create initial design mockups",
+      "status": "in_progress",
+      "priority": "high",
+      "progress_percent": 75,
+      "start_date": "2025-01-01",
+      "end_date": "2025-01-15",
+      "project": {
+        "id": 1,
+        "name": "Website Redesign"
+      },
+      "user": {
+        "id": 2,
+        "name": "Jane Smith",
+        "email": "jane@example.com"
+      },
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-08T10:30:00Z"
+    }
+  ]
+}
+```
+
+#### Create Task
+```http
+POST /api/tasks
+Content-Type: application/json
+
+{
+  "name": "New Task",
+  "description": "Task description",
+  "project_id": 1,
+  "user_id": 2,
+  "priority": "medium",
+  "start_date": "2025-01-10",
+  "end_date": "2025-01-20"
+}
+```
+
+#### Update Task
+```http
+PUT /api/tasks/{id}
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "progress_percent": 100,
+  "completed_at": "2025-01-08T10:30:00Z"
+}
+```
+
+### Clients API
+
+#### List Clients
+```http
+GET /api/clients
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "Acme Corp",
+      "email": "contact@acme.com",
+      "phone": "+1-555-123-4567",
+      "company": "Acme Corporation",
+      "address": "123 Main St, City, State 12345",
+      "projects_count": 3,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-08T10:30:00Z"
+    }
+  ]
+}
+```
+
+#### Create Client
+```http
+POST /api/clients
+Content-Type: application/json
+
+{
+  "name": "New Client",
+  "email": "client@example.com",
+  "phone": "+1-555-987-6543",
+  "company": "Client Company",
+  "address": "456 Oak Ave, City, State 54321"
+}
+```
+
+### Dashboard API
+
+#### Get Dashboard Data
+```http
+GET /api/dashboard
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "projects": {
+      "total": 10,
+      "active": 5,
+      "completed": 3,
+      "on_hold": 2
+    },
+    "tasks": {
+      "total": 50,
+      "pending": 15,
+      "in_progress": 20,
+      "completed": 15
+    },
+    "clients": {
+      "total": 8,
+      "active": 6
+    },
+    "recent_activity": [
+      {
+        "id": 1,
+        "type": "task_completed",
+        "description": "Task 'Design Mockups' completed",
+        "user": "Jane Smith",
+        "created_at": "2025-01-08T10:30:00Z"
+      }
+    ]
+  }
+}
+```
+
+#### Get Dashboard Stats
+```http
+GET /api/dashboard/stats
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "performance": {
+      "avg_response_time": 150,
+      "uptime": 99.9,
+      "error_rate": 0.1
+    },
+    "usage": {
+      "api_calls_today": 1250,
+      "active_users": 25,
+      "storage_used": "2.5GB"
+    }
+  }
+}
+```
+
+---
+
+## 📝 REQUEST/RESPONSE EXAMPLES
+
+### Complete Project Workflow
+
+#### 1. Create Project
+```http
+POST /api/projects
+Authorization: Bearer your-token
+Content-Type: application/json
+
+{
+  "name": "E-commerce Platform",
+  "description": "Build a complete e-commerce platform",
+  "budget_total": 100000,
+  "start_date": "2025-01-15",
+  "end_date": "2025-06-15",
+  "client_id": 1
+}
+```
+
+#### 2. Add Tasks to Project
+```http
+POST /api/tasks
+Authorization: Bearer your-token
+Content-Type: application/json
+
+{
+  "name": "Database Design",
+  "description": "Design database schema",
+  "project_id": 1,
+  "user_id": 2,
+  "priority": "high",
+  "start_date": "2025-01-15",
+  "end_date": "2025-01-25"
+}
+```
+
+#### 3. Update Task Progress
+```http
+PUT /api/tasks/1
+Authorization: Bearer your-token
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "progress_percent": 50
+}
+```
+
+#### 4. Complete Project
+```http
+PUT /api/projects/1
+Authorization: Bearer your-token
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "progress_pct": 100,
+  "completed_at": "2025-06-15T00:00:00Z"
+}
+```
+
+### File Upload Example
+
+#### Upload Document
+```http
+POST /api/documents
+Authorization: Bearer your-token
+Content-Type: multipart/form-data
+
+{
+  "name": "Project Requirements",
+  "description": "Detailed project requirements document",
+  "project_id": 1,
+  "file": [binary file data]
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Project Requirements",
+    "description": "Detailed project requirements document",
+    "file_path": "/uploads/documents/requirements.pdf",
+    "file_size": 1024000,
+    "mime_type": "application/pdf",
+    "project_id": 1,
+    "created_at": "2025-01-08T10:30:00Z"
+  }
+}
+```
+
+---
+
+## 🛠️ SDKs & LIBRARIES
+
+### JavaScript/Node.js
+```bash
+npm install zenamanage-api
+```
+
+```javascript
+const ZenaManage = require('zenamanage-api');
+
+const client = new ZenaManage({
+  baseUrl: 'https://zenamanage.com/api',
+  token: 'your-access-token'
+});
+
+// Get projects
+const projects = await client.projects.list();
+
+// Create project
+const project = await client.projects.create({
+  name: 'New Project',
+  description: 'Project description',
+  budget_total: 30000
+});
+```
+
+### PHP
+```bash
+composer require zenamanage/api-client
+```
+
+```php
+use ZenaManage\ApiClient;
+
+$client = new ApiClient([
+    'base_url' => 'https://zenamanage.com/api',
+    'token' => 'your-access-token'
+]);
+
+// Get projects
+$projects = $client->projects()->list();
+
+// Create project
+$project = $client->projects()->create([
+    'name' => 'New Project',
+    'description' => 'Project description',
+    'budget_total' => 30000
+]);
+```
+
+### Python
+```bash
+pip install zenamanage-api
+```
+
+```python
+from zenamanage import ZenaManageClient
+
+client = ZenaManageClient(
+    base_url='https://zenamanage.com/api',
+    token='your-access-token'
+)
+
+# Get projects
+projects = client.projects.list()
+
+# Create project
+project = client.projects.create({
+    'name': 'New Project',
+    'description': 'Project description',
+    'budget_total': 30000
+})
+```
+
+---
+
+## 🔗 WEBHOOKS
+
+### Webhook Configuration
+Configure webhooks to receive real-time notifications:
+
+```http
+POST /api/webhooks
+Authorization: Bearer your-token
+Content-Type: application/json
+
+{
+  "url": "https://your-app.com/webhooks/zenamanage",
+  "events": ["project.created", "task.completed"],
+  "secret": "your-webhook-secret"
+}
+```
+
+### Webhook Events
+Available webhook events:
+
+| Event | Description |
+|-------|-------------|
+| `project.created` | Project created |
+| `project.updated` | Project updated |
+| `project.completed` | Project completed |
+| `task.created` | Task created |
+| `task.updated` | Task updated |
+| `task.completed` | Task completed |
+| `user.created` | User created |
+| `user.updated` | User updated |
+
+### Webhook Payload
+```json
+{
+  "event": "project.created",
+  "data": {
+    "id": 1,
+    "name": "New Project",
+    "status": "planning",
+    "created_at": "2025-01-08T10:30:00Z"
+  },
+  "timestamp": "2025-01-08T10:30:00Z"
+}
+```
+
+---
+
+## 🧪 TESTING
+
+### API Testing
+Use tools like Postman, Insomnia, or curl to test the API:
+
+#### Test Authentication
+```bash
+curl -X POST https://zenamanage.com/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "password"
+  }'
+```
+
+#### Test Project Creation
+```bash
+curl -X POST https://zenamanage.com/api/projects \
+  -H "Authorization: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Project",
+    "description": "API test project",
+    "budget_total": 10000
+  }'
+```
+
+### Postman Collection
+Import our Postman collection for easy API testing:
+[Download Postman Collection](https://zenamanage.com/api/postman-collection.json)
+
+### API Testing Tools
+- **Postman**: GUI-based API testing
+- **Insomnia**: Modern API testing tool
+- **curl**: Command-line API testing
+- **HTTPie**: User-friendly command-line HTTP client
+
+---
+
+## 📞 SUPPORT
+
+### API Support
+- **Documentation**: This comprehensive guide
+- **API Status**: [status.zenamanage.com](https://status.zenamanage.com)
+- **Support Email**: api-support@zenamanage.com
+- **Developer Forum**: [forum.zenamanage.com](https://forum.zenamanage.com)
+
+### Rate Limits & Quotas
+- **Free Tier**: 1,000 requests/month
+- **Pro Tier**: 100,000 requests/month
+- **Enterprise**: Unlimited requests
+
+### API Changelog
+- **v2.0**: Current version with advanced features
+- **v1.5**: Previous version with basic functionality
+- **v1.0**: Initial API release
+
+---
+
+**ZenaManage API Documentation v2.0**  
+*Last Updated: January 8, 2025*  
+*For API support, contact api-support@zenamanage.com or visit our developer documentation center.*

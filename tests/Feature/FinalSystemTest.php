@@ -26,19 +26,24 @@ class FinalSystemTest extends TestCase
     {
         parent::setUp();
         
+        // Create tenant first
+        $tenant = \App\Models\Tenant::factory()->create();
+        
         // Create test users
         $this->user = User::factory()->create([
             'role' => 'user',
-            'email' => 'user@test.com'
+            'email' => 'user@test.com',
+            'tenant_id' => $tenant->id
         ]);
 
         $this->admin = User::factory()->create([
             'role' => 'admin',
-            'email' => 'admin@test.com'
+            'email' => 'admin@test.com',
+            'tenant_id' => $tenant->id
         ]);
 
-        // Run migrations
-        Artisan::call('migrate:fresh');
+        // Run migrations (already done by RefreshDatabase trait)
+        // Artisan::call('migrate:fresh');
     }
 
     /**
@@ -493,7 +498,11 @@ class FinalSystemTest extends TestCase
         $this->actingAs($this->user);
 
         // Create dashboard
-        $dashboard = Dashboard::factory()->create(['user_id' => $this->user->id]);
+        $dashboard = Dashboard::factory()->create([
+            'name' => 'Test Dashboard',
+            'user_id' => (string)$this->user->id,
+            'tenant_id' => (string)$this->user->tenant_id
+        ]);
 
         // Create widget
         $widget = Widget::factory()->create(['dashboard_id' => $dashboard->id]);

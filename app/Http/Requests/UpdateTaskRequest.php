@@ -113,7 +113,8 @@ class UpdateTaskRequest extends BaseApiRequest
                     $estimatedHours = $this->input('estimated_hours') ?? ($this->task ? $this->task->estimated_hours : 0);
                     if ($value && $estimatedHours && $value > ($estimatedHours * 1.5)) {
                         // Chỉ warning, không fail validation
-                        session()->flash('warning', 'Số giờ thực tế vượt quá 50% so với ước tính.');
+                        // Warning: Actual hours exceed estimated hours by more than 50%
+                        // This should be handled by the controller, not in validation
                     }
                 }
             ],

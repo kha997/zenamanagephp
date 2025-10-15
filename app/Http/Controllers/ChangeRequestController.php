@@ -9,7 +9,7 @@ use Src\ChangeRequest\Models\ChangeRequest;
 use Src\ChangeRequest\Resources\ChangeRequestCollection;
 use Src\ChangeRequest\Resources\ChangeRequestResource;
 use Src\Foundation\Helpers\AuthHelper;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
@@ -51,11 +51,11 @@ class ChangeRequestController extends Controller
                 (int) $request->get('per_page', 15)
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new ChangeRequestCollection($changeRequests)
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách change requests: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy danh sách change requests: ' . $e->getMessage());
         }
     }
 
@@ -76,13 +76,13 @@ class ChangeRequestController extends Controller
                 $this->resolveActorId()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new ChangeRequestResource($changeRequest),
                 'Change request đã được tạo thành công',
                 201
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể tạo change request: ' . $e->getMessage());
+            return ApiResponse::error('Không thể tạo change request: ' . $e->getMessage());
         }
     }
 
@@ -100,14 +100,14 @@ class ChangeRequestController extends Controller
             $changeRequest = $this->changeRequestService->getChangeRequestById($id);
 
             if (!$changeRequest || $changeRequest->project_id !== $projectId) {
-                return JSendResponse::error('Change request không tồn tại', 404);
+                return ApiResponse::error('Change request không tồn tại', 404);
             }
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new ChangeRequestResource($changeRequest)
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin change request: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy thông tin change request: ' . $e->getMessage());
         }
     }
 
@@ -129,12 +129,12 @@ class ChangeRequestController extends Controller
                 $this->resolveActorId()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new ChangeRequestResource($changeRequest),
                 'Change request đã được cập nhật thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể cập nhật change request: ' . $e->getMessage());
+            return ApiResponse::error('Không thể cập nhật change request: ' . $e->getMessage());
         }
     }
 
@@ -154,22 +154,22 @@ class ChangeRequestController extends Controller
                 ->first();
 
             if (!$changeRequest) {
-                return JSendResponse::error('Change request không tồn tại', 404);
+                return ApiResponse::error('Change request không tồn tại', 404);
             }
 
             // Chỉ cho phép xóa khi ở trạng thái draft
             if (!$changeRequest->isDraft()) {
-                return JSendResponse::error('Không thể xóa change request đã được submit', 403);
+                return ApiResponse::error('Không thể xóa change request đã được submit', 403);
             }
 
             $changeRequest->delete();
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 null,
                 'Change request đã được xóa thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể xóa change request: ' . $e->getMessage());
+            return ApiResponse::error('Không thể xóa change request: ' . $e->getMessage());
         }
     }
 
@@ -189,12 +189,12 @@ class ChangeRequestController extends Controller
                 $this->resolveActorId()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new ChangeRequestResource($changeRequest),
                 'Change request đã được submit để chờ phê duyệt'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể submit change request: ' . $e->getMessage());
+            return ApiResponse::error('Không thể submit change request: ' . $e->getMessage());
         }
     }
 
@@ -215,12 +215,12 @@ class ChangeRequestController extends Controller
                 $request->get('decision_note')
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new ChangeRequestResource($changeRequest),
                 'Change request đã được phê duyệt'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể phê duyệt change request: ' . $e->getMessage());
+            return ApiResponse::error('Không thể phê duyệt change request: ' . $e->getMessage());
         }
     }
 
@@ -241,12 +241,12 @@ class ChangeRequestController extends Controller
                 $request->get('decision_note')
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new ChangeRequestResource($changeRequest),
                 'Change request đã bị từ chối'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể từ chối change request: ' . $e->getMessage());
+            return ApiResponse::error('Không thể từ chối change request: ' . $e->getMessage());
         }
     }
 
@@ -262,9 +262,9 @@ class ChangeRequestController extends Controller
         try {
             $stats = $this->changeRequestService->getChangeRequestStats($projectId);
 
-            return JSendResponse::success($stats);
+            return ApiResponse::success($stats);
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy thống kê change requests: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy thống kê change requests: ' . $e->getMessage());
         }
     }
 
@@ -298,9 +298,9 @@ class ChangeRequestController extends Controller
                 ? 'Liên kết đã được thêm thành công'
                 : 'Liên kết đã được xóa thành công';
 
-            return JSendResponse::success($result, $message);
+            return ApiResponse::success($result, $message);
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể quản lý liên kết: ' . $e->getMessage());
+            return ApiResponse::error('Không thể quản lý liên kết: ' . $e->getMessage());
         }
     }
 

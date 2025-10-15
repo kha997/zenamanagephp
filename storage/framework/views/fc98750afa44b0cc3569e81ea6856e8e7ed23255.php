@@ -6,6 +6,12 @@
     <title><?php echo $__env->yieldContent('title', 'Super Admin'); ?> - ZenaManage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Suppress Tailwind CSS production warning
+        tailwind.config = {
+            suppressWarnings: true
+        };
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
     <script src="<?php echo e(asset('js/chart.umd.js')); ?>"></script>
     <!-- Core Page Refresh CSS -->
@@ -17,6 +23,10 @@
     <!-- Enhanced Dashboard Styles -->
     <link rel="stylesheet" href="<?php echo e(asset('css/dashboard-enhanced.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset('css/tenants-enhanced.css')); ?>">
+    <script src="<?php echo e(asset('js/tenants/performance.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/tenants/advanced-filters.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/tenants/bulk-operations.js')); ?>" defer></script>
+    <script src="<?php echo e(asset('js/tenants/export-enhancements.js')); ?>" defer></script>
     <?php echo $__env->yieldPushContent('styles'); ?>
     <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <?php echo $__env->yieldContent('styles'); ?>
@@ -130,8 +140,22 @@
     
     console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
 " x-cloak>
-    <!-- Topbar -->
-    <?php echo $__env->make('layouts.partials._topbar', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <!-- Unified HeaderShell for Admin -->
+    <?php if (isset($component)) { $__componentOriginalc254754b9d5db91d5165876f9d051922ca0066f4 = $component; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.shared.header-wrapper','data' => ['variant' => 'admin','user' => Auth::user(),'tenant' => Auth::user()->tenant ?? null,'alertCount' => $alertCount ?? 0,'theme' => $theme ?? 'light']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? (array) $attributes->getIterator() : [])); ?>
+<?php $component->withName('shared.header-wrapper'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag && $constructor = (new ReflectionClass(Illuminate\View\AnonymousComponent::class))->getConstructor()): ?>
+<?php $attributes = $attributes->except(collect($constructor->getParameters())->map->getName()->all()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['variant' => 'admin','user' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(Auth::user()),'tenant' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(Auth::user()->tenant ?? null),'alert-count' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($alertCount ?? 0),'theme' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($theme ?? 'light')]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginalc254754b9d5db91d5165876f9d051922ca0066f4)): ?>
+<?php $component = $__componentOriginalc254754b9d5db91d5165876f9d051922ca0066f4; ?>
+<?php unset($__componentOriginalc254754b9d5db91d5165876f9d051922ca0066f4); ?>
+<?php endif; ?>
     
     <div class="flex">
         <!-- Sidebar - Desktop -->
@@ -159,7 +183,7 @@
     </div>
     
     <!-- Mobile Bottom Navigation -->
-    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-mobile-nav">
         <div class="flex items-center justify-around py-2">
             <a href="/admin/dashboard" 
                class="flex flex-col items-center py-2 px-3 text-xs <?php echo e(request()->is('admin/dashboard') ? 'text-blue-600' : 'text-gray-500'); ?>">

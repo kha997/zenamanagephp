@@ -1,373 +1,183 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Services\MetricsCollectionService;
-use App\Services\StructuredLoggingService;
-use Illuminate\Http\Request;
+use App\Services\MonitoringService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class MonitoringController extends Controller
 {
-    /**
-     * Get application metrics
-     */
-    public function metrics(): JsonResponse
-    {
-        try {
-            $metrics = MetricsCollectionService::collectAllMetrics();
-            
-            // Store metrics for historical tracking
-            MetricsCollectionService::storeMetrics($metrics);
-            
-            // Log metrics collection
-            StructuredLoggingService::logEvent('metrics_collected', [
-                'metrics_count' => count($metrics),
-                'timestamp' => now()->toISOString(),
-            ]);
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => $metrics,
-                'timestamp' => now()->toISOString(),
-            ]);
-        } catch (\Exception $e) {
-            StructuredLoggingService::logError('Failed to collect metrics', $e);
-            
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to collect metrics',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
+    public function __construct(
+        private MonitoringService $monitoringService
+    ) {
+        $this->middleware('auth:sanctum');
+        $this->middleware('ability:tenant');
     }
 
     /**
-     * Get health status
+     * Get system health status
      */
     public function health(): JsonResponse
     {
         try {
-            $health = [
-                'status' => 'healthy',
-                'timestamp' => now()->toISOString(),
-                'version' => config('app.version', '1.0.0'),
-                'environment' => app()->environment(),
-                'checks' => [
-                    'database' => $this->checkDatabase(),
-                    'cache' => $this->checkCache(),
-                    'queue' => $this->checkQueue(),
-                    'storage' => $this->checkStorage(),
-                ],
-            ];
-            
-            // Determine overall health status
-            $allHealthy = collect($health['checks'])->every(function ($check) {
-                return $check['status'] === 'healthy';
-            });
-            
-            if (!$allHealthy) {
-                $health['status'] = 'degraded';
-            }
-            
-            return response()->json($health);
-        } catch (\Exception $e) {
-            StructuredLoggingService::logError('Health check failed', $e);
-            
-            return response()->json([
-                'status' => 'unhealthy',
-                'timestamp' => now()->toISOString(),
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
+            $health = $this->monitoringService->getSystemHealth();
 
-    /**
-     * Get performance metrics
-     */
-    public function performance(): JsonResponse
-    {
-        try {
-            $performance = [
-                'timestamp' => now()->toISOString(),
-                'application' => [
-                    'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
-                    'peak_memory_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
-                    'execution_time_ms' => round((microtime(true) - $_SERVER['REQUEST_TIME_FLOAT']) * 1000, 2),
-                ],
-                'database' => [
-                    'query_count' => count(\DB::getQueryLog()),
-                    'connection_status' => 'connected',
-                ],
-                'cache' => [
-                    'driver' => config('cache.default'),
-                    'status' => 'available',
-                ],
-                'system' => [
-                    'cpu_usage_percent' => $this->getCpuUsage(),
-                    'memory_usage_percent' => $this->getMemoryUsage(),
-                    'disk_usage_percent' => $this->getDiskUsage(),
-                    'load_average' => sys_getloadavg(),
-                ],
-            ];
-            
             return response()->json([
                 'status' => 'success',
-                'data' => $performance,
+                'data' => $health,
+                'timestamp' => now()->toISOString(),
             ]);
+
         } catch (\Exception $e) {
-            StructuredLoggingService::logError('Performance metrics failed', $e);
-            
+            Log::error('Failed to get system health', [
+                'error' => $e->getMessage(),
+                'tenant_id' => Auth::user()?->tenant_id,
+                'user_id' => Auth::id(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to collect performance metrics',
-                'error' => $e->getMessage(),
+                'message' => 'Failed to get system health',
+                'error' => [
+                    'id' => 'monitoring_health_error',
+                    'message' => $e->getMessage(),
+                ],
             ], 500);
         }
     }
 
     /**
-     * Get historical metrics
+     * Get API metrics
      */
-    public function historical(Request $request): JsonResponse
+    public function apiMetrics(): JsonResponse
     {
         try {
-            $hours = $request->get('hours', 24);
-            $hours = min($hours, 168); // Max 1 week
-            
-            $metrics = MetricsCollectionService::getStoredMetrics($hours);
-            
+            $metrics = $this->monitoringService->getApiMetrics();
+
             return response()->json([
                 'status' => 'success',
                 'data' => $metrics,
-                'hours' => $hours,
-                'count' => count($metrics),
+                'timestamp' => now()->toISOString(),
             ]);
+
         } catch (\Exception $e) {
-            StructuredLoggingService::logError('Historical metrics failed', $e);
-            
+            Log::error('Failed to get API metrics', [
+                'error' => $e->getMessage(),
+                'tenant_id' => Auth::user()?->tenant_id,
+                'user_id' => Auth::id(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get historical metrics',
-                'error' => $e->getMessage(),
+                'message' => 'Failed to get API metrics',
+                'error' => [
+                    'id' => 'monitoring_api_metrics_error',
+                    'message' => $e->getMessage(),
+                ],
             ], 500);
         }
     }
 
     /**
-     * Get logs
+     * Get database metrics
      */
-    public function logs(Request $request): JsonResponse
+    public function databaseMetrics(): JsonResponse
     {
         try {
-            $level = $request->get('level', 'info');
-            $limit = min($request->get('limit', 100), 1000);
-            
-            // This is a simplified implementation
-            // In production, you'd want to use a proper log aggregation service
-            $logs = $this->getRecentLogs($level, $limit);
-            
+            $metrics = $this->monitoringService->getDatabaseMetrics();
+
             return response()->json([
                 'status' => 'success',
-                'data' => $logs,
-                'level' => $level,
-                'limit' => $limit,
+                'data' => $metrics,
+                'timestamp' => now()->toISOString(),
             ]);
+
         } catch (\Exception $e) {
-            StructuredLoggingService::logError('Log retrieval failed', $e);
-            
+            Log::error('Failed to get database metrics', [
+                'error' => $e->getMessage(),
+                'tenant_id' => Auth::user()?->tenant_id,
+                'user_id' => Auth::id(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to get logs',
-                'error' => $e->getMessage(),
+                'message' => 'Failed to get database metrics',
+                'error' => [
+                    'id' => 'monitoring_database_metrics_error',
+                    'message' => $e->getMessage(),
+                ],
             ], 500);
         }
     }
 
     /**
-     * Check database health
+     * Get queue metrics
      */
-    protected function checkDatabase(): array
+    public function queueMetrics(): JsonResponse
     {
         try {
-            \DB::connection()->getPdo();
-            return [
-                'status' => 'healthy',
-                'message' => 'Database connection successful',
-            ];
-        } catch (\Exception $e) {
-            return [
-                'status' => 'unhealthy',
-                'message' => 'Database connection failed',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
+            $metrics = $this->monitoringService->getQueueMetrics();
 
-    /**
-     * Check cache health
-     */
-    protected function checkCache(): array
-    {
-        try {
-            $testKey = 'health_check_' . time();
-            \Cache::put($testKey, 'test', 60);
-            $value = \Cache::get($testKey);
-            \Cache::forget($testKey);
-            
-            if ($value === 'test') {
-                return [
-                    'status' => 'healthy',
-                    'message' => 'Cache operations successful',
-                ];
-            } else {
-                return [
-                    'status' => 'unhealthy',
-                    'message' => 'Cache operations failed',
-                ];
-            }
-        } catch (\Exception $e) {
-            return [
-                'status' => 'unhealthy',
-                'message' => 'Cache check failed',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Check queue health
-     */
-    protected function checkQueue(): array
-    {
-        try {
-            $queue = app('queue');
-            $connection = $queue->connection();
-            
-            return [
-                'status' => 'healthy',
-                'message' => 'Queue connection successful',
-            ];
-        } catch (\Exception $e) {
-            return [
-                'status' => 'unhealthy',
-                'message' => 'Queue connection failed',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Check storage health
-     */
-    protected function checkStorage(): array
-    {
-        try {
-            $testFile = 'health_check_' . time() . '.txt';
-            $testContent = 'test';
-            
-            \Storage::put($testFile, $testContent);
-            $retrieved = \Storage::get($testFile);
-            \Storage::delete($testFile);
-            
-            if ($retrieved === $testContent) {
-                return [
-                    'status' => 'healthy',
-                    'message' => 'Storage operations successful',
-                ];
-            } else {
-                return [
-                    'status' => 'unhealthy',
-                    'message' => 'Storage operations failed',
-                ];
-            }
-        } catch (\Exception $e) {
-            return [
-                'status' => 'unhealthy',
-                'message' => 'Storage check failed',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Get CPU usage percentage
-     */
-    protected function getCpuUsage(): float
-    {
-        if (function_exists('sys_getloadavg')) {
-            $load = sys_getloadavg();
-            return round($load[0] * 100, 2);
-        }
-        return 0.0;
-    }
-
-    /**
-     * Get memory usage percentage
-     */
-    protected function getMemoryUsage(): float
-    {
-        $memoryLimit = ini_get('memory_limit');
-        if ($memoryLimit === '-1') {
-            return 0.0;
-        }
-        
-        $memoryLimitBytes = $this->convertToBytes($memoryLimit);
-        $memoryUsage = memory_get_usage(true);
-        
-        return round(($memoryUsage / $memoryLimitBytes) * 100, 2);
-    }
-
-    /**
-     * Get disk usage percentage
-     */
-    protected function getDiskUsage(): float
-    {
-        $total = disk_total_space('/');
-        $free = disk_free_space('/');
-        
-        if ($total && $free) {
-            return round((($total - $free) / $total) * 100, 2);
-        }
-        
-        return 0.0;
-    }
-
-    /**
-     * Convert memory limit string to bytes
-     */
-    protected function convertToBytes(string $value): int
-    {
-        $value = trim($value);
-        $last = strtolower($value[strlen($value) - 1]);
-        $value = (int) $value;
-
-        switch ($last) {
-            case 'g':
-                $value *= 1024;
-            case 'm':
-                $value *= 1024;
-            case 'k':
-                $value *= 1024;
-        }
-
-        return $value;
-    }
-
-    /**
-     * Get recent logs (simplified implementation)
-     */
-    protected function getRecentLogs(string $level, int $limit): array
-    {
-        // This is a simplified implementation
-        // In production, you'd want to use a proper log aggregation service
-        return [
-            [
+            return response()->json([
+                'status' => 'success',
+                'data' => $metrics,
                 'timestamp' => now()->toISOString(),
-                'level' => $level,
-                'message' => 'Sample log entry',
-                'context' => ['correlation_id' => 'sample-id'],
-            ],
-        ];
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get queue metrics', [
+                'error' => $e->getMessage(),
+                'tenant_id' => Auth::user()?->tenant_id,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get queue metrics',
+                'error' => [
+                    'id' => 'monitoring_queue_metrics_error',
+                    'message' => $e->getMessage(),
+                ],
+            ], 500);
+        }
+    }
+
+    /**
+     * Get monitoring dashboard data
+     */
+    public function dashboard(): JsonResponse
+    {
+        try {
+            $data = [
+                'api_metrics' => $this->monitoringService->getApiMetrics(),
+                'database_metrics' => $this->monitoringService->getDatabaseMetrics(),
+                'queue_metrics' => $this->monitoringService->getQueueMetrics(),
+                'system_health' => $this->monitoringService->getSystemHealth(),
+            ];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $data,
+                'timestamp' => now()->toISOString(),
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get monitoring dashboard', [
+                'error' => $e->getMessage(),
+                'tenant_id' => Auth::user()?->tenant_id,
+                'user_id' => Auth::id(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to get monitoring dashboard',
+                'error' => [
+                    'id' => 'monitoring_dashboard_error',
+                    'message' => $e->getMessage(),
+                ],
+            ], 500);
+        }
     }
 }

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\WorkTemplate\Models\Template;
 use Src\WorkTemplate\Resources\TemplateResource;
 
@@ -75,7 +75,7 @@ class TemplateController extends Controller
         $perPage = min($request->get('per_page', 15), 100); // Giới hạn tối đa 100
         $templates = $query->paginate($perPage);
         
-        return JSendResponse::success([
+        return ApiResponse::success([
             'templates' => $templates
         ]);
     }
@@ -94,11 +94,11 @@ class TemplateController extends Controller
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'template' => new TemplateResource($template->load(['latestVersion']))
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Failed to create template: ' . $e->getMessage(),
                 500
             );
@@ -116,10 +116,10 @@ class TemplateController extends Controller
         $template = Template::with(['versions', 'latestVersion'])->find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template không tồn tại', 404);
+            return ApiResponse::error('Template không tồn tại', 404);
         }
         
-        return JSendResponse::success([
+        return ApiResponse::success([
             'template' => new TemplateResource($template)
         ]);
     }
@@ -136,7 +136,7 @@ class TemplateController extends Controller
         $template = Template::find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template không tồn tại', 404);
+            return ApiResponse::error('Template không tồn tại', 404);
         }
         
         try {
@@ -146,11 +146,11 @@ class TemplateController extends Controller
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'template' => new TemplateResource($updatedTemplate->load(['latestVersion']))
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Failed to update template: ' . $e->getMessage(),
                 500
             );
@@ -168,13 +168,13 @@ class TemplateController extends Controller
     {
         $userId = $this->getUserId($request);
         if (!$userId) {
-            return JSendResponse::error('Unauthorized', 401);
+            return ApiResponse::error('Unauthorized', 401);
         }
 
         $template = Template::find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template không tồn tại', 404);
+            return ApiResponse::error('Template không tồn tại', 404);
         }
         
         try {
@@ -185,12 +185,12 @@ class TemplateController extends Controller
             
             $template->delete();
             
-            return JSendResponse::success(
+            return ApiResponse::success(
                 null,
                 'Template deleted successfully'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Failed to delete template: ' . $e->getMessage(),
                 500
             );
@@ -209,11 +209,11 @@ class TemplateController extends Controller
         $template = Template::with(['latestVersion'])->find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template không tồn tại', 404);
+            return ApiResponse::error('Template không tồn tại', 404);
         }
         
         if (!$template->is_active) {
-            return JSendResponse::error('Template is not active', 400);
+            return ApiResponse::error('Template is not active', 400);
         }
         
         try {
@@ -224,12 +224,12 @@ class TemplateController extends Controller
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
-            return JSendResponse::success(
+            return ApiResponse::success(
                 $result,
                 'Template applied successfully'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Failed to apply template: ' . $e->getMessage(),
                 500
             );
@@ -247,14 +247,14 @@ class TemplateController extends Controller
         $template = Template::find($id);
         
         if (!$template) {
-            return JSendResponse::error('Template không tồn tại', 404);
+            return ApiResponse::error('Template không tồn tại', 404);
         }
         
         $versions = $template->versions()
             ->orderBy('version_number', 'desc')
             ->get();
         
-        return JSendResponse::success(
+        return ApiResponse::success(
             $versions,
             'Template versions retrieved successfully'
         );
@@ -269,7 +269,7 @@ class TemplateController extends Controller
     {
         $categories = Template::getAvailableCategories();
         
-        return JSendResponse::success(
+        return ApiResponse::success(
             $categories,
             'Template categories retrieved successfully'
         );

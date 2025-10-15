@@ -1,0 +1,224 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Early route gate - fail fast if routes are broken
+  route-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, dom, fileinfo, mysql
+          coverage: none
+      
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      
+      - name: Generate key
+        run: php artisan key:generate
+      
+      - name: Run Route Gate
+        run: ./scripts/ci-routes-only.sh
+
+  # Main test suite
+  test:
+    runs-on: ubuntu-latest
+    needs: route-gate
+    strategy:
+      matrix:
+        php: [8.1, 8.2]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, dom, fileinfo, mysql
+          coverage: xdebug
+      
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      
+      - name: Generate key
+        run: php artisan key:generate
+      
+      - name: Directory Permissions
+        run: chmod -R 777 storage bootstrap/cache
+      
+      - name: Create Database
+        run: |
+          mysql --version
+          mysql -e 'CREATE DATABASE zenamanage_testing;'
+      
+      - name: Execute tests (Unit and Feature tests)
+        run: php artisan test --testsuite=Feature --coverage
+      
+      - name: Run Authorization Tests
+        run: php artisan test tests/Feature/AuthorizationTest.php --verbose
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # Dusk E2E tests
+  dusk:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, dom, fileinfo, mysql
+          coverage: none
+      
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      
+      - name: Generate key
+        run: php artisan key:generate
+      
+      - name: Directory Permissions
+        run: chmod -R 777 storage bootstrap/cache
+      
+      - name: Create Database
+        run: |
+          mysql -e 'CREATE DATABASE zenamanage_testing;'
+      
+      - name: Install Chrome Driver
+        run: php artisan dusk:chrome-driver --detect
+      
+      - name: Start Chrome Driver
+        run: ./vendor/laravel/dusk/bin/chromedriver-linux &
+      
+      - name: Run Dusk Tests
+        run: php artisan dusk --configuration=phpunit.dusk.xml
+      
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: screenshots
+          path: tests/Browser/screenshots
+
+  # Security scan
+  security:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, dom, fileinfo, mysql
+          coverage: none
+      
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      
+      - name: Run Security Check
+        run: composer audit
+      
+      - name: Run PHPStan
+        run: ./vendor/bin/phpstan analyse --memory-limit=2G
+
+  # Performance tests
+  performance:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, dom, fileinfo, mysql
+          coverage: none
+      
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+      
+      - name: Generate key
+        run: php artisan key:generate
+      
+      - name: Directory Permissions
+        run: chmod -R 777 storage bootstrap/cache
+      
+      - name: Create Database
+        run: |
+          mysql -e 'CREATE DATABASE zenamanage_testing;'
+      
+      - name: Run Performance Tests
+        run: php artisan test --testsuite=Feature --filter=Perf
+
+  # Deploy to staging (only on develop branch)
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: [test, dusk, security, performance]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your deployment script here
+      
+      - name: Run Smoke Tests
+        run: ./scripts/smoke-check-routes.sh
+
+  # Deploy to production (only on main branch)
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [test, dusk, security, performance]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Production
+        run: |
+          echo "Deploying to production environment..."
+          # Add your deployment script here
+      
+      - name: Run Smoke Tests
+        run: ./scripts/smoke-check-routes.sh
+      
+      - name: Notify Slack
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}

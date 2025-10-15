@@ -11,11 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
-            // Add composite indexes for entity audit queries
-            $table->index(['entity_type', 'entity_id', 'created_at'], 'audit_logs_entity_history_index');
-            $table->index(['action', 'created_at'], 'audit_logs_action_created_index');
-        });
+        if (Schema::hasTable('audit_logs')) {
+            Schema::table('audit_logs', function (Blueprint $table) {
+                // Add composite indexes for entity audit queries
+                if (Schema::hasColumn('audit_logs', 'entity_type') && Schema::hasColumn('audit_logs', 'entity_id')) {
+                    $table->index(['entity_type', 'entity_id', 'created_at'], 'audit_logs_entity_history_index');
+                }
+                if (Schema::hasColumn('audit_logs', 'action')) {
+                    $table->index(['action', 'created_at'], 'audit_logs_action_created_index');
+                }
+            });
+        }
     }
 
     /**
@@ -23,10 +29,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
-            // Drop indexes
-            $table->dropIndex('audit_logs_entity_history_index');
-            $table->dropIndex('audit_logs_action_created_index');
-        });
+        if (Schema::hasTable('audit_logs')) {
+            Schema::table('audit_logs', function (Blueprint $table) {
+                // Drop indexes
+                $table->dropIndex('audit_logs_entity_history_index');
+                $table->dropIndex('audit_logs_action_created_index');
+            });
+        }
     }
 };

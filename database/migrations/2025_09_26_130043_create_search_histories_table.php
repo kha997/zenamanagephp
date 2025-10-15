@@ -15,7 +15,7 @@ return new class extends Migration
     {
         Schema::create('search_histories', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('user_id'); // Use string instead of foreignId
             $table->string('tenant_id');
             $table->string('query');
             $table->string('context')->default('all');

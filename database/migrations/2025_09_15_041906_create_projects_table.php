@@ -11,6 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Drop existing projects table if it exists
+        Schema::dropIfExists('projects');
+        
         Schema::create('projects', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('tenant_id')->nullable();
@@ -19,10 +22,12 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('client_id')->nullable();
             $table->string('pm_id')->nullable();
+            $table->string('owner_id')->nullable();
             $table->date('start_date')->nullable();
             $table->date('end_date')->nullable();
             $table->string('status')->default('draft');
             $table->decimal('progress', 5, 2)->default(0);
+            $table->integer('progress_pct')->default(0);
             $table->decimal('budget_total', 15, 2)->default(0);
             $table->json('tags')->nullable();
             $table->timestamps();

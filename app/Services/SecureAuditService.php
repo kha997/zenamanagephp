@@ -39,8 +39,8 @@ class SecureAuditService
                 'tenant_id' => $tenantId,
                 'old_data' => $oldData ? json_encode($this->maskSensitiveData($oldData)) : null,
                 'new_data' => $newData ? json_encode($this->maskSensitiveData($newData)) : null,
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
+                'ip_address' => app()->bound('request') ? request()->ip() : '127.0.0.1',
+                'user_agent' => app()->bound('request') ? request()->userAgent() : 'CLI',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now()
             ];

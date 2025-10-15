@@ -16,12 +16,13 @@ class AppController extends Controller
     
     public function projects()
     {
-        return view('layouts.app-layout');
+        $projectController = new \App\Http\Controllers\Web\ProjectController();
+        return $projectController->index();
     }
     
     public function tasks()
     {
-        return view('tasks.index');
+        return view('app.tasks.index');
     }
     
     public function documents()

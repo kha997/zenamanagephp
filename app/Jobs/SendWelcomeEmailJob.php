@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Mail;
 
 class SendWelcomeEmailJob implements ShouldQueue
 {
+    use Dispatchable;
 
     public $user;
     public $tries = 3;
@@ -25,7 +26,15 @@ class SendWelcomeEmailJob implements ShouldQueue
     public function __construct(User $user)
     {
         $this->user = $user;
-        $this->onQueue('emails-welcome');
+    }
+    
+    /**
+     * Get the queue the job should be sent to.
+     */
+    public function onQueue($queue)
+    {
+        $this->queue = $queue;
+        return $this;
     }
 
     /**

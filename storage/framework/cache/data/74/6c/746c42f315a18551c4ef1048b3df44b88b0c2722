@@ -1,0 +1,12 @@
+1760542716a:5:{s:7:"message";s:126:"Command "config:show" is not defined.
+
+Did you mean one of these?
+    config:cache
+    config:clear
+    db:show
+    model:show";s:4:"file";s:87:"/Applications/XAMPP/xamppfiles/htdocs/zenamanage/vendor/symfony/console/Application.php";s:4:"line";i:737;s:5:"trace";s:1174:"#0 /Applications/XAMPP/xamppfiles/htdocs/zenamanage/vendor/symfony/console/Application.php(266): Symfony\Component\Console\Application->find('config:show')
+#1 /Applications/XAMPP/xamppfiles/htdocs/zenamanage/vendor/symfony/console/Application.php(175): Symfony\Component\Console\Application->doRun(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#2 /Applications/XAMPP/xamppfiles/htdocs/zenamanage/vendor/laravel/framework/src/Illuminate/Console/Application.php(102): Symfony\Component\Console\Application->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#3 /Applications/XAMPP/xamppfiles/htdocs/zenamanage/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(155): Illuminate\Console\Application->run(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#4 /Applications/XAMPP/xamppfiles/htdocs/zenamanage/artisan(35): Illuminate\Foundation\Console\Kernel->handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+#5 {main}";s:9:"timestamp";s:27:"2025-10-15T14:38:36.924224Z";}

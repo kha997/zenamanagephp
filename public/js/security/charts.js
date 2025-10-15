@@ -1,229 +1,227 @@
-// Security Charts Manager - Clean Implementation
-class SecurityCharts {
-    constructor() {
-        this.charts = {};
-        this.chartData = {};
-        this.chartPeriod = '30d';
-        this.loading = false;
-        this.error = null;
-        
-        // Bind methods
-        this.changePeriod = this.changePeriod.bind(this);
-        this.init = this.init.bind(this);
-        
-        this.init();
+/**
+ * Security Charts - Chart.js visualizations for KPI panels
+ */
+export function lineChart(el, { labels, datasets }) {
+    if (el._chart) {
+        el._chart.destroy();
     }
-
-    init() {
-        console.log('SecurityCharts: Initializing...');
-        
-        // Wait for Chart.js to be available
-        if (typeof Chart === 'undefined') {
-            console.error('Chart.js not loaded');
-            this.error = 'Chart.js not available';
-            return;
-        }
-
-        this.setupEventListeners();
-        this.loadChartData();
-    }
-
-    setupEventListeners() {
-        // Listen for period change events
-        document.addEventListener('chartPeriodChanged', (event) => {
-            if (event.detail && event.detail.period !== this.chartPeriod) {
-                this.chartPeriod = event.detail.period;
-                this.loadChartData();
-            }
-        });
-
-        // Listen for security data updates
-        document.addEventListener('security:dataUpdated', (event) => {
-            this.chartData = event.detail?.data || {};
-            this.renderCharts();
-        });
-    }
-
-    async loadChartData() {
-        if (this.loading) return;
-        
-        this.loading = true;
-        this.error = null;
-
-        try {
-            const url = `/api/admin/security/kpis?period=${this.chartPeriod}`;
-            console.log('SecurityCharts: Loading data from', url);
-
-            const response = await fetch(url, {
-                headers: { 'Accept': 'application/json' }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            this.chartData = data.data || {};
-            
-            console.log('SecurityCharts: Data loaded', this.chartData);
-            
-            // Dispatch data updated event
-            document.dispatchEvent(new CustomEvent('security:dataUpdated', {
-                detail: { data: this.chartData }
-            }));
-
-        } catch (error) {
-            console.error('SecurityCharts: Error loading data:', error);
-            this.error = error.message;
-        } finally {
-            this.loading = false;
-        }
-    }
-
-    renderCharts() {
-        if (this.error) {
-            console.log('SecurityCharts: Cannot render due to error:', this.error);
-            return;
-        }
-
-        // Destroy existing charts
-        Object.values(this.charts).forEach(chart => {
-            if (chart && chart.destroy) {
-                chart.destroy();
-            }
-        });
-        this.charts = {};
-
-        // Create charts
-        this.createChart('mfa-adoption-chart', this.getChartConfig('MFA Adoption', this.chartData.mfaAdoption?.series, '#3B82F6'));
-        this.createChart('login-attempts-chart', this.getChartConfig('Login Attempts', this.chartData.loginAttempts?.success, '#10B981'));
-        this.createChart('active-sessions-chart', this.getChartConfig('Active Sessions', this.chartData.activeSessions?.series, '#6366F1'));
-        this.createChart('failed-logins-chart', this.getChartConfig('Failed Logins', this.chartData.loginAttempts?.failed, '#EF4444'));
-
-        console.log('SecurityCharts: Charts rendered successfully');
-    }
-
-    getChartConfig(title, data, color) {
-        if (!data || !Array.isArray(data) || data.length === 0) {
-            return null;
-        }
-
-        const labels = data.map((_, index) => `Day ${index + 1}`);
-        
-        return {
+    el._chart = new Chart(el.getContext('2d'), {
         type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: title,
-                    data: data,
-                    borderColor: color,
-                    backgroundColor: `${color}20`,
-                    borderWidth: 2,
-                    fill: false,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    pointHoverRadius: 4
-                }]
-            },
+        data: { labels, datasets },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: { 
-                mode: 'index', 
-                intersect: false 
+            animation: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
             },
-            plugins: { 
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${context.parsed.y}`;
-                            }
-                        }
-                    }
+            plugins: {
+                legend: { display: true },
+                tooltip: { enabled: true }
             },
-            scales: { 
-                x: { 
-                        display: false,
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        display: false,
-                        grid: {
-                            display: false
+            scales: {
+                x: {
+                    ticks: { maxRotation: 0 },
+                    type: 'time',
+                    time: {
+                        displayFormats: {
+                            hour: 'MMM dd HH:mm',
+                            day: 'MMM dd',
+                            week: 'MMM dd',
+                            month: 'MMM yyyy'
                         }
                     }
                 },
-                animation: {
-                    duration: 300
+                y: { beginAtZero: true }
+            }
+        }
+    });
+}
+export function areaChart(el, { labels, datasets }) {
+    if (el._chart) {
+        el._chart.destroy();
+    }
+    el._chart = new Chart(el.getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: { display: true },
+                tooltip: { enabled: true }
+            },
+            scales: {
+                x: {
+                    ticks: { maxRotation: 0 },
+                    type: 'time',
+                    time: {
+                        displayFormats: {
+                            hour: 'MMM dd HH:mm',
+                            day: 'MMM dd',
+                            week: 'MMM dd',
+                            month: 'MMM yyyy'
+                        }
+                    }
+                },
+                y: { beginAtZero: true }
+            },
+            elements: {
+                line: {
+                    fill: true
                 }
             }
-        };
-    }
-
-    createChart(canvasId, config) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas || !config) {
-            console.log(`SecurityCharts: Skipping chart ${canvasId} - no canvas or config`);
-            return;
         }
-
-        try {
-            this.charts[canvasId] = new Chart(canvas, config);
-            console.log(`SecurityCharts: Created chart ${canvasId}`);
-        } catch (error) {
-            console.error(`SecurityCharts: Error creating chart ${canvasId}:`, error);
-            this.error = `Failed to create ${canvasId}`;
-        }
-    }
-
-    changePeriod(period) {
-        if (period === this.chartPeriod) return;
-        
-        this.chartPeriod = period;
-        
-        // Dispatch period change event
-        document.dispatchEvent(new CustomEvent('chartPeriodChanged', {
-            detail: { period }
-        }));
-        
-        // Load new data
-        this.loadChartData();
-    }
-
-    destroy() {
-        Object.values(this.charts).forEach(chart => {
-            if (chart && chart.destroy) {
-                chart.destroy();
-            }
-        });
-        this.charts = {};
-    }
+    });
 }
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('SecurityCharts: DOM ready, initializing charts...');
-    
-    // Wait for Chart.js to be available
-    const initCharts = () => {
-        if (typeof Chart !== 'undefined') {
-            window.SecurityCharts = new SecurityCharts();
-            console.log('SecurityCharts: Initialized successfully');
-        } else {
-            console.log('SecurityCharts: Chart.js not ready, retrying...');
-            setTimeout(initCharts, 100);
+export function stackedBarChart(el, { labels, datasets }) {
+    if (el._chart) {
+        el._chart.destroy();
+    }
+    el._chart = new Chart(el.getContext('2d'), {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: { display: true },
+                tooltip: { enabled: true }
+            },
+            scales: {
+                x: {
+                    ticks: { maxRotation: 0 },
+                    type: 'time',
+                    time: {
+                        displayFormats: {
+                            hour: 'MMM dd HH:mm',
+                            day: 'MMM dd',
+                            week: 'MMM dd',
+                            month: 'MMM yyyy'
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    stacked: true
+                }
+            }
         }
+    });
+}
+/**
+ * Downsample data points if more than 365 points
+ */
+export function downsampleData(points, maxPoints = 365) {
+    if (points.length <= maxPoints) {
+        return points;
+    }
+    const step = Math.ceil(points.length / maxPoints);
+    const downsampled = [];
+    for (let i = 0; i < points.length; i += step) {
+        const chunk = points.slice(i, i + step);
+        const avgValue = chunk.reduce((sum, p) => sum + p.value, 0) / chunk.length;
+        const timestamp = chunk[0].ts; // Use first timestamp in chunk
+        downsampled.push({
+            ts: timestamp,
+            value: Math.round(avgValue * 100) / 100
+        });
+    }
+    return downsampled;
+}
+/**
+ * Build chart data from API response
+ */
+export function buildChartData(points, label, color = null) {
+    const downsampled = downsampleData(points);
+    return {
+        labels: downsampled.map(p => p.ts),
+        datasets: [{
+                label: label,
+                data: downsampled.map(p => p.value),
+                borderColor: color || Chart.defaults.color,
+                backgroundColor: color ? color + '20' : Chart.defaults.color + '20',
+                tension: 0.1,
+                fill: false
+            }]
     };
-    
-    initCharts();
-});
-
-// Export for global access
-window.SecurityCharts = SecurityCharts;
+}
+/**
+ * Build stacked chart data for login attempts
+ */
+export function buildStackedChartData(successPoints, failedPoints) {
+    const maxLength = Math.max(successPoints.length, failedPoints.length);
+    const labels = [];
+    const successData = [];
+    const failedData = [];
+    for (let i = 0; i < maxLength; i++) {
+        const successPoint = successPoints[i];
+        const failedPoint = failedPoints[i];
+        if (successPoint) {
+            labels.push(successPoint.ts);
+            successData.push(successPoint.value);
+            failedData.push(failedPoint?.value || 0);
+        }
+        else if (failedPoint) {
+            labels.push(failedPoint.ts);
+            successData.push(0);
+            failedData.push(failedPoint.value);
+        }
+    }
+    return {
+        labels,
+        datasets: [
+            {
+                label: 'Successful Logins',
+                data: successData,
+                backgroundColor: '#10B981',
+                borderColor: '#10B981'
+            },
+            {
+                label: 'Failed Logins',
+                data: failedData,
+                backgroundColor: '#EF4444',
+                borderColor: '#EF4444'
+            }
+        ]
+    };
+}
+/**
+ * Chart error handling
+ */
+export function showChartError(canvas, message) {
+    if (canvas._chart) {
+        canvas._chart.destroy();
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+}
+/**
+ * Chart loading state
+ */
+export function showChartLoading(canvas) {
+    if (canvas._chart) {
+        canvas._chart.destroy();
+    }
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2);
+}

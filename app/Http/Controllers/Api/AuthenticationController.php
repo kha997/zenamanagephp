@@ -3,255 +3,259 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\AuthenticationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 
 /**
  * Authentication Controller
  * 
- * Handles user authentication, token management, and session handling
+ * Handles authentication-related API endpoints
  */
 class AuthenticationController extends Controller
 {
-    protected AuthenticationService $authService;
-    
-    public function __construct(AuthenticationService $authService)
-    {
-        $this->authService = $authService;
-    }
-    
     /**
-     * Login user
-     * POST /api/auth/login
-     */
-    public function login(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string|min:6',
-            'remember' => 'boolean'
-        ]);
-        
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Validation failed',
-                'errors' => $validator->errors(),
-                'code' => 'VALIDATION_ERROR'
-            ], 422);
-        }
-        
-        $result = $this->authService->authenticate(
-            $request->email,
-            $request->password,
-            $request->boolean('remember', false)
-        );
-        
-        if (!$result['success']) {
-            return response()->json($result, 401);
-        }
-        
-        return response()->json($result, 200);
-    }
-    
-    /**
-     * Logout user
-     * POST /api/auth/logout
-     */
-    public function logout(Request $request): JsonResponse
-    {
-        $user = Auth::user();
-        
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'error' => 'User not authenticated',
-                'code' => 'USER_NOT_AUTHENTICATED'
-            ], 401);
-        }
-        
-        $token = $request->bearerToken();
-        $result = $this->authService->logout($user, $token);
-        
-        return response()->json($result, $result['success'] ? 200 : 500);
-    }
-    
-    /**
-     * Refresh token
-     * POST /api/auth/refresh
-     */
-    public function refresh(Request $request): JsonResponse
-    {
-        $token = $request->bearerToken();
-        
-        if (!$token) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Token not provided',
-                'code' => 'TOKEN_NOT_PROVIDED'
-            ], 401);
-        }
-        
-        $result = $this->authService->refreshToken($token);
-        
-        return response()->json($result, $result['success'] ? 200 : 401);
-    }
-    
-    /**
-     * Get current user
-     * GET /api/auth/me
+     * Get current user info
      */
     public function me(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        
-        if (!$user) {
+        try {
+            $user = auth()->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role,
+                        'tenant_id' => $user->tenant_id,
+                        'is_active' => $user->is_active
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get User Info Error', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->check() ? auth()->id() : null
+            ]);
+
             return response()->json([
                 'success' => false,
-                'error' => 'User not authenticated',
-                'code' => 'USER_NOT_AUTHENTICATED'
-            ], 401);
+                'message' => 'Failed to get user info'
+            ], 500);
         }
-        
-        return response()->json([
-            'success' => true,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'tenant_id' => $user->tenant_id,
-                'avatar' => $user->avatar,
-                'preferences' => $user->preferences,
-                'last_login_at' => $user->last_login_at,
-                'last_activity_at' => $user->last_activity_at,
-                'is_active' => $user->is_active
-            ]
-        ]);
     }
-    
-    /**
-     * Validate token
-     * GET /api/auth/validate
-     */
-    public function validateToken(Request $request): JsonResponse
-    {
-        $token = $request->bearerToken();
-        
-        if (!$token) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Token not provided',
-                'code' => 'TOKEN_NOT_PROVIDED'
-            ], 401);
-        }
-        
-        $user = $this->authService->validateToken($token);
-        
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Invalid or expired token',
-                'code' => 'INVALID_TOKEN'
-            ], 401);
-        }
-        
-        return response()->json([
-            'success' => true,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'tenant_id' => $user->tenant_id
-            ]
-        ]);
-    }
-    
+
     /**
      * Get user permissions
-     * GET /api/auth/permissions
      */
     public function permissions(Request $request): JsonResponse
     {
-        $user = Auth::user();
-        
-        if (!$user) {
+        try {
+            $user = auth()->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+
+            // Mock permissions based on role
+            $permissions = match($user->role) {
+                'super_admin' => [
+                    'projects.create', 'projects.read', 'projects.update', 'projects.delete',
+                    'users.create', 'users.read', 'users.update', 'users.delete',
+                    'admin.access', 'system.settings'
+                ],
+                'project_manager' => [
+                    'projects.create', 'projects.read', 'projects.update',
+                    'tasks.create', 'tasks.read', 'tasks.update',
+                    'team.manage'
+                ],
+                'member' => [
+                    'projects.read', 'tasks.read', 'tasks.update'
+                ],
+                default => ['projects.read']
+            };
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'permissions' => $permissions,
+                    'role' => $user->role
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Get User Permissions Error', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->check() ? auth()->id() : null
+            ]);
+
             return response()->json([
                 'success' => false,
-                'error' => 'User not authenticated',
-                'code' => 'USER_NOT_AUTHENTICATED'
-            ], 401);
+                'message' => 'Failed to get user permissions'
+            ], 500);
         }
-        
-        // Get user roles and permissions
-        $roles = $this->getUserRoles($user);
-        $permissions = $this->getUserPermissions($user);
-        
-        return response()->json([
-            'success' => true,
-            'roles' => $roles,
-            'permissions' => $permissions
-        ]);
     }
-    
+
     /**
-     * Get user roles
+     * Login user
      */
-    private function getUserRoles($user): array
+    public function login(Request $request): JsonResponse
     {
-        $roles = [];
-        
-        if ($user->isSuperAdmin()) {
-            $roles[] = 'admin';
-        }
-        
-        // Add more role logic based on your system
-        if ($user->hasRole('project_manager')) {
-            $roles[] = 'project_manager';
-        }
-        
-        if ($user->hasRole('team_member')) {
-            $roles[] = 'team_member';
-        }
-        
-        return $roles;
-    }
-    
-    /**
-     * Get user permissions
-     */
-    private function getUserPermissions($user): array
-    {
-        $permissions = [];
-        
-        if ($user->isSuperAdmin()) {
-            $permissions = [
-                'create_project', 'edit_project', 'delete_project', 'view_project',
-                'create_task', 'edit_task', 'delete_task', 'view_task',
-                'manage_team', 'view_team', 'manage_documents', 'view_documents',
-                'view_analytics', 'manage_settings', 'view_settings'
-            ];
-        } else {
-            // Add permission logic based on user's roles
-            if ($user->hasRole('project_manager')) {
-                $permissions = array_merge($permissions, [
-                    'create_project', 'edit_project', 'view_project',
-                    'create_task', 'edit_task', 'view_task',
-                    'manage_team', 'view_team', 'view_documents',
-                    'view_analytics', 'view_settings'
+        try {
+            $credentials = $request->only('email', 'password');
+            
+            if (Auth::attempt($credentials)) {
+                $user = Auth::user();
+                $token = $user->createToken('API Token')->plainTextToken;
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'user' => $user,
+                        'token' => $token,
+                        'token_type' => 'Bearer'
+                    ]
                 ]);
             }
             
-            if ($user->hasRole('team_member')) {
-                $permissions = array_merge($permissions, [
-                    'view_project', 'create_task', 'edit_task', 'view_task',
-                    'view_team', 'view_documents'
-                ]);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials'
+            ], 401);
+
+        } catch (\Exception $e) {
+            Log::error('Login Error', [
+                'error' => $e->getMessage(),
+                'email' => $request->input('email')
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Login failed'
+            ], 500);
         }
-        
-        return array_unique($permissions);
+    }
+
+    /**
+     * Logout user
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            
+            if ($user) {
+                $user->currentAccessToken()->delete();
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Logged out successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Logout Error', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->check() ? auth()->id() : null
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed'
+            ], 500);
+        }
+    }
+
+    /**
+     * Refresh token
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ], 401);
+            }
+
+            // Delete current token
+            $user->currentAccessToken()->delete();
+            
+            // Create new token
+            $token = $user->createToken('API Token')->plainTextToken;
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'token' => $token,
+                    'token_type' => 'Bearer'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Token Refresh Error', [
+                'error' => $e->getMessage(),
+                'user_id' => auth()->check() ? auth()->id() : null
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Token refresh failed'
+            ], 500);
+        }
+    }
+
+    /**
+     * Validate token
+     */
+    public function validateToken(Request $request): JsonResponse
+    {
+        try {
+            $user = auth()->user();
+            
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid token'
+                ], 401);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'valid' => true,
+                    'user_id' => $user->id,
+                    'expires_at' => $user->currentAccessToken()->expires_at
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Token Validation Error', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Token validation failed'
+            ], 500);
+        }
     }
 }

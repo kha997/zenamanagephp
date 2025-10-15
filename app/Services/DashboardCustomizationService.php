@@ -147,10 +147,8 @@ class DashboardCustomizationService
             
             // Find and remove widget instance
             $widgetInstance = null;
-            $layout = array_filter($layout, function($widget) 
-                    return false; // Remove from array
-                }
-                return true;
+            $layout = array_filter($layout, function($widget) {
+                return false; // Remove from array
             });
 
             if (!$widgetInstance) {
@@ -476,7 +474,8 @@ class DashboardCustomizationService
             ->where('tenant_id', $user->tenant_id)
             ->get();
 
-        return $widgets->filter(function ($widget) 
+        return $widgets->filter(function ($widget) {
+            return true; // Keep all widgets
         })->map(function ($widget) {
             return [
                 'id' => $widget->id,

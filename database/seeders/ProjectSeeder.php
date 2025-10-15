@@ -18,11 +18,33 @@ class ProjectSeeder extends Seeder
      */
     public function run(): void
     {
-        // Tạo sample projects
+        $this->command->info('📋 Seeding projects...');
+
+        // Lấy tất cả tenants để tạo projects cho mỗi tenant
+        $tenants = Tenant::all();
+        
+        if ($tenants->isEmpty()) {
+            $this->command->warn('No tenants found. Skipping projects seeding.');
+            return;
+        }
+
+        foreach ($tenants as $tenant) {
+            $this->createProjectsForTenant($tenant);
+        }
+
+        $this->command->info('✅ Projects seeded successfully!');
+    }
+
+    /**
+     * Tạo projects cho một tenant
+     */
+    private function createProjectsForTenant(Tenant $tenant): void
+    {
+        // Sử dụng tenant ID để tạo unique code
+        $tenantSuffix = substr($tenant->id, -8); // Lấy 8 ký tự cuối của tenant ID
         $projects = [
             [
-                'tenant_id' => '01k5kzpfwd618xmwdwq3rej3jz',
-                'code' => 'PRJ-001',
+                'code' => 'PRJ-' . $tenantSuffix . '-001',
                 'name' => 'Website Redesign',
                 'description' => 'Complete redesign of the company website with modern UI/UX',
                 'status' => 'active',
@@ -32,8 +54,7 @@ class ProjectSeeder extends Seeder
                 'end_date' => now()->addDays(15),
             ],
             [
-                'tenant_id' => '01k5kzpfwd618xmwdwq3rej3jz',
-                'code' => 'PRJ-002',
+                'code' => 'PRJ-' . $tenantSuffix . '-002',
                 'name' => 'Mobile App Development',
                 'description' => 'Development of iOS and Android mobile application',
                 'status' => 'planning',
@@ -43,8 +64,7 @@ class ProjectSeeder extends Seeder
                 'end_date' => now()->addDays(60),
             ],
             [
-                'tenant_id' => '01k5kzpfwd618xmwdwq3rej3jz',
-                'code' => 'PRJ-003',
+                'code' => 'PRJ-' . $tenantSuffix . '-003',
                 'name' => 'Marketing Campaign',
                 'description' => 'Q1 marketing campaign for new product launch',
                 'status' => 'active',
@@ -54,8 +74,7 @@ class ProjectSeeder extends Seeder
                 'end_date' => now()->addDays(10),
             ],
             [
-                'tenant_id' => '01k5kzpfwd618xmwdwq3rej3jz',
-                'code' => 'PRJ-004',
+                'code' => 'PRJ-' . $tenantSuffix . '-004',
                 'name' => 'Database Migration',
                 'description' => 'Migration from MySQL to PostgreSQL',
                 'status' => 'on_hold',
@@ -65,8 +84,7 @@ class ProjectSeeder extends Seeder
                 'end_date' => now()->addDays(30),
             ],
             [
-                'tenant_id' => '01k5kzpfwd618xmwdwq3rej3jz',
-                'code' => 'PRJ-005',
+                'code' => 'PRJ-' . $tenantSuffix . '-005',
                 'name' => 'E-commerce Platform',
                 'description' => 'Build new e-commerce platform with payment integration',
                 'status' => 'completed',
@@ -76,8 +94,7 @@ class ProjectSeeder extends Seeder
                 'end_date' => now()->subDays(10),
             ],
             [
-                'tenant_id' => '01k5kzpfwd618xmwdwq3rej3jz',
-                'code' => 'PRJ-006',
+                'code' => 'PRJ-' . $tenantSuffix . '-006',
                 'name' => 'API Development',
                 'description' => 'RESTful API development for mobile and web applications',
                 'status' => 'active',
@@ -89,7 +106,11 @@ class ProjectSeeder extends Seeder
         ];
 
         foreach ($projects as $projectData) {
-            Project::create($projectData);
+            Project::create(array_merge($projectData, [
+                'tenant_id' => $tenant->id,
+            ]));
         }
+
+        $this->command->info("Created " . count($projects) . " projects for tenant: {$tenant->name}");
     }
 }

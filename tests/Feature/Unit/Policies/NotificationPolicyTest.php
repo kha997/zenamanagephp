@@ -64,13 +64,47 @@ class NotificationPolicyTest extends TestCase
 
     public function test_user_can_create_notification_with_proper_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
+
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
         $this->assertTrue($this->policy->create($this->user));
     }
 
     public function test_user_can_send_notification_with_management_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
+
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
         $this->assertTrue($this->policy->send($this->user));
     }
 }

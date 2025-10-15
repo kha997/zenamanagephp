@@ -77,7 +77,10 @@ class AuthenticationService
                     'email' => $user->email,
                     'tenant_id' => $user->tenant_id,
                     'avatar' => $user->avatar,
-                    'preferences' => $user->preferences
+                    'preferences' => $user->preferences,
+                    'email_verified_at' => $user->email_verified_at,
+                    'role' => $user->role,
+                    'status' => $user->status
                 ],
                 'token' => $token,
                 'expires_at' => $remember ? now()->addDays(30) : now()->addHours(8)

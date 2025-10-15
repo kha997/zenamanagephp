@@ -21,8 +21,8 @@ class BackupJob implements ShouldQueue, ShouldBeUnique
     public $tries = 1; // Only try once for backup jobs
     public $uniqueId = 'backup-job';
 
-    protected $backupType;
-    protected $options;
+    public $backupType;
+    public $options;
 
     /**
      * Create a new job instance.
@@ -31,7 +31,15 @@ class BackupJob implements ShouldQueue, ShouldBeUnique
     {
         $this->backupType = $backupType;
         $this->options = $options;
-        $this->onQueue('backup');
+    }
+    
+    /**
+     * Get the queue the job should be sent to.
+     */
+    public function onQueue($queue)
+    {
+        $this->queue = $queue;
+        return $this;
     }
 
     /**

@@ -343,17 +343,17 @@ class LaunchChecklistService
 
     private function checkSmartTools(): bool
     {
-        return file_exists(resource_path('views/components/smart-search.blade.php'));
+        return file_exists(resource_path('views/components/shared/filters/smart-search.blade.php'));
     }
 
     private function checkMobileOptimization(): bool
     {
-        return file_exists(resource_path('views/components/mobile-fab.blade.php'));
+        return file_exists(resource_path('views/components/shared/mobile/mobile-fab.blade.php'));
     }
 
     private function checkAccessibility(): bool
     {
-        return file_exists(resource_path('views/components/accessibility-skip-links.blade.php'));
+        return file_exists(resource_path('views/components/shared/a11y/accessibility-skip-links.blade.php'));
     }
 
     private function checkApiIntegration(): bool

@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Models\Project;
+use Src\CoreProject\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Project>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<Src\CoreProject\Models\Project>
  */
 class ProjectFactory extends Factory
 {
@@ -22,22 +22,29 @@ class ProjectFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
             'tenant_id' => Tenant::factory(),
-            'code' => 'PRJ-' . strtoupper($this->faker->unique()->regexify('[A-Z0-9]{8}')),
             'name' => $this->faker->company() . ' Project',
+            'code' => 'PRJ-' . strtoupper($this->faker->unique()->regexify('[A-Z0-9]{8}')),
             'description' => $this->faker->paragraph(),
-            'client_id' => null,
-            'pm_id' => User::factory(),
-            'created_by' => User::factory(),
+            'status' => $this->faker->randomElement(['active', 'archived', 'completed', 'on_hold', 'cancelled', 'planning']),
+            'owner_id' => function (array $attributes) {
+                return User::factory()->create(['tenant_id' => $attributes['tenant_id']])->id;
+            },
+            'tags' => $this->faker->words(3),
             'start_date' => $this->faker->dateTimeBetween('-1 month', '+1 month'),
             'end_date' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
-            'status' => $this->faker->randomElement(['planning', 'active', 'in_progress', 'on_hold', 'completed', 'cancelled']),
-            'progress' => $this->faker->randomFloat(2, 0, 100),
+            'priority' => $this->faker->randomElement(['low', 'normal', 'high', 'urgent']),
+            'progress_pct' => $this->faker->numberBetween(0, 100),
+            'budget_total' => $this->faker->randomFloat(2, 10000, 1000000),
             'budget_planned' => $this->faker->randomFloat(2, 10000, 1000000),
             'budget_actual' => $this->faker->randomFloat(2, 0, 1000000),
-            'priority' => $this->faker->randomElement(['low', 'medium', 'high', 'urgent']),
-            'tags' => $this->faker->words(3),
+            'estimated_hours' => $this->faker->randomFloat(2, 40, 1000),
+            'actual_hours' => $this->faker->randomFloat(2, 0, 1000),
+            'risk_level' => $this->faker->randomElement(['low', 'medium', 'high', 'critical']),
+            'is_template' => false,
+            'template_id' => null,
+            'last_activity_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
+            'completion_percentage' => $this->faker->randomFloat(2, 0, 100),
             'settings' => [
                 'notifications' => $this->faker->boolean(),
                 'auto_assign' => $this->faker->boolean(),
@@ -53,7 +60,8 @@ class ProjectFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'active',
-            'progress' => $this->faker->randomFloat(2, 10, 90),
+            'progress_pct' => $this->faker->numberBetween(10, 90),
+            'completion_percentage' => $this->faker->randomFloat(2, 10, 90),
         ]);
     }
 
@@ -64,7 +72,8 @@ class ProjectFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => 'completed',
-            'progress' => 100,
+            'progress_pct' => 100,
+            'completion_percentage' => 100.0,
             'end_date' => $this->faker->dateTimeBetween('-1 month', 'now'),
         ]);
     }
@@ -75,7 +84,7 @@ class ProjectFactory extends Factory
     public function overdue(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'in_progress',
+            'status' => 'active',
             'end_date' => $this->faker->dateTimeBetween('-1 month', '-1 day'),
         ]);
     }

@@ -7,25 +7,25 @@ use Illuminate\Foundation\Http\Kernel as HttpKernel;
 class Kernel extends HttpKernel
 {
     /**
-     * The application's global HTTP middleware stack.
-     *
-     * These middleware are run during every request to your application.
-     *
-     * @var array<int, class-string|string>
+     * Global HTTP middleware (mọi request).
      */
     protected $middleware = [
-        // Temporarily disabled all global middleware for debugging
+        \App\Http\Middleware\TrustProxies::class,
+        \Illuminate\Http\Middleware\HandleCors::class,
+        \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
+        \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
+        \App\Http\Middleware\TrimStrings::class,
+        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
     ];
 
     /**
-     * The application's route middleware groups.
-     *
-     * @var array<string, array<int, class-string|string>>
+     * Route middleware groups.
      */
     protected $middlewareGroups = [
         'web' => [
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            // ✅ BẬT LẠI: session + errors + CSRF + bindings
             \Illuminate\Session\Middleware\StartSession::class,
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
@@ -33,61 +33,67 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // \Illuminate\Routing\Middleware\SubstituteBindings::class, // Temporarily disabled
-            // \App\Http\Middleware\ErrorEnvelopeMiddleware::class, // Temporarily disabled
+            'throttle:api',
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
 
+        /**
+         * Route middleware aliases (assign theo tên ngắn).
+         */
+        protected $routeMiddleware = [
+            'auth'                 => \App\Http\Middleware\Authenticate::class,
+            'guest'                => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'auth.sanctum'         => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            'throttle'             => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+
+            // ✳️ Authentication & Authorization
+            'auth.api'             => \App\Http\Middleware\ApiAuthenticationMiddleware::class,
+            'ability'               => \App\Http\Middleware\AbilityMiddleware::class,
+
+            // ✳️ Tenancy
+            'tenant.scope'         => \App\Http\Middleware\TenantScopeMiddleware::class,
+            // 'tenant.isolation'     => \App\Http\Middleware\TenantIsolationMiddleware::class,
+
+            // ✳️ Rate limit (unified)
+            'rate.limit'           => \App\Http\Middleware\Unified\UnifiedRateLimitMiddleware::class,
+            'rate.limit.sliding'    => \App\Http\Middleware\Unified\UnifiedRateLimitMiddleware::class,
+            'rate.limit.token'      => \App\Http\Middleware\Unified\UnifiedRateLimitMiddleware::class,
+            'rate.limit.fixed'      => \App\Http\Middleware\Unified\UnifiedRateLimitMiddleware::class,
+
+            // ✳️ Security (unified)
+            'security'              => \App\Http\Middleware\Unified\UnifiedSecurityMiddleware::class,
+            'security.headers'      => \App\Http\Middleware\Unified\UnifiedSecurityMiddleware::class,
+
+            // ✳️ Validation (unified)
+            'validation'            => \App\Http\Middleware\Unified\UnifiedValidationMiddleware::class,
+            'input.validation'       => \App\Http\Middleware\Unified\UnifiedValidationMiddleware::class,
+            'feature.flags'        => \App\Http\Middleware\EnsureFeatureFlags::class,
+            'demo.user'            => \App\Http\Middleware\DemoUserMiddleware::class,
+
+            // ⚠️ CORS: nếu dùng custom CorsMiddleware thì bỏ HandleCors ở global trên.
+            // 'cors'               => \App\Http\Middleware\CorsMiddleware::class,
+            // 'token.only'           => \App\Http\Middleware\TokenOnly::class,
+        ];
+
     /**
-     * The application's route middleware.
-     *
-     * These middleware may be assigned to groups or used individually.
-     *
-     * @var array<string, class-string|string>
-     */
-    protected $middlewareAliases = [
-        'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
-        'auth.sanctum' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        'auth.api' => \App\Http\Middleware\ApiAuthenticationMiddleware::class,
-        'auth.session' => \App\Http\Middleware\SessionManagementMiddleware::class,
-        'admin.only' => \App\Http\Middleware\AdminOnly::class,
-        'tenant.scope' => \App\Http\Middleware\TenantScopeMiddleware::class,
-        'tenant.isolation' => \App\Http\Middleware\TenantIsolationMiddleware::class,
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-        'rate.limit' => \App\Http\Middleware\EnhancedRateLimitMiddleware::class,
-        'api.cache' => \App\Http\Middleware\ApiResponseCacheMiddleware::class,
-        'debug.gate' => \App\Http\Middleware\DebugGateMiddleware::class,
-        'cors' => \App\Http\Middleware\CorsMiddleware::class,
-        'token.only' => \App\Http\Middleware\TokenOnly::class,
-        'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
-        'input.sanitization' => \App\Http\Middleware\InputSanitizationMiddleware::class,
-        'error.envelope' => \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
-        'legacy.route' => \App\Http\Middleware\LegacyRouteMiddleware::class,
-        'legacy.redirect' => \App\Http\Middleware\LegacyRedirectMiddleware::class,
-        'legacy.gone' => \App\Http\Middleware\LegacyGoneMiddleware::class,
-        'auth.conditional' => \App\Http\Middleware\ConditionalAuthMiddleware::class,
-    ];
-    
-    /**
-     * Override terminate to handle middleware resolution issues
+     * Override terminate để tránh crash do bind lỗi.
      */
     public function terminate($request, $response)
     {
         try {
             parent::terminate($request, $response);
         } catch (\ReflectionException $e) {
-            // Log the error but don't break the application
             \Log::warning('Middleware resolution error during terminate', [
                 'error' => $e->getMessage(),
                 'request_uri' => $request->getRequestUri(),
-                'method' => $request->getMethod()
+                'method' => $request->getMethod(),
             ]);
         } catch (\Illuminate\Contracts\Container\BindingResolutionException $e) {
-            // Log the error but don't break the application
             \Log::warning('Middleware binding resolution error during terminate', [
                 'error' => $e->getMessage(),
                 'request_uri' => $request->getRequestUri(),
-                'method' => $request->getMethod()
+                'method' => $request->getMethod(),
             ]);
         }
     }

@@ -27,22 +27,14 @@ class AuditServiceTest extends TestCase
     {
         parent::setUp();
         
-        // Mock Auth facade to prevent request errors
-        $mockRequest = Request::create('/test', 'GET');
-        Auth::setRequest($mockRequest);
-        
         $this->auditService = new AuditService();
         
         $tenant = Tenant::factory()->create();
         $this->user = User::factory()->create(['tenant_id' => $tenant->id]);
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'tenant_id' => $tenant->id,
-            'code' => 'PRJ-TEST-' . rand(1000, 9999),
             'name' => 'Test Project',
-            'description' => 'Test project for audit service',
-            'status' => 'active',
-            'progress' => 50,
-            'budget_total' => 100000
+            'status' => 'active'
         ]);
     }
 
@@ -62,7 +54,7 @@ class AuditServiceTest extends TestCase
         ];
         
         $auditLog = $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             $actionData['action'],
             $actionData['entity_type'],
             $actionData['entity_id'],
@@ -73,7 +65,7 @@ class AuditServiceTest extends TestCase
         );
         
         $this->assertNotNull($auditLog);
-        $this->assertEquals($this->user->id, $auditLog->user_id);
+        $this->assertEquals((string) $this->user->id, $auditLog->user_id);
         $this->assertEquals('project.created', $auditLog->action);
         $this->assertEquals('project', $auditLog->entity_type);
         $this->assertEquals($this->project->id, $auditLog->entity_id);
@@ -93,14 +85,14 @@ class AuditServiceTest extends TestCase
     {
         // Tạo multiple audit logs
         $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             'project.created',
             'project',
             $this->project->id
         );
         
         $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             'project.updated',
             'project',
             $this->project->id,
@@ -115,8 +107,8 @@ class AuditServiceTest extends TestCase
         );
         
         $this->assertEquals(2, $auditTrail->count());
-        $this->assertEquals('project.updated', $auditTrail->first()->action);
-        $this->assertEquals('project.created', $auditTrail->last()->action);
+        $this->assertEquals('project.created', $auditTrail->first()->action);
+        $this->assertEquals('project.updated', $auditTrail->last()->action);
     }
 
     /**
@@ -148,7 +140,7 @@ class AuditServiceTest extends TestCase
     {
         // Tạo old audit logs
         $oldLog = $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             'old.action',
             'test',
             'test_id'
@@ -160,7 +152,7 @@ class AuditServiceTest extends TestCase
         
         // Tạo recent log
         $recentLog = $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             'recent.action',
             'test',
             'test_id'

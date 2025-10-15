@@ -48,6 +48,9 @@ class User extends Authenticatable
         'preferences',
         'last_login_at',
         'is_active',
+        'status',
+        'role',
+        'mfa_enabled',
         'oidc_provider',
         'oidc_subject_id',
         'oidc_data',
@@ -110,7 +113,7 @@ class User extends Authenticatable
      */
     public function hasRole(string $role): bool
     {
-        return $this->roles()->where('name', 'like', $role . '_%')->exists();
+        return $this->roles()->where('name', $role)->exists();
     }
 
     /**
@@ -224,6 +227,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Relationship: User has many projects as project manager
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'pm_id');
+    }
+
+    /**
      * Relationship: User has many support tickets
      */
     public function supportTickets(): HasMany
@@ -269,6 +280,56 @@ class User extends Authenticatable
     public function canManageInvitations(): bool
     {
         return $this->isAdmin();
+    }
+
+    /**
+     * Relationship: User has many system roles
+     */
+    public function systemRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(ZenaRole::class, 'user_roles', 'user_id', 'role_id');
+    }
+
+    /**
+     * Relationship: User has many role permissions through roles
+     */
+    public function rolePermissions(): BelongsToMany
+    {
+        return $this->belongsToMany(ZenaPermission::class, 'zena_role_permissions', 'role_id', 'permission_id')
+            ->join('user_roles', 'user_roles.role_id', '=', 'zena_role_permissions.role_id')
+            ->where('user_roles.user_id', $this->id);
+    }
+
+    /**
+     * Relationship: User has many dashboard metrics
+     */
+    public function dashboardMetrics(): HasMany
+    {
+        return $this->hasMany(DashboardMetric::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User has many documents uploaded
+     */
+    public function documentsUploaded(): HasMany
+    {
+        return $this->hasMany(Document::class, 'uploaded_by');
+    }
+
+    /**
+     * Relationship: User has many dashboards
+     */
+    public function dashboards(): HasMany
+    {
+        return $this->hasMany(Dashboard::class, 'user_id');
+    }
+
+    /**
+     * Relationship: User has many widgets
+     */
+    public function widgets(): HasMany
+    {
+        return $this->hasMany(Widget::class, 'user_id');
     }
 
 }

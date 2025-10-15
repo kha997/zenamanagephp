@@ -1,0 +1,255 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
+
+class ErrorHandlerService
+{
+    /**
+     * Generate structured error response according to Project Rules
+     *
+     * @param string $code Error code (e.g., 'E001.INVALID_INPUT')
+     * @param string $message Error message
+     * @param array $details Additional error details
+     * @param int $httpStatus HTTP status code
+     * @param Request|null $request Request instance for correlation ID
+     * @return JsonResponse
+     */
+    public static function error(
+        string $code,
+        string $message,
+        array $details = [],
+        int $httpStatus = 400,
+        ?Request $request = null
+    ): JsonResponse {
+        // Generate unique error ID for correlation
+        $errorId = 'req_' . Str::random(8);
+        
+        // Get correlation ID from request headers
+        $correlationId = $request ? $request->header('X-Request-ID', Str::uuid()) : Str::uuid();
+        
+        // Log error with structured format
+        self::logError($errorId, $correlationId, $code, $message, $details, $request);
+        
+        // Build error response
+        $errorResponse = [
+            'error' => [
+                'id' => $errorId,
+                'code' => $code,
+                'message' => $message,
+            ]
+        ];
+        
+        // Add details if provided
+        if (!empty($details)) {
+            $errorResponse['error']['details'] = $details;
+        }
+        
+        // Add retry-after for rate limiting and maintenance
+        $headers = [];
+        if ($httpStatus === 429 || $httpStatus === 503) {
+            $headers['Retry-After'] = 60; // 60 seconds
+        }
+        
+        // Add correlation ID to response headers
+        $headers['X-Request-ID'] = $correlationId;
+        
+        return response()->json($errorResponse, $httpStatus, $headers);
+    }
+    
+    /**
+     * Generate validation error response (422)
+     *
+     * @param array $validationErrors Laravel validation errors
+     * @param Request|null $request Request instance
+     * @return JsonResponse
+     */
+    public static function validationError(array $validationErrors, ?Request $request = null): JsonResponse
+    {
+        $errorId = 'req_' . Str::random(8);
+        $correlationId = $request ? $request->header('X-Request-ID', Str::uuid()) : Str::uuid();
+        
+        // Log validation error
+        self::logError($errorId, $correlationId, 'E422.VALIDATION', 'Validation failed', $validationErrors, $request);
+        
+        $errorResponse = [
+            'error' => [
+                'id' => $errorId,
+                'code' => 'E422.VALIDATION',
+                'message' => 'Validation failed',
+                'fields' => $validationErrors
+            ]
+        ];
+        
+        return response()->json($errorResponse, 422, [
+            'X-Request-ID' => $correlationId
+        ]);
+    }
+    
+    /**
+     * Generate authentication error response (401)
+     *
+     * @param string $message Authentication error message
+     * @param Request|null $request Request instance
+     * @return JsonResponse
+     */
+    public static function authenticationError(string $message = 'Authentication required', ?Request $request = null): JsonResponse
+    {
+        return self::error('E401.AUTHENTICATION', $message, [], 401, $request);
+    }
+    
+    /**
+     * Generate authorization error response (403)
+     *
+     * @param string $message Authorization error message
+     * @param Request|null $request Request instance
+     * @return JsonResponse
+     */
+    public static function authorizationError(string $message = 'Access denied', ?Request $request = null): JsonResponse
+    {
+        return self::error('E403.AUTHORIZATION', $message, [], 403, $request);
+    }
+    
+    /**
+     * Generate not found error response (404)
+     *
+     * @param string $resource Resource name
+     * @param Request|null $request Request instance
+     * @return JsonResponse
+     */
+    public static function notFoundError(string $resource = 'Resource', ?Request $request = null): JsonResponse
+    {
+        return self::error('E404.NOT_FOUND', "{$resource} not found", [], 404, $request);
+    }
+    
+    /**
+     * Generate conflict error response (409)
+     *
+     * @param string $message Conflict message
+     * @param array $details Conflict details
+     * @param Request|null $request Request instance
+     * @return JsonResponse
+     */
+    public static function conflictError(string $message, array $details = [], ?Request $request = null): JsonResponse
+    {
+        return self::error('E409.CONFLICT', $message, $details, 409, $request);
+    }
+    
+    /**
+     * Generate rate limit error response (429)
+     *
+     * @param int $retryAfter Seconds to retry after
+     * @param Request|null $request Request instance
+     * @return JsonResponse
+     */
+    public static function rateLimitError(int $retryAfter = 60, ?Request $request = null): JsonResponse
+    {
+        return self::error('E429.RATE_LIMIT', 'Rate limit exceeded', ['retry_after' => $retryAfter], 429, $request);
+    }
+    
+    /**
+     * Generate internal server error response (500)
+     *
+     * @param string $message Error message
+     * @param array $details Error details
+     * @param Request|null $request Request instance
+     * @return JsonResponse
+     */
+    public static function internalError(string $message = 'Internal server error', array $details = [], ?Request $request = null): JsonResponse
+    {
+        return self::error('E500.INTERNAL', $message, $details, 500, $request);
+    }
+    
+    /**
+     * Generate maintenance error response (503)
+     *
+     * @param string $message Maintenance message
+     * @param Request|null $request Request instance
+     * @return JsonResponse
+     */
+    public static function maintenanceError(string $message = 'Service temporarily unavailable', ?Request $request = null): JsonResponse
+    {
+        return self::error('E503.MAINTENANCE', $message, [], 503, $request);
+    }
+    
+    /**
+     * Log error with structured format according to Project Rules
+     *
+     * @param string $errorId Unique error ID
+     * @param string $correlationId Request correlation ID
+     * @param string $code Error code
+     * @param string $message Error message
+     * @param array $details Error details
+     * @param Request|null $request Request instance
+     * @return void
+     */
+    private static function logError(
+        string $errorId,
+        string $correlationId,
+        string $code,
+        string $message,
+        array $details,
+        ?Request $request = null
+    ): void {
+        $logData = [
+            'timestamp' => now()->toISOString(),
+            'level' => self::getLogLevel($code),
+            'error_id' => $errorId,
+            'correlation_id' => $correlationId,
+            'error_code' => $code,
+            'message' => $message,
+            'route' => $request ? $request->fullUrl() : null,
+            'method' => $request ? $request->method() : null,
+            'user_id' => auth()->id(),
+            'tenant_id' => auth()->user()?->tenant_id,
+            'ip_address' => $request ? $request->ip() : null,
+            'user_agent' => $request ? $request->userAgent() : null,
+            'details' => self::redactPII($details),
+        ];
+        
+        // Remove null values
+        $logData = array_filter($logData, fn($value) => $value !== null);
+        
+        Log::error('API Error', $logData);
+    }
+    
+    /**
+     * Get log level based on error code
+     *
+     * @param string $code Error code
+     * @return string Log level
+     */
+    private static function getLogLevel(string $code): string
+    {
+        return match (true) {
+            str_starts_with($code, 'E4') => 'ERROR',
+            str_starts_with($code, 'E5') => 'CRITICAL',
+            default => 'WARN'
+        };
+    }
+    
+    /**
+     * Redact PII from error details
+     *
+     * @param array $details Error details
+     * @return array Redacted details
+     */
+    private static function redactPII(array $details): array
+    {
+        $piiFields = ['password', 'token', 'secret', 'key', 'email', 'phone', 'ssn'];
+        
+        foreach ($details as $key => $value) {
+            if (is_array($value)) {
+                $details[$key] = self::redactPII($value);
+            } elseif (is_string($key) && in_array(strtolower($key), $piiFields)) {
+                $details[$key] = '[REDACTED]';
+            }
+        }
+        
+        return $details;
+    }
+}

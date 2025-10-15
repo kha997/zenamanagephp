@@ -5,11 +5,34 @@ namespace App\Traits;
 trait HasRoles
 {
     /**
-     * Check if user has a specific role
+     * Assign a role to the user
      */
-    public function hasRole(string $roleName): bool
+    public function assignRole(string $roleName): void
     {
-        return $this->roles()->where('name', $roleName)->exists();
+        $role = \App\Models\Role::where('name', $roleName)->first();
+        if ($role && !$this->hasRole($roleName)) {
+            $this->roles()->attach($role->id);
+        }
+    }
+
+    /**
+     * Remove a role from the user
+     */
+    public function removeRole(string $roleName): void
+    {
+        $role = \App\Models\Role::where('name', $roleName)->first();
+        if ($role) {
+            $this->roles()->detach($role->id);
+        }
+    }
+
+    /**
+     * Sync user roles (replace all roles with the given ones)
+     */
+    public function syncRoles(array $roleNames): void
+    {
+        $roleIds = \App\Models\Role::whereIn('name', $roleNames)->pluck('id')->toArray();
+        $this->roles()->sync($roleIds);
     }
 
     /**

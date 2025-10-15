@@ -41,14 +41,7 @@ $app->singleton(
     App\Exceptions\Handler::class
 );
 
-// THÊM BOOTSTRAP PROCESS
-$app->bootstrapWith([
-    \Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables::class,
-    \Illuminate\Foundation\Bootstrap\LoadConfiguration::class,
-    \Illuminate\Foundation\Bootstrap\HandleExceptions::class,
-    \Illuminate\Foundation\Bootstrap\RegisterFacades::class,
-    \Illuminate\Foundation\Bootstrap\RegisterProviders::class,
-    \Illuminate\Foundation\Bootstrap\BootProviders::class,
-]);
+// Use default Laravel bootstrap process instead of custom one
+// This fixes the UrlGenerator issue where Request object was null
 
 return $app;

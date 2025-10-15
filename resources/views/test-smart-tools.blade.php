@@ -131,7 +131,7 @@
             </div>
             
             <!-- Export Component -->
-            @include('components.export-component')
+            @include('components.shared.export')
         </div>
     </div>
     

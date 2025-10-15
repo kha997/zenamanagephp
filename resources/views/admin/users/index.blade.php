@@ -1,878 +1,528 @@
-@extends('layouts.admin')
+{{-- Admin Users - Week 2 Implementation --}}
+{{-- Using standardized components with admin-specific RBAC management --}}
 
-@section('title', 'Users Management')
-
-@section('content')
-<div class="container mx-auto p-6" x-data="usersPage()">
-    <!-- Page Header -->
-    <div class="flex items-center justify-between mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Users Management</h1>
-            <p class="text-gray-600 mt-1">Manage all users across the system</p>
-        </div>
+@php
+    $user = Auth::user();
+    $tenant = $user->tenant ?? null;
+    
+    // Admin-specific filters for users
+    $statusOptions = [
+        ['value' => 'active', 'label' => 'Active'],
+        ['value' => 'inactive', 'label' => 'Inactive'],
+        ['value' => 'suspended', 'label' => 'Suspended'],
+        ['value' => 'pending', 'label' => 'Pending']
+    ];
+    
+    $roleOptions = [
+        ['value' => 'super_admin', 'label' => 'Super Admin'],
+        ['value' => 'admin', 'label' => 'Admin'],
+        ['value' => 'project_manager', 'label' => 'Project Manager'],
+        ['value' => 'member', 'label' => 'Member'],
+        ['value' => 'client', 'label' => 'Client'],
+        ['value' => 'client_rep', 'label' => 'Client Representative']
+    ];
+    
+    $tenantOptions = collect($tenants ?? [])->map(function($tenant) {
+        return ['value' => $tenant->id ?? '', 'label' => $tenant->name ?? 'Unknown'];
+    })->toArray();
+    
+    // Filter configuration
+    $filters = [
+        [
+            'key' => 'status',
+            'label' => 'Status',
+            'type' => 'select',
+            'options' => $statusOptions,
+            'placeholder' => 'All Statuses'
+        ],
+        [
+            'key' => 'role',
+            'label' => 'Role',
+            'type' => 'select',
+            'options' => $roleOptions,
+            'placeholder' => 'All Roles'
+        ],
+        [
+            'key' => 'tenant_id',
+            'label' => 'Tenant',
+            'type' => 'select',
+            'options' => $tenantOptions,
+            'placeholder' => 'All Tenants'
+        ],
+        [
+            'key' => 'created_date',
+            'label' => 'Created Date',
+            'type' => 'date-range'
+        ],
+        [
+            'key' => 'last_login',
+            'label' => 'Last Login',
+            'type' => 'date-range'
+        ]
+    ];
+    
+    // Sort options
+    $sortOptions = [
+        ['value' => 'name', 'label' => 'Name'],
+        ['value' => 'email', 'label' => 'Email'],
+        ['value' => 'role', 'label' => 'Role'],
+        ['value' => 'status', 'label' => 'Status'],
+        ['value' => 'created_at', 'label' => 'Created Date'],
+        ['value' => 'last_login_at', 'label' => 'Last Login']
+    ];
+    
+    // Bulk actions
+    $bulkActions = [
+        [
+            'label' => 'Activate Users',
+            'icon' => 'fas fa-check',
+            'handler' => 'bulkActivate()'
+        ],
+        [
+            'label' => 'Suspend Users',
+            'icon' => 'fas fa-pause',
+            'handler' => 'bulkSuspend()'
+        ],
+        [
+            'label' => 'Change Role',
+            'icon' => 'fas fa-user-tag',
+            'handler' => 'bulkChangeRole()'
+        ],
+        [
+            'label' => 'Export Users',
+            'icon' => 'fas fa-download',
+            'handler' => 'bulkExport()'
+        ],
+        [
+            'label' => 'Delete Users',
+            'icon' => 'fas fa-trash',
+            'handler' => 'bulkDelete()'
+        ]
+    ];
+    
+    // Breadcrumbs
+    $breadcrumbs = [
+        ['label' => 'Admin Dashboard', 'url' => route('admin.dashboard')],
+        ['label' => 'Users', 'url' => null]
+    ];
+    
+    // Page actions
+    $actions = '
         <div class="flex items-center space-x-3">
-            <button @click="exportUsers" 
-                    class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
+            <button onclick="exportUsers()" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
                 <i class="fas fa-download mr-2"></i>Export
             </button>
-            <button @click="openInviteModal" 
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                <i class="fas fa-user-plus mr-2"></i>Invite User
+            <button onclick="openModal(\'create-user-modal\')" class="btn bg-blue-600 text-white hover:bg-blue-700">
+                <i class="fas fa-user-plus mr-2"></i>Add User
             </button>
         </div>
-    </div>
-
-    <!-- Mock Data Badge -->
-    <div x-show="mockData" class="mb-4">
-        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <i class="fas fa-flask mr-1"></i>Mock Data
-        </span>
-    </div>
-
-    <!-- KPI Strip -->
-    @include('admin.users._kpis')
-
-    <!-- Search & Filters -->
-    @include('admin.users._filters')
-
-    <!-- Users Table -->
-    @include('admin.users._table')
-
-    <!-- Pagination -->
-    @include('admin.users._pagination')
+    ';
     
-    <!-- Modals -->
-    @include('admin.users._edit_modal')
-    @include('admin.users._change_role_modal')
-    @include('admin.users._force_mfa_modal')
-    @include('admin.users._invite_modal')
-</div>
-@endsection
+    // Prepare table data
+    $tableData = collect($users ?? [])->map(function($user) {
+        return [
+            'id' => $user->id,
+            'name' => $user->name ?? 'Unknown',
+            'email' => $user->email ?? '',
+            'role' => $user->role ?? 'member',
+            'status' => $user->is_active ? 'active' : 'inactive',
+            'tenant' => $user->tenant->name ?? 'No Tenant',
+            'last_login' => $user->last_login_at ? $user->last_login_at->format('M d, Y') : 'Never',
+            'created_at' => $user->created_at->format('M d, Y'),
+            'updated_at' => $user->updated_at->format('M d, Y')
+        ];
+    });
+    
+    // Table columns configuration
+    $columns = [
+        ['key' => 'name', 'label' => 'Name', 'sortable' => true, 'primary' => true],
+        ['key' => 'email', 'label' => 'Email', 'sortable' => true],
+        ['key' => 'role', 'label' => 'Role', 'sortable' => true, 'type' => 'badge'],
+        ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'type' => 'badge'],
+        ['key' => 'tenant', 'label' => 'Tenant', 'sortable' => true],
+        ['key' => 'last_login', 'label' => 'Last Login', 'sortable' => true, 'type' => 'date'],
+        ['key' => 'created_at', 'label' => 'Created', 'sortable' => true, 'type' => 'date']
+    ];
+@endphp
+
+<x-shared.layout-wrapper 
+    title="User Management"
+    subtitle="Manage system users and permissions"
+    :breadcrumbs="$breadcrumbs"
+    :actions="$actions"
+    variant="admin">
+    
+    {{-- Filter Bar --}}
+    <x-shared.filter-bar 
+        :search="true"
+        search-placeholder="Search users..."
+        :filters="$filters"
+        :sort-options="$sortOptions"
+        :view-modes="['table', 'grid', 'list']"
+        current-view-mode="table"
+        :bulk-actions="$bulkActions">
+        
+        {{-- Custom Actions Slot --}}
+        <x-slot name="actions">
+            <button onclick="refreshUsers()" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
+                <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+        </x-slot>
+    </x-shared.filter-bar>
+    
+    {{-- Users Table --}}
+    <div class="mt-6">
+        @if($tableData->count() > 0)
+            <x-shared.table-standardized 
+                :data="$tableData"
+                :columns="$columns"
+                :sortable="true"
+                :selectable="true"
+                :pagination="true"
+                :per-page="15"
+                :search="true"
+                :export="true"
+                :bulk-actions="$bulkActions"
+                :responsive="true"
+                :loading="false"
+                :empty-message="'No users found'"
+                :empty-description="'Create your first user to get started'"
+                :empty-action-text="'Add User'"
+                :empty-action-handler="'openModal(\'create-user-modal\')'">
+                
+                {{-- Custom cell content for role --}}
+                <x-slot name="cell-role">
+                    @php
+                        $role = $row['role'] ?? 'member';
+                        $roleClasses = [
+                            'super_admin' => 'bg-red-100 text-red-800',
+                            'admin' => 'bg-orange-100 text-orange-800',
+                            'project_manager' => 'bg-blue-100 text-blue-800',
+                            'member' => 'bg-green-100 text-green-800',
+                            'client' => 'bg-purple-100 text-purple-800',
+                            'client_rep' => 'bg-indigo-100 text-indigo-800'
+                        ];
+                        $roleClass = $roleClasses[$role] ?? $roleClasses['member'];
+                    @endphp
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $roleClass }}">
+                        {{ ucfirst(str_replace('_', ' ', $role)) }}
+                    </span>
+                </x-slot>
+                
+                {{-- Custom cell content for status --}}
+                <x-slot name="cell-status">
+                    @php
+                        $status = $row['status'] ?? 'inactive';
+                        $statusClasses = [
+                            'active' => 'bg-green-100 text-green-800',
+                            'inactive' => 'bg-gray-100 text-gray-800',
+                            'suspended' => 'bg-red-100 text-red-800',
+                            'pending' => 'bg-yellow-100 text-yellow-800'
+                        ];
+                        $statusClass = $statusClasses[$status] ?? $statusClasses['inactive'];
+                    @endphp
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
+                        {{ ucfirst($status) }}
+                    </span>
+                </x-slot>
+                
+                {{-- Custom cell content for last login --}}
+                <x-slot name="cell-last_login">
+                    @if($row['last_login'] === 'Never')
+                        <span class="text-sm text-gray-500">Never</span>
+                    @else
+                        <span class="text-sm font-medium text-gray-900">{{ $row['last_login'] }}</span>
+                    @endif
+                </x-slot>
+                
+                {{-- Row actions --}}
+                <x-slot name="row-actions">
+                    <div class="flex items-center space-x-2">
+                        <button onclick="viewUser('{{ $row['id'] }}')" 
+                                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            <i class="fas fa-eye mr-1"></i>View
+                        </button>
+                        <button onclick="editUser('{{ $row['id'] }}')" 
+                                class="text-gray-600 hover:text-gray-800 text-sm font-medium">
+                            <i class="fas fa-edit mr-1"></i>Edit
+                        </button>
+                        <button onclick="resetPassword('{{ $row['id'] }}')" 
+                                class="text-orange-600 hover:text-orange-800 text-sm font-medium">
+                            <i class="fas fa-key mr-1"></i>Reset Password
+                        </button>
+                        <button onclick="suspendUser('{{ $row['id'] }}')" 
+                                class="text-yellow-600 hover:text-yellow-800 text-sm font-medium">
+                            <i class="fas fa-pause mr-1"></i>Suspend
+                        </button>
+                        <button onclick="deleteUser('{{ $row['id'] }}')" 
+                                class="text-red-600 hover:text-red-800 text-sm font-medium">
+                            <i class="fas fa-trash mr-1"></i>Delete
+                        </button>
+                    </div>
+                </x-slot>
+            </x-shared.table-standardized>
+        @else
+            {{-- Empty State --}}
+            <x-shared.empty-state 
+                icon="fas fa-users"
+                title="No users found"
+                description="Create your first user to start managing the system."
+                action-text="Add User"
+                action-icon="fas fa-user-plus"
+                action-handler="openModal('create-user-modal')" />
+        @endif
+    </div>
+    
+    {{-- Create User Modal --}}
+    <x-shared.modal 
+        id="create-user-modal"
+        title="Create New User"
+        size="lg">
+        
+        <form id="create-user-form" @submit.prevent="createUser()">
+            <div class="space-y-6">
+                {{-- Basic Information --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-first-name" class="form-label">First Name *</label>
+                        <input type="text" 
+                               id="user-first-name" 
+                               name="first_name" 
+                               required
+                               class="form-input"
+                               placeholder="Enter first name">
+                    </div>
+                    
+                    <div>
+                        <label for="user-last-name" class="form-label">Last Name *</label>
+                        <input type="text" 
+                               id="user-last-name" 
+                               name="last_name" 
+                               required
+                               class="form-input"
+                               placeholder="Enter last name">
+                    </div>
+                </div>
+                
+                {{-- Email --}}
+                <div>
+                    <label for="user-email" class="form-label">Email Address *</label>
+                    <input type="email" 
+                           id="user-email" 
+                           name="email" 
+                           required
+                           class="form-input"
+                           placeholder="Enter email address">
+                </div>
+                
+                {{-- Role & Tenant --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-role" class="form-label">Role *</label>
+                        <select id="user-role" name="role" required class="form-select">
+                            <option value="">Select Role</option>
+                            <option value="super_admin">Super Admin</option>
+                            <option value="admin">Admin</option>
+                            <option value="project_manager">Project Manager</option>
+                            <option value="member">Member</option>
+                            <option value="client">Client</option>
+                            <option value="client_rep">Client Representative</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="user-tenant" class="form-label">Tenant *</label>
+                        <select id="user-tenant" name="tenant_id" required class="form-select">
+                            <option value="">Select Tenant</option>
+                            @foreach($tenants ?? [] as $tenant)
+                                <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                
+                {{-- Password --}}
+                <div>
+                    <label for="user-password" class="form-label">Password *</label>
+                    <input type="password" 
+                           id="user-password" 
+                           name="password" 
+                           required
+                           class="form-input"
+                           placeholder="Enter password">
+                    <p class="text-sm text-gray-500 mt-1">Minimum 8 characters</p>
+                </div>
+                
+                {{-- Status & Permissions --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-status" class="form-label">Status</label>
+                        <select id="user-status" name="is_active" class="form-select">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="user-permissions" class="form-label">Additional Permissions</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions[]" value="can_manage_users" class="form-checkbox">
+                                <span class="ml-2 text-sm text-gray-700">Manage Users</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions[]" value="can_manage_projects" class="form-checkbox">
+                                <span class="ml-2 text-sm text-gray-700">Manage Projects</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions[]" value="can_view_analytics" class="form-checkbox">
+                                <span class="ml-2 text-sm text-gray-700">View Analytics</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {{-- Form Actions --}}
+            <div class="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <button type="button" 
+                        onclick="closeModal('create-user-modal')"
+                        class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="btn bg-blue-600 text-white hover:bg-blue-700">
+                    <i class="fas fa-user-plus mr-2"></i>Create User
+                </button>
+            </div>
+        </form>
+    </x-shared.modal>
+</x-shared.layout-wrapper>
 
 @push('scripts')
-<script src="/js/usersApi.js"></script>
 <script>
-    function usersPage() {
-        return {
-            // Feature flag for mock data
-            mockData: false,
-            
-            // KPI Data Contract v2
-            kpis: {
-                totalUsers: { 
-                    value: 1247, 
-                    deltaPct: 12.1, 
-                    period: '30d',
-                    series: [1050, 1080, 1120, 1180, 1247]
-                },
-                activeUsers: { 
-                    value: 892, 
-                    deltaPct: 8.3, 
-                    period: '7d',
-                    series: [820, 835, 845, 860, 892]
-                },
-                lockedUsers: { 
-                    value: 23, 
-                    deltaAbs: -5, 
-                    period: '7d',
-                    series: [28, 26, 25, 24, 23]
-                },
-                noMfaUsers: { 
-                    value: 156, 
-                    deltaPct: -15.2, 
-                    period: '30d',
-                    series: [180, 175, 170, 162, 156]
-                },
-                pendingInvites: { 
-                    value: 8, 
-                    deltaAbs: 2, 
-                    period: '7d',
-                    series: [6, 6, 7, 7, 8]
-                }
-            },
-            
-            // Mock users data
-            users: [
-                {
-                    id: '1',
-                    name: 'John Doe',
-                    email: 'john@acme.com',
-                    tenantId: '1',
-                    tenantName: 'Acme Corp',
-                    role: 'TenantAdmin',
-                    status: 'active',
-                    mfaEnabled: true,
-                    lastLoginAt: '2024-09-27T10:30:00Z',
-                    createdAt: '2024-08-15T09:00:00Z'
-                },
-                {
-                    id: '2',
-                    name: 'Jane Smith',
-                    email: 'jane@techstart.com',
-                    tenantId: '2',
-                    tenantName: 'TechStart',
-                    role: 'PM',
-                    status: 'active',
-                    mfaEnabled: false,
-                    lastLoginAt: '2024-09-26T14:20:00Z',
-                    createdAt: '2024-09-01T11:30:00Z'
-                },
-                {
-                    id: '3',
-                    name: 'Bob Wilson',
-                    email: 'bob@enterprise.com',
-                    tenantId: '3',
-                    tenantName: 'Enterprise Inc',
-                    role: 'Staff',
-                    status: 'locked',
-                    mfaEnabled: true,
-                    lastLoginAt: '2024-09-20T16:45:00Z',
-                    createdAt: '2024-07-10T08:15:00Z'
-                }
-            ],
-            
-            // Server-side state
-            filteredUsers: [],
-            searchQuery: '',
-            tenantFilter: '',
-            roleFilter: '',
-            statusFilter: '',
-            mfaFilter: '',
-            activeWithinFilter: '',
-            lastLoginFrom: '',
-            lastLoginTo: '',
-            createdFrom: '',
-            createdTo: '',
-            sortBy: 'name',
-            sortOrder: 'asc',
-            page: 1,
-            perPage: 20,
-            total: 0,
-            lastPage: 1,
-            isLoading: false,
-            usersLoading: false,
-            error: null,
-            abortController: null,
-            
-            // UI state - Non-blocking loading
-            selectedUsers: [],
-            activePreset: '',
-            showEditModal: false,
-            
-            // Modal management with proper cloaking
-            modalOpen: false,
-            showChangeRoleModal: false,
-            showForceMfaModal: false,
-            showInviteModal: false,
-            currentUser: null,
-            newUser: {
-                name: '',
-                email: '',
-                tenantId: '',
-                role: 'Staff'
-            },
-            chartInstances: {},
-            
-            async init() {
-                console.log('UsersPage init, mockData:', this.mockData);
-                this.parseUrlParams();
-                this.loadUsers();
-                this.initCharts();
-                this.logEvent('users_view_loaded', { 
-                    query: this.getCurrentQuery(), 
-                    page: this.page, 
-                    per_page: this.perPage 
-                });
-            },
-            
-            // URL state management
-            parseUrlParams() {
-                const urlParams = new URLSearchParams(window.location.search);
-                this.searchQuery = urlParams.get('q') || '';
-                this.tenantFilter = urlParams.get('tenant') || '';
-                this.roleFilter = urlParams.get('role') || '';
-                this.statusFilter = urlParams.get('status') || '';
-                this.mfaFilter = urlParams.get('mfa') || '';
-                this.activeWithinFilter = urlParams.get('activeWithin') || '';
-                this.lastLoginFrom = urlParams.get('lastLoginFrom') || '';
-                this.lastLoginTo = urlParams.get('lastLoginTo') || '';
-                this.createdFrom = urlParams.get('createdFrom') || '';
-                this.createdTo = urlParams.get('createdTo') || '';
-                this.sortBy = urlParams.get('sort')?.replace('-', '') || 'name';
-                this.sortOrder = urlParams.get('sort')?.startsWith('-') ? 'desc' : 'asc';
-                this.page = parseInt(urlParams.get('page')) || 1;
-                this.perPage = parseInt(urlParams.get('per_page')) || 20;
-            },
-            
-            updateUrl() {
-                const params = new URLSearchParams();
-                if (this.searchQuery) params.set('q', this.searchQuery);
-                if (this.tenantFilter) params.set('tenant', this.tenantFilter);
-                if (this.roleFilter) params.set('role', this.roleFilter);
-                if (this.statusFilter) params.set('status', this.statusFilter);
-                if (this.mfaFilter) params.set('mfa', this.mfaFilter);
-                if (this.activeWithinFilter) params.set('activeWithin', this.activeWithinFilter);
-                if (this.lastLoginFrom) params.set('lastLoginFrom', this.lastLoginFrom);
-                if (this.lastLoginTo) params.set('lastLoginTo', this.lastLoginTo);
-                if (this.createdFrom) params.set('createdFrom', this.createdFrom);
-                if (this.createdTo) params.set('createdTo', this.createdTo);
-                if (this.sortBy) params.set('sort', this.sortOrder === 'desc' ? `-${this.sortBy}` : this.sortBy);
-                if (this.page > 1) params.set('page', this.page);
-                if (this.perPage !== 20) params.set('per_page', this.perPage);
-                
-                const newUrl = `${window.location.pathname}?${params.toString()}`;
-                window.history.replaceState({}, '', newUrl);
-            },
-            
-            // Data loading - Non-blocking with Panel Fetch
-            async loadUsers() {
-                try {
-                    this.error = null;
-                    
-                    // Use Panel Fetch for non-blocking load
-                    const result = await window.panelFetch('/api/admin/users?' + this.buildApiParams(), {
-                        onStart: () => { this.usersLoading = true; },
-                        onEnd: () => { this.usersLoading = false; },
-                        panelId: 'users-table',
-                        cacheKey: 'users-list'
-                    });
-                    
-                    // Handle response data
-                    if (this.mockData) {
-                        // Mock API response
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                        this.filteredUsers = [...this.users];
-                        this.total = this.users.length;
-                        this.lastPage = Math.ceil(this.total / this.perPage);
-                    } else {
-                        // Real API call using service layer - map camelCase to snake_case
-                        const params = this.buildApiParams();
-                        
-                        if (!window.usersApi) {
-                            console.error('window.usersApi is not available, falling back to mock data');
-                            this.filteredUsers = [...this.users];
-                            this.total = this.users.length;
-                            this.lastPage = Math.ceil(this.total / this.perPage);
-                            return;
-                        }
-                        
-                        const data = await window.usersApi.getUsers(params);
-                        this.filteredUsers = data.data;
-                        this.total = data.meta.total;
-                        this.lastPage = data.meta.last_page;
-                    }
-                } catch (error) {
-                    if (error.name !== 'AbortError') {
-                        console.error('Users loading error:', error);
-                        this.error = error.message;
-                    }
-                }
-            },
-            
-            // Build API params with snake_case mapping and sanitization
-            buildApiParams() {
-                const params = {};
-                
-                // Map camelCase to snake_case and sanitize
-                if (this.searchQuery) params.q = this.searchQuery;
-                if (this.tenantFilter) params.tenant = this.tenantFilter;
-                if (this.roleFilter) params.role = this.roleFilter;
-                if (this.statusFilter) params.status = this.statusFilter;
-                if (this.mfaFilter) params.mfa = this.mfaFilter;
-                if (this.activeWithinFilter) params.active_within = this.activeWithinFilter;
-                if (this.lastLoginFrom) params.last_login_from = this.lastLoginFrom;
-                if (this.lastLoginTo) params.last_login_to = this.lastLoginTo;
-                if (this.createdFrom) params.created_from = this.createdFrom;
-                if (this.createdTo) params.created_to = this.createdTo;
-                
-                // Sort field mapping
-                let sortField = this.sortBy;
-                if (sortField === 'lastLoginAt') sortField = 'last_login_at';
-                if (sortField === 'createdAt') sortField = 'created_at';
-                if (sortField === 'tenantName') sortField = 'tenant';
-                if (sortField === 'mfaEnabled') sortField = 'mfa';
-                
-                params.sort = this.sortOrder === 'desc' ? `-${sortField}` : sortField;
-                params.page = this.page;
-                params.per_page = this.perPage;
-                
-                return params;
-            },
-            
-            // Search and filters
-            performServerSearch: debounce(function() {
-                this.page = 1;
-                this.updateUrl();
-                this.loadUsers();
-            }, 250),
-            
-            applyFilters() {
-                this.page = 1;
-                this.updateUrl();
-                this.loadUsers();
-            },
-            
-            applyPreset(preset) {
-                // Clear existing filters first
-                this.searchQuery = '';
-                this.tenantFilter = '';
-                this.roleFilter = '';
-                this.statusFilter = '';
-                this.mfaFilter = '';
-                this.activeWithinFilter = '';
-                this.lastLoginFrom = '';
-                this.lastLoginTo = '';
-                this.createdFrom = '';
-                this.createdTo = '';
-                this.sortBy = 'name';
-                this.sortOrder = 'asc';
-                
-                switch (preset) {
-                    case 'active':
-                        this.statusFilter = 'active';
-                        this.activeWithinFilter = '7d';
-                        this.sortBy = 'lastLoginAt';
-                        this.sortOrder = 'desc';
-                        break;
-                    case 'locked':
-                        this.statusFilter = 'locked';
-                        break;
-                    case 'no-mfa':
-                        this.mfaFilter = 'false';
-                        break;
-                    case 'invited':
-                        this.statusFilter = 'invited';
-                        break;
-                    case 'disabled':
-                        this.statusFilter = 'disabled';
-                        break;
-                }
-                
-                this.activePreset = preset;
-                this.page = 1;
-                this.updateUrl();
-                this.loadUsers();
-                this.logEvent('users_preset_click', { preset });
-            },
-            
-            clearFilters() {
-                this.searchQuery = '';
-                this.tenantFilter = '';
-                this.roleFilter = '';
-                this.statusFilter = '';
-                this.mfaFilter = '';
-                this.activeWithinFilter = '';
-                this.lastLoginFrom = '';
-                this.lastLoginTo = '';
-                this.createdFrom = '';
-                this.createdTo = '';
-                this.sortBy = 'name';
-                this.sortOrder = 'asc';
-                this.activePreset = '';
-                this.page = 1;
-                this.updateUrl();
-                this.loadUsers();
-            },
-            
-            get hasActiveFilters() {
-                return this.searchQuery || this.tenantFilter || this.roleFilter || 
-                       this.statusFilter || this.mfaFilter || this.activeWithinFilter ||
-                       this.lastLoginFrom || this.lastLoginTo || this.createdFrom || this.createdTo;
-            },
-            
-            // Server-side sorting
-            async setSort(column) {
-                if (this.sortBy === column) {
-                    this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
-                } else {
-                    this.sortBy = column;
-                    this.sortOrder = 'asc';
-                }
-                
-                this.updateUrl();
-                this.loadUsers();
-            },
-            
-            // Pagination
-            changePage(newPage) {
-                this.page = newPage;
-                this.updateUrl();
-                this.loadUsers();
-            },
-            
-            getVisiblePages() {
-                const pages = [];
-                const start = Math.max(1, this.page - 2);
-                const end = Math.min(this.lastPage, this.page + 2);
-                
-                for (let i = start; i <= end; i++) {
-                    pages.push(i);
-                }
-                return pages;
-            },
-            
-            // Utility functions
-            formatDate(dateString) {
-                if (!dateString) return 'Never';
-                const date = new Date(dateString);
-                return date.toLocaleDateString();
-            },
-            
-            formatTimeAgo(dateString) {
-                if (!dateString) return 'Never';
-                const date = new Date(dateString);
-                const now = new Date();
-                const diffMs = now - date;
-                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                
-                if (diffDays === 0) return 'Today';
-                if (diffDays === 1) return 'Yesterday';
-                if (diffDays < 7) return `${diffDays} days ago`;
-                if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-                return `${Math.floor(diffDays / 30)} months ago`;
-            },
-            
-            // User actions
-            viewUser(user) {
-                window.location.href = `/admin/users/${user.id}`;
-                this.logEvent('user_row_action', { action: 'view', userId: user.id });
-            },
-            
-            async toggleUserStatus(user) {
-                const newStatus = user.status === 'active' ? 'disabled' : 'active';
-                const action = newStatus === 'active' ? 'enable' : 'disable';
-                
-                try {
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        user.status = newStatus;
-                    } else {
-                        const data = await window.usersApi[`${action}User`](user.id);
-                        user.status = data.data.status;
-                    }
-                    
-                    this.logEvent('user_row_action', { action, userId: user.id });
-                } catch (error) {
-                    console.error('Failed to toggle user status:', error);
-                    this.error = error.message;
-                }
-            },
-            
-            async unlockUser(user) {
-                try {
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        user.status = 'active';
-                    } else {
-                        const data = await window.usersApi.unlockUser(user.id);
-                        user.status = data.data.status;
-                    }
-                    
-                    this.logEvent('user_row_action', { action: 'unlock', userId: user.id });
-                } catch (error) {
-                    console.error('Failed to unlock user:', error);
-                    this.error = error.message;
-                }
-            },
-            
-            async sendResetLink(user) {
-                try {
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        alert(`Reset link sent to ${user.email}`);
-                    } else {
-                        await window.usersApi.sendResetLink(user.id);
-                        alert(`Reset link sent to ${user.email}`);
-                    }
-                    
-                    this.logEvent('user_row_action', { action: 'send_reset_link', userId: user.id });
-                } catch (error) {
-                    console.error('Failed to send reset link:', error);
-                    alert(`Failed to send reset link: ${error.message}`);
-                }
-            },
-            
-            // Selection
-            selectUser(user) {
-                if (this.selectedUsers.some(u => u.id === user.id)) {
-                    this.selectedUsers = this.selectedUsers.filter(u => u.id !== user.id);
-                } else {
-                    this.selectedUsers.push(user);
-                }
-            },
-            
-            selectAllUsers() {
-                if (this.selectedUsers.length === this.filteredUsers.length) {
-                    this.selectedUsers = [];
-                } else {
-                    this.selectedUsers = [...this.filteredUsers];
-                }
-            },
-            
-            // Modal functions
-            openEditModal(user) {
-                this.showEditModal = true;
-                this.currentUser = { ...user };
-            },
-            
-            openChangeRoleModal(user) {
-                this.showChangeRoleModal = true;
-                this.currentUser = user;
-            },
-            
-            openForceMfaModal(user) {
-                this.showForceMfaModal = true;
-                this.currentUser = user;
-            },
-            
-            openInviteModal() {
-                this.showInviteModal = true;
-                this.newUser = {
-                    name: '',
-                    email: '',
-                    tenantId: '',
-                    role: 'Staff'
-                };
-            },
-            
-            closeModals() {
-                this.showEditModal = false;
-                this.showChangeRoleModal = false;
-                this.showForceMfaModal = false;
-                this.showInviteModal = false;
-                this.currentUser = null;
-                this.newUser = {
-                    name: '',
-                    email: '',
-                    tenantId: '',
-                    role: 'Staff'
-                };
-            },
-            
-            async updateUser() {
-                try {
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        const index = this.filteredUsers.findIndex(u => u.id === this.currentUser.id);
-                        if (index !== -1) {
-                            this.filteredUsers[index] = { ...this.currentUser };
-                        }
-                    } else {
-                        const data = await window.usersApi.updateUser(this.currentUser.id, this.currentUser);
-                        const index = this.filteredUsers.findIndex(u => u.id === this.currentUser.id);
-                        if (index !== -1) {
-                            this.filteredUsers[index] = data.data;
-                        }
-                    }
-                    
-                    this.closeModals();
-                    this.logEvent('user_updated', { userId: this.currentUser.id });
-                    alert('User updated successfully!');
-                } catch (error) {
-                    console.error('Failed to update user:', error);
-                    alert(`Failed to update user: ${error.message}`);
-                }
-            },
-            
-            async changeUserRole() {
-                try {
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        this.currentUser.role = this.currentUser.newRole;
-                    } else {
-                        const data = await window.usersApi.changeUserRole(this.currentUser.id, this.currentUser.newRole);
-                        this.currentUser.role = data.data.role;
-                    }
-                    
-                    this.closeModals();
-                    this.logEvent('user_role_changed', { userId: this.currentUser.id, newRole: this.currentUser.newRole });
-                    alert('User role changed successfully!');
-                } catch (error) {
-                    console.error('Failed to change user role:', error);
-                    alert(`Failed to change user role: ${error.message}`);
-                }
-            },
-            
-            async forceMfa() {
-                try {
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        this.currentUser.mfaEnabled = true;
-                    } else {
-                        const data = await window.usersApi.forceMfa(this.currentUser.id);
-                        this.currentUser.mfaEnabled = data.data.mfaEnabled;
-                    }
-                    
-                    this.closeModals();
-                    this.logEvent('user_mfa_forced', { userId: this.currentUser.id });
-                    alert('MFA forced successfully!');
-                } catch (error) {
-                    console.error('Failed to force MFA:', error);
-                    alert(`Failed to force MFA: ${error.message}`);
-                }
-            },
-            
-            async inviteUser() {
-                try {
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        const newUser = {
-                            id: Date.now().toString(),
-                            ...this.newUser,
-                            status: 'invited',
-                            mfaEnabled: false,
-                            lastLoginAt: null,
-                            createdAt: new Date().toISOString()
-                        };
-                        this.filteredUsers.unshift(newUser);
-                        this.total++;
-                    } else {
-                        const data = await window.usersApi.createUser(this.newUser);
-                        this.filteredUsers.unshift(data.data);
-                        this.total++;
-                    }
-                    
-                    this.closeModals();
-                    this.logEvent('user_invited', { email: this.newUser.email });
-                    alert('User invited successfully!');
-                } catch (error) {
-                    console.error('Failed to invite user:', error);
-                    alert(`Failed to invite user: ${error.message}`);
-                }
-            },
-            
-            // Bulk actions
-            async bulkAction(action) {
-                if (this.selectedUsers.length === 0) return;
-                
-                const count = this.selectedUsers.length;
-                let confirmMessage = '';
-                let successMessage = '';
-                
-                switch (action) {
-                    case 'enable':
-                        confirmMessage = `Enable ${count} user(s)?`;
-                        successMessage = `${count} user(s) enabled successfully`;
-                        break;
-                    case 'disable':
-                        confirmMessage = `Disable ${count} user(s)?`;
-                        successMessage = `${count} user(s) disabled successfully`;
-                        break;
-                    case 'unlock':
-                        confirmMessage = `Unlock ${count} user(s)?`;
-                        successMessage = `${count} user(s) unlocked successfully`;
-                        break;
-                    case 'change-role':
-                        confirmMessage = `Change role for ${count} user(s)?`;
-                        successMessage = `${count} user(s) role changed successfully`;
-                        break;
-                    case 'force-mfa':
-                        confirmMessage = `Force MFA for ${count} user(s)?`;
-                        successMessage = `${count} user(s) MFA forced successfully`;
-                        break;
-                    case 'send-reset':
-                        confirmMessage = `Send reset links to ${count} user(s)?`;
-                        successMessage = `Reset links sent to ${count} user(s)`;
-                        break;
-                    case 'delete':
-                        confirmMessage = `Delete ${count} user(s)? This action cannot be undone.`;
-                        successMessage = `${count} user(s) deleted successfully`;
-                        break;
-                }
-                
-                if (!confirm(confirmMessage)) return;
-                
-                try {
-                    const ids = this.selectedUsers.map(u => u.id);
-                    
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        const successCount = Math.floor(count * 0.8);
-                        const errorCount = count - successCount;
-                        
-                        if (errorCount === 0) {
-                            alert(successMessage);
-                        } else {
-                            alert(`${successCount} user(s) processed successfully, ${errorCount} failed`);
-                        }
-                    } else {
-                        const result = await window.usersApi.bulkAction(action, ids);
-                        const successCount = result.ok.length;
-                        const errorCount = result.failed.length;
-                        
-                        if (errorCount === 0) {
-                            alert(successMessage);
-                        } else {
-                            alert(`${successCount} user(s) processed successfully, ${errorCount} failed`);
-                        }
-                    }
-                    
-                    this.selectedUsers = [];
-                    this.loadUsers();
-                    this.logEvent('users_bulk_action', { action, count });
-                    
-                } catch (error) {
-                    console.error('Bulk action failed:', error);
-                    alert(`Bulk action failed: ${error.message}`);
-                }
-            },
-            
-            // Export
-            async exportUsers() {
-                try {
-                    const params = this.buildApiParams();
-                    delete params.page;
-                    delete params.per_page;
-                    
-                    if (this.mockData) {
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        alert('Exporting all users with current filters...');
-                    } else {
-                        await window.usersApi.exportUsers(params);
-                    }
-                    
-                    this.logEvent('users_export', { format: 'csv', filtered: this.hasActiveFilters, count: this.total });
-                    
-                } catch (error) {
-                    console.error('Export failed:', error);
-                    alert(`Export failed: ${error.message}`);
-                }
-            },
-            
-            // KPI drill-down
-            drillDownTotal() {
-                window.location.href = '/admin/users?sort=-created_at';
-                this.logEvent('kpi_drilldown', { kpi: 'total', target: 'users_list' });
-            },
-            
-            drillDownActive() {
-                window.location.href = '/admin/users?status=active&active_within=7d&sort=-last_login_at';
-                this.logEvent('kpi_drilldown', { kpi: 'active', target: 'users_list' });
-            },
-            
-            drillDownLocked() {
-                window.location.href = '/admin/users?status=locked,disabled';
-                this.logEvent('kpi_drilldown', { kpi: 'locked', target: 'users_list' });
-            },
-            
-            drillDownNoMfa() {
-                window.location.href = '/admin/users?mfa=false';
-                this.logEvent('kpi_drilldown', { kpi: 'no-mfa', target: 'users_list' });
-            },
-            
-            drillDownInvites() {
-                window.location.href = '/admin/users?status=invited';
-                this.logEvent('kpi_drilldown', { kpi: 'invites', target: 'users_list' });
-            },
-            
-            // Charts
-            initCharts() {
-                Object.keys(this.kpis).forEach(key => {
-                    if (this.kpis[key].series) {
-                        this.createSparkline(key, this.kpis[key].series);
-                    }
-                });
-            },
-            
-            createSparkline(kpiKey, series) {
-                const canvas = document.getElementById(`sparkline-${kpiKey}`);
-                if (!canvas) return;
-                
-                const ctx = canvas.getContext('2d');
-                const width = canvas.width;
-                const height = canvas.height;
-                
-                if (this.chartInstances[kpiKey]) {
-                    this.chartInstances[kpiKey].destroy();
-                }
-                
-                const max = Math.max(...series);
-                const min = Math.min(...series);
-                const range = max - min || 1;
-                
-                ctx.clearRect(0, 0, width, height);
-                ctx.strokeStyle = this.getSparklineColor(kpiKey);
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                
-                series.forEach((value, index) => {
-                    const x = (index / (series.length - 1)) * width;
-                    const y = height - ((value - min) / range) * height;
-                    
-                    if (index === 0) {
-                        ctx.moveTo(x, y);
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                });
-                
-                ctx.stroke();
-            },
-            
-            getSparklineColor(kpiKey) {
-                const colors = {
-                    totalUsers: '#3B82F6',
-                    activeUsers: '#10B981',
-                    lockedUsers: '#EF4444',
-                    noMfaUsers: '#F59E0B',
-                    pendingInvites: '#8B5CF6'
-                };
-                return colors[kpiKey] || '#6B7280';
-            },
-            
-            // Analytics
-            getCurrentQuery() {
-                const params = new URLSearchParams();
-                if (this.searchQuery) params.set('q', this.searchQuery);
-                if (this.statusFilter) params.set('status', this.statusFilter);
-                if (this.roleFilter) params.set('role', this.roleFilter);
-                return params.toString();
-            },
-            
-            logEvent(eventName, meta = {}) {
-                const event = {
-                    name: eventName,
-                    timestamp: new Date().toISOString(),
-                    meta: {
-                        view: 'users',
-                        ...meta
-                    }
-                };
-                console.log('Analytics Event:', event);
-            },
-            
-            // Accessibility
-            getAriaLabel(action, user) {
-                const labels = {
-                    view: `View user ${user.name}`,
-                    edit: `Edit user ${user.name}`,
-                    enable: `Enable user ${user.name}`,
-                    disable: `Disable user ${user.name}`,
-                    unlock: `Unlock user ${user.name}`,
-                    'change-role': `Change role for ${user.name}`,
-                    'force-mfa': `Force MFA for ${user.name}`,
-                    'send-reset': `Send reset link to ${user.email}`,
-                    delete: `Delete user ${user.name}`
-                };
-                return labels[action] || action;
-            }
-        }
-    }
+function refreshUsers() {
+    window.location.reload();
+}
+
+function exportUsers() {
+    alert('Export users functionality would be implemented here');
+}
+
+function createUser() {
+    const form = document.getElementById('create-user-form');
+    const formData = new FormData(form);
     
-    // Debounce utility
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+    fetch('/api/v1/admin/users', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Authorization': 'Bearer ' + getAuthToken()
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            closeModal('create-user-modal');
+            window.location.reload();
+        } else {
+            alert('Error creating user: ' + (result.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating user');
+    });
+}
+
+function viewUser(userId) {
+    window.location.href = '/admin/users/' + userId;
+}
+
+function editUser(userId) {
+    window.location.href = '/admin/users/' + userId + '/edit';
+}
+
+function resetPassword(userId) {
+    if (confirm('Are you sure you want to reset this user\'s password?')) {
+        alert('Reset password functionality would be implemented here');
     }
+}
+
+function suspendUser(userId) {
+    if (confirm('Are you sure you want to suspend this user?')) {
+        alert('Suspend user functionality would be implemented here');
+    }
+}
+
+function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        fetch('/api/v1/admin/users/' + userId, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Authorization': 'Bearer ' + getAuthToken()
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert('Error deleting user: ' + (result.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting user');
+        });
+    }
+}
+
+function bulkActivate() {
+    alert('Bulk activate functionality would be implemented here');
+}
+
+function bulkSuspend() {
+    alert('Bulk suspend functionality would be implemented here');
+}
+
+function bulkChangeRole() {
+    alert('Bulk change role functionality would be implemented here');
+}
+
+function bulkExport() {
+    alert('Bulk export functionality would be implemented here');
+}
+
+function bulkDelete() {
+    alert('Bulk delete functionality would be implemented here');
+}
+
+function openModal(modalId) {
+    alert('Open modal: ' + modalId);
+}
+
+function closeModal(modalId) {
+    alert('Close modal: ' + modalId);
+}
+
+function getAuthToken() {
+    return localStorage.getItem('auth_token') || '';
+}
+
+// Listen for filter events
+document.addEventListener('filter-search', (e) => {
+    console.log('Search:', e.detail.query);
+});
+
+document.addEventListener('filter-apply', (e) => {
+    console.log('Filters:', e.detail.filters);
+});
+
+document.addEventListener('filter-sort', (e) => {
+    console.log('Sort:', e.detail.sortBy, e.detail.sortDirection);
+});
 </script>
 @endpush
-
-<!-- Users Page Module -->
-<script src="{{ asset('js/pages/users.js') }}" defer></script>

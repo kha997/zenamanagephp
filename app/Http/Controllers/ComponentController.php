@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Src\CoreProject\Models\Component;
 use Src\CoreProject\Resources\ComponentResource;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
@@ -35,9 +35,9 @@ class ComponentController
     {
         try {
             $components = Component::where('project_id', $projectId)->with(['user', 'project'])->get();
-            return JSendResponse::success(ComponentResource::collection($components));
+            return ApiResponse::success(ComponentResource::collection($components));
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách components: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy danh sách components: ' . $e->getMessage());
         }
     }
     
@@ -55,9 +55,9 @@ class ComponentController
             $data['project_id'] = $projectId;
             
             $component = Component::create($data);
-            return JSendResponse::success(new ComponentResource($component), 'Component đã được tạo thành công');
+            return ApiResponse::success(new ComponentResource($component), 'Component đã được tạo thành công');
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo component: ' . $e->getMessage());
+            return ApiResponse::error('Không thể tạo component: ' . $e->getMessage());
         }
     }
     
@@ -74,9 +74,9 @@ class ComponentController
             $component = Component::where('project_id', $projectId)
                                 ->select(['id', 'name', 'status'])->where('id', $componentId)
                                 ->firstOrFail();
-            return JSendResponse::success(new ComponentResource($component));
+            return ApiResponse::success(new ComponentResource($component));
         } catch (\Exception $e) {
-            return JSendResponse::error('Không tìm thấy component: ' . $e->getMessage());
+            return ApiResponse::error('Không tìm thấy component: ' . $e->getMessage());
         }
     }
     
@@ -96,9 +96,9 @@ class ComponentController
                                 ->firstOrFail();
             
             $component->update($request->validated());
-            return JSendResponse::success(new ComponentResource($component), 'Component đã được cập nhật thành công');
+            return ApiResponse::success(new ComponentResource($component), 'Component đã được cập nhật thành công');
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể cập nhật component: ' . $e->getMessage());
+            return ApiResponse::error('Không thể cập nhật component: ' . $e->getMessage());
         }
     }
     
@@ -117,9 +117,9 @@ class ComponentController
                                 ->firstOrFail();
             
             $component->delete();
-            return JSendResponse::success(null, 'Component đã được xóa thành công');
+            return ApiResponse::success(null, 'Component đã được xóa thành công');
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể xóa component: ' . $e->getMessage());
+            return ApiResponse::error('Không thể xóa component: ' . $e->getMessage());
         }
     }
     
@@ -136,9 +136,9 @@ class ComponentController
                                  ->whereNull('parent_component_id')
                                  ->with('children')
                                  ->with(['user', 'project'])->get();
-            return JSendResponse::success(ComponentResource::collection($components));
+            return ApiResponse::success(ComponentResource::collection($components));
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy cây components: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy cây components: ' . $e->getMessage());
         }
     }
 }

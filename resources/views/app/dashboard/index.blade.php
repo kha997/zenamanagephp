@@ -1,232 +1,221 @@
-{{-- App Dashboard Index --}}
-@extends('layouts.app')
+{{-- App Dashboard - Phase 2 Implementation --}}
+{{-- Using standardized components for consistent UI/UX --}}
 
-@section('title', 'Dashboard')
-
-@section('content')
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    {{-- KPI Strip --}}
-    @include('app.dashboard._kpis')
+@php
+    $user = Auth::user();
+    $tenant = $user->tenant ?? null;
     
-    {{-- Alert Bar --}}
-    @include('app.dashboard._alerts')
+    // Prepare KPIs data
+    $kpis = [
+        [
+            'key' => 'projects',
+            'label' => 'Total Projects',
+            'value' => $totalProjects ?? 0,
+            'change' => $projectsChange ?? 0,
+            'icon' => 'fas fa-project-diagram',
+            'color' => 'blue'
+        ],
+        [
+            'key' => 'tasks',
+            'label' => 'Active Tasks',
+            'value' => $totalTasks ?? 0,
+            'change' => $tasksChange ?? 0,
+            'icon' => 'fas fa-tasks',
+            'color' => 'green'
+        ],
+        [
+            'key' => 'team',
+            'label' => 'Team Members',
+            'value' => $totalTeamMembers ?? 0,
+            'change' => $teamChange ?? 0,
+            'icon' => 'fas fa-users',
+            'color' => 'purple'
+        ],
+        [
+            'key' => 'budget',
+            'label' => 'Budget Used',
+            'value' => $budgetUsed ?? 0,
+            'change' => $budgetChange ?? 0,
+            'icon' => 'fas fa-dollar-sign',
+            'color' => 'yellow'
+        ]
+    ];
     
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {{-- Left Column --}}
-        <div class="lg:col-span-2 space-y-8">
-            {{-- Projects Overview --}}
-            @include('app.dashboard._projects')
-            
-            {{-- Recent Activity --}}
-            @include('app.dashboard._activities')
+    // Prepare charts data
+    $charts = [
+        [
+            'key' => 'project-progress',
+            'type' => 'doughnut',
+            'title' => 'Project Progress',
+            'data' => $projectProgressData ?? []
+        ],
+        [
+            'key' => 'task-distribution',
+            'type' => 'line',
+            'title' => 'Task Completion Trend',
+            'data' => $taskCompletionData ?? []
+        ]
+    ];
+    
+    // Prepare recent projects data
+    $recentProjectsData = $recentProjects ?? collect([]);
+    
+    // Prepare recent activity data
+    $recentActivityData = $recentActivity ?? collect([]);
+    
+    // Prepare alerts data
+    $alertsData = $alerts ?? collect([]);
+    
+    // Prepare notifications data
+    $notificationsData = $notifications ?? collect([]);
+    
+    // Breadcrumbs
+    $breadcrumbs = [
+        ['label' => 'Dashboard', 'url' => null]
+    ];
+    
+    // Page actions
+    $actions = '
+        <div class="flex items-center space-x-3">
+            <button onclick="refreshDashboard()" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
+                <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+            <a href="' . route('app.projects.create') . '" class="btn bg-blue-600 text-white hover:bg-blue-700">
+                <i class="fas fa-plus mr-2"></i>New Project
+            </a>
         </div>
+    ';
+@endphp
+
+<x-shared.dashboard-shell 
+    variant="app"
+    :user="$user"
+    :tenant="$tenant"
+    :kpis="$kpis"
+    :charts="$charts"
+    :recent-projects="$recentProjectsData"
+    :recent-activity="$recentActivityData"
+    :alerts="$alertsData"
+    :notifications="$notificationsData"
+    title="Dashboard"
+    :subtitle="'Welcome back, ' . ($user->first_name ?? $user->name ?? 'User')"
+    :breadcrumbs="$breadcrumbs"
+    :actions="$actions">
+    
+    {{-- Additional Dashboard Content --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+        {{-- Team Status --}}
+        <x-shared.card-standardized 
+            title="Team Status"
+            subtitle="Current team activity and availability">
+            
+            <div class="space-y-4">
+                @if(isset($teamMembers) && $teamMembers->count() > 0)
+                    @foreach($teamMembers->take(5) as $member)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                                    <span class="text-white text-sm font-medium">
+                                        {{ substr($member->name, 0, 1) }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">{{ $member->name }}</h4>
+                                    <p class="text-sm text-gray-500">{{ $member->role ?? 'Member' }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span class="text-sm text-gray-500">Online</span>
+                            </div>
+                        </div>
+                    @endforeach
+                    
+                    @if($teamMembers->count() > 5)
+                        <div class="text-center">
+                            <a href="{{ route('app.team.index') }}" class="text-blue-600 hover:text-blue-800 font-medium">
+                                View all {{ $teamMembers->count() }} team members →
+                            </a>
+                        </div>
+                    @endif
+                @else
+                    <x-shared.empty-state 
+                        icon="fas fa-users"
+                        title="No team members"
+                        description="Invite team members to start collaborating."
+                        action-text="Invite Team Member"
+                        action-icon="fas fa-user-plus"
+                        action-handler="inviteTeamMember" />
+                @endif
+            </div>
+        </x-shared.card-standardized>
         
-        {{-- Right Column --}}
-        <div class="space-y-8">
-            {{-- Quick Actions --}}
-            @include('app.dashboard._quick-actions')
+        {{-- Quick Actions --}}
+        <x-shared.card-standardized 
+            title="Quick Actions"
+            subtitle="Common tasks and shortcuts">
             
-            {{-- Team Status --}}
-            @include('app.dashboard._team-status')
-            
-            {{-- Activity Feed --}}
-            @include('app.dashboard._activity-feed')
-        </div>
+            <div class="grid grid-cols-2 gap-4">
+                <a href="{{ route('app.projects.create') }}" 
+                   class="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                    <i class="fas fa-project-diagram text-2xl text-blue-600 mb-2"></i>
+                    <span class="font-medium text-blue-900">New Project</span>
+                </a>
+                
+                <a href="{{ route('app.tasks.create') }}" 
+                   class="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                    <i class="fas fa-tasks text-2xl text-green-600 mb-2"></i>
+                    <span class="font-medium text-green-900">New Task</span>
+                </a>
+                
+                <a href="{{ route('app.clients.create') }}" 
+                   class="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                    <i class="fas fa-user-plus text-2xl text-purple-600 mb-2"></i>
+                    <span class="font-medium text-purple-900">Add Client</span>
+                </a>
+                
+                <a href="{{ route('app.documents.index') }}" 
+                   class="flex flex-col items-center p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+                    <i class="fas fa-file-alt text-2xl text-orange-600 mb-2"></i>
+                    <span class="font-medium text-orange-900">Documents</span>
+                </a>
+            </div>
+        </x-shared.card-standardized>
     </div>
-</div>
-@endsection
+    
+    {{-- System Alerts --}}
+    @if(isset($systemAlerts) && $systemAlerts->count() > 0)
+        <div class="mt-8">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">System Alerts</h3>
+            <div class="space-y-4">
+                @foreach($systemAlerts as $alert)
+                    <x-shared.alert-standardized 
+                        :type="$alert['type']"
+                        :title="$alert['title']"
+                        :message="$alert['message']"
+                        :dismissible="true" />
+                @endforeach
+            </div>
+        </div>
+    @endif
+</x-shared.dashboard-shell>
 
 @push('scripts')
 <script>
-    function appDashboard() {
-        return {
-            showNotifications: false,
-            showUserMenu: false,
-            showAlerts: false,
-            showModal: false,
-            modalTitle: '',
-            modalContent: '',
-            currentModal: '',
-            chartPeriod: '30d',
-            unreadNotifications: 2,
+function refreshDashboard() {
+    // Refresh dashboard data
+    window.location.reload();
+}
 
-            kpis: {
-                totalProjects: 12,
-                projectGrowth: '+8%',
-                activeTasks: 45,
-                taskGrowth: '+15%',
-                teamMembers: 8,
-                teamGrowth: '+2%',
-                completionRate: '87%'
-            },
+function inviteTeamMember() {
+    // Open invite team member modal or redirect
+    window.location.href = '{{ route("app.team.index") }}';
+}
 
-            alerts: [
-                {
-                    id: 1,
-                    title: 'Project Deadline Approaching',
-                    message: 'Project "Website Redesign" deadline in 3 days',
-                    icon: 'fas fa-exclamation-triangle',
-                    type: 'warning'
-                }
-            ],
-
-            notifications: [
-                {
-                    id: 1,
-                    title: 'Task Assigned',
-                    message: 'You have been assigned to "Update Documentation"',
-                    icon: 'fas fa-tasks',
-                    type: 'info',
-                    time: '5 minutes ago'
-                },
-                {
-                    id: 2,
-                    title: 'Project Update',
-                    message: 'Project "Mobile App" status updated to "In Progress"',
-                    icon: 'fas fa-project-diagram',
-                    type: 'success',
-                    time: '1 hour ago'
-                }
-            ],
-
-            recentActivities: [
-                {
-                    id: 1,
-                    title: 'Task Completed',
-                    description: 'Task "Design Mockups" marked as completed',
-                    icon: 'fas fa-check-circle',
-                    iconColor: 'text-green-600',
-                    iconBg: 'bg-green-100',
-                    time: '10 minutes ago'
-                },
-                {
-                    id: 2,
-                    title: 'Project Created',
-                    description: 'New project "E-commerce Platform" created',
-                    icon: 'fas fa-project-diagram',
-                    iconColor: 'text-blue-600',
-                    iconBg: 'bg-blue-100',
-                    time: '2 hours ago'
-                },
-                {
-                    id: 3,
-                    title: 'Team Member Added',
-                    description: 'John Doe added to project "Website Redesign"',
-                    icon: 'fas fa-user-plus',
-                    iconColor: 'text-purple-600',
-                    iconBg: 'bg-purple-100',
-                    time: '4 hours ago'
-                }
-            ],
-
-            teamStatus: [
-                { name: 'John Doe', status: 'online', role: 'Developer' },
-                { name: 'Jane Smith', status: 'away', role: 'Designer' },
-                { name: 'Mike Johnson', status: 'online', role: 'PM' },
-                { name: 'Sarah Wilson', status: 'offline', role: 'QA' }
-            ],
-
-            activityFeed: [
-                {
-                    id: 1,
-                    user: 'John Doe',
-                    action: ' completed task "Fix Bug #123"',
-                    avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff',
-                    time: '5 minutes ago'
-                },
-                {
-                    id: 2,
-                    user: 'Jane Smith',
-                    action: ' uploaded design files',
-                    avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff',
-                    time: '15 minutes ago'
-                },
-                {
-                    id: 3,
-                    user: 'Mike Johnson',
-                    action: ' created new project milestone',
-                    avatar: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=8b5cf6&color=ffffff',
-                    time: '1 hour ago'
-                }
-            ],
-
-            init() {
-                this.initChart();
-                this.startRealTimeUpdates();
-            },
-
-            initChart() {
-                // Chart initialization will be handled by individual chart components
-                console.log('App dashboard initialized');
-            },
-
-            toggleNotifications() {
-                this.showNotifications = !this.showNotifications;
-                if (this.showNotifications) {
-                    this.unreadNotifications = 0;
-                }
-            },
-
-            toggleUserMenu() {
-                this.showUserMenu = !this.showUserMenu;
-            },
-
-            dismissAlert(alertId) {
-                this.alerts = this.alerts.filter(alert => alert.id !== alertId);
-            },
-
-            dismissAllAlerts() {
-                this.alerts = [];
-            },
-
-            openModal(type) {
-                this.currentModal = type;
-                this.showModal = true;
-                
-                switch(type) {
-                    case 'createProject':
-                        this.modalTitle = 'Create New Project';
-                        this.modalContent = `
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
-                                    <input type="text" class="w-full border border-gray-300 rounded-md px-3 py-2">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                    <textarea class="w-full border border-gray-300 rounded-md px-3 py-2" rows="3"></textarea>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
-                                    <input type="date" class="w-full border border-gray-300 rounded-md px-3 py-2">
-                                </div>
-                            </div>
-                        `;
-                        break;
-                }
-            },
-
-            closeModal() {
-                this.showModal = false;
-                this.currentModal = '';
-            },
-
-            executeModalAction() {
-                console.log('Executing action:', this.currentModal);
-                this.closeModal();
-            },
-
-            refreshActivity() {
-                console.log('Refreshing activity feed');
-            },
-
-            startRealTimeUpdates() {
-                setInterval(() => {
-                    this.kpis.totalProjects += Math.floor(Math.random() * 2);
-                    this.kpis.activeTasks += Math.floor(Math.random() * 5);
-                }, 30000);
-            }
-        }
-    }
+// Auto-refresh dashboard every 5 minutes
+setInterval(function() {
+    // Optionally refresh specific data without full page reload
+    console.log('Dashboard auto-refresh triggered');
+}, 300000);
 </script>
 @endpush

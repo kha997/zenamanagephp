@@ -88,7 +88,8 @@ class ConditionalDisplayService
     {
         $cacheKey = "feature_flag_{$value}_user_{$user->id}";
         
-        return Cache::remember($cacheKey, 300, function () 
+        return Cache::remember($cacheKey, 300, function () use ($value, $user) {
+            return app(FeatureFlagService::class)->isEnabled($value, $user);
         });
     }
 
@@ -204,7 +205,15 @@ class ConditionalDisplayService
     {
         $cacheKey = "module_enabled_{$value}_tenant_{$user->tenant_id}";
         
-        return Cache::remember($cacheKey, 600, function () 
+        return Cache::remember($cacheKey, 600, function () use ($value, $user) {
+            // Check if module is enabled for tenant
+            $tenant = $user->tenant;
+            if (!$tenant) {
+                return false;
+            }
+            
+            $settings = $tenant->settings ?? [];
+            return isset($settings['modules'][$value]) && $settings['modules'][$value] === true;
         });
     }
 

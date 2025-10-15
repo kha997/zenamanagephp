@@ -21,11 +21,37 @@
     <div class="mb-6">
         <div class="bg-gray-50 rounded-lg p-4">
             <h3 class="text-sm font-medium text-gray-900 mb-4">Adoption Rate Over Time</h3>
-            <div class="h-64 flex items-center justify-center">
-                <div class="text-center">
-                    <i class="fas fa-chart-line text-4xl text-gray-400 mb-2"></i>
-                    <p class="text-gray-500">MFA adoption chart will be displayed here</p>
-                    <p class="text-xs text-gray-400 mt-1">Chart.js integration pending</p>
+            <div class="relative h-64 w-full">
+                <canvas 
+                    id="mfa-adoption-panel-chart"
+                    width="100%" 
+                    height="100%"
+                    class="chart-canvas"
+                    aria-label="MFA adoption percentage over time">
+                </canvas>
+                
+                <!-- Loading State -->
+                <div x-show="chartsLoading" class="absolute inset-0 flex items-center justify-center">
+                    <div class="flex items-center space-x-2 text-gray-500">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                        <span class="text-sm">Loading...</span>
+                    </div>
+                </div>
+                
+                <!-- Error State -->
+                <div x-show="chartError" class="absolute inset-0 flex flex-col items-center justify-center text-red-500">
+                    <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                    <p class="text-sm">Chart Error</p>
+                    <p class="text-xs mt-1" x-text="chartError"></p>
+                    <button @click="initCharts()" class="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                        Retry
+                    </button>
+                </div>
+                
+                <!-- Empty State -->
+                <div x-show="!chartError && !chartsLoading && !chartData.mfaAdoption" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                    <i class="fas fa-chart-line text-3xl mb-2"></i>
+                    <p class="text-sm">No data available</p>
                 </div>
             </div>
         </div>

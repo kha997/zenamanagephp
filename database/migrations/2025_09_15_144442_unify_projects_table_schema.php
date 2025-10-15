@@ -24,7 +24,7 @@ return new class extends Migration
             }
             
             if (!Schema::hasColumn('projects', 'priority')) {
-                $table->enum('priority', ['low', 'medium', 'high', 'urgent'])->default('medium')->after('status');
+                $table->enum('priority', ['low', 'normal', 'medium', 'high', 'urgent'])->default('normal')->after('status');
             }
             
             if (!Schema::hasColumn('projects', 'settings')) {

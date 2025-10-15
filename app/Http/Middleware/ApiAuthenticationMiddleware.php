@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use App\Support\ApiResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,7 +31,7 @@ class ApiAuthenticationMiddleware
             $user = $this->authenticateUser($request);
             
             if (!$user) {
-                return $this->unauthorizedResponse('Authentication required');
+                return ApiResponse::error('Authentication required', 'AUTH_REQUIRED', 401);
             }
             
             // Set the authenticated user
@@ -43,29 +44,25 @@ class ApiAuthenticationMiddleware
             $request->attributes->set('auth_user', $user);
             $request->attributes->set('tenant_id', $user->tenant_id);
             
-            // Set tenant context globally
-            app()->instance('current_tenant_id', $user->tenant_id);
-            
             // Log successful authentication
             Log::info('User authenticated via API', [
                 'user_id' => $user->id,
-                'email' => $user->email,
-                'tenant_id' => $user->tenant_id,
+                'tenant_id' => $user->tenant_id ? substr($user->tenant_id, 0, 8) . '...' : null,
                 'method' => $this->getAuthMethod($request),
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent' => substr($request->userAgent(), 0, 50) // Truncate for privacy
             ]);
             
             return $next($request);
             
         } catch (\Exception $e) {
-            Log::error('Authentication error', [
+            Log::error('API Authentication failed', [
                 'error' => $e->getMessage(),
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent()
             ]);
             
-            return $this->unauthorizedResponse('Authentication failed');
+            return ApiResponse::error('Authentication failed', 'AUTH_FAILED', 401);
         }
     }
     
@@ -80,8 +77,8 @@ class ApiAuthenticationMiddleware
         }
         
         // Method 2: Session-based authentication (for SPA)
-        if ($request->hasSession() && $request->session()->has('auth')) {
-            return $this->authenticateViaSession($request);
+        if ($request->hasSession() && Auth::guard('web')->check()) {
+            return Auth::guard('web')->user();
         }
         
         // Method 3: API key authentication
@@ -127,41 +124,12 @@ class ApiAuthenticationMiddleware
             return null;
         }
         
-        // Update last activity
-        $personalAccessToken->forceFill([
-            'last_used_at' => now(),
-        ])->save();
+        // Update last activity (debounced)
+        $this->updateLastActivity($personalAccessToken, 'last_used_at');
         
         return $user;
     }
     
-    /**
-     * Authenticate via session (for SPA)
-     */
-    private function authenticateViaSession(Request $request): ?\App\Models\User
-    {
-        if (!$request->hasSession()) {
-            return null;
-        }
-        
-        $session = $request->session();
-        $userId = $session->get('auth.user_id');
-        
-        if (!$userId) {
-            return null;
-        }
-        
-        $user = \App\Models\User::find($userId);
-        
-        if (!$user || !$user->is_active) {
-            return null;
-        }
-        
-        // Update last activity
-        $user->update(['last_activity_at' => now()]);
-        
-        return $user;
-    }
     
     /**
      * Authenticate via API key
@@ -174,17 +142,18 @@ class ApiAuthenticationMiddleware
             return null;
         }
         
-        // Find user by API key (you might want to create a separate API keys table)
+        // Find user by API key with tenant scoping
         $user = \App\Models\User::where('api_key', $apiKey)
             ->where('is_active', true)
+            ->whereNotNull('tenant_id') // Ensure user has tenant
             ->first();
         
         if (!$user) {
             return null;
         }
         
-        // Update last activity
-        $user->update(['last_activity_at' => now()]);
+        // Update last activity (debounced)
+        $this->updateLastActivity($user, 'last_activity_at');
         
         return $user;
     }
@@ -198,7 +167,7 @@ class ApiAuthenticationMiddleware
             return 'sanctum_token';
         }
         
-        if ($request->hasSession() && $request->session()->has('auth')) {
+        if ($request->hasSession() && Auth::guard('web')->check()) {
             return 'session';
         }
         
@@ -206,19 +175,24 @@ class ApiAuthenticationMiddleware
             return 'api_key';
         }
         
-        return 'unknown';
+        return Auth::guard('sanctum')->check() ? 'sanctum_already_authenticated' : 'unknown';
     }
     
     /**
-     * Return unauthorized response
+     * Update last activity with debouncing (only if older than 5 minutes)
      */
-    private function unauthorizedResponse(string $message): Response
+    private function updateLastActivity($model, string $field): void
     {
-        return response()->json([
-            'success' => false,
-            'error' => 'Unauthorized',
-            'message' => $message,
-            'code' => 'AUTH_REQUIRED'
-        ], 401);
+        $now = now();
+        $lastUpdate = $model->{$field};
+        
+        // Only update if last update was more than 5 minutes ago
+        if (!$lastUpdate || $lastUpdate->diffInMinutes($now) >= 5) {
+            if ($model instanceof \Laravel\Sanctum\PersonalAccessToken) {
+                $model->forceFill([$field => $now])->save();
+            } else {
+                $model->update([$field => $now]);
+            }
+        }
     }
 }

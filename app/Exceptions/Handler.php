@@ -1,33 +1,16 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Exceptions;
 
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
     /**
-     * A list of exception types with their corresponding custom log levels.
-     *
-     * @var array<class-string<\Throwable>, \Psr\Log\LogLevel::*>
-     */
-    protected $levels = [
-        
-    ];
-
-    /**
-     * A list of the exception types that are not reported.
-     *
-     * @var array<int, class-string<\Throwable>>
-     */
-    protected $dontReport = [
-        
-    ];
-
-    /**
-     * A list of the inputs that are never flashed to the session on validation exceptions.
+     * The list of the inputs that are never flashed to the session on validation exceptions.
      *
      * @var array<int, string>
      */
@@ -39,25 +22,42 @@ class Handler extends ExceptionHandler
 
     /**
      * Register the exception handling callbacks for the application.
-     *
-     * @return void
      */
-    public function register()
+    public function register(): void
     {
         $this->reportable(function (Throwable $e) {
-            
+            $this->trackError($e);
         });
     }
 
     /**
-     * Convert an authentication exception into a response.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Illuminate\Auth\AuthenticationException  $exception
-     * @return \Symfony\Component\HttpFoundation\Response
+     * Track error metrics
      */
-    protected function unauthenticated($request, AuthenticationException $exception)
+    private function trackError(Throwable $e): void
     {
-        return response()->json(['message' => 'Unauthenticated'], 401);
+        $today = now()->toDateString();
+        $errorKey = "performance:errors:{$today}";
+        
+        // Increment error count
+        Cache::increment($errorKey);
+        
+        // Store last error details
+        Cache::put('performance:last_error', [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+            'timestamp' => now()->toISOString(),
+        ], 3600); // 1 hour
+        
+        // Log error with performance context
+        Log::error('Application Error', [
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'memory_usage' => memory_get_usage(true),
+            'memory_peak' => memory_get_peak_usage(true),
+            'timestamp' => now()->toISOString(),
+        ]);
     }
 }

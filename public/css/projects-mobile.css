@@ -1,0 +1,754 @@
+/* Projects Mobile Responsive Styles */
+
+/* Mobile-first approach with progressive enhancement */
+
+/* Base mobile styles (320px+) */
+@media (max-width: 640px) {
+    /* Header adjustments */
+    .projects-header {
+        padding: 0.75rem 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .projects-header h1 {
+        font-size: 1.5rem;
+        line-height: 1.2;
+    }
+    
+    .projects-header-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .projects-header-actions button {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* KPI Strip mobile layout */
+    .kpi-strip {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        padding: 1rem;
+    }
+    
+    .kpi-card {
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+    }
+    
+    .kpi-card h3 {
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .kpi-card .value {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+    
+    .kpi-card .change {
+        font-size: 0.625rem;
+    }
+    
+    /* Charts mobile layout */
+    .charts-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    .chart-card {
+        padding: 1rem;
+    }
+    
+    .chart-card h3 {
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    /* Filter bar mobile layout */
+    .filter-bar {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+        width: 100%;
+        font-size: 0.875rem;
+    }
+    
+    /* Table mobile layout */
+    .projects-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .projects-table {
+        min-width: 600px;
+    }
+    
+    .projects-table th,
+    .projects-table td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.75rem;
+    }
+    
+    .projects-table th:first-child,
+    .projects-table td:first-child {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 10;
+        min-width: 120px;
+    }
+    
+    /* Mobile table actions */
+    .table-actions {
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .table-actions button {
+        padding: 0.25rem;
+        font-size: 0.75rem;
+    }
+    
+    /* Modal mobile adjustments */
+    .modal-content {
+        margin: 1rem;
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        padding: 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .modal-footer button {
+        width: 100%;
+    }
+    
+    /* Form mobile adjustments */
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .form-group {
+        width: 100%;
+    }
+    
+    /* Toast notifications mobile */
+    .toast-container {
+        bottom: 1rem;
+        left: 1rem;
+        right: 1rem;
+        width: auto;
+    }
+    
+    .toast {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Small mobile devices (480px+) */
+@media (min-width: 480px) and (max-width: 640px) {
+    .projects-header-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .projects-header-actions button {
+        flex: 1 1 calc(50% - 0.25rem);
+    }
+    
+    .kpi-strip {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .filter-bar {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        flex: 1 1 calc(50% - 0.375rem);
+    }
+}
+
+/* Tablet portrait (768px+) */
+@media (min-width: 641px) and (max-width: 1024px) {
+    .projects-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .projects-header-actions {
+        gap: 0.75rem;
+    }
+    
+    .kpi-strip {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .charts-container {
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        padding: 1.5rem;
+    }
+    
+    .filter-bar {
+        padding: 1.5rem;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        flex: 1 1 calc(33.333% - 0.5rem);
+    }
+    
+    .projects-table th,
+    .projects-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Tablet landscape (1024px+) */
+@media (min-width: 1025px) and (max-width: 1280px) {
+    .kpi-strip {
+        grid-template-columns: repeat(6, 1fr);
+    }
+    
+    .charts-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .filter-group {
+        flex: 1 1 calc(25% - 0.5rem);
+    }
+}
+
+/* Desktop (1280px+) */
+@media (min-width: 1281px) {
+    .kpi-strip {
+        grid-template-columns: repeat(6, 1fr);
+    }
+    
+    .charts-container {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .filter-group {
+        flex: 1 1 calc(20% - 0.5rem);
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    /* Larger touch targets */
+    button {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    .table-actions button {
+        min-height: 36px;
+        min-width: 36px;
+    }
+    
+    /* Remove hover effects on touch devices */
+    .hover\:bg-gray-50:hover {
+        background-color: transparent;
+    }
+    
+    .hover\:text-gray-600:hover {
+        color: inherit;
+    }
+    
+    /* Add active states for touch feedback */
+    button:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    /* Improve scrolling on touch devices */
+    .projects-table-container {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .kpi-card .sparkline {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .projects-header {
+        background-color: #1f2937;
+        color: #f9fafb;
+    }
+    
+    .kpi-card {
+        background-color: #374151;
+        color: #f9fafb;
+    }
+    
+    .chart-card {
+        background-color: #374151;
+        color: #f9fafb;
+    }
+    
+    .filter-bar {
+        background-color: #374151;
+    }
+    
+    .projects-table {
+        background-color: #1f2937;
+        color: #f9fafb;
+    }
+    
+    .projects-table th {
+        background-color: #374151;
+        color: #f9fafb;
+    }
+    
+    .projects-table td {
+        border-color: #4b5563;
+    }
+    
+    .modal-content {
+        background-color: #1f2937;
+        color: #f9fafb;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .animate-spin {
+        animation: none;
+    }
+    
+    .animate-pulse {
+        animation: none;
+    }
+}
+
+/* Disable animations to prevent flickering */
+.no-animations *,
+.no-animations *::before,
+.no-animations *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+}
+
+/* Force disable ALL animations and transitions to prevent flickering - EXCEPT dropdowns */
+*:not(.dropdown-menu):not([x-show]):not(.modal) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+}
+
+/* Force disable animations on mobile to prevent flickering - EXCEPT dropdowns */
+@media (max-width: 768px) {
+    *:not(.dropdown-menu):not([x-show]):not(.modal) {
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+    }
+}
+
+/* Fix layout issues - prevent overlapping elements */
+.projects-table-container {
+    position: relative !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    height: auto !important;
+    min-height: 200px !important;
+}
+
+/* Ensure proper stacking context */
+.projects-header,
+.kpi-strip,
+.charts-container,
+.filter-bar {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Fix dropdown positioning */
+.relative {
+    position: relative !important;
+}
+
+/* Prevent elements from floating */
+.fixed {
+    position: fixed !important;
+}
+
+.absolute {
+    position: absolute !important;
+}
+
+/* Ensure proper z-index hierarchy */
+.z-10 { z-index: 10 !important; }
+.z-20 { z-index: 20 !important; }
+.z-30 { z-index: 30 !important; }
+.z-40 { z-index: 40 !important; }
+.z-50 { z-index: 50 !important; }
+
+/* Fix dropdown positioning and visibility */
+[x-show] {
+    display: block !important;
+    transition: opacity 0.2s ease !important; /* Re-enable transition for x-show */
+}
+
+[x-show="false"] {
+    display: none !important;
+}
+
+/* Ensure dropdowns work properly with proper z-index hierarchy */
+.absolute.z-10 {
+    position: absolute !important;
+    z-index: 10 !important;
+}
+
+/* Fix select dropdowns */
+select {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Fix dropdown menus */
+.dropdown-menu {
+    position: absolute !important;
+    z-index: 20 !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.375rem !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Fix notification and user menu dropdowns */
+.absolute.right-0.mt-2 {
+    position: absolute !important;
+    z-index: 30 !important;
+}
+
+/* Fix all dropdown menus to appear above KPI cards */
+.absolute.z-50 {
+    position: absolute !important;
+    z-index: 50 !important;
+}
+
+/* Ensure dropdowns appear above KPI cards and other content */
+[x-show] .absolute {
+    z-index: 50 !important;
+}
+
+/* Fix dropdown visibility issues */
+.relative {
+    position: relative !important;
+}
+
+/* Ensure dropdown buttons are clickable */
+button {
+    pointer-events: auto !important;
+}
+
+/* Fix dropdown menu positioning */
+.absolute.mt-2 {
+    position: absolute !important;
+    margin-top: 0.5rem !important;
+    z-index: 50 !important;
+}
+
+/* Print styles */
+@media print {
+    .projects-header-actions,
+    .filter-bar,
+    .table-actions,
+    .modal,
+    .toast-container {
+        display: none !important;
+    }
+    
+    .projects-table {
+        font-size: 12px;
+    }
+    
+    .kpi-strip {
+        grid-template-columns: repeat(3, 1fr);
+        break-inside: avoid;
+    }
+    
+    .chart-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-contrast: high) {
+    .kpi-card {
+        border: 2px solid #000;
+    }
+    
+    .chart-card {
+        border: 2px solid #000;
+    }
+    
+    .projects-table th,
+    .projects-table td {
+        border: 1px solid #000;
+    }
+}
+
+/* Focus management for keyboard navigation */
+.projects-table-container:focus-within {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Mobile-specific utility classes */
+.mobile-only {
+    display: block;
+}
+
+.desktop-only {
+    display: none;
+}
+
+@media (min-width: 641px) {
+    .mobile-only {
+        display: none;
+    }
+    
+    .desktop-only {
+        display: block;
+    }
+}
+
+/* Mobile navigation improvements */
+.mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    padding: 0.5rem;
+    z-index: 50;
+}
+
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.5rem;
+    text-decoration: none;
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.mobile-nav-item.active {
+    color: #3b82f6;
+}
+
+.mobile-nav-item svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Mobile search improvements */
+.mobile-search {
+    position: relative;
+    width: 100%;
+}
+
+.mobile-search input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+}
+
+.mobile-search .search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+}
+
+/* Mobile filter chips */
+.mobile-filter-chips {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mobile-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    text-decoration: none;
+    color: #374151;
+}
+
+.mobile-filter-chip.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.mobile-filter-chip .remove {
+    margin-left: 0.25rem;
+    cursor: pointer;
+}
+
+/* Mobile loading states */
+.mobile-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.mobile-loading .spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid #e5e7eb;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mobile error states */
+.mobile-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    color: #dc2626;
+}
+
+.mobile-error .error-icon {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 1rem;
+    color: #dc2626;
+}
+
+.mobile-error .error-message {
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.mobile-error .retry-button {
+    padding: 0.5rem 1rem;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+/* Mobile empty states */
+.mobile-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #6b7280;
+}
+
+.mobile-empty .empty-icon {
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    color: #d1d5db;
+}
+
+.mobile-empty .empty-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.mobile-empty .empty-description {
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.mobile-empty .empty-action {
+    padding: 0.75rem 1.5rem;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}

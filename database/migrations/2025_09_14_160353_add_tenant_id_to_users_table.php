@@ -14,9 +14,11 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->ulid('tenant_id')->nullable()->after('id');
-            $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
-            $table->index('tenant_id');
+            if (!Schema::hasColumn('users', 'tenant_id')) {
+                $table->ulid('tenant_id')->nullable()->after('id');
+                $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
+                $table->index('tenant_id');
+            }
         });
     }
 

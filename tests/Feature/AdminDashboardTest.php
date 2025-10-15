@@ -13,13 +13,18 @@ class AdminDashboardTest extends TestCase
     /** @test */
     public function it_can_access_admin_dashboard_with_feature_flag()
     {
-        // Enable auth bypass
-        config(['app.auth_bypass_enabled' => true]);
+        // Create admin user
+        $adminUser = User::factory()->create([
+            'role' => 'super_admin'
+        ]);
+        
+        // Authenticate as admin user
+        $this->actingAs($adminUser, 'web');
         
         $response = $this->get('/admin/dashboard');
         
         $response->assertStatus(200);
-        $response->assertViewIs('admin.dashboard.index');
+        $response->assertViewIs('admin.dashboard');
     }
 
     /** @test */

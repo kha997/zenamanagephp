@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         // Users table for Z.E.N.A
-        Schema::create('users', function (Blueprint $table) {
+        if (!Schema::hasTable('users')) {
+            Schema::create('users', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('name');
             $table->string('email')->unique();
@@ -27,7 +28,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['email']);
-        });
+            });
+        }
     }
 
     /**

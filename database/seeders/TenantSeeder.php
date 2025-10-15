@@ -20,9 +20,10 @@ class TenantSeeder extends Seeder
     public function run(): void
     {
         // Tạo tenant mặc định cho development - sử dụng firstOrCreate để tránh duplicate
-        Tenant::firstOrCreate(
-            ['domain' => 'zena.local'], // Điều kiện tìm kiếm
-            [
+        $tenant = Tenant::withoutGlobalScopes()->where('domain', 'zena.local')->first();
+        if (!$tenant) {
+            Tenant::create([
+                'domain' => 'zena.local',
                 'name' => 'ZENA Company',
                 'slug' => 'zena-company',
                 'is_active' => true,
@@ -32,11 +33,11 @@ class TenantSeeder extends Seeder
                     'currency' => 'VND',
                     'language' => 'vi'
                 ]
-            ]
-        );
+            ]);
+        }
 
         // Kiểm tra và tạo thêm tenant khác nếu chưa đủ
-        $existingCount = Tenant::where('domain', '!=', 'zena.local')->count();
+        $existingCount = Tenant::withoutGlobalScopes()->where('domain', '!=', 'zena.local')->count();
         if ($existingCount < 2) {
             $needToCreate = 2 - $existingCount;
             Tenant::factory($needToCreate)->create();

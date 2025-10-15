@@ -28,6 +28,11 @@ class ExistsRule implements Rule
      */
     public function passes($attribute, $value): bool
     {
+        // Allow empty values (handled by required rule)
+        if (empty($value)) {
+            return true;
+        }
+
         $query = DB::table($this->table)->where($this->column, $value);
 
         if ($this->whereColumn && $this->whereValue !== null) {

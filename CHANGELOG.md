@@ -1,6 +1,35 @@
 # 📦 CHANGELOG
 
-## [Unreleased] - 2025-01-21 - APP-PROJ-DELTA: Projects Management Enhancement
+## [Unreleased] - 2025-01-21 - E2E-SMOKE-MIN: Smoke Test Execution & Analysis
+
+### 🧪 **Smoke Test Execution**
+- **✅ Test Execution**: Ran comprehensive smoke test suite with @smoke tag
+- **⚠️ Test Results**: 82 tests passed, 70 tests failed (53.9% success rate)
+- **📊 Browser Coverage**: Tests executed across Chromium, Mobile Chrome, Mobile Safari
+- **🎥 Artifacts Generated**: Complete trace.zip with videos, screenshots, and error context
+
+### 🔍 **Test Analysis**
+- **❌ Authentication Issues**: Multiple login failures across all browsers
+- **❌ Dashboard Loading**: Dashboard elements not loading properly
+- **❌ Project Creation**: Project creation functionality not accessible
+- **❌ API Endpoints**: 401/404 errors on API calls
+- **✅ Test Infrastructure**: Playwright setup and test execution working correctly
+
+### 📋 **Key Issues Identified**
+- **Authentication Flow**: Login process failing consistently
+- **Frontend-Backend Sync**: Frontend not properly connecting to backend
+- **Route Protection**: API endpoints returning authentication errors
+- **UI Element Detection**: Selectors not finding expected elements
+
+### 🎯 **Next Steps Required**
+- **Backend Authentication**: Fix login API and session management
+- **Database Seeding**: Ensure test users and roles are properly seeded
+- **Frontend Build**: Verify frontend is properly built and served
+- **API Integration**: Resolve API endpoint authentication issues
+
+---
+
+## [Unreleased] - 2025-01-21 - APP-PROJ-DELTA-01: Projects Management Enhancement
 
 ### 🚀 **New Features**
 - **✅ Project Creation**: Enhanced project creation modal with comprehensive form validation

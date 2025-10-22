@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { 
   useAdminTenants, 
   useDeleteAdminTenant, 
-  useBulkUpdateTenantStatus,
   useSuspendTenant,
   useActivateTenant
 } from '@/entities/admin/tenants/hooks';
@@ -25,36 +24,36 @@ export default function AdminTenantsPage() {
     page: 1,
     per_page: 10
   });
-  const [selectedTenants, setSelectedTenants] = useState<number[]>([]);
+  // const [selectedTenants, setSelectedTenants] = useState<number[]>([]);
 
   const { data: tenantsResponse, isLoading, error } = useAdminTenants(filters);
   const deleteTenantMutation = useDeleteAdminTenant();
-  const bulkUpdateStatusMutation = useBulkUpdateTenantStatus();
+  // const bulkUpdateStatusMutation = useBulkUpdateTenantStatus();
   const suspendTenantMutation = useSuspendTenant();
   const activateTenantMutation = useActivateTenant();
 
   const tenants = tenantsResponse?.data || [];
   const meta = tenantsResponse?.meta;
 
-  const handleSearch = (search: string) => {
-    setFilters(prev => ({ ...prev, search, page: 1 }));
-  };
+  // const handleSearch = (search: string) => {
+  //   setFilters(prev => ({ ...prev, search, page: 1 }));
+  // };
 
-  const handleStatusFilter = (status: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      status: status === 'all' ? undefined : status,
-      page: 1 
-    }));
-  };
+  // const handleStatusFilter = (status: string) => {
+  //   setFilters(prev => ({ 
+  //     ...prev, 
+  //     status: status === 'all' ? undefined : status,
+  //     page: 1 
+  //   }));
+  // };
 
-  const handlePlanFilter = (plan: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      plan: plan === 'all' ? undefined : plan,
-      page: 1 
-    }));
-  };
+  // const handlePlanFilter = (plan: string) => {
+  //   setFilters(prev => ({ 
+  //     ...prev, 
+  //     plan: plan === 'all' ? undefined : plan,
+  //     page: 1 
+  //   }));
+  // };
 
   const handleDeleteTenant = async (tenantId: number) => {
     if (window.confirm('Are you sure you want to delete this tenant? This action cannot be undone.')) {
@@ -81,33 +80,33 @@ export default function AdminTenantsPage() {
     }
   };
 
-  const handleBulkStatusUpdate = async (status: 'active' | 'inactive' | 'suspended') => {
-    if (selectedTenants.length === 0) return;
-    
-    try {
-      await bulkUpdateStatusMutation.mutateAsync({ tenantIds: selectedTenants, status });
-      toast.success(`${selectedTenants.length} tenants have been ${status}`);
-      setSelectedTenants([]);
-    } catch (error) {
-      toast.error('Failed to update tenants');
-    }
-  };
+  // const handleBulkStatusUpdate = async (status: 'active' | 'inactive' | 'suspended') => {
+  //   if (selectedTenants.length === 0) return;
+  //   
+  //   try {
+  //     await bulkUpdateStatusMutation.mutateAsync({ tenantIds: selectedTenants, status });
+  //     toast.success(`${selectedTenants.length} tenants have been ${status}`);
+  //     setSelectedTenants([]);
+  //   } catch (error) {
+  //     toast.error('Failed to update tenants');
+  //   }
+  // };
 
-  const handleSelectTenant = (tenantId: number) => {
-    setSelectedTenants(prev => 
-      prev.includes(tenantId) 
-        ? prev.filter(id => id !== tenantId)
-        : [...prev, tenantId]
-    );
-  };
+  // const handleSelectTenant = (tenantId: number) => {
+  //   setSelectedTenants(prev => 
+  //     prev.includes(tenantId) 
+  //       ? prev.filter(id => id !== tenantId)
+  //       : [...prev, tenantId]
+  //   );
+  // };
 
-  const handleSelectAll = () => {
-    if (selectedTenants.length === tenants.length) {
-      setSelectedTenants([]);
-    } else {
-      setSelectedTenants(tenants.map(tenant => tenant.id));
-    }
-  };
+  // const handleSelectAll = () => {
+  //   if (selectedTenants.length === tenants.length) {
+  //     setSelectedTenants([]);
+  //   } else {
+  //     setSelectedTenants(tenants.map(tenant => tenant.id));
+  //   }
+  // };
 
   if (isLoading) {
     return (

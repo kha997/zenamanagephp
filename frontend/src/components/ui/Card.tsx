@@ -1,25 +1,25 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { hoverLift, fadeInUp } from '@/utils/animations'
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode
 }
 
-export const Card: React.FC<CardProps> = ({ children, className, ...props }) => {
+export const Card: React.FC<CardProps> = ({ children, className }) => {
   return (
     <motion.div
       className={cn(
         'rounded-lg border bg-card text-card-foreground shadow-sm',
         className
       )}
-      initial="initial"
-      animate="animate"
-      whileHover="hover"
-      variants={hoverLift}
-      transition={{ duration: 0.2, ease: 'easeInOut' }}
-      {...props}
+      whileHover={{
+        y: -2,
+        transition: {
+          duration: 0.2,
+          ease: "easeInOut"
+        }
+      }}
     >
       {children}
     </motion.div>

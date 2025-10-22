@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,9 @@ import toast from 'react-hot-toast';
 import { 
   useProjects, 
   useDeleteProject,
-  useCreateProject
+  useCreateProject,
+  useUpdateProject,
+  useExportProjects
 } from '@/entities/app/projects/hooks';
 import type { ProjectsFilters } from '@/entities/app/projects/types';
 import { 
@@ -22,7 +24,8 @@ import {
   EyeIcon,
   CalendarIcon,
   UserGroupIcon,
-  FolderIcon
+  FolderIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 
 export default function ProjectsListPage() {
@@ -30,19 +33,32 @@ export default function ProjectsListPage() {
     page: 1,
     per_page: 12
   });
-  const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
+  // const [selectedProjects, setSelectedProjects] = useState<number[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<any>(null);
   const [createForm, setCreateForm] = useState({
     name: '',
     description: '',
     status: 'planning',
     priority: 'medium',
-    start_date: new Date().toISOString().split('T')[0]
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  });
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    status: 'planning',
+    priority: 'medium',
+    start_date: '',
+    end_date: ''
   });
 
   const { data: projectsResponse, isLoading, error } = useProjects(filters);
   const deleteProjectMutation = useDeleteProject();
   const createProjectMutation = useCreateProject();
+  const updateProjectMutation = useUpdateProject();
+  const exportProjectsMutation = useExportProjects();
 
   const projects = projectsResponse?.data || [];
   const meta = projectsResponse?.meta;
@@ -78,26 +94,30 @@ export default function ProjectsListPage() {
     }
   };
 
-  const handleSelectProject = (projectId: number) => {
-    setSelectedProjects(prev => 
-      prev.includes(projectId) 
-        ? prev.filter(id => id !== projectId)
-        : [...prev, projectId]
-    );
-  };
+  // const handleSelectProject = (projectId: number) => {
+  //   setSelectedProjects(prev => 
+  //     prev.includes(projectId) 
+  //       ? prev.filter(id => id !== projectId)
+  //       : [...prev, projectId]
+  //   );
+  // };
 
-  const handleSelectAll = () => {
-    if (selectedProjects.length === projects.length) {
-      setSelectedProjects([]);
-    } else {
-      setSelectedProjects(projects.map(project => project.id));
-    }
-  };
+  // const handleSelectAll = () => {
+  //   if (selectedProjects.length === projects.length) {
+  //     setSelectedProjects([]);
+  //   } else {
+  //     setSelectedProjects(projects.map(project => project.id));
+  //   }
+  // };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createProjectMutation.mutateAsync(createForm);
+      await createProjectMutation.mutateAsync({
+        ...createForm,
+        status: createForm.status as 'planning' | 'active' | 'completed' | 'cancelled' | 'on_hold',
+        priority: createForm.priority as 'low' | 'medium' | 'high' | 'urgent'
+      });
       toast.success('Project created successfully');
       setIsCreateModalOpen(false);
       setCreateForm({
@@ -105,11 +125,63 @@ export default function ProjectsListPage() {
         description: '',
         status: 'planning',
         priority: 'medium',
-        start_date: new Date().toISOString().split('T')[0]
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       });
     } catch (error) {
       toast.error('Failed to create project');
     }
+  };
+
+  const handleEditProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProject) return;
+    
+    try {
+      await updateProjectMutation.mutateAsync({
+        id: editingProject.id,
+        projectData: {
+          ...editForm,
+          status: editForm.status as 'planning' | 'active' | 'completed' | 'cancelled' | 'on_hold',
+          priority: editForm.priority as 'low' | 'medium' | 'high' | 'urgent'
+        }
+      });
+      toast.success('Project updated successfully');
+      setIsEditModalOpen(false);
+      setEditingProject(null);
+    } catch (error) {
+      toast.error('Failed to update project');
+    }
+  };
+
+  const handleExportProjects = async () => {
+    try {
+      const blob = await exportProjectsMutation.mutateAsync(filters);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `projects-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Projects exported successfully');
+    } catch (error) {
+      toast.error('Failed to export projects');
+    }
+  };
+
+  const openEditModal = (project: any) => {
+    setEditingProject(project);
+    setEditForm({
+      name: project.name || '',
+      description: project.description || '',
+      status: project.status || 'planning',
+      priority: project.priority || 'medium',
+      start_date: project.start_date ? new Date(project.start_date).toISOString().split('T')[0] : '',
+      end_date: project.end_date ? new Date(project.end_date).toISOString().split('T')[0] : ''
+    });
+    setIsEditModalOpen(true);
   };
 
   if (isLoading) {
@@ -188,13 +260,18 @@ export default function ProjectsListPage() {
           <h2 className="text-3xl font-bold text-gray-900">Projects</h2>
           <p className="text-gray-600">Manage your projects and track progress</p>
         </div>
-        <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              New Project
-            </Button>
-          </DialogTrigger>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={handleExportProjects} disabled={exportProjectsMutation.isPending}>
+            <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <PlusIcon className="h-4 w-4 mr-2" />
+                New Project
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Create New Project</DialogTitle>
@@ -267,6 +344,16 @@ export default function ProjectsListPage() {
                   required
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="end_date">End Date</Label>
+                <Input
+                  id="end_date"
+                  type="date"
+                  value={createForm.end_date}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, end_date: e.target.value }))}
+                  required
+                />
+              </div>
               <div className="flex justify-end space-x-2">
                 <Button
                   type="button"
@@ -286,6 +373,104 @@ export default function ProjectsListPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditProject} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Project Name</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter project name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editForm.description}
+                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter project description"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="planning">Planning</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="on_hold">On Hold</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-priority">Priority</Label>
+                <Select
+                  value={editForm.priority}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, priority: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-start-date">Start Date</Label>
+                <Input
+                  id="edit-start-date"
+                  type="date"
+                  value={editForm.start_date}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, start_date: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-end-date">End Date</Label>
+                <Input
+                  id="edit-end-date"
+                  type="date"
+                  value={editForm.end_date}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, end_date: e.target.value }))}
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateProjectMutation.isPending}>
+                {updateProjectMutation.isPending ? 'Updating...' : 'Update Project'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Filters */}
       <Card>
@@ -342,9 +527,9 @@ export default function ProjectsListPage() {
       </Card>
 
       {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="grid" aria-label="Projects grid">
-          {projects.map(project => (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow" role="gridcell">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="grid" aria-label="Projects grid">
+        {projects.map(project => (
+          <Card key={project.id} className="hover:shadow-lg transition-shadow" role="gridcell">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -389,13 +574,18 @@ export default function ProjectsListPage() {
                   </div>
                 </div>
 
-                  {/* Actions */}
-                  <div className="flex space-x-2 pt-2">
+                {/* Actions */}
+                <div className="flex space-x-2 pt-2">
                     <Button variant="outline" size="sm" className="flex-1" aria-label={`View project ${project.name}`}>
                       <EyeIcon className="h-4 w-4 mr-1" />
                       View
                     </Button>
-                    <Button variant="outline" size="sm" aria-label={`Edit project ${project.name}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => openEditModal(project)}
+                      aria-label={`Edit project ${project.name}`}
+                    >
                       <PencilIcon className="h-4 w-4" />
                     </Button>
                     <Button 
@@ -408,7 +598,7 @@ export default function ProjectsListPage() {
                     >
                       <TrashIcon className="h-4 w-4" />
                     </Button>
-                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -453,6 +643,7 @@ export default function ProjectsListPage() {
         </CardContent>
       </Card>
       )}
+      </div>
     </div>
   );
 }

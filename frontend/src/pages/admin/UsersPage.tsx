@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,21 +37,21 @@ export default function AdminUsersPage() {
     setFilters(prev => ({ ...prev, search, page: 1 }));
   };
 
-  const handleTenantFilter = (tenantId: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      tenant_id: tenantId === 'all' ? undefined : parseInt(tenantId),
-      page: 1 
-    }));
-  };
+  // const handleTenantFilter = (tenantId: string) => {
+  //   setFilters(prev => ({ 
+  //     ...prev, 
+  //     tenant_id: tenantId === 'all' ? undefined : parseInt(tenantId),
+  //     page: 1 
+  //   }));
+  // };
 
-  const handleRoleFilter = (roleId: string) => {
-    setFilters(prev => ({ 
-      ...prev, 
-      role_id: roleId === 'all' ? undefined : parseInt(roleId),
-      page: 1 
-    }));
-  };
+  // const handleRoleFilter = (roleId: string) => {
+  //   setFilters(prev => ({ 
+  //     ...prev, 
+  //     role_id: roleId === 'all' ? undefined : parseInt(roleId),
+  //     page: 1 
+  //   }));
+  // };
 
   const handleStatusFilter = (status: string) => {
     setFilters(prev => ({ 

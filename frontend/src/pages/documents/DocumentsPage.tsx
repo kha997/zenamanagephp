@@ -1,16 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import toast from 'react-hot-toast';
 import { 
-  useDocuments, 
-  useDeleteDocument, 
-  useDownloadDocument,
-  useBulkDeleteDocuments,
-  useBulkUpdateDocumentTags,
-  useBulkUpdateDocumentVisibility
+  useDocuments
 } from '@/entities/app/documents/hooks';
 import type { DocumentsFilters } from '@/entities/app/documents/types';
 import { 
@@ -26,82 +20,94 @@ import {
   VideoCameraIcon
 } from '@heroicons/react/24/outline';
 
-interface Document {
-  id: number;
-  name: string;
-  type: 'pdf' | 'doc' | 'docx' | 'xls' | 'xlsx' | 'ppt' | 'pptx' | 'jpg' | 'png' | 'mp4';
-  size: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  project?: string;
-  category: 'project' | 'template' | 'resource' | 'archive';
-}
+// interface DocumentType {
+//   id: number;
+//   name: string;
+//   filename: string;
+//   original_filename: string;
+//   mime_type: string;
+//   size: number;
+//   path: string;
+//   url: string;
+//   project_id?: number;
+//   project_name?: string;
+//   uploaded_by: number;
+//   uploaded_by_name: string;
+//   uploaded_at: string;
+//   updated_at: string;
+//   tags: string[];
+//   description?: string;
+//   version: number;
+//   is_public: boolean;
+//   download_count: number;
+//   last_accessed_at?: string;
+// }
 
 // Mock data - replace with actual API call
-const mockDocuments: Document[] = [
-  {
-    id: 1,
-    name: 'Project Brief.pdf',
-    type: 'pdf',
-    size: '2.4 MB',
-    uploadedBy: 'John Doe',
-    uploadedAt: '2024-01-15',
-    project: 'Website Redesign',
-    category: 'project'
-  },
-  {
-    id: 2,
-    name: 'Design Mockups.pdf',
-    type: 'pdf',
-    size: '5.8 MB',
-    uploadedBy: 'Jane Smith',
-    uploadedAt: '2024-01-14',
-    project: 'Website Redesign',
-    category: 'project'
-  },
-  {
-    id: 3,
-    name: 'Technical Specs.docx',
-    type: 'docx',
-    size: '1.2 MB',
-    uploadedBy: 'Bob Johnson',
-    uploadedAt: '2024-01-13',
-    project: 'Website Redesign',
-    category: 'project'
-  },
-  {
-    id: 4,
-    name: 'Company Logo.png',
-    type: 'png',
-    size: '856 KB',
-    uploadedBy: 'Alice Brown',
-    uploadedAt: '2024-01-12',
-    category: 'resource'
-  },
-  {
-    id: 5,
-    name: 'Meeting Recording.mp4',
-    type: 'mp4',
-    size: '45.2 MB',
-    uploadedBy: 'Charlie Wilson',
-    uploadedAt: '2024-01-11',
-    project: 'Website Redesign',
-    category: 'project'
-  }
-];
+// const mockDocuments: Document[] = [
+//   {
+//     id: 1,
+//     name: 'Project Brief.pdf',
+//     type: 'pdf',
+//     size: '2.4 MB',
+//     uploadedBy: 'John Doe',
+//     uploadedAt: '2024-01-15',
+//     project: 'Website Redesign',
+//     category: 'project'
+//   },
+//   {
+//     id: 2,
+//     name: 'Design Mockups.pdf',
+//     type: 'pdf',
+//     size: '5.8 MB',
+//     uploadedBy: 'Jane Smith',
+//     uploadedAt: '2024-01-14',
+//     project: 'Website Redesign',
+//     category: 'project'
+//   },
+//   {
+//     id: 3,
+//     name: 'Technical Specs.docx',
+//     type: 'docx',
+//     size: '1.2 MB',
+//     uploadedBy: 'Bob Johnson',
+//     uploadedAt: '2024-01-13',
+//     project: 'Website Redesign',
+//     category: 'project'
+//   },
+//   {
+//     id: 4,
+//     name: 'Company Logo.png',
+//     type: 'png',
+//     size: '856 KB',
+//     uploadedBy: 'Alice Brown',
+//     uploadedAt: '2024-01-12',
+//     category: 'resource'
+//   },
+//   {
+//     id: 5,
+//     name: 'Meeting Recording.mp4',
+//     type: 'mp4',
+//     size: '45.2 MB',
+//     uploadedBy: 'Charlie Wilson',
+//     uploadedAt: '2024-01-11',
+//     project: 'Website Redesign',
+//     category: 'project'
+//   }
+// ];
 
 export default function DocumentsPage() {
   const [filters, setFilters] = useState<DocumentsFilters>({
     page: 1,
     per_page: 12
   });
-  const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  // const [selectedDocuments, setSelectedDocuments] = useState<number[]>([]);
+  // const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const { data: documentsResponse, isLoading, error } = useDocuments(filters);
-  const deleteDocumentMutation = useDeleteDocument();
-  const downloadDocumentMutation = useDownloadDocument();
-  const bulkDeleteMutation = useBulkDeleteDocuments();
+  // const deleteDocumentMutation = useDeleteDocument();
+  // const downloadDocumentMutation = useDownloadDocument();
+  // const bulkDeleteMutation = useBulkDeleteDocuments();
 
   const documents = documentsResponse?.data || [];
   const meta = documentsResponse?.meta;
@@ -126,63 +132,63 @@ export default function DocumentsPage() {
     }));
   };
 
-  const handleDeleteDocument = async (documentId: number) => {
-    if (window.confirm('Are you sure you want to delete this document?')) {
-      try {
-        await deleteDocumentMutation.mutateAsync(documentId);
-        toast.success('Document deleted successfully');
-      } catch (error) {
-        toast.error('Failed to delete document');
-      }
-    }
-  };
+  // const handleDeleteDocument = async (documentId: number) => {
+  //   if (window.confirm('Are you sure you want to delete this document?')) {
+  //     try {
+  //       await deleteDocumentMutation.mutateAsync(documentId);
+  //       toast.success('Document deleted successfully');
+  //     } catch (error) {
+  //       toast.error('Failed to delete document');
+  //     }
+  //   }
+  // };
 
-  const handleDownloadDocument = async (documentId: number, filename: string) => {
-    try {
-      const blob = await downloadDocumentMutation.mutateAsync(documentId);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      toast.success('Document downloaded successfully');
-    } catch (error) {
-      toast.error('Failed to download document');
-    }
-  };
+  // const handleDownloadDocument = async (documentId: number, filename: string) => {
+  //   try {
+  //     const blob = await downloadDocumentMutation.mutateAsync(documentId);
+  //     const url = window.URL.createObjectURL(blob);
+  //     const a = document.createElement('a');
+  //     a.href = url;
+  //     a.download = filename;
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     window.URL.revokeObjectURL(url);
+  //     document.body.removeChild(a);
+  //     toast.success('Document downloaded successfully');
+  //   } catch (error) {
+  //     toast.error('Failed to download document');
+  //   }
+  // };
 
-  const handleBulkDelete = async () => {
-    if (selectedDocuments.length === 0) return;
-    
-    if (window.confirm(`Are you sure you want to delete ${selectedDocuments.length} documents?`)) {
-      try {
-        await bulkDeleteMutation.mutateAsync(selectedDocuments);
-        toast.success(`${selectedDocuments.length} documents deleted successfully`);
-        setSelectedDocuments([]);
-      } catch (error) {
-        toast.error('Failed to delete documents');
-      }
-    }
-  };
+  // const handleBulkDelete = async () => {
+  //   if (selectedDocuments.length === 0) return;
+  //   
+  //   if (window.confirm(`Are you sure you want to delete ${selectedDocuments.length} documents?`)) {
+  //     try {
+  //       await bulkDeleteMutation.mutateAsync(selectedDocuments);
+  //       toast.success(`${selectedDocuments.length} documents deleted successfully`);
+  //       setSelectedDocuments([]);
+  //     } catch (error) {
+  //       toast.error('Failed to delete documents');
+  //     }
+  //   }
+  // };
 
-  const handleSelectDocument = (documentId: number) => {
-    setSelectedDocuments(prev => 
-      prev.includes(documentId) 
-        ? prev.filter(id => id !== documentId)
-        : [...prev, documentId]
-    );
-  };
+  // const handleSelectDocument = (documentId: number) => {
+  //   setSelectedDocuments(prev => 
+  //     prev.includes(documentId) 
+  //       ? prev.filter(id => id !== documentId)
+  //       : [...prev, documentId]
+  //   );
+  // };
 
-  const handleSelectAll = () => {
-    if (selectedDocuments.length === documents.length) {
-      setSelectedDocuments([]);
-    } else {
-      setSelectedDocuments(documents.map(doc => doc.id));
-    }
-  };
+  // const handleSelectAll = () => {
+  //   if (selectedDocuments.length === documents.length) {
+  //     setSelectedDocuments([]);
+  //   } else {
+  //     setSelectedDocuments(documents.map(doc => doc.id));
+  //   }
+  // };
 
   if (isLoading) {
     return (
@@ -221,46 +227,41 @@ export default function DocumentsPage() {
     );
   }
 
-  const getFileIcon = (type: string) => {
-    switch (type) {
-      case 'pdf':
-        return <DocumentTextIcon className="h-5 w-5 text-red-500" />;
-      case 'doc':
-      case 'docx':
-        return <DocumentTextIcon className="h-5 w-5 text-blue-500" />;
-      case 'xls':
-      case 'xlsx':
-        return <DocumentTextIcon className="h-5 w-5 text-green-500" />;
-      case 'ppt':
-      case 'pptx':
-        return <DocumentTextIcon className="h-5 w-5 text-orange-500" />;
-      case 'jpg':
-      case 'png':
-        return <PhotoIcon className="h-5 w-5 text-purple-500" />;
-      case 'mp4':
-        return <VideoCameraIcon className="h-5 w-5 text-indigo-500" />;
-      default:
-        return <DocumentTextIcon className="h-5 w-5 text-gray-500" />;
+  const getFileIcon = (mimeType: string) => {
+    if (mimeType.includes('pdf')) {
+      return <DocumentTextIcon className="h-5 w-5 text-red-500" />;
+    } else if (mimeType.includes('word') || mimeType.includes('document')) {
+      return <DocumentTextIcon className="h-5 w-5 text-blue-500" />;
+    } else if (mimeType.includes('sheet') || mimeType.includes('excel')) {
+      return <DocumentTextIcon className="h-5 w-5 text-green-500" />;
+    } else if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+      return <DocumentTextIcon className="h-5 w-5 text-orange-500" />;
+    } else if (mimeType.includes('image')) {
+      return <PhotoIcon className="h-5 w-5 text-purple-500" />;
+    } else if (mimeType.includes('video')) {
+      return <VideoCameraIcon className="h-5 w-5 text-indigo-500" />;
+    } else {
+      return <DocumentTextIcon className="h-5 w-5 text-gray-500" />;
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'project':
-        return 'default';
-      case 'template':
-        return 'secondary';
-      case 'resource':
-        return 'outline';
-      case 'archive':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
-  };
+  // const getCategoryColor = (category: string) => {
+  //   switch (category) {
+  //     case 'project':
+  //       return 'default';
+  //     case 'template':
+  //       return 'secondary';
+  //     case 'resource':
+  //       return 'outline';
+  //     case 'archive':
+  //       return 'destructive';
+  //     default:
+  //       return 'secondary';
+  //   }
+  // };
 
-  const projects = [...new Set(documents.map(doc => doc.project).filter(Boolean))];
-  const categories = [...new Set(documents.map(doc => doc.category))];
+  const projects = [...new Set(documents.map(doc => doc.project_name).filter(Boolean))];
+  // const categories = [...new Set(documents.map(doc => doc.category))];
 
   return (
     <div className="space-y-6">
@@ -340,21 +341,21 @@ export default function DocumentsPage() {
             {documents.map(doc => (
               <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                 <div className="flex items-center space-x-4">
-                  {getFileIcon(doc.type)}
+                  {getFileIcon(doc.mime_type)}
                   <div className="flex-1">
                     <h4 className="font-medium">{doc.name}</h4>
                     <div className="flex items-center space-x-4 mt-1">
                       <span className="text-sm text-gray-500">{doc.size}</span>
-                      <span className="text-sm text-gray-500">by {doc.uploadedBy}</span>
-                      <span className="text-sm text-gray-500">{doc.uploadedAt}</span>
-                      {doc.project && (
+                      <span className="text-sm text-gray-500">by {doc.uploaded_by_name}</span>
+                      <span className="text-sm text-gray-500">{doc.uploaded_at}</span>
+                      {doc.project_name && (
                         <Badge variant="outline" className="text-xs">
-                          {doc.project}
+                          {doc.project_name}
                         </Badge>
                       )}
-                      <Badge variant={getCategoryColor(doc.category)} className="text-xs">
+                      {/* <Badge variant={getCategoryColor(doc.category)} className="text-xs">
                         {doc.category}
-                      </Badge>
+                      </Badge> */}
                     </div>
                   </div>
                 </div>

@@ -1,12 +1,9 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { 
   useAdminDashboardSummary,
-  useAdminDashboardCharts,
-  useAdminDashboardActivity,
   useAdminDashboardExport
 } from '@/entities/admin/dashboard/hooks';
 import { 
@@ -22,13 +19,9 @@ export default function AdminDashboardPage() {
   const navigate = useNavigate();
   
   const { data: summaryResponse, isLoading: summaryLoading, error: summaryError } = useAdminDashboardSummary();
-  const { data: chartsResponse, isLoading: chartsLoading } = useAdminDashboardCharts();
-  const { data: activityResponse, isLoading: activityLoading } = useAdminDashboardActivity();
   const { data: exportResponse } = useAdminDashboardExport();
 
   const summary = summaryResponse?.data;
-  const charts = chartsResponse?.data;
-  const activity = activityResponse?.data;
   const exportUrl = exportResponse?.data?.export_url;
 
   const handleExport = () => {

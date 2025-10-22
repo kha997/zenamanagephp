@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminUsersApi } from './api';
 import type {
-  AdminUser,
   AdminUsersFilters,
   CreateAdminUserRequest,
   UpdateAdminUserRequest

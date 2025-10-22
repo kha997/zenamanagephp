@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -96,33 +95,33 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const getTaskStatusColor = (status: string) => {
-    switch (status) {
-      case 'done':
-        return 'default';
-      case 'in_progress':
-        return 'secondary';
-      case 'todo':
-        return 'outline';
-      default:
-        return 'secondary';
-    }
-  };
+  // const getTaskStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case 'done':
+  //       return 'default';
+  //     case 'in_progress':
+  //       return 'secondary';
+  //     case 'todo':
+  //       return 'outline';
+  //     default:
+  //       return 'secondary';
+  //   }
+  // };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent':
-        return 'destructive';
-      case 'high':
-        return 'default';
-      case 'medium':
-        return 'secondary';
-      case 'low':
-        return 'outline';
-      default:
-        return 'secondary';
-    }
-  };
+  // const getPriorityColor = (priority: string) => {
+  //   switch (priority) {
+  //     case 'urgent':
+  //       return 'destructive';
+  //     case 'high':
+  //       return 'default';
+  //     case 'medium':
+  //       return 'secondary';
+  //     case 'low':
+  //       return 'outline';
+  //     default:
+  //       return 'secondary';
+  //   }
+  // };
 
   return (
     <div className="space-y-6">
@@ -211,7 +210,7 @@ export default function ProjectDetailPage() {
         {/* Project Details */}
         <div className="lg:col-span-2 space-y-6">
           {/* Tasks */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Tasks</CardTitle>
             </CardHeader>
@@ -239,7 +238,7 @@ export default function ProjectDetailPage() {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         {/* Sidebar */}

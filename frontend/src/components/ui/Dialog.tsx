@@ -83,7 +83,7 @@ export const DialogTitle: React.FC<DialogTitleProps> = ({ children }) => {
   );
 };
 
-export const DialogTrigger: React.FC<DialogTriggerProps> = ({ asChild, children }) => {
+export const DialogTrigger: React.FC<DialogTriggerProps> = ({ children }) => {
   return <>{children}</>;
 };
 

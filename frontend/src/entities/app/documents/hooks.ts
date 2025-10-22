@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { documentsApi } from './api';
 import type {
-  Document,
   DocumentsFilters,
   UploadDocumentRequest,
   UpdateDocumentRequest

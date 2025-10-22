@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectsApi } from './api';
 import type {
-  Project,
   ProjectsFilters,
   CreateProjectRequest,
   UpdateProjectRequest
@@ -115,5 +114,12 @@ export const useRemoveTeamMember = () => {
       // Invalidate project details
       queryClient.invalidateQueries({ queryKey: projectsKeys.detail(projectId) });
     },
+  });
+};
+
+// Export projects mutation
+export const useExportProjects = () => {
+  return useMutation({
+    mutationFn: (filters: ProjectsFilters = {}) => projectsApi.exportProjects(filters),
   });
 };

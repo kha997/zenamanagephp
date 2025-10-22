@@ -64,5 +64,25 @@ export const projectsApi = {
   // Remove team member
   removeTeamMember: async (projectId: number, userId: number): Promise<void> => {
     await apiClient.delete(`/api/v1/projects/${projectId}/team-members/${userId}`);
+  },
+
+  // Export projects to CSV
+  exportProjects: async (filters: ProjectsFilters = {}): Promise<Blob> => {
+    const params = new URLSearchParams();
+    
+    if (filters.search) params.append('search', filters.search);
+    if (filters.status) params.append('status', filters.status);
+    if (filters.priority) params.append('priority', filters.priority);
+    if (filters.tenant_id) params.append('tenant_id', filters.tenant_id.toString());
+    if (filters.created_by) params.append('created_by', filters.created_by.toString());
+    params.append('format', 'csv');
+
+    const response = await apiClient.get(`/api/v1/app/projects/export?${params.toString()}`, {
+      responseType: 'blob',
+      headers: {
+        'Accept': 'text/csv'
+      }
+    });
+    return response.data;
   }
 };

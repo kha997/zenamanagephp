@@ -1,1 +1,0 @@
-<?php /**PATH /Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/projects/construction-project.blade.php ENDPATH**/ ?>

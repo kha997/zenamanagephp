@@ -41,7 +41,7 @@ const Header = () => {
     window.location.href = '/logout';
   };
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = async () => {
     // Mock search implementation
     return [
       {

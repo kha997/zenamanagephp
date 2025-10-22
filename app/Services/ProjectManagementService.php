@@ -57,6 +57,10 @@ class ProjectManagementService
             $query->where('priority', $filters['priority']);
         }
 
+        if (isset($filters['client_id']) && $filters['client_id']) {
+            $query->where('client_id', $filters['client_id']);
+        }
+
         if (isset($filters['owner_id']) && $filters['owner_id']) {
             $query->where('owner_id', $filters['owner_id']);
         }
@@ -397,5 +401,79 @@ class ProjectManagementService
                     ->count()
             ];
         }, 300);
+    }
+
+    /**
+     * Bulk archive projects
+     */
+    public function bulkArchiveProjects(array $projectIds, ?int $tenantId = null): array
+    {
+        $this->validateTenantAccess($tenantId);
+        
+        $projects = Project::whereIn('id', $projectIds)
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->get();
+        
+        if ($projects->isEmpty()) {
+            abort(404, 'No projects found');
+        }
+        
+        $archivedCount = 0;
+        foreach ($projects as $project) {
+            $project->update(['status' => 'archived']);
+            $this->logCrudOperation('bulk_archived', $project);
+            $archivedCount++;
+        }
+        
+        return [
+            'archived_count' => $archivedCount,
+            'project_ids' => $projectIds
+        ];
+    }
+
+    /**
+     * Bulk export projects
+     */
+    public function bulkExportProjects(array $projectIds, ?int $tenantId = null): array
+    {
+        $this->validateTenantAccess($tenantId);
+        
+        $projects = Project::whereIn('id', $projectIds)
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->with(['owner', 'client'])
+            ->get();
+        
+        if ($projects->isEmpty()) {
+            abort(404, 'No projects found');
+        }
+        
+        // For now, return project data for export
+        // In a real implementation, this would generate a file
+        $exportData = $projects->map(function($project) {
+            return [
+                'id' => $project->id,
+                'name' => $project->name,
+                'description' => $project->description,
+                'status' => $project->status,
+                'priority' => $project->priority,
+                'progress' => $project->progress,
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'budget_total' => $project->budget_total,
+                'owner' => $project->owner->name ?? 'N/A',
+                'client' => $project->client?->name ?? 'N/A'
+            ];
+        });
+        
+        $this->logCrudOperation('bulk_exported', null, [
+            'exported_count' => $projects->count(),
+            'project_ids' => $projectIds
+        ]);
+        
+        return [
+            'exported_count' => $projects->count(),
+            'data' => $exportData,
+            'project_ids' => $projectIds
+        ];
     }
 }

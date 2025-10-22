@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 
 export interface ChartData {
   id: string;
@@ -41,9 +41,9 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({ data, loading = false,
         renderCharts();
       }
     });
-  }, [data, loading, error]);
+  }, [data, loading, error, renderCharts]);
 
-  const renderCharts = () => {
+  const renderCharts = useCallback(() => {
     data.forEach((chartData) => {
       const canvas = chartRefs.current[chartData.id];
       if (!canvas) return;
@@ -90,7 +90,7 @@ export const ChartWidget: React.FC<ChartWidgetProps> = ({ data, loading = false,
         }
       });
     });
-  };
+  }, [data]);
 
   if (loading) {
     return (

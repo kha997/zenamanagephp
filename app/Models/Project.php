@@ -150,6 +150,22 @@ class Project extends Model
     }
 
     /**
+     * Relationship: Project belongs to client
+     */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Client::class, 'client_id');
+    }
+
+    /**
+     * Relationship: Project owner
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'owner_id');
+    }
+
+    /**
      * Relationship: Project có nhiều components
      */
     public function components(): HasMany
@@ -319,14 +335,6 @@ class Project extends Model
     public function scopeArchived($query)
     {
         return $query->where('status', self::STATUS_ARCHIVED);
-    }
-
-    /**
-     * Relationship: Project owner
-     */
-    public function owner(): BelongsTo
-    {
-        return $this->belongsTo(\App\Models\User::class, 'owner_id');
     }
 
     /**

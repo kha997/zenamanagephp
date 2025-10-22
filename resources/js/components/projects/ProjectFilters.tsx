@@ -10,11 +10,11 @@ export interface ProjectFilters {
 
 interface ProjectFiltersProps {
   filters: ProjectFilters;
-  onFiltersChange: (filters: ProjectFilters) => void;
+  onFiltersChange: (_filters: ProjectFilters) => void;
   onReset: () => void;
 }
 
-export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
+const ProjectFiltersComponent: React.FC<ProjectFiltersProps> = ({
   filters,
   onFiltersChange,
   onReset
@@ -255,4 +255,4 @@ export const ProjectFilters: React.FC<ProjectFiltersProps> = ({
   );
 };
 
-export default ProjectFilters;
+export default ProjectFiltersComponent;

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ProjectManagementService;
 use App\Http\Requests\Unified\ProjectManagementRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 
@@ -320,5 +321,61 @@ class ProjectManagementController extends Controller
         }
 
         return view('app.projects.edit', compact('project'));
+    }
+
+    /**
+     * Bulk archive projects
+     */
+    public function bulkArchiveProjects(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'ids' => 'required|array',
+                'ids.*' => 'required|string|ulid'
+            ]);
+
+            $projectIds = $request->input('ids');
+            $result = $this->projectService->bulkArchiveProjects($projectIds);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Projects archived successfully',
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to archive projects: ' . $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Bulk export projects
+     */
+    public function bulkExportProjects(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'ids' => 'required|array',
+                'ids.*' => 'required|string|ulid'
+            ]);
+
+            $projectIds = $request->input('ids');
+            $result = $this->projectService->bulkExportProjects($projectIds);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Projects exported successfully',
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to export projects: ' . $e->getMessage()
+            ], 422);
+        }
     }
 }

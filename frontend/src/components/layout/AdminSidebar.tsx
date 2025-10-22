@@ -19,9 +19,8 @@ interface AdminSidebarProps {
 const adminNavigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: HomeIcon },
   { name: 'Users', href: '/admin/users', icon: UsersIcon },
-  { name: 'Projects', href: '/admin/projects', icon: FolderIcon },
-  { name: 'Roles & Permissions', href: '/admin/rbac', icon: ShieldCheckIcon },
-  { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
+  { name: 'Roles & Permissions', href: '/admin/roles', icon: ShieldCheckIcon },
+  { name: 'Tenants', href: '/admin/tenants', icon: FolderIcon },
   { name: 'System Settings', href: '/admin/settings', icon: Cog6ToothIcon },
 ];
 

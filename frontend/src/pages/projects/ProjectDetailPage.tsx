@@ -1,207 +1,242 @@
-import React from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/Card';
-import { Button } from '@/components/Button';
-import { Loading } from '@/components/Loading';
-import { apiClient } from '@/lib/api-client';
-import {
-  ArrowLeft,
-  Calendar,
-  DollarSign,
-  Edit,
-  Users,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  BarChart3
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import toast from 'react-hot-toast';
+import { 
+  useProject, 
+  useDeleteProject 
+} from '@/entities/app/projects/hooks';
+import { 
+  useDocuments 
+} from '@/entities/app/documents/hooks';
+import { 
+  ArrowLeftIcon,
+  PencilIcon,
+  CalendarIcon,
+  UserGroupIcon,
+  ChartBarIcon,
+  DocumentTextIcon,
+  PlusIcon,
+  TrashIcon
+} from '@heroicons/react/24/outline';
 
-interface ProjectDetail {
-  id: number;
-  name: string;
-  description: string;
-  status: string;
-  progress: number;
-  start_date: string;
-  end_date: string;
-  actual_cost: number;
-  created_at: string;
-  updated_at: string;
-}
-
-const ProjectDetailPage: React.FC = () => {
+export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const projectId = id ? parseInt(id) : 0;
 
-  const { data: project, isLoading, error } = useQuery({
-    queryKey: ['project', id],
-    queryFn: async (): Promise<ProjectDetail> => {
-      const response = await apiClient.get(`/projects/${id}`);
-      return response.data;
-    },
-    enabled: !!id
-  });
+  const { data: projectResponse, isLoading, error } = useProject(projectId);
+  const { data: documentsResponse } = useDocuments({ project_id: projectId, per_page: 5 });
+  const deleteProjectMutation = useDeleteProject();
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'text-green-600 bg-green-100';
-      case 'in_progress':
-        return 'text-blue-600 bg-blue-100';
-      case 'on_hold':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'planning':
-        return 'text-gray-600 bg-gray-100';
-      case 'cancelled':
-        return 'text-red-600 bg-red-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+  const project = projectResponse?.data;
+  const documents = documentsResponse?.data || [];
+
+  const handleDeleteProject = async () => {
+    if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+      try {
+        await deleteProjectMutation.mutateAsync(projectId);
+        toast.success('Project deleted successfully');
+        navigate('/app/projects');
+      } catch (error) {
+        toast.error('Failed to delete project');
+      }
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'Hoàn thành';
-      case 'in_progress':
-        return 'Đang thực hiện';
-      case 'on_hold':
-        return 'Tạm dừng';
-      case 'planning':
-        return 'Lên kế hoạch';
-      case 'cancelled':
-        return 'Đã hủy';
-      default:
-        return status;
-    }
+  const handleEditProject = () => {
+    // TODO: Navigate to edit project page or open modal
+    toast('Edit project functionality coming soon');
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  const handleAddTask = () => {
+    // TODO: Navigate to add task page or open modal
+    toast('Add task functionality coming soon');
   };
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-96">
-        <Loading size="lg" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">Loading project...</div>
+        </div>
       </div>
     );
   }
 
   if (error || !project) {
     return (
-      <div className="text-center py-12">
-        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Không tìm thấy dự án</h2>
-        <p className="text-gray-600 mb-4">Dự án bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
-        <Button asChild>
-          <Link to="/projects">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại danh sách
-          </Link>
-        </Button>
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-red-500">
+            <h3 className="text-lg font-medium mb-2">Failed to load project</h3>
+            <p className="text-gray-600">There was an error loading the project. Please try again.</p>
+          </div>
+        </div>
       </div>
     );
   }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'default';
+      case 'planning':
+        return 'secondary';
+      case 'on_hold':
+        return 'destructive';
+      case 'completed':
+        return 'outline';
+      case 'cancelled':
+        return 'destructive';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const getTaskStatusColor = (status: string) => {
+    switch (status) {
+      case 'done':
+        return 'default';
+      case 'in_progress':
+        return 'secondary';
+      case 'todo':
+        return 'outline';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return 'destructive';
+      case 'high':
+        return 'default';
+      case 'medium':
+        return 'secondary';
+      case 'low':
+        return 'outline';
+      default:
+        return 'secondary';
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" asChild>
-            <Link to="/projects">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Quay lại
-            </Link>
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/app/projects')}>
+            <ArrowLeftIcon className="h-4 w-4 mr-2" />
+            Back to Projects
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{project.name}</h1>
-            <div className="flex items-center gap-3 mt-2">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(project.status)}`}>
-                {getStatusText(project.status)}
-              </span>
-              <span className="text-gray-500 text-sm">
-                Cập nhật: {formatDate(project.updated_at)}
-              </span>
-            </div>
+            <h2 className="text-3xl font-bold text-gray-900">{project.name}</h2>
+            <p className="text-gray-600">{project.description}</p>
           </div>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" asChild>
-            <Link to={`/projects/${project.id}/edit`}>
-              <Edit className="w-4 h-4 mr-2" />
-              Chỉnh sửa
-            </Link>
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={handleEditProject}>
+            <PencilIcon className="h-4 w-4 mr-2" />
+            Edit Project
           </Button>
-          <Button asChild>
-            <Link to={`/projects/${project.id}/tasks`}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              Xem nhiệm vụ
-            </Link>
+          <Button onClick={handleAddTask}>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Add Task
+          </Button>
+          <Button 
+            variant="outline" 
+            className="text-red-600"
+            onClick={handleDeleteProject}
+            disabled={deleteProjectMutation.isPending}
+          >
+            <TrashIcon className="h-4 w-4 mr-2" />
+            Delete
           </Button>
         </div>
       </div>
 
-      {/* Project Overview */}
+      {/* Project Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Status</CardTitle>
+            <ChartBarIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <Badge variant={getStatusColor(project.status)} className="text-sm">
+              {project.status}
+            </Badge>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Progress</CardTitle>
+            <ChartBarIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{project.progress}%</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Team Size</CardTitle>
+            <UserGroupIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{project.team_members.length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Budget</CardTitle>
+            <ChartBarIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${(project.spent || 0).toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              of ${(project.budget || 0).toLocaleString()}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Info */}
-        <div className="lg:col-span-2">
+        {/* Project Details */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Tasks */}
           <Card>
             <CardHeader>
-              <CardTitle>Thông tin dự án</CardTitle>
+              <CardTitle>Tasks</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {/* Description */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Mô tả</h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {project.description || 'Chưa có mô tả cho dự án này.'}
-                  </p>
-                </div>
-
-                {/* Progress */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Tiến độ thực hiện</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Hoàn thành</span>
-                      <span className="font-medium">{project.progress}%</span>
+              <div className="space-y-4">
+                {tasks.map(task => (
+                  <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium">{task.title}</h4>
+                      <p className="text-sm text-gray-600">{task.description}</p>
+                      <div className="flex items-center space-x-4 mt-2">
+                        <Badge variant={getTaskStatusColor(task.status)}>
+                          {task.status}
+                        </Badge>
+                        <Badge variant={getPriorityColor(task.priority)}>
+                          {task.priority}
+                        </Badge>
+                        <span className="text-sm text-gray-500">{task.assignee}</span>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div
-                        className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-                        style={{ width: `${project.progress}%` }}
-                      ></div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">{project.progress}%</div>
-                        <div className="text-gray-500">Hoàn thành</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-yellow-600">{100 - project.progress}%</div>
-                        <div className="text-gray-500">Còn lại</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">0</div>
-                        <div className="text-gray-500">Quá hạn</div>
-                      </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">{task.dueDate}</p>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -209,93 +244,61 @@ const ProjectDetailPage: React.FC = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Project Stats */}
+          {/* Project Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Thống kê</CardTitle>
+              <CardTitle>Project Information</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Timeline */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Thời gian</p>
-                    <p className="font-medium">
-                      {formatDate(project.start_date)} - {formatDate(project.end_date)}
-                    </p>
-                  </div>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <CalendarIcon className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium">Start Date</p>
+                  <p className="text-sm text-gray-600">{new Date(project.start_date).toLocaleDateString()}</p>
                 </div>
-
-                {/* Budget */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Chi phí thực tế</p>
-                    <p className="font-medium">{formatCurrency(project.actual_cost)}</p>
-                  </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CalendarIcon className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium">End Date</p>
+                  <p className="text-sm text-gray-600">{new Date(project.end_date).toLocaleDateString()}</p>
                 </div>
-
-                {/* Team */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Users className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Thành viên</p>
-                    <p className="font-medium">5 người</p>
-                  </div>
-                </div>
-
-                {/* Tasks */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-yellow-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Nhiệm vụ</p>
-                    <p className="font-medium">12/20 hoàn thành</p>
-                  </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <UserGroupIcon className="h-4 w-4 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium">Team Size</p>
+                  <p className="text-sm text-gray-600">{project.team_members.length} members</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
+          {/* Recent Documents */}
           <Card>
             <CardHeader>
-              <CardTitle>Thao tác nhanh</CardTitle>
+              <CardTitle>Recent Documents</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button className="w-full justify-start" variant="outline" asChild>
-                  <Link to={`/projects/${project.id}/tasks`}>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Quản lý nhiệm vụ
-                  </Link>
-                </Button>
-                <Button className="w-full justify-start" variant="outline" asChild>
-                  <Link to={`/projects/${project.id}/team`}>
-                    <Users className="w-4 h-4 mr-2" />
-                    Quản lý nhóm
-                  </Link>
-                </Button>
-                <Button className="w-full justify-start" variant="outline" asChild>
-                  <Link to={`/projects/${project.id}/reports`}>
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Báo cáo
-                  </Link>
-                </Button>
-                <Button className="w-full justify-start" variant="outline" asChild>
-                  <Link to={`/projects/${project.id}/documents`}>
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Tài liệu
-                  </Link>
-                </Button>
+                {documents.length > 0 ? (
+                  documents.map(doc => (
+                    <div key={doc.id} className="flex items-center space-x-3">
+                      <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{doc.name}</p>
+                        <p className="text-xs text-gray-500">
+                          Updated {new Date(doc.updated_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 py-4">
+                    <DocumentTextIcon className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">No documents yet</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -303,6 +306,4 @@ const ProjectDetailPage: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default ProjectDetailPage;
+}

@@ -101,9 +101,9 @@ class BackupCommand extends Command
         // Get database configuration
         $config = config('database.connections.mysql');
         
-        // Create mysqldump command
+        // Create mysqldump command with MariaDB compatibility
         $command = sprintf(
-            'mysqldump --user=%s --password=%s --host=%s --port=%s --single-transaction --routines --triggers %s > %s',
+            'mysqldump --user=%s --password=%s --host=%s --port=%s --single-transaction --skip-routines --skip-triggers --skip-events %s > %s',
             $config['username'],
             $config['password'],
             $config['host'],
@@ -116,7 +116,22 @@ class BackupCommand extends Command
         exec($command, $output, $returnCode);
 
         if ($returnCode !== 0) {
-            throw new \Exception('Database backup failed with return code: ' . $returnCode);
+            // Try fallback command without problematic options
+            $fallbackCommand = sprintf(
+                'mysqldump --user=%s --password=%s --host=%s --port=%s --single-transaction --skip-routines --skip-triggers --skip-events --skip-lock-tables %s > %s',
+                $config['username'],
+                $config['password'],
+                $config['host'],
+                $config['port'],
+                $config['database'],
+                $filepath
+            );
+            
+            exec($fallbackCommand, $fallbackOutput, $fallbackReturnCode);
+            
+            if ($fallbackReturnCode !== 0) {
+                throw new \Exception('Database backup failed with return code: ' . $fallbackReturnCode . '. Output: ' . implode("\n", $fallbackOutput));
+            }
         }
 
         // Verify backup file

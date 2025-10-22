@@ -16,7 +16,7 @@
                 <p class="mt-2 text-gray-600">{{ __('clients.subtitle') }}</p>
             </div>
             <div class="flex items-center space-x-4">
-                <a href="{{ route('clients.create') }}" 
+                <a href="{{ route('app.clients.create') }}" 
                    class="btn btn-primary">
                     <i class="fas fa-plus mr-2"></i>
                     {{ __('clients.create_client') }}
@@ -251,7 +251,7 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex items-center justify-end space-x-2">
-                                    <a href="{{ route('clients.show', $client) }}" 
+                                    <a href="{{ route('app.clients.show', $client) }}" 
                                        class="text-indigo-600 hover:text-indigo-900">
                                         {{ __('clients.view') }}
                                     </a>
@@ -276,7 +276,7 @@
                 <i class="fas fa-users text-gray-400 text-4xl mb-4"></i>
                 <h3 class="text-lg font-medium text-gray-900 mb-2">{{ __('clients.no_clients') }}</h3>
                 <p class="text-gray-500 mb-6">{{ __('clients.no_clients_description') }}</p>
-                <a href="{{ route('clients.create') }}" 
+                <a href="{{ route('app.clients.create') }}" 
                    class="btn btn-primary">
                     <i class="fas fa-plus mr-2"></i>
                     {{ __('clients.create_first_client') }}

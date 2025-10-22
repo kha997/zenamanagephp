@@ -1,475 +1,695 @@
-{{-- Projects Index - Phase 2 Implementation --}}
-{{-- Using standardized components for consistent UI/UX --}}
+@extends('layouts.app')
 
-@php
-    $user = Auth::user();
-    $tenant = $user->tenant ?? null;
-    
-    // Prepare filter options
-    $statusOptions = [
-        ['value' => 'active', 'label' => 'Active'],
-        ['value' => 'completed', 'label' => 'Completed'],
-        ['value' => 'on_hold', 'label' => 'On Hold'],
-        ['value' => 'cancelled', 'label' => 'Cancelled']
-    ];
-    
-    $priorityOptions = [
-        ['value' => 'low', 'label' => 'Low'],
-        ['value' => 'medium', 'label' => 'Medium'],
-        ['value' => 'high', 'label' => 'High'],
-        ['value' => 'urgent', 'label' => 'Urgent']
-    ];
-    
-    $ownerOptions = collect($projects ?? [])->pluck('owner')->unique()->map(function($owner) {
-        return ['value' => $owner->id ?? '', 'label' => $owner->name ?? 'Unknown'];
-    })->toArray();
-    
-    // Filter configuration
-    $filters = [
-        [
-            'key' => 'status',
-            'label' => 'Status',
-            'type' => 'select',
-            'options' => $statusOptions,
-            'placeholder' => 'All Statuses'
-        ],
-        [
-            'key' => 'priority',
-            'label' => 'Priority',
-            'type' => 'select',
-            'options' => $priorityOptions,
-            'placeholder' => 'All Priorities'
-        ],
-        [
-            'key' => 'owner_id',
-            'label' => 'Owner',
-            'type' => 'select',
-            'options' => $ownerOptions,
-            'placeholder' => 'All Owners'
-        ],
-        [
-            'key' => 'start_date',
-            'label' => 'Start Date',
-            'type' => 'date-range'
-        ]
-    ];
-    
-    // Sort options
-    $sortOptions = [
-        ['value' => 'name', 'label' => 'Name'],
-        ['value' => 'status', 'label' => 'Status'],
-        ['value' => 'priority', 'label' => 'Priority'],
-        ['value' => 'start_date', 'label' => 'Start Date'],
-        ['value' => 'end_date', 'label' => 'End Date'],
-        ['value' => 'created_at', 'label' => 'Created Date'],
-        ['value' => 'updated_at', 'label' => 'Last Updated']
-    ];
-    
-    // Bulk actions
-    $bulkActions = [
-        [
-            'label' => 'Archive',
-            'icon' => 'fas fa-archive',
-            'handler' => 'bulkArchive()'
-        ],
-        [
-            'label' => 'Change Status',
-            'icon' => 'fas fa-edit',
-            'handler' => 'bulkChangeStatus()'
-        ],
-        [
-            'label' => 'Export',
-            'icon' => 'fas fa-download',
-            'handler' => 'bulkExport()'
-        ]
-    ];
-    
-    // Breadcrumbs
-    $breadcrumbs = [
-        ['label' => 'Dashboard', 'url' => route('app.dashboard')],
-        ['label' => 'Projects', 'url' => null]
-    ];
-    
-    // Page actions
-    $actions = '
-        <div class="flex items-center space-x-3">
-            <button onclick="exportProjects()" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
-                <i class="fas fa-download mr-2"></i>Export
-            </button>
-            <button onclick="openModal(\'create-project-modal\')" class="btn bg-blue-600 text-white hover:bg-blue-700">
-                <i class="fas fa-plus mr-2"></i>New Project
-            </button>
-        </div>
-    ';
-    
-    // Prepare table data
-    $tableData = collect($projects ?? [])->map(function($project) {
-        return [
-            'id' => $project->id,
-            'name' => $project->name,
-            'description' => $project->description,
-            'status' => $project->status,
-            'priority' => $project->priority ?? 'medium',
-            'owner' => $project->owner->name ?? 'Unknown',
-            'start_date' => $project->start_date ? $project->start_date->format('M d, Y') : '-',
-            'end_date' => $project->end_date ? $project->end_date->format('M d, Y') : '-',
-            'budget' => $project->budget_total ?? 0,
-            'progress' => $project->progress ?? 0,
-            'created_at' => $project->created_at->format('M d, Y'),
-            'updated_at' => $project->updated_at->format('M d, Y')
-        ];
-    });
-    
-    // Table columns configuration
-    $columns = [
-        ['key' => 'name', 'label' => 'Project Name', 'sortable' => true, 'primary' => true],
-        ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'type' => 'badge'],
-        ['key' => 'priority', 'label' => 'Priority', 'sortable' => true, 'type' => 'badge'],
-        ['key' => 'owner', 'label' => 'Owner', 'sortable' => true],
-        ['key' => 'start_date', 'label' => 'Start Date', 'sortable' => true, 'type' => 'date'],
-        ['key' => 'end_date', 'label' => 'End Date', 'sortable' => true, 'type' => 'date'],
-        ['key' => 'budget', 'label' => 'Budget', 'sortable' => true, 'type' => 'currency'],
-        ['key' => 'progress', 'label' => 'Progress', 'sortable' => true, 'type' => 'progress'],
-        ['key' => 'updated_at', 'label' => 'Last Updated', 'sortable' => true, 'type' => 'date']
-    ];
-@endphp
+@section('title', 'Projects')
 
-<x-shared.layout-wrapper 
-    title="Projects"
-    subtitle="Manage and track your projects"
-    :breadcrumbs="$breadcrumbs"
-    :actions="$actions">
-    
-    {{-- Filter Bar --}}
-    <x-shared.filter-bar 
-        :search="true"
-        search-placeholder="Search projects..."
-        :filters="$filters"
-        :sort-options="$sortOptions"
-        :view-modes="['table', 'grid', 'list']"
-        current-view-mode="table"
-        :bulk-actions="$bulkActions">
-        
-        {{-- Custom Actions Slot --}}
-        <x-slot name="actions">
-            <button onclick="refreshProjects()" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
-                <i class="fas fa-sync-alt mr-2"></i>Refresh
-            </button>
-        </x-slot>
-    </x-shared.filter-bar>
-    
-    {{-- Projects Table --}}
-    <div class="mt-6">
-        @if($tableData->count() > 0)
-            <x-shared.table-standardized 
-                :data="$tableData"
-                :columns="$columns"
-                :sortable="true"
-                :selectable="true"
-                :pagination="true"
-                :per-page="15"
-                :search="true"
-                :export="true"
-                :bulk-actions="$bulkActions"
-                :responsive="true"
-                :loading="false"
-                :empty-message="'No projects found'"
-                :empty-description="'Create your first project to get started'"
-                :empty-action-text="'Create Project'"
-                :empty-action-handler="'openModal(\'create-project-modal\')'">
-                
-                {{-- Custom cell content for status --}}
-                <x-slot name="cell-status">
-                    @php
-                        $status = $row['status'] ?? 'unknown';
-                        $statusClasses = [
-                            'active' => 'bg-green-100 text-green-800',
-                            'completed' => 'bg-blue-100 text-blue-800',
-                            'on_hold' => 'bg-yellow-100 text-yellow-800',
-                            'cancelled' => 'bg-red-100 text-red-800',
-                            'unknown' => 'bg-gray-100 text-gray-800'
-                        ];
-                        $statusClass = $statusClasses[$status] ?? $statusClasses['unknown'];
-                    @endphp
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
-                        {{ ucfirst($status) }}
-                    </span>
-                </x-slot>
-                
-                {{-- Custom cell content for priority --}}
-                <x-slot name="cell-priority">
-                    @php
-                        $priority = $row['priority'] ?? 'medium';
-                        $priorityClasses = [
-                            'low' => 'bg-gray-100 text-gray-800',
-                            'medium' => 'bg-blue-100 text-blue-800',
-                            'high' => 'bg-orange-100 text-orange-800',
-                            'urgent' => 'bg-red-100 text-red-800'
-                        ];
-                        $priorityClass = $priorityClasses[$priority] ?? $priorityClasses['medium'];
-                    @endphp
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $priorityClass }}">
-                        {{ ucfirst($priority) }}
-                    </span>
-                </x-slot>
-                
-                {{-- Custom cell content for progress --}}
-                <x-slot name="cell-progress">
-                    @php
-                        $progress = $row['progress'] ?? 0;
-                        $progressColor = $progress >= 80 ? 'bg-green-500' : ($progress >= 50 ? 'bg-yellow-500' : 'bg-red-500');
-                    @endphp
-                    <div class="flex items-center">
-                        <div class="w-full bg-gray-200 rounded-full h-2 mr-2">
-                            <div class="h-2 rounded-full {{ $progressColor }}" style="width: {{ $progress }}%"></div>
-                        </div>
-                        <span class="text-sm text-gray-600">{{ $progress }}%</span>
-                    </div>
-                </x-slot>
-                
-                {{-- Custom cell content for budget --}}
-                <x-slot name="cell-budget">
-                    <span class="text-sm font-medium text-gray-900">
-                        {{ number_format($row['budget'], 0) }} VND
-                    </span>
-                </x-slot>
-                
-                {{-- Row actions --}}
-                <x-slot name="row-actions">
-                    <div class="flex items-center space-x-2">
-                        <a href="{{ route('app.projects.show', $row['id']) }}" 
-                           class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                            View
-                        </a>
-                        <a href="{{ route('app.projects.edit', $row['id']) }}" 
-                           class="text-gray-600 hover:text-gray-800 text-sm font-medium">
-                            Edit
-                        </a>
-                        <button onclick="deleteProject('{{ $row['id'] }}')" 
-                                class="text-red-600 hover:text-red-800 text-sm font-medium">
-                            Delete
+@section('content')
+<div class="min-h-screen bg-gray-50" x-data="projectsList()">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Projects</h1>
+                    <p class="text-sm text-gray-600">Manage your projects and track progress</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- View Mode Toggle -->
+                    <div class="flex items-center bg-gray-100 rounded-lg p-1">
+                        <button @click="setViewMode('table')" 
+                                :class="viewMode === 'table' ? 'bg-white shadow-sm' : ''"
+                                class="px-3 py-1 rounded text-sm font-medium transition-all">
+                            <i class="fas fa-table mr-1"></i>Table
+                        </button>
+                        <button @click="setViewMode('card')" 
+                                :class="viewMode === 'card' ? 'bg-white shadow-sm' : ''"
+                                class="px-3 py-1 rounded text-sm font-medium transition-all">
+                            <i class="fas fa-th-large mr-1"></i>Cards
+                        </button>
+                        <button @click="setViewMode('kanban')" 
+                                :class="viewMode === 'kanban' ? 'bg-white shadow-sm' : ''"
+                                class="px-3 py-1 rounded text-sm font-medium transition-all">
+                            <i class="fas fa-columns mr-1"></i>Kanban
                         </button>
                     </div>
-                </x-slot>
-            </x-shared.table-standardized>
-        @else
-            {{-- Empty State --}}
-            <x-shared.empty-state 
-                icon="fas fa-project-diagram"
-                title="No projects found"
-                description="Create your first project to start managing your work."
-                action-text="Create Project"
-                action-icon="fas fa-plus"
-                action-handler="openModal('create-project-modal')" />
-        @endif
+                    
+                    <a href="{{ route('app.projects.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        <i class="fas fa-plus mr-2"></i>New Project
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
-    
-    {{-- Create Project Modal --}}
-    <x-shared.modal 
-        id="create-project-modal"
-        title="Create New Project"
-        size="lg">
-        
-        <form id="create-project-form" @submit.prevent="createProject()">
-            <div class="space-y-6">
-                {{-- Project Name --}}
-                <div>
-                    <label for="project-name" class="form-label">Project Name *</label>
-                    <input type="text" 
-                           id="project-name" 
-                           name="name" 
-                           required
-                           class="form-input"
-                           placeholder="Enter project name">
-                </div>
-                
-                {{-- Description --}}
-                <div>
-                    <label for="project-description" class="form-label">Description</label>
-                    <textarea id="project-description" 
-                              name="description" 
-                              rows="3"
-                              class="form-textarea"
-                              placeholder="Enter project description"></textarea>
-                </div>
-                
-                {{-- Status & Priority --}}
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="project-status" class="form-label">Status</label>
-                        <select id="project-status" name="status" class="form-select">
-                            <option value="active">Active</option>
-                            <option value="on_hold">On Hold</option>
-                            <option value="completed">Completed</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label for="project-priority" class="form-label">Priority</label>
-                        <select id="project-priority" name="priority" class="form-select">
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                        </select>
-                    </div>
-                </div>
-                
-                {{-- Dates --}}
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="project-start-date" class="form-label">Start Date</label>
-                        <input type="date" 
-                               id="project-start-date" 
-                               name="start_date"
-                               class="form-input">
-                    </div>
-                    
-                    <div>
-                        <label for="project-end-date" class="form-label">End Date</label>
-                        <input type="date" 
-                               id="project-end-date" 
-                               name="end_date"
-                               class="form-input">
-                    </div>
-                </div>
-                
-                {{-- Budget --}}
-                <div>
-                    <label for="project-budget" class="form-label">Budget (VND)</label>
-                    <input type="number" 
-                           id="project-budget" 
-                           name="budget_total"
-                           min="0"
-                           step="1000"
-                           class="form-input"
-                           placeholder="Enter project budget">
-                </div>
-            </div>
-            
-            {{-- Form Actions --}}
-            <div class="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
-                <button type="button" 
-                        onclick="closeModal('create-project-modal')"
-                        class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
-                    Cancel
-                </button>
-                <button type="submit" 
-                        class="btn bg-blue-600 text-white hover:bg-blue-700">
-                    <i class="fas fa-plus mr-2"></i>Create Project
-                </button>
-            </div>
-        </form>
-    </x-shared.modal>
-</x-shared.layout-wrapper>
 
-@push('scripts')
+    <!-- Filters and Search -->
+    <div class="bg-white border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+                <!-- Search -->
+                <div class="flex-1 max-w-lg">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <input type="text" 
+                               x-model="filters.search"
+                               @input.debounce.300ms="applyFilters()"
+                               placeholder="Search projects..."
+                               class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex flex-wrap items-center space-x-4">
+                    <!-- Status Filter -->
+                    <select x-model="filters.status" 
+                            @change="applyFilters()"
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">All Status</option>
+                        <option value="planning">Planning</option>
+                        <option value="active">Active</option>
+                        <option value="on_hold">On Hold</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="archived">Archived</option>
+                    </select>
+
+                    <!-- Priority Filter -->
+                    <select x-model="filters.priority" 
+                            @change="applyFilters()"
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">All Priority</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                    </select>
+
+                    <!-- Client Filter -->
+                    <select x-model="filters.client_id" 
+                            @change="applyFilters()"
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">All Clients</option>
+                        @if(isset($clients) && $clients->count() > 0)
+                            @foreach($clients as $client)
+                                <option value="{{ $client->id }}">{{ $client->name }}</option>
+                            @endforeach
+                        @endif
+                    </select>
+
+                    <!-- Sort -->
+                    <select x-model="filters.sort_by" 
+                            @change="applyFilters()"
+                            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="name">Sort by Name</option>
+                        <option value="status">Sort by Status</option>
+                        <option value="priority">Sort by Priority</option>
+                        <option value="start_date">Sort by Start Date</option>
+                        <option value="end_date">Sort by End Date</option>
+                        <option value="progress">Sort by Progress</option>
+                        <option value="updated_at">Sort by Last Updated</option>
+                    </select>
+
+                    <!-- Clear Filters -->
+                    <button @click="clearFilters()" 
+                            class="px-3 py-2 text-gray-600 hover:text-gray-800 text-sm font-medium">
+                        <i class="fas fa-times mr-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div x-show="selectedProjects.length > 0" 
+         x-transition
+         class="bg-blue-50 border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm font-medium text-blue-900">
+                        <span x-text="selectedProjects.length"></span> project(s) selected
+                    </span>
+                    <button @click="selectAll()" class="text-sm text-blue-600 hover:text-blue-800">
+                        Select All
+                    </button>
+                    <button @click="clearSelection()" class="text-sm text-blue-600 hover:text-blue-800">
+                        Clear Selection
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button @click="bulkAction('delete')" 
+                            class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded">
+                        <i class="fas fa-trash mr-1"></i>Delete
+                    </button>
+                    <button @click="bulkAction('archive')" 
+                            class="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded">
+                        <i class="fas fa-archive mr-1"></i>Archive
+                    </button>
+                    <button @click="bulkAction('export')" 
+                            class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded">
+                        <i class="fas fa-download mr-1"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Loading State -->
+        <div x-show="loading" class="text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl text-gray-400 mb-4"></i>
+            <p class="text-gray-600">Loading projects...</p>
+        </div>
+
+        <!-- Table View -->
+        <div x-show="viewMode === 'table'" x-transition>
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left">
+                                    <input type="checkbox" 
+                                           @change="toggleSelectAll()"
+                                           :checked="selectedProjects.length === filteredProjects.length && filteredProjects.length > 0"
+                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Project
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Priority
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Progress
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Client
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Due Date
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <template x-for="project in paginatedProjects" :key="project.id">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <input type="checkbox" 
+                                               :value="project.id"
+                                               @change="toggleProject(project.id)"
+                                               :checked="selectedProjects.includes(project.id)"
+                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10">
+                                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                                    <i class="fas fa-project-diagram text-blue-600"></i>
+                                                </div>
+                                            </div>
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900" x-text="project.name"></div>
+                                                <div class="text-sm text-gray-500" x-text="project.description"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                              :class="getStatusClass(project.status)"
+                                              x-text="project.status"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                              :class="getPriorityClass(project.priority)"
+                                              x-text="project.priority"></span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                                <div class="bg-blue-600 h-2 rounded-full" 
+                                                     :style="`width: ${project.progress || 0}%`"></div>
+                                            </div>
+                                            <span class="text-sm text-gray-600" x-text="`${project.progress || 0}%`"></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="project.client?.name || 'No Client'"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="formatDate(project.end_date)"></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <a :href="`/app/projects/${project.id}`" 
+                                               class="text-blue-600 hover:text-blue-900">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a :href="`/app/projects/${project.id}/edit`" 
+                                               class="text-indigo-600 hover:text-indigo-900">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button @click="deleteProject(project.id)" 
+                                                    class="text-red-600 hover:text-red-900">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card View -->
+        <div x-show="viewMode === 'card'" x-transition>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="project in paginatedProjects" :key="project.id">
+                    <div class="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+                        <div class="p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center">
+                                    <input type="checkbox" 
+                                           :value="project.id"
+                                           @change="toggleProject(project.id)"
+                                           :checked="selectedProjects.includes(project.id)"
+                                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3">
+                                    <h3 class="text-lg font-medium text-gray-900" x-text="project.name"></h3>
+                                </div>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      :class="getStatusClass(project.status)"
+                                      x-text="project.status"></span>
+                            </div>
+                            
+                            <p class="text-sm text-gray-600 mb-4" x-text="project.description"></p>
+                            
+                            <div class="mb-4">
+                                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                    <span>Progress</span>
+                                    <span x-text="`${project.progress || 0}%`"></span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" 
+                                         :style="`width: ${project.progress || 0}%`"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-calendar mr-1"></i>
+                                    <span x-text="formatDate(project.start_date)"></span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-user mr-1"></i>
+                                    <span x-text="project.client?.name || 'No Client'"></span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex space-x-2">
+                                <a :href="`/app/projects/${project.id}`" 
+                                   class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm font-medium text-center">
+                                    View
+                                </a>
+                                <a :href="`/app/projects/${project.id}/edit`" 
+                                   class="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded text-sm font-medium text-center">
+                                    Edit
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Kanban View -->
+        <div x-show="viewMode === 'kanban'" x-transition>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <template x-for="status in ['planning', 'active', 'on_hold', 'completed']" :key="status">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4 capitalize" x-text="status.replace('_', ' ')"></h3>
+                        <div class="space-y-3">
+                            <template x-for="project in getProjectsByStatus(status)" :key="project.id">
+                                <div class="bg-white rounded-lg shadow p-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <input type="checkbox" 
+                                               :value="project.id"
+                                               @change="toggleProject(project.id)"
+                                               :checked="selectedProjects.includes(project.id)"
+                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+                                              :class="getPriorityClass(project.priority)"
+                                              x-text="project.priority"></span>
+                                    </div>
+                                    <h4 class="text-sm font-medium text-gray-900 mb-1" x-text="project.name"></h4>
+                                    <p class="text-xs text-gray-600 mb-2" x-text="project.description"></p>
+                                    <div class="flex items-center justify-between text-xs text-gray-500">
+                                        <span x-text="formatDate(project.end_date)"></span>
+                                        <span x-text="`${project.progress || 0}%`"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div x-show="!loading && filteredProjects.length === 0" class="text-center py-12">
+            <i class="fas fa-project-diagram text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
+            <p class="text-gray-500 mb-6">Try adjusting your filters or create a new project</p>
+            <a href="{{ route('app.projects.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium">
+                <i class="fas fa-plus mr-2"></i>Create Project
+            </a>
+        </div>
+
+        <!-- Pagination -->
+        <div x-show="!loading && filteredProjects.length > 0" class="mt-8">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                    Showing <span x-text="pagination.from"></span> to <span x-text="pagination.to"></span> 
+                    of <span x-text="pagination.total"></span> results
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button @click="previousPage()" 
+                            :disabled="pagination.currentPage === 1"
+                            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Previous
+                    </button>
+                    <span class="px-3 py-2 text-sm font-medium text-gray-700">
+                        Page <span x-text="pagination.currentPage"></span> of <span x-text="pagination.lastPage"></span>
+                    </span>
+                    <button @click="nextPage()" 
+                            :disabled="pagination.currentPage === pagination.lastPage"
+                            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Next
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-function refreshProjects() {
-    window.location.reload();
-}
-
-function exportProjects() {
-    // Export projects functionality
-    alert('Export projects functionality would be implemented here');
-}
-
-function createProject() {
-    const form = document.getElementById('create-project-form');
-    const formData = new FormData(form);
-    
-    // Convert FormData to object
-    const data = Object.fromEntries(formData.entries());
-    
-    // Add tenant_id
-    data.tenant_id = '{{ $user->tenant_id }}';
-    data.user_id = '{{ $user->id }}';
-    
-    // Submit via API
-    fetch('/api/v1/app/projects', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Authorization': 'Bearer ' + getAuthToken()
+function projectsList() {
+    return {
+        loading: false,
+        viewMode: '{{ $viewMode ?? "table" }}',
+        selectedProjects: [],
+        filters: {
+            search: '{{ $filters["search"] ?? "" }}',
+            status: '{{ $filters["status"] ?? "" }}',
+            priority: '{{ $filters["priority"] ?? "" }}',
+            client_id: '{{ $filters["client_id"] ?? "" }}',
+            sort_by: '{{ $filters["sort_by"] ?? "name" }}',
+            sort_direction: '{{ $filters["sort_direction"] ?? "asc" }}'
         },
-        body: JSON.stringify(data)
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            closeModal('create-project-modal');
-            window.location.reload();
-        } else {
-            alert('Error creating project: ' + (result.message || 'Unknown error'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error creating project');
-    });
-}
+        projects: @json($projects ?? []),
+        meta: @json($meta ?? []),
+        pagination: {
+            currentPage: {{ $meta['current_page'] ?? 1 }},
+            lastPage: {{ $meta['last_page'] ?? 1 }},
+            perPage: {{ $meta['per_page'] ?? 15 }},
+            total: {{ $meta['total'] ?? 0 }},
+            from: {{ $meta['from'] ?? 0 }},
+            to: {{ $meta['to'] ?? 0 }}
+        },
 
-function deleteProject(projectId) {
-    if (confirm('Are you sure you want to delete this project?')) {
-        fetch(`/api/v1/app/projects/${projectId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Authorization': 'Bearer ' + getAuthToken()
+        get filteredProjects() {
+            let filtered = this.projects;
+
+            // Apply search filter
+            if (this.filters.search) {
+                const search = this.filters.search.toLowerCase();
+                filtered = filtered.filter(project => 
+                    project.name.toLowerCase().includes(search) ||
+                    project.description.toLowerCase().includes(search)
+                );
             }
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.success) {
-                window.location.reload();
+
+            // Apply status filter
+            if (this.filters.status) {
+                filtered = filtered.filter(project => project.status === this.filters.status);
+            }
+
+            // Apply priority filter
+            if (this.filters.priority) {
+                filtered = filtered.filter(project => project.priority === this.filters.priority);
+            }
+
+            // Apply client filter
+            if (this.filters.client_id) {
+                filtered = filtered.filter(project => project.client_id == this.filters.client_id);
+            }
+
+            // Apply sorting
+            filtered.sort((a, b) => {
+                const aVal = a[this.filters.sort_by] || '';
+                const bVal = b[this.filters.sort_by] || '';
+                
+                if (this.filters.sort_direction === 'asc') {
+                    return aVal > bVal ? 1 : -1;
+                } else {
+                    return aVal < bVal ? 1 : -1;
+                }
+            });
+
+            return filtered;
+        },
+
+        get paginatedProjects() {
+            return this.filteredProjects;
+        },
+
+        setViewMode(mode) {
+            this.viewMode = mode;
+            this.updateViewModeSession(mode);
+        },
+
+        updateViewModeSession(mode) {
+            fetch('/app/projects/view-mode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ view_mode: mode })
+            });
+        },
+
+        applyFilters() {
+            const params = new URLSearchParams();
+            Object.entries(this.filters).forEach(([key, value]) => {
+                if (value) {
+                    params.set(key, value);
+                } else {
+                    params.delete(key);
+                }
+            });
+            params.set('page', '1');
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        },
+
+        clearFilters() {
+            this.filters = {
+                search: '',
+                status: '',
+                priority: '',
+                client_id: '',
+                sort_by: 'name',
+                sort_direction: 'asc'
+            };
+            this.applyFilters();
+        },
+
+        toggleProject(projectId) {
+            const index = this.selectedProjects.indexOf(projectId);
+            if (index > -1) {
+                this.selectedProjects.splice(index, 1);
             } else {
-                alert('Error deleting project: ' + (result.message || 'Unknown error'));
+                this.selectedProjects.push(projectId);
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting project');
-        });
+        },
+
+        toggleSelectAll() {
+            if (this.selectedProjects.length === this.filteredProjects.length) {
+                this.selectedProjects = [];
+            } else {
+                this.selectedProjects = this.filteredProjects.map(p => p.id);
+            }
+        },
+
+        selectAll() {
+            this.selectedProjects = this.filteredProjects.map(p => p.id);
+        },
+
+        clearSelection() {
+            this.selectedProjects = [];
+        },
+
+        bulkAction(action) {
+            if (this.selectedProjects.length === 0) return;
+
+            const actionMap = {
+                delete: () => this.bulkDelete(),
+                archive: () => this.bulkArchive(),
+                export: () => this.bulkExport()
+            };
+
+            if (actionMap[action]) {
+                actionMap[action]();
+            }
+        },
+
+        bulkDelete() {
+            if (confirm(`Are you sure you want to delete ${this.selectedProjects.length} project(s)?`)) {
+                this.performBulkAction('delete');
+            }
+        },
+
+        bulkArchive() {
+            if (confirm(`Are you sure you want to archive ${this.selectedProjects.length} project(s)?`)) {
+                this.performBulkAction('archive');
+            }
+        },
+
+        bulkExport() {
+            this.performBulkAction('export');
+        },
+
+        async performBulkAction(action) {
+            try {
+                const response = await fetch('/app/projects/bulk-action', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        project_ids: this.selectedProjects
+                    })
+                });
+
+                const processedIds = [...this.selectedProjects];
+                const result = await response.json();
+
+                if (response.ok) {
+                    this.showNotification('success', result.message || 'Action completed successfully');
+                    if (action === 'delete') {
+                        this.projects = this.projects.filter(p => !processedIds.includes(p.id));
+                    } else if (action === 'archive') {
+                        this.projects = this.projects.map(p => processedIds.includes(p.id) ? { ...p, status: 'archived' } : p);
+                    }
+                    this.selectedProjects = this.selectedProjects.filter(id => !processedIds.includes(id));
+                } else {
+                    this.showNotification('error', result.message || 'Failed to perform action');
+                }
+            } catch (error) {
+                console.error('Bulk action error:', error);
+                this.showNotification('error', 'An error occurred while performing the action');
+            }
+        },
+
+        showNotification(type, message) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+                type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 5 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        },
+
+        async deleteProject(projectId) {
+            if (confirm('Are you sure you want to delete this project?')) {
+                try {
+                    const response = await fetch(`/app/projects/${projectId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        }
+                    });
+
+                    if (response.ok) {
+                        this.showNotification('success', 'Project deleted successfully');
+                        // Remove project from local data
+                        this.projects = this.projects.filter(p => p.id !== projectId);
+                        // Clear selection if this project was selected
+                        this.selectedProjects = this.selectedProjects.filter(id => id !== projectId);
+                    } else {
+                        const result = await response.json();
+                        this.showNotification('error', result.message || 'Failed to delete project');
+                    }
+                } catch (error) {
+                    console.error('Delete project error:', error);
+                    this.showNotification('error', 'An error occurred while deleting the project');
+                }
+            }
+        },
+
+        getProjectsByStatus(status) {
+            return this.filteredProjects.filter(project => project.status === status);
+        },
+
+        getStatusClass(status) {
+            const classes = {
+                'planning': 'bg-gray-100 text-gray-800',
+                'active': 'bg-green-100 text-green-800',
+                'on_hold': 'bg-yellow-100 text-yellow-800',
+                'completed': 'bg-blue-100 text-blue-800',
+                'cancelled': 'bg-red-100 text-red-800',
+                'archived': 'bg-gray-200 text-gray-700'
+            };
+            return classes[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        getPriorityClass(priority) {
+            const classes = {
+                'low': 'bg-gray-100 text-gray-800',
+                'medium': 'bg-blue-100 text-blue-800',
+                'high': 'bg-orange-100 text-orange-800',
+                'urgent': 'bg-red-100 text-red-800'
+            };
+            return classes[priority] || 'bg-gray-100 text-gray-800';
+        },
+
+        formatDate(date) {
+            if (!date) return 'No date';
+            return new Date(date).toLocaleDateString();
+        },
+
+        previousPage() {
+            if (this.pagination.currentPage > 1) {
+                this.navigateToPage(this.pagination.currentPage - 1);
+            }
+        },
+
+        nextPage() {
+            if (this.pagination.currentPage < this.pagination.lastPage) {
+                this.navigateToPage(this.pagination.currentPage + 1);
+            }
+        },
+
+        navigateToPage(page) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('page', page);
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        },
     }
 }
-
-function bulkArchive() {
-    alert('Bulk archive functionality would be implemented here');
-}
-
-function bulkChangeStatus() {
-    alert('Bulk change status functionality would be implemented here');
-}
-
-function bulkExport() {
-    alert('Bulk export functionality would be implemented here');
-}
-
-function getAuthToken() {
-    // Get auth token from localStorage or session
-    return localStorage.getItem('auth_token') || '';
-}
-
-// Listen for filter events
-document.addEventListener('filter-search', (e) => {
-    console.log('Search:', e.detail.query);
-    // Implement search functionality
-});
-
-document.addEventListener('filter-apply', (e) => {
-    console.log('Filters:', e.detail.filters);
-    // Implement filter functionality
-});
-
-document.addEventListener('filter-sort', (e) => {
-    console.log('Sort:', e.detail.sortBy, e.detail.sortDirection);
-    // Implement sort functionality
-});
-
-document.addEventListener('filter-view-mode', (e) => {
-    console.log('View mode:', e.detail.viewMode);
-    // Implement view mode functionality
-});
 </script>
-@endpush
+@endsection

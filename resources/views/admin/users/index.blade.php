@@ -119,7 +119,7 @@
     ';
     
     // Prepare table data
-    $tableData = collect($users ?? [])->map(function($user) {
+    $tableData = collect($users->items() ?? [])->map(function($user) {
         return [
             'id' => $user->id,
             'name' => $user->name ?? 'Unknown',
@@ -137,11 +137,11 @@
     $columns = [
         ['key' => 'name', 'label' => 'Name', 'sortable' => true, 'primary' => true],
         ['key' => 'email', 'label' => 'Email', 'sortable' => true],
-        ['key' => 'role', 'label' => 'Role', 'sortable' => true, 'type' => 'badge'],
-        ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'type' => 'badge'],
+        ['key' => 'role', 'label' => 'Role', 'sortable' => true, 'format' => 'badge'],
+        ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'format' => 'badge'],
         ['key' => 'tenant', 'label' => 'Tenant', 'sortable' => true],
-        ['key' => 'last_login', 'label' => 'Last Login', 'sortable' => true, 'type' => 'date'],
-        ['key' => 'created_at', 'label' => 'Created', 'sortable' => true, 'type' => 'date']
+        ['key' => 'last_login', 'label' => 'Last Login', 'sortable' => true, 'format' => 'text'],
+        ['key' => 'created_at', 'label' => 'Created', 'sortable' => true, 'format' => 'date']
     ];
 @endphp
 
@@ -173,93 +173,25 @@
     {{-- Users Table --}}
     <div class="mt-6">
         @if($tableData->count() > 0)
-            <x-shared.table-standardized 
-                :data="$tableData"
-                :columns="$columns"
-                :sortable="true"
-                :selectable="true"
-                :pagination="true"
-                :per-page="15"
-                :search="true"
-                :export="true"
-                :bulk-actions="$bulkActions"
-                :responsive="true"
-                :loading="false"
-                :empty-message="'No users found'"
-                :empty-description="'Create your first user to get started'"
-                :empty-action-text="'Add User'"
-                :empty-action-handler="'openModal(\'create-user-modal\')'">
-                
-                {{-- Custom cell content for role --}}
-                <x-slot name="cell-role">
-                    @php
-                        $role = $row['role'] ?? 'member';
-                        $roleClasses = [
-                            'super_admin' => 'bg-red-100 text-red-800',
-                            'admin' => 'bg-orange-100 text-orange-800',
-                            'project_manager' => 'bg-blue-100 text-blue-800',
-                            'member' => 'bg-green-100 text-green-800',
-                            'client' => 'bg-purple-100 text-purple-800',
-                            'client_rep' => 'bg-indigo-100 text-indigo-800'
-                        ];
-                        $roleClass = $roleClasses[$role] ?? $roleClasses['member'];
-                    @endphp
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $roleClass }}">
-                        {{ ucfirst(str_replace('_', ' ', $role)) }}
-                    </span>
-                </x-slot>
-                
-                {{-- Custom cell content for status --}}
-                <x-slot name="cell-status">
-                    @php
-                        $status = $row['status'] ?? 'inactive';
-                        $statusClasses = [
-                            'active' => 'bg-green-100 text-green-800',
-                            'inactive' => 'bg-gray-100 text-gray-800',
-                            'suspended' => 'bg-red-100 text-red-800',
-                            'pending' => 'bg-yellow-100 text-yellow-800'
-                        ];
-                        $statusClass = $statusClasses[$status] ?? $statusClasses['inactive'];
-                    @endphp
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}">
-                        {{ ucfirst($status) }}
-                    </span>
-                </x-slot>
-                
-                {{-- Custom cell content for last login --}}
-                <x-slot name="cell-last_login">
-                    @if($row['last_login'] === 'Never')
-                        <span class="text-sm text-gray-500">Never</span>
-                    @else
-                        <span class="text-sm font-medium text-gray-900">{{ $row['last_login'] }}</span>
-                    @endif
-                </x-slot>
-                
-                {{-- Row actions --}}
-                <x-slot name="row-actions">
-                    <div class="flex items-center space-x-2">
-                        <button onclick="viewUser('{{ $row['id'] }}')" 
-                                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                            <i class="fas fa-eye mr-1"></i>View
-                        </button>
-                        <button onclick="editUser('{{ $row['id'] }}')" 
-                                class="text-gray-600 hover:text-gray-800 text-sm font-medium">
-                            <i class="fas fa-edit mr-1"></i>Edit
-                        </button>
-                        <button onclick="resetPassword('{{ $row['id'] }}')" 
-                                class="text-orange-600 hover:text-orange-800 text-sm font-medium">
-                            <i class="fas fa-key mr-1"></i>Reset Password
-                        </button>
-                        <button onclick="suspendUser('{{ $row['id'] }}')" 
-                                class="text-yellow-600 hover:text-yellow-800 text-sm font-medium">
-                            <i class="fas fa-pause mr-1"></i>Suspend
-                        </button>
-                        <button onclick="deleteUser('{{ $row['id'] }}')" 
-                                class="text-red-600 hover:text-red-800 text-sm font-medium">
-                            <i class="fas fa-trash mr-1"></i>Delete
-                        </button>
-                    </div>
-                </x-slot>
+        <x-shared.table-standardized 
+            :items="$tableData"
+            :columns="$columns"
+            :sortable="true"
+            :show-bulk-actions="true"
+            :pagination="$users->links()"
+            :show-search="true"
+            :show-filters="true"
+            :loading="false"
+            :empty-state="[
+                'icon' => 'fas fa-users',
+                'title' => 'No users found',
+                'description' => 'Try adjusting your filters or add a new user.',
+                'action' => [
+                    'label' => 'Add User',
+                    'icon' => 'fas fa-user-plus',
+                    'handler' => 'openModal(\'create-user-modal\')'
+                ]
+            ]">
             </x-shared.table-standardized>
         @else
             {{-- Empty State --}}
@@ -270,6 +202,13 @@
                 action-text="Add User"
                 action-icon="fas fa-user-plus"
                 action-handler="openModal('create-user-modal')" />
+        @endif
+        
+        {{-- Pagination Links --}}
+        @if($users->hasPages())
+            <div class="mt-6">
+                {{ $users->appends(request()->query())->links() }}
+            </div>
         @endif
     </div>
     

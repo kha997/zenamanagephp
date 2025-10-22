@@ -1,0 +1,40 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ZenaManage Application Metrics
+  - job_name: 'zenamanage-app'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+    metrics_path: '/api/metrics/prometheus'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # ZenaManage Health Check
+  - job_name: 'zenamanage-health'
+    static_configs:
+      - targets: ['host.docker.internal:8000']
+    metrics_path: '/api/metrics/health'
+    scrape_interval: 60s
+    scrape_timeout: 10s
+
+  # Node Exporter (if available)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+    scrape_interval: 30s

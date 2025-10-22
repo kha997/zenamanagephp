@@ -1,7 +1,42 @@
 // Users Page Module - No-Flash Implementation
+// eslint-disable-next-line sonarjs/cognitive-complexity
 (function() {
     let abortController = null;
     const pageKey = 'users';
+
+    // Helper functions to reduce complexity
+    function setLoadingState(loading) {
+        const tablePanel = document.getElementById('users-table');
+        if (tablePanel && window.setPanelLoading) {
+            window.setPanelLoading(tablePanel, loading);
+        }
+    }
+
+    function updateUsersState(data) {
+        const usersPage = Alpine.$data(document.querySelector('[x-data="usersPage()"]'));
+        if (!usersPage) return;
+
+        if (data.data) {
+            usersPage.filteredUsers = data.data.users || [];
+            usersPage.total = data.meta?.pagination?.total || 0;
+            usersPage.lastPage = data.meta?.pagination?.last_page || 1;
+            usersPage.kpis = data.data.kpis || {};
+        }
+        usersPage.usersLoading = false;
+        usersPage.error = null;
+    }
+
+    function updateErrorState(error) {
+        const usersPage = Alpine.$data(document.querySelector('[x-data="usersPage()"]'));
+        if (!usersPage) return;
+
+        usersPage.usersLoading = false;
+        usersPage.error = error.message;
+    }
+
+    function dispatchEvent(eventName, detail) {
+        document.dispatchEvent(new CustomEvent(eventName, { detail }));
+    }
 
     // Page refresh handler
     async function loadUsersData() {
@@ -12,12 +47,7 @@
             }
             
             abortController = new AbortController();
-
-            // Set loading state on table
-            const tablePanel = document.getElementById('users-table');
-            if (tablePanel && window.setPanelLoading) {
-                window.setPanelLoading(tablePanel, true);
-            }
+            setLoadingState(true);
 
             // Build cache key with current params
             const urlParams = new URLSearchParams(window.location.search);
@@ -31,47 +61,20 @@
             });
 
             // Update Alpine.js state
-            const usersPage = Alpine.$data(document.querySelector('[x-data="usersPage()"]'));
-            if (usersPage) {
-                // Extract data from response
-                if (data.data) {
-                    usersPage.filteredUsers = data.data.users || [];
-                    usersPage.total = data.meta?.pagination?.total || 0;
-                    usersPage.lastPage = data.meta?.pagination?.last_page || 1;
-                    usersPage.kpis = data.data.kpis || {};
-                }
-                usersPage.usersLoading = false;
-                usersPage.error = null;
-            }
+            updateUsersState(data);
 
             // Dispatch success event
-            document.dispatchEvent(new CustomEvent('users:dataLoaded', {
-                detail: { data, url: apiUrl }
-            }));
+            dispatchEvent('users:dataLoaded', { data, url: apiUrl });
 
         } catch (error) {
             console.error('[Users] Error loading data:', error);
             
             if (error.name !== 'AbortError') {
-                // Update error state
-                const usersPage = Alpine.$data(document.querySelector('[x-data="usersPage()"]'));
-                if (usersPage) {
-                    usersPage.usersLoading = false;
-                    usersPage.error = error.message;
-                }
-                
-                // Dispatch error event
-                document.dispatchEvent(new CustomEvent('users:error', {
-                    detail: { error }
-                }));
+                updateErrorState(error);
+                dispatchEvent('users:error', { error });
             }
         } finally {
-            // Always clean up loading state
-            const tablePanel = document.getElementById('users-table');
-            if (tablePanel && window.setPanelLoading) {
-                window.setPanelLoading(tablePanel, false);
-            }
-            
+            setLoadingState(false);
             abortController = null;
         }
     }

@@ -1,0 +1,54 @@
+import { test, expect } from '@playwright/test';
+import { AuthHelper } from '../helpers/auth-helper';
+
+test.describe('Debug Attachment Delete', () => {
+  test('debug attachment delete functionality', async ({ page }) => {
+    // Navigate directly to task detail
+    await page.goto('/app/tasks/01K83FPM28B0NSDKE77REAFQ4P');
+    await page.waitForLoadState('networkidle');
+    
+    // Check if we're on the task detail page
+    await expect(page.locator('[data-testid="task-detail"]')).toBeVisible();
+    
+    // Upload a test file first
+    await page.click('[data-testid="upload-button"]');
+    await page.fill('[data-testid="attachment-name"]', 'Debug Delete Test File');
+    await page.setInputFiles('[data-testid="file-input"]', 'tests/fixtures/test-document.txt');
+    await page.click('[data-testid="submit-upload"]');
+    
+    // Wait for upload to complete
+    await expect(page.locator('[data-testid="attachment-item"]').filter({ hasText: 'Debug Delete Test File' })).toBeVisible();
+    
+    // Check if delete button exists
+    const attachmentItem = page.locator('[data-testid="attachment-item"]').filter({ hasText: 'Debug Delete Test File' });
+    const deleteButton = attachmentItem.locator('[data-testid="delete-attachment-button"]');
+    await expect(deleteButton).toBeVisible();
+    
+    // Click delete button
+    await deleteButton.click();
+    
+    // Check if modal is visible
+    const modal = page.locator('[data-testid="confirm-delete-attachment"]');
+    console.log('Modal visible:', await modal.isVisible());
+    console.log('Modal count:', await modal.count());
+    
+    // Check Alpine.js state
+    const alpineState = await page.evaluate(() => {
+      const element = document.querySelector('[data-testid="task-detail"]');
+      const data = window.Alpine?.$data(element);
+      return {
+        showConfirmModal: data?.showConfirmModal,
+        confirmMessage: data?.confirmMessage,
+        confirmAction: typeof data?.confirmAction
+      };
+    });
+    
+    console.log('Alpine state:', alpineState);
+    
+    // Wait a bit to see if modal appears
+    await page.waitForTimeout(2000);
+    
+    // Check again
+    console.log('Modal visible after wait:', await modal.isVisible());
+  });
+});

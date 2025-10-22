@@ -18,6 +18,61 @@ interface DashboardData {
   }>;
 }
 
+// Constants
+const API_HEADERS = {
+  'Accept': 'application/json',
+  'X-Requested-With': 'XMLHttpRequest',
+  'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+};
+
+// Helper functions to reduce complexity
+const getChangeType = (change: number): 'increase' | 'decrease' | 'neutral' => {
+  if (change > 0) return 'increase';
+  if (change < 0) return 'decrease';
+  return 'neutral';
+};
+
+const transformKPIData = (kpisData: any): KPIData[] => {
+  return [
+    {
+      id: 'projects',
+      title: 'Total Projects',
+      value: kpisData.data.projects.total,
+      change: kpisData.data.projects.change,
+      changeType: getChangeType(kpisData.data.projects.change),
+      icon: 'fas fa-project-diagram',
+      color: 'blue'
+    },
+    {
+      id: 'users',
+      title: 'Active Users',
+      value: kpisData.data.users.active,
+      change: kpisData.data.users.change,
+      changeType: getChangeType(kpisData.data.users.change),
+      icon: 'fas fa-users',
+      color: 'green'
+    },
+    {
+      id: 'progress',
+      title: 'Average Progress',
+      value: `${kpisData.data.progress.overall}%`,
+      change: kpisData.data.progress.change,
+      changeType: getChangeType(kpisData.data.progress.change),
+      icon: 'fas fa-chart-line',
+      color: 'purple'
+    },
+    {
+      id: 'budget',
+      title: 'Budget Utilization',
+      value: `${kpisData.data.budget.utilization}%`,
+      change: kpisData.data.budget.change,
+      changeType: getChangeType(kpisData.data.budget.change),
+      icon: 'fas fa-dollar-sign',
+      color: 'yellow'
+    }
+  ];
+};
+
 const Dashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,32 +85,16 @@ const Dashboard: React.FC = () => {
 
       const [kpisResponse, chartsResponse, activitiesResponse, projectsResponse] = await Promise.all([
         fetch('/api/dashboard/kpis', {
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          }
+          headers: API_HEADERS
         }),
         fetch('/api/dashboard/charts', {
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          }
+          headers: API_HEADERS
         }),
         fetch('/api/dashboard/recent-activity', {
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          }
+          headers: API_HEADERS
         }),
         fetch('/api/projects?limit=5&sort=updated_at&order=desc', {
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-          }
+          headers: API_HEADERS
         })
       ]);
 
@@ -71,44 +110,7 @@ const Dashboard: React.FC = () => {
       ]);
 
       // Transform KPIs data
-      const kpis: KPIData[] = [
-        {
-          id: 'projects',
-          title: 'Total Projects',
-          value: kpisData.data.projects.total,
-          change: kpisData.data.projects.change,
-          changeType: kpisData.data.projects.change > 0 ? 'increase' : kpisData.data.projects.change < 0 ? 'decrease' : 'neutral',
-          icon: 'fas fa-project-diagram',
-          color: 'blue'
-        },
-        {
-          id: 'users',
-          title: 'Active Users',
-          value: kpisData.data.users.active,
-          change: kpisData.data.users.change,
-          changeType: kpisData.data.users.change > 0 ? 'increase' : kpisData.data.users.change < 0 ? 'decrease' : 'neutral',
-          icon: 'fas fa-users',
-          color: 'green'
-        },
-        {
-          id: 'progress',
-          title: 'Average Progress',
-          value: `${kpisData.data.progress.overall}%`,
-          change: kpisData.data.progress.change,
-          changeType: kpisData.data.progress.change > 0 ? 'increase' : kpisData.data.progress.change < 0 ? 'decrease' : 'neutral',
-          icon: 'fas fa-chart-line',
-          color: 'purple'
-        },
-        {
-          id: 'budget',
-          title: 'Budget Utilization',
-          value: `${kpisData.data.budget.utilization}%`,
-          change: kpisData.data.budget.change,
-          changeType: kpisData.data.budget.change > 0 ? 'increase' : kpisData.data.budget.change < 0 ? 'decrease' : 'neutral',
-          icon: 'fas fa-dollar-sign',
-          color: 'yellow'
-        }
-      ];
+      const kpis = transformKPIData(kpisData);
 
       // Transform charts data
       const charts: ChartData[] = [

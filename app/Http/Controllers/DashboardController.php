@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use Carbon\Carbon;
 
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -59,9 +60,9 @@ class DashboardController extends Controller
         $alerts = $this->getAlerts($tenantId);
         $systemAlerts = collect($alerts)->map(function($alert) {
             return [
-                'type' => $alert['priority'] === 'high' ? 'error' : 'warning',
-                'title' => ucfirst($alert['type']),
-                'message' => $alert['message']
+                'type' => isset($alert['priority']) && $alert['priority'] === 'high' ? 'error' : 'warning',
+                'title' => isset($alert['type']) ? ucfirst($alert['type']) : 'Alert',
+                'message' => $alert['message'] ?? 'No message'
             ];
         });
         
@@ -80,7 +81,7 @@ class DashboardController extends Controller
             ['date' => '2024-01-05', 'completed' => 18, 'total' => 20]
         ];
         
-        return view('app.dashboard.index-new', compact(
+        return view('app.dashboard.index', compact(
             'totalProjects',
             'totalTasks', 
             'totalTeamMembers',
@@ -120,7 +121,7 @@ class DashboardController extends Controller
             
             $overdueTasks = Task::whereHas('project', function($q) use ($tenantId) {
                 $q->where('tenant_id', $tenantId);
-            })->where('due_date', '<', now())
+            })->where('end_date', '<', now())
               ->whereNotIn('status', ['completed', 'cancelled'])
               ->count();
               
@@ -173,9 +174,16 @@ class DashboardController extends Controller
         $changes = [
             'projects' => ['+2', '+1', '+3', '-1'],
             'tasks' => ['+5', '+8', '+3', '+12'],
+            'team' => ['+1', '+2', '0', '+1'],
+            'budget' => ['+5%', '+2%', '+8%', '+3%'],
             'overdue' => ['-1', '+2', '-3', '0'],
             'schedule' => ['+3', '+1', '+2', '+4']
         ];
+        
+        // Guard against undefined keys
+        if (!isset($changes[$type])) {
+            return '0';
+        }
         
         return $changes[$type][array_rand($changes[$type])];
     }
@@ -187,7 +195,7 @@ class DashboardController extends Controller
         // Check for overdue tasks
         $overdueCount = Task::whereHas('project', function($q) use ($tenantId) {
             $q->where('tenant_id', $tenantId);
-        })->where('due_date', '<', now())
+        })->where('end_date', '<', now())
           ->whereNotIn('status', ['completed', 'cancelled'])
           ->count();
           

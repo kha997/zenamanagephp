@@ -16,9 +16,9 @@ export interface Notification {
 export interface NotificationsBellProps {
   notifications?: Notification[];
   unreadCount?: number;
-  onMarkAsRead?: (notificationId: string) => void;
+  onMarkAsRead?: (_notificationId: string) => void;
   onMarkAllAsRead?: () => void;
-  onNotificationClick?: (notification: Notification) => void;
+  onNotificationClick?: (_notification: Notification) => void;
   className?: string;
 }
 
@@ -83,6 +83,11 @@ export const NotificationsBell: React.FC<NotificationsBellProps> = ({
     setIsOpen(false);
   };
 
+  const getAriaLabel = () => {
+    const baseLabel = 'Notifications';
+    return unreadCount > 0 ? `${baseLabel}, ${unreadCount} unread` : baseLabel;
+  };
+
   return (
     <div className={`relative ${className}`}>
       <button
@@ -91,7 +96,7 @@ export const NotificationsBell: React.FC<NotificationsBellProps> = ({
         className="header-action-btn relative"
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+        aria-label={getAriaLabel()}
       >
         <i className="fas fa-bell text-lg" aria-hidden="true" />
         

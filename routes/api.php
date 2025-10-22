@@ -35,6 +35,14 @@ Route::get('/health', function () {
     ]);
 });
 
+// Metrics endpoints
+Route::prefix('metrics')->group(function () {
+    Route::get('/', [App\Http\Controllers\Api\MetricsController::class, 'index']);
+    Route::get('/prometheus', [App\Http\Controllers\Api\MetricsController::class, 'prometheus']);
+    Route::get('/health', [App\Http\Controllers\Api\MetricsController::class, 'health']);
+    Route::get('/{metric}', [App\Http\Controllers\Api\MetricsController::class, 'show']);
+});
+
 Route::get('/health/performance', function () {
     return response()->json([
         'memory' => [
@@ -166,6 +174,11 @@ Route::prefix('auth')->group(function () {
     // Login moved to web routes for session support
     // Route::post('/login', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'login'])
     //     ->middleware(['web', 'throttle:5,1']);
+    
+    // Add compatibility route for login form
+    Route::post('/login', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'login'])
+        ->middleware(['web']);
+    
     Route::post('/logout', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'logout'])
         ->middleware(['auth:sanctum', 'security', 'validation']);
     
@@ -195,6 +208,27 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/data', [\App\Http\Controllers\Api\DashboardController::class, 'getDashboardData']);
         Route::get('/csrf-token', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
     });
+
+    // Rewards API endpoints (tenant-scoped)
+    Route::prefix('v1/app/rewards')
+        ->middleware(['ability:tenant'])
+        ->controller(\App\Http\Controllers\RewardsController::class)
+        ->group(function () {
+            Route::get('status', 'status');
+            Route::post('toggle', 'toggle');
+            Route::post('trigger-task-completion', 'triggerTaskCompletion');
+            Route::get('messages', 'messages');
+        });
+
+    // Notifications API endpoints (tenant-scoped)
+    Route::prefix('v1')
+        ->middleware(['ability:tenant'])
+        ->controller(\App\Http\Controllers\Api\App\NotificationController::class)
+        ->group(function () {
+            Route::get('/notifications', 'index');
+            Route::put('/notifications/{id}/read', 'markAsRead');
+            Route::put('/notifications/read-all', 'markAllAsRead');
+        });
 
     // AI endpoints
     Route::prefix('ai')->group(function () {
@@ -437,6 +471,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/{id}', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'updateProject']);
         Route::delete('/{id}', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'deleteProject']);
         Route::post('/bulk-delete', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'bulkDeleteProjects']);
+        Route::post('/bulk-archive', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'bulkArchiveProjects']);
+        Route::post('/bulk-export', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'bulkExportProjects']);
         Route::put('/{id}/status', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'updateProjectStatus']);
         Route::put('/{id}/progress', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'updateProjectProgress']);
         Route::put('/{id}/assign', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'assignProject']);
@@ -444,23 +480,67 @@ Route::middleware(['auth:sanctum'])->group(function () {
     });
 
     // ========================================
-    // TASKS API ENDPOINTS
+    // TASKS API ENDPOINTS (Unified)
     // ========================================
     Route::prefix('tasks')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\TasksController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\Api\TasksController::class, 'store']);
-        Route::get('/{task}', [\App\Http\Controllers\Api\TasksController::class, 'show']);
-        Route::put('/{task}', [\App\Http\Controllers\Api\TasksController::class, 'update']);
-        Route::delete('/{task}', [\App\Http\Controllers\Api\TasksController::class, 'destroy']);
-        Route::post('/{task}/assign', [\App\Http\Controllers\Api\TasksController::class, 'assign']);
-        Route::post('/{task}/unassign', [\App\Http\Controllers\Api\TasksController::class, 'unassign']);
-        Route::post('/{task}/progress', [\App\Http\Controllers\Api\TasksController::class, 'updateProgress']);
-        Route::get('/{task}/documents', [\App\Http\Controllers\Api\TasksController::class, 'documents']);
-        Route::get('/{task}/history', [\App\Http\Controllers\Api\TasksController::class, 'history']);
+        Route::get('/', [\App\Http\Controllers\Unified\TaskManagementController::class, 'getTasks']);
+        Route::post('/', [\App\Http\Controllers\Unified\TaskManagementController::class, 'createTask']);
+        Route::get('/stats', [\App\Http\Controllers\Unified\TaskManagementController::class, 'getTaskStatistics']);
+        Route::get('/project/{projectId}', [\App\Http\Controllers\Unified\TaskManagementController::class, 'getTasksForProject']);
+        Route::get('/{id}', [\App\Http\Controllers\Unified\TaskManagementController::class, 'getTask']);
+        Route::put('/{id}', [\App\Http\Controllers\Unified\TaskManagementController::class, 'updateTask']);
+        Route::delete('/{id}', [\App\Http\Controllers\Unified\TaskManagementController::class, 'deleteTask']);
+        Route::put('/{id}/progress', [\App\Http\Controllers\Unified\TaskManagementController::class, 'updateTaskProgress']);
+        Route::post('/bulk-delete', [\App\Http\Controllers\Unified\TaskManagementController::class, 'bulkDeleteTasks']);
+        Route::post('/bulk-status', [\App\Http\Controllers\Unified\TaskManagementController::class, 'bulkUpdateStatus']);
+        Route::post('/bulk-assign', [\App\Http\Controllers\Unified\TaskManagementController::class, 'bulkAssignTasks']);
     });
 
     // ========================================
-    // CLIENTS API ENDPOINTS
+    // SUBTASKS - API ENDPOINTS
+    // ========================================
+    Route::prefix('subtasks')->group(function () {
+        Route::get('/task/{taskId}', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'getSubtasksForTask']);
+        Route::post('/', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'createSubtask']);
+        Route::get('/{id}', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'getSubtask']);
+        Route::put('/{id}', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'updateSubtask']);
+        Route::delete('/{id}', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'deleteSubtask']);
+        Route::put('/{id}/progress', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'updateSubtaskProgress']);
+        Route::get('/task/{taskId}/stats', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'getSubtaskStatistics']);
+        Route::post('/bulk-delete', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'bulkDeleteSubtasks']);
+        Route::post('/bulk-status', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'bulkUpdateStatus']);
+        Route::post('/bulk-assign', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'bulkAssignSubtasks']);
+        Route::post('/reorder', [\App\Http\Controllers\Unified\SubtaskManagementController::class, 'reorderSubtasks']);
+    });
+
+    // ========================================
+    // TASK COMMENTS - API ENDPOINTS
+    // ========================================
+    Route::prefix('task-comments')->middleware(['ability:tenant'])->group(function () {
+        Route::get('/task/{taskId}', [\App\Http\Controllers\Unified\TaskCommentManagementController::class, 'getCommentsForTask']);
+        Route::post('/', [\App\Http\Controllers\Unified\TaskCommentManagementController::class, 'createComment']);
+        Route::get('/{id}', [\App\Http\Controllers\Unified\TaskCommentManagementController::class, 'getComment']);
+        Route::put('/{id}', [\App\Http\Controllers\Unified\TaskCommentManagementController::class, 'updateComment']);
+        Route::delete('/{id}', [\App\Http\Controllers\Unified\TaskCommentManagementController::class, 'deleteComment']);
+        Route::patch('/{id}/pin', [\App\Http\Controllers\Unified\TaskCommentManagementController::class, 'togglePinComment']);
+        Route::get('/task/{taskId}/stats', [\App\Http\Controllers\Unified\TaskCommentManagementController::class, 'getCommentStatistics']);
+    });
+
+    // ========================================
+    // TASK ATTACHMENTS - API ENDPOINTS
+    // ========================================
+    Route::prefix('task-attachments')->middleware(['ability:tenant'])->group(function () {
+        Route::get('/task/{taskId}', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'getAttachmentsForTask']);
+        Route::post('/', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'uploadAttachment']);
+        Route::get('/{id}', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'getAttachment']);
+        Route::put('/{id}', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'updateAttachment']);
+        Route::delete('/{id}', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'deleteAttachment']);
+        Route::get('/{id}/download', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'downloadAttachment']);
+        Route::get('/{id}/preview', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'previewAttachment']);
+        Route::post('/{id}/versions', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'uploadVersion']);
+        Route::get('/task/{taskId}/stats', [\App\Http\Controllers\Unified\TaskAttachmentManagementController::class, 'getAttachmentStatistics']);
+    });
+
     // ========================================
     Route::prefix('clients')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\ClientsController::class, 'index']);

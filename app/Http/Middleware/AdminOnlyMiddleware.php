@@ -33,11 +33,15 @@ class AdminOnlyMiddleware
                 'request_id' => $request->header('X-Request-Id')
             ]);
 
-            return response()->json([
-                'success' => false,
-                'error' => 'Authentication required',
-                'code' => 'AUTH_REQUIRED'
-            ], 401);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Authentication required',
+                    'code' => 'AUTH_REQUIRED'
+                ], 401);
+            }
+            
+            return redirect()->route('login')->with('error', 'Authentication required');
         }
 
         // Check if user has admin role
@@ -53,16 +57,20 @@ class AdminOnlyMiddleware
                 'request_id' => $request->header('X-Request-Id')
             ]);
 
-            return response()->json([
-                'success' => false,
-                'error' => 'Admin access required',
-                'code' => 'ADMIN_REQUIRED'
-            ], 403);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Admin access required',
+                    'code' => 'ADMIN_REQUIRED'
+                ], 403);
+            }
+            
+            abort(403, 'Admin access required');
         }
 
         // Check if user is active
         if (!$user->is_active) {
-            Log::warning('Inactive admin user attempted to access admin endpoint', [
+            Log::warning('Inactive user attempted to access admin endpoint', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'role' => $user->role,
@@ -72,11 +80,15 @@ class AdminOnlyMiddleware
                 'request_id' => $request->header('X-Request-Id')
             ]);
 
-            return response()->json([
-                'success' => false,
-                'error' => 'Account is inactive',
-                'code' => 'ACCOUNT_INACTIVE'
-            ], 403);
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Account is inactive',
+                    'code' => 'ACCOUNT_INACTIVE'
+                ], 403);
+            }
+            
+            abort(403, 'Account is inactive');
         }
 
         // Add admin context to request

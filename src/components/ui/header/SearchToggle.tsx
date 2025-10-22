@@ -13,7 +13,7 @@ export interface SearchResult {
 }
 
 export interface SearchToggleProps {
-  onSearch?: (query: string) => Promise<SearchResult[]>;
+  onSearch?: (_query: string) => Promise<SearchResult[]>;
   placeholder?: string;
   className?: string;
 }

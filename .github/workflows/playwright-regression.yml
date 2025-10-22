@@ -1,0 +1,405 @@
+name: Playwright Regression Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - regression
+        - security
+        - performance
+        - cross-browser
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'testing'
+        type: choice
+        options:
+        - testing
+        - staging
+
+jobs:
+  php-unit-tests:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, zip, gd, curl, xml, ctype, json, bcmath, openssl, tokenizer, xmlwriter
+        coverage: xdebug
+        
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+          
+    - name: Install PHP dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Create database
+      run: |
+        mysql --host 127.0.0.1 --port 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        
+    - name: Run database migrations
+      run: php artisan migrate --env=testing
+      
+    - name: Run PHP unit tests
+      run: php artisan test --testsuite=Unit --coverage
+      
+    - name: Run PHP feature tests
+      run: php artisan test --testsuite=Feature --coverage
+      
+    - name: Copy coverage file to root
+      run: cp storage/app/coverage.xml ./coverage.xml
+      
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  playwright-regression:
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    needs: php-unit-tests
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, zip, gd, curl, xml, ctype, json, bcmath, openssl, tokenizer, xmlwriter
+        coverage: none
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+        
+    - name: Install PHP dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Install Node.js dependencies
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Create database
+      run: |
+        mysql --host 127.0.0.1 --port 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        
+    - name: Run database migrations
+      run: php artisan migrate --env=testing
+      
+    - name: Seed database with extended data
+      run: php artisan db:seed --class=Phase4E2EDatabaseSeeder --env=testing
+      
+    - name: Start Laravel server
+      run: php artisan serve --host=0.0.0.0 --port=8000 &
+      
+    - name: Wait for server
+      run: sleep 15
+      
+    - name: Run Playwright regression tests
+      run: npx playwright test --project=regression-chromium --grep "@regression"
+      
+    - name: Upload Playwright report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report-regression
+        path: playwright-report/
+        retention-days: 30
+      
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-regression
+        path: test-results/
+        retention-days: 30
+
+  playwright-security:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    needs: php-unit-tests
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, zip, gd, curl, xml, ctype, json, bcmath, openssl, tokenizer, xmlwriter
+        coverage: none
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+          
+    - name: Install PHP dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Install Node.js dependencies
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Create database
+      run: |
+        mysql --host 127.0.0.1 --port 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        
+    - name: Run database migrations
+      run: php artisan migrate --env=testing
+      
+    - name: Seed database with security test data
+      run: php artisan db:seed --class=SecurityTestDatabaseSeeder --env=testing
+      
+    - name: Start Laravel server
+      run: php artisan serve --host=0.0.0.0 --port=8000 &
+      
+    - name: Wait for server
+      run: sleep 15
+      
+    - name: Run Playwright security tests
+      run: npx playwright test --project=security-chromium --grep "@security"
+      
+    - name: Upload Playwright report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report-security
+        path: playwright-report/
+        retention-days: 30
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-security
+        path: test-results/
+        retention-days: 30
+
+  playwright-performance:
+    timeout-minutes: 90
+    runs-on: ubuntu-latest
+    needs: php-unit-tests
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, zip, gd, curl, xml, ctype, json, bcmath, openssl, tokenizer, xmlwriter
+        coverage: none
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+          
+    - name: Install PHP dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Install Node.js dependencies
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Create database
+      run: |
+        mysql --host 127.0.0.1 --port 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        
+    - name: Run database migrations
+      run: php artisan migrate --env=testing
+      
+    - name: Seed database with performance test data
+      run: php artisan db:seed --class=PerformanceTestDatabaseSeeder --env=testing
+      
+    - name: Start Laravel server
+      run: php artisan serve --host=0.0.0.0 --port=8000 &
+      
+    - name: Wait for server
+      run: sleep 15
+      
+    - name: Run Playwright performance tests
+      run: npx playwright test --project=performance-chromium --grep "@performance"
+      
+    - name: Upload Playwright report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report-performance
+        path: playwright-report/
+        retention-days: 30
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-performance
+        path: test-results/
+        retention-days: 30
+
+  playwright-cross-browser:
+    timeout-minutes: 120
+    runs-on: ubuntu-latest
+    needs: php-unit-tests
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, zip, gd, curl, xml, ctype, json, bcmath, openssl, tokenizer, xmlwriter
+        coverage: none
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+          
+    - name: Install PHP dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Install Node.js dependencies
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Create database
+      run: |
+        mysql --host 127.0.0.1 --port 3306 -u root -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        
+    - name: Run database migrations
+      run: php artisan migrate --env=testing
+      
+    - name: Seed database
+      run: php artisan db:seed --class=E2EDatabaseSeeder --env=testing
+      
+    - name: Start Laravel server
+      run: php artisan serve --host=0.0.0.0 --port=8000 &
+      
+    - name: Wait for server
+      run: sleep 15
+      
+    - name: Run Playwright cross-browser tests
+      run: npx playwright test --project=${{ matrix.browser }} --grep "@cross-browser"
+      
+    - name: Upload Playwright report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report-${{ matrix.browser }}
+        path: playwright-report/
+        retention-days: 30
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ matrix.browser }}
+        path: test-results/
+        retention-days: 30

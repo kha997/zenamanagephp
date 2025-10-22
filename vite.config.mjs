@@ -4,7 +4,12 @@ import laravel from 'laravel-vite-plugin';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: [
+                'resources/css/app.css', 
+                'resources/js/app.js',
+                'resources/js/task-comments.js',
+                'resources/js/pages/app/kanban-entry.tsx'
+            ],
             refresh: true,
         }),
     ],

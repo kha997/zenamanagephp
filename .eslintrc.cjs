@@ -3,12 +3,19 @@ module.exports = {
   env: { browser: true, es2020: true },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs'],
   parser: '@typescript-eslint/parser',
   plugins: ['react-refresh'],
+  globals: {
+    Alpine: 'readonly',
+    Chart: 'readonly',
+    axios: 'readonly',
+    gtag: 'readonly',
+    NodeJS: 'readonly'
+  },
   rules: {
     'react-refresh/only-export-components': [
       'warn',

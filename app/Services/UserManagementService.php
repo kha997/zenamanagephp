@@ -31,7 +31,7 @@ class UserManagementService
         int $perPage = 15,
         string $sortBy = 'created_at',
         string $sortDirection = 'desc',
-        ?int $tenantId = null
+        string|int|null $tenantId = null
     ): LengthAwarePaginator {
         $this->validateTenantAccess($tenantId);
         
@@ -70,7 +70,7 @@ class UserManagementService
     /**
      * Get user by ID with tenant isolation
      */
-    public function getUserById(int $id, ?int $tenantId = null): ?User
+    public function getUserById(int $id, string|int|null $tenantId = null): ?User
     {
         $this->validateTenantAccess($tenantId);
         
@@ -83,7 +83,7 @@ class UserManagementService
     /**
      * Create new user
      */
-    public function createUser(array $data, ?int $tenantId = null): User
+    public function createUser(array $data, string|int|null $tenantId = null): User
     {
         $this->validateTenantAccess($tenantId);
         
@@ -102,7 +102,7 @@ class UserManagementService
     /**
      * Update user
      */
-    public function updateUser(int $id, array $data, ?int $tenantId = null): User
+    public function updateUser(int $id, array $data, string|int|null $tenantId = null): User
     {
         $this->validateTenantAccess($tenantId);
         
@@ -128,7 +128,7 @@ class UserManagementService
     /**
      * Delete user
      */
-    public function deleteUser(int $id, ?int $tenantId = null): bool
+    public function deleteUser(int $id, string|int|null $tenantId = null): bool
     {
         $this->validateTenantAccess($tenantId);
         
@@ -153,7 +153,7 @@ class UserManagementService
     /**
      * Bulk delete users
      */
-    public function bulkDeleteUsers(array $ids, ?int $tenantId = null): int
+    public function bulkDeleteUsers(array $ids, string|int|null $tenantId = null): int
     {
         $this->validateTenantAccess($tenantId);
         
@@ -177,7 +177,7 @@ class UserManagementService
     /**
      * Toggle user active status
      */
-    public function toggleUserStatus(int $id, ?int $tenantId = null): User
+    public function toggleUserStatus(int $id, string|int|null $tenantId = null): User
     {
         $this->validateTenantAccess($tenantId);
         
@@ -196,7 +196,7 @@ class UserManagementService
     /**
      * Update user role
      */
-    public function updateUserRole(int $id, string $role, ?int $tenantId = null): User
+    public function updateUserRole(int $id, string $role, string|int|null $tenantId = null): User
     {
         $this->validateTenantAccess($tenantId);
         
@@ -218,7 +218,7 @@ class UserManagementService
     /**
      * Get user statistics
      */
-    public function getUserStats(?int $tenantId = null): array
+    public function getUserStats(string|int|null $tenantId = null): array
     {
         $this->validateTenantAccess($tenantId);
         
@@ -242,7 +242,7 @@ class UserManagementService
     public function searchUsers(
         string $search,
         int $limit = 10,
-        ?int $tenantId = null
+        string|int|null $tenantId = null
     ): Collection {
         $this->validateTenantAccess($tenantId);
         
@@ -312,7 +312,7 @@ class UserManagementService
     /**
      * Get user preferences
      */
-    public function getUserPreferences(int $userId, ?int $tenantId = null): array
+    public function getUserPreferences(int $userId, string|int|null $tenantId = null): array
     {
         $this->validateTenantAccess($tenantId);
         
@@ -325,7 +325,7 @@ class UserManagementService
     /**
      * Update user preferences
      */
-    public function updateUserPreferences(int $userId, array $preferences, ?int $tenantId = null): User
+    public function updateUserPreferences(int $userId, array $preferences, string|int|null $tenantId = null): User
     {
         $this->validateTenantAccess($tenantId);
         

@@ -2,6 +2,10 @@
  * Security Charts - Chart.js visualizations for KPI panels
  */
 
+// Constants
+const DATE_FORMAT_DAY = 'MMM dd';
+const DATE_FORMAT_HOUR = DATE_FORMAT_HOUR;
+
 export function lineChart(el, {labels, datasets}) {
     if (el._chart) { 
         el._chart.destroy(); 
@@ -28,9 +32,9 @@ export function lineChart(el, {labels, datasets}) {
                     type: 'time',
                     time: {
                         displayFormats: {
-                            hour: 'MMM dd HH:mm',
-                            day: 'MMM dd',
-                            week: 'MMM dd',
+                            hour: DATE_FORMAT_HOUR,
+                            day: DATE_FORMAT_DAY,
+                            week: DATE_FORMAT_DAY,
                             month: 'MMM yyyy'
                         }
                     }
@@ -67,9 +71,9 @@ export function areaChart(el, {labels, datasets}) {
                     type: 'time',
                     time: {
                         displayFormats: {
-                            hour: 'MMM dd HH:mm',
-                            day: 'MMM dd',
-                            week: 'MMM dd',
+                            hour: DATE_FORMAT_HOUR,
+                            day: DATE_FORMAT_DAY,
+                            week: DATE_FORMAT_DAY,
                             month: 'MMM yyyy'
                         }
                     }
@@ -111,9 +115,9 @@ export function stackedBarChart(el, {labels, datasets}) {
                     type: 'time',
                     time: {
                         displayFormats: {
-                            hour: 'MMM dd HH:mm',
-                            day: 'MMM dd',
-                            week: 'MMM dd',
+                            hour: DATE_FORMAT_HOUR,
+                            day: DATE_FORMAT_DAY,
+                            week: DATE_FORMAT_DAY,
                             month: 'MMM yyyy'
                         }
                     }

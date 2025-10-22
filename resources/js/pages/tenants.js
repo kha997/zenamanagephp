@@ -1,7 +1,42 @@
 // Tenants Page Module - No-Flash Implementation
+// eslint-disable-next-line sonarjs/cognitive-complexity
 (function() {
     let abortController = null;
     const pageKey = 'tenants';
+
+    // Helper functions to reduce complexity
+    function setLoadingState(loading) {
+        const tablePanel = document.getElementById('tenants-table');
+        if (tablePanel && window.setPanelLoading) {
+            window.setPanelLoading(tablePanel, loading);
+        }
+    }
+
+    function updateTenantsState(data) {
+        const tenantsPage = Alpine.$data(document.querySelector('[x-data="tenantsPage()"]'));
+        if (!tenantsPage) return;
+
+        if (data.data) {
+            tenantsPage.filteredTenants = data.data.tenants || [];
+            tenantsPage.total = data.meta?.pagination?.total || 0;
+            tenantsPage.lastPage = data.meta?.pagination?.last_page || 1;
+            tenantsPage.kpis = data.data.kpis || {};
+        }
+        tenantsPage.tenantsLoading = false;
+        tenantsPage.error = null;
+    }
+
+    function updateErrorState(error) {
+        const tenantsPage = Alpine.$data(document.querySelector('[x-data="tenantsPage()"]'));
+        if (!tenantsPage) return;
+
+        tenantsPage.tenantsLoading = false;
+        tenantsPage.error = error.message;
+    }
+
+    function dispatchEvent(eventName, detail) {
+        document.dispatchEvent(new CustomEvent(eventName, { detail }));
+    }
 
     // Page refresh handler
     async function loadTenantsData() {
@@ -12,12 +47,7 @@
             }
             
             abortController = new AbortController();
-
-            // Set loading state on table
-            const tablePanel = document.getElementById('tenants-table');
-            if (tablePanel && window.setPanelLoading) {
-                window.setPanelLoading(tablePanel, true);
-            }
+            setLoadingState(true);
 
             // Build cache key with current params
             const urlParams = new URLSearchParams(window.location.search);
@@ -31,47 +61,20 @@
             });
 
             // Update Alpine.js state
-            const tenantsPage = Alpine.$data(document.querySelector('[x-data="tenantsPage()"]'));
-            if (tenantsPage) {
-                // Extract data from response
-                if (data.data) {
-                    tenantsPage.filteredTenants = data.data.tenants || [];
-                    tenantsPage.total = data.meta?.pagination?.total || 0;
-                    tenantsPage.lastPage = data.meta?.pagination?.last_page || 1;
-                    tenantsPage.kpis = data.data.kpis || {};
-                }
-                tenantsPage.tenantsLoading = false;
-                tenantsPage.error = null;
-            }
+            updateTenantsState(data);
 
             // Dispatch success event
-            document.dispatchEvent(new CustomEvent('tenants:dataLoaded', {
-                detail: { data, url: apiUrl }
-            }));
+            dispatchEvent('tenants:dataLoaded', { data, url: apiUrl });
 
         } catch (error) {
             console.error('[Tenants] Error loading data:', error);
             
             if (error.name !== 'AbortError') {
-                // Update error state
-                const tenantsPage = Alpine.$data(document.querySelector('[x-data="tenantsPage()"]'));
-                if (tenantsPage) {
-                    tenantsPage.tenantsLoading = false;
-                    tenantsPage.error = error.message;
-                }
-                
-                // Dispatch error event
-                document.dispatchEvent(new CustomEvent('tenants:error', {
-                    detail: { error }
-                }));
+                updateErrorState(error);
+                dispatchEvent('tenants:error', { error });
             }
         } finally {
-            // Always clean up loading state
-            const tablePanel = document.getElementById('tenants-table');
-            if (tablePanel && window.setPanelLoading) {
-                window.setPanelLoading(tablePanel, false);
-            }
-            
+            setLoadingState(false);
             abortController = null;
         }
     }

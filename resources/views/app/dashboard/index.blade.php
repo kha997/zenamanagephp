@@ -1,221 +1,337 @@
-{{-- App Dashboard - Phase 2 Implementation --}}
-{{-- Using standardized components for consistent UI/UX --}}
+@extends('layouts.app')
 
-@php
-    $user = Auth::user();
-    $tenant = $user->tenant ?? null;
+@section('title', 'Dashboard')
+
+@section('content')
+<div class="min-h-screen bg-gray-50" x-data="dashboardData()" x-init="init()">
+    <!-- Alert Banner -->
+    @include('app.dashboard._alerts')
     
-    // Prepare KPIs data
-    $kpis = [
-        [
-            'key' => 'projects',
-            'label' => 'Total Projects',
-            'value' => $totalProjects ?? 0,
-            'change' => $projectsChange ?? 0,
-            'icon' => 'fas fa-project-diagram',
-            'color' => 'blue'
-        ],
-        [
-            'key' => 'tasks',
-            'label' => 'Active Tasks',
-            'value' => $totalTasks ?? 0,
-            'change' => $tasksChange ?? 0,
-            'icon' => 'fas fa-tasks',
-            'color' => 'green'
-        ],
-        [
-            'key' => 'team',
-            'label' => 'Team Members',
-            'value' => $totalTeamMembers ?? 0,
-            'change' => $teamChange ?? 0,
-            'icon' => 'fas fa-users',
-            'color' => 'purple'
-        ],
-        [
-            'key' => 'budget',
-            'label' => 'Budget Used',
-            'value' => $budgetUsed ?? 0,
-            'change' => $budgetChange ?? 0,
-            'icon' => 'fas fa-dollar-sign',
-            'color' => 'yellow'
-        ]
-    ];
-    
-    // Prepare charts data
-    $charts = [
-        [
-            'key' => 'project-progress',
-            'type' => 'doughnut',
-            'title' => 'Project Progress',
-            'data' => $projectProgressData ?? []
-        ],
-        [
-            'key' => 'task-distribution',
-            'type' => 'line',
-            'title' => 'Task Completion Trend',
-            'data' => $taskCompletionData ?? []
-        ]
-    ];
-    
-    // Prepare recent projects data
-    $recentProjectsData = $recentProjects ?? collect([]);
-    
-    // Prepare recent activity data
-    $recentActivityData = $recentActivity ?? collect([]);
-    
-    // Prepare alerts data
-    $alertsData = $alerts ?? collect([]);
-    
-    // Prepare notifications data
-    $notificationsData = $notifications ?? collect([]);
-    
-    // Breadcrumbs
-    $breadcrumbs = [
-        ['label' => 'Dashboard', 'url' => null]
-    ];
-    
-    // Page actions
-    $actions = '
-        <div class="flex items-center space-x-3">
-            <button onclick="refreshDashboard()" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
-                <i class="fas fa-sync-alt mr-2"></i>Refresh
-            </button>
-            <a href="' . route('app.projects.create') . '" class="btn bg-blue-600 text-white hover:bg-blue-700">
-                <i class="fas fa-plus mr-2"></i>New Project
-            </a>
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+                    <p class="text-sm text-gray-600">Welcome back, {{ Auth::user()->name ?? 'User' }}</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button @click="refreshDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                    <a href="{{ route('app.projects.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        <i class="fas fa-plus mr-2"></i>New Project
+                    </a>
+                </div>
+            </div>
         </div>
-    ';
-@endphp
+    </div>
 
-<x-shared.dashboard-shell 
-    variant="app"
-    :user="$user"
-    :tenant="$tenant"
-    :kpis="$kpis"
-    :charts="$charts"
-    :recent-projects="$recentProjectsData"
-    :recent-activity="$recentActivityData"
-    :alerts="$alertsData"
-    :notifications="$notificationsData"
-    title="Dashboard"
-    :subtitle="'Welcome back, ' . ($user->first_name ?? $user->name ?? 'User')"
-    :breadcrumbs="$breadcrumbs"
-    :actions="$actions">
-    
-    {{-- Additional Dashboard Content --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-        {{-- Team Status --}}
-        <x-shared.card-standardized 
-            title="Team Status"
-            subtitle="Current team activity and availability">
-            
-            <div class="space-y-4">
-                @if(isset($teamMembers) && $teamMembers->count() > 0)
-                    @foreach($teamMembers->take(5) as $member)
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+    <!-- KPI Strip -->
+    @include('app.dashboard._kpis')
+
+    <!-- Main Content Grid -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Row 1: Recent Projects + Activity Feed -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Recent Projects -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Recent Projects</h3>
+                </div>
+                <div class="p-6">
+                    @forelse($recentProjects as $project)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-3">
                             <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                                    <span class="text-white text-sm font-medium">
-                                        {{ substr($member->name, 0, 1) }}
-                                    </span>
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-project-diagram text-blue-600"></i>
                                 </div>
                                 <div>
-                                    <h4 class="font-medium text-gray-900">{{ $member->name }}</h4>
-                                    <p class="text-sm text-gray-500">{{ $member->role ?? 'Member' }}</p>
+                                    <h4 class="text-sm font-medium text-gray-900">{{ $project->name }}</h4>
+                                    <p class="text-xs text-gray-500">{{ ucfirst($project->status) }}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-900">{{ $project->progress }}%</p>
+                                <div class="w-16 bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $project->progress }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-8">
+                            <i class="fas fa-project-diagram text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No projects yet</p>
+                            <a href="{{ route('app.projects.create') }}" class="text-blue-600 hover:text-blue-800 font-medium">Create your first project</a>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Activity Feed -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
+                </div>
+                <div class="p-6">
+                    @forelse($recentActivity as $activity)
+                        <div class="flex items-start space-x-3 mb-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-bell text-blue-600 text-sm"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-gray-900">{{ $activity->message }}</p>
+                                <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($activity->created_at)->diffForHumans() }}</p>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-8">
+                            <i class="fas fa-bell text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No recent activity</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Project Progress Chart + Quick Actions -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Project Progress Chart -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Project Progress</h3>
+                </div>
+                <div class="p-6">
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="projectProgressChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            @include('app.dashboard._quick-actions')
+        </div>
+
+        <!-- Row 3: Team Status + Task Completion Chart -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Team Status -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Team Status</h3>
+                </div>
+                <div class="p-6">
+                    @forelse($teamMembers as $member)
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                                        <span class="text-sm font-medium text-gray-600">{{ substr($member['name'], 0, 1) }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">{{ $member['name'] }}</p>
+                                    <p class="text-xs text-gray-500">{{ $member['role'] }}</p>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span class="text-sm text-gray-500">Online</span>
+                                <div class="w-2 h-2 rounded-full {{ $member['status_color'] }}"></div>
+                                <span class="text-xs text-gray-500">{{ ucfirst($member['status']) }}</span>
                             </div>
                         </div>
-                    @endforeach
-                    
-                    @if($teamMembers->count() > 5)
-                        <div class="text-center">
-                            <a href="{{ route('app.team.index') }}" class="text-blue-600 hover:text-blue-800 font-medium">
-                                View all {{ $teamMembers->count() }} team members →
-                            </a>
+                    @empty
+                        <div class="text-center py-8">
+                            <i class="fas fa-users text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No team members</p>
                         </div>
-                    @endif
-                @else
-                    <x-shared.empty-state 
-                        icon="fas fa-users"
-                        title="No team members"
-                        description="Invite team members to start collaborating."
-                        action-text="Invite Team Member"
-                        action-icon="fas fa-user-plus"
-                        action-handler="inviteTeamMember" />
-                @endif
+                    @endforelse
+                </div>
             </div>
-        </x-shared.card-standardized>
-        
-        {{-- Quick Actions --}}
-        <x-shared.card-standardized 
-            title="Quick Actions"
-            subtitle="Common tasks and shortcuts">
-            
-            <div class="grid grid-cols-2 gap-4">
-                <a href="{{ route('app.projects.create') }}" 
-                   class="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                    <i class="fas fa-project-diagram text-2xl text-blue-600 mb-2"></i>
-                    <span class="font-medium text-blue-900">New Project</span>
-                </a>
-                
-                <a href="{{ route('app.tasks.create') }}" 
-                   class="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-                    <i class="fas fa-tasks text-2xl text-green-600 mb-2"></i>
-                    <span class="font-medium text-green-900">New Task</span>
-                </a>
-                
-                <a href="{{ route('app.clients.create') }}" 
-                   class="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                    <i class="fas fa-user-plus text-2xl text-purple-600 mb-2"></i>
-                    <span class="font-medium text-purple-900">Add Client</span>
-                </a>
-                
-                <a href="{{ route('app.documents.index') }}" 
-                   class="flex flex-col items-center p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-                    <i class="fas fa-file-alt text-2xl text-orange-600 mb-2"></i>
-                    <span class="font-medium text-orange-900">Documents</span>
-                </a>
-            </div>
-        </x-shared.card-standardized>
-    </div>
-    
-    {{-- System Alerts --}}
-    @if(isset($systemAlerts) && $systemAlerts->count() > 0)
-        <div class="mt-8">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">System Alerts</h3>
-            <div class="space-y-4">
-                @foreach($systemAlerts as $alert)
-                    <x-shared.alert-standardized 
-                        :type="$alert['type']"
-                        :title="$alert['title']"
-                        :message="$alert['message']"
-                        :dismissible="true" />
-                @endforeach
+
+            <!-- Task Completion Chart -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Task Completion</h3>
+                </div>
+                <div class="p-6">
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="taskCompletionChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
-    @endif
-</x-shared.dashboard-shell>
+    </div>
+</div>
+@endsection
 
-@push('scripts')
+@section('scripts')
 <script>
-function refreshDashboard() {
-    // Refresh dashboard data
-    window.location.reload();
-}
+// Bootstrap data from server
+window.dashboardBootstrap = {!! $dashboardBootstrap !!};
 
-function inviteTeamMember() {
-    // Open invite team member modal or redirect
-    window.location.href = '{{ route("app.team.index") }}';
-}
+// Initialize charts immediately with server data
+document.addEventListener('DOMContentLoaded', function() {
+    // Project Progress Chart
+    const projectProgressCtx = document.getElementById('projectProgressChart');
+    if (projectProgressCtx && window.dashboardBootstrap.charts.projectProgress) {
+        new Chart(projectProgressCtx, window.dashboardBootstrap.charts.projectProgress);
+    }
+    
+    // Task Completion Chart
+    const taskCompletionCtx = document.getElementById('taskCompletionChart');
+    if (taskCompletionCtx && window.dashboardBootstrap.charts.taskCompletion) {
+        new Chart(taskCompletionCtx, window.dashboardBootstrap.charts.taskCompletion);
+    }
+});
 
-// Auto-refresh dashboard every 5 minutes
-setInterval(function() {
-    // Optionally refresh specific data without full page reload
-    console.log('Dashboard auto-refresh triggered');
-}, 300000);
+// Dashboard Alpine.js component
+function dashboardData() {
+    return {
+        kpis: {
+            totalProjects: 0,
+            projectGrowth: '+0%',
+            activeTasks: 0,
+            taskGrowth: '+0%',
+            teamMembers: 0,
+            teamGrowth: '+0%',
+            completionRate: 0,
+        },
+        alerts: [],
+        recentProjects: [],
+        recentActivity: [],
+        teamStatus: [],
+        charts: {
+            projectProgress: null,
+            taskCompletion: null,
+        },
+        
+        init() {
+            // Load bootstrap data
+            if (window.dashboardBootstrap) {
+                const bootstrap = window.dashboardBootstrap;
+                
+                // Normalize data to ensure arrays
+                const normalize = (value) => 
+                    Array.isArray(value) ? value : Object.values(value || {});
+                
+                this.kpis = bootstrap.kpis || this.kpis;
+                this.alerts = normalize(bootstrap.alerts);
+                this.recentProjects = normalize(bootstrap.recentProjects);
+                this.recentActivity = normalize(bootstrap.recentActivity);
+                this.teamStatus = normalize(bootstrap.teamStatus);
+                this.charts = bootstrap.charts || {};
+                
+                // Debug log
+                console.log('Dashboard Bootstrap Data:', {
+                    kpis: this.kpis,
+                    alerts: this.alerts,
+                    recentProjects: this.recentProjects,
+                    recentActivity: this.recentActivity,
+                    teamStatus: this.teamStatus,
+                    charts: this.charts
+                });
+            }
+            
+            // Initialize charts after DOM is ready
+            this.$nextTick(() => {
+                this.initCharts();
+            });
+        },
+        
+        initCharts() {
+            // Initialize Project Progress Chart (Doughnut)
+            if (this.charts.projectProgress) {
+                this.initProjectProgressChart();
+            }
+            
+            // Initialize Task Completion Chart (Line)
+            if (this.charts.taskCompletion) {
+                this.initTaskCompletionChart();
+            }
+        },
+        
+        initProjectProgressChart() {
+            const ctx = document.getElementById('projectProgressChart');
+            if (!ctx) return;
+            
+            // Destroy existing chart
+            if (window.projectProgressChartInstance) {
+                window.projectProgressChartInstance.destroy();
+            }
+            
+            window.projectProgressChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: this.charts.projectProgress,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                    },
+                },
+            });
+        },
+        
+        initTaskCompletionChart() {
+            const ctx = document.getElementById('taskCompletionChart');
+            if (!ctx) return;
+            
+            // Destroy existing chart
+            if (window.taskCompletionChartInstance) {
+                window.taskCompletionChartInstance.destroy();
+            }
+            
+            window.taskCompletionChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: this.charts.taskCompletion,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                        },
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                    },
+                },
+            });
+        },
+        
+        refreshDashboard() {
+            window.location.reload();
+        },
+        
+        formatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+            
+            if (diffInHours < 1) {
+                return 'Just now';
+            } else if (diffInHours < 24) {
+                return `${diffInHours}h ago`;
+            } else {
+                const diffInDays = Math.floor(diffInHours / 24);
+                return `${diffInDays}d ago`;
+            }
+        },
+        
+        dismissAllAlerts() {
+            this.alerts = [];
+        },
+        
+        openModal(type) {
+            // Placeholder for modal functionality
+            console.log('Opening modal:', type);
+        },
+    };
+}
 </script>
-@endpush
+@endsection

@@ -6,7 +6,7 @@ export interface SearchOverlayProps {
   results: SearchResult[];
   isLoading: boolean;
   placeholder: string;
-  onSearch: (query: string) => void;
+  onSearch: (_query: string) => void;
   onClose: () => void;
 }
 

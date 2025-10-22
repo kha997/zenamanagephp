@@ -127,7 +127,7 @@
                         
                         @if(count($notifications) > 0)
                             <div class="px-4 py-2 border-t border-header-border">
-                                <a href="{{ $isAdmin ? route('admin.notifications') : route('app.notifications') }}" 
+                                <a href="#" 
                                    class="text-sm text-nav-active hover:text-nav-hover font-medium">
                                     View all notifications
                                 </a>
@@ -178,7 +178,7 @@
                                 <i class="fas fa-user mr-2"></i>
                                 Profile
                             </a>
-                            <a href="{{ $isAdmin ? '#' : route('app.settings') }}" 
+                            <a href="{{ $isAdmin ? '#' : route('app.settings.index') }}" 
                                class="header-dropdown-item">
                                 <i class="fas fa-cog mr-2"></i>
                                 Settings
@@ -289,7 +289,7 @@
                             <i class="fas fa-user w-5"></i>
                             <span>Profile</span>
                         </a>
-                        <a href="{{ $isAdmin ? '#' : route('app.settings') }}" 
+                        <a href="{{ $isAdmin ? '#' : route('app.settings.index') }}" 
                            class="flex items-center space-x-3 px-3 py-2 text-header-fg hover:bg-header-bg-hover rounded-lg">
                             <i class="fas fa-cog w-5"></i>
                             <span>Settings</span>

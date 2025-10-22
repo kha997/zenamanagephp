@@ -253,69 +253,6 @@ class AppApiGateway
 
     // ===== TASK METHODS =====
 
-    /**
-     * Fetch tasks list
-     */
-    public function fetchTasks(array $filters = []): array
-    {
-        // Cache tasks for 1 minute if no filters (tasks change frequently)
-        if (empty($filters)) {
-            $cacheKey = "tasks_{$this->tenantId}";
-            return Cache::remember($cacheKey, 60, function () {
-                $response = $this->makeRequest('GET', '/tasks');
-                return $this->handleResponse($response);
-            });
-        }
-        
-        $response = $this->makeRequest('GET', '/tasks', $filters);
-        return $this->handleResponse($response);
-    }
-
-    /**
-     * Get task details
-     */
-    public function fetchTask(string $taskId): array
-    {
-        $response = $this->makeRequest('GET', "/tasks/{$taskId}");
-        return $this->handleResponse($response);
-    }
-
-    /**
-     * Create task
-     */
-    public function createTask(array $data): array
-    {
-        $response = $this->makeRequest('POST', '/tasks', $data);
-        return $this->handleResponse($response);
-    }
-
-    /**
-     * Update task
-     */
-    public function updateTask(string $taskId, array $data): array
-    {
-        $response = $this->makeRequest('PUT', "/tasks/{$taskId}", $data);
-        return $this->handleResponse($response);
-    }
-
-    /**
-     * Delete task
-     */
-    public function deleteTask(string $taskId): array
-    {
-        $response = $this->makeRequest('DELETE', "/tasks/{$taskId}");
-        return $this->handleResponse($response);
-    }
-
-    /**
-     * Update task progress
-     */
-    public function updateTaskProgress(string $taskId, array $data): array
-    {
-        $response = $this->makeRequest('POST', "/tasks/{$taskId}/progress", $data);
-        return $this->handleResponse($response);
-    }
-
     // ===== CLIENT METHODS =====
 
     /**
@@ -432,6 +369,145 @@ class AppApiGateway
             $response = $this->makeRequest('GET', '/dashboard/stats');
             return $this->handleResponse($response);
         });
+    }
+
+    // ===== TASK METHODS =====
+
+    /**
+     * Fetch tasks with filters
+     */
+    public function fetchTasks(array $filters = []): array
+    {
+        $queryParams = http_build_query($filters);
+        $url = $queryParams ? "/tasks?{$queryParams}" : '/tasks';
+        $response = $this->makeRequest('GET', $url);
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Fetch single task
+     */
+    public function fetchTask(string $taskId): array
+    {
+        $response = $this->makeRequest('GET', "/tasks/{$taskId}");
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Create task
+     */
+    public function createTask(array $data): array
+    {
+        $response = $this->makeRequest('POST', '/tasks', $data);
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Update task
+     */
+    public function updateTask(string $taskId, array $data): array
+    {
+        $response = $this->makeRequest('PUT', "/tasks/{$taskId}", $data);
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Delete task
+     */
+    public function deleteTask(string $taskId): array
+    {
+        $response = $this->makeRequest('DELETE', "/tasks/{$taskId}");
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Update task progress
+     */
+    public function updateTaskProgress(string $taskId, float $progress): array
+    {
+        $payload = ['progress' => $progress];
+        $response = $this->makeRequest('PUT', "/tasks/{$taskId}/progress", $payload);
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Fetch task statistics
+     */
+    public function fetchTaskStatistics(): array
+    {
+        $response = $this->makeRequest('GET', '/tasks/stats');
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Fetch tasks for project
+     */
+    public function fetchTasksForProject(string $projectId): array
+    {
+        $response = $this->makeRequest('GET', "/tasks/project/{$projectId}");
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Bulk delete tasks
+     */
+    public function bulkDeleteTasks(array $taskIds): array
+    {
+        $payload = ['ids' => $taskIds];
+        $response = $this->makeRequest('POST', '/tasks/bulk-delete', $payload);
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Bulk update task status
+     */
+    public function bulkUpdateTaskStatus(array $taskIds, string $status): array
+    {
+        $payload = ['ids' => $taskIds, 'status' => $status];
+        $response = $this->makeRequest('POST', '/tasks/bulk-status', $payload);
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Bulk assign tasks
+     */
+    public function bulkAssignTasks(array $taskIds, string $assigneeId): array
+    {
+        $payload = ['ids' => $taskIds, 'assignee_id' => $assigneeId];
+        $response = $this->makeRequest('POST', '/tasks/bulk-assign', $payload);
+        return $this->handleResponse($response);
+    }
+
+    // ===== BULK ACTIONS =====
+
+    /**
+     * Bulk delete projects
+     */
+    public function bulkDeleteProjects(array $projectIds): array
+    {
+        $payload = ['ids' => $projectIds];
+        $response = $this->makeRequest('POST', '/projects/bulk-delete', $payload);
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Bulk archive projects
+     */
+    public function bulkArchiveProjects(array $projectIds): array
+    {
+        $payload = ['ids' => $projectIds];
+        $response = $this->makeRequest('POST', '/projects/bulk-archive', $payload);
+        return $this->handleResponse($response);
+    }
+
+    /**
+     * Bulk export projects
+     */
+    public function bulkExportProjects(array $projectIds): array
+    {
+        $payload = ['ids' => $projectIds];
+        $response = $this->makeRequest('POST', '/projects/bulk-export', $payload);
+        return $this->handleResponse($response);
     }
 
     // ===== TEAM METHODS =====
@@ -1115,6 +1191,332 @@ class AppApiGateway
                 'error' => $e->getMessage()
             ]);
             return [];
+        }
+    }
+
+    // ========================================
+    // SUBTASK METHODS
+    // ========================================
+
+    /**
+     * Fetch subtasks for a task
+     */
+    public function fetchSubtasksForTask(string $taskId): array
+    {
+        try {
+            $response = $this->makeRequest('GET', "/subtasks/task/{$taskId}");
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error fetching subtasks for task', [
+                'task_id' => $taskId,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to fetch subtasks'];
+        }
+    }
+
+    /**
+     * Fetch subtask by ID
+     */
+    public function fetchSubtask(string $id): array
+    {
+        try {
+            $response = $this->makeRequest('GET', "/subtasks/{$id}");
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error fetching subtask', [
+                'subtask_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to fetch subtask'];
+        }
+    }
+
+    /**
+     * Create subtask
+     */
+    public function createSubtask(array $data): array
+    {
+        try {
+            $response = $this->makeRequest('POST', '/subtasks', $data);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error creating subtask', [
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to create subtask'];
+        }
+    }
+
+    /**
+     * Update subtask
+     */
+    public function updateSubtask(string $id, array $data): array
+    {
+        try {
+            $response = $this->makeRequest('PUT', "/subtasks/{$id}", $data);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error updating subtask', [
+                'subtask_id' => $id,
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to update subtask'];
+        }
+    }
+
+    /**
+     * Delete subtask
+     */
+    public function deleteSubtask(string $id): array
+    {
+        try {
+            $response = $this->makeRequest('DELETE', "/subtasks/{$id}");
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error deleting subtask', [
+                'subtask_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to delete subtask'];
+        }
+    }
+
+    /**
+     * Update subtask progress
+     */
+    public function updateSubtaskProgress(string $id, float $progress): array
+    {
+        try {
+            $response = $this->makeRequest('PUT', "/subtasks/{$id}/progress", ['progress' => $progress]);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error updating subtask progress', [
+                'subtask_id' => $id,
+                'progress' => $progress,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to update subtask progress'];
+        }
+    }
+
+    /**
+     * Fetch subtask statistics for a task
+     */
+    public function fetchSubtaskStatistics(string $taskId): array
+    {
+        try {
+            $response = $this->makeRequest('GET', "/subtasks/task/{$taskId}/stats");
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error fetching subtask statistics', [
+                'task_id' => $taskId,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to fetch subtask statistics'];
+        }
+    }
+
+    /**
+     * Bulk delete subtasks
+     */
+    public function bulkDeleteSubtasks(array $subtaskIds): array
+    {
+        try {
+            $response = $this->makeRequest('POST', '/subtasks/bulk-delete', ['subtask_ids' => $subtaskIds]);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error bulk deleting subtasks', [
+                'subtask_ids' => $subtaskIds,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to bulk delete subtasks'];
+        }
+    }
+
+    /**
+     * Bulk update subtask status
+     */
+    public function bulkUpdateSubtaskStatus(array $subtaskIds, string $status): array
+    {
+        try {
+            $response = $this->makeRequest('POST', '/subtasks/bulk-status', [
+                'subtask_ids' => $subtaskIds,
+                'status' => $status
+            ]);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error bulk updating subtask status', [
+                'subtask_ids' => $subtaskIds,
+                'status' => $status,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to bulk update subtask status'];
+        }
+    }
+
+    /**
+     * Bulk assign subtasks
+     */
+    public function bulkAssignSubtasks(array $subtaskIds, string $assigneeId): array
+    {
+        try {
+            $response = $this->makeRequest('POST', '/subtasks/bulk-assign', [
+                'subtask_ids' => $subtaskIds,
+                'assignee_id' => $assigneeId
+            ]);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error bulk assigning subtasks', [
+                'subtask_ids' => $subtaskIds,
+                'assignee_id' => $assigneeId,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to bulk assign subtasks'];
+        }
+    }
+
+    /**
+     * Reorder subtasks
+     */
+    public function reorderSubtasks(array $subtaskIds): array
+    {
+        try {
+            $response = $this->makeRequest('POST', '/subtasks/reorder', ['subtask_ids' => $subtaskIds]);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error reordering subtasks', [
+                'subtask_ids' => $subtaskIds,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to reorder subtasks'];
+        }
+    }
+
+    // ========================================
+    // TASK COMMENT METHODS
+    // ========================================
+
+    /**
+     * Fetch comments for a task
+     */
+    public function fetchCommentsForTask(string $taskId): array
+    {
+        try {
+            $response = $this->makeRequest('GET', "/task-comments/task/{$taskId}");
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error fetching comments for task', [
+                'task_id' => $taskId,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to fetch comments'];
+        }
+    }
+
+    /**
+     * Fetch comment by ID
+     */
+    public function fetchComment(string $id): array
+    {
+        try {
+            $response = $this->makeRequest('GET', "/task-comments/{$id}");
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error fetching comment', [
+                'comment_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to fetch comment'];
+        }
+    }
+
+    /**
+     * Create comment
+     */
+    public function createComment(array $data): array
+    {
+        try {
+            $response = $this->makeRequest('POST', '/task-comments', $data);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error creating comment', [
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to create comment'];
+        }
+    }
+
+    /**
+     * Update comment
+     */
+    public function updateComment(string $id, array $data): array
+    {
+        try {
+            $response = $this->makeRequest('PUT', "/task-comments/{$id}", $data);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error updating comment', [
+                'comment_id' => $id,
+                'data' => $data,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to update comment'];
+        }
+    }
+
+    /**
+     * Delete comment
+     */
+    public function deleteComment(string $id): array
+    {
+        try {
+            $response = $this->makeRequest('DELETE', "/task-comments/{$id}");
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error deleting comment', [
+                'comment_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to delete comment'];
+        }
+    }
+
+    /**
+     * Toggle comment pin status
+     */
+    public function togglePinComment(string $id, bool $isPinned): array
+    {
+        try {
+            $response = $this->makeRequest('PATCH', "/task-comments/{$id}/pin", ['is_pinned' => $isPinned]);
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error toggling comment pin', [
+                'comment_id' => $id,
+                'is_pinned' => $isPinned,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to toggle comment pin'];
+        }
+    }
+
+    /**
+     * Fetch comment statistics for a task
+     */
+    public function fetchCommentStatistics(string $taskId): array
+    {
+        try {
+            $response = $this->makeRequest('GET', "/task-comments/task/{$taskId}/stats");
+            return $this->handleResponse($response);
+        } catch (\Exception $e) {
+            Log::error('Error fetching comment statistics', [
+                'task_id' => $taskId,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'Failed to fetch comment statistics'];
         }
     }
 }

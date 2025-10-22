@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Services\AppApiGateway;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -36,7 +37,15 @@ class ProjectController extends Controller
             $viewMode = session('projects_view_mode', 'table');
             
             // Get filters from request
-            $filters = $request->only(['status', 'search', 'sort_by', 'sort_direction']);
+            $filters = $request->only([
+                'status',
+                'priority',
+                'client_id',
+                'search',
+                'sort_by',
+                'sort_direction',
+                'page'
+            ]);
             
             // Fetch data efficiently
             $responses = $this->fetchProjectData($filters);
@@ -44,13 +53,63 @@ class ProjectController extends Controller
             // Extract responses from services
             $projects = $responses['projects'];
             $dashboardData = $responses['dashboard'];
+            $clients = $responses['clients'] ?? collect();
+            $meta = $responses['meta'] ?? [];
 
-            return view('app.projects.index-new', [
-                'projects' => $projects,
-                'meta' => [],
-                'kpis' => $this->buildKpis($dashboardData),
-                'viewMode' => $viewMode,
-                'filters' => $filters
+                   return view('app.projects.index', [
+                       'projects' => $projects,
+                       'clients' => $clients,
+                       'meta' => $meta,
+                       'kpis' => $this->buildKpis($dashboardData),
+                       'viewMode' => $viewMode,
+                       'filters' => $filters,
+                       'user' => auth()->user(),
+                'breadcrumbs' => [
+                    ['label' => 'Dashboard', 'url' => route('app.dashboard')],
+                    ['label' => 'Projects', 'url' => null]
+                ],
+                'actions' => '<a href="' . route('app.projects.create') . '" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-plus mr-2"></i>
+                    New Project
+                </a>',
+                'sortOptions' => [
+                    ['value' => 'name', 'label' => 'Project Name'],
+                    ['value' => 'status', 'label' => 'Status'],
+                    ['value' => 'priority', 'label' => 'Priority'],
+                    ['value' => 'start_date', 'label' => 'Start Date'],
+                    ['value' => 'end_date', 'label' => 'End Date'],
+                    ['value' => 'budget', 'label' => 'Budget'],
+                    ['value' => 'progress', 'label' => 'Progress'],
+                    ['value' => 'updated_at', 'label' => 'Last Updated']
+                ],
+                'bulkActions' => [
+                    ['value' => 'delete', 'label' => 'Delete Selected', 'icon' => 'fas fa-trash', 'handler' => 'bulkDelete'],
+                    ['value' => 'archive', 'label' => 'Archive Selected', 'icon' => 'fas fa-archive', 'handler' => 'bulkArchive'],
+                    ['value' => 'export', 'label' => 'Export Selected', 'icon' => 'fas fa-download', 'handler' => 'bulkExport']
+                ],
+                'tableData' => $projects->map(function($project) {
+                    return [
+                        'id' => $project->id,
+                        'name' => $project->name,
+                        'status' => $project->status,
+                        'priority' => $project->priority,
+                        'start_date' => $project->start_date,
+                        'end_date' => $project->end_date,
+                        'budget' => $project->budget,
+                        'progress' => $project->progress,
+                        'updated_at' => $project->updated_at
+                    ];
+                }),
+                'columns' => [
+                    ['key' => 'name', 'label' => 'Project Name', 'sortable' => true],
+                    ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+                    ['key' => 'priority', 'label' => 'Priority', 'sortable' => true],
+                    ['key' => 'start_date', 'label' => 'Start Date', 'sortable' => true],
+                    ['key' => 'end_date', 'label' => 'End Date', 'sortable' => true],
+                    ['key' => 'budget', 'label' => 'Budget', 'sortable' => true],
+                    ['key' => 'progress', 'label' => 'Progress', 'sortable' => true],
+                    ['key' => 'updated_at', 'label' => 'Last Updated', 'sortable' => true]
+                ]
             ]);
 
         } catch (\Exception $e) {
@@ -59,12 +118,47 @@ class ProjectController extends Controller
                 'request_id' => $this->apiGateway->getRequestId()
             ]);
 
-            return view('app.projects.index', [
-                'projects' => collect(),
-                'kpis' => [],
-                'viewMode' => 'table',
-                'filters' => [],
-                'error' => 'An error occurred while loading projects'
+                   return view('app.projects.index', [
+                       'projects' => collect(),
+                       'kpis' => [],
+                       'viewMode' => 'table',
+                       'filters' => [],
+                       'error' => 'An error occurred while loading projects',
+                       'user' => auth()->user(),
+                'breadcrumbs' => [
+                    ['label' => 'Dashboard', 'url' => route('app.dashboard')],
+                    ['label' => 'Projects', 'url' => null]
+                ],
+                'actions' => '<a href="' . route('app.projects.create') . '" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-plus mr-2"></i>
+                    New Project
+                </a>',
+                'sortOptions' => [
+                    ['value' => 'name', 'label' => 'Project Name'],
+                    ['value' => 'status', 'label' => 'Status'],
+                    ['value' => 'priority', 'label' => 'Priority'],
+                    ['value' => 'start_date', 'label' => 'Start Date'],
+                    ['value' => 'end_date', 'label' => 'End Date'],
+                    ['value' => 'budget', 'label' => 'Budget'],
+                    ['value' => 'progress', 'label' => 'Progress'],
+                    ['value' => 'updated_at', 'label' => 'Last Updated']
+                ],
+                'bulkActions' => [
+                    ['value' => 'delete', 'label' => 'Delete Selected', 'icon' => 'fas fa-trash', 'handler' => 'bulkDelete'],
+                    ['value' => 'archive', 'label' => 'Archive Selected', 'icon' => 'fas fa-archive', 'handler' => 'bulkArchive'],
+                    ['value' => 'export', 'label' => 'Export Selected', 'icon' => 'fas fa-download', 'handler' => 'bulkExport']
+                ],
+                'tableData' => collect(),
+                'columns' => [
+                    ['key' => 'name', 'label' => 'Project Name', 'sortable' => true],
+                    ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+                    ['key' => 'priority', 'label' => 'Priority', 'sortable' => true],
+                    ['key' => 'start_date', 'label' => 'Start Date', 'sortable' => true],
+                    ['key' => 'end_date', 'label' => 'End Date', 'sortable' => true],
+                    ['key' => 'budget', 'label' => 'Budget', 'sortable' => true],
+                    ['key' => 'progress', 'label' => 'Progress', 'sortable' => true],
+                    ['key' => 'updated_at', 'label' => 'Last Updated', 'sortable' => true]
+                ]
             ]);
         }
     }
@@ -74,18 +168,37 @@ class ProjectController extends Controller
      */
     private function fetchProjectData(array $filters): array
     {
-        // Use services directly instead of internal API calls
-        $projectService = app(\App\Services\ProjectService::class);
-        $dashboardService = app(\App\Services\DashboardService::class);
-        
-        $user = Auth::user();
-        $userId = $user->id;
-        $tenantId = $user->tenant_id;
-        
-        return [
-            'projects' => $projectService->getProjectsList($filters, $userId, $tenantId),
-            'dashboard' => $dashboardService->getDashboardData($userId, $tenantId)
-        ];
+        try {
+            $this->apiGateway->setAuthContext();
+            
+            // Fetch projects with filters
+            $projectsResponse = $this->apiGateway->fetchProjects($filters);
+            $meta = data_get($projectsResponse, 'data.meta', []);
+            
+            // Fetch clients for filter dropdown
+            $clientsResponse = $this->apiGateway->fetchClients();
+            
+            // Fetch dashboard data
+            $dashboardResponse = $this->apiGateway->fetchDashboardData();
+            
+            return [
+                'projects' => collect($projectsResponse['data']['data'] ?? [])->map(fn ($item) => (object) $item),
+                'clients' => collect($clientsResponse['data']['data'] ?? [])->map(fn ($item) => (object) $item),
+                'dashboard' => $dashboardResponse['data'] ?? [],
+                'meta' => $meta
+            ];
+        } catch (\Exception $e) {
+            Log::error('ProjectController fetchProjectData error', [
+                'error' => $e->getMessage(),
+                'request_id' => $this->apiGateway->getRequestId()
+            ]);
+            
+            return [
+                'projects' => collect(),
+                'clients' => collect(),
+                'dashboard' => []
+            ];
+        }
     }
 
     /**
@@ -151,7 +264,7 @@ class ProjectController extends Controller
             }
 
             return redirect()
-                ->route('projects.index')
+                ->route('app.projects.index')
                 ->with('success', 'Project created successfully!');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -195,9 +308,9 @@ class ProjectController extends Controller
             $documentsResponse = $this->apiGateway->fetchDocuments(['project_id' => $projectId]);
 
             return view('app.projects.show', [
-                'project' => $response['data']['project'],
-                'tasks' => $tasksResponse['data']['tasks'] ?? collect(),
-                'documents' => $documentsResponse['data']['documents'] ?? collect()
+                'project' => $this->mapProject($response['data']['data'] ?? null),
+                'tasks' => collect(data_get($tasksResponse, 'data.data', []))->map(fn ($task) => (object) $task),
+                'documents' => collect(data_get($documentsResponse, 'data.data', []))->map(fn ($doc) => (object) $doc)
             ]);
 
         } catch (\Exception $e) {
@@ -231,9 +344,9 @@ class ProjectController extends Controller
             $teamResponse = $this->apiGateway->fetchTeamMembers();
 
             return view('app.projects.edit', [
-                'project' => $projectResponse['data']['project'],
-                'clients' => $clientsResponse['data']['clients'] ?? collect(),
-                'users' => $teamResponse['data']['members'] ?? collect()
+                'project' => $this->mapProject($projectResponse['data']['data'] ?? null),
+                'clients' => collect(data_get($clientsResponse, 'data.data', []))->map(fn ($c) => (object) $c),
+                'users' => collect(data_get($teamResponse, 'data.data', []))->map(fn ($u) => (object) $u)
             ]);
 
         } catch (\Exception $e) {
@@ -279,7 +392,7 @@ class ProjectController extends Controller
             }
 
             return redirect()
-                ->route('projects.index')
+                ->route('app.projects.index')
                 ->with('success', 'Project updated successfully!');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -303,13 +416,91 @@ class ProjectController extends Controller
     }
 
     /**
-     * Set view mode preference
+     * Remove the specified project from storage.
+     */
+    public function destroy(string $projectId): RedirectResponse
+    {
+        try {
+            $this->apiGateway->setAuthContext();
+            
+            // Delete project via API
+            $response = $this->apiGateway->deleteProject($projectId);
+
+            if (!$response['success']) {
+                return redirect()
+                    ->back()
+                    ->withErrors(['error' => $response['error']['message'] ?? 'Failed to delete project']);
+            }
+
+            return redirect()
+                ->route('app.projects.index')
+                ->with('success', 'Project deleted successfully!');
+
+        } catch (\Exception $e) {
+            Log::error('ProjectController destroy error', [
+                'project_id' => $projectId,
+                'error' => $e->getMessage(),
+                'request_id' => $this->apiGateway->getRequestId()
+            ]);
+
+            return redirect()
+                ->back()
+                ->withErrors(['error' => 'An error occurred while deleting the project']);
+        }
+    }
+
+    /**
+     * Map API project data to object for views
+     */
+    private function mapProject(?array $projectData): ?object
+    {
+        if (!$projectData) {
+            return null;
+        }
+
+        // Convert array to object and add fake relationships
+        $project = (object) $projectData;
+        
+        // Add fake client relationship if client_id exists
+        if (isset($projectData['client_id']) && $projectData['client_id']) {
+            $project->client = (object) [
+                'id' => $projectData['client_id'],
+                'name' => $projectData['client_name'] ?? 'Unknown Client'
+            ];
+        } else {
+            $project->client = null;
+        }
+        
+        // Add fake project manager relationship if project_manager_id exists
+        if (isset($projectData['project_manager_id']) && $projectData['project_manager_id']) {
+            $project->projectManager = (object) [
+                'id' => $projectData['project_manager_id'],
+                'name' => $projectData['project_manager_name'] ?? 'Unknown Manager'
+            ];
+        } else {
+            $project->projectManager = null;
+        }
+        
+        // Convert date strings to Carbon objects for proper formatting
+        if (isset($projectData['start_date']) && $projectData['start_date']) {
+            $project->start_date = \Carbon\Carbon::parse($projectData['start_date']);
+        }
+        
+        if (isset($projectData['end_date']) && $projectData['end_date']) {
+            $project->end_date = \Carbon\Carbon::parse($projectData['end_date']);
+        }
+        
+        return $project;
+    }
+
+    /**
+     * Set preferred projects view mode (table/card/kanban)
      */
     public function setViewMode(Request $request): RedirectResponse
     {
         $viewMode = $request->input('view_mode', 'table');
         
-        if (in_array($viewMode, ['table', 'card', 'kanban'])) {
+        if (in_array($viewMode, ['table', 'card', 'kanban'], true)) {
             session(['projects_view_mode' => $viewMode]);
         }
 
@@ -403,5 +594,64 @@ class ProjectController extends Controller
                 ->with('history', [])
                 ->with('error', 'Unable to load history');
         }
+    }
+
+    /**
+     * Handle bulk actions on projects
+     */
+    public function bulkAction(Request $request): JsonResponse
+    {
+        $request->validate([
+            'action' => 'required|in:delete,archive,export',
+            'project_ids' => 'required|array',
+            'project_ids.*' => 'required|string|ulid'
+        ]);
+
+        try {
+            $this->apiGateway->setAuthContext();
+            $action = $request->input('action');
+            $projectIds = $request->input('project_ids');
+
+            [$response, $message] = $this->dispatchBulkAction($action, $projectIds);
+
+            return $response['success']
+                ? response()->json(['message' => $message])
+                : response()->json(['message' => 'Failed to perform bulk action'], 422);
+
+        } catch (\Exception $e) {
+            Log::error('ProjectController bulkAction error', [
+                'error' => $e->getMessage(),
+                'action' => $request->input('action'),
+                'project_ids' => $request->input('project_ids'),
+                'request_id' => $this->apiGateway->getRequestId()
+            ]);
+
+            return response()->json(['message' => 'An error occurred while performing the bulk action'], 500);
+        }
+    }
+
+    /**
+     * Dispatch bulk action to appropriate API method
+     */
+    private function dispatchBulkAction(string $action, array $projectIds): array
+    {
+        switch ($action) {
+            case 'delete':
+                $response = $this->apiGateway->bulkDeleteProjects($projectIds);
+                $message = 'Projects deleted successfully';
+                break;
+            case 'archive':
+                $response = $this->apiGateway->bulkArchiveProjects($projectIds);
+                $message = 'Projects archived successfully';
+                break;
+            case 'export':
+                $response = $this->apiGateway->bulkExportProjects($projectIds);
+                $message = 'Projects exported successfully';
+                break;
+            default:
+                throw new \InvalidArgumentException("Unknown bulk action: {$action}");
+        }
+
+        return [$response, $message];
     }
 }

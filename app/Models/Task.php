@@ -241,6 +241,22 @@ class Task extends Model
     }
 
     /**
+     * Relationship: Task có nhiều subtasks
+     */
+    public function subtasks(): HasMany
+    {
+        return $this->hasMany(Subtask::class)->ordered();
+    }
+
+    /**
+     * Relationship: Task có nhiều comments
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(TaskComment::class)->ordered();
+    }
+
+    /**
      * Relationship: Task có thể có compensation
      */
     public function compensation(): HasOne

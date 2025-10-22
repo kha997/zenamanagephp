@@ -1,12 +1,16 @@
 import React from 'react';
 import { Notification } from './NotificationsBell';
 
+// Constants
+const TEXT_HEADER_FG = 'text-header-fg';
+const TEXT_HEADER_FG_MUTED = 'text-header-fg-muted';
+
 export interface NotificationsOverlayProps {
   notifications: Notification[];
   unreadCount: number;
-  onMarkAsRead?: (notificationId: string) => void;
+  onMarkAsRead?: (_notificationId: string) => void;
   onMarkAllAsRead?: () => void;
-  onNotificationClick?: (notification: Notification) => void;
+  onNotificationClick?: (_notification: Notification) => void;
 }
 
 export const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({
@@ -96,7 +100,7 @@ export const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className={`text-sm font-medium ${
-                        !notification.read ? 'text-header-fg' : 'text-header-fg-muted'
+                        !notification.read ? TEXT_HEADER_FG : TEXT_HEADER_FG_MUTED
                       }`}>
                         {notification.title}
                       </p>
@@ -104,9 +108,7 @@ export const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({
                         <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
                       )}
                     </div>
-                    <p className={`text-xs mt-1 ${
-                      !notification.read ? 'text-header-fg-muted' : 'text-header-fg-muted'
-                    }`}>
+                    <p className={`text-xs mt-1 ${TEXT_HEADER_FG_MUTED}`}>
                       {notification.message}
                     </p>
                     <p className="text-xs text-header-fg-muted mt-2">

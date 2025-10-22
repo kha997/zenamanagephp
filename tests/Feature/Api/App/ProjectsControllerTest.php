@@ -654,4 +654,160 @@ class ProjectsControllerTest extends TestCase
         // Should complete within 500ms (performance budget)
         $this->assertLessThan(500, $executionTime, 'Query took too long: ' . $executionTime . 'ms');
     }
+
+    /**
+     * Test bulk archive projects
+     */
+    public function test_bulk_archive_projects(): void
+    {
+        $projects = Project::factory()->count(2)->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => 'active'
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->postJson('/api/projects/bulk-archive', [
+            'ids' => $projects->pluck('id')->all()
+        ]);
+
+        $response->assertStatus(200)
+                ->assertJson([
+                    'success' => true,
+                    'message' => 'Projects archived successfully'
+                ]);
+
+        foreach ($projects as $project) {
+            $this->assertDatabaseHas('projects', [
+                'id' => $project->id,
+                'status' => 'archived'
+            ]);
+        }
+    }
+
+    /**
+     * Test bulk export projects
+     */
+    public function test_bulk_export_projects(): void
+    {
+        $projects = Project::factory()->count(2)->create([
+            'tenant_id' => $this->tenant->id
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->postJson('/api/projects/bulk-export', [
+            'ids' => $projects->pluck('id')->all()
+        ]);
+
+        $response->assertStatus(200)
+                ->assertJson([
+                    'success' => true,
+                    'message' => 'Projects exported successfully'
+                ])
+                ->assertJsonStructure([
+                    'success',
+                    'message',
+                    'data' => [
+                        'exported_count',
+                        'data' => [
+                            '*' => [
+                                'id',
+                                'name',
+                                'description',
+                                'status',
+                                'priority',
+                                'progress',
+                                'start_date',
+                                'end_date',
+                                'budget_total',
+                                'owner',
+                                'client'
+                            ]
+                        ],
+                        'project_ids'
+                    ]
+                ]);
+    }
+
+    /**
+     * Test bulk archive validation
+     */
+    public function test_bulk_archive_validation(): void
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->postJson('/api/projects/bulk-archive', [
+            'ids' => 'invalid'
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    /**
+     * Test bulk export validation
+     */
+    public function test_bulk_export_validation(): void
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->postJson('/api/projects/bulk-export', [
+            'ids' => []
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    /**
+     * Test project filtering by client
+     */
+    public function test_project_filtering_by_client(): void
+    {
+        $client = \App\Models\Client::factory()->create([
+            'tenant_id' => $this->tenant->id
+        ]);
+
+        $projectWithClient = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'client_id' => $client->id
+        ]);
+
+        $projectWithoutClient = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'client_id' => null
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->getJson('/api/projects?client_id=' . $client->id);
+
+        $response->assertStatus(200)
+                ->assertJsonCount(1, 'data.data')
+                ->assertJsonPath('data.data.0.id', $projectWithClient->id);
+    }
+
+    /**
+     * Test bulk export with client data
+     */
+    public function test_bulk_export_with_client_data(): void
+    {
+        $client = \App\Models\Client::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Test Client'
+        ]);
+
+        $project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'client_id' => $client->id
+        ]);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token
+        ])->postJson('/api/projects/bulk-export', [
+            'ids' => [$project->id]
+        ]);
+
+        $response->assertStatus(200)
+                ->assertJsonPath('data.data.0.client', 'Test Client');
+    }
 }

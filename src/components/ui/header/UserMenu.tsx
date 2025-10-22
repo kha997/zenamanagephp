@@ -57,16 +57,18 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           setIsOpen(false);
           buttonRef.current?.focus();
           break;
-        case 'ArrowDown':
+        case 'ArrowDown': {
           event.preventDefault();
           const firstItem = menuRef.current?.querySelector('[role="menuitem"]') as HTMLElement;
           firstItem?.focus();
           break;
-        case 'ArrowUp':
+        }
+        case 'ArrowUp': {
           event.preventDefault();
           const lastItem = menuRef.current?.querySelector('[role="menuitem"]:last-child') as HTMLElement;
           lastItem?.focus();
           break;
+        }
       }
     };
 
@@ -79,24 +81,28 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     const currentIndex = items.indexOf(event.target as HTMLElement);
 
     switch (event.key) {
-      case 'ArrowDown':
+      case 'ArrowDown': {
         event.preventDefault();
         const nextIndex = (currentIndex + 1) % items.length;
         (items[nextIndex] as HTMLElement).focus();
         break;
-      case 'ArrowUp':
+      }
+      case 'ArrowUp': {
         event.preventDefault();
         const prevIndex = currentIndex === 0 ? items.length - 1 : currentIndex - 1;
         (items[prevIndex] as HTMLElement).focus();
         break;
-      case 'Home':
+      }
+      case 'Home': {
         event.preventDefault();
         (items[0] as HTMLElement).focus();
         break;
-      case 'End':
+      }
+      case 'End': {
         event.preventDefault();
         (items[items.length - 1] as HTMLElement).focus();
         break;
+      }
     }
   };
 

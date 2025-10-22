@@ -18,19 +18,31 @@
     @switch($format)
         @case('date')
             <span class="text-sm text-gray-900">
-                {{ $value ? \Carbon\Carbon::parse($value)->format('M d, Y') : '-' }}
+                @if($value && $value !== 'Never' && $value !== '-')
+                    {{ \Carbon\Carbon::parse($value)->format('M d, Y') }}
+                @else
+                    {{ $value ?? '-' }}
+                @endif
             </span>
             @break
             
         @case('datetime')
             <span class="text-sm text-gray-900">
-                {{ $value ? \Carbon\Carbon::parse($value)->format('M d, Y H:i') : '-' }}
+                @if($value && $value !== 'Never' && $value !== '-')
+                    {{ \Carbon\Carbon::parse($value)->format('M d, Y H:i') }}
+                @else
+                    {{ $value ?? '-' }}
+                @endif
             </span>
             @break
             
         @case('time')
             <span class="text-sm text-gray-900">
-                {{ $value ? \Carbon\Carbon::parse($value)->format('H:i') : '-' }}
+                @if($value && $value !== 'Never' && $value !== '-')
+                    {{ \Carbon\Carbon::parse($value)->format('H:i') }}
+                @else
+                    {{ $value ?? '-' }}
+                @endif
             </span>
             @break
             

@@ -48,8 +48,10 @@
 - [ ] Set up health checks
 
 ### **Testing**
-- [ ] Run full test suite: `php artisan test`
-- [ ] Run smoke tests
+- [ ] Run backend test suite: `php artisan test`
+- [ ] Run Playwright smoke suite: `npx playwright test --project=chromium --grep @smoke`
+- [ ] Run Playwright core suite: `npx playwright test --project=chromium --grep @core`
+- [ ] Run Playwright regression suite: `npx playwright test --project=chromium --grep @regression`
 - [ ] Test authentication flow
 - [ ] Test all main routes
 - [ ] Verify tenant isolation

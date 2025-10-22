@@ -42,12 +42,16 @@ export const useUIStore = create<UIState>()(
         
         // Apply theme to document
         if (theme === 'dark') {
+          document.documentElement.dataset.theme = 'dark'
           document.documentElement.classList.add('dark')
         } else if (theme === 'light') {
+          document.documentElement.dataset.theme = 'light'
           document.documentElement.classList.remove('dark')
         } else {
           // System theme
           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          const actualTheme = prefersDark ? 'dark' : 'light'
+          document.documentElement.dataset.theme = actualTheme
           if (prefersDark) {
             document.documentElement.classList.add('dark')
           } else {

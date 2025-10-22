@@ -28,9 +28,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (theme === 'system') {
       const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
       setActualTheme(systemTheme)
+      root.dataset.theme = systemTheme
       root.classList.toggle('dark', systemTheme === 'dark')
     } else {
       setActualTheme(theme)
+      root.dataset.theme = theme
       root.classList.toggle('dark', theme === 'dark')
     }
     
@@ -46,6 +48,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (theme === 'system') {
         const systemTheme = mediaQuery.matches ? 'dark' : 'light'
         setActualTheme(systemTheme)
+        document.documentElement.dataset.theme = systemTheme
         document.documentElement.classList.toggle('dark', systemTheme === 'dark')
       }
     }

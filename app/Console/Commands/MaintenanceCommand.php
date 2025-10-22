@@ -291,9 +291,9 @@ class MaintenanceCommand extends Command
                 mkdir(dirname($path), 0755, true);
             }
 
-            // Run mysqldump
+            // Run mysqldump with MariaDB compatibility
             $command = sprintf(
-                'mysqldump --user=%s --password=%s --host=%s %s > %s',
+                'mysqldump --user=%s --password=%s --host=%s --single-transaction --skip-routines --skip-triggers --skip-events %s > %s',
                 config('database.connections.mysql.username'),
                 config('database.connections.mysql.password'),
                 config('database.connections.mysql.host'),
@@ -303,7 +303,25 @@ class MaintenanceCommand extends Command
 
             exec($command, $output, $returnCode);
 
-            if ($returnCode === 0) {
+            if ($returnCode !== 0) {
+                // Try fallback command
+                $fallbackCommand = sprintf(
+                    'mysqldump --user=%s --password=%s --host=%s --single-transaction --skip-routines --skip-triggers --skip-events --skip-lock-tables %s > %s',
+                    config('database.connections.mysql.username'),
+                    config('database.connections.mysql.password'),
+                    config('database.connections.mysql.host'),
+                    config('database.connections.mysql.database'),
+                    $path
+                );
+                
+                exec($fallbackCommand, $fallbackOutput, $fallbackReturnCode);
+                
+                if ($fallbackReturnCode !== 0) {
+                    throw new \Exception('mysqldump command failed with return code: ' . $fallbackReturnCode . '. Output: ' . implode("\n", $fallbackOutput));
+                }
+            }
+
+            if ($returnCode === 0 || (isset($fallbackReturnCode) && $fallbackReturnCode === 0)) {
                 $fileSize = filesize($path);
                 
                 $task->markAsCompleted([

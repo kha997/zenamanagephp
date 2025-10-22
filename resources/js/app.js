@@ -3,6 +3,10 @@ import './alpine-data-functions';
 import './focus-mode';
 import './rewards';
 
+// Import Chart.js
+import Chart from 'chart.js/auto';
+window.Chart = Chart;
+
 // Z.E.N.A Project Management - Main JavaScript
 class ZenaApp {
     constructor() {
@@ -16,6 +20,7 @@ class ZenaApp {
         this.checkAuth();
         this.setupAjaxDefaults();
         this.setupAxiosInterceptors();
+        this.setupBackgroundTasks();
     }
 
     setupEventListeners() {
@@ -125,6 +130,22 @@ class ZenaApp {
         if (!token && !currentPath.includes('/login')) {
             window.location.href = '/login';
         }
+    }
+
+    isAppPage() {
+        return window.location.pathname.startsWith('/app');
+    }
+
+    setupBackgroundTasks() {
+        // Notification polling only on app pages and when authenticated
+        if (this.isAppPage() && this.getToken()) {
+            this.loadNotifications();
+        }
+        setInterval(() => {
+            if (this.isAppPage() && this.getToken()) {
+                this.loadNotifications();
+            }
+        }, 30000);
     }
 
     getToken() {
@@ -336,7 +357,7 @@ class ZenaApp {
         if (filename) formData.append('filename', filename);
 
         try {
-            const response = await this.apiCall('POST', '/files/upload', formData, {
+            return await this.apiCall('POST', '/files/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 },
@@ -349,7 +370,6 @@ class ZenaApp {
                     }
                 }
             });
-            return response;
         } catch (error) {
             console.error('File upload error:', error);
             throw error;
@@ -359,11 +379,10 @@ class ZenaApp {
     // Xóa file
     async deleteFile(path, disk = 'documents') {
         try {
-            const response = await this.apiCall('DELETE', '/files/delete', {
+            return await this.apiCall('DELETE', '/files/delete', {
                 path,
                 disk
             });
-            return response;
         } catch (error) {
             console.error('File delete error:', error);
             throw error;
@@ -373,10 +392,9 @@ class ZenaApp {
     // Lấy thông tin file
     async getFileInfo(path, disk = 'documents') {
         try {
-            const response = await this.apiCall('GET', '/files/info', null, {
+            return await this.apiCall('GET', '/files/info', null, {
                 params: { path, disk }
             });
-            return response;
         } catch (error) {
             console.error('Get file info error:', error);
             throw error;
@@ -387,13 +405,6 @@ class ZenaApp {
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.zenaApp = new ZenaApp();
-    
-    // Load notifications every 30 seconds
-    setInterval(() => {
-        if (window.zenaApp.getToken()) {
-            window.zenaApp.loadNotifications();
-        }
-    }, 30000);
 });
 
 // Export for use in other modules

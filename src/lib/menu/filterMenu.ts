@@ -34,55 +34,45 @@ export const filterMenu = (
     }))
     .filter(item => {
       // Remove items with no visible children
-      if (item.children && item.children.length === 0) {
-        return false;
-      }
-      return true;
+      return !(item.children && item.children.length === 0);
     });
 };
 
 /**
  * Checks if user has permission to access a menu item
  */
-const hasPermission = (item: NavItem, user: User, tenant: Tenant): boolean => {
-  // Check roles
-  if (item.roles && item.roles.length > 0) {
-    // Wildcard allows all roles
-    if (item.roles.includes('*')) {
-      // Continue to other checks
-    } else {
-      // Check if user has any of the required roles
-      const hasRole = item.roles.some(role => user.roles.includes(role));
-      if (!hasRole) {
-        return false;
-      }
-    }
-  }
+const hasRolePermission = (item: NavItem, user: User): boolean => {
+  if (!item.roles || item.roles.length === 0) return true;
+  
+  // Wildcard allows all roles
+  if (item.roles.includes('*')) return true;
+  
+  // Check if user has any of the required roles
+  return item.roles.some(role => user.roles.includes(role));
+};
 
-  // Check tenant access
-  if (item.tenants && item.tenants.length > 0) {
-    // Wildcard allows all tenants
-    if (item.tenants.includes('*')) {
-      // Continue to other checks
-    } else {
-      // Check if user's tenant is allowed
-      if (!item.tenants.includes(user.tenant_id)) {
-        return false;
-      }
-    }
-  }
+const hasTenantPermission = (item: NavItem, user: User): boolean => {
+  if (!item.tenants || item.tenants.length === 0) return true;
+  
+  // Wildcard allows all tenants
+  if (item.tenants.includes('*')) return true;
+  
+  // Check if user's tenant is allowed
+  return item.tenants.includes(user.tenant_id);
+};
 
-  // Additional permission checks can be added here
-  // For example, checking specific permissions array
-  if (user.permissions && item.id) {
-    // Example: Check for specific permission like 'menu.dashboard.view'
-    const requiredPermission = `menu.${item.id}.view`;
-    if (!user.permissions.includes(requiredPermission)) {
-      return false;
-    }
-  }
+const hasSpecificPermission = (item: NavItem, user: User): boolean => {
+  if (!user.permissions || !item.id) return true;
+  
+  // Example: Check for specific permission like 'menu.dashboard.view'
+  const requiredPermission = `menu.${item.id}.view`;
+  return user.permissions.includes(requiredPermission);
+};
 
-  return true;
+const hasPermission = (item: NavItem, user: User, _tenant: Tenant): boolean => {
+  return hasRolePermission(item, user) && 
+         hasTenantPermission(item, user) && 
+         hasSpecificPermission(item, user);
 };
 
 /**

@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="user-id" content="{{ auth()->id() }}">
+    <meta name="tenant-id" content="{{ auth()->user()->tenant_id ?? '' }}">
     <title>@yield('title', 'Dashboard') - ZenaManage</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script>
-        // Suppress Tailwind CDN warning
-        tailwind.config = { suppressWarnings: true };
+        // Suppress Tailwind CDN warning only if Tailwind CDN is present
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = { suppressWarnings: true };
+        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
@@ -47,15 +52,8 @@
     </style>
 </head>
 <body class="bg-gray-50" x-data="appLayout()">
-    <!-- Unified HeaderShell -->
-    <x-shared.header-wrapper 
-        variant="app"
-        :user="Auth::user()"
-        :tenant="Auth::user()->tenant ?? null"
-        :notifications="$notifications ?? []"
-        :unread-count="$unreadCount ?? 0"
-        :theme="$theme ?? 'light'"
-    />
+    <!-- Simple Header -->
+    <x-shared.simple-header :user="Auth::user()" variant="app" />
 
     <script>
         // Shared Header component logic
@@ -150,5 +148,7 @@
             }));
         });
     </script>
+    
+    @stack('scripts')
 </body>
 </html>

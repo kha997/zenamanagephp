@@ -7,6 +7,10 @@ import { useAuthStore } from '../store/auth';
 import { Permission, Role } from '../lib/types';
 import { hasPermission, hasRole } from '../lib/utils/auth';
 
+const abilityRoleFallback: Record<string, string[]> = {
+  'system.admin': ['super_admin', 'admin'],
+};
+
 export const usePermissions = () => {
   const { user } = useAuthStore();
 
@@ -44,6 +48,15 @@ export const usePermissions = () => {
     return checkPermission(permissionCode, projectId);
   };
 
+  const can = (ability: string, projectId?: number) => {
+    const fallbackRoles = abilityRoleFallback[ability];
+    if (fallbackRoles && fallbackRoles.some((role) => checkRole(role, projectId))) {
+      return true;
+    }
+
+    return checkPermission(ability, projectId);
+  };
+
   // Specific permission checks for common actions
   const canCreateProject = () => checkPermission('project.create');
   const canEditProject = (projectId?: number) => checkPermission('project.edit', projectId);
@@ -69,6 +82,8 @@ export const usePermissions = () => {
     checkPermission,
     checkRole,
     canAccess,
+    can,
+    isLoading: false,
     
     // Specific permission checks
     canCreateProject,

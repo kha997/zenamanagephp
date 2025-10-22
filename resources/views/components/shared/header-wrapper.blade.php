@@ -277,8 +277,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <span class="text-xl font-bold text-gray-900">ZenaManage</span>
                         </div>
-                        <div class="text-sm text-gray-600">
-                            HeaderShell failed to load
+                        <div class="flex items-center space-x-4">
+                            <div class="text-sm text-gray-600">
+                                Welcome, ${user ? user.name : 'User'}
+                            </div>
+                            <div class="relative" data-testid="user-menu">
+                                <button class="flex items-center space-x-2 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                                        <span class="text-white text-sm font-medium">${user ? (user.first_name ? user.first_name.charAt(0).toUpperCase() : 'U') : 'U'}</span>
+                                    </div>
+                                    <span class="hidden md:block text-sm font-medium text-gray-900">${user ? user.name : 'User'}</span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

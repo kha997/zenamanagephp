@@ -1,4 +1,4 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace App\Http\Middleware;
 
@@ -17,83 +17,56 @@ class SecurityHeadersMiddleware
     {
         $response = $next($request);
 
-        // Content Security Policy (CSP)
-        $response->headers->set('Content-Security-Policy', 
-            "default-src 'self'; " .
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " .
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " .
-            "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; " .
-            "img-src 'self' data: https:; " .
-            "connect-src 'self' https:; " .
-            "frame-src 'none'; " .
-            "object-src 'none'; " .
-            "base-uri 'self'; " .
-            "form-action 'self'; " .
-            "upgrade-insecure-requests"
-        );
-
-        // X-Content-Type-Options
+        // Security Headers
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-
-        // X-Frame-Options
         $response->headers->set('X-Frame-Options', 'DENY');
-
-        // X-XSS-Protection
         $response->headers->set('X-XSS-Protection', '1; mode=block');
-
-        // Referrer Policy
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-        // Permissions Policy
-        $response->headers->set('Permissions-Policy', 
-            'camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()'
-        );
-
-        // Strict Transport Security (HSTS) - only for HTTPS
-        if ($request->isSecure()) {
+        
+        // HSTS (only in production with HTTPS)
+        if (app()->environment('production') && $request->secure()) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
-
-        // Cross-Origin Embedder Policy
-        $response->headers->set('Cross-Origin-Embedder-Policy', 'require-corp');
-
-        // Cross-Origin Opener Policy
-        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
-
-        // Cross-Origin Resource Policy
-        $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
-
-        // Cache Control for sensitive pages
-        if ($this->isSensitivePage($request)) {
-            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-            $response->headers->set('Pragma', 'no-cache');
-            $response->headers->set('Expires', '0');
+        
+        // Content Security Policy - allow Vite dev server and fonts in local env
+        if (app()->environment('local', 'development', 'testing')) {
+            $csp = "default-src 'self'; " .
+                   "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:3000 http://127.0.0.1:3000 http://localhost:3001 http://127.0.0.1:3001 https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " .
+                   "style-src 'self' 'unsafe-inline' http://localhost:3000 http://127.0.0.1:3000 http://localhost:3001 http://127.0.0.1:3001 https://fonts.googleapis.com https://fonts.bunny.net https://cdnjs.cloudflare.com; " .
+                   "img-src 'self' data: https:; " .
+                   "font-src 'self' data: https://fonts.gstatic.com https://fonts.bunny.net https://cdnjs.cloudflare.com; " .
+                   "connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 http://localhost:3001 http://127.0.0.1:3001 ws://localhost:3000 ws://127.0.0.1:3000 ws://localhost:3001 ws://127.0.0.1:3001 ws: wss:; " .
+                   "media-src 'self'; " .
+                   "object-src 'none'; " .
+                   "frame-ancestors 'none'; " .
+                   "form-action 'self'; " .
+                   "base-uri 'self';";
+        } else {
+            $csp = "default-src 'self'; " .
+                   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " .
+                   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " .
+                   "img-src 'self' data: https:; " .
+                   "font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " .
+                   "connect-src 'self' ws: wss:; " .
+                   "media-src 'self'; " .
+                   "object-src 'none'; " .
+                   "frame-ancestors 'none'; " .
+                   "form-action 'self'; " .
+                   "base-uri 'self';";
         }
-
+        
+        $response->headers->set('Content-Security-Policy', $csp);
+        
+        // Permissions Policy (remove unsupported 'speaker')
+        $permissionsPolicy = "camera=(), microphone=(), geolocation=(), " .
+                            "payment=(), usb=(), magnetometer=(), " .
+                            "accelerometer=(), gyroscope=()";
+        $response->headers->set('Permissions-Policy', $permissionsPolicy);
+        
+        // Remove server information
+        $response->headers->remove('X-Powered-By');
+        $response->headers->remove('Server');
+        
         return $response;
-    }
-
-    /**
-     * Check if the current page is sensitive and should not be cached
-     */
-    private function isSensitivePage(Request $request): bool
-    {
-        $sensitivePaths = [
-            '/admin',
-            '/app/profile',
-            '/app/settings',
-            '/app/team',
-            '/login',
-            '/register',
-            '/password',
-        ];
-
-        foreach ($sensitivePaths as $path) {
-            if (str_starts_with($request->getPathInfo(), $path)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

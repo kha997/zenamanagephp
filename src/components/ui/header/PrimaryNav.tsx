@@ -44,21 +44,10 @@ export const PrimaryNav: React.FC<PrimaryNavProps> = ({
   const hasPermission = (item: NavItem): boolean => {
     if (!currentUser) return false;
     
-    // Check roles
-    if (item.roles && item.roles.length > 0) {
-      if (!item.roles.includes('*') && !item.roles.some(role => currentUser.roles.includes(role))) {
-        return false;
-      }
-    }
+    const hasRolePermission = !item.roles || item.roles.length === 0 || item.roles.includes('*') || item.roles.some(role => currentUser.roles.includes(role));
+    const hasTenantPermission = !item.tenants || item.tenants.length === 0 || item.tenants.includes('*') || item.tenants.includes(currentUser.tenant_id);
     
-    // Check tenants (if applicable)
-    if (item.tenants && item.tenants.length > 0) {
-      if (!item.tenants.includes('*') && !item.tenants.includes(currentUser.tenant_id)) {
-        return false;
-      }
-    }
-    
-    return true;
+    return hasRolePermission && hasTenantPermission;
   };
 
   const renderNavItem = (item: NavItem) => {

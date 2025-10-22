@@ -8,16 +8,6 @@ export default defineConfig({
     react({
       // Enable React Fast Refresh
       fastRefresh: true,
-      // Optimize React components
-      babel: {
-        plugins: [
-          // Remove console.log in production
-          process.env.NODE_ENV === 'production' && [
-            'transform-remove-console',
-            { exclude: ['error', 'warn'] }
-          ]
-        ].filter(Boolean)
-      }
     })
   ],
   
@@ -30,24 +20,7 @@ export default defineConfig({
     sourcemap: process.env.NODE_ENV === 'production' ? 'hidden' : true,
     
     // Minification
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        // Remove console.log in production
-        drop_console: process.env.NODE_ENV === 'production',
-        drop_debugger: process.env.NODE_ENV === 'production',
-        // Remove unused code
-        pure_funcs: process.env.NODE_ENV === 'production' ? ['console.log'] : [],
-        // Optimize for size
-        passes: 2
-      },
-      mangle: {
-        // Mangle class names
-        keep_classnames: false,
-        // Mangle function names
-        keep_fnames: false
-      }
-    },
+    minify: 'esbuild',
     
     // Chunk size warning limit
     chunkSizeWarningLimit: 1000,
@@ -60,15 +33,8 @@ export default defineConfig({
           // Vendor chunks
           'react-vendor': ['react', 'react-dom'],
           'router-vendor': ['react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
-          'animation-vendor': ['framer-motion'],
-          'utils-vendor': ['date-fns', 'clsx', 'tailwind-merge'],
-          'chart-vendor': ['recharts'],
-          'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'utils-vendor': ['clsx', 'tailwind-merge'],
           'notification-vendor': ['react-hot-toast'],
-          'websocket-vendor': ['socket.io-client'],
-          'file-vendor': ['react-dropzone'],
-          'pdf-vendor': ['jspdf', 'html2canvas']
         },
         
         // Asset file naming
@@ -171,19 +137,9 @@ export default defineConfig({
       'react',
       'react-dom',
       'react-router-dom',
-      'framer-motion',
-      'date-fns',
       'clsx',
       'tailwind-merge',
-      'recharts',
-      'react-hook-form',
-      '@hookform/resolvers',
-      'zod',
       'react-hot-toast',
-      'socket.io-client',
-      'react-dropzone',
-      'jspdf',
-      'html2canvas'
     ],
     exclude: [
       // Exclude heavy dependencies from pre-bundling

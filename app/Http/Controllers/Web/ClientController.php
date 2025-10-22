@@ -56,7 +56,41 @@ class ClientController extends Controller
                 'meta' => $response['data']['meta'] ?? [],
                 'kpis' => $this->buildKpis($dashboardResponse['data'] ?? []),
                 'stats' => $this->buildClientStats($dashboardResponse['data'] ?? []),
-                'filters' => $filters
+                'filters' => $filters,
+                'user' => auth()->user(),
+                'breadcrumbs' => [
+                    ['label' => 'Dashboard', 'url' => route('app.dashboard')],
+                    ['label' => 'Clients', 'url' => null]
+                ],
+                'actions' => '<a href="' . route('app.clients.create') . '" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-plus mr-2"></i>
+                    New Client
+                </a>',
+                'sortOptions' => [
+                    ['value' => 'name', 'label' => 'Client Name'],
+                    ['value' => 'status', 'label' => 'Status'],
+                    ['value' => 'created_at', 'label' => 'Created Date'],
+                    ['value' => 'updated_at', 'label' => 'Last Updated']
+                ],
+                'bulkActions' => [
+                    ['value' => 'delete', 'label' => 'Delete Selected', 'icon' => 'fas fa-trash', 'handler' => 'bulkDelete'],
+                    ['value' => 'export', 'label' => 'Export Selected', 'icon' => 'fas fa-download', 'handler' => 'bulkExport']
+                ],
+                'tableData' => collect($response['data']['clients'] ?? [])->map(function($client) {
+                    return [
+                        'id' => $client->id ?? $client['id'] ?? '',
+                        'name' => $client->name ?? $client['name'] ?? '',
+                        'status' => $client->status ?? $client['status'] ?? 'active',
+                        'created_at' => $client->created_at ?? $client['created_at'] ?? '',
+                        'updated_at' => $client->updated_at ?? $client['updated_at'] ?? ''
+                    ];
+                }),
+                'columns' => [
+                    ['key' => 'name', 'label' => 'Client Name', 'sortable' => true],
+                    ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+                    ['key' => 'created_at', 'label' => 'Created Date', 'sortable' => true],
+                    ['key' => 'updated_at', 'label' => 'Last Updated', 'sortable' => true]
+                ]
             ]);
 
         } catch (\Exception $e) {
@@ -70,7 +104,33 @@ class ClientController extends Controller
                 'kpis' => [],
                 'stats' => $this->buildClientStats([]),
                 'filters' => [],
-                'error' => 'An error occurred while loading clients'
+                'error' => 'An error occurred while loading clients',
+                'user' => auth()->user(),
+                'breadcrumbs' => [
+                    ['label' => 'Dashboard', 'url' => route('app.dashboard')],
+                    ['label' => 'Clients', 'url' => null]
+                ],
+                'actions' => '<a href="' . route('app.clients.create') . '" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-plus mr-2"></i>
+                    New Client
+                </a>',
+                'sortOptions' => [
+                    ['value' => 'name', 'label' => 'Client Name'],
+                    ['value' => 'status', 'label' => 'Status'],
+                    ['value' => 'created_at', 'label' => 'Created Date'],
+                    ['value' => 'updated_at', 'label' => 'Last Updated']
+                ],
+                'bulkActions' => [
+                    ['value' => 'delete', 'label' => 'Delete Selected', 'icon' => 'fas fa-trash', 'handler' => 'bulkDelete'],
+                    ['value' => 'export', 'label' => 'Export Selected', 'icon' => 'fas fa-download', 'handler' => 'bulkExport']
+                ],
+                'tableData' => collect(),
+                'columns' => [
+                    ['key' => 'name', 'label' => 'Client Name', 'sortable' => true],
+                    ['key' => 'status', 'label' => 'Status', 'sortable' => true],
+                    ['key' => 'created_at', 'label' => 'Created Date', 'sortable' => true],
+                    ['key' => 'updated_at', 'label' => 'Last Updated', 'sortable' => true]
+                ]
             ]);
         }
     }
@@ -113,7 +173,7 @@ class ClientController extends Controller
             }
 
             return redirect()
-                ->route('clients.index')
+                ->route('app.clients.index')
                 ->with('success', 'Client created successfully!');
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -229,7 +289,7 @@ class ClientController extends Controller
             }
 
             return redirect()
-                ->route('clients.index')
+                ->route('app.clients.index')
                 ->with('success', 'Client updated successfully!');
 
         } catch (\Illuminate\Validation\ValidationException $e) {

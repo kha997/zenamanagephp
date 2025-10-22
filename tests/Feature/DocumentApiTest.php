@@ -183,7 +183,17 @@ class DocumentApiTest extends TestCase
             'description' => 'Initial upload'
         ]);
         
+        $uploadResponse->assertStatus(201);
         $documentId = $uploadResponse->json('data.document.id');
+        
+        // Wait a moment to ensure document is fully created and indexed
+        usleep(100000); // 100ms delay
+        
+        // Verify document exists before proceeding
+        $this->assertDatabaseHas('documents', [
+            'id' => $documentId,
+            'name' => 'Test Document'
+        ]);
 
         $file = UploadedFile::fake()->create('test-document-v2.pdf', 1024, 'application/pdf');
 

@@ -3,6 +3,9 @@
  * Handles UI changes for Focus Mode feature
  */
 
+// Constants
+const FOCUS_MODE_HIDDEN_CLASS = 'focus-mode-hidden';
+
 class FocusModeManager {
     constructor() {
         this.isActive = false;
@@ -14,6 +17,11 @@ class FocusModeManager {
      * Initialize Focus Mode
      */
     init() {
+        // Only run on tenant app pages
+        if (!this.shouldRunOnPage()) {
+            return;
+        }
+
         // Check if focus mode is enabled on page load
         this.checkFocusModeStatus();
         
@@ -22,6 +30,14 @@ class FocusModeManager {
             this.toggle(event.detail.enabled);
         });
     }
+    /**
+     * Determine whether this script should run on the current page
+     */
+    shouldRunOnPage() {
+        // Only run under tenant application routes
+        return window.location.pathname.startsWith('/app');
+    }
+
 
     /**
      * Check current focus mode status from API
@@ -32,7 +48,7 @@ class FocusModeManager {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                 },
                 credentials: 'same-origin'
             });
@@ -51,13 +67,13 @@ class FocusModeManager {
     /**
      * Toggle focus mode
      */
-    async toggle(enabled = null) {
+    async toggle(_enabled = null) {
         try {
             const response = await fetch('/api/v1/app/focus-mode/toggle', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
                 },
                 credentials: 'same-origin'
             });
@@ -197,7 +213,7 @@ class FocusModeManager {
         );
         
         secondaryKPIs.forEach(element => {
-            element.classList.add('focus-mode-hidden');
+            element.classList.add(FOCUS_MODE_HIDDEN_CLASS);
             element.style.display = 'none';
         });
     }
@@ -206,9 +222,9 @@ class FocusModeManager {
      * Show secondary KPIs
      */
     showSecondaryKPIs() {
-        const secondaryKPIs = document.querySelectorAll('.focus-mode-hidden');
+        const secondaryKPIs = document.querySelectorAll(`.${FOCUS_MODE_HIDDEN_CLASS}`);
         secondaryKPIs.forEach(element => {
-            element.classList.remove('focus-mode-hidden');
+            element.classList.remove(FOCUS_MODE_HIDDEN_CLASS);
             element.style.display = '';
         });
     }
@@ -231,7 +247,7 @@ class FocusModeManager {
         );
         
         nonEssentialElements.forEach(element => {
-            element.classList.add('focus-mode-hidden');
+            element.classList.add(FOCUS_MODE_HIDDEN_CLASS);
             element.style.display = 'none';
         });
     }
@@ -246,9 +262,9 @@ class FocusModeManager {
         }
 
         // Show all elements
-        const hiddenElements = document.querySelectorAll('.focus-mode-hidden');
+        const hiddenElements = document.querySelectorAll(`.${FOCUS_MODE_HIDDEN_CLASS}`);
         hiddenElements.forEach(element => {
-            element.classList.remove('focus-mode-hidden');
+            element.classList.remove(FOCUS_MODE_HIDDEN_CLASS);
             element.style.display = '';
         });
     }
@@ -336,7 +352,7 @@ class FocusModeManager {
         return {
             isActive: this.isActive,
             sidebarCollapsed: document.querySelector('.sidebar')?.classList.contains('collapsed') || false,
-            secondaryKPIsHidden: document.querySelectorAll('.focus-mode-hidden').length > 0
+            secondaryKPIsHidden: document.querySelectorAll(`.${FOCUS_MODE_HIDDEN_CLASS}`).length > 0
         };
     }
 }

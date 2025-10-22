@@ -12,6 +12,17 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        // Metrics Collection - Every 5 minutes
+        $schedule->command('metrics:collect --format=json --log')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Metrics Export for Prometheus - Every minute
+        $schedule->command('metrics:collect --format=prometheus --output=' . storage_path('logs/metrics.prometheus'))
+            ->everyMinute()
+            ->withoutOverlapping();
+
         // Temporarily commented out to avoid dependency issues
         /*
         // System Health Monitoring

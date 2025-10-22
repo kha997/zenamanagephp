@@ -20,7 +20,7 @@ export const useApi = () => {
     return localStorage.getItem('auth_token') || 'eyJ1c2VyX2lkIjoyOTE0LCJlbWFpbCI6InN1cGVyYWRtaW5AemVuYS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJleHBpcmVzIjoxNzU4NjE2OTIwfQ==';
   };
   
-  const getHeaders = (includeAuth = true) => {
+  const getHeaders = useCallback((includeAuth = true) => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -32,7 +32,7 @@ export const useApi = () => {
     }
     
     return headers;
-  };
+  }, []);
   
   const handleResponse = async <T>(response: Response): Promise<ApiResponse<T>> => {
     if (!response.ok) {
@@ -59,7 +59,7 @@ export const useApi = () => {
     });
     
     return handleResponse<T>(response);
-  }, []);
+  }, [getHeaders]);
 
   const post = useCallback(async <T = any>(url: string, data?: any, includeAuth = true): Promise<ApiResponse<T>> => {
     const response = await fetch(`${baseUrl}${url}`, {
@@ -69,7 +69,7 @@ export const useApi = () => {
     });
     
     return handleResponse<T>(response);
-  }, []);
+  }, [getHeaders]);
 
   const put = useCallback(async <T = any>(url: string, data?: any, includeAuth = true): Promise<ApiResponse<T>> => {
     const response = await fetch(`${baseUrl}${url}`, {
@@ -79,7 +79,7 @@ export const useApi = () => {
     });
     
     return handleResponse<T>(response);
-  }, []);
+  }, [getHeaders]);
 
   const del = useCallback(async <T = any>(url: string, includeAuth = true): Promise<ApiResponse<T>> => {
     const response = await fetch(`${baseUrl}${url}`, {
@@ -88,7 +88,7 @@ export const useApi = () => {
     });
     
     return handleResponse<T>(response);
-  }, []);
+  }, [getHeaders]);
 
   // Dashboard API methods
   const getAdminDashboard = useCallback(async (): Promise<ApiResponse> => {
@@ -98,7 +98,7 @@ export const useApi = () => {
     });
     
     return handleResponse(response);
-  }, []);
+  }, [getHeaders]);
 
   const getAppDashboard = useCallback(async (): Promise<ApiResponse> => {
     const response = await fetch('/test-api-app-dashboard', {
@@ -107,7 +107,7 @@ export const useApi = () => {
     });
     
     return handleResponse(response);
-  }, []);
+  }, [getHeaders]);
 
   return {
     get,

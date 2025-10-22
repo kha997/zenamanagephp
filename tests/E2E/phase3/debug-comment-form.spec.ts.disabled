@@ -1,0 +1,119 @@
+import { test, expect } from '@playwright/test';
+import { AuthHelper } from '../helpers/auth-helper';
+
+test.describe('Debug Comment Form', () => {
+  test('should be able to see comment form elements', async ({ page }) => {
+    // Capture console logs and errors
+    const consoleLogs: string[] = [];
+    const consoleErrors: string[] = [];
+    page.on('console', msg => {
+      if (msg.type() === 'log') {
+        consoleLogs.push(msg.text());
+      } else if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+    const authHelper = new AuthHelper(page);
+    await authHelper.login('uat-pm@test.com', 'password');
+
+    // Navigate to task list
+    await page.goto('/app/tasks');
+    await page.waitForLoadState('networkidle');
+
+    // Click on first task
+    const firstTaskLink = page.locator('[data-testid="task-name-link"]').first();
+    await firstTaskLink.click();
+
+    // Wait for task detail page to load
+    await page.waitForLoadState('networkidle');
+
+    // Check if comments section is visible
+    const commentsSection = page.locator('[data-testid="comments-section"]');
+    await expect(commentsSection).toBeVisible();
+
+    // Check if comment form elements are visible
+    const commentContent = page.locator('[data-testid="comment-content"]');
+    const commentType = page.locator('[data-testid="comment-type"]');
+    const submitComment = page.locator('[data-testid="submit-comment"]');
+
+    console.log('Comment content visible:', await commentContent.isVisible());
+    console.log('Comment type visible:', await commentType.isVisible());
+    console.log('Submit comment visible:', await submitComment.isVisible());
+
+    // Check if Alpine.js is working
+    const alpineData = await page.evaluate(() => {
+      return window.Alpine;
+    });
+    console.log('Alpine.js loaded:', !!alpineData);
+
+    // Check if taskComments function is available
+    const taskCommentsFunction = await page.evaluate(() => {
+      return typeof window.taskComments;
+    });
+    console.log('taskComments function available:', taskCommentsFunction);
+
+    // Check console errors
+    const pageConsoleErrors = await page.evaluate(() => {
+      return window.consoleErrors || [];
+    });
+    console.log('Console errors:', pageConsoleErrors);
+
+    // Check if task-comments script is loaded
+    const taskCommentsScript = await page.evaluate(() => {
+      const scripts = Array.from(document.querySelectorAll('script'));
+      return scripts.some(script => script.src.includes('task-comments'));
+    });
+    console.log('Task-comments script loaded:', taskCommentsScript);
+
+    // Check if taskComments function is defined
+    const taskCommentsDefined = await page.evaluate(() => {
+      return typeof window.taskComments === 'function';
+    });
+    console.log('taskComments function defined:', taskCommentsDefined);
+
+    // Check if Alpine.data is available
+    const alpineDataAvailable = await page.evaluate(() => {
+      return typeof window.Alpine?.data === 'function';
+    });
+    console.log('Alpine.data available:', alpineDataAvailable);
+
+    // Check if taskComments is registered with Alpine
+    const taskCommentsRegistered = await page.evaluate(() => {
+      return window.Alpine?.data('taskComments') !== undefined;
+    });
+    console.log('taskComments registered with Alpine:', taskCommentsRegistered);
+
+    // Try to call the function directly
+    const taskCommentsFunctionType = await page.evaluate(() => {
+      try {
+        const func = window.Alpine?.data('taskComments');
+        if (func) {
+          return typeof func;
+        }
+        return 'not found';
+      } catch (error) {
+        return 'error: ' + error.message;
+      }
+    });
+    console.log('taskComments function type:', taskCommentsFunctionType);
+
+    // Take a screenshot for debugging
+    await page.screenshot({ path: 'test-results/phase3-artifacts/debug-comment-form.png' });
+
+    // Try to fill the comment form
+    if (await commentContent.isVisible()) {
+      await commentContent.fill('Test comment');
+      console.log('Successfully filled comment form');
+    } else {
+      console.log('Comment form not visible');
+    }
+
+    // Output console logs and errors
+    console.log('Console logs from page:');
+    consoleLogs.forEach(log => console.log('  ', log));
+    if (consoleErrors.length > 0) {
+      console.log('Console errors from page:');
+      consoleErrors.forEach(error => console.log('  ERROR:', error));
+    }
+  });
+});

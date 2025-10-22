@@ -50,6 +50,25 @@
 ---
 
 ## 🚨 COMMON ISSUES
+### 0. Browser console CSS vendor warnings (Tailwind preflight)
+
+#### Symptoms
+- Warnings như: `-webkit-text-size-adjust: Declaration dropped`, `-moz-column-gap: Unknown property`, `text-size-adjust: Unknown property` trên các trang như `/login`.
+
+#### Nguyên nhân
+- Phát sinh từ Tailwind preflight/reset khi trình duyệt gặp thuộc tính vendor/không chuẩn. Đây là hành vi dự kiến và không ảnh hưởng chức năng.
+
+#### Cách xác minh an toàn
+- Kiểm tra nguồn CSS của cảnh báo: thường là asset build của Tailwind (app.css/public css), không phải CSS tuỳ chỉnh của dự án.
+- Xác nhận không có lỗi hiển thị và không có test UI thất bại.
+
+#### Quyết định cho ZenaManage
+- Chấp nhận các cảnh báo vendor từ preflight. Không thêm override tuỳ ý chỉ để tắt cảnh báo.
+- Không vô hiệu hoá preflight để tránh rủi ro giao diện/phức tạp bảo trì.
+
+#### Khi nào cần hành động
+- Nếu cảnh báo xuất phát từ CSS tuỳ chỉnh của dự án, hãy sửa/loại bỏ thuộc tính gây cảnh báo.
+
 
 ### 1. Application Not Loading
 

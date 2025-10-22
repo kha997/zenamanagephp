@@ -22,7 +22,7 @@ class RealActivityService
     /**
      * Get recent activities for dashboard
      */
-    public function getRecentActivities(?int $tenantId = null, int $limit = 10): array
+    public function getRecentActivities(string|int|null $tenantId = null, int $limit = 10): array
     {
         $this->validateTenantAccess($tenantId);
         
@@ -40,8 +40,8 @@ class RealActivityService
         $userActivities = $this->getUserActivities($tenantId, $limit);
         $activities = array_merge($activities, $userActivities);
         
-        // Sort by created_at and limit
-        usort($activities, fn($a, $b) => strtotime($b['created_at']) - strtotime($a['created_at']));
+        // Sort by timestamp and limit
+        usort($activities, fn($a, $b) => strtotime($b['timestamp'] ?? '1970-01-01') - strtotime($a['timestamp'] ?? '1970-01-01'));
         
         return array_slice($activities, 0, $limit);
     }
@@ -49,7 +49,7 @@ class RealActivityService
     /**
      * Get project-related activities
      */
-    protected function getProjectActivities(?int $tenantId, int $limit): array
+    protected function getProjectActivities(string|int|null $tenantId, int $limit): array
     {
         $query = Project::query()
             ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
@@ -70,8 +70,8 @@ class RealActivityService
                     : "Project '{$project->name}' was updated",
                 'timestamp' => $project->updated_at->toISOString(),
                 'user' => [
-                    'id' => $project->owner->id,
-                    'name' => $project->owner->name
+                    'id' => $project->owner?->id ?? 'unknown',
+                    'name' => $project->owner?->name ?? 'Unknown User'
                 ],
                 'metadata' => [
                     'project_id' => $project->id,
@@ -88,7 +88,7 @@ class RealActivityService
     /**
      * Get task-related activities
      */
-    protected function getTaskActivities(?int $tenantId, int $limit): array
+    protected function getTaskActivities(string|int|null $tenantId, int $limit): array
     {
         // Assuming tasks are related to projects which have tenant_id
         $query = Task::query()
@@ -132,7 +132,7 @@ class RealActivityService
     /**
      * Get user-related activities
      */
-    protected function getUserActivities(?int $tenantId, int $limit): array
+    protected function getUserActivities(string|int|null $tenantId, int $limit): array
     {
         $query = User::query()
             ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
@@ -171,7 +171,7 @@ class RealActivityService
     /**
      * Get activities by type
      */
-    public function getActivitiesByType(string $type, ?int $tenantId = null, int $limit = 10): array
+    public function getActivitiesByType(string $type, string|int|null $tenantId = null, int $limit = 10): array
     {
         $this->validateTenantAccess($tenantId);
         
@@ -186,7 +186,7 @@ class RealActivityService
     /**
      * Get activities for specific user
      */
-    public function getUserSpecificActivities(int $userId, ?int $tenantId = null, int $limit = 10): array
+    public function getUserSpecificActivities(int $userId, string|int|null $tenantId = null, int $limit = 10): array
     {
         $this->validateTenantAccess($tenantId);
         

@@ -28,6 +28,15 @@ interface LogStats {
   debug: number;
 }
 
+// Constants
+const API_HEADERS = {
+  'Accept': 'application/json',
+  'X-Requested-With': 'XMLHttpRequest',
+  'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+};
+
+const RED_LEVEL_STYLES = 'bg-red-100 text-red-800';
+
 const SystemLogsPage: React.FC = () => {
   // State management
   const [logs, setLogs] = useState<SystemLog[]>([]);
@@ -70,11 +79,7 @@ const SystemLogsPage: React.FC = () => {
       });
 
       const response = await fetch(`/api/admin/system-logs?${queryParams}`, {
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-        }
+        headers: API_HEADERS
       });
 
       if (!response.ok) {
@@ -101,11 +106,7 @@ const SystemLogsPage: React.FC = () => {
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/admin/system-logs/stats', {
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-        }
+        headers: API_HEADERS
       });
 
       if (response.ok) {
@@ -127,10 +128,10 @@ const SystemLogsPage: React.FC = () => {
 
   const getLevelColor = (level: string) => {
     const colors = {
-      emergency: 'bg-red-100 text-red-800',
+      emergency: RED_LEVEL_STYLES,
       alert: 'bg-orange-100 text-orange-800',
-      critical: 'bg-red-100 text-red-800',
-      error: 'bg-red-100 text-red-800',
+      critical: RED_LEVEL_STYLES,
+      error: RED_LEVEL_STYLES,
       warning: 'bg-yellow-100 text-yellow-800',
       notice: 'bg-blue-100 text-blue-800',
       info: 'bg-green-100 text-green-800',

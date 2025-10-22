@@ -22,10 +22,14 @@ interface ProjectTableProps {
   data: Project[];
   loading?: boolean;
   error?: boolean;
-  onEdit?: (project: Project) => void;
-  onDelete?: (project: Project) => void;
-  onView?: (project: Project) => void;
+  onEdit?: (_project: Project) => void;
+  onDelete?: (_project: Project) => void;
+  onView?: (_project: Project) => void;
 }
+
+// Constants for sort button styles
+const SORT_ACTIVE_CLASS = 'text-gray-900';
+const SORT_INACTIVE_CLASS = 'text-gray-400';
 
 export const ProjectTable: React.FC<ProjectTableProps> = ({
   data,
@@ -221,7 +225,7 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                   >
                     <span>Project</span>
                     <i className={`fas fa-sort text-xs ${
-                      sortField === 'name' ? 'text-gray-900' : 'text-gray-400'
+                      sortField === 'name' ? SORT_ACTIVE_CLASS : SORT_INACTIVE_CLASS
                     }`}></i>
                   </button>
                 </th>
@@ -232,7 +236,7 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                   >
                     <span>Status</span>
                     <i className={`fas fa-sort text-xs ${
-                      sortField === 'status' ? 'text-gray-900' : 'text-gray-400'
+                      sortField === 'status' ? SORT_ACTIVE_CLASS : SORT_INACTIVE_CLASS
                     }`}></i>
                   </button>
                 </th>
@@ -243,7 +247,7 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                   >
                     <span>Progress</span>
                     <i className={`fas fa-sort text-xs ${
-                      sortField === 'progress' ? 'text-gray-900' : 'text-gray-400'
+                      sortField === 'progress' ? SORT_ACTIVE_CLASS : SORT_INACTIVE_CLASS
                     }`}></i>
                   </button>
                 </th>
@@ -254,7 +258,7 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                   >
                     <span>Due Date</span>
                     <i className={`fas fa-sort text-xs ${
-                      sortField === 'due_date' ? 'text-gray-900' : 'text-gray-400'
+                      sortField === 'due_date' ? SORT_ACTIVE_CLASS : SORT_INACTIVE_CLASS
                     }`}></i>
                   </button>
                 </th>
@@ -265,7 +269,7 @@ export const ProjectTable: React.FC<ProjectTableProps> = ({
                   >
                     <span>Budget</span>
                     <i className={`fas fa-sort text-xs ${
-                      sortField === 'budget' ? 'text-gray-900' : 'text-gray-400'
+                      sortField === 'budget' ? SORT_ACTIVE_CLASS : SORT_INACTIVE_CLASS
                     }`}></i>
                   </button>
                 </th>

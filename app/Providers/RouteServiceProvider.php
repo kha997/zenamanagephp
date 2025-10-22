@@ -44,7 +44,7 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/web.php'));
 
             // App UI (tất cả /app/*) - testing
-            Route::middleware('web')
+            Route::middleware('web.test')
                 ->group(base_path('routes/app.php'));
 
             // Admin UI - testing

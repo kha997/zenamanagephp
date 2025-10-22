@@ -1,0 +1,102 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RouterProvider } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { router } from './router';
+import { ThemeContext } from './theme-context';
+import { I18nProvider } from './i18n-context';
+import { applyTheme, resolveNextMode, type ColorMode } from '../shared/tokens';
+import { initializeAuth } from '../shared/auth/store';
+
+const getInitialMode = (): ColorMode => {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+
+  const stored = window.localStorage.getItem('zenamanage.theme');
+  if (stored === 'light' || stored === 'dark') {
+    return stored;
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
+
+export const AppShell: React.FC = () => {
+  const [mode, setMode] = useState<ColorMode>(() => getInitialMode());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: 1,
+            staleTime: 60_000,
+            refetchOnWindowFocus: false,
+          },
+        },
+      }),
+  );
+
+  useEffect(() => {
+    applyTheme(mode);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('zenamanage.theme', mode);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    // Initialize auth state from localStorage
+    initializeAuth();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (event: MediaQueryListEvent) => {
+      const stored = window.localStorage.getItem('zenamanage.theme');
+      if (!stored) {
+        setMode(event.matches ? 'dark' : 'light');
+      }
+    };
+
+    media.addEventListener('change', handler);
+    return () => media.removeEventListener('change', handler);
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      mode,
+      setMode,
+      toggleMode: () => setMode((prev) => resolveNextMode(prev)),
+    }),
+    [mode],
+  );
+
+  return (
+    <I18nProvider locale="en">
+      <ThemeContext.Provider value={contextValue}>
+        <QueryClientProvider client={queryClient}>
+          <div className="min-h-screen bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
+            <RouterProvider router={router} />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 3500,
+                style: {
+                  background: 'var(--color-surface-card)',
+                  color: 'var(--color-text-primary)',
+                  border: '1px solid var(--color-border-subtle)',
+                  boxShadow: '0 12px 24px rgba(15, 23, 42, 0.12)',
+                },
+              }}
+            />
+          </div>
+        </QueryClientProvider>
+      </ThemeContext.Provider>
+    </I18nProvider>
+  );
+};
+
+export default AppShell;

@@ -3,7 +3,7 @@ import React from 'react';
 interface TableColumn<T = any> {
   key: string;
   title: string;
-  render?: (value: any, record: T) => React.ReactNode;
+  render?: (_value: any, _record: T) => React.ReactNode;
   width?: string;
   align?: 'left' | 'center' | 'right';
 }

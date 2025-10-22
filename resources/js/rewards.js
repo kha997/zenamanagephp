@@ -3,6 +3,15 @@
  * Handles celebration animations and confetti effects
  */
 
+// Constants
+const CONTENT_TYPE_JSON = 'application/json';
+const CSRF_TOKEN_SELECTOR = 'meta[name="csrf-token"]';
+const CSRF_TOKEN_VALUE = document.querySelector(CSRF_TOKEN_SELECTOR)?.getAttribute('content') || '';
+const REWARD_COLORS = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
+const SAME_ORIGIN_CREDENTIALS = 'same-origin';
+const REWARDS_MESSAGE_OVERLAY_ID = 'rewards-message-overlay';
+const REWARDS_MESSAGE_OVERLAY_CLASS = 'rewards-message-overlay';
+
 class RewardsManager {
     constructor() {
         this.isActive = false;
@@ -15,6 +24,11 @@ class RewardsManager {
      * Initialize Rewards Manager
      */
     init() {
+        // Only run on tenant app pages
+        if (!this.shouldRunOnPage()) {
+            return;
+        }
+
         // Create confetti canvas
         this.createCanvas();
         
@@ -31,6 +45,14 @@ class RewardsManager {
             this.toggle(event.detail.enabled);
         });
     }
+    /**
+     * Determine whether this script should run on the current page
+     */
+    shouldRunOnPage() {
+        // Only run under tenant application routes
+        return window.location.pathname.startsWith('/app');
+    }
+
 
     /**
      * Create confetti canvas
@@ -71,10 +93,10 @@ class RewardsManager {
             const response = await fetch('/api/v1/app/rewards/status', {
                 method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Content-Type': CONTENT_TYPE_JSON,
+                    'X-CSRF-TOKEN': CSRF_TOKEN_VALUE
                 },
-                credentials: 'same-origin'
+                credentials: SAME_ORIGIN_CREDENTIALS
             });
 
             if (response.ok) {
@@ -91,15 +113,15 @@ class RewardsManager {
     /**
      * Toggle rewards
      */
-    async toggle(enabled = null) {
+    async toggle(_enabled = null) {
         try {
             const response = await fetch('/api/v1/app/rewards/toggle', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Content-Type': CONTENT_TYPE_JSON,
+                    'X-CSRF-TOKEN': CSRF_TOKEN_VALUE
                 },
-                credentials: 'same-origin'
+                credentials: SAME_ORIGIN_CREDENTIALS
             });
 
             if (response.ok) {
@@ -126,10 +148,10 @@ class RewardsManager {
             const response = await fetch('/api/v1/app/rewards/trigger-task-completion', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    'Content-Type': CONTENT_TYPE_JSON,
+                    'X-CSRF-TOKEN': CSRF_TOKEN_VALUE
                 },
-                credentials: 'same-origin',
+                credentials: SAME_ORIGIN_CREDENTIALS,
                 body: JSON.stringify(taskData)
             });
 
@@ -168,7 +190,7 @@ class RewardsManager {
             particleCount: 100,
             spread: 70,
             startVelocity: 45,
-            colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57']
+            colors: REWARD_COLORS
         };
         
         const confettiConfig = { ...defaultConfig, ...config };
@@ -253,8 +275,8 @@ class RewardsManager {
     showCongratsMessage(messages) {
         // Create message overlay
         const overlay = document.createElement('div');
-        overlay.id = 'rewards-message-overlay';
-        overlay.className = 'rewards-message-overlay';
+        overlay.id = REWARDS_MESSAGE_OVERLAY_ID;
+        overlay.className = REWARDS_MESSAGE_OVERLAY_CLASS;
         overlay.innerHTML = `
             <div class="rewards-message">
                 <div class="rewards-icon">🎉</div>
@@ -267,7 +289,7 @@ class RewardsManager {
         // Add styles
         const style = document.createElement('style');
         style.textContent = `
-            .rewards-message-overlay {
+            .${REWARDS_MESSAGE_OVERLAY_CLASS} {
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -356,7 +378,7 @@ class RewardsManager {
     hideCelebration() {
         this.canvas.style.display = 'none';
         
-        const overlay = document.getElementById('rewards-message-overlay');
+        const overlay = document.getElementById(REWARDS_MESSAGE_OVERLAY_ID);
         if (overlay) {
             overlay.remove();
         }
@@ -421,7 +443,7 @@ document.addEventListener('alpine:init', () => {
         },
         
         get toggleIcon() {
-            return this.isActive ? 'fas fa-gift' : 'fas fa-gift';
+            return 'fas fa-gift';
         }
     }));
 });

@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use Src\CoreProject\Models\Project;
+use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<Src\CoreProject\Models\Project>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<App\Models\Project>
  */
 class ProjectFactory extends Factory
 {
@@ -30,7 +30,7 @@ class ProjectFactory extends Factory
             'owner_id' => function (array $attributes) {
                 return User::factory()->create(['tenant_id' => $attributes['tenant_id']])->id;
             },
-            'tags' => $this->faker->words(3),
+            'tags' => json_encode($this->faker->words(3)),
             'start_date' => $this->faker->dateTimeBetween('-1 month', '+1 month'),
             'end_date' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
             'priority' => $this->faker->randomElement(['low', 'normal', 'high', 'urgent']),
@@ -45,11 +45,11 @@ class ProjectFactory extends Factory
             'template_id' => null,
             'last_activity_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
             'completion_percentage' => $this->faker->randomFloat(2, 0, 100),
-            'settings' => [
+            'settings' => json_encode([
                 'notifications' => $this->faker->boolean(),
                 'auto_assign' => $this->faker->boolean(),
                 'require_approval' => $this->faker->boolean(),
-            ],
+            ]),
         ];
     }
 

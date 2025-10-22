@@ -1,0 +1,386 @@
+# Phase 7 UAT Environment Setup
+
+**Date**: January 15, 2025  
+**Status**: UAT Environment Preparation  
+**Phase**: Phase 7 - UAT/Production Prep
+
+---
+
+## 🏗️ **UAT Environment Configuration**
+
+### **Environment Specifications**
+- **Server**: UAT server with production-like configuration
+- **Database**: Fresh database with comprehensive test data
+- **Monitoring**: Full monitoring stack (Prometheus, Grafana, ELK)
+- **SSL**: Production SSL certificates
+- **CDN**: Content delivery network configured
+- **Backup**: Automated backup system
+
+### **Test Data Requirements**
+
+#### **Security & RBAC Test Data**
+```php
+// UAT Security Test Data
+- 5 Users with different roles (super_admin, PM, Member, Client)
+- 3 Tenants with different configurations
+- 20 Projects with various statuses
+- 50 Tasks with different priorities
+- 100 User sessions for testing
+- 200 Login attempts for brute force testing
+- 50 Permission tests for RBAC validation
+```
+
+#### **Queue & Background Jobs Test Data**
+```php
+// UAT Queue Test Data
+- 100 Background jobs in various states
+- 50 Failed jobs for retry testing
+- 25 Dead letter queue entries
+- Queue metrics for 7 days
+- Performance benchmarks
+- Monitoring dashboard data
+```
+
+#### **CSV Import/Export Test Data**
+```php
+// UAT CSV Test Data
+- 1000 Users for export testing
+- 500 Projects for export testing
+- 2000 Tasks for export testing
+- Sample CSV files for import testing
+- Invalid CSV files for validation testing
+- Large CSV files (10MB+) for performance testing
+```
+
+#### **Internationalization Test Data**
+```php
+// UAT i18n Test Data
+- English and Vietnamese translations
+- 5 Different timezones
+- Locale-specific formatting examples
+- Date/time formats for different regions
+- Currency formats for different regions
+- Number formats for different regions
+```
+
+#### **Performance Test Data**
+```php
+// UAT Performance Test Data
+- 10,000 Users for load testing
+- 5,000 Projects for performance testing
+- 20,000 Tasks for performance testing
+- Performance benchmarks
+- Memory usage patterns
+- Network performance data
+```
+
+---
+
+## 📊 **UAT Database Seeder**
+
+### **UATDatabaseSeeder.php**
+```php
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use App\Models\User;
+use App\Models\Tenant;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\UserSession;
+use App\Models\LoginAttempt;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+
+class UATDatabaseSeeder extends Seeder
+{
+    public function run()
+    {
+        $this->command->info('Seeding UAT environment...');
+        
+        // Create tenants
+        $this->createTenants();
+        
+        // Create users with different roles
+        $this->createUsers();
+        
+        // Create projects and tasks
+        $this->createProjectsAndTasks();
+        
+        // Create sessions and login attempts
+        $this->createSecurityTestData();
+        
+        // Create queue test data
+        $this->createQueueTestData();
+        
+        // Create performance test data
+        $this->createPerformanceTestData();
+        
+        $this->command->info('UAT environment seeded successfully!');
+    }
+    
+    private function createTenants()
+    {
+        $tenants = [
+            [
+                'domain' => 'uat-security.test',
+                'name' => 'UAT Security Test Tenant',
+                'slug' => 'uat-security',
+                'is_active' => true,
+                'status' => 'active',
+                'settings' => json_encode([
+                    'timezone' => 'UTC',
+                    'currency' => 'USD',
+                    'language' => 'en'
+                ])
+            ],
+            [
+                'domain' => 'uat-performance.test',
+                'name' => 'UAT Performance Test Tenant',
+                'slug' => 'uat-performance',
+                'is_active' => true,
+                'status' => 'active',
+                'settings' => json_encode([
+                    'timezone' => 'America/New_York',
+                    'currency' => 'USD',
+                    'language' => 'en'
+                ])
+            ],
+            [
+                'domain' => 'uat-i18n.test',
+                'name' => 'UAT i18n Test Tenant',
+                'slug' => 'uat-i18n',
+                'is_active' => true,
+                'status' => 'active',
+                'settings' => json_encode([
+                    'timezone' => 'Asia/Ho_Chi_Minh',
+                    'currency' => 'VND',
+                    'language' => 'vi'
+                ])
+            ]
+        ];
+        
+        foreach ($tenants as $tenantData) {
+            Tenant::create($tenantData);
+        }
+        
+        $this->command->info('Created 3 UAT tenants');
+    }
+    
+    private function createUsers()
+    {
+        $tenant = Tenant::first();
+        
+        $users = [
+            [
+                'name' => 'UAT Super Admin',
+                'email' => 'uat-superadmin@test.com',
+                'password' => Hash::make('password'),
+                'role' => 'super_admin',
+                'tenant_id' => $tenant->id,
+                'email_verified_at' => now()
+            ],
+            [
+                'name' => 'UAT Project Manager',
+                'email' => 'uat-pm@test.com',
+                'password' => Hash::make('password'),
+                'role' => 'PM',
+                'tenant_id' => $tenant->id,
+                'email_verified_at' => now()
+            ],
+            [
+                'name' => 'UAT Team Member',
+                'email' => 'uat-member@test.com',
+                'password' => Hash::make('password'),
+                'role' => 'Member',
+                'tenant_id' => $tenant->id,
+                'email_verified_at' => now()
+            ],
+            [
+                'name' => 'UAT Client',
+                'email' => 'uat-client@test.com',
+                'password' => Hash::make('password'),
+                'role' => 'Client',
+                'tenant_id' => $tenant->id,
+                'email_verified_at' => now()
+            ],
+            [
+                'name' => 'UAT Test User',
+                'email' => 'uat-test@test.com',
+                'password' => Hash::make('password'),
+                'role' => 'Member',
+                'tenant_id' => $tenant->id,
+                'email_verified_at' => now()
+            ]
+        ];
+        
+        foreach ($users as $userData) {
+            User::create($userData);
+        }
+        
+        $this->command->info('Created 5 UAT users with different roles');
+    }
+    
+    private function createProjectsAndTasks()
+    {
+        $tenant = Tenant::first();
+        $pm = User::where('role', 'PM')->first();
+        
+        // Create projects
+        for ($i = 1; $i <= 20; $i++) {
+            $project = Project::create([
+                'name' => "UAT Project {$i}",
+                'description' => "UAT test project {$i} for comprehensive testing",
+                'status' => ['planning', 'active', 'on_hold', 'completed'][array_rand(['planning', 'active', 'on_hold', 'completed'])],
+                'budget' => rand(10000, 100000),
+                'start_date' => now()->subDays(rand(1, 30)),
+                'end_date' => now()->addDays(rand(1, 60)),
+                'tenant_id' => $tenant->id,
+                'created_by' => $pm->id
+            ]);
+            
+            // Create tasks for each project
+            for ($j = 1; $j <= 10; $j++) {
+                Task::create([
+                    'title' => "UAT Task {$i}-{$j}",
+                    'description' => "UAT test task {$i}-{$j} for project testing",
+                    'status' => ['pending', 'in_progress', 'completed', 'cancelled'][array_rand(['pending', 'in_progress', 'completed', 'cancelled'])],
+                    'priority' => ['low', 'medium', 'high', 'urgent'][array_rand(['low', 'medium', 'high', 'urgent'])],
+                    'project_id' => $project->id,
+                    'assigned_to' => User::where('role', 'Member')->inRandomOrder()->first()->id,
+                    'created_by' => $pm->id,
+                    'due_date' => now()->addDays(rand(1, 30))
+                ]);
+            }
+        }
+        
+        $this->command->info('Created 20 projects with 200 tasks');
+    }
+    
+    private function createSecurityTestData()
+    {
+        $tenant = Tenant::first();
+        $users = User::all();
+        
+        // Create user sessions
+        foreach ($users as $user) {
+            for ($i = 0; $i < 5; $i++) {
+                UserSession::create([
+                    'user_id' => $user->id,
+                    'session_id' => Str::random(40),
+                    'ip_address' => '192.168.1.' . rand(1, 255),
+                    'user_agent' => 'UAT Test Browser',
+                    'last_activity' => now()->subMinutes(rand(1, 60)),
+                    'tenant_id' => $tenant->id
+                ]);
+            }
+        }
+        
+        // Create login attempts (including failed ones for brute force testing)
+        foreach ($users as $user) {
+            for ($i = 0; $i < 10; $i++) {
+                LoginAttempt::create([
+                    'email' => $user->email,
+                    'ip_address' => '192.168.1.' . rand(1, 255),
+                    'user_agent' => 'UAT Test Browser',
+                    'success' => rand(0, 1),
+                    'attempted_at' => now()->subMinutes(rand(1, 120)),
+                    'tenant_id' => $tenant->id
+                ]);
+            }
+        }
+        
+        $this->command->info('Created security test data (sessions and login attempts)');
+    }
+    
+    private function createQueueTestData()
+    {
+        // This would create queue jobs for testing
+        // Implementation depends on your queue system
+        $this->command->info('Queue test data creation - implementation pending');
+    }
+    
+    private function createPerformanceTestData()
+    {
+        // Create additional data for performance testing
+        $tenant = Tenant::first();
+        
+        // Create more users for load testing
+        for ($i = 1; $i <= 100; $i++) {
+            User::create([
+                'name' => "UAT Load User {$i}",
+                'email' => "uat-load-{$i}@test.com",
+                'password' => Hash::make('password'),
+                'role' => 'Member',
+                'tenant_id' => $tenant->id,
+                'email_verified_at' => now()
+            ]);
+        }
+        
+        $this->command->info('Created 100 additional users for performance testing');
+    }
+}
+```
+
+---
+
+## 🔧 **UAT Environment Commands**
+
+### **Setup Commands**
+```bash
+# Create UAT environment
+php artisan env:uat
+
+# Seed UAT database
+php artisan db:seed --class=UATDatabaseSeeder --env=uat
+
+# Run UAT tests
+php artisan test --env=uat
+
+# Run Playwright UAT tests
+npx playwright test --project=uat-chromium
+```
+
+### **Monitoring Setup**
+```bash
+# Start monitoring stack
+docker-compose -f docker-compose.uat.yml up -d
+
+# Check monitoring status
+curl http://uat-server:3000/api/health
+
+# View Grafana dashboard
+open http://uat-server:3000
+```
+
+---
+
+## 📋 **UAT Environment Checklist**
+
+### **Pre-UAT Setup**
+- [ ] UAT server provisioned and configured
+- [ ] Database created and migrated
+- [ ] UATDatabaseSeeder run successfully
+- [ ] SSL certificates installed
+- [ ] CDN configured
+- [ ] Monitoring stack deployed
+- [ ] Backup system configured
+- [ ] Test data verified
+
+### **UAT Environment Verification**
+- [ ] All 5 handoff card features accessible
+- [ ] Security & RBAC functionality working
+- [ ] Queue & Background Jobs operational
+- [ ] CSV Import/Export functional
+- [ ] Internationalization working
+- [ ] Performance monitoring active
+- [ ] Regression tests passing
+- [ ] Performance benchmarks met
+
+---
+
+**Last Updated**: 2025-01-15  
+**Next Review**: After UAT environment setup  
+**Status**: Ready for UAT execution

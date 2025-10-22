@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 interface UseHeaderCondenseOptions {
   enabled?: boolean;
   threshold?: number;
-  onCondense?: (isCondensed: boolean) => void;
+  onCondense?: (_isCondensed: boolean) => void;
 }
 
 export const useHeaderCondense = ({
@@ -17,7 +17,6 @@ export const useHeaderCondense = ({
   useEffect(() => {
     if (!enabled) return;
 
-    let lastScrollY = window.scrollY;
     let ticking = false;
 
     const updateCondensedState = () => {

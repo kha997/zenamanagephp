@@ -53,10 +53,10 @@
 </head>
 <body class="bg-gray-50" x-data="appLayout()">
     <!-- Simple Header -->
-    <?php if (isset($component)) { $__componentOriginalee0a29c497842642cfde3b68b14f782d = $component; } ?>
-<?php if (isset($attributes)) { $__attributesOriginalee0a29c497842642cfde3b68b14f782d = $attributes; } ?>
-<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.shared.simple-header','data' => ['user' => Auth::user(),'variant' => 'app']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? (array) $attributes->getIterator() : [])); ?>
-<?php $component->withName('shared.simple-header'); ?>
+    <?php if (isset($component)) { $__componentOriginal912ec3668f7643dba1d0f7e3e8aeb8f8 = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal912ec3668f7643dba1d0f7e3e8aeb8f8 = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.shared.header-standardized','data' => ['user' => Auth::user(),'variant' => 'app']] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? (array) $attributes->getIterator() : [])); ?>
+<?php $component->withName('shared.header-standardized'); ?>
 <?php if ($component->shouldRender()): ?>
 <?php $__env->startComponent($component->resolveView(), $component->data()); ?>
 <?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag && $constructor = (new ReflectionClass(Illuminate\View\AnonymousComponent::class))->getConstructor()): ?>
@@ -65,13 +65,13 @@
 <?php $component->withAttributes(['user' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(Auth::user()),'variant' => 'app']); ?>
 <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
-<?php if (isset($__attributesOriginalee0a29c497842642cfde3b68b14f782d)): ?>
-<?php $attributes = $__attributesOriginalee0a29c497842642cfde3b68b14f782d; ?>
-<?php unset($__attributesOriginalee0a29c497842642cfde3b68b14f782d); ?>
+<?php if (isset($__attributesOriginal912ec3668f7643dba1d0f7e3e8aeb8f8)): ?>
+<?php $attributes = $__attributesOriginal912ec3668f7643dba1d0f7e3e8aeb8f8; ?>
+<?php unset($__attributesOriginal912ec3668f7643dba1d0f7e3e8aeb8f8); ?>
 <?php endif; ?>
-<?php if (isset($__componentOriginalee0a29c497842642cfde3b68b14f782d)): ?>
-<?php $component = $__componentOriginalee0a29c497842642cfde3b68b14f782d; ?>
-<?php unset($__componentOriginalee0a29c497842642cfde3b68b14f782d); ?>
+<?php if (isset($__componentOriginal912ec3668f7643dba1d0f7e3e8aeb8f8)): ?>
+<?php $component = $__componentOriginal912ec3668f7643dba1d0f7e3e8aeb8f8; ?>
+<?php unset($__componentOriginal912ec3668f7643dba1d0f7e3e8aeb8f8); ?>
 <?php endif; ?>
 
     <script>

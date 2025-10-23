@@ -16,38 +16,38 @@ export class MinimalAuthHelper {
   }
 
   async logout(): Promise<void> {
-    // Wait for page to load and user menu to be available
-    await this.page.waitForLoadState('networkidle');
+    // Wait for dashboard to be fully loaded by checking for a known element
+    await this.page.waitForSelector('h1, h2, [data-testid="dashboard"], .dashboard', { timeout: 10000 });
     
-    // Try multiple selectors for user menu
+    // Try deterministic selectors for user menu
     const userMenuSelectors = [
+      '.header-user-menu button',
+      '[data-testid="user-menu"] button',
       '[data-testid="user-menu-toggle"]',
-      'button[\\@click="showUserMenu = !showUserMenu"]',
-      'button:has-text("Super Admin")',
-      '.flex.items-center.space-x-2'
+      'button[\\@click="open = !open"]'
     ];
     
     let userMenuFound = false;
     for (const selector of userMenuSelectors) {
       try {
-        await this.page.waitForSelector(selector, { timeout: 2000 });
+        await this.page.waitForSelector(selector, { timeout: 3000 });
         await this.page.click(selector);
         userMenuFound = true;
         break;
       } catch (e) {
-        console.log(`Selector ${selector} not found, trying next...`);
+        // Try next selector
       }
     }
     
     if (!userMenuFound) {
-      throw new Error('User menu button not found with any selector');
+      throw new Error('User menu button not found with deterministic selectors');
     }
     
     // Wait for dropdown to be visible
-    await this.page.waitForSelector('[data-testid="user-menu-dropdown"]', { state: 'visible' });
+    await this.page.waitForSelector('.header-dropdown', { state: 'visible' });
     
     // Click logout link
-    await this.page.click('[data-testid="logout-link"]');
+    await this.page.click('button[type="submit"]');
     
     // Wait for redirect to login
     await this.page.waitForURL(/\/login/);
@@ -55,9 +55,9 @@ export class MinimalAuthHelper {
 
   async isLoggedIn(): Promise<boolean> {
     try {
-      const currentUrl = this.page.url();
-      console.log('Current URL for isLoggedIn check:', currentUrl);
-      return currentUrl.includes('/app') || currentUrl.includes('/dashboard');
+      // Wait for dashboard to be fully loaded
+      await this.page.waitForURL(/\/app\/dashboard/, { timeout: 5000 });
+      return true;
     } catch {
       return false;
     }

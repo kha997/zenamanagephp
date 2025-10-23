@@ -43,6 +43,14 @@ jobs:
     - name: Generate application key
       run: php artisan key:generate
       
+    - name: Configure database for CI
+      run: |
+        echo "DB_CONNECTION=sqlite" >> .env
+        echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
+        echo "CACHE_DRIVER=array" >> .env
+        echo "SESSION_DRIVER=array" >> .env
+        echo "QUEUE_CONNECTION=sync" >> .env
+      
     - name: Create database
       run: |
         touch database/database.sqlite
@@ -50,6 +58,12 @@ jobs:
         
     - name: Seed database
       run: php artisan db:seed --force
+      
+    - name: Verify database setup
+      run: |
+        echo "Database file exists: $(ls -la database/database.sqlite)"
+        echo "Database connection test:"
+        php artisan tinker --execute="echo 'DB Connection: ' . config('database.default'); echo 'DB Path: ' . config('database.connections.sqlite.database');"
       
     - name: Start Laravel server
       run: php artisan serve --host=127.0.0.1 --port=8000 &

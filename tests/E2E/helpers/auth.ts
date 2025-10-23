@@ -8,16 +8,16 @@ export class MinimalAuthHelper {
     await this.page.fill('#email', email);
     await this.page.fill('#password', password);
     
-    // Click submit and wait for app-shell element (SPA routing)
+    // Click submit and wait for universal logged-in marker
     await Promise.all([
-      this.page.waitForSelector('[data-testid="user-menu"], [data-testid="dashboard"], .app-shell', { timeout: 10000 }),
+      this.page.waitForSelector('[data-testid="user-menu"]', { timeout: 10000 }),
       this.page.click('#loginButton')
     ]);
   }
 
   async logout(): Promise<void> {
-    // Wait for app-shell to be loaded (works for both dashboard and projects)
-    await this.page.waitForSelector('[data-testid="user-menu"], [data-testid="dashboard"], .app-shell', { timeout: 10000 });
+    // Wait for universal logged-in marker
+    await this.page.waitForSelector('[data-testid="user-menu"]', { timeout: 10000 });
     
     // Try deterministic selectors for user menu
     const userMenuSelectors = [
@@ -53,8 +53,8 @@ export class MinimalAuthHelper {
 
   async isLoggedIn(): Promise<boolean> {
     try {
-      // Wait for app-shell element to appear (SPA routing)
-      await this.page.waitForSelector('[data-testid="user-menu"], [data-testid="dashboard"], .app-shell', { timeout: 5000 });
+      // Wait for universal logged-in marker
+      await this.page.waitForSelector('[data-testid="user-menu"]', { timeout: 5000 });
       return true;
     } catch (error) {
       return false;

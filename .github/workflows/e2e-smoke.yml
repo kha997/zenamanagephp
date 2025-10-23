@@ -65,6 +65,12 @@ jobs:
         
     - name: Generate smoke test summary
       run: |
+        # Check jq availability
+        if ! command -v jq &> /dev/null; then
+          echo "jq not found, installing..."
+          sudo apt-get update && sudo apt-get install -y jq
+        fi
+        
         # Parse Playwright JSON output for real metrics
         if [ -f test-results/results.json ]; then
           TOTAL_TESTS=$(jq '.stats.expected + .stats.unexpected' test-results/results.json 2>/dev/null || echo "unknown")
@@ -83,7 +89,7 @@ jobs:
         echo "- **Execution Time**: $(date)" >> $GITHUB_STEP_SUMMARY
         echo "- **Duration**: ${DURATION}ms" >> $GITHUB_STEP_SUMMARY
         echo "- **Test Results**: ${PASSED_TESTS} passed, ${FAILED_TESTS} failed (${TOTAL_TESTS} total)" >> $GITHUB_STEP_SUMMARY
-        echo "- **Browser Coverage**: Chromium, Mobile Chrome, Mobile Safari" >> $GITHUB_STEP_SUMMARY
+        echo "- **Browser Coverage**: Chromium (default project)" >> $GITHUB_STEP_SUMMARY
         echo "- **Artifacts**: Traces, videos, and screenshots uploaded on completion" >> $GITHUB_STEP_SUMMARY
         
     - name: Upload test results

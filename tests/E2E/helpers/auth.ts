@@ -16,8 +16,32 @@ export class MinimalAuthHelper {
   }
 
   async logout(): Promise<void> {
-    // Click user menu to open dropdown
-    await this.page.click('[data-testid="user-menu-toggle"]');
+    // Wait for page to load and user menu to be available
+    await this.page.waitForLoadState('networkidle');
+    
+    // Try multiple selectors for user menu
+    const userMenuSelectors = [
+      '[data-testid="user-menu-toggle"]',
+      'button[\\@click="showUserMenu = !showUserMenu"]',
+      'button:has-text("Super Admin")',
+      '.flex.items-center.space-x-2'
+    ];
+    
+    let userMenuFound = false;
+    for (const selector of userMenuSelectors) {
+      try {
+        await this.page.waitForSelector(selector, { timeout: 2000 });
+        await this.page.click(selector);
+        userMenuFound = true;
+        break;
+      } catch (e) {
+        console.log(`Selector ${selector} not found, trying next...`);
+      }
+    }
+    
+    if (!userMenuFound) {
+      throw new Error('User menu button not found with any selector');
+    }
     
     // Wait for dropdown to be visible
     await this.page.waitForSelector('[data-testid="user-menu-dropdown"]', { state: 'visible' });
@@ -31,8 +55,9 @@ export class MinimalAuthHelper {
 
   async isLoggedIn(): Promise<boolean> {
     try {
-      await this.page.waitForURL(/\/app/, { timeout: 2000 });
-      return true;
+      const currentUrl = this.page.url();
+      console.log('Current URL for isLoggedIn check:', currentUrl);
+      return currentUrl.includes('/app') || currentUrl.includes('/dashboard');
     } catch {
       return false;
     }

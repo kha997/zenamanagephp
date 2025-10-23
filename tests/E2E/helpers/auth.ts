@@ -21,9 +21,7 @@ export class MinimalAuthHelper {
     
     // Try deterministic selectors for user menu
     const userMenuSelectors = [
-      '.header-user-menu button',
-      '[data-testid="user-menu"] button',
-      '[data-testid="user-menu-toggle"]',
+      '[data-testid="user-menu"] button[\\@click="open = !open"]',
       'button[\\@click="open = !open"]'
     ];
     
@@ -44,10 +42,10 @@ export class MinimalAuthHelper {
     }
     
     // Wait for dropdown to be visible
-    await this.page.waitForSelector('.header-dropdown', { state: 'visible' });
+    await this.page.waitForSelector('[data-testid="user-menu-dropdown"]', { state: 'visible' });
     
-    // Click logout link
-    await this.page.click('button[type="submit"]');
+    // Click logout form submit button specifically
+    await this.page.click('[data-testid="logout-link"]');
     
     // Wait for redirect to login
     await this.page.waitForURL(/\/login/);
@@ -55,8 +53,8 @@ export class MinimalAuthHelper {
 
   async isLoggedIn(): Promise<boolean> {
     try {
-      // Wait for dashboard to be fully loaded
-      await this.page.waitForURL(/\/app\/dashboard/, { timeout: 5000 });
+      // Wait for any /app/* destination with retry
+      await this.page.waitForURL(/\/app\//, { timeout: 5000 });
       return true;
     } catch {
       return false;

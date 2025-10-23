@@ -53,7 +53,7 @@
 </head>
 <body class="bg-gray-50" x-data="appLayout()">
     <!-- Simple Header -->
-    <x-shared.header-standardized :user="Auth::user()" variant="app" />
+    <x-shared.simple-header :user="Auth::user()" variant="app" />
 
     <script>
         // Shared Header component logic

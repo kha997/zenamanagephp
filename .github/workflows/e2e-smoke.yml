@@ -58,7 +58,7 @@ jobs:
       run: sleep 10
       
     - name: Run smoke tests
-      run: npm run test:e2e:smoke --reporter=json > test-results.json
+      run: npm run test:e2e:smoke
       env:
         SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
         SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
@@ -66,11 +66,11 @@ jobs:
     - name: Generate smoke test summary
       run: |
         # Parse Playwright JSON output for real metrics
-        if [ -f test-results.json ]; then
-          TOTAL_TESTS=$(jq '.stats.total' test-results.json 2>/dev/null || echo "unknown")
-          PASSED_TESTS=$(jq '.stats.passed' test-results.json 2>/dev/null || echo "unknown")
-          FAILED_TESTS=$(jq '.stats.failed' test-results.json 2>/dev/null || echo "unknown")
-          DURATION=$(jq '.stats.duration' test-results.json 2>/dev/null || echo "unknown")
+        if [ -f test-results/results.json ]; then
+          TOTAL_TESTS=$(jq '.stats.expected + .stats.unexpected' test-results/results.json 2>/dev/null || echo "unknown")
+          PASSED_TESTS=$(jq '.stats.expected' test-results/results.json 2>/dev/null || echo "unknown")
+          FAILED_TESTS=$(jq '.stats.unexpected' test-results/results.json 2>/dev/null || echo "unknown")
+          DURATION=$(jq '.stats.duration' test-results/results.json 2>/dev/null || echo "unknown")
         else
           TOTAL_TESTS="unknown"
           PASSED_TESTS="unknown"

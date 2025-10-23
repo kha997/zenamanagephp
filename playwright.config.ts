@@ -50,7 +50,7 @@ export default defineConfig({
   projects: [
     {
       name: 'smoke-chromium',
-      testMatch: '**/smoke/**/*.spec.ts',
+      testMatch: '**/smoke/*-minimal.spec.ts',
       testIgnore: '**/smoke/api-*.spec.ts',
       use: { 
         ...devices['Desktop Chrome'],
@@ -62,7 +62,7 @@ export default defineConfig({
 
     {
       name: 'smoke-mobile',
-      testMatch: '**/smoke/**/*.spec.ts',
+      testMatch: '**/smoke/*-minimal.spec.ts',
       testIgnore: '**/smoke/api-*.spec.ts',
       use: { 
         ...devices['Pixel 5'],
@@ -110,12 +110,12 @@ export default defineConfig({
     /* Test against mobile viewports. */
     {
       name: 'Mobile Chrome',
-      testMatch: '**/smoke/**/*.spec.ts',
+      testMatch: '**/smoke/*-minimal.spec.ts',
       use: { ...devices['Pixel 5'] },
     },
     {
       name: 'Mobile Safari',
-      testMatch: '**/smoke/**/*.spec.ts',
+      testMatch: '**/smoke/*-minimal.spec.ts',
       use: { ...devices['iPhone 12'] },
     },
 

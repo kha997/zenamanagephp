@@ -7,18 +7,21 @@ export class MinimalAuthHelper {
     await this.page.goto('/login');
     await this.page.fill('#email', email);
     await this.page.fill('#password', password);
-    await this.page.click('#loginForm button[type="submit"]');
-    await this.page.waitForTimeout(2000); // Wait for redirect
-    // Check if we're redirected to app or still on login (indicating failure)
-    const currentUrl = this.page.url();
-    if (currentUrl.includes('/login')) {
-      throw new Error('Login failed - still on login page');
-    }
+    
+    // Click submit and wait for navigation
+    await Promise.all([
+      this.page.waitForURL(/\/app/),
+      this.page.click('#loginButton')
+    ]);
   }
 
   async logout(): Promise<void> {
-    await this.page.click('button:has-text("Logout")');
-    await expect(this.page).toHaveURL(/\/login/);
+    // Click user menu to open dropdown
+    await this.page.click('button[\\@click="showUserMenu = !showUserMenu"]');
+    // Click logout link
+    await this.page.click('a:has-text("Logout")');
+    // Wait for redirect to login
+    await this.page.waitForURL(/\/login/);
   }
 
   async isLoggedIn(): Promise<boolean> {

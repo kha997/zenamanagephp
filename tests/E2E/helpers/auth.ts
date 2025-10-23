@@ -17,12 +17,12 @@ export class MinimalAuthHelper {
 
   async logout(): Promise<void> {
     // Wait for dashboard to be fully loaded by checking for a known element
-    await this.page.waitForSelector('h1, h2, [data-testid="dashboard"], .dashboard', { timeout: 10000 });
+    await this.page.waitForSelector('[data-testid="dashboard-nav"], [data-testid="dashboard"], .dashboard-content', { timeout: 10000 });
     
     // Try deterministic selectors for user menu
     const userMenuSelectors = [
-      '[data-testid="user-menu"] button[\\@click="open = !open"]',
-      'button[\\@click="open = !open"]'
+      '[data-testid="user-menu"] button',
+      'button[data-testid="user-menu-toggle"]'
     ];
     
     let userMenuFound = false;
@@ -53,10 +53,18 @@ export class MinimalAuthHelper {
 
   async isLoggedIn(): Promise<boolean> {
     try {
-      // Wait for any /app/* destination with retry
+      // Wait for any /app/* destination with retry and debug
+      const currentUrl = this.page.url();
+      console.log('Current URL before waitForURL:', currentUrl);
+      
       await this.page.waitForURL(/\/app\//, { timeout: 5000 });
+      
+      const finalUrl = this.page.url();
+      console.log('Final URL after waitForURL:', finalUrl);
+      
       return true;
-    } catch {
+    } catch (error) {
+      console.log('isLoggedIn failed:', error.message);
       return false;
     }
   }

@@ -113,6 +113,13 @@ swagger-ui-serve docs/api/openapi.json
 - **[tests/Feature/DeterministicViewTest.php](tests/Feature/DeterministicViewTest.php)** - View consistency testing
 - **[GUARD_LINT_README.md](GUARD_LINT_README.md)** - Code quality guidelines
 - **[E2E_TESTING_STRATEGY.md](E2E_TESTING_STRATEGY.md)** - E2E testing strategy and smoke tests
+
+#### **E2E-SMOKE-MIN Implementation**
+- **[E2E_SMOKE_MIN_IMPLEMENTATION.md](E2E_SMOKE_MIN_IMPLEMENTATION.md)** - Complete implementation documentation with architecture, technical solutions, and performance metrics
+- **[E2E_SMOKE_MIN_API_DOCUMENTATION.md](E2E_SMOKE_MIN_API_DOCUMENTATION.md)** - API reference for MinimalAuthHelper, test specifications, and configuration
+- **[E2E_SMOKE_MIN_CHECKLIST.md](E2E_SMOKE_MIN_CHECKLIST.md)** - Implementation checklist and success metrics
+- **[E2E_SMOKE_MIN_PR_DOCUMENTATION.md](E2E_SMOKE_MIN_PR_DOCUMENTATION.md)** - Pull request documentation and review checklist
+- **[tests/e2e/smoke/README.md](tests/e2e/smoke/README.md)** - Smoke test suite documentation and usage guide
 - **[docs/TASK_LOG_PHASE_4.md](docs/TASK_LOG_PHASE_4.md)** ✅ **COMPLETED** - Phase 4 E2E Advanced Features & Regression testing task log
 - **[docs/PHASE_6_HANDOFF_CARDS.md](docs/PHASE_6_HANDOFF_CARDS.md)** ✅ **READY** - Phase 6 Handoff Cards with 38 issues mapped to 5 domain cards
 - **[docs/PHASE_6_TEAM_HANDOFF.md](docs/PHASE_6_TEAM_HANDOFF.md)** ✅ **READY** - Team assignment matrix and acknowledgment checklist

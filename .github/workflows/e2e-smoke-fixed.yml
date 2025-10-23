@@ -1,0 +1,125 @@
+name: E2E Smoke Tests (Fixed)
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, sqlite3, pdo_sqlite, bcmath, soap, intl, readline, libxml, zip, curl, gd, iconv, imagick, redis, memcached, pcov
+        coverage: none
+        
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Configure database for CI
+      run: |
+        echo "DB_CONNECTION=sqlite" >> .env
+        echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
+        echo "CACHE_DRIVER=array" >> .env
+        echo "SESSION_DRIVER=array" >> .env
+        echo "QUEUE_CONNECTION=sync" >> .env
+      
+    - name: Create database
+      run: |
+        touch database/database.sqlite
+        php artisan migrate --force
+        
+    - name: Seed database
+      run: php artisan db:seed --force
+      
+    - name: Verify database setup
+      run: |
+        echo "Database file exists: $(ls -la database/database.sqlite)"
+        echo "Database connection test:"
+        php artisan tinker --execute="echo 'DB Connection: ' . config('database.default'); echo 'DB Path: ' . config('database.connections.sqlite.database');"
+      
+    - name: Start Laravel server
+      run: php artisan serve --host=127.0.0.1 --port=8000 &
+      
+    - name: Wait for server
+      run: sleep 10
+      
+    - name: Run smoke tests
+      run: npm run test:e2e:smoke
+      env:
+        SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+        SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+        
+    - name: Generate smoke test summary
+      run: |
+        # Check jq availability
+        if ! command -v jq &> /dev/null; then
+          echo "jq not found, installing..."
+          sudo apt-get update && sudo apt-get install -y jq
+        fi
+        
+        # Parse Playwright JSON output for real metrics
+        if [ -f test-results/results.json ]; then
+          TOTAL_TESTS=$(jq '.stats.expected + .stats.unexpected' test-results/results.json 2>/dev/null || echo "unknown")
+          PASSED_TESTS=$(jq '.stats.expected' test-results/results.json 2>/dev/null || echo "unknown")
+          FAILED_TESTS=$(jq '.stats.unexpected' test-results/results.json 2>/dev/null || echo "unknown")
+          DURATION=$(jq '.stats.duration' test-results/results.json 2>/dev/null || echo "unknown")
+        else
+          TOTAL_TESTS="unknown"
+          PASSED_TESTS="unknown"
+          FAILED_TESTS="unknown"
+          DURATION="unknown"
+        fi
+        
+        echo "## Smoke Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Scope**: Minimal smoke tests only (*-minimal.spec.ts)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Execution Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Duration**: ${DURATION}ms" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Results**: ${PASSED_TESTS} passed, ${FAILED_TESTS} failed (${TOTAL_TESTS} total)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Browser Coverage**: Chromium (default project)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Artifacts**: Traces, videos, and screenshots uploaded on completion" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: smoke-test-results
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 30
+        
+    - name: Upload trace artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: smoke-trace-artifacts
+        path: test-results/
+        retention-days: 7

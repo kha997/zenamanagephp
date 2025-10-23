@@ -58,6 +58,9 @@ export default defineConfig({
         actionTimeout: 5000,
         navigationTimeout: 15000,
       },
+      // Run smoke tests sequentially to avoid race conditions
+      fullyParallel: false,
+      workers: 1,
     },
 
     {

@@ -8,16 +8,16 @@ export class MinimalAuthHelper {
     await this.page.fill('#email', email);
     await this.page.fill('#password', password);
     
-    // Click submit and wait for navigation
+    // Click submit and wait for app-shell element (SPA routing)
     await Promise.all([
-      this.page.waitForURL(/\/app/),
+      this.page.waitForSelector('[data-testid="user-menu"], [data-testid="dashboard"], .app-shell', { timeout: 10000 }),
       this.page.click('#loginButton')
     ]);
   }
 
   async logout(): Promise<void> {
-    // Wait for dashboard to be fully loaded by checking for a known element
-    await this.page.waitForSelector('[data-testid="dashboard-nav"], [data-testid="dashboard"], .dashboard-content', { timeout: 10000 });
+    // Wait for app-shell to be loaded (works for both dashboard and projects)
+    await this.page.waitForSelector('[data-testid="user-menu"], [data-testid="dashboard"], .app-shell', { timeout: 10000 });
     
     // Try deterministic selectors for user menu
     const userMenuSelectors = [
@@ -53,18 +53,10 @@ export class MinimalAuthHelper {
 
   async isLoggedIn(): Promise<boolean> {
     try {
-      // Wait for any /app/* destination with retry and debug
-      const currentUrl = this.page.url();
-      console.log('Current URL before waitForURL:', currentUrl);
-      
-      await this.page.waitForURL(/\/app\//, { timeout: 5000 });
-      
-      const finalUrl = this.page.url();
-      console.log('Final URL after waitForURL:', finalUrl);
-      
+      // Wait for app-shell element to appear (SPA routing)
+      await this.page.waitForSelector('[data-testid="user-menu"], [data-testid="dashboard"], .app-shell', { timeout: 5000 });
       return true;
     } catch (error) {
-      console.log('isLoggedIn failed:', error.message);
       return false;
     }
   }

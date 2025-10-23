@@ -17,6 +17,8 @@ Configure these secrets in GitHub:
 - `SMOKE_ADMIN_EMAIL` - Admin user email for testing
 - `SMOKE_ADMIN_PASSWORD` - Admin user password for testing
 
+**Note**: Ensure your database is seeded with an admin user matching these credentials. See [Database Seeding Guide](../../../database/seeders/README.md) for setup instructions.
+
 ## Running Tests
 
 ### Local Development
@@ -31,6 +33,8 @@ npm run test:e2e:smoke:headed
 # Alternative: headless execution
 npm run test:e2e:smoke
 ```
+
+**Prerequisites**: Ensure your database is seeded with admin users. See [Database Seeding Guide](../../../database/seeders/README.md) for setup instructions.
 
 ### Important Notes
 - **Use npm scripts**: Always use `npm run test:e2e:smoke*` to ensure minimal scope execution

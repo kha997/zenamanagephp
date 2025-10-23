@@ -58,17 +58,31 @@ jobs:
       run: sleep 10
       
     - name: Run smoke tests
-      run: npm run test:e2e:smoke
+      run: npm run test:e2e:smoke --reporter=json > test-results.json
       env:
         SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
         SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
         
     - name: Generate smoke test summary
       run: |
+        # Parse Playwright JSON output for real metrics
+        if [ -f test-results.json ]; then
+          TOTAL_TESTS=$(jq '.stats.total' test-results.json 2>/dev/null || echo "unknown")
+          PASSED_TESTS=$(jq '.stats.passed' test-results.json 2>/dev/null || echo "unknown")
+          FAILED_TESTS=$(jq '.stats.failed' test-results.json 2>/dev/null || echo "unknown")
+          DURATION=$(jq '.stats.duration' test-results.json 2>/dev/null || echo "unknown")
+        else
+          TOTAL_TESTS="unknown"
+          PASSED_TESTS="unknown"
+          FAILED_TESTS="unknown"
+          DURATION="unknown"
+        fi
+        
         echo "## Smoke Test Execution Summary" >> $GITHUB_STEP_SUMMARY
         echo "- **Test Scope**: Minimal smoke tests only (*-minimal.spec.ts)" >> $GITHUB_STEP_SUMMARY
         echo "- **Execution Time**: $(date)" >> $GITHUB_STEP_SUMMARY
-        echo "- **Test Count**: 4 minimal tests (2 auth + 2 project)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Duration**: ${DURATION}ms" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Results**: ${PASSED_TESTS} passed, ${FAILED_TESTS} failed (${TOTAL_TESTS} total)" >> $GITHUB_STEP_SUMMARY
         echo "- **Browser Coverage**: Chromium, Mobile Chrome, Mobile Safari" >> $GITHUB_STEP_SUMMARY
         echo "- **Artifacts**: Traces, videos, and screenshots uploaded on completion" >> $GITHUB_STEP_SUMMARY
         

@@ -13,9 +13,6 @@ export class MinimalAuthHelper {
       this.page.waitForURL(/\/app/),
       this.page.click('#loginButton')
     ]);
-    
-    // Debug: log current URL after login
-    console.log('Current URL after login:', this.page.url());
   }
 
   async logout(): Promise<void> {

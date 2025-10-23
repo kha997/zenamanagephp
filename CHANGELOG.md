@@ -28,9 +28,9 @@
 
 ### 🎯 **Next Steps**
 - **Admin Credentials**: Ensure test admin account exists and secrets are configured
-- **Playwright Config**: Verify single-project run configuration
-- **Selector Stability**: Add data-testid hooks for robust UI element targeting
-- **Smoke Verification**: Add explicit smoke run verification step
+- **CI Health Monitoring**: Add smoke run health monitoring and execution proof
+- **Credential Seeding**: Verify admin user seeding for CI environment
+- **Smoke Run Verification**: Add CI artifacts/badges to prove minimal suite execution
 
 ---
 

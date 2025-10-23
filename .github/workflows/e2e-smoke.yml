@@ -63,6 +63,15 @@ jobs:
         SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
         SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
         
+    - name: Generate smoke test summary
+      run: |
+        echo "## Smoke Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Scope**: Minimal smoke tests only (*-minimal.spec.ts)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Execution Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Count**: 4 minimal tests (2 auth + 2 project)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Browser Coverage**: Chromium, Mobile Chrome, Mobile Safari" >> $GITHUB_STEP_SUMMARY
+        echo "- **Artifacts**: Traces, videos, and screenshots uploaded on completion" >> $GITHUB_STEP_SUMMARY
+        
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()

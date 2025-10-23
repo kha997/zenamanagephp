@@ -18,13 +18,25 @@ Configure these secrets in GitHub:
 - `SMOKE_ADMIN_PASSWORD` - Admin user password for testing
 
 ## Running Tests
-```bash
-# Run all smoke tests
-npx playwright test tests/e2e/smoke --grep @smoke
 
-# Run specific test file
-npx playwright test tests/e2e/smoke/auth-minimal.spec.ts
+### Local Development
+```bash
+# Set environment variables
+export SMOKE_ADMIN_EMAIL="admin@zena.local"
+export SMOKE_ADMIN_PASSWORD="password"
+
+# Run minimal smoke tests (recommended)
+npm run test:e2e:smoke:headed
+
+# Alternative: headless execution
+npm run test:e2e:smoke
 ```
+
+### Important Notes
+- **Use npm scripts**: Always use `npm run test:e2e:smoke*` to ensure minimal scope execution
+- **Avoid legacy tests**: Do NOT run `npx playwright test tests/e2e/smoke` directly as this executes heavy legacy specs
+- **Minimal scope**: Only runs `*-minimal.spec.ts` files (4 tests total)
+- **Fast execution**: Designed for quick CI feedback, not comprehensive testing
 
 ## CI Integration
 Tests run automatically on:

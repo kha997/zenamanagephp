@@ -11,7 +11,7 @@
 ### 🎯 **Minimal Test Scope**
 - **Authentication**: Login/logout flow verification only
 - **Project Creation**: Form load and list visibility checks only
-- **No Heavy Abstractions**: Removed legacy AuthHelper dependencies
+- **No Heavy Abstractions**: Uses new MinimalAuthHelper alongside existing AuthHelper
 - **Fast Execution**: 4 minimal tests instead of 80+ heavy scenarios
 
 ### 🔧 **Technical Implementation**
@@ -29,7 +29,8 @@
 ### 🎯 **Next Steps**
 - **Admin Credentials**: Ensure test admin account exists and secrets are configured
 - **Playwright Config**: Verify single-project run configuration
-- **Legacy Cleanup**: Remove old heavy smoke tests and AuthHelper dependencies
+- **Selector Stability**: Add data-testid hooks for robust UI element targeting
+- **Smoke Verification**: Add explicit smoke run verification step
 
 ---
 

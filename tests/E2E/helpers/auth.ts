@@ -13,13 +13,21 @@ export class MinimalAuthHelper {
       this.page.waitForURL(/\/app/),
       this.page.click('#loginButton')
     ]);
+    
+    // Debug: log current URL after login
+    console.log('Current URL after login:', this.page.url());
   }
 
   async logout(): Promise<void> {
     // Click user menu to open dropdown
-    await this.page.click('button[\\@click="showUserMenu = !showUserMenu"]');
+    await this.page.click('[data-testid="user-menu-toggle"]');
+    
+    // Wait for dropdown to be visible
+    await this.page.waitForSelector('[data-testid="user-menu-dropdown"]', { state: 'visible' });
+    
     // Click logout link
-    await this.page.click('a:has-text("Logout")');
+    await this.page.click('[data-testid="logout-link"]');
+    
     // Wait for redirect to login
     await this.page.waitForURL(/\/login/);
   }

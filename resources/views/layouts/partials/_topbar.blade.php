@@ -144,6 +144,7 @@
                 <!-- User Menu -->
                 <div class="relative">
                     <button @click="showUserMenu = !showUserMenu" 
+                            data-testid="user-menu-toggle"
                             class="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none">
                         <img src="https://ui-avatars.com/api/?name=Super+Admin&background=3b82f6&color=ffffff" 
                              alt="Super Admin" class="h-8 w-8 rounded-full">
@@ -153,6 +154,7 @@
                     
                     <!-- User Dropdown -->
                     <div x-show="showUserMenu" @click.away="showUserMenu = false" 
+                         data-testid="user-menu-dropdown"
                          class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                         <div class="py-1">
                             <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
@@ -162,7 +164,7 @@
                                 <i class="fas fa-cog mr-2"></i>Settings
                             </a>
                             <hr class="my-1">
-                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <a href="#" data-testid="logout-link" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                                 <i class="fas fa-sign-out-alt mr-2"></i>Logout
                             </a>
                         </div>

@@ -7,8 +7,8 @@ test.describe('Smoke Tests - Project Creation', () => {
     await auth.login(process.env.SMOKE_ADMIN_EMAIL!, process.env.SMOKE_ADMIN_PASSWORD!);
     
     await page.goto('/app/projects');
-    await page.click('button:has-text("New Project")');
-    await expect(page.locator('form')).toBeVisible();
+    await page.click('[data-testid="create-project"]');
+    await expect(page.locator('form[action*="projects"]')).toBeVisible();
   });
 
   test('@smoke project list loads', async ({ page }) => {

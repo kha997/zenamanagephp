@@ -3,9 +3,12 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\SqliteCompatibleMigration;
+use App\Support\DBDriver;
 
 return new class extends Migration
 {
+    use SqliteCompatibleMigration;
     /**
      * Run the migrations.
      */
@@ -13,7 +16,7 @@ return new class extends Migration
     {
         // Only add columns to tables that actually need them
         $tablesToUpdate = [
-            'documents' => ['created_by', 'updated_by'],
+            // 'documents' => ['created_by', 'updated_by'], // Already handled by previous migration
             'components' => ['updated_by'], // already has created_by
             'projects' => ['updated_by'], // already has created_by
             'rfis' => ['created_by', 'updated_by'],
@@ -83,8 +86,8 @@ return new class extends Migration
                 Schema::table($tableName, function (Blueprint $table) use ($tableName, $columns) {
                     foreach ($columns as $column) {
                         $indexName = $tableName . '_' . $column . '_index';
-                        if (!$this->indexExists($tableName, $indexName)) {
-                            $table->index($column);
+                        if (!$this->constraintExists($tableName, $indexName)) {
+                            $this->addIndex($table, [$column], $indexName);
                         }
                     }
                 });
@@ -98,7 +101,7 @@ return new class extends Migration
     public function down(): void
     {
         $tablesToUpdate = [
-            'documents' => ['created_by', 'updated_by'],
+            // 'documents' => ['created_by', 'updated_by'], // Already handled by previous migration
             'components' => ['updated_by'],
             'projects' => ['updated_by'],
             'rfis' => ['created_by', 'updated_by'],
@@ -157,12 +160,14 @@ return new class extends Migration
             if (Schema::hasTable($tableName)) {
                 Schema::table($tableName, function (Blueprint $table) use ($tableName, $columns) {
                     foreach ($columns as $column) {
-                        // Drop foreign keys first
-                        $constraintName = $tableName . '_' . $column . '_foreign';
-                        try {
-                            $table->dropForeign([$constraintName]);
-                        } catch (\Exception $e) {
-                            // Foreign key might not exist
+                        // Drop foreign keys first (only for MySQL)
+                        if (DBDriver::isMysql()) {
+                            $constraintName = $tableName . '_' . $column . '_foreign';
+                            try {
+                                $table->dropForeign([$constraintName]);
+                            } catch (\Exception $e) {
+                                // Foreign key might not exist
+                            }
                         }
                         
                         // Drop indexes
@@ -180,47 +185,6 @@ return new class extends Migration
                     }
                 });
             }
-        }
-    }
-
-
-    /**
-     * Check if a foreign key constraint exists
-     */
-    private function foreignKeyExists(string $table, string $constraint): bool
-    {
-        try {
-            $foreignKeys = \DB::select("
-                SELECT CONSTRAINT_NAME 
-                FROM information_schema.KEY_COLUMN_USAGE 
-                WHERE TABLE_SCHEMA = ? 
-                AND TABLE_NAME = ? 
-                AND CONSTRAINT_NAME = ?
-            ", [config('database.connections.mysql.database'), $table, $constraint]);
-
-            return count($foreignKeys) > 0;
-        } catch (\Exception $e) {
-            return false;
-        }
-    }
-
-    /**
-     * Check if an index exists
-     */
-    private function indexExists(string $table, string $index): bool
-    {
-        try {
-            $indexes = \DB::select("
-                SELECT INDEX_NAME 
-                FROM information_schema.STATISTICS 
-                WHERE TABLE_SCHEMA = ? 
-                AND TABLE_NAME = ? 
-                AND INDEX_NAME = ?
-            ", [config('database.connections.mysql.database'), $table, $index]);
-
-            return count($indexes) > 0;
-        } catch (\Exception $e) {
-            return false;
         }
     }
 };

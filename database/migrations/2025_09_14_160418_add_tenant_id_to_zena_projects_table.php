@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\DBDriver;
 
 return new class extends Migration
 {
@@ -28,7 +29,9 @@ return new class extends Migration
     public function down()
     {
         Schema::table('zena_projects', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['tenant_id']);
+            }
             $table->dropIndex(['tenant_id']);
             $table->dropColumn('tenant_id');
         });

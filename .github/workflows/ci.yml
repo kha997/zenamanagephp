@@ -2,223 +2,215 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, feature/* ]
   pull_request:
     branches: [ main, develop ]
 
 jobs:
-  # Early route gate - fail fast if routes are broken
-  route-gate:
+  # Fast unit/feature tests with SQLite
+  unit-feature-tests:
+    name: Unit & Feature Tests (SQLite)
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          extensions: mbstring, dom, fileinfo, mysql
-          coverage: none
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3
+        coverage: xdebug
+        
+    - name: Copy environment file
+      run: cp .env.testing .env
       
-      - name: Copy .env
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
       
-      - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+    - name: Generate application key
+      run: php artisan key:generate --env=testing
       
-      - name: Generate key
-        run: php artisan key:generate
+    - name: Run PHPUnit tests (SQLite)
+      run: php artisan test --testsuite=Unit,Feature --coverage-clover=coverage.xml
       
-      - name: Run Route Gate
-        run: ./scripts/ci-routes-only.sh
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: sqlite-tests
+        name: sqlite-coverage
 
-  # Main test suite
-  test:
+  # E2E tests with MySQL for full fidelity
+  e2e-tests:
+    name: E2E Tests (MySQL)
     runs-on: ubuntu-latest
-    needs: route-gate
-    strategy:
-      matrix:
-        php: [8.1, 8.2]
+    needs: unit-feature-tests
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: zenamanage_test
+          MYSQL_USER: zena
+          MYSQL_PASSWORD: secret
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php }}
-          extensions: mbstring, dom, fileinfo, mysql
-          coverage: xdebug
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
       
-      - name: Copy .env
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+    - name: Install NPM dependencies
+      run: npm ci
       
-      - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+    - name: Build frontend assets
+      run: npm run build
       
-      - name: Generate key
-        run: php artisan key:generate
+    - name: Wait for MySQL
+      run: |
+        while ! mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; do
+          sleep 1
+        done
+        
+    - name: Setup MySQL environment
+      run: |
+        cp env.example .env
+        sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=mysql/' .env
+        sed -i 's/DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/' .env
+        sed -i 's/DB_PORT=3306/DB_PORT=3306/' .env
+        sed -i 's/DB_DATABASE=zenamanage/DB_DATABASE=zenamanage_test/' .env
+        sed -i 's/DB_USERNAME=root/DB_USERNAME=zena/' .env
+        sed -i 's/DB_PASSWORD=/DB_PASSWORD=secret/' .env
+        
+    - name: Generate application key
+      run: php artisan key:generate
       
-      - name: Directory Permissions
-        run: chmod -R 777 storage bootstrap/cache
+    - name: Run database migrations
+      run: php artisan migrate:fresh --seed
       
-      - name: Create Database
-        run: |
-          mysql --version
-          mysql -e 'CREATE DATABASE zenamanage_testing;'
+    - name: Run E2E tests
+      run: php artisan test --testsuite=E2E
       
-      - name: Execute tests (Unit and Feature tests)
-        run: php artisan test --testsuite=Feature --coverage
+    - name: Run Playwright tests
+      run: npx playwright test --config=playwright.config.ts
+      if: always()
       
-      - name: Run Authorization Tests
-        run: php artisan test tests/Feature/AuthorizationTest.php --verbose
-      
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
+    - name: Upload Playwright report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
 
-  # Dusk E2E tests
-  dusk:
+  # Security and quality checks
+  security-quality:
+    name: Security & Quality Checks
     runs-on: ubuntu-latest
-    needs: test
+    
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          extensions: mbstring, dom, fileinfo, mysql
-          coverage: none
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3
+        
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
       
-      - name: Copy .env
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+    - name: Run PHP CS Fixer
+      run: ./vendor/bin/php-cs-fixer fix --dry-run --diff
       
-      - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+    - name: Run PHPStan
+      run: ./vendor/bin/phpstan analyse --memory-limit=2G
       
-      - name: Generate key
-        run: php artisan key:generate
+    - name: Run Security Checker
+      run: ./vendor/bin/security-checker security:check
       
-      - name: Directory Permissions
-        run: chmod -R 777 storage bootstrap/cache
-      
-      - name: Create Database
-        run: |
-          mysql -e 'CREATE DATABASE zenamanage_testing;'
-      
-      - name: Install Chrome Driver
-        run: php artisan dusk:chrome-driver --detect
-      
-      - name: Start Chrome Driver
-        run: ./vendor/laravel/dusk/bin/chromedriver-linux &
-      
-      - name: Run Dusk Tests
-        run: php artisan dusk --configuration=phpunit.dusk.xml
-      
-      - name: Upload screenshots
-        uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: screenshots
-          path: tests/Browser/screenshots
-
-  # Security scan
-  security:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          extensions: mbstring, dom, fileinfo, mysql
-          coverage: none
-      
-      - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
-      
-      - name: Run Security Check
-        run: composer audit
-      
-      - name: Run PHPStan
-        run: ./vendor/bin/phpstan analyse --memory-limit=2G
+    - name: Run Larastan
+      run: ./vendor/bin/phpstan analyse --memory-limit=2G --configuration=phpstan.neon
 
   # Performance tests
-  performance:
+  performance-tests:
+    name: Performance Tests
     runs-on: ubuntu-latest
-    needs: test
+    needs: [unit-feature-tests, e2e-tests]
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: zenamanage_test
+          MYSQL_USER: zena
+          MYSQL_PASSWORD: secret
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
       
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.1'
-          extensions: mbstring, dom, fileinfo, mysql
-          coverage: none
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3
+        
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
       
-      - name: Copy .env
-        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+    - name: Setup MySQL environment
+      run: |
+        cp env.example .env
+        sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=mysql/' .env
+        sed -i 's/DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/' .env
+        sed -i 's/DB_PORT=3306/DB_PORT=3306/' .env
+        sed -i 's/DB_DATABASE=zenamanage/DB_DATABASE=zenamanage_test/' .env
+        sed -i 's/DB_USERNAME=root/DB_USERNAME=zena/' .env
+        sed -i 's/DB_PASSWORD=/DB_PASSWORD=secret/' .env
+        
+    - name: Generate application key
+      run: php artisan key:generate
       
-      - name: Install Dependencies
-        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+    - name: Run database migrations
+      run: php artisan migrate:fresh --seed
       
-      - name: Generate key
-        run: php artisan key:generate
+    - name: Run performance tests
+      run: php artisan test --testsuite="Final Testing"
       
-      - name: Directory Permissions
-        run: chmod -R 777 storage bootstrap/cache
-      
-      - name: Create Database
-        run: |
-          mysql -e 'CREATE DATABASE zenamanage_testing;'
-      
-      - name: Run Performance Tests
-        run: php artisan test --testsuite=Feature --filter=Perf
-
-  # Deploy to staging (only on develop branch)
-  deploy-staging:
-    runs-on: ubuntu-latest
-    needs: [test, dusk, security, performance]
-    if: github.ref == 'refs/heads/develop'
-    environment: staging
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Deploy to Staging
-        run: |
-          echo "Deploying to staging environment..."
-          # Add your deployment script here
-      
-      - name: Run Smoke Tests
-        run: ./scripts/smoke-check-routes.sh
-
-  # Deploy to production (only on main branch)
-  deploy-production:
-    runs-on: ubuntu-latest
-    needs: [test, dusk, security, performance]
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Deploy to Production
-        run: |
-          echo "Deploying to production environment..."
-          # Add your deployment script here
-      
-      - name: Run Smoke Tests
-        run: ./scripts/smoke-check-routes.sh
-      
-      - name: Notify Slack
-        if: always()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          channel: '#deployments'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+    - name: Run load tests
+      run: |
+        # Add load testing commands here
+        echo "Load testing would go here"

@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\DBDriver;
 
 return new class extends Migration
 {
@@ -26,7 +27,9 @@ return new class extends Migration
     {
         Schema::table('documents', function (Blueprint $table) {
             if (Schema::hasColumn('documents', 'uploaded_by')) {
+                if (DBDriver::isMysql()) {
                 $table->dropForeign(['uploaded_by']);
+            }
                 $table->dropColumn('uploaded_by');
             }
         });

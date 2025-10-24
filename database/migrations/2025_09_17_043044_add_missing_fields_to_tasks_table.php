@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\DBDriver;
 
 return new class extends Migration
 {
@@ -51,11 +52,21 @@ return new class extends Migration
     {
         Schema::table('tasks', function (Blueprint $table) {
             // Drop foreign keys first
-            $table->dropForeign(['component_id']);
-            $table->dropForeign(['assigned_to']);
-            $table->dropForeign(['parent_id']);
-            $table->dropForeign(['created_by']);
-            $table->dropForeign(['updated_by']);
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['component_id']);
+            }
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['assigned_to']);
+            }
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['parent_id']);
+            }
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['created_by']);
+            }
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['updated_by']);
+            }
             
             // Drop indexes
             $table->dropIndex(['component_id', 'status']);

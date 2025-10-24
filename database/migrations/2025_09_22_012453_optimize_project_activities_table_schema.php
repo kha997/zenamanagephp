@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\DBDriver;
 
 return new class extends Migration
 {
@@ -32,7 +33,9 @@ return new class extends Migration
     {
         Schema::table('project_activities', function (Blueprint $table) {
             // Drop foreign key constraint
-            $table->dropForeign(['tenant_id']);
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['tenant_id']);
+            }
             
             // Drop indexes
             $table->dropIndex('project_activities_entity_history_index');

@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\DBDriver;
 
 return new class extends Migration
 {
@@ -15,7 +16,9 @@ return new class extends Migration
     {
         Schema::table('widgets', function (Blueprint $table) {
             // Drop foreign key constraint first
-            $table->dropForeign(['tenant_id']);
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['tenant_id']);
+            }
             $table->dropColumn('tenant_id');
         });
         

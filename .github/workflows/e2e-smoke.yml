@@ -72,8 +72,24 @@ jobs:
         echo "CACHE_DRIVER=array" >> .env
         echo "SESSION_DRIVER=array" >> .env
         echo "QUEUE_CONNECTION=sync" >> .env
-      
+        
+    - name: Wait for MySQL service
+      run: |
+        echo "Waiting for MySQL service to be ready..."
+        for i in {1..30}; do
+          if mysql --host=127.0.0.1 --port=3306 --user=e2e_user --password=e2e_password -e "SELECT 1;" > /dev/null 2>&1; then
+            echo "MySQL service is ready!"
+            break
+          fi
+          echo "Attempt $i: MySQL not ready yet, waiting..."
+          sleep 2
+        done
+        
     - name: Create database
+      run: |
+        mysql --host=127.0.0.1 --port=3306 --user=e2e_user --password=e2e_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_e2e;"
+        
+    - name: Run migrations
       run: |
         php artisan migrate:fresh --force
         

@@ -16,12 +16,15 @@ class E2EDatabaseSeeder extends Seeder
         $this->command->info('🌱 Starting E2E Database Seeding...');
 
         // Create tenant for E2E testing
-        $tenantId = DB::table('tenants')->insertGetId([
+        $tenantId = \Str::ulid();
+        DB::table('tenants')->insert([
+            'id' => $tenantId,
             'name' => 'E2E Test Tenant',
             'domain' => 'e2e.local',
             'slug' => 'e2e-test',
             'is_active' => true,
             'status' => 'active',
+            'plan' => 'basic',
             'settings' => json_encode([
                 'timezone' => 'Asia/Ho_Chi_Minh',
                 'currency' => 'VND',
@@ -35,6 +38,7 @@ class E2EDatabaseSeeder extends Seeder
         DB::table('users')->updateOrInsert(
             ['email' => 'admin@zena.local'],
             [
+                'id' => \Str::ulid(),
                 'name' => 'Admin User',
                 'email' => 'admin@zena.local',
                 'password' => Hash::make('password'),
@@ -50,6 +54,8 @@ class E2EDatabaseSeeder extends Seeder
         DB::table('projects')->updateOrInsert(
             ['name' => 'Test Project'],
             [
+                'id' => \Str::ulid(),
+                'code' => 'TEST-001',
                 'name' => 'Test Project',
                 'description' => 'Sample project for E2E testing',
                 'status' => 'active',

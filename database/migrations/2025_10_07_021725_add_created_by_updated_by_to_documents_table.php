@@ -88,6 +88,11 @@ return new class extends Migration
      */
     private function indexExists(string $table, string $index): bool
     {
+        // Skip index checks for SQLite (E2E testing)
+        if (config('database.default') === 'sqlite') {
+            return false;
+        }
+
         $indexes = \DB::select("
             SELECT INDEX_NAME 
             FROM information_schema.STATISTICS 

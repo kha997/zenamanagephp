@@ -1,0 +1,96 @@
+name: E2E Smoke Tests Debug
+
+on:
+  push:
+    branches: [ feature/repo-cleanup ]
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: zenamanage_e2e
+          MYSQL_USER: e2e_user
+          MYSQL_PASSWORD: e2e_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3, pdo_sqlite, bcmath, soap, intl, readline, libxml, zip, curl, gd, iconv, imagick, redis, memcached, pcov
+        coverage: none
+        
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Configure database for CI
+      run: |
+        echo "DB_CONNECTION=mysql" >> .env
+        echo "DB_HOST=127.0.0.1" >> .env
+        echo "DB_PORT=3306" >> .env
+        echo "DB_DATABASE=zenamanage_e2e" >> .env
+        echo "DB_USERNAME=e2e_user" >> .env
+        echo "DB_PASSWORD=e2e_password" >> .env
+        echo "CACHE_DRIVER=array" >> .env
+        echo "SESSION_DRIVER=array" >> .env
+        echo "QUEUE_CONNECTION=sync" >> .env
+        
+    - name: Test MySQL connection
+      run: |
+        echo "Testing MySQL connection..."
+        mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1 as test;"
+        
+    - name: Create database
+      run: |
+        php artisan migrate:fresh --force
+        
+    - name: Seed database
+      run: php artisan db:seed --class=E2EDatabaseSeeder --force
+      
+    - name: Verify database setup
+      run: |
+        echo "Database connection test:"
+        php artisan tinker --execute="echo 'DB Connection: ' . config('database.default'); echo 'DB Host: ' . config('database.connections.mysql.host'); echo 'DB Database: ' . config('database.connections.mysql.database');"
+        echo "User count:"
+        php artisan tinker --execute="echo 'Users: ' . App\Models\User::count();"
+        
+    - name: Test environment variables
+      run: |
+        echo "SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}"
+        echo "SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}"
+        
+    - name: Run smoke tests
+      run: npm run test:e2e:smoke
+      env:
+        SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+        SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}

@@ -56,8 +56,18 @@ return new class extends Migration
             ? $table . '_' . implode('_', $columns) . '_index'
             : $table . '_' . $columns . '_index';
 
-        $indexes = DB::select("SHOW INDEX FROM {$table}");
-        $indexExists = collect($indexes)->contains('Key_name', $indexName);
+        // Check if index exists - SQLite compatible way
+        $indexExists = false;
+        
+        if (config('database.default') === 'sqlite') {
+            // For SQLite, check if index exists by querying sqlite_master
+            $indexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='{$table}'");
+            $indexExists = collect($indexes)->contains('name', $indexName);
+        } else {
+            // For MySQL/PostgreSQL, use SHOW INDEX
+            $indexes = DB::select("SHOW INDEX FROM {$table}");
+            $indexExists = collect($indexes)->contains('Key_name', $indexName);
+        }
 
         if (!$indexExists) {
             Schema::table($table, function (Blueprint $table) use ($columns) {

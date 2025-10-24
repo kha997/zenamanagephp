@@ -11,6 +11,18 @@ jobs:
   smoke-tests:
     runs-on: ubuntu-latest
     
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: zenamanage_e2e
+          MYSQL_USER: e2e_user
+          MYSQL_PASSWORD: e2e_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -45,25 +57,29 @@ jobs:
       
     - name: Configure database for CI
       run: |
-        echo "DB_CONNECTION=sqlite" >> .env
-        echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
+        echo "DB_CONNECTION=mysql" >> .env
+        echo "DB_HOST=127.0.0.1" >> .env
+        echo "DB_PORT=3306" >> .env
+        echo "DB_DATABASE=zenamanage_e2e" >> .env
+        echo "DB_USERNAME=e2e_user" >> .env
+        echo "DB_PASSWORD=e2e_password" >> .env
         echo "CACHE_DRIVER=array" >> .env
         echo "SESSION_DRIVER=array" >> .env
         echo "QUEUE_CONNECTION=sync" >> .env
       
     - name: Create database
       run: |
-        touch database/database.sqlite
-        php artisan migrate --force
+        php artisan migrate:fresh --force
         
     - name: Seed database
-      run: php artisan db:seed --force
+      run: php artisan db:seed --class=E2EDatabaseSeeder --force
       
     - name: Verify database setup
       run: |
-        echo "Database file exists: $(ls -la database/database.sqlite)"
         echo "Database connection test:"
-        php artisan tinker --execute="echo 'DB Connection: ' . config('database.default'); echo 'DB Path: ' . config('database.connections.sqlite.database');"
+        php artisan tinker --execute="echo 'DB Connection: ' . config('database.default'); echo 'DB Host: ' . config('database.connections.mysql.host'); echo 'DB Database: ' . config('database.connections.mysql.database');"
+        echo "User count:"
+        php artisan tinker --execute="echo 'Users: ' . App\Models\User::count();"
       
     - name: Start Laravel server
       run: php artisan serve --host=127.0.0.1 --port=8000 &

@@ -45,11 +45,32 @@ jobs:
         php-version: '8.2'
         extensions: mbstring, dom, fileinfo, mysql, sqlite3, pdo_sqlite, bcmath, soap, intl, readline, libxml, zip, curl, gd, iconv, imagick, redis, memcached, pcov
         coverage: none
+        cache: false
         tools: composer:v2
         
     - name: Verify PHP version
       run: |
         php --version
+        composer --version
+        which php
+        echo "PHP_PATH: $(which php)"
+        
+    - name: Force PHP 8.2 path
+      run: |
+        echo "Current PHP version:"
+        php --version
+        echo "Setting PHP path..."
+        echo "/opt/hostedtoolcache/php/8.2.*/x64/bin" >> $GITHUB_PATH
+        echo "Updated PATH:"
+        echo $PATH
+        
+    - name: Verify PHP 8.2 is active
+      run: |
+        echo "Final PHP version check:"
+        php --version
+        echo "PHP location:"
+        which php
+        echo "Composer version:"
         composer --version
         
     - name: Install Composer dependencies

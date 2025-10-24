@@ -44,7 +44,7 @@ export default defineConfig({
   },
 
   /* Global setup for all tests */
-  globalSetup: require.resolve('./tests/e2e/setup/global-setup.ts'),
+  globalSetup: require.resolve('./tests/E2E/setup/global-setup.ts'),
 
   /* Configure projects for major browsers */
   projects: [

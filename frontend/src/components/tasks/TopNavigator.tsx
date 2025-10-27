@@ -1,14 +1,21 @@
-// frontend/src/components/tasks/TopNavigator.tsx
-
 import React from 'react';
+import { useTasks } from '@/entities/tasks/hooks';
 
 const TopNavigator: React.FC = () => {
+  const { data: allTasksData } = useTasks({ tenantId: 'tenant1' });
+  const allTasks = allTasksData?.data || [];
+
+  const myTasksCount = allTasks.filter((task) => task.assignees.includes('user1')).length; // Replace 'user1' with actual user ID
+  const assignedCount = allTasks.filter((task) => task.assignees.length > 0).length;
+  const overdueCount = allTasks.filter((task) => new Date(task.dueDate) < new Date()).length;
+  const completedCount = allTasks.filter((task) => task.status === 'Done').length;
+
   const tabs = [
-    { label: 'All', count: 0 },
-    { label: 'My Tasks', count: 0 },
-    { label: 'Assigned', count: 0 },
-    { label: 'Overdue', count: 0 },
-    { label: 'Completed', count: 0 },
+    { label: 'All', count: allTasks.length },
+    { label: 'My Tasks', count: myTasksCount },
+    { label: 'Assigned', count: assignedCount },
+    { label: 'Overdue', count: overdueCount },
+    { label: 'Completed', count: completedCount },
   ];
 
   return (

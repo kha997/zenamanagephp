@@ -1,12 +1,25 @@
-// frontend/src/components/tasks/TasksTable.tsx
-
 import React from 'react';
+import { useTasks } from '@/entities/tasks/hooks';
+import { Skeleton } from '@/shared/ui/skeleton';
 
 const TasksTable: React.FC = () => {
-  const tasks = [
-    { id: 1, title: 'Task 1', status: 'Todo', priority: 'High', assignees: ['User 1'], project: 'Project A', due: '2023-12-31', updated: '2023-12-25' },
-    { id: 2, title: 'Task 2', status: 'InProgress', priority: 'Medium', assignees: ['User 2'], project: 'Project B', due: '2024-01-15', updated: '2023-12-28' },
-  ];
+  const { data, isLoading, isError, error } = useTasks({ tenantId: 'tenant1' });
+
+  if (isLoading) {
+    return (
+      <div>
+        <Skeleton height={20} width={100} />
+        <Skeleton height={20} width={150} />
+        <Skeleton height={20} width={120} />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return <div>Error: {error.message}</div>;
+  }
+
+  const tasks = data?.data || [];
 
   return (
     <div className="overflow-x-auto">

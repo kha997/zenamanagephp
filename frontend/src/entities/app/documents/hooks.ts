@@ -59,6 +59,17 @@ export const useDocumentVersions = (id: number, enabled: boolean = true) => {
   });
 };
 
+// Get document activity
+export const useDocumentActivity = (id: number, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: [...documentsKeys.detail(id), 'activity'],
+    queryFn: () => documentsApi.getDocumentActivity(id),
+    enabled: enabled && !!id,
+    staleTime: 60_000, // 1 minute
+    retry: 1,
+  });
+};
+
 // Upload document mutation
 export const useUploadDocument = () => {
   const queryClient = useQueryClient();
@@ -162,6 +173,22 @@ export const useBulkUpdateDocumentVisibility = () => {
       documentsApi.bulkUpdateVisibility(documentIds, isPublic),
     onSuccess: () => {
       // Invalidate documents list
+      queryClient.invalidateQueries({ queryKey: documentsKeys.lists() });
+    },
+  });
+};
+
+// Revert version mutation
+export const useRevertVersion = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, versionId, comment }: { id: number; versionId: number; comment: string }) =>
+      documentsApi.revertVersion(id, versionId, comment),
+    onSuccess: (_, { id }) => {
+      // Invalidate document, versions, and list
+      queryClient.invalidateQueries({ queryKey: documentsKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: documentsKeys.versions(id) });
       queryClient.invalidateQueries({ queryKey: documentsKeys.lists() });
     },
   });

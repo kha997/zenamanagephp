@@ -42,6 +42,11 @@ export const useTasksStore = create<TasksState>((set, get) => ({
    * Lấy danh sách tasks của một project
    */
   fetchTasks: async (projectId: string, filters = {}) => {
+    if (!projectId) {
+      set({ tasks: [], isLoading: false, error: null })
+      return
+    }
+    
     set({ isLoading: true, error: null })
     
     try {
@@ -188,9 +193,14 @@ export const useTasksStore = create<TasksState>((set, get) => ({
    * Cập nhật trạng thái task
    */
   updateTaskStatus: async (projectId: string, taskId: string, status: string) => {
+    if (!projectId || !taskId) {
+      throw new Error('Project ID and Task ID are required')
+    }
+    
     try {
       await get().updateTask(projectId, taskId, { status })
     } catch (error) {
+      console.error('Error updating task status:', error)
       throw error
     }
   },

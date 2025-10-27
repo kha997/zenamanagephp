@@ -1,50 +1,116 @@
 {{-- Shared Header Component --}}
-<header class="bg-white shadow-sm border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
-            {{-- Logo --}}
-            <div class="flex items-center">
-                <a href="{{ route('app.dashboard') }}" class="flex items-center">
-                    <img class="h-8 w-auto" src="{{ asset('images/logo.svg') }}" alt="ZenaManage">
-                    <span class="ml-2 text-xl font-bold text-gray-900">ZenaManage</span>
-                </a>
-            </div>
+{{-- This component provides a bridge between Laravel Blade and React HeaderShell --}}
 
-            {{-- Navigation --}}
-            <nav class="hidden md:flex space-x-8">
-                <a href="{{ route('app.dashboard') }}" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                    Dashboard
-                </a>
-                <a href="{{ route('app.projects.index') }}" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                    Projects
-                </a>
-                <a href="{{ route('app.tasks.index') }}" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                    Tasks
-                </a>
-                <a href="{{ route('app.team.index') }}" class="text-gray-500 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                    Team
-                </a>
-            </nav>
+@props([
+    'user' => null,
+    'variant' => 'app'
+])
 
-            {{-- User Menu --}}
-            <div class="flex items-center space-x-4">
-                {{-- Notifications --}}
-                <div class="relative">
-                    <button class="p-2 text-gray-400 hover:text-gray-500" x-data="{ notificationsOpen: false }" @click="notificationsOpen = !notificationsOpen">
-                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 1 0-15 0v5z" />
-                        </svg>
-                    </button>
-                </div>
+@php
+    $user = $user ?? Auth::user();
+    
+    // Try to get tenant safely
+    try {
+        $tenant = $user?->tenant;
+    } catch (\Exception $e) {
+        $tenant = null;
+    }
+    
+    // Load menu items from config/menu.json
+    $menuJson = file_get_contents(config_path('menu.json'));
+    $menuItems = $menuJson ? json_decode($menuJson, true) : [];
+    
+    // User data for React (simplified to avoid database queries)
+    $userData = $user ? [
+        'id' => $user->id,
+        'name' => $user->name ?? (isset($user->first_name) ? $user->first_name . ' ' . $user->last_name : 'User'),
+        'email' => $user->email ?? '',
+        'avatar' => $user->avatar ?? null,
+        'role' => 'user',
+        'roles' => ['user'],
+        'tenant_id' => $user->tenant_id ?? null,
+        'permissions' => [],
+    ] : null;
+    
+    // Tenant data
+    $tenantData = $tenant ? [
+        'id' => $tenant->id,
+        'name' => $tenant->name,
+        'type' => $tenant->type ?? null,
+    ] : null;
+    
+    // Notifications data (mock for now, will be replaced with real API call)
+    $notifications = json_encode([]);
+    $unreadCount = 0;
+    
+    // Breadcrumbs (will be dynamically set by pages)
+    $breadcrumbs = json_encode([]);
+@endphp
 
-                {{-- User Dropdown --}}
-                <div class="relative">
-                    <button class="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        <img class="h-8 w-8 rounded-full" src="{{ auth()->user()->avatar ?? asset('images/default-avatar.png') }}" alt="{{ auth()->user()->name }}">
-                        <span class="ml-2 text-gray-700">Hello, {{ auth()->user()->name }}</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</header>
+{{-- Mount point for React HeaderShell --}}
+<div id="header-mount" 
+     data-testid="header-legacy"
+     data-source="blade"
+     data-user='@json($userData)'
+     data-tenant='@json($tenantData)'
+     data-menu-items='@json($menuItems)'
+     data-notifications='@json($notifications)'
+     data-unread-count='@json($unreadCount)'
+     data-breadcrumbs='@json($breadcrumbs)'
+     data-logout-url="{{ route('logout') }}"
+     data-csrf-token="{{ csrf_token() }}"
+     style="min-height: 80px; background: #f0f0f0; border: 2px dashed #ccc; padding: 10px;">
+    <!-- React Header will mount here -->
+    <div style="color: #666; font-size: 12px;">Waiting for React to mount...</div>
+</div>
+
+{{-- Initialize header via JavaScript --}}
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🔍 Debug: DOMContentLoaded fired');
+        
+        // Get mount element
+        const mountEl = document.getElementById('header-mount');
+        console.log('🔍 Debug: Mount element:', mountEl);
+        
+        if (!mountEl) {
+            console.error('❌ Header mount element not found!');
+            return;
+        }
+        
+        // Get data from attributes
+        const userData = JSON.parse(mountEl.dataset.user || 'null');
+        const tenantData = JSON.parse(mountEl.dataset.tenant || 'null');
+        const menuItems = JSON.parse(mountEl.dataset.menuItems || '[]');
+        const notifications = JSON.parse(mountEl.dataset.notifications || '[]');
+        const unreadCount = parseInt(mountEl.dataset.unreadCount || '0');
+        const breadcrumbs = JSON.parse(mountEl.dataset.breadcrumbs || '[]');
+        const logoutUrl = mountEl.dataset.logoutUrl;
+        const csrfToken = mountEl.dataset.csrfToken;
+        
+        console.log('🔍 Debug: User data:', userData);
+        console.log('🔍 Debug: Tenant data:', tenantData);
+        console.log('🔍 Debug: Menu items:', menuItems);
+        console.log('🔍 Debug: initHeader function:', typeof window.initHeader);
+        
+        // Initialize header if the React components are loaded
+        if (window.initHeader) {
+            console.log('✅ Debug: Calling initHeader...');
+            window.initHeader({
+                user: userData,
+                tenant: tenantData,
+                menuItems: menuItems,
+                notifications: notifications,
+                unreadCount: unreadCount,
+                breadcrumbs: breadcrumbs,
+                logoutUrl: logoutUrl,
+                csrfToken: csrfToken,
+            });
+            console.log('✅ Debug: initHeader called successfully');
+        } else {
+            console.error('❌ initHeader function not found!');
+        }
+    });
+</script>
+@endpush

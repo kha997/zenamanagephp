@@ -5,6 +5,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Header Design Tokens - Light Theme (Default) */
+:root {
+  /* Header Colors */
+  --hdr-bg: #ffffff;
+  --hdr-fg: #111827;
+  --hdr-border: #e5e7eb;
+  --hdr-bg-hover: #f9fafb;
+  --hdr-fg-muted: #6b7280;
+  
+  /* Navigation Colors */
+  --nav-active: #3b82f6;
+  --nav-hover: #60a5fa;
+  --nav-active-bg: #dbeafe;
+  
+  /* Header Dimensions */
+  --hdr-h: 72px;
+  --hdr-h-condensed: 56px;
+  
+  /* Shadows */
+  --hdr-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --hdr-shadow-condensed: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
 /* Table Design Tokens */
 :root {
   /* Table Colors */

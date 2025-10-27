@@ -61,7 +61,7 @@
             :title="__('projects.empty.title')"
             :description="__('projects.empty.description')"
             :action-text="__('projects.empty.action')"
-            :action-url="route('app.projects.create')" />
+            :action-url="/frontend/app/projects/create" />
     </div>
     @endforelse
 </div>

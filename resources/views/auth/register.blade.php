@@ -71,6 +71,7 @@
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700">Full Name</label>
                     <input id="name" name="name" type="text" autocomplete="name" required 
+                           data-testid="name-input"
                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm @error('name') border-red-300 @enderror" 
                            placeholder="Enter your full name" 
                            value="{{ old('name') }}">
@@ -80,6 +81,7 @@
                 <div>
                     <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
                     <input id="email" name="email" type="email" autocomplete="email" required 
+                           data-testid="email-input"
                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm @error('email') border-red-300 @enderror" 
                            placeholder="Enter your email address" 
                            value="{{ old('email') }}">
@@ -99,9 +101,10 @@
                     <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
                     <div class="mt-1 relative">
                         <input id="password" name="password" type="password" autocomplete="new-password" required 
+                               data-testid="password-input"
                                class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm @error('password') border-red-300 @enderror" 
                                placeholder="Create a strong password">
-                        <button type="button" onclick="togglePassword('password')" 
+                        <button type="button" onclick="togglePassword('password')" data-testid="password-toggle" 
                                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
                             <svg id="password-eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -119,6 +122,7 @@
                     <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm Password</label>
                     <div class="mt-1 relative">
                         <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required 
+                               data-testid="password-confirm-input"
                                class="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm @error('password_confirmation') border-red-300 @enderror" 
                                placeholder="Confirm your password">
                         <button type="button" onclick="togglePassword('password_confirmation')" 
@@ -146,6 +150,7 @@
                 <!-- Terms and Conditions -->
                 <div class="flex items-center">
                     <input id="terms" name="terms" type="checkbox" required 
+                           data-testid="terms-checkbox"
                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                     <label for="terms" class="ml-2 block text-sm text-gray-900">
                         I agree to the 
@@ -157,7 +162,7 @@
             </div>
 
             <div>
-                <button type="submit" id="registerButton"
+                <button type="submit" id="registerButton" data-testid="register-submit"
                         class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
                     <span class="absolute left-0 inset-y-0 flex items-center pl-3">
                         <svg class="h-5 w-5 text-blue-500 group-hover:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -300,6 +305,7 @@ function showError(message) {
     
     // Create error message element
     const errorDiv = document.createElement('div');
+    errorDiv.setAttribute('data-testid', 'error-message');
     errorDiv.className = 'error-message rounded-md bg-red-50 p-4';
     errorDiv.innerHTML = `
         <div class="flex">
@@ -328,6 +334,7 @@ function showSuccess(message) {
     
     // Create success message element
     const successDiv = document.createElement('div');
+    successDiv.setAttribute('data-testid', 'success-message');
     successDiv.className = 'success-message rounded-md bg-green-50 p-4';
     successDiv.innerHTML = `
         <div class="flex">

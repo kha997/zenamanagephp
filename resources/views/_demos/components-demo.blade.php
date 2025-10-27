@@ -24,22 +24,28 @@
             <div class="space-y-4">
                 <div>
                     <h3 class="text-lg font-semibold mb-2">App Header</h3>
-                    <x-shared.header-standardized 
+                    <x-shared.header-wrapper 
                         variant="app"
+                        :user="Auth::user()"
+                        :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
                         :notifications="[
                             ['message' => 'New project created', 'icon' => 'project-diagram', 'color' => 'blue', 'time' => '2m ago'],
                             ['message' => 'Task completed', 'icon' => 'check-circle', 'color' => 'green', 'time' => '5m ago']
-                        ]" />
+                        ]"
+                        :unread-count="2" />
                 </div>
                 
                 <div>
                     <h3 class="text-lg font-semibold mb-2">Admin Header</h3>
-                    <x-shared.header-standardized 
+                    <x-shared.header-wrapper 
                         variant="admin"
+                        :user="Auth::user()"
+                        :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'admin')"
                         :notifications="[
                             ['message' => 'New tenant registered', 'icon' => 'building', 'color' => 'blue', 'time' => '10m ago'],
                             ['message' => 'System backup completed', 'icon' => 'save', 'color' => 'green', 'time' => '1h ago']
-                        ]" />
+                        ]"
+                        :unread-count="2" />
                 </div>
             </div>
         </div>

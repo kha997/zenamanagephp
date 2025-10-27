@@ -176,6 +176,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
         
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -189,11 +191,30 @@ jobs:
       - name: Run ESLint
         run: npm run lint
         
+      - name: Run UI standards gate
+        run: npm run check:ui-standards
+        env:
+          UI_STANDARDS_BASE: ${{ github.base_ref && format('origin/{0}', github.base_ref) || 'origin/main' }}
+
       - name: Run Prettier check
         run: npm run format:check
         
+      - name: Install frontend workspace deps
+        working-directory: frontend
+        run: npm ci
+        
       - name: Build assets
         run: npm run build
+        
+      - name: Build frontend workspace bundle
+        working-directory: frontend
+        run: npm run build
+        
+      - name: Ensure Storybook build
+        run: npm run storybook:build
+        
+      - name: Check performance budgets
+        run: npm run check:performance
         
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3

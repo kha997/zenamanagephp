@@ -1,5 +1,5 @@
 import React from 'react';
-import { Notification } from './NotificationsBell';
+import type { Notification } from './NotificationsBell';
 
 // Constants
 const TEXT_HEADER_FG = 'text-header-fg';
@@ -59,6 +59,7 @@ export const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({
           <h3 className="text-sm font-medium text-header-fg">Notifications</h3>
           {unreadCount > 0 && (
             <button
+              type="button"
               onClick={onMarkAllAsRead}
               className="text-xs text-nav-active hover:text-nav-hover transition-colors"
             >
@@ -83,9 +84,10 @@ export const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({
         ) : (
           <div className="divide-y divide-header-border">
             {notifications.map((notification) => (
-              <div
+              <button
                 key={notification.id}
-                className={`p-4 hover:bg-header-bg-hover transition-colors cursor-pointer ${
+                type="button"
+                className={`w-full text-left p-4 hover:bg-header-bg-hover transition-colors ${
                   !notification.read ? 'bg-blue-50' : ''
                 }`}
                 onClick={() => handleNotificationClick(notification)}
@@ -116,7 +118,7 @@ export const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({
                     </p>
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -125,12 +127,12 @@ export const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({
       {/* Footer */}
       {notifications.length > 0 && (
         <div className="px-4 py-3 border-t border-header-border bg-header-bg-hover">
-          <button
-            onClick={() => window.location.href = '/app/notifications'}
-            className="w-full text-center text-sm text-nav-active hover:text-nav-hover transition-colors"
+          <a
+            href="/app/notifications"
+            className="w-full inline-flex justify-center text-sm text-nav-active hover:text-nav-hover transition-colors"
           >
             View all notifications
-          </button>
+          </a>
         </div>
       )}
     </div>

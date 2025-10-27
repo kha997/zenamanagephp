@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SearchResult } from './SearchToggle';
+import type { SearchResult } from './SearchToggle';
 
 export interface SearchOverlayProps {
   query: string;
@@ -26,18 +26,22 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
     inputRef.current?.focus();
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // Handle search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchQuery(value);
     onSearch(value);
-  };
-
-  // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
   };
 
   // Handle result click
@@ -79,7 +83,13 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
   };
 
   return (
-    <div className="w-96 max-h-96 overflow-hidden" onKeyDown={handleKeyDown}>
+    <div
+      className="w-96 max-h-96 overflow-hidden"
+      role="dialog"
+      aria-label="Search results"
+      aria-modal="true"
+      tabIndex={-1}
+    >
       {/* Search Input */}
       <div className="p-4 border-b border-header-border">
         <div className="relative">
@@ -133,9 +143,10 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
         ) : (
           <div className="divide-y divide-header-border">
             {results.map((result) => (
-              <div
+              <button
                 key={result.id}
-                className="p-4 hover:bg-header-bg-hover transition-colors cursor-pointer"
+                type="button"
+                className="w-full text-left p-4 hover:bg-header-bg-hover transition-colors"
                 onClick={() => handleResultClick(result)}
               >
                 <div className="flex items-start space-x-3">
@@ -171,7 +182,7 @@ export const SearchOverlay: React.FC<SearchOverlayProps> = ({
                     )}
                   </div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Unified;
 
 use App\Http\Controllers\Controller;
+use App\Models\Project;
+use App\Models\Task;
 use App\Services\TaskManagementService;
 use App\Support\ApiResponse;
 use Illuminate\Http\Request;
@@ -70,10 +72,10 @@ class TaskManagementController extends Controller
     /**
      * Get task by ID
      */
-    public function getTask(string $id): JsonResponse
+    public function getTask(string $projectId, string $id): JsonResponse
     {
         try {
-            $task = $this->taskService->getTaskById($id, auth()->user()->tenant_id);
+            $task = $this->taskService->getTaskById($id, (string) auth()->user()->tenant_id);
 
             if (!$task) {
                 return ApiResponse::error('Task not found', 404);
@@ -96,7 +98,7 @@ class TaskManagementController extends Controller
     /**
      * Create new task
      */
-    public function createTask(Request $request): JsonResponse
+    public function createTask(Request $request, string $projectId): JsonResponse
     {
         try {
             $request->validate([
@@ -113,7 +115,7 @@ class TaskManagementController extends Controller
                 'tags.*' => 'string|max:50'
             ]);
 
-            $task = $this->taskService->createTask($request->all(), auth()->user()->tenant_id);
+            $task = $this->taskService->createTask($request->all(), (string) auth()->user()->tenant_id);
 
             return ApiResponse::success($task, 'Task created successfully', 201);
 
@@ -133,7 +135,7 @@ class TaskManagementController extends Controller
     /**
      * Update task
      */
-    public function updateTask(Request $request, string $id): JsonResponse
+    public function updateTask(Request $request, string $projectId, string $id): JsonResponse
     {
         try {
             $request->validate([
@@ -151,7 +153,7 @@ class TaskManagementController extends Controller
                 'tags.*' => 'string|max:50'
             ]);
 
-            $task = $this->taskService->updateTask($id, $request->all(), auth()->user()->tenant_id);
+            $task = $this->taskService->updateTask($id, $request->all(), (string) auth()->user()->tenant_id);
 
             return ApiResponse::success($task, 'Task updated successfully');
 
@@ -172,10 +174,10 @@ class TaskManagementController extends Controller
     /**
      * Delete task
      */
-    public function deleteTask(string $id): JsonResponse
+    public function deleteTask(string $projectId, string $id): JsonResponse
     {
         try {
-            $deleted = $this->taskService->deleteTask($id, auth()->user()->tenant_id);
+            $deleted = $this->taskService->deleteTask($id, (string) auth()->user()->tenant_id);
 
             if (!$deleted) {
                 return ApiResponse::error('Task not found', 404);
@@ -292,12 +294,60 @@ class TaskManagementController extends Controller
     /**
      * Get tasks for project
      */
-    public function getTasksForProject(string $projectId): JsonResponse
+    public function getTasksForProject(Request $request, string $projectId): JsonResponse
     {
         try {
-            $tasks = $this->taskService->getTasksForProject($projectId, auth()->user()->tenant_id);
+            $perPage = $request->get('per_page', 15);
+            $status = $request->get('status');
+            $search = $request->get('search');
+            $assignee = $request->get('assigned_to');
 
-            return ApiResponse::success($tasks, 'Project tasks retrieved successfully');
+            // Check if user has access to this project
+            $project = Project::where('id', $projectId)
+                ->where('tenant_id', auth()->user()->tenant_id)
+                ->first();
+
+            if (!$project) {
+                return ApiResponse::forbidden('Access denied to this project');
+            }
+
+            $query = Task::with(['assignee', 'creator'])
+                ->where('project_id', $projectId)
+                ->where('tenant_id', auth()->user()->tenant_id);
+
+            // Apply filters
+            if ($status) {
+                $query->where('status', $status);
+            }
+
+            if ($search) {
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%");
+                });
+            }
+
+            if ($assignee) {
+                $query->where('assigned_to', $assignee);
+            }
+
+            $tasks = $query->orderBy('priority', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage);
+
+            return ApiResponse::paginated($tasks->items(), [
+                'current_page' => $tasks->currentPage(),
+                'last_page' => $tasks->lastPage(),
+                'per_page' => $tasks->perPage(),
+                'total' => $tasks->total(),
+                'from' => $tasks->firstItem(),
+                'to' => $tasks->lastItem(),
+            ], 'Project tasks retrieved successfully', [
+                'first' => $tasks->url(1),
+                'last' => $tasks->url($tasks->lastPage()),
+                'prev' => $tasks->previousPageUrl(),
+                'next' => $tasks->nextPageUrl(),
+            ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to get project tasks', [
@@ -317,7 +367,7 @@ class TaskManagementController extends Controller
     public function getTaskStatistics(): JsonResponse
     {
         try {
-            $stats = $this->taskService->getTaskStatistics(auth()->user()->tenant_id);
+            $stats = $this->taskService->getTaskStatistics((string) auth()->user()->tenant_id);
 
             return ApiResponse::success($stats, 'Task statistics retrieved successfully');
 

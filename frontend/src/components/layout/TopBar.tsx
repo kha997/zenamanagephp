@@ -15,7 +15,7 @@ export function TopBar() {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         {/* Left side - Search */}
         <div className="flex items-center flex-1 max-w-md">

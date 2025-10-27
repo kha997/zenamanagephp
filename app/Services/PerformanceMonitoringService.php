@@ -1,265 +1,451 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Models\PerformanceMetric;
-use App\Models\DashboardMetric;
-use App\Models\DashboardMetricValue;
-use App\Models\Tenant;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class PerformanceMonitoringService
 {
-    /**
-     * Log performance metric.
-     */
-    public function logMetric(string $name, float $value, string $unit, string $category, ?Tenant $tenant = null, ?array $metadata = null): void
-    {
-        $metric = PerformanceMetric::create([
-            'metric_name' => $name,
-            'metric_value' => $value,
-            'metric_unit' => $unit,
-            'category' => $category,
-            'tenant_id' => $tenant?->id,
-            'metadata' => $metadata,
-        ]);
+    protected array $performanceThresholds = [
+        'page_load_time' => 500, // ms
+        'api_response_time' => 300, // ms
+        'memory_usage' => 80, // percentage
+        'database_query_time' => 100, // ms
+        'cache_hit_ratio' => 90, // percentage
+    ];
 
-        // Log to Laravel log
-        Log::info('Performance metric logged', [
-            'metric_name' => $name,
-            'metric_value' => $value,
-            'metric_unit' => $unit,
-            'category' => $category,
-            'tenant_id' => $tenant?->id,
-            'metadata' => $metadata,
-        ]);
+    protected array $performanceMetrics = [];
+
+    public function __construct()
+    {
+        $this->initializeMetrics();
     }
 
     /**
-     * Log page load time.
+     * Initialize performance metrics
      */
-    public function logPageLoadTime(float $loadTime, string $page, ?Tenant $tenant = null): void
+    protected function initializeMetrics(): void
     {
-        $this->logMetric(
-            'page_load_time',
-            $loadTime,
-            'ms',
-            'page_performance',
-            $tenant,
-            ['page' => $page, 'timestamp' => now()->toISOString()]
-        );
-
-        // Check if load time exceeds threshold
-        if ($loadTime > 500) {
-            Log::warning('Page load time exceeds threshold', [
-                'load_time' => $loadTime,
-                'page' => $page,
-                'threshold' => 500,
-                'tenant_id' => $tenant?->id,
-            ]);
-        }
-    }
-
-    /**
-     * Log API response time.
-     */
-    public function logApiResponseTime(float $responseTime, string $endpoint, ?Tenant $tenant = null): void
-    {
-        $this->logMetric(
-            'api_response_time',
-            $responseTime,
-            'ms',
-            'api_performance',
-            $tenant,
-            ['endpoint' => $endpoint, 'timestamp' => now()->toISOString()]
-        );
-
-        // Check if response time exceeds threshold
-        if ($responseTime > 300) {
-            Log::warning('API response time exceeds threshold', [
-                'response_time' => $responseTime,
-                'endpoint' => $endpoint,
-                'threshold' => 300,
-                'tenant_id' => $tenant?->id,
-            ]);
-        }
-    }
-
-    /**
-     * Log database query time.
-     */
-    public function logDatabaseQueryTime(float $queryTime, string $query, ?Tenant $tenant = null): void
-    {
-        $this->logMetric(
-            'database_query_time',
-            $queryTime,
-            'ms',
-            'database_performance',
-            $tenant,
-            ['query' => $query, 'timestamp' => now()->toISOString()]
-        );
-
-        // Check if query time exceeds threshold
-        if ($queryTime > 100) {
-            Log::warning('Database query time exceeds threshold', [
-                'query_time' => $queryTime,
-                'query' => $query,
-                'threshold' => 100,
-                'tenant_id' => $tenant?->id,
-            ]);
-        }
-    }
-
-    /**
-     * Log memory usage.
-     */
-    public function logMemoryUsage(?Tenant $tenant = null): void
-    {
-        $currentMemory = memory_get_usage(true) / 1024 / 1024; // MB
-        $peakMemory = memory_get_peak_usage(true) / 1024 / 1024; // MB
-        
-        $this->logMetric(
-            'memory_usage',
-            $currentMemory,
-            'MB',
-            'system_performance',
-            $tenant,
-            ['peak_memory' => $peakMemory, 'timestamp' => now()->toISOString()]
-        );
-
-        // Check if memory usage exceeds threshold
-        $memoryLimit = (int)ini_get('memory_limit') * 1024 * 1024; // Convert to bytes
-        $usagePercentage = ($currentMemory * 1024 * 1024 / $memoryLimit) * 100;
-        
-        if ($usagePercentage > 80) {
-            Log::warning('Memory usage exceeds threshold', [
-                'current_memory' => $currentMemory,
-                'peak_memory' => $peakMemory,
-                'usage_percentage' => $usagePercentage,
-                'threshold' => 80,
-                'tenant_id' => $tenant?->id,
-            ]);
-        }
-    }
-
-    /**
-     * Log cache performance.
-     */
-    public function logCachePerformance(float $operationTime, string $operation, ?Tenant $tenant = null): void
-    {
-        $this->logMetric(
-            'cache_operation_time',
-            $operationTime,
-            'ms',
-            'cache_performance',
-            $tenant,
-            ['operation' => $operation, 'timestamp' => now()->toISOString()]
-        );
-
-        // Check if cache operation time exceeds threshold
-        if ($operationTime > 10) {
-            Log::warning('Cache operation time exceeds threshold', [
-                'operation_time' => $operationTime,
-                'operation' => $operation,
-                'threshold' => 10,
-                'tenant_id' => $tenant?->id,
-            ]);
-        }
-    }
-
-    /**
-     * Get performance summary for tenant.
-     */
-    public function getPerformanceSummary(Tenant $tenant): array
-    {
-        $metrics = PerformanceMetric::where('tenant_id', $tenant->id)
-            ->where('created_at', '>=', now()->subHours(24))
-            ->get();
-
-        return [
-            'total_metrics' => $metrics->count(),
-            'average_page_load_time' => $metrics->where('metric_name', 'page_load_time')->avg('metric_value'),
-            'average_api_response_time' => $metrics->where('metric_name', 'api_response_time')->avg('metric_value'),
-            'average_database_query_time' => $metrics->where('metric_name', 'database_query_time')->avg('metric_value'),
-            'average_memory_usage' => $metrics->where('metric_name', 'memory_usage')->avg('metric_value'),
-            'average_cache_operation_time' => $metrics->where('metric_name', 'cache_operation_time')->avg('metric_value'),
-            'warnings_count' => $this->getWarningsCount($tenant),
+        $this->performanceMetrics = [
+            'page_load_times' => [],
+            'api_response_times' => [],
+            'memory_usage' => [],
+            'database_query_times' => [],
+            'cache_hit_ratios' => [],
+            'error_rates' => [],
+            'throughput' => [],
         ];
     }
 
     /**
-     * Get warnings count for tenant.
+     * Record page load time
      */
-    private function getWarningsCount(Tenant $tenant): int
+    public function recordPageLoadTime(string $route, float $loadTime): void
     {
-        $metrics = PerformanceMetric::where('tenant_id', $tenant->id)
-            ->where('created_at', '>=', now()->subHours(24))
-            ->get();
+        $this->performanceMetrics['page_load_times'][] = [
+            'route' => $route,
+            'load_time' => $loadTime,
+            'timestamp' => now(),
+        ];
 
-        $warnings = 0;
-        
-        foreach ($metrics as $metric) {
-            switch ($metric->metric_name) {
-                case 'page_load_time':
-                    if ($metric->metric_value > 500) $warnings++;
-                    break;
-                case 'api_response_time':
-                    if ($metric->metric_value > 300) $warnings++;
-                    break;
-                case 'database_query_time':
-                    if ($metric->metric_value > 100) $warnings++;
-                    break;
-                case 'cache_operation_time':
-                    if ($metric->metric_value > 10) $warnings++;
-                    break;
-            }
+        // Log if exceeds threshold
+        if ($loadTime > $this->performanceThresholds['page_load_time']) {
+            Log::warning('Page load time exceeded threshold', [
+                'route' => $route,
+                'load_time' => $loadTime,
+                'threshold' => $this->performanceThresholds['page_load_time'],
+            ]);
         }
 
-        return $warnings;
+        // Store in cache for real-time monitoring
+        $this->storeMetric('page_load_time', $route, $loadTime);
     }
 
     /**
-     * Create dashboard metric.
+     * Record API response time
      */
-    public function createDashboardMetric(string $name, string $description, string $unit, string $category, ?Tenant $tenant = null): DashboardMetric
+    public function recordApiResponseTime(string $endpoint, float $responseTime): void
     {
-        return DashboardMetric::create([
-            'name' => $name,
-            'description' => $description,
-            'unit' => $unit,
-            'category' => $category,
-            'tenant_id' => $tenant?->id,
-            'is_active' => true,
-        ]);
+        $this->performanceMetrics['api_response_times'][] = [
+            'endpoint' => $endpoint,
+                'response_time' => $responseTime,
+            'timestamp' => now(),
+        ];
+
+        // Log if exceeds threshold
+        if ($responseTime > $this->performanceThresholds['api_response_time']) {
+            Log::warning('API response time exceeded threshold', [
+                'endpoint' => $endpoint,
+                'response_time' => $responseTime,
+                'threshold' => $this->performanceThresholds['api_response_time'],
+            ]);
+        }
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('api_response_time', $endpoint, $responseTime);
     }
 
     /**
-     * Record dashboard metric value.
+     * Record memory usage
      */
-    public function recordDashboardMetricValue(DashboardMetric $metric, float $value, ?Tenant $tenant = null, ?array $metadata = null): DashboardMetricValue
+    public function recordMemoryUsage(float $memoryUsage): void
     {
-        return DashboardMetricValue::create([
-            'metric_id' => $metric->id,
-            'tenant_id' => $tenant?->id,
-            'value' => $value,
-            'metadata' => $metadata,
-            'recorded_at' => now(),
-        ]);
+        $memoryPercentage = ($memoryUsage / memory_get_peak_usage(true)) * 100;
+        
+        $this->performanceMetrics['memory_usage'][] = [
+            'memory_usage' => $memoryUsage,
+            'memory_percentage' => $memoryPercentage,
+            'timestamp' => now(),
+        ];
+
+        // Log if exceeds threshold
+        if ($memoryPercentage > $this->performanceThresholds['memory_usage']) {
+            Log::warning('Memory usage exceeded threshold', [
+                'memory_usage' => $memoryUsage,
+                'memory_percentage' => $memoryPercentage,
+                'threshold' => $this->performanceThresholds['memory_usage'],
+            ]);
+        }
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('memory_usage', 'system', $memoryPercentage);
     }
 
     /**
-     * Get dashboard metrics for tenant.
+     * Record database query time
      */
-    public function getDashboardMetrics(Tenant $tenant): array
+    public function recordDatabaseQueryTime(string $query, float $queryTime): void
     {
-        return DashboardMetric::where('tenant_id', $tenant->id)
-            ->where('is_active', true)
-            ->with(['values' => function ($query) {
-                $query->orderBy('recorded_at', 'desc')->limit(10);
-            }])
-            ->get()
+        $this->performanceMetrics['database_query_times'][] = [
+            'query' => $query,
+                'query_time' => $queryTime,
+            'timestamp' => now(),
+        ];
+
+        // Log if exceeds threshold
+        if ($queryTime > $this->performanceThresholds['database_query_time']) {
+            Log::warning('Database query time exceeded threshold', [
+                'query' => $query,
+                'query_time' => $queryTime,
+                'threshold' => $this->performanceThresholds['database_query_time'],
+            ]);
+        }
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('database_query_time', $query, $queryTime);
+    }
+
+    /**
+     * Record cache hit ratio
+     */
+    public function recordCacheHitRatio(string $cacheKey, bool $hit): void
+    {
+        $this->performanceMetrics['cache_hit_ratios'][] = [
+            'cache_key' => $cacheKey,
+            'hit' => $hit,
+            'timestamp' => now(),
+        ];
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('cache_hit_ratio', $cacheKey, $hit ? 100 : 0);
+    }
+
+    /**
+     * Record error rate
+     */
+    public function recordError(string $error, string $context = ''): void
+    {
+        $this->performanceMetrics['error_rates'][] = [
+            'error' => $error,
+            'context' => $context,
+            'timestamp' => now(),
+        ];
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('error_rate', $context, 1);
+    }
+
+    /**
+     * Record throughput
+     */
+    public function recordThroughput(string $operation, int $count): void
+    {
+        $this->performanceMetrics['throughput'][] = [
+            'operation' => $operation,
+            'count' => $count,
+            'timestamp' => now(),
+        ];
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('throughput', $operation, $count);
+    }
+
+    /**
+     * Store metric in cache for real-time monitoring
+     */
+    protected function storeMetric(string $type, string $key, mixed $value): void
+    {
+        $cacheKey = "performance_metric_{$type}_{$key}_" . now()->format('Y-m-d-H-i');
+        Cache::put($cacheKey, $value, 300); // 5 minutes
+    }
+
+    /**
+     * Get performance statistics
+     */
+    public function getPerformanceStats(): array
+    {
+        $stats = [];
+
+        // Page load times
+        $pageLoadTimes = collect($this->performanceMetrics['page_load_times'])
+            ->pluck('load_time')
             ->toArray();
+        
+        if (!empty($pageLoadTimes)) {
+            $stats['page_load_time'] = [
+                'avg' => round(array_sum($pageLoadTimes) / count($pageLoadTimes), 2),
+                'min' => min($pageLoadTimes),
+                'max' => max($pageLoadTimes),
+                'p95' => $this->calculatePercentile($pageLoadTimes, 95),
+                'count' => count($pageLoadTimes),
+            ];
+        }
+
+        // API response times
+        $apiResponseTimes = collect($this->performanceMetrics['api_response_times'])
+            ->pluck('response_time')
+            ->toArray();
+        
+        if (!empty($apiResponseTimes)) {
+            $stats['api_response_time'] = [
+                'avg' => round(array_sum($apiResponseTimes) / count($apiResponseTimes), 2),
+                'min' => min($apiResponseTimes),
+                'max' => max($apiResponseTimes),
+                'p95' => $this->calculatePercentile($apiResponseTimes, 95),
+                'count' => count($apiResponseTimes),
+            ];
+        }
+
+        // Memory usage
+        $memoryUsage = collect($this->performanceMetrics['memory_usage'])
+            ->pluck('memory_percentage')
+            ->toArray();
+        
+        if (!empty($memoryUsage)) {
+            $stats['memory_usage'] = [
+                'avg' => round(array_sum($memoryUsage) / count($memoryUsage), 2),
+                'min' => min($memoryUsage),
+                'max' => max($memoryUsage),
+                'current' => memory_get_usage(true),
+                'peak' => memory_get_peak_usage(true),
+            ];
+        }
+
+        // Database query times
+        $queryTimes = collect($this->performanceMetrics['database_query_times'])
+            ->pluck('query_time')
+            ->toArray();
+        
+        if (!empty($queryTimes)) {
+            $stats['database_query_time'] = [
+                'avg' => round(array_sum($queryTimes) / count($queryTimes), 2),
+                'min' => min($queryTimes),
+                'max' => max($queryTimes),
+                'p95' => $this->calculatePercentile($queryTimes, 95),
+                'count' => count($queryTimes),
+            ];
+        }
+
+        // Cache hit ratios
+        $cacheHitRatios = collect($this->performanceMetrics['cache_hit_ratios'])
+            ->pluck('hit')
+            ->toArray();
+        
+        if (!empty($cacheHitRatios)) {
+            $hitCount = array_sum($cacheHitRatios);
+            $totalCount = count($cacheHitRatios);
+            $stats['cache_hit_ratio'] = [
+                'hit_ratio' => round(($hitCount / $totalCount) * 100, 2),
+                'hit_count' => $hitCount,
+                'miss_count' => $totalCount - $hitCount,
+                'total_count' => $totalCount,
+            ];
+        }
+
+        // Error rates
+        $errorCount = count($this->performanceMetrics['error_rates']);
+        $totalRequests = $errorCount + count($this->performanceMetrics['page_load_times']) + count($this->performanceMetrics['api_response_times']);
+        
+        if ($totalRequests > 0) {
+            $stats['error_rate'] = [
+                'error_count' => $errorCount,
+                'total_requests' => $totalRequests,
+                'error_percentage' => round(($errorCount / $totalRequests) * 100, 2),
+            ];
+        }
+
+        // Throughput
+        $throughput = collect($this->performanceMetrics['throughput'])
+            ->groupBy('operation')
+            ->map(function ($items) {
+                return $items->sum('count');
+            })
+            ->toArray();
+        
+        if (!empty($throughput)) {
+            $stats['throughput'] = $throughput;
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Get performance recommendations
+     */
+    public function getPerformanceRecommendations(): array
+    {
+        $recommendations = [];
+        $stats = $this->getPerformanceStats();
+
+        // Page load time recommendations
+        if (isset($stats['page_load_time']) && $stats['page_load_time']['avg'] > $this->performanceThresholds['page_load_time']) {
+            $recommendations[] = [
+                'type' => 'page_load_time',
+                'priority' => 'high',
+                'message' => 'Page load time is above threshold. Consider optimizing assets, enabling caching, or reducing database queries.',
+                'current_value' => $stats['page_load_time']['avg'],
+                'threshold' => $this->performanceThresholds['page_load_time'],
+            ];
+        }
+
+        // API response time recommendations
+        if (isset($stats['api_response_time']) && $stats['api_response_time']['avg'] > $this->performanceThresholds['api_response_time']) {
+            $recommendations[] = [
+                'type' => 'api_response_time',
+                'priority' => 'high',
+                'message' => 'API response time is above threshold. Consider optimizing queries, adding indexes, or implementing caching.',
+                'current_value' => $stats['api_response_time']['avg'],
+                'threshold' => $this->performanceThresholds['api_response_time'],
+            ];
+        }
+
+        // Memory usage recommendations
+        if (isset($stats['memory_usage']) && $stats['memory_usage']['avg'] > $this->performanceThresholds['memory_usage']) {
+            $recommendations[] = [
+                'type' => 'memory_usage',
+                'priority' => 'medium',
+                'message' => 'Memory usage is above threshold. Consider optimizing memory usage, reducing object creation, or implementing garbage collection.',
+                'current_value' => $stats['memory_usage']['avg'],
+                'threshold' => $this->performanceThresholds['memory_usage'],
+            ];
+        }
+
+        // Database query time recommendations
+        if (isset($stats['database_query_time']) && $stats['database_query_time']['avg'] > $this->performanceThresholds['database_query_time']) {
+            $recommendations[] = [
+                'type' => 'database_query_time',
+                'priority' => 'high',
+                'message' => 'Database query time is above threshold. Consider adding indexes, optimizing queries, or implementing query caching.',
+                'current_value' => $stats['database_query_time']['avg'],
+                'threshold' => $this->performanceThresholds['database_query_time'],
+            ];
+        }
+
+        // Cache hit ratio recommendations
+        if (isset($stats['cache_hit_ratio']) && $stats['cache_hit_ratio']['hit_ratio'] < $this->performanceThresholds['cache_hit_ratio']) {
+            $recommendations[] = [
+                'type' => 'cache_hit_ratio',
+                'priority' => 'medium',
+                'message' => 'Cache hit ratio is below threshold. Consider implementing more caching strategies or optimizing cache keys.',
+                'current_value' => $stats['cache_hit_ratio']['hit_ratio'],
+                'threshold' => $this->performanceThresholds['cache_hit_ratio'],
+            ];
+        }
+
+        return $recommendations;
+    }
+
+    /**
+     * Get performance thresholds
+     */
+    public function getPerformanceThresholds(): array
+    {
+        return $this->performanceThresholds;
+    }
+
+    /**
+     * Set performance thresholds
+     */
+    public function setPerformanceThresholds(array $thresholds): void
+    {
+        $this->performanceThresholds = array_merge($this->performanceThresholds, $thresholds);
+    }
+
+    /**
+     * Calculate percentile
+     */
+    protected function calculatePercentile(array $values, int $percentile): float
+    {
+        sort($values);
+        $index = ($percentile / 100) * (count($values) - 1);
+        $lower = floor($index);
+        $upper = ceil($index);
+        
+        if ($lower === $upper) {
+            return $values[$lower];
+        }
+        
+        $weight = $index - $lower;
+        return $values[$lower] * (1 - $weight) + $values[$upper] * $weight;
+    }
+
+    /**
+     * Get real-time performance metrics
+     */
+    public function getRealTimeMetrics(): array
+    {
+        $metrics = [];
+        
+        // Get cached metrics from last 5 minutes
+        $cacheKeys = Cache::get('performance_metrics_keys', []);
+        
+        foreach ($cacheKeys as $key) {
+            $value = Cache::get($key);
+            if ($value !== null) {
+                $metrics[] = [
+                    'key' => $key,
+                    'value' => $value,
+                    'timestamp' => now(),
+                ];
+            }
+        }
+        
+        return $metrics;
+    }
+
+    /**
+     * Clear performance metrics
+     */
+    public function clearMetrics(): void
+    {
+        $this->initializeMetrics();
+        Cache::forget('performance_metrics_keys');
+    }
+
+    /**
+     * Export performance data
+     */
+    public function exportPerformanceData(): array
+    {
+        return [
+            'timestamp' => now(),
+            'metrics' => $this->performanceMetrics,
+            'stats' => $this->getPerformanceStats(),
+            'recommendations' => $this->getPerformanceRecommendations(),
+            'thresholds' => $this->getPerformanceThresholds(),
+        ];
     }
 }

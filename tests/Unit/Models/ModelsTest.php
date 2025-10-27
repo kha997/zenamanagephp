@@ -276,7 +276,27 @@ class ModelsTest extends TestCase
     /** @test */
     public function team_model_belongs_to_many_members()
     {
-        $this->markTestSkipped('Missing team_members pivot table migration');
+        $team = Team::factory()->create();
+        $user1 = User::factory()->create();
+        $user2 = User::factory()->create();
+        
+        // Attach users to team through pivot table
+        $team->members()->attach($user1, ['role' => 'lead', 'joined_at' => now()]);
+        $team->members()->attach($user2, ['role' => 'member', 'joined_at' => now()]);
+        
+        $members = $team->members;
+        
+        $this->assertInstanceOf(Collection::class, $members);
+        $this->assertCount(2, $members);
+        
+        // Check by ID (convert ULID to string)
+        $memberIds = $members->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        $this->assertContains((string) $user1->id, $memberIds);
+        $this->assertContains((string) $user2->id, $memberIds);
+        
+        // Check pivot data
+        $this->assertEquals('lead', $members->find($user1->id)->pivot->role);
+        $this->assertEquals('member', $members->find($user2->id)->pivot->role);
     }
 
     /** @test */
@@ -378,13 +398,21 @@ class ModelsTest extends TestCase
     /** @test */
     public function rfi_model_belongs_to_project()
     {
-        $this->markTestSkipped('Missing RfiFactory');
+        $project = Project::factory()->create();
+        $rfi = Rfi::factory()->create(['project_id' => $project->id]);
+        
+        $this->assertInstanceOf(Project::class, $rfi->project);
+        $this->assertEquals($project->id, $rfi->project->id);
     }
 
     /** @test */
     public function rfi_model_belongs_to_creator()
     {
-        $this->markTestSkipped('Missing RfiFactory');
+        $user = User::factory()->create();
+        $rfi = Rfi::factory()->create(['created_by' => $user->id]);
+        
+        $this->assertInstanceOf(User::class, $rfi->createdBy);
+        $this->assertEquals($user->id, $rfi->createdBy->id);
     }
 
     /** @test */

@@ -17,6 +17,10 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
+    "test:auth": "playwright test --config=playwright.auth.config.ts",
+    "test:auth:headed": "playwright test --config=playwright.auth.config.ts --headed",
+    "test:auth:ui": "playwright test --config=playwright.auth.config.ts --ui",
+    "test:auth:report": "playwright show-report test-results/auth/html-report",
     "test:e2e:smoke": "playwright test --project=smoke-chromium",
     "test:e2e:smoke:headed": "playwright test --project=smoke-chromium --headed",
     "test:e2e:report": "playwright show-report",
@@ -33,7 +37,13 @@
     "analyze:duplicates": "npm run dedupe:check && npm run dedupe:php",
     "analyze:quality": "npm run lint:sonar",
     "analyze:all": "npm run analyze:duplicates && npm run analyze:quality",
-    "pre-commit": "npm run ci:check"
+    "pre-commit": "npm run ci:check",
+    "lint": "eslint src/components/ui/header --ext .ts,.tsx",
+    "format": "prettier --write \"./{app,resources,src,frontend,docs,tests}/**/*.{js,ts,tsx,jsx,css,scss,md,php,blade.php,json,mdx}\"",
+    "format:check": "prettier --check \"./{app,resources,src,frontend,docs,tests}/**/*.{js,ts,tsx,jsx,css,scss,md,php,blade.php,json,mdx}\"",
+    "check:ui-standards": "node scripts/ui-standards/check-ui-standards.js",
+    "check:performance": "node scripts/ui-standards/check-performance-budgets.js",
+    "storybook:build": "node scripts/ui-standards/ensure-storybook-build.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
@@ -57,7 +67,13 @@
     "tailwindcss": "^3.4.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.10",
-    "vitest": "^4.0.1"
+    "vitest": "^4.0.1",
+    "prettier": "^3.3.3",
+    "eslint-plugin-jsx-a11y": "^6.10.0",
+    "eslint-plugin-local-rules": "^3.0.2",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "ts-morph": "^22.0.0"
   },
   "dependencies": {
     "@types/react": "^19.2.2",

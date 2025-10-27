@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Log;
 use Src\Compensation\Models\TaskCompensation;
 use Src\Foundation\EventBus;
@@ -36,7 +37,7 @@ use Src\Foundation\Helpers\AuthHelper;
  */
 class Task extends Model
 {
-    use HasUlids, HasFactory, BelongsToTenant;
+    use HasUlids, HasFactory, BelongsToTenant, SoftDeletes;
     
     protected $table = 'tasks';
     

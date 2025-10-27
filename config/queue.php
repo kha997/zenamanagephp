@@ -73,6 +73,38 @@ return [
             'after_commit' => false,
         ],
 
+        'emails-high' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'emails-high',
+            'retry_after' => 60,
+            'after_commit' => false,
+        ],
+
+        'emails-medium' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'emails-medium',
+            'retry_after' => 90,
+            'after_commit' => false,
+        ],
+
+        'emails-low' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'emails-low',
+            'retry_after' => 120,
+            'after_commit' => false,
+        ],
+
+        'documents' => [
+            'driver' => 'database',
+            'table' => 'jobs',
+            'queue' => 'documents',
+            'retry_after' => 300,
+            'after_commit' => false,
+        ],
+
     ],
 
     /*

@@ -16,7 +16,7 @@
                     <button onclick="refreshDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
                         <i class="fas fa-sync-alt mr-2"></i>Refresh
                     </button>
-                    <a href="{{ route('app.projects.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    <a href="/frontend/app/projects/create" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
                         <i class="fas fa-plus mr-2"></i>New Project
                     </a>
                 </div>
@@ -118,7 +118,7 @@
                         <div class="text-center py-8">
                             <i class="fas fa-project-diagram text-4xl text-gray-300 mb-4"></i>
                             <p class="text-gray-500">No projects yet</p>
-                            <a href="{{ route('app.projects.create') }}" class="text-blue-600 hover:text-blue-800 font-medium">Create your first project</a>
+                            <a href="/frontend/app/projects/create" class="text-blue-600 hover:text-blue-800 font-medium">Create your first project</a>
                         </div>
                     @endif
                 </div>

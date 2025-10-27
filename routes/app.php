@@ -67,14 +67,14 @@ Route::prefix('app')->name('app.')->middleware(['web.test'])->group(function () 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // ========================================
-    // PROJECTS - READ ONLY (UI renders only)
+    // PROJECTS - DISABLED (Using React Frontend)
     // ========================================
-    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
-    Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
-    Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
-    Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
-    Route::get('/projects/{project}/documents', [ProjectController::class, 'documents'])->name('projects.documents');
-    Route::get('/projects/{project}/history', [ProjectController::class, 'history'])->name('projects.history');
+    // Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+    // Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
+    // Route::get('/projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+    // Route::get('/projects/{project}/edit', [ProjectController::class, 'edit'])->name('projects.edit');
+    // Route::get('/projects/{project}/documents', [ProjectController::class, 'documents'])->name('projects.documents');
+    // Route::get('/projects/{project}/history', [ProjectController::class, 'history'])->name('projects.history');
 
     // ========================================
     // TASKS - READ ONLY (UI renders only)

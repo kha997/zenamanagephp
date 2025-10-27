@@ -1,4 +1,4 @@
-@extends('layouts.app-layout')
+@extends('layouts.app')
 
 @section('title', __('monitoring.dashboard_title'))
 

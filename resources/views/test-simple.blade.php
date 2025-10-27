@@ -1,12 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Test Simple View</title>
+    <title>Simple Test</title>
 </head>
 <body>
-    <h1>Test Simple View</h1>
-    <p>This is a simple test view.</p>
-    <p>Clients count: {{ $clients->count() }}</p>
-    <p>Stats: {{ json_encode($stats) }}</p>
+    <h1>Simple Blade Test</h1>
+    <p>If you see this, Blade is working!</p>
 </body>
 </html>

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use App\Models\UserSidebarPreference;
 use Illuminate\Support\Facades\Cache;
 

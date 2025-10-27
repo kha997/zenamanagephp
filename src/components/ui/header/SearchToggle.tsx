@@ -9,7 +9,7 @@ export interface SearchResult {
   description: string;
   type: 'project' | 'task' | 'user' | 'document';
   url: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, string | number | boolean>;
 }
 
 export interface SearchToggleProps {

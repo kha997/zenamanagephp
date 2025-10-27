@@ -82,9 +82,13 @@ class AdminOnlyMiddleware
 
             if ($request->expectsJson()) {
                 return response()->json([
-                    'success' => false,
-                    'error' => 'Account is inactive',
-                    'code' => 'ACCOUNT_INACTIVE'
+                    'status' => 'error',
+                    'message' => 'Account is inactive',
+                    'error' => [
+                        'id' => 'ACCOUNT_INACTIVE',
+                        'code' => 'ACCOUNT_INACTIVE',
+                        'details' => 'Account is inactive'
+                    ]
                 ], 403);
             }
             

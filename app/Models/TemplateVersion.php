@@ -36,7 +36,7 @@ class TemplateVersion extends Model
         'version',
         'name',
         'description',
-        'template_data',
+        'json_body',
         'changes',
         'created_by',
         'is_active'
@@ -44,7 +44,7 @@ class TemplateVersion extends Model
 
     protected $casts = [
         'version' => 'integer',
-        'template_data' => 'array',
+        'json_body' => 'array',
         'changes' => 'array',
         'is_active' => 'boolean',
         'created_at' => 'datetime',

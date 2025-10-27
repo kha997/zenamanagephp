@@ -1,0 +1,9 @@
+name,path,type,variant,meets_design,missing,used_by_count,used_by_paths,conflict,notes
+HeaderShell,frontend/src/components/layout/HeaderShell.tsx,React,standard,PARTIAL,theme,2,frontend/src/components/layout/__tests__/HeaderShell.test.tsx;frontend/src/app/layouts/MainLayout.tsx,,,
+Header,frontend/src/components/layout/Header.tsx,React,legacy,NO,theme,0,,,migration needed
+PrimaryNav,frontend/src/components/layout/PrimaryNav.tsx,React,legacy,NO,rbac,0,,,migration needed
+HeaderShell,src/components/ui/header/HeaderShell.tsx,React,standard,PARTIAL,theme,1,resources/views/components/shared/header-wrapper.blade.php,,,
+header-wrapper,resources/views/components/shared/header-wrapper.blade.php,Blade,standard,PARTIAL,theme,2,app.blade.php;admin.blade.php,,,
+header-standardized,resources/views/components/shared/header-standardized.blade.php,Blade,standard,PARTIAL,theme,0,,UNUSED,consider removal
+header,resources/views/components/shared/header.blade.php,Blade,legacy,NO,theme,0,,React HeaderShell mount point,replace with standardized
+

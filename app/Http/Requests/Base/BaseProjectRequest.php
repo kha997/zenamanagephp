@@ -166,7 +166,7 @@ abstract class BaseProjectRequest extends BaseApiRequest
             'start_date_to' => ['sometimes', 'date'],
             'end_date_from' => ['sometimes', 'date'],
             'end_date_to' => ['sometimes', 'date'],
-            'sort_by' => ['sometimes', 'string', 'in:name,status,priority,progress,start_date,end_date,created_at,updated_at'],
+            'sort_by' => ['sometimes', 'string', 'in:name,status,priority,progress,progress_pct,start_date,end_date,due_date,created_at,updated_at'],
             'sort_direction' => ['sometimes', 'string', 'in:asc,desc'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ];

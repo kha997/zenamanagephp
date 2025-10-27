@@ -1,0 +1,28 @@
+{
+  "targets": [
+    {
+      "label": "Laravel Vite app bundle",
+      "directory": "public/build/assets",
+      "pattern": "app*.js",
+      "maxKB": 350
+    },
+    {
+      "label": "Laravel Vite vendor bundle",
+      "directory": "public/build/assets",
+      "pattern": "vendor*.js",
+      "maxKB": 550
+    },
+    {
+      "label": "React dashboard bundle (frontend)",
+      "directory": "frontend/dist/assets",
+      "pattern": "index*.js",
+      "maxKB": 400
+    },
+    {
+      "label": "React dashboard CSS (frontend)",
+      "directory": "frontend/dist/assets",
+      "pattern": "*.css",
+      "maxKB": 200
+    }
+  ]
+}

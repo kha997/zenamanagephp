@@ -32,12 +32,7 @@
     @yield('styles')
 </head>
 <body class="bg-gray-50" x-data="{ 
-    // Sidebar State
-    sidebarCollapsed: false,
-    toggleSidebar() { 
-        this.sidebarCollapsed = !this.sidebarCollapsed; 
-        localStorage.setItem('sidebarCollapsed', this.sidebarCollapsed);
-    },
+    
     
     // Global Search State
     globalSearchQuery: '',
@@ -129,17 +124,7 @@
         }
         this.closeModal();
     }
-}" x-init="
-    const saved = localStorage.getItem('sidebarCollapsed');
-    if (saved !== null) {
-        this.sidebarCollapsed = JSON.parse(saved);
-    }
-    
-    // Initialize notifications count
-    this.unreadNotifications = 2;
-    
-    console.log('Body initialized, sidebar collapsed:', this.sidebarCollapsed);
-" x-cloak>
+}"  x-cloak>
     <!-- Unified HeaderShell for Admin -->
     <x-shared.header-wrapper 
         variant="admin"
@@ -150,15 +135,9 @@
     />
     
     <div class="flex">
-        <!-- Sidebar - Desktop -->
-        <div class="hidden lg:block">
-            @include('layouts.partials._sidebar')
-                    </div>
-                    
         
         <!-- Main Content -->
-        <main class="flex-1 transition-all duration-300 pb-16 lg:pb-0" 
-              :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'">
+        <main class="flex-1 transition-all duration-300 pb-16 lg:pb-0">
             <!-- Breadcrumb -->
             <nav class="bg-white border-b border-gray-200 px-6 py-3">
                 <ol class="flex items-center space-x-2 text-sm text-gray-500">
@@ -174,55 +153,7 @@
         </main>
     </div>
     
-    <!-- Mobile Bottom Navigation -->
-    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-mobile-nav">
-        <div class="flex items-center justify-around py-2">
-            <a href="/admin/dashboard" 
-               class="flex flex-col items-center py-2 px-3 text-xs {{ request()->is('admin/dashboard') ? 'text-blue-600' : 'text-gray-500' }}">
-                <i class="fas fa-tachometer-alt text-lg mb-1"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="/admin/tenants" 
-               class="flex flex-col items-center py-2 px-3 text-xs {{ request()->is('admin/tenants*') ? 'text-blue-600' : 'text-gray-500' }}">
-                <i class="fas fa-building text-lg mb-1"></i>
-                <span>Tenants</span>
-            </a>
-            <a href="/admin/users" 
-               class="flex flex-col items-center py-2 px-3 text-xs {{ request()->is('admin/users*') ? 'text-blue-600' : 'text-gray-500' }}">
-                <i class="fas fa-users text-lg mb-1"></i>
-                <span>Users</span>
-            </a>
-            <div class="relative">
-                <button @click="showMobileMenu = !showMobileMenu" 
-                        class="flex flex-col items-center py-2 px-3 text-xs text-gray-500">
-                    <i class="fas fa-ellipsis-h text-lg mb-1"></i>
-                    <span>More</span>
-                </button>
-                
-                <!-- Mobile Menu Dropdown -->
-                <div x-show="showMobileMenu" @click.away="showMobileMenu = false" 
-                     class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200">
-                    <div class="py-1">
-                        <a href="/admin/security" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-shield-alt mr-2"></i>Security
-                        </a>
-                        <a href="/admin/settings" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-cog mr-2"></i>Settings
-                        </a>
-                        <a href="/admin/billing" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-credit-card mr-2"></i>Billing
-                        </a>
-                        <a href="/admin/maintenance" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-tools mr-2"></i>Maintenance
-                        </a>
-                        <a href="/admin/alerts" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>Alerts
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    
     
     <!-- Footer -->
     @include('layouts.partials._footer')

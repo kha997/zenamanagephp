@@ -54,14 +54,14 @@ class PerformanceLoggingMiddleware
 
         // Log API response time
         if ($request->is('api/*')) {
-            $this->performanceService->logApiResponseTime($responseTime, $route, $tenant);
+            $this->performanceService->recordApiResponseTime($route, $responseTime);
         } else {
             // Log page load time for web routes
-            $this->performanceService->logPageLoadTime($responseTime, $route, $tenant);
+            $this->performanceService->recordPageLoadTime($route, $responseTime);
         }
 
         // Log memory usage
-        $this->performanceService->logMemoryUsage($tenant);
+        $this->performanceService->recordMemoryUsage(memory_get_usage(true));
 
         // Log to performance channel
         Log::channel('performance')->info('Request performance metrics', [

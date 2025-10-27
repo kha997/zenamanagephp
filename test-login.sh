@@ -3,17 +3,25 @@
 # Test login script
 echo "Testing login..."
 
-# Get CSRF token
-TOKEN=$(curl -s http://localhost:8000/login | grep -o 'name="_token" value="[^"]*"' | cut -d'"' -f4)
-echo "CSRF Token: $TOKEN"
+# Login via API
+echo "Attempting login via API..."
+LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}')
 
-# Login with CSRF token
-curl -c cookies.txt -X POST http://localhost:8000/login \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -H "X-CSRF-TOKEN: $TOKEN" \
-  -d "email=test@example.com&password=password123&_token=$TOKEN" \
-  -L
+echo "$LOGIN_RESPONSE" | jq .
 
-echo ""
-echo "--- Testing dashboard ---"
-curl -b cookies.txt http://localhost:8000/app/dashboard
+# Extract token from response
+TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+if [ -n "$TOKEN" ]; then
+    echo ""
+    echo "Token: $TOKEN"
+    echo ""
+    echo "--- Testing dashboard ---"
+    curl -s -H "Authorization: Bearer $TOKEN" \
+         http://localhost:8000/api/dashboard | jq .
+else
+    echo "❌ Failed to get token"
+    exit 1
+fi

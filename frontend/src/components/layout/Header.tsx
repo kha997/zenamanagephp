@@ -11,7 +11,10 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const { user } = useAuthStore();
 
   return (
-    <header className={cn('bg-white shadow-sm border-b border-gray-200', className)}>
+    <header 
+      data-testid="header-legacy"
+      data-source="react"
+      className={cn('bg-white shadow-sm border-b border-gray-200', className)}>
       <div className="flex h-16 items-center justify-between px-6">
         {/* Left side - could add breadcrumbs or page title here */}
         <div className="flex items-center">

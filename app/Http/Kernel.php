@@ -58,7 +58,10 @@ class Kernel extends HttpKernel
         protected $routeMiddleware = [
             'auth'                 => \App\Http\Middleware\Authenticate::class,
             'guest'                => \App\Http\Middleware\RedirectIfAuthenticated::class,
-            'auth.sanctum'         => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            // FIXED: Removed auth.sanctum mapping to avoid using stateful middleware for API tokens
+            // auth:sanctum will use Laravel's default Authenticate middleware with 'sanctum' guard
+            // For SPA stateful auth, use: auth.sanctum.stateful
+            'auth.sanctum.stateful' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle'             => \Illuminate\Routing\Middleware\ThrottleRequests::class,
 
             // ✳️ Authentication & Authorization
@@ -83,9 +86,13 @@ class Kernel extends HttpKernel
 
             // ✳️ Validation (unified)
             'validation'            => \App\Http\Middleware\Unified\UnifiedValidationMiddleware::class,
-            'input.validation'       => \App\Http\Middleware\Unified\UnifiedValidationMiddleware::class,
+            'input.validation'       => \App\Http\Middleware\InputValidationMiddleware::class,
             'feature.flags'        => \App\Http\Middleware\EnsureFeatureFlags::class,
             'demo.user'            => \App\Http\Middleware\DemoUserMiddleware::class,
+            
+            // ✳️ Security & Session Management
+            'brute.force.protection' => \App\Http\Middleware\BruteForceProtectionMiddleware::class,
+            'session.management'     => \App\Http\Middleware\SessionManagementMiddleware::class,
 
             // ⚠️ CORS: nếu dùng custom CorsMiddleware thì bỏ HandleCors ở global trên.
             // 'cors'               => \App\Http\Middleware\CorsMiddleware::class,

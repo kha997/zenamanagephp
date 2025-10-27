@@ -65,7 +65,7 @@
                         @endif
                     </select>
                     @if($projects->count() == 0)
-                        <p class="mt-1 text-sm text-red-600">No projects available. <a href="{{ route('app.projects.create') }}" class="text-blue-600 hover:underline">Create a project first</a></p>
+                        <p class="mt-1 text-sm text-red-600">No projects available. <a href="/frontend/app/projects/create" class="text-blue-600 hover:underline">Create a project first</a></p>
                     @endif
                 </div>
 

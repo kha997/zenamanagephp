@@ -20,6 +20,8 @@ export interface Document {
   is_public: boolean;
   download_count: number;
   last_accessed_at?: string;
+  versions?: DocumentVersion[];
+  activity?: DocumentActivity[];
 }
 
 export interface DocumentsResponse {
@@ -80,8 +82,20 @@ export interface DocumentVersion {
   version: number;
   filename: string;
   size: number;
+  mime_type: string;
+  checksum?: string;
   uploaded_at: string;
   uploaded_by: number;
   uploaded_by_name: string;
   change_description?: string;
+  reverted_from_version?: number;
+}
+
+export interface DocumentActivity {
+  id: string;
+  action: 'upload' | 'download' | 'approve' | 'revert' | 'lock' | 'unlock';
+  actor_id: number;
+  actor_name: string;
+  metadata?: Record<string, unknown>;
+  created_at: string;
 }

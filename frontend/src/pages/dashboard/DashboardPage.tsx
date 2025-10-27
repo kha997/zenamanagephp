@@ -10,6 +10,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { dashboardKeys } from '../../entities/dashboard/hooks';
 import { WidgetGrid } from '../../features/widgets/WidgetGrid';
 import { useI18n } from '../../app/i18n-context';
+import { useSidebar } from '../../app/layouts/MainLayout';
+import { cn } from '../../shared/ui/utils';
 
 const DashboardMetrics: React.FC = () => {
   const { t } = useI18n();
@@ -272,6 +274,7 @@ const DashboardPage: React.FC = () => {
   }
 
   if (error) {
+    const { collapsed } = useSidebar();
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -285,18 +288,16 @@ const DashboardPage: React.FC = () => {
           </div>
         </div>
         <Card>
-          <CardContent className="p-6">
-            <div className="text-center text-[var(--color-text-muted)]">
-              <p className="text-lg font-medium mb-2">
-                {t('dashboard.errorTitle', { defaultValue: 'Failed to load dashboard' })}
-              </p>
-              <p className="text-sm mb-4">
-                {t('dashboard.errorDescription', { defaultValue: 'Please try refreshing the page' })}
-              </p>
-              <Button variant="outline" size="sm">
-                {t('dashboard.retry', { defaultValue: 'Retry' })}
-              </Button>
-            </div>
+          <CardContent className={cn('text-center text-[var(--color-text-muted)]', collapsed ? 'p-4' : 'p-6')}>
+            <p className="text-lg font-medium mb-2">
+              {t('dashboard.errorTitle', { defaultValue: 'Failed to load dashboard' })}
+            </p>
+            <p className="text-sm mb-4">
+              {t('dashboard.errorDescription', { defaultValue: 'Please try refreshing the page' })}
+            </p>
+            <Button variant="outline" size="sm">
+              {t('dashboard.retry', { defaultValue: 'Retry' })}
+            </Button>
           </CardContent>
         </Card>
       </div>

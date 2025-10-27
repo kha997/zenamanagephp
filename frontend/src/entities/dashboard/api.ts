@@ -10,10 +10,10 @@ import type {
 } from './types';
 
 export class DashboardApiService implements DashboardApiEndpoints {
-  private baseUrl = '/dashboard';
+  private baseUrl = '/app/dashboard'; // Relative path (client already has /api/v1 as baseURL)
 
   async getUserDashboard(): Promise<ApiResponse<DashboardLayout>> {
-    return http.get<ApiResponse<DashboardLayout>>(`${this.baseUrl}/`);
+    return http.get<ApiResponse<DashboardLayout>>(`${this.baseUrl}`);
   }
 
   async getAvailableWidgets(): Promise<ApiResponse<DashboardWidget[]>> {
@@ -56,6 +56,25 @@ export class DashboardApiService implements DashboardApiEndpoints {
     return http.get<ApiResponse<DashboardMetrics>>(`${this.baseUrl}/metrics`);
   }
 
+  // New endpoints for dashboard data
+  async getRecentProjects(params: { limit?: number } = {}): Promise<ApiResponse<any[]>> {
+    return http.get<ApiResponse<any[]>>(`${this.baseUrl}/recent-projects`, { params });
+  }
+
+  async getRecentActivity(params: { limit?: number } = {}): Promise<ApiResponse<any[]>> {
+    return http.get<ApiResponse<any[]>>(`${this.baseUrl}/recent-activity`, { params });
+  }
+
+  async getTeamStatus(): Promise<ApiResponse<any[]>> {
+    return http.get<ApiResponse<any[]>>(`${this.baseUrl}/team-status`);
+  }
+
+  async getChartData(type: 'project-progress' | 'task-completion', period?: string): Promise<ApiResponse<any>> {
+    return http.get<ApiResponse<any>>(`${this.baseUrl}/charts/${type}`, { 
+      params: period ? { period } : {} 
+    });
+  }
+
   async saveUserPreferences(preferences: Partial<DashboardPreferences>): Promise<ApiResponse<DashboardPreferences>> {
     return http.post<ApiResponse<DashboardPreferences>>(`${this.baseUrl}/preferences`, preferences);
   }
@@ -67,3 +86,4 @@ export class DashboardApiService implements DashboardApiEndpoints {
 
 // Export singleton instance
 export const dashboardApi = new DashboardApiService();
+

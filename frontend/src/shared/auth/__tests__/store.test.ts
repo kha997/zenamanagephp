@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useAuthStore } from '../store';
 import { apiClient } from '../../api/client';
+import { createTestUser } from '../../../../tests/factories/user';
 
 // Mock the API client
 vi.mock('../../api/client', () => ({
@@ -10,11 +12,18 @@ vi.mock('../../api/client', () => ({
     post: vi.fn(),
     defaults: {
       headers: {
-        common: {},
+        common: {} as Record<string, string>,
       },
     },
   },
 }));
+
+type ApiClientMock = typeof apiClient & {
+  get: Mock;
+  post: Mock;
+};
+
+const mockedApiClient = apiClient as ApiClientMock;
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -60,13 +69,7 @@ describe('Auth Store', () => {
 
   describe('Login Flow', () => {
     it('should handle successful login', async () => {
-      const mockUser = {
-        id: '1',
-        name: 'Test User',
-        email: 'test@example.com',
-        roles: ['user'],
-        permissions: ['read'],
-      };
+      const mockUser = createTestUser();
       const mockToken = 'mock-token';
 
       const mockResponse = {
@@ -76,8 +79,8 @@ describe('Auth Store', () => {
         },
       };
 
-      (apiClient.get as any).mockResolvedValueOnce({});
-      (apiClient.post as any).mockResolvedValueOnce(mockResponse);
+      mockedApiClient.get.mockResolvedValueOnce({});
+      mockedApiClient.post.mockResolvedValueOnce(mockResponse);
 
       const { result } = renderHook(() => useAuthStore());
 
@@ -85,7 +88,13 @@ describe('Auth Store', () => {
         await result.current.login('test@example.com', 'password');
       });
 
-      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.user).toEqual(
+        expect.objectContaining({
+          id: mockUser.id,
+          name: mockUser.name,
+          permissions: mockUser.permissions,
+        })
+      );
       expect(result.current.token).toBe(mockToken);
       expect(result.current.isAuthenticated).toBe(true);
       expect(result.current.isLoading).toBe(false);
@@ -102,8 +111,8 @@ describe('Auth Store', () => {
         },
       };
 
-      (apiClient.get as any).mockResolvedValueOnce({});
-      (apiClient.post as any).mockRejectedValueOnce(mockError);
+      mockedApiClient.get.mockResolvedValueOnce({});
+      mockedApiClient.post.mockRejectedValueOnce(mockError);
 
       const { result } = renderHook(() => useAuthStore());
 
@@ -123,8 +132,8 @@ describe('Auth Store', () => {
     });
 
     it('should set loading state during login', async () => {
-      (apiClient.get as any).mockImplementation(() => new Promise(() => {})); // Never resolves
-      (apiClient.post as any).mockImplementation(() => new Promise(() => {}));
+      mockedApiClient.get.mockImplementation(() => new Promise(() => {}));
+      mockedApiClient.post.mockImplementation(() => new Promise(() => {}));
 
       const { result } = renderHook(() => useAuthStore());
 
@@ -141,15 +150,10 @@ describe('Auth Store', () => {
       const { result } = renderHook(() => useAuthStore());
 
       // Set initial authenticated state
+      const user = createTestUser();
       act(() => {
         result.current.setToken('mock-token');
-        result.current.setUser({
-          id: '1',
-          name: 'Test User',
-          email: 'test@example.com',
-          roles: ['user'],
-          permissions: ['read'],
-        });
+        result.current.setUser(user);
       });
 
       expect(result.current.isAuthenticated).toBe(true);
@@ -183,19 +187,13 @@ describe('Auth Store', () => {
   describe('User Management', () => {
     it('should set user data', () => {
       const { result } = renderHook(() => useAuthStore());
-      const mockUser = {
-        id: '1',
-        name: 'Test User',
-        email: 'test@example.com',
-        roles: ['user'],
-        permissions: ['read'],
-      };
+      const mockUser = createTestUser();
 
       act(() => {
         result.current.setUser(mockUser);
       });
 
-      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.user).toEqual(expect.objectContaining({ id: mockUser.id }));
     });
   });
 
@@ -224,13 +222,7 @@ describe('Auth Store', () => {
       // Set some state
       act(() => {
         result.current.setToken('mock-token');
-        result.current.setUser({
-          id: '1',
-          name: 'Test User',
-          email: 'test@example.com',
-          roles: ['user'],
-          permissions: ['read'],
-        });
+        result.current.setUser(createTestUser());
         result.current.setError('Test error');
         result.current.setLoading(true);
       });

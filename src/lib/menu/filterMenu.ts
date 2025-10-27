@@ -84,10 +84,25 @@ export const getMenuItems = async (
   tenant: Tenant
 ): Promise<NavItem[]> => {
   try {
-    // In a real app, this would fetch from API or config
-    // For now, we'll use the static menu config
-    const menuConfig = await import('../../../config/menu.json');
-    return filterMenu(menuConfig.default, user, tenant);
+    // Load menu config - try from data attribute first, then fetch
+    const mountEl = document.getElementById('header-mount');
+    const menuItemsAttr = mountEl?.dataset.menuItems;
+    
+    if (menuItemsAttr) {
+      const menuConfig = JSON.parse(menuItemsAttr);
+      if (Array.isArray(menuConfig) && menuConfig.length > 0) {
+        return filterMenu(menuConfig, user, tenant);
+      }
+    }
+    
+    // Fallback: fetch from public directory
+    const menuResponse = await fetch('/config/menu.json');
+    if (!menuResponse.ok) {
+      console.error('Failed to load menu.json');
+      return [];
+    }
+    const menuConfig = await menuResponse.json();
+    return filterMenu(menuConfig, user, tenant);
   } catch (error) {
     console.error('Failed to load menu items:', error);
     return [];

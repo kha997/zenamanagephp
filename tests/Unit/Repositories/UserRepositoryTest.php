@@ -116,9 +116,10 @@ class UserRepositoryTest extends TestCase
     /** @test */
     public function it_can_create_user()
     {
+        $email = 'newuser-' . uniqid() . '@example.com';
         $userData = [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => $email,
             'password' => 'password123',
             'tenant_id' => $this->tenant->id
         ];
@@ -127,7 +128,7 @@ class UserRepositoryTest extends TestCase
         
         $this->assertInstanceOf(User::class, $result);
         $this->assertEquals('Test User', $result->name);
-        $this->assertEquals('test@example.com', $result->email);
+        $this->assertEquals($email, $result->email);
     }
 
     /** @test */

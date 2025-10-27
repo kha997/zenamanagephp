@@ -177,7 +177,7 @@ Route::prefix('auth')->group(function () {
     
     // Add compatibility route for login form
     Route::post('/login', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'login'])
-        ->middleware(['web']);
+        ->middleware(['web', 'brute.force.protection', 'input.validation']);
     
     Route::post('/logout', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'logout'])
         ->middleware(['auth:sanctum', 'security', 'validation']);
@@ -187,6 +187,16 @@ Route::prefix('auth')->group(function () {
         ->middleware(['security', 'validation', 'rate.limit:sliding,3,1']);
     Route::post('/password/reset', [\App\Http\Controllers\Api\Auth\PasswordController::class, 'reset'])
         ->middleware(['security', 'validation', 'rate.limit:sliding,3,1']);
+    
+    // Password reset with new controller
+    Route::post('/password/reset/send', [\App\Http\Controllers\Api\Auth\PasswordResetController::class, 'sendResetLink'])
+        ->middleware(['input.validation', 'rate.limit:sliding,3,1']);
+    
+    Route::post('/password/reset/confirm', [\App\Http\Controllers\Api\Auth\PasswordResetController::class, 'resetPassword'])
+        ->middleware(['input.validation']);
+    
+    Route::post('/password/reset/verify', [\App\Http\Controllers\Api\Auth\PasswordResetController::class, 'verifyToken'])
+        ->middleware(['input.validation']);
     
     // Token management
     Route::post('/refresh', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'refresh'])
@@ -464,6 +474,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjects']);
         Route::post('/', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'createProject']);
         Route::get('/stats', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjectStats']);
+        Route::get('/timeline/{id}', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjectTimeline']);
         Route::get('/search', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'searchProjects']);
         Route::get('/recent', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getRecentProjects']);
         Route::get('/dashboard', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjectDashboardData']);
@@ -477,6 +488,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/{id}/progress', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'updateProjectProgress']);
         Route::put('/{id}/assign', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'assignProject']);
         Route::post('/{id}/restore', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'restoreProject']);
+        
+        // Project-specific task routes
+        Route::prefix('{projectId}/tasks')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Unified\TaskManagementController::class, 'getTasksForProject']);
+            Route::post('/', [\App\Http\Controllers\Unified\TaskManagementController::class, 'createTask']);
+            Route::get('/{id}', [\App\Http\Controllers\Unified\TaskManagementController::class, 'getTask']);
+            Route::put('/{id}', [\App\Http\Controllers\Unified\TaskManagementController::class, 'updateTask']);
+            Route::patch('/{id}', [\App\Http\Controllers\Unified\TaskManagementController::class, 'updateTask']);
+            Route::delete('/{id}', [\App\Http\Controllers\Unified\TaskManagementController::class, 'deleteTask']);
+        });
     });
 
     // ========================================
@@ -830,4 +851,60 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{id}/revert', [App\Http\Controllers\Api\DocumentController::class, 'revertVersion']);
         Route::get('/analytics', [App\Http\Controllers\Api\DocumentController::class, 'analytics']);
     });
+
+// CSV Import/Export routes - Admin only
+Route::prefix('admin/csv')->middleware(['auth:sanctum', \App\Http\Middleware\AdminOnlyMiddleware::class])->group(function () {
+    Route::get('/export/users', [\App\Http\Controllers\Admin\CsvController::class, 'exportUsers'])->name('admin.csv.export.users');
+    Route::get('/export/projects', [\App\Http\Controllers\Admin\CsvController::class, 'exportProjects'])->name('admin.csv.export.projects');
+    Route::post('/import/users', [\App\Http\Controllers\Admin\CsvController::class, 'importUsers'])->name('admin.csv.import.users');
+    Route::post('/import/projects', [\App\Http\Controllers\Admin\CsvController::class, 'importProjects'])->name('admin.csv.import.projects');
+    Route::get('/template', [\App\Http\Controllers\Admin\CsvController::class, 'getImportTemplate'])->name('admin.csv.template');
+    Route::post('/validate', [\App\Http\Controllers\Admin\CsvController::class, 'validateCsv'])->name('admin.csv.validate');
+});
+
+
+// Queue management routes - Admin only
+Route::prefix('admin/queue')->middleware(['auth:sanctum', \App\Http\Middleware\AdminOnlyMiddleware::class])->group(function () {
+    Route::get('/stats', [\App\Http\Controllers\QueueController::class, 'getStats'])->name('admin.queue.stats');
+    Route::get('/metrics', [\App\Http\Controllers\QueueController::class, 'getMetrics'])->name('admin.queue.metrics');
+    Route::get('/workers', [\App\Http\Controllers\QueueController::class, 'getWorkers'])->name('admin.queue.workers');
+    Route::post('/retry', [\App\Http\Controllers\QueueController::class, 'retryFailedJobs'])->name('admin.queue.retry');
+    Route::post('/clear', [\App\Http\Controllers\QueueController::class, 'clearFailedJobs'])->name('admin.queue.clear');
+});
+
+// Performance monitoring routes - Admin only
+Route::prefix('admin/performance')->middleware(['auth:sanctum', \App\Http\Middleware\AdminOnlyMiddleware::class])->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\PerformanceController::class, 'getDashboard'])->name('admin.performance.dashboard');
+    Route::get('/stats', [\App\Http\Controllers\PerformanceController::class, 'getPerformanceStats'])->name('admin.performance.stats');
+    Route::get('/memory', [\App\Http\Controllers\PerformanceController::class, 'getMemoryStats'])->name('admin.performance.memory');
+    Route::get('/network', [\App\Http\Controllers\PerformanceController::class, 'getNetworkStats'])->name('admin.performance.network');
+    Route::get('/recommendations', [\App\Http\Controllers\PerformanceController::class, 'getRecommendations'])->name('admin.performance.recommendations');
+    Route::get('/thresholds', [\App\Http\Controllers\PerformanceController::class, 'getThresholds'])->name('admin.performance.thresholds');
+    Route::post('/thresholds', [\App\Http\Controllers\PerformanceController::class, 'setThresholds'])->name('admin.performance.set.thresholds');
+    Route::post('/page-load', [\App\Http\Controllers\PerformanceController::class, 'recordPageLoadTime'])->name('admin.performance.page.load');
+    Route::post('/api-response', [\App\Http\Controllers\PerformanceController::class, 'recordApiResponseTime'])->name('admin.performance.api.response');
+    Route::post('/memory', [\App\Http\Controllers\PerformanceController::class, 'recordMemoryUsage'])->name('admin.performance.memory.record');
+    Route::post('/network-monitor', [\App\Http\Controllers\PerformanceController::class, 'monitorNetworkEndpoint'])->name('admin.performance.network.monitor');
+    Route::get('/realtime', [\App\Http\Controllers\PerformanceController::class, 'getRealTimeMetrics'])->name('admin.performance.realtime');
+    Route::post('/clear', [\App\Http\Controllers\PerformanceController::class, 'clearData'])->name('admin.performance.clear');
+    Route::get('/export', [\App\Http\Controllers\PerformanceController::class, 'exportData'])->name('admin.performance.export');
+    Route::post('/gc', [\App\Http\Controllers\PerformanceController::class, 'forceGarbageCollection'])->name('admin.performance.gc');
+    Route::post('/test-connectivity', [\App\Http\Controllers\PerformanceController::class, 'testConnectivity'])->name('admin.performance.test.connectivity');
+    Route::get('/network-health', [\App\Http\Controllers\PerformanceController::class, 'getNetworkHealthStatus'])->name('admin.performance.network.health');
+});
+
+// I18n routes (public)
+Route::prefix('i18n')->group(function () {
+    Route::get('/config', [\App\Http\Controllers\Api\I18nController::class, 'getConfiguration'])->name('i18n.config');
+    Route::post('/language', [\App\Http\Controllers\Api\I18nController::class, 'setLanguage'])->name('i18n.language');
+    Route::post('/timezone', [\App\Http\Controllers\Api\I18nController::class, 'setTimezone'])->name('i18n.timezone');
+    Route::post('/format/date', [\App\Http\Controllers\Api\I18nController::class, 'formatDate'])->name('i18n.format.date');
+    Route::post('/format/time', [\App\Http\Controllers\Api\I18nController::class, 'formatTime'])->name('i18n.format.time');
+    Route::post('/format/datetime', [\App\Http\Controllers\Api\I18nController::class, 'formatDateTime'])->name('i18n.format.datetime');
+    Route::post('/format/number', [\App\Http\Controllers\Api\I18nController::class, 'formatNumber'])->name('i18n.format.number');
+    Route::post('/format/currency', [\App\Http\Controllers\Api\I18nController::class, 'formatCurrency'])->name('i18n.format.currency');
+    Route::get('/locale', [\App\Http\Controllers\Api\I18nController::class, 'getCurrentLocale'])->name('i18n.locale');
+});
+
+// Close the auth:sanctum group
 });

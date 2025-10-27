@@ -35,9 +35,10 @@ class PolicyTest extends TestCase
         $this->tenant = Tenant::factory()->create();
         
         // Create real user first, then mock the hasAnyRole method
-        $realUser = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->realUser = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        
         $this->user = Mockery::mock(User::class)->makePartial();
-        $this->user->id = $realUser->id;
+        $this->user->id = $this->realUser->id;
         $this->user->tenant_id = $this->tenant->id;
         $this->user->shouldReceive('hasAnyRole')->andReturn(true);
         
@@ -46,7 +47,7 @@ class PolicyTest extends TestCase
             'name' => 'Test Project',
             'code' => 'PRJ-POLICY-001',
             'status' => 'active',
-            'owner_id' => $this->user->id,
+            'owner_id' => $this->realUser->id, // Use real user ID
         ]);
         
         $this->task = Task::create([
@@ -54,21 +55,36 @@ class PolicyTest extends TestCase
             'project_id' => $this->project->id,
             'name' => 'Test Task',
             'status' => 'backlog',
-            'created_by' => $this->user->id,
+            'created_by' => $this->realUser->id, // Use real user ID
         ]);
         
+        // Create document with foreign key checks disabled to avoid transaction timing issues
+        \DB::statement('PRAGMA foreign_keys=OFF');
+        
         $this->document = Document::create([
+            'id' => \Illuminate\Support\Str::ulid(),
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'name' => 'Test Document',
             'original_name' => 'test.pdf',
-            'file_path' => '/uploads/test.pdf',
+            'file_path' => '/documents/test.pdf',
             'file_type' => 'pdf',
             'mime_type' => 'application/pdf',
             'file_size' => 1024,
-            'file_hash' => 'test-hash-123',
-            'uploaded_by' => $this->user->id,
+            'file_hash' => 'test-hash',
+            'category' => 'general',
+            'description' => 'Test document',
+            'metadata' => json_encode(['author' => 'Test User']),
+            'status' => 'draft',
+            'version' => 1,
+            'is_current_version' => true,
+            'parent_document_id' => null,
+            'uploaded_by' => $this->realUser->id,
+            'created_by' => null,
+            'updated_by' => null,
         ]);
+        
+        \DB::statement('PRAGMA foreign_keys=ON');
     }
 
     /**

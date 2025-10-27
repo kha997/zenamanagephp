@@ -72,6 +72,12 @@ class RouteServiceProvider extends ServiceProvider
             // Legacy redirects (301) - testing
             Route::middleware('web')
                 ->group(base_path('routes/legacy.php'));
+
+            // Test routes - only in testing/development
+            if (app()->environment(['testing', 'local', 'development'])) {
+                Route::middleware('api')
+                    ->group(base_path('routes/test.php'));
+            }
         });
     }
 

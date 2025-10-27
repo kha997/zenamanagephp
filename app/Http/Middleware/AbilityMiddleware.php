@@ -46,6 +46,22 @@ class AbilityMiddleware
         }
 
         // Check ability based on parameter
+        $result = $this->checkAbility($user, $request, $ability);
+        
+        // If result is a Response (error), return it
+        if ($result instanceof Response) {
+            return $result;
+        }
+        
+        // Otherwise, continue to the next middleware/controller
+        return $next($request);
+    }
+
+    /**
+     * Check ability based on type
+     */
+    private function checkAbility($user, Request $request, string $ability): ?Response
+    {
         switch ($ability) {
             case 'tenant':
                 return $this->checkTenantAbility($user, $request);
@@ -73,7 +89,7 @@ class AbilityMiddleware
     /**
      * Check tenant ability
      */
-    private function checkTenantAbility($user, Request $request): Response
+    private function checkTenantAbility($user, Request $request): ?Response
     {
         if (!$user->tenant_id) {
             Log::warning('User without tenant accessing tenant-scoped endpoint', [
@@ -94,8 +110,10 @@ class AbilityMiddleware
         }
 
         // Check if user has appropriate role within tenant
-        $allowedRoles = ['admin', 'pm', 'member'];
-        if (!in_array($user->role, $allowedRoles)) {
+        $allowedRoles = ['admin', 'pm', 'member', 'project_manager', 'site_engineer', 'design_lead', 'client_rep', 'qc_inspector'];
+        // Normalize role to lowercase for case-insensitive comparison
+        $userRole = strtolower($user->role ?? '');
+        if (!in_array($userRole, array_map('strtolower', $allowedRoles))) {
             Log::warning('User with invalid role accessing tenant endpoint', [
                 'user_id' => $user->id,
                 'role' => $user->role,
@@ -114,21 +132,20 @@ class AbilityMiddleware
             ], 403);
         }
 
-        // Return success response - access granted
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Access granted'
-        ], 200);
+        // Access granted - return null to continue to controller
+        return null;
     }
 
     /**
      * Check admin ability
      */
-    private function checkAdminAbility($user, Request $request): Response
+    private function checkAdminAbility($user, Request $request): ?Response
     {
         $adminRoles = ['super_admin', 'admin'];
+        // Normalize role to lowercase for case-insensitive comparison
+        $userRole = strtolower($user->role ?? '');
         
-        if (!in_array($user->role, $adminRoles)) {
+        if (!in_array($userRole, array_map('strtolower', $adminRoles))) {
             Log::warning('Non-admin user accessing admin endpoint', [
                 'user_id' => $user->id,
                 'role' => $user->role,
@@ -147,10 +164,7 @@ class AbilityMiddleware
             ], 403);
         }
 
-        // Return success response - access granted
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Access granted'
-        ], 200);
+        // Access granted - return null to continue to controller
+        return null;
     }
 }

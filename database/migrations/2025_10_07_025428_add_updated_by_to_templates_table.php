@@ -13,9 +13,13 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('templates', function (Blueprint $table) {
-            $table->string('updated_by')->nullable()->after('created_by');
-        });
+        if (Schema::hasTable('templates')) {
+            Schema::table('templates', function (Blueprint $table) {
+                if (!Schema::hasColumn('templates', 'updated_by')) {
+                    $table->string('updated_by')->nullable()->after('created_by');
+                }
+            });
+        }
     }
 
     /**

@@ -11,15 +11,31 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('templates', function (Blueprint $table) {
-            $table->integer('version')->default(1)->after('status');
-            $table->boolean('is_public')->default(false)->after('version');
-            $table->integer('usage_count')->default(0)->after('is_public');
-            $table->json('tags')->nullable()->after('usage_count');
-            $table->json('metadata')->nullable()->after('tags');
-            $table->json('template_data')->nullable()->after('metadata');
-            $table->json('settings')->nullable()->after('template_data');
-        });
+        if (Schema::hasTable('templates')) {
+            Schema::table('templates', function (Blueprint $table) {
+                if (!Schema::hasColumn('templates', 'version')) {
+                    $table->integer('version')->default(1)->after('status');
+                }
+                if (!Schema::hasColumn('templates', 'is_public')) {
+                    $table->boolean('is_public')->default(false)->after('version');
+                }
+                if (!Schema::hasColumn('templates', 'usage_count')) {
+                    $table->integer('usage_count')->default(0)->after('is_public');
+                }
+                if (!Schema::hasColumn('templates', 'tags')) {
+                    $table->json('tags')->nullable()->after('usage_count');
+                }
+                if (!Schema::hasColumn('templates', 'metadata')) {
+                    $table->json('metadata')->nullable()->after('tags');
+                }
+                if (!Schema::hasColumn('templates', 'template_data')) {
+                    $table->json('template_data')->nullable()->after('metadata');
+                }
+                if (!Schema::hasColumn('templates', 'settings')) {
+                    $table->json('settings')->nullable()->after('template_data');
+                }
+            });
+        }
     }
 
     /**

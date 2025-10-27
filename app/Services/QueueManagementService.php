@@ -132,22 +132,198 @@ class QueueManagementService
     }
 
     /**
-     * Get active workers
+     * Get queue metrics for monitoring
      */
-    private function getActiveWorkers(): array
+    public function getQueueMetrics(): array
+    {
+        try {
+            $stats = $this->getQueueStats();
+            
+            $metrics = [
+                'queue_jobs_total' => $stats['total_jobs'],
+                'queue_jobs_failed_total' => $stats['total_failed'],
+                'queue_jobs_processing' => array_sum(array_column($stats['queues'], 'processing')),
+                'queue_workers_active' => count($stats['workers']),
+                'queue_health_status' => $this->getHealthStatus()['status'],
+                'timestamp' => now()->timestamp,
+            ];
+
+            // Add per-queue metrics
+            foreach ($stats['queues'] as $queueName => $queueStats) {
+                $metrics["queue_{$queueName}_pending"] = $queueStats['pending'];
+                $metrics["queue_{$queueName}_failed"] = $queueStats['failed'];
+                $metrics["queue_{$queueName}_processing"] = $queueStats['processing'];
+            }
+
+            return $metrics;
+        } catch (\Exception $e) {
+            Log::error('Failed to get queue metrics', [
+                'error' => $e->getMessage(),
+            ]);
+            
+            return [
+                'error' => $e->getMessage(),
+                'timestamp' => now()->timestamp,
+            ];
+        }
+    }
+
+    /**
+     * Retry a specific job
+     */
+    public function retryJob(string $jobId): array
+    {
+        try {
+            if ($this->connection === 'database') {
+                $job = \DB::table('failed_jobs')->where('id', $jobId)->first();
+                if (!$job) {
+                    return ['success' => false, 'message' => 'Job not found'];
+                }
+
+                // Move job back to jobs table
+                \DB::table('jobs')->insert([
+                    'queue' => $job->queue,
+                    'payload' => $job->payload,
+                    'attempts' => 0,
+                    'reserved_at' => null,
+                    'available_at' => now()->timestamp,
+                    'created_at' => now()->timestamp,
+                ]);
+
+                // Remove from failed jobs
+                \DB::table('failed_jobs')->where('id', $jobId)->delete();
+
+                return ['success' => true, 'message' => 'Job retried successfully', 'count' => 1];
+            }
+
+            return ['success' => false, 'message' => 'Retry not supported for this connection'];
+        } catch (\Exception $e) {
+            Log::error('Failed to retry job', [
+                'job_id' => $jobId,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return ['success' => false, 'message' => 'Failed to retry job: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Retry all failed jobs for a queue
+     */
+    public function retryAllFailedJobs(string $queue = null): array
+    {
+        try {
+            $count = 0;
+            
+            if ($this->connection === 'database') {
+                $query = \DB::table('failed_jobs');
+                if ($queue) {
+                    $query->where('queue', $queue);
+                }
+                
+                $failedJobs = $query->get();
+                
+                foreach ($failedJobs as $job) {
+                    // Move job back to jobs table
+                    \DB::table('jobs')->insert([
+                        'queue' => $job->queue,
+                        'payload' => $job->payload,
+                        'attempts' => 0,
+                        'reserved_at' => null,
+                        'available_at' => now()->timestamp,
+                        'created_at' => now()->timestamp,
+                    ]);
+                    
+                    $count++;
+                }
+                
+                // Remove from failed jobs
+                $query->delete();
+            }
+
+            return ['success' => true, 'message' => "Retried {$count} failed jobs", 'count' => $count];
+        } catch (\Exception $e) {
+            Log::error('Failed to retry all failed jobs', [
+                'queue' => $queue,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return ['success' => false, 'message' => 'Failed to retry jobs: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Clear failed jobs with count
+     */
+    public function clearFailedJobs(string $queue = null): array
+    {
+        try {
+            $count = 0;
+            
+            if ($this->connection === 'database') {
+                $query = \DB::table('failed_jobs');
+                if ($queue) {
+                    $query->where('queue', $queue);
+                }
+                
+                $count = $query->count();
+                $query->delete();
+            } elseif ($this->connection === 'redis') {
+                $redis = Redis::connection();
+                
+                if ($queue) {
+                    $failedKey = "queues:{$queue}:failed";
+                    $count = $redis->llen($failedKey);
+                    $redis->del($failedKey);
+                } else {
+                    foreach ($this->queues as $q) {
+                        $failedKey = "queues:{$q}:failed";
+                        $count += $redis->llen($failedKey);
+                        $redis->del($failedKey);
+                    }
+                }
+            }
+
+            return ['success' => true, 'message' => "Cleared {$count} failed jobs", 'count' => $count];
+        } catch (\Exception $e) {
+            Log::error('Failed to clear failed jobs', [
+                'queue' => $queue,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return ['success' => false, 'message' => 'Failed to clear failed jobs: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get active workers with enhanced info
+     */
+    public function getActiveWorkers(): array
     {
         try {
             if ($this->connection === 'redis') {
                 return $this->getRedisWorkers();
-            } else {
-                return [];
+            } elseif ($this->connection === 'database') {
+                return $this->getDatabaseWorkers();
             }
+            
+            return [];
         } catch (\Exception $e) {
             Log::warning('Failed to get active workers', [
                 'error' => $e->getMessage(),
             ]);
             return [];
         }
+    }
+
+    /**
+     * Get database workers (simulated)
+     */
+    private function getDatabaseWorkers(): array
+    {
+        // For database connection, we can't easily track workers
+        // Return empty array or simulate based on running processes
+        return [];
     }
 
     /**
@@ -175,62 +351,6 @@ class QueueManagementService
         }
 
         return $workers;
-    }
-
-    /**
-     * Clear failed jobs
-     */
-    public function clearFailedJobs(string $queue = null): bool
-    {
-        try {
-            if ($this->connection === 'redis') {
-                return $this->clearRedisFailedJobs($queue);
-            } elseif ($this->connection === 'database') {
-                return $this->clearDatabaseFailedJobs($queue);
-            }
-            
-            return false;
-        } catch (\Exception $e) {
-            Log::error('Failed to clear failed jobs', [
-                'queue' => $queue,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * Clear Redis failed jobs
-     */
-    private function clearRedisFailedJobs(string $queue = null): bool
-    {
-        $redis = Redis::connection();
-        
-        if ($queue) {
-            $failedKey = "queues:{$queue}:failed";
-            $redis->del($failedKey);
-        } else {
-            foreach ($this->queues as $q) {
-                $failedKey = "queues:{$q}:failed";
-                $redis->del($failedKey);
-            }
-        }
-        
-        return true;
-    }
-
-    /**
-     * Clear database failed jobs
-     */
-    private function clearDatabaseFailedJobs(string $queue = null): bool
-    {
-        if ($queue) {
-            \DB::table('failed_jobs')->where('queue', $queue)->delete();
-        } else {
-            \DB::table('failed_jobs')->delete();
-        }
-        
-        return true;
     }
 
     /**

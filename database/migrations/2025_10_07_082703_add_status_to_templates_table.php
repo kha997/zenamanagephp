@@ -11,9 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('templates', function (Blueprint $table) {
-            $table->enum('status', ['draft', 'active', 'archived', 'deprecated'])->default('draft')->after('is_active');
-        });
+        if (Schema::hasTable('templates')) {
+            Schema::table('templates', function (Blueprint $table) {
+                if (!Schema::hasColumn('templates', 'status')) {
+                    $table->enum('status', ['draft', 'active', 'archived', 'deprecated'])->default('draft')->after('is_active');
+                }
+            });
+        }
     }
 
     /**

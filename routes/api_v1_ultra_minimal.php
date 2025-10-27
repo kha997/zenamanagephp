@@ -26,6 +26,8 @@ Route::prefix('v1')->group(function () {
         Route::get('dashboard/recent-tasks', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getRecentTasks']);
         Route::get('dashboard/recent-activity', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getRecentActivity']);
         Route::get('dashboard/metrics', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getMetrics']);
+        Route::get('dashboard/team-status', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getTeamStatus']);
+        Route::get('dashboard/charts/{type}', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getChartData']);
         
         // Calendar API
         Route::apiResource('calendar', App\Http\Controllers\Api\V1\App\CalendarController::class);

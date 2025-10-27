@@ -105,10 +105,12 @@ export const testUtils = {
     },
 
     measureMemoryUsage: (): number => {
-      if ('memory' in performance) {
-        return (performance as any).memory.usedJSHeapSize
+      const performanceWithMemory = performance as Performance & {
+        memory?: {
+          usedJSHeapSize?: number
+        }
       }
-      return 0
+      return performanceWithMemory.memory?.usedJSHeapSize ?? 0
     },
 
     generateLargeDataset: (size: number) => {
@@ -139,11 +141,11 @@ export const testUtils = {
       })
     },
 
-    testMessageSending: (ws: WebSocket, message: any): Promise<boolean> => {
+    testMessageSending: (ws: WebSocket, message: Record<string, unknown>): Promise<boolean> => {
       return new Promise((resolve) => {
         const timeout = setTimeout(() => resolve(false), 3000)
         
-        ws.onmessage = (event) => {
+        ws.onmessage = () => {
           clearTimeout(timeout)
           resolve(true)
         }
@@ -177,14 +179,20 @@ export const testUtils = {
 
   // Data synchronization testing
   dataSync: {
-    testDataConsistency: (originalData: any, syncedData: any): boolean => {
+    testDataConsistency: <T>(originalData: T, syncedData: T): boolean => {
       return JSON.stringify(originalData) === JSON.stringify(syncedData)
     },
 
-    testCacheUpdate: (cache: any, newData: any): boolean => {
-      // Test if cache is properly updated with new data
-      return cache && cache.data && cache.data.some((item: any) => 
-        newData.some((newItem: any) => newItem.id === item.id)
+    testCacheUpdate: <T extends { id: string | number }>(
+      cache: { data?: T[] } | null | undefined,
+      newData: T[]
+    ): boolean => {
+      if (!cache?.data) {
+        return false
+      }
+
+      return cache.data.some((item) =>
+        newData.some((newItem) => newItem.id === item.id)
       )
     }
   }

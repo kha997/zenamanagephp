@@ -11,14 +11,15 @@ use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\RFI;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
 
 class SecurityIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected $user;
     protected $project;
@@ -27,7 +28,7 @@ class SecurityIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = \App\Models\Tenant::create([
             'name' => 'Test Tenant',
@@ -35,10 +36,11 @@ class SecurityIntegrationTest extends TestCase
             'is_active' => true
         ]);
         
-        // Create test user
+        // Create test user with unique email
+        $timestamp = now()->timestamp . rand(100, 999);
         $this->user = User::create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => "test+{$timestamp}@example.com",
             'password' => Hash::make('password'),
             'role' => 'project_manager',
             'tenant_id' => $this->tenant->id
@@ -47,11 +49,9 @@ class SecurityIntegrationTest extends TestCase
         // Create test project
         $this->project = Project::create([
             'name' => 'Test Project',
-            'description' => 'Test project description',
             'status' => 'active',
             'budget' => 100000,
             'start_date' => now(),
-            'end_date' => now()->addMonths(6),
             'tenant_id' => $this->tenant->id
         ]);
         

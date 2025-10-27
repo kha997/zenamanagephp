@@ -168,7 +168,7 @@ class TemplateFactory extends Factory
     public function published(): Factory
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Template::STATUS_PUBLISHED,
+            'status' => Template::STATUS_ACTIVE,
             'is_active' => true
         ]);
     }
@@ -194,7 +194,7 @@ class TemplateFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'usage_count' => $this->faker->numberBetween(50, 500),
             'is_public' => true,
-            'status' => Template::STATUS_PUBLISHED
+            'status' => Template::STATUS_ACTIVE
         ]);
     }
 

@@ -26,24 +26,44 @@ class ProjectManagementController extends Controller
     }
 
     /**
-     * Display projects list (Web)
+     * Display projects list (Web or API)
      */
-    public function index(ProjectManagementRequest $request): View
+    public function index(ProjectManagementRequest $request)
     {
         $filters = $request->only(['search', 'status', 'priority', 'owner_id', 'start_date_from', 'start_date_to', 'end_date_from', 'end_date_to']);
         $sortBy = $request->get('sort_by', 'updated_at');
         $sortDirection = $request->get('sort_direction', 'desc');
-        $perPage = $request->get('per_page', 15);
+        $perPage = (int) $request->get('per_page', 15);
 
+        $tenantId = (string) (Auth::user()?->tenant_id ?? '');
+        
         $projects = $this->projectService->getProjects(
             $filters,
             $perPage,
             $sortBy,
-            $sortDirection
+            $sortDirection,
+            $tenantId
         );
 
-        $stats = $this->projectService->getProjectStats();
+        // If API request (wants JSON)
+        if ($request->wantsJson() || $request->is('api/*')) {
+            if (method_exists($projects, 'items')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $projects->items(),
+                    'meta' => [
+                        'current_page' => $projects->currentPage(),
+                        'per_page' => $projects->perPage(),
+                        'total' => $projects->total(),
+                        'last_page' => $projects->lastPage(),
+                    ]
+                ]);
+            }
+            return $this->projectService->successResponse($projects);
+        }
 
+        // Web request - return view
+        $stats = $this->projectService->getProjectStats();
         return view('app.projects.index', compact('projects', 'stats', 'filters'));
     }
 
@@ -64,6 +84,21 @@ class ProjectManagementController extends Controller
             $sortDirection,
             (string) (Auth::user()?->tenant_id ?? '')
         );
+
+        // Ensure consistent JSON structure for tests
+        // If $projects is a paginator, extract items and metadata
+        if (method_exists($projects, 'items')) {
+            return response()->json([
+                'success' => true,
+                'data' => $projects->items(),
+                'meta' => [
+                    'current_page' => $projects->currentPage(),
+                    'per_page' => $projects->perPage(),
+                    'total' => $projects->total(),
+                    'last_page' => $projects->lastPage(),
+                ]
+            ]);
+        }
 
         return $this->projectService->successResponse($projects);
     }
@@ -238,9 +273,71 @@ class ProjectManagementController extends Controller
      */
     public function getProjectStats(): JsonResponse
     {
-        $stats = $this->projectService->getProjectStats((string) (string) (Auth::user()?->tenant_id ?? ''));
-        
-        return $this->projectService->successResponse($stats);
+        try {
+            $stats = $this->projectService->getProjectStats((string) (Auth::user()?->tenant_id ?? ''));
+            
+            return $this->projectService->successResponse($stats);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database errors
+            return $this->projectService->errorResponse(
+                'Database error occurred while fetching statistics',
+                500,
+                ['error_id' => 'stats_db_error_' . uniqid()]
+            );
+        } catch (\Exception $e) {
+            // Handle other errors
+            return $this->projectService->errorResponse(
+                $e->getMessage(),
+                $e->getCode() ?: 500,
+                ['error_id' => 'stats_error_' . uniqid()]
+            );
+        }
+    }
+
+    /**
+     * Get project timeline (API)
+     * 
+     * Returns timeline of project milestones, tasks, and events
+     * 
+     * @param string $id Project ID
+     * @return JsonResponse Timeline data with project_id and timeline items
+     * @throws \Exception On database errors or unauthorized access
+     */
+    public function getProjectTimeline(string $id): JsonResponse
+    {
+        try {
+            // Check authentication
+            if (!Auth::check()) {
+                return $this->projectService->errorResponse('Unauthenticated', 401);
+            }
+
+            $user = Auth::user();
+            $tenantId = (string) ($user->tenant_id ?? '');
+
+            // Get timeline data from service
+            $timelineData = $this->projectService->getProjectTimeline($id, $tenantId);
+            
+            if (!$timelineData) {
+                return $this->projectService->errorResponse('Project not found', 404);
+            }
+
+            return $this->projectService->successResponse($timelineData);
+            
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database errors
+            return $this->projectService->errorResponse(
+                'Database error occurred while fetching timeline',
+                500,
+                ['error_id' => 'timeline_db_error_' . uniqid()]
+            );
+        } catch (\Exception $e) {
+            // Handle other errors
+            return $this->projectService->errorResponse(
+                $e->getMessage(),
+                $e->getCode() ?: 500,
+                ['error_id' => 'timeline_error_' . uniqid()]
+            );
+        }
     }
 
     /**

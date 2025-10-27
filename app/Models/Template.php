@@ -89,13 +89,15 @@ class Template extends Model
      * Template status constants
      */
     public const STATUS_DRAFT = 'draft';
-    public const STATUS_PUBLISHED = 'published';
+    public const STATUS_ACTIVE = 'active';
     public const STATUS_ARCHIVED = 'archived';
+    public const STATUS_DEPRECATED = 'deprecated';
 
     public const VALID_STATUSES = [
         self::STATUS_DRAFT,
-        self::STATUS_PUBLISHED,
+        self::STATUS_ACTIVE,
         self::STATUS_ARCHIVED,
+        self::STATUS_DEPRECATED,
     ];
 
     /**
@@ -168,7 +170,7 @@ class Template extends Model
 
     public function scopePublished($query)
     {
-        return $query->where('status', self::STATUS_PUBLISHED);
+        return $query->where('status', self::STATUS_ACTIVE);
     }
 
     public function scopeByUser($query, string $userId)
@@ -191,7 +193,7 @@ class Template extends Model
 
     public function publish(): bool
     {
-        $this->status = self::STATUS_PUBLISHED;
+        $this->status = self::STATUS_ACTIVE;
         return $this->save();
     }
 
@@ -263,7 +265,7 @@ class Template extends Model
     public function canBeUsed(): bool
     {
         return $this->is_active && 
-               $this->status === self::STATUS_PUBLISHED &&
+               $this->status === self::STATUS_ACTIVE &&
                $this->isValid();
     }
 }

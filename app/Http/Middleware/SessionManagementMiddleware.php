@@ -69,7 +69,7 @@ class SessionManagementMiddleware
         $lastActivity = $session->get('last_activity');
         
         if (!$lastActivity) {
-            return false;
+            return false; // New session
         }
         
         $timeout = config('session.lifetime', 120) * 60; // Convert to seconds
@@ -85,6 +85,97 @@ class SessionManagementMiddleware
         }
         
         return $expired;
+    }
+    
+    /**
+     * Handle session expired
+     */
+    private function handleSessionExpired(Request $request): Response
+    {
+        $user = Auth::user();
+        
+        if ($user) {
+            Log::info('User session expired, logging out', [
+                'user_id' => $user->id,
+                'session_id' => $request->session()->getId(),
+                'ip' => $request->ip()
+            ]);
+            
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+        
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Session expired. Please log in again.',
+                'code' => 'SESSION_EXPIRED'
+            ], 401);
+        }
+        
+        return redirect()->route('login')
+            ->with('error', 'Your session has expired. Please log in again.');
+    }
+    
+    /**
+     * Handle concurrent session limit exceeded
+     */
+    private function handleConcurrentSessionLimit(Request $request): Response
+    {
+        $user = Auth::user();
+        
+        Log::warning('Concurrent session limit exceeded, logging out', [
+            'user_id' => $user->id,
+            'session_id' => $request->session()->getId(),
+            'ip' => $request->ip()
+        ]);
+        
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Maximum concurrent sessions exceeded. Please log in again.',
+                'code' => 'CONCURRENT_SESSION_LIMIT'
+            ], 401);
+        }
+        
+        return redirect()->route('login')
+            ->with('error', 'Maximum concurrent sessions exceeded. Please log in again.');
+    }
+    
+    /**
+     * Update session activity
+     */
+    private function updateSessionActivity($user, Request $request): void
+    {
+        $session = $request->session();
+        $sessionId = $session->getId();
+        
+        // Update last activity timestamp
+        $session->put('last_activity', now()->timestamp);
+        
+        // Store session info in cache
+        $sessionData = [
+            'user_id' => $user->id,
+            'session_id' => $sessionId,
+            'last_activity' => now()->timestamp,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent()
+        ];
+        
+        $sessions = cache()->get("user_sessions_{$user->id}", []);
+        $sessions[$sessionId] = $sessionData;
+        
+        // Keep only recent sessions (cleanup old ones)
+        $sessions = array_filter($sessions, function($sessionData) {
+            return now()->timestamp - $sessionData['last_activity'] < 86400; // 24 hours
+        });
+        
+        cache()->put("user_sessions_{$user->id}", $sessions, 86400); // 24 hours
     }
     
     /**
@@ -155,69 +246,5 @@ class SessionManagementMiddleware
         $lastActivity = $sessionData['last_activity'] ?? 0;
         
         return now()->timestamp - $lastActivity <= $timeout;
-    }
-    
-    /**
-     * Update session activity
-     */
-    private function updateSessionActivity($user, Request $request): void
-    {
-        if (!$request->hasSession()) {
-            return;
-        }
-        
-        $session = $request->session();
-        $sessionId = $session->getId();
-        
-        // Update session last activity
-        $session->put('last_activity', now()->timestamp);
-        
-        // Update user's last activity
-        $user->update(['last_activity_at' => now()]);
-        
-        // Store session info in cache
-        $sessions = cache()->get("user_sessions_{$user->id}", []);
-        $sessions[$sessionId] = [
-            'last_activity' => now()->timestamp,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'created_at' => $sessions[$sessionId]['created_at'] ?? now()->timestamp
-        ];
-        
-        cache()->put("user_sessions_{$user->id}", $sessions, now()->addHours(24));
-    }
-    
-    /**
-     * Handle session expired
-     */
-    private function handleSessionExpired(Request $request): Response
-    {
-        // Clear the session
-        if ($request->hasSession()) {
-            $request->session()->invalidate();
-        }
-        
-        // Logout the user
-        Auth::logout();
-        
-        return response()->json([
-            'success' => false,
-            'error' => 'Session Expired',
-            'message' => 'Your session has expired. Please log in again.',
-            'code' => 'SESSION_EXPIRED'
-        ], 401);
-    }
-    
-    /**
-     * Handle concurrent session limit
-     */
-    private function handleConcurrentSessionLimit(Request $request): Response
-    {
-        return response()->json([
-            'success' => false,
-            'error' => 'Session Limit Exceeded',
-            'message' => 'You have reached the maximum number of concurrent sessions. Please log out from another device.',
-            'code' => 'SESSION_LIMIT_EXCEEDED'
-        ], 409);
     }
 }

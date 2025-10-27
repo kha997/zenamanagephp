@@ -62,7 +62,13 @@ const attachAuthHeader = (config: InternalAxiosRequestConfig) => {
     config.headers = {} as any;
   }
 
-  if (authToken) {
+  // Always check localStorage for latest token
+  if (typeof window !== 'undefined') {
+    const token = window.localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } else if (authToken) {
     config.headers.Authorization = `Bearer ${authToken}`;
   }
 
@@ -108,9 +114,11 @@ export const mapAxiosError = (error: AxiosError | Error): ApiError => {
   return new ApiError(error.message || 'Lỗi không xác định', 500);
 };
 
+const DEFAULT_API_BASE_URL = '/api/v1'; // Use relative URL for Vite proxy
+
 export const createApiClient = (options: ApiClientOptions = {}): AxiosInstance => {
   const instance = axios.create({
-    baseURL: options.baseURL ?? '/api/v1',
+    baseURL: options.baseURL ?? DEFAULT_API_BASE_URL,
     timeout: options.timeout ?? 12000,
     headers: {
       'Content-Type': 'application/json',

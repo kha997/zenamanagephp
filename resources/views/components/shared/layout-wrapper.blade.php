@@ -7,7 +7,6 @@
     'subtitle' => null,
     'breadcrumbs' => [],
     'actions' => null,
-    'sidebar' => null,
     'user' => null,
     'tenant' => null,
     'notifications' => [],
@@ -51,26 +50,26 @@
      data-theme="{{ $theme }}">
     
     {{-- Header --}}
-    <x-shared.header-standardized 
+    <x-shared.header-wrapper 
         variant="{{ $variant }}"
         :user="$user"
         :tenant="$tenant"
+        :navigation="app(App\Services\HeaderService::class)->getNavigation($user, $variant)"
         :notifications="$notifications"
-        :show-notifications="$showNotifications"
-        :show-user-menu="$showUserMenu"
-        theme="{{ $theme }}" />
+        :unread-count="count($notifications)"
+        :breadcrumbs="$breadcrumbs"
+        :theme="$theme" />
+    
+    {{-- Primary Navigator --}}
+    <x-shared.navigation.primary-navigator 
+        variant="{{ $variant }}"
+        :navigation="app(App\Services\HeaderService::class)->getNavigation($user, $variant)"
+    />
     
     {{-- Main Layout Container --}}
-    <div class="flex min-h-screen">
-        {{-- Sidebar (if provided) --}}
-        @if($sidebar)
-            <aside class="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:pt-header lg:pb-0 lg:overflow-y-auto bg-white border-r border-gray-200">
-                {{ $sidebar }}
-            </aside>
-        @endif
-        
+    <div class="flex flex-col min-h-screen">
         {{-- Main Content Area --}}
-        <main class="flex-1 {{ $sidebar ? 'lg:ml-64' : '' }}">
+        <main class="flex-1">
             {{-- Page Header --}}
             <div class="bg-white shadow-sm border-b border-gray-200 {{ $sticky ? 'sticky top-header z-10' : '' }}">
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -180,41 +179,6 @@
             </div>
         </main>
     </div>
-    
-    {{-- Mobile Sidebar Overlay --}}
-    @if($sidebar)
-        <div x-show="mobileSidebarOpen" 
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-             @click="mobileSidebarOpen = false">
-        </div>
-        
-        {{-- Mobile Sidebar --}}
-        <div x-show="mobileSidebarOpen" 
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="-translate-x-full"
-             x-transition:enter-end="translate-x-0"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="translate-x-0"
-             x-transition:leave-end="-translate-x-full"
-             class="fixed inset-y-0 left-0 w-64 bg-white z-50 lg:hidden">
-            <div class="flex items-center justify-between p-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">Menu</h2>
-                <button @click="mobileSidebarOpen = false" 
-                        class="p-2 text-gray-400 hover:text-gray-500">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="p-4">
-                {{ $sidebar }}
-            </div>
-        </div>
-    @endif
 </div>
 
 @push('scripts')
@@ -222,7 +186,6 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('layoutWrapperComponent', () => ({
         theme: '{{ $theme }}',
-        mobileSidebarOpen: false,
         
         init() {
             // Initialize theme
@@ -245,10 +208,6 @@ document.addEventListener('alpine:init', () => {
         
         handleScroll() {
             // This will be handled by the header component
-        },
-        
-        toggleMobileSidebar() {
-            this.mobileSidebarOpen = !this.mobileSidebarOpen;
         }
     }));
 });

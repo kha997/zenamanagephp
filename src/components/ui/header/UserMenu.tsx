@@ -197,6 +197,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 </Link>
               ) : (
                 <button
+                  type="button"
                   onClick={item.onClick}
                   className={`flex items-center space-x-3 px-3 py-2 text-header-fg hover:text-nav-hover hover:bg-header-bg-hover rounded-lg transition-colors duration-200 w-full text-left ${item.className || ''}`}
                   role={item.role}
@@ -217,6 +218,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     <div className={`header-user-menu ${className}`}>
       <button
         ref={buttonRef}
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="header-user-avatar"
         aria-expanded={isOpen}
@@ -240,6 +242,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           className="header-dropdown"
           role="menu"
           aria-label="User menu"
+          tabIndex={-1}
           onKeyDown={handleMenuKeyDown}
         >
           {/* User Info */}
@@ -273,6 +276,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                 </Link>
               ) : (
                 <button
+                  type="button"
                   onClick={() => {
                     item.onClick?.();
                     setIsOpen(false);

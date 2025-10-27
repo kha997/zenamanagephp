@@ -33,15 +33,7 @@ class TemplateSimple extends Model
     protected $keyType = 'string';
     public $incrementing = false;
     
-    protected $fillable = [
-        'template_name',
-        'category',
-        'json_body',
-        'version',
-        'is_active',
-        'created_by',
-        'updated_by',
-    ];
+    protected $guarded = [];
 
     protected $casts = [
         'json_body' => 'array',

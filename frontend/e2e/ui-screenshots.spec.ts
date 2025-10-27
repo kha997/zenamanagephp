@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test.describe('UI Screenshots for Review', () => {
   test('capture login page screenshot', async ({ page }) => {

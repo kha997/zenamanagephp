@@ -292,6 +292,105 @@ class ProjectManagementService
     }
 
     /**
+     * Get project timeline
+     * 
+     * Returns timeline of project milestones, tasks, and events
+     * 
+     * @param string $projectId Project ID
+     * @param string|int|null $tenantId Tenant ID for multi-tenant isolation
+     * @return array|null Timeline data with project_id and timeline items
+     */
+    public function getProjectTimeline(string $projectId, string|int|null $tenantId = null): ?array
+    {
+        $this->validateTenantAccess($tenantId);
+        
+        // Get project with tenant validation
+        $project = Project::query()
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->find($projectId);
+            
+        if (!$project) {
+            return null;
+        }
+        
+        // Get timeline items from various sources
+        $timelineItems = collect();
+        
+        // Add project milestones (start_date, end_date)
+        if ($project->start_date) {
+            $timelineItems->push([
+                'id' => 'project_start_' . $project->id,
+                'title' => 'Project Start',
+                'date' => $project->start_date,
+                'type' => 'milestone',
+                'status' => $project->start_date <= now() ? 'completed' : 'pending',
+                'description' => 'Project start date'
+            ]);
+        }
+        
+        if ($project->end_date) {
+            $timelineItems->push([
+                'id' => 'project_end_' . $project->id,
+                'title' => 'Project End',
+                'date' => $project->end_date,
+                'type' => 'milestone',
+                'status' => $project->end_date <= now() ? ($project->status === 'completed' ? 'completed' : 'overdue') : 'pending',
+                'description' => 'Project end date'
+            ]);
+        }
+        
+        // Add project creation event
+        $timelineItems->push([
+            'id' => 'project_created_' . $project->id,
+            'title' => 'Project Created',
+            'date' => $project->created_at,
+            'type' => 'event',
+            'status' => 'completed',
+            'description' => 'Project was created'
+        ]);
+        
+        // Add project status changes
+        if ($project->updated_at && $project->updated_at != $project->created_at) {
+            $timelineItems->push([
+                'id' => 'project_updated_' . $project->id,
+                'title' => 'Project Updated',
+                'date' => $project->updated_at,
+                'type' => 'event',
+                'status' => 'completed',
+                'description' => 'Project was last updated'
+            ]);
+        }
+        
+        // Get tasks for this project
+        $tasks = \App\Models\Task::query()
+            ->where('project_id', $projectId)
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->orderBy('due_date', 'asc')
+            ->get();
+            
+        foreach ($tasks as $task) {
+            $timelineItems->push([
+                'id' => 'task_' . $task->id,
+                'title' => $task->title,
+                'date' => $task->due_date ?? $task->created_at,
+                'type' => 'task',
+                'status' => $task->status === 'completed' ? 'completed' : 
+                           ($task->due_date && $task->due_date < now() ? 'overdue' : 'pending'),
+                'description' => $task->description
+            ]);
+        }
+        
+        // Sort timeline items by date
+        $timelineItems = $timelineItems->sortBy('date')->values();
+        
+        return [
+            'project_id' => $projectId,
+            'project_name' => $project->name,
+            'timeline' => $timelineItems->toArray()
+        ];
+    }
+
+    /**
      * Search projects
      */
     public function searchProjects(

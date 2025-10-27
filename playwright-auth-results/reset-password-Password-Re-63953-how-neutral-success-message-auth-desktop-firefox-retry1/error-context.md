@@ -1,0 +1,14 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e3]: "500"
+  - heading "Page Not Found" [level=1] [ref=e4]
+  - paragraph [ref=e5]: The page you are looking for does not exist or has been moved.
+  - generic [ref=e6]:
+    - link "Go Back" [ref=e7] [cursor=pointer]:
+      - /url: http://127.0.0.1:8000
+    - link "Dashboard" [ref=e8] [cursor=pointer]:
+      - /url: http://127.0.0.1:8000/app/dashboard
+  - generic [ref=e9]: "If this problem persists, please contact support with Request ID: N/A"
+```

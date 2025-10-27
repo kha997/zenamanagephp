@@ -94,7 +94,7 @@ class TemplateService
             ]);
 
             // Create new version if template data changed
-            if ($data['template_data'] && $data['template_data'] !== $oldData) {
+            if (isset($data['template_data']) && $data['template_data'] && $data['template_data'] !== $oldData) {
                 $template->increment('version');
                 $this->createVersion($template, $userId, 'Template updated');
             }
@@ -220,7 +220,7 @@ class TemplateService
             'version' => $template->version,
             'name' => $description ?: "Version {$template->version}",
             'description' => $description,
-            'template_data' => $template->template_data,
+            'json_body' => $template->template_data,
             'changes' => [],
             'created_by' => $userId,
             'is_active' => true
@@ -243,7 +243,7 @@ class TemplateService
 
         return [
             'total_templates' => $templates->count(),
-            'published_templates' => $templates->where('status', Template::STATUS_PUBLISHED)->count(),
+            'published_templates' => $templates->where('status', Template::STATUS_ACTIVE)->count(),
             'draft_templates' => $templates->where('status', Template::STATUS_DRAFT)->count(),
             'archived_templates' => $templates->where('status', Template::STATUS_ARCHIVED)->count(),
             'public_templates' => $templates->where('is_public', true)->count(),

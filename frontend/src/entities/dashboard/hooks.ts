@@ -171,3 +171,40 @@ export const useResetDashboard = () => {
     },
   });
 };
+
+// New hooks for dashboard data
+export const useRecentProjects = (limit: number = 5) => {
+  return useQuery({
+    queryKey: [...dashboardKeys.all, 'recent-projects', limit],
+    queryFn: () => dashboardApi.getRecentProjects({ limit }),
+    staleTime: 30_000, // 30 seconds
+    retry: 1,
+  });
+};
+
+export const useRecentActivity = (limit: number = 10) => {
+  return useQuery({
+    queryKey: [...dashboardKeys.all, 'recent-activity', limit],
+    queryFn: () => dashboardApi.getRecentActivity({ limit }),
+    staleTime: 30_000, // 30 seconds
+    retry: 1,
+  });
+};
+
+export const useTeamStatus = () => {
+  return useQuery({
+    queryKey: [...dashboardKeys.all, 'team-status'],
+    queryFn: () => dashboardApi.getTeamStatus(),
+    staleTime: 60_000, // 1 minute
+    retry: 1,
+  });
+};
+
+export const useDashboardChart = (type: 'project-progress' | 'task-completion', period?: string) => {
+  return useQuery({
+    queryKey: [...dashboardKeys.all, 'chart', type, period],
+    queryFn: () => dashboardApi.getChartData(type, period),
+    staleTime: 60_000, // 1 minute
+    retry: 1,
+  });
+};

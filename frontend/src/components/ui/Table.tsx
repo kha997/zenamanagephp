@@ -75,7 +75,7 @@ export function Table<T extends Record<string, any>>({
     }
   };
 
-  const handleSelectRow = (record: T, index: number, checked: boolean) => {
+  const handleSelectRow = (_record: T, index: number, checked: boolean) => {
     if (!rowSelection) return;
     
     const { selectedRowKeys } = rowSelection;

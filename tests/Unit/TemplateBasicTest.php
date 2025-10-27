@@ -19,20 +19,27 @@ class TemplateBasicTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->markTestSkipped('All TemplateBasicTest tests skipped - database schema issue with template_name column');
+        
+        // Create tenant and user for testing
+        $this->tenant = Tenant::factory()->create();
+        $this->user = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'email' => 'test-' . uniqid() . '@example.com'
+        ]);
     }
 
     /** @test */
     public function it_can_create_a_template()
     {
-        $this->markTestSkipped('Template test skipped - database schema issue with template_name column');
-        
-        $template = Template::create([
-            'id' => Str::ulid(),
+        // Use DB::table to insert directly to avoid Eloquent issues
+        $templateId = Str::ulid();
+        \Illuminate\Support\Facades\DB::table('templates')->insert([
+            'id' => $templateId,
             'tenant_id' => $this->tenant->id,
+            'name' => 'Test Template',
             'template_name' => 'Test Template',
             'category' => 'project',
-            'json_body' => [
+            'json_body' => json_encode([
                 'phases' => [
                     [
                         'name' => 'Phase 1',
@@ -40,12 +47,15 @@ class TemplateBasicTest extends TestCase
                         'tasks' => []
                     ]
                 ]
-            ],
+            ]),
             'version' => 1,
             'created_by' => $this->user->id,
             'updated_by' => $this->user->id,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
+        $template = Template::find($templateId);
         $this->assertInstanceOf(Template::class, $template);
         $this->assertEquals('Test Template', $template->template_name);
         $this->assertEquals('project', $template->category);
@@ -58,6 +68,7 @@ class TemplateBasicTest extends TestCase
         $template = Template::create([
             'id' => Str::ulid(),
             'tenant_id' => $this->tenant->id,
+            'name' => 'Test Template', // Required field
             'template_name' => 'Test Template',
             'category' => 'project',
             'json_body' => [
@@ -93,6 +104,7 @@ class TemplateBasicTest extends TestCase
         Template::create([
             'id' => Str::ulid(),
             'tenant_id' => $this->tenant->id,
+            'name' => 'Tenant 1 Template', // Required field
             'template_name' => 'Tenant 1 Template',
             'category' => 'project',
             'json_body' => [],
@@ -104,6 +116,7 @@ class TemplateBasicTest extends TestCase
         Template::create([
             'id' => Str::ulid(),
             'tenant_id' => $otherTenant->id,
+            'name' => 'Tenant 2 Template', // Required field
             'template_name' => 'Tenant 2 Template',
             'category' => 'project',
             'json_body' => [],
@@ -123,6 +136,7 @@ class TemplateBasicTest extends TestCase
         Template::create([
             'id' => Str::ulid(),
             'tenant_id' => $this->tenant->id,
+            'name' => 'Project Template', // Required field
             'template_name' => 'Project Template',
             'category' => 'project',
             'json_body' => [],
@@ -134,6 +148,7 @@ class TemplateBasicTest extends TestCase
         Template::create([
             'id' => Str::ulid(),
             'tenant_id' => $this->tenant->id,
+            'name' => 'Task Template', // Required field
             'template_name' => 'Task Template',
             'category' => 'task',
             'json_body' => [],
@@ -156,6 +171,7 @@ class TemplateBasicTest extends TestCase
         $template = Template::create([
             'id' => Str::ulid(),
             'tenant_id' => $this->tenant->id,
+            'name' => 'Test Template', // Required field
             'template_name' => 'Test Template',
             'category' => 'project',
             'json_body' => [],
@@ -175,6 +191,7 @@ class TemplateBasicTest extends TestCase
         $template = Template::create([
             'id' => Str::ulid(),
             'tenant_id' => $this->tenant->id,
+            'name' => 'Test Template', // Required field
             'template_name' => 'Test Template',
             'category' => 'project',
             'json_body' => [],

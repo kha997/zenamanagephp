@@ -3,7 +3,7 @@ import ProjectTable, { Project } from '../components/projects/ProjectTable';
 import ProjectFilters, { ProjectFilters as ProjectFiltersType } from '../components/projects/ProjectFilters';
 
 const Projects: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects = useState<Project[>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ProjectFiltersType>({
@@ -32,7 +32,7 @@ const Projects: React.FC = () => {
         sort_direction: filters.sortDirection
       });
 
-      const response = await fetch(`/api/projects?${queryParams}`, {
+      const response = await fetch(`/projects?${queryParams}`, {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
@@ -88,7 +88,7 @@ const Projects: React.FC = () => {
   const handleDeleteProject = async (project: Project) => {
     if (window.confirm(`Are you sure you want to delete "${project.name}"?`)) {
       try {
-        const response = await fetch(`/api/projects/${project.id}`, {
+        const response = await fetch(`/projects/${project.id}`, {
           method: 'DELETE',
           headers: {
             'Accept': 'application/json',
@@ -111,7 +111,7 @@ const Projects: React.FC = () => {
   };
 
   const handleViewProject = (project: Project) => {
-    window.location.href = `/app/projects/${project.id}`;
+    window.location.href = `/projects/${project.id}`;
   };
 
   const handlePageChange = (page: number) => {
@@ -222,3 +222,4 @@ const Projects: React.FC = () => {
 };
 
 export default Projects;
+

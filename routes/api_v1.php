@@ -45,5 +45,28 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('templates', App\Http\Controllers\Api\TemplatesController::class);
         Route::get('/templates/library', [App\Http\Controllers\Api\TemplatesController::class, 'library']);
         Route::get('/templates/builder', [App\Http\Controllers\Api\TemplatesController::class, 'builder']);
+        
+        // Dashboard API - using proper middleware
+        Route::middleware(['ability:tenant'])->prefix('dashboard')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'index']);
+            Route::get('/stats', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getStats']);
+            Route::get('/recent-projects', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getRecentProjects']);
+            Route::get('/recent-tasks', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getRecentTasks']);
+            Route::get('/recent-activity', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getRecentActivity']);
+            Route::get('/metrics', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getMetrics']);
+            Route::get('/team-status', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getTeamStatus']);
+            Route::get('/charts/{type}', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getChartData']);
+            Route::get('/alerts', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getAlerts']);
+            Route::put('/alerts/{id}/read', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'markAlertAsRead']);
+            Route::put('/alerts/read-all', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'markAllAlertsAsRead']);
+            Route::get('/widgets', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getAvailableWidgets']);
+            Route::get('/widgets/{id}/data', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'getWidgetData']);
+            Route::post('/widgets', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'addWidget']);
+            Route::delete('/widgets/{id}', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'removeWidget']);
+            Route::put('/widgets/{id}', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'updateWidgetConfig']);
+            Route::put('/layout', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'updateLayout']);
+            Route::post('/preferences', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'saveUserPreferences']);
+            Route::post('/reset', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'resetToDefault']);
+        });
     });
 });

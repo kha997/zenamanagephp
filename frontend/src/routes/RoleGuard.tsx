@@ -37,10 +37,16 @@ export function RoleGuard({
     return <Navigate to="/auth/login" state={{ from: location }} replace />
   }
 
+  const normalizedRoles = Array.isArray(user.roles)
+    ? user.roles
+        .map(role => (typeof role === 'string' ? role : role?.name))
+        .filter((role): role is string => Boolean(role))
+    : [];
+
   // Kiểm tra role
   if (requiredRoles.length > 0) {
-    const hasRequiredRole = requiredRoles.some(role => 
-      user.roles.includes(role)
+    const hasRequiredRole = requiredRoles.some(role =>
+      normalizedRoles.includes(role)
     )
     
     if (!hasRequiredRole) {
@@ -51,7 +57,7 @@ export function RoleGuard({
   // Kiểm tra permission
   if (requiredPermissions.length > 0) {
     const hasRequiredPermission = requiredPermissions.some(permission => 
-      user.permissions.includes(permission)
+      user.permissions?.includes?.(permission)
     )
     
     if (!hasRequiredPermission) {
@@ -67,21 +73,26 @@ export function RoleGuard({
  */
 export function useRolePermission() {
   const { user } = useAuthStore()
+  const normalizedRoles = Array.isArray(user?.roles)
+    ? user.roles
+        .map(role => (typeof role === 'string' ? role : role?.name))
+        .filter((role): role is string => Boolean(role))
+    : []
 
   const hasRole = (role: string): boolean => {
-    return user?.roles.includes(role) ?? false
+    return normalizedRoles.includes(role)
   }
 
   const hasAnyRole = (roles: string[]): boolean => {
-    return roles.some(role => user?.roles.includes(role)) ?? false
+    return roles.some(role => normalizedRoles.includes(role))
   }
 
   const hasPermission = (permission: string): boolean => {
-    return user?.permissions.includes(permission) ?? false
+    return user?.permissions?.includes?.(permission) ?? false
   }
 
   const hasAnyPermission = (permissions: string[]): boolean => {
-    return permissions.some(permission => user?.permissions.includes(permission)) ?? false
+    return permissions.some(permission => user?.permissions?.includes?.(permission)) ?? false
   }
 
   const canAccess = (requiredRoles?: string[], requiredPermissions?: string[]): boolean => {
@@ -89,8 +100,8 @@ export function useRolePermission() {
 
     // Kiểm tra role
     if (requiredRoles && requiredRoles.length > 0) {
-      const hasRequiredRole = requiredRoles.some(role => 
-        user.roles.includes(role)
+      const hasRequiredRole = requiredRoles.some(role =>
+        normalizedRoles.includes(role)
       )
       if (!hasRequiredRole) return false
     }
@@ -98,7 +109,7 @@ export function useRolePermission() {
     // Kiểm tra permission
     if (requiredPermissions && requiredPermissions.length > 0) {
       const hasRequiredPermission = requiredPermissions.some(permission => 
-        user.permissions.includes(permission)
+        user.permissions?.includes?.(permission)
       )
       if (!hasRequiredPermission) return false
     }

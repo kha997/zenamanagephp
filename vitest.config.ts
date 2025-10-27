@@ -14,7 +14,12 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/*.{test,spec}.{js,ts,tsx}', 'frontend/**/*.{test,spec}.{js,ts,tsx}'],
+    include: [
+      'tests/**/*.{test,spec}.{js,ts,tsx}',
+      'src/**/*.{test,spec}.{js,ts,tsx}',
+      'src/**/__tests__/**/*.{js,ts,tsx}',
+      'frontend/**/*.{test,spec}.{js,ts,tsx}',
+    ],
     exclude: ['node_modules', 'vendor', 'public/build'],
   },
 });

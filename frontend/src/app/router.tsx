@@ -1,4 +1,5 @@
-import { Navigate, createBrowserRouter } from 'react-router-dom';
+import React from 'react';
+import { Navigate, createBrowserRouter, useLocation } from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AdminRoute from '../routes/AdminRoute';
@@ -15,11 +16,37 @@ import AdminTenantsPage from '../pages/admin/TenantsPage';
 import ProjectsListPage from '../pages/projects/ProjectsListPage';
 import ProjectDetailPage from '../pages/projects/ProjectDetailPage';
 import DocumentsPage from '../pages/documents/DocumentsPage';
+import { DocumentDetailPage } from '../pages/documents/DocumentDetailPage';
+import { useAuth } from '../shared/auth/hooks';
 
-export const router = createBrowserRouter([
+const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--color-surface-base)] text-[var(--color-text-secondary)]">
+        Đang xác thực phiên đăng nhập...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return children;
+};
+
+export const router = createBrowserRouter(
+  [
   {
     path: '/app',
-    element: <MainLayout />,
+    element: (
+      <RequireAuth>
+        <MainLayout />
+      </RequireAuth>
+    ),
     children: [
       {
         index: true,
@@ -48,6 +75,10 @@ export const router = createBrowserRouter([
       {
         path: 'documents',
         element: <DocumentsPage />,
+      },
+      {
+        path: 'documents/:id',
+        element: <DocumentDetailPage />,
       },
     ],
   },
@@ -97,6 +128,12 @@ export const router = createBrowserRouter([
     path: '*',
     element: <Navigate to="/app/dashboard" replace />,
   },
-]);
+],
+  {
+        future: {
+          // v7_startTransition: true, // Commented out - not available in current React Router version
+        },
+  }
+);
 
 export default router;

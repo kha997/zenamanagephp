@@ -2,19 +2,28 @@
 
 echo "=== Testing Login ==="
 
-# Test 1: Get login page and extract CSRF token
-echo "1. Getting CSRF token..."
-TOKEN=$(curl -s -c cookies.txt http://localhost:8000/login | grep -o 'name="_token" value="[^"]*"' | cut -d'"' -f4)
-echo "CSRF Token: $TOKEN"
+# Test 1: Login via API
+echo "1. Attempting login via API..."
+LOGIN_RESPONSE=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}')
 
-# Test 2: Login with CSRF token
-echo "2. Attempting login..."
-curl -b cookies.txt -c cookies.txt -X POST http://localhost:8000/login \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -H "X-CSRF-TOKEN: $TOKEN" \
-  -d "email=test@example.com&password=password123&_token=$TOKEN" \
-  -L
+echo "Login Response: $LOGIN_RESPONSE"
 
-echo ""
-echo "3. Testing dashboard access..."
-curl -b cookies.txt http://localhost:8000/app/dashboard | head -20
+# Extract token from response
+TOKEN=$(echo $LOGIN_RESPONSE | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+echo "Token: $TOKEN"
+
+# Test 2: Test authenticated request
+if [ -n "$TOKEN" ]; then
+    echo ""
+    echo "2. Testing dashboard access with token..."
+    DASHBOARD_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+         http://localhost:8000/api/dashboard)
+    echo "$DASHBOARD_RESPONSE" | sed -n '1,20p'
+    echo ""
+    echo "✅ Login test completed successfully!"
+else
+    echo "❌ Failed to get token"
+    exit 1
+fi

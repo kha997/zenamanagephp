@@ -70,6 +70,7 @@
                 <div>
                     <label for="email" class="sr-only">Email address</label>
                     <input id="email" name="email" type="email" autocomplete="email" required 
+                           data-testid="email-input"
                            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm @error('email') border-red-300 @enderror" 
                            placeholder="Email address" 
                            value="{{ old('email') }}">
@@ -77,6 +78,7 @@
                 <div class="relative">
                     <label for="password" class="sr-only">Password</label>
                     <input id="password" name="password" type="password" autocomplete="current-password" required 
+                           data-testid="password-input"
                            class="appearance-none rounded-none relative block w-full px-3 py-2 pr-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm @error('password') border-red-300 @enderror" 
                            placeholder="Password">
                     <button type="button" onclick="togglePassword('password')" 
@@ -95,6 +97,7 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
                     <input id="remember" name="remember" type="checkbox" 
+                           data-testid="remember-checkbox"
                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                     <label for="remember" class="ml-2 block text-sm text-gray-900">
                         Remember me
@@ -109,7 +112,7 @@
             </div>
 
             <div>
-                <button type="submit" id="loginButton"
+                <button type="submit" id="loginButton" data-testid="login-submit"
                         class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
                     <span class="absolute left-0 inset-y-0 flex items-center pl-3">
                         <svg class="h-5 w-5 text-blue-500 group-hover:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
@@ -214,6 +217,7 @@ function showError(message) {
     
     // Create error message element
     const errorDiv = document.createElement('div');
+    errorDiv.setAttribute('data-testid', 'error-message');
     errorDiv.className = 'error-message rounded-md bg-red-50 p-4';
     errorDiv.innerHTML = `
         <div class="flex">
@@ -242,6 +246,7 @@ function showSuccess(message) {
     
     // Create success message element
     const successDiv = document.createElement('div');
+    successDiv.setAttribute('data-testid', 'success-message');
     successDiv.className = 'success-message rounded-md bg-green-50 p-4';
     successDiv.innerHTML = `
         <div class="flex">

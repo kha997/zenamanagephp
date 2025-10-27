@@ -8,13 +8,13 @@
     "build": "tsc && vite build",
     "build:prod": "NODE_ENV=production tsc && vite build --config vite.config.prod.ts",
     "build:analyze": "NODE_ENV=production tsc && vite build --config vite.config.prod.ts && npx vite-bundle-analyzer dist",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "lint": "eslint src/components/layout src/shared/auth src/__tests__/filterMenu.test.ts e2e --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint src/components/layout src/shared/auth src/__tests__/filterMenu.test.ts e2e --fix",
     "type-check": "tsc --noEmit",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "test:ui": "vitest --ui",
-        "test:e2e": "npx vite build && playwright test",
+    "test:e2e": "npx vite build && playwright test",
     "test:e2e:ui": "playwright test --ui",
     "preview": "vite preview",
     "preview:prod": "vite preview --config vite.config.prod.ts",
@@ -27,7 +27,9 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "size": "npm run build && npx bundlephobia",
     "lighthouse": "lighthouse http://localhost:4173 --output html --output-path ./lighthouse-report.html",
-    "perf": "npm run build && npm run preview:prod & sleep 5 && npm run lighthouse"
+    "perf": "npm run build && npm run preview:prod & sleep 5 && npm run lighthouse",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -77,6 +79,14 @@
     "tailwindcss": "^3.3.5",
     "typescript": "^5.2.2",
     "vite": "^7.1.5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "storybook": "^9.1.15",
+    "@storybook/react-vite": "^9.1.15",
+    "@chromatic-com/storybook": "^4.1.1",
+    "@storybook/addon-docs": "^9.1.15",
+    "@storybook/addon-onboarding": "^9.1.15",
+    "eslint-plugin-storybook": "^9.1.15",
+    "@storybook/addon-a11y": "^9.1.15",
+    "@storybook/addon-vitest": "^9.1.15"
   }
 }

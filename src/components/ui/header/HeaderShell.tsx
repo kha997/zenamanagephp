@@ -1,4 +1,5 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useHeaderCondense } from '../../../hooks/useHeaderCondense';
 
 export interface HeaderShellProps {
@@ -56,6 +57,18 @@ export const HeaderShell: React.FC<HeaderShellProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isMobileMenuOpen]);
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
   const headerClasses = [
     'header-shell',
     sticky && 'sticky top-0',
@@ -77,13 +90,15 @@ export const HeaderShell: React.FC<HeaderShellProps> = ({
         className={headerClasses}
         role="banner"
         aria-label="Main navigation"
+        data-debug="header-shell"
       >
         <div className={containerClasses}>
           {/* Left Section: Logo + Hamburger */}
           <div className="flex items-center space-x-4">
             {/* Mobile Hamburger */}
             <button
-              className="hamburger"
+              type="button"
+              className={`hamburger ${isMobileMenuOpen ? 'active' : ''}`}
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-menu"
@@ -102,7 +117,7 @@ export const HeaderShell: React.FC<HeaderShellProps> = ({
 
           {/* Center Section: Primary Navigation (Desktop) */}
           {primaryNav && (
-            <nav className="header-nav" role="navigation" aria-label="Primary navigation">
+            <nav className="header-nav hidden md:flex" role="navigation" aria-label="Primary navigation">
               {primaryNav}
             </nav>
           )}
@@ -158,6 +173,7 @@ export const HeaderShell: React.FC<HeaderShellProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation menu"
+        tabIndex={-1}
       >
         <div className="p-4 space-y-4">
           {/* Mobile Primary Nav */}

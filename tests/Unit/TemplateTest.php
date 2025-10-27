@@ -21,14 +21,12 @@ class TemplateTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->markTestSkipped('All TemplateTest tests skipped - missing name field in templates table');
 
         $this->tenant = Tenant::factory()->create(['id' => 'test-tenant-1']);
         $this->user = User::factory()->create([
             'id' => 'test-user-1',
             'tenant_id' => $this->tenant->id,
-            'email' => 'test@example.com',
+            'email' => 'test-' . uniqid() . '@example.com',
             'password' => bcrypt('password'),
         ]);
     }
@@ -39,9 +37,9 @@ class TemplateTest extends TestCase
         $template = Template::create([
             'id' => Str::ulid(),
             'tenant_id' => $this->tenant->id,
-            'template_name' => 'Test Template',
+            'name' => 'Test Template',
             'category' => Template::CATEGORY_PROJECT,
-            'json_body' => [
+            'template_data' => [
                 'phases' => [
                     [
                         'name' => 'Phase 1',

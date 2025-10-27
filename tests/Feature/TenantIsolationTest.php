@@ -95,7 +95,9 @@ class TenantIsolationTest extends TestCase
             
         $response->assertStatus(200);
         
-        $projects = $response->json('data');
+        $data = $response->json('data');
+        // Handle both flat array and paginated response
+        $projects = is_array($data) && isset($data[0]) ? $data : $data['data'] ?? $data;
         $this->assertCount(1, $projects);
         $this->assertEquals($this->projectA->id, $projects[0]['id']);
     }
@@ -109,7 +111,9 @@ class TenantIsolationTest extends TestCase
             
         $response->assertStatus(200);
         
-        $projects = $response->json('data');
+        $data = $response->json('data');
+        // Handle both flat array and paginated response
+        $projects = is_array($data) && isset($data[0]) ? $data : $data['data'] ?? $data;
         $this->assertCount(1, $projects);
         $this->assertEquals($this->projectA->id, $projects[0]['id']);
         $this->assertNotEquals($this->projectB->id, $projects[0]['id']);
@@ -130,7 +134,9 @@ class TenantIsolationTest extends TestCase
             
         $response->assertStatus(200);
         
-        $projects = $response->json('data');
+        $data = $response->json('data');
+        // Handle both flat array and paginated response
+        $projects = is_array($data) && isset($data[0]) ? $data : $data['data'] ?? $data;
         $this->assertCount(1, $projects);
     }
 
@@ -154,7 +160,9 @@ class TenantIsolationTest extends TestCase
         $response->assertStatus(200);
         
         // Verify tenant isolation by checking project belongs to correct tenant
-        $projects = $response->json('data');
+        $data = $response->json('data');
+        // Handle both flat array and paginated response
+        $projects = is_array($data) && isset($data[0]) ? $data : $data['data'] ?? $data;
         $this->assertCount(1, $projects);
         $this->assertEquals($this->tenantA->id, $projects[0]['tenant_id']);
     }

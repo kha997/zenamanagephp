@@ -6,8 +6,55 @@ import type {
   UploadDocumentRequest,
   UpdateDocumentRequest,
   DocumentStats,
-  DocumentVersion
+  DocumentVersion,
+  DocumentActivity
 } from './types';
+
+const toDocument = (doc: any): Document => ({
+  id: doc.id,
+  name: doc.name ?? doc.title ?? '',
+  filename: doc.file_name ?? doc.filename ?? '',
+  original_filename: doc.original_name ?? doc.original_filename ?? doc.name ?? '',
+  mime_type: doc.mime_type ?? doc.file_type ?? '',
+  size: doc.file_size ?? doc.size ?? 0,
+  path: doc.file_path ?? doc.path ?? '',
+  url: doc.url ?? doc.path ?? '',
+  project_id: doc.project_id ?? doc.project?.id,
+  project_name: doc.project?.name,
+  uploaded_by: doc.uploaded_by ?? doc.uploader?.id,
+  uploaded_by_name: doc.uploader?.name ?? doc.uploaded_by_name ?? '',
+  uploaded_at: doc.created_at ?? doc.uploaded_at ?? '',
+  updated_at: doc.updated_at ?? '',
+  tags: doc.tags ?? [],
+  description: doc.description ?? '',
+  version: doc.version ?? doc.currentVersion?.version_number ?? 1,
+  is_public: Boolean(doc.is_public),
+  download_count: doc.download_count ?? 0,
+  last_accessed_at: doc.last_accessed_at,
+});
+
+const toDocumentVersion = (version: any): DocumentVersion => ({
+  id: Number(version.id),
+  version: version.version ?? version.version_number ?? 1,
+  filename: version.filename ?? version.file_name ?? '',
+  size: version.size ?? version.file_size ?? 0,
+  mime_type: version.mime_type ?? version.file_type ?? '',
+  checksum: version.checksum ?? version.file_hash,
+  uploaded_at: version.created_at ?? version.uploaded_at ?? '',
+  uploaded_by: version.created_by ?? version.uploaded_by ?? version.user_id ?? 0,
+  uploaded_by_name: version.uploader?.name ?? version.uploaded_by_name ?? version.user_name ?? version.user?.name ?? '',
+  change_description: version.change_description ?? version.comment,
+  reverted_from_version: version.reverted_from_version ?? version.reverted_from_version_number,
+});
+
+const toDocumentActivity = (activity: any): DocumentActivity => ({
+  id: String(activity.id ?? activity.event_id ?? `${Date.now()}`),
+  action: activity.action ?? activity.event ?? 'upload',
+  actor_id: activity.actor_id ?? activity.user_id ?? 0,
+  actor_name: activity.actor_name ?? activity.user_name ?? '',
+  metadata: activity.metadata ?? activity.payload ?? undefined,
+  created_at: activity.created_at ?? activity.timestamp ?? new Date().toISOString(),
+});
 
 export const documentsApi = {
   // Get paginated list of documents
@@ -28,13 +75,44 @@ export const documentsApi = {
     if (filters.sort_order) params.append('sort_order', filters.sort_order);
 
     const response = await apiClient.get(`/api/v1/documents?${params.toString()}`);
-    return response.data;
+    const payload = response.data ?? {};
+    const list = Array.isArray(payload.data?.documents)
+      ? payload.data.documents
+      : Array.isArray(payload.data)
+        ? payload.data
+        : [];
+    const pagination = payload.data?.pagination ?? {};
+    const currentPage = pagination.current_page ?? 1;
+    const lastPage = pagination.last_page ?? currentPage;
+
+    return {
+      data: list.map(toDocument),
+      meta: {
+        current_page: currentPage,
+        last_page: lastPage,
+        per_page: pagination.per_page ?? filters.per_page ?? 12,
+        total: pagination.total ?? list.length,
+      },
+      links: {
+        first: pagination.first_page_url ?? '',
+        last: pagination.last_page_url ?? '',
+        prev: currentPage > 1 ? String(currentPage - 1) : undefined,
+        next: currentPage < lastPage ? String(currentPage + 1) : undefined,
+      },
+    };
   },
 
   // Get single document by ID
   getDocument: async (id: number): Promise<{ data: Document }> => {
     const response = await apiClient.get(`/api/v1/documents/${id}`);
-    return response.data;
+    const payload = response.data?.data ?? response.data ?? {};
+    return {
+      data: {
+        ...toDocument(payload),
+        versions: Array.isArray(payload.versions) ? payload.versions.map(toDocumentVersion) : undefined,
+        activity: Array.isArray(payload.activity) ? payload.activity.map(toDocumentActivity) : undefined,
+      },
+    };
   },
 
   // Upload new document
@@ -55,13 +133,17 @@ export const documentsApi = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
+    return {
+      data: toDocument(response.data.data ?? response.data),
+    };
   },
 
   // Update document metadata
   updateDocument: async (id: number, documentData: UpdateDocumentRequest): Promise<{ data: Document }> => {
     const response = await apiClient.put(`/api/v1/documents/${id}`, documentData);
-    return response.data;
+    return {
+      data: toDocument(response.data.data ?? response.data),
+    };
   },
 
   // Delete document
@@ -77,20 +159,31 @@ export const documentsApi = {
     return response.data;
   },
 
+  // Download specific version
+  downloadVersion: async (documentId: number, versionId: number): Promise<Blob> => {
+    const response = await apiClient.get(`/api/v1/documents/${documentId}/versions/${versionId}/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   // Get document stats
   getDocumentStats: async (): Promise<{ data: DocumentStats }> => {
     const response = await apiClient.get('/api/v1/documents/stats');
-    return response.data;
+    return {
+      data: response.data.data ?? response.data,
+    };
   },
 
   // Get document versions
   getDocumentVersions: async (id: number): Promise<{ data: DocumentVersion[] }> => {
     const response = await apiClient.get(`/api/v1/documents/${id}/versions`);
-    return response.data;
+    const list = response.data?.data ?? response.data ?? [];
+    return { data: list.map(toDocumentVersion) };
   },
 
   // Upload new version
-  uploadNewVersion: async (id: number, file: File, changeDescription?: string): Promise<{ data: Document }> => {
+  uploadNewVersion: async (id: number, file: File, changeDescription?: string): Promise<{ data: DocumentVersion }> => {
     const formData = new FormData();
     formData.append('file', file);
     if (changeDescription) formData.append('change_description', changeDescription);
@@ -100,7 +193,22 @@ export const documentsApi = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
+    return { data: toDocumentVersion(response.data?.data ?? response.data) };
+  },
+
+  getDocumentActivity: async (id: number): Promise<{ data: DocumentActivity[] }> => {
+    const response = await apiClient.get(`/api/v1/documents/${id}/activity`);
+    const list = response.data?.data ?? response.data ?? [];
+    return { data: list.map(toDocumentActivity) };
+  },
+
+  // Revert to previous version
+  revertVersion: async (id: number, versionId: number, comment: string): Promise<{ data: Document }> => {
+    const response = await apiClient.post(`/api/v1/documents/${id}/revert`, {
+      version_id: versionId,
+      comment
+    });
+    return { data: toDocument(response.data.data ?? response.data) };
   },
 
   // Bulk operations

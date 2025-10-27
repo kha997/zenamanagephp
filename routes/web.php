@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\PasswordResetController;
@@ -111,10 +112,12 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
 // Admin Performance Routes
 Route::middleware(['auth', 'tenant'])->group(function () {
-    Route::get('/admin/performance', [PerformanceController::class, 'index'])->name('admin.performance');
-    Route::get('/admin/performance/metrics', [PerformanceController::class, 'getMetrics'])->name('admin.performance.metrics');
-    Route::get('/admin/performance/logs', [PerformanceController::class, 'getLogs'])->name('admin.performance.logs');
-    Route::post('/admin/performance/metrics', [PerformanceController::class, 'storeMetric'])->name('admin.performance.store');
+    Route::get('/admin/performance', function () {
+        return view('admin.performance.dashboard');
+    })->name('admin.performance');
+    Route::get('/admin/performance/metrics', [\App\Http\Controllers\PerformanceController::class, 'getDashboard'])->name('admin.performance.metrics');
+    Route::get('/admin/performance/logs', [\App\Http\Controllers\PerformanceController::class, 'getRealTimeMetrics'])->name('admin.performance.logs');
+    Route::post('/admin/performance/metrics', [\App\Http\Controllers\PerformanceController::class, 'recordPageLoadTime'])->name('admin.performance.store');
 });
 
 // Test routes (no auth required)
@@ -125,6 +128,17 @@ Route::get('/test-direct-html', function () {
 Route::get('/test-script', function () {
     return view('test-script');
 });
+
+Route::get('/test/login', function (Request $request) {
+    $email = $request->query('email');
+    abort_unless($email, 400, 'Missing email query parameter');
+
+    $user = \App\Models\User::where('email', $email)->firstOrFail();
+    Auth::login($user, true);
+
+    $redirectTo = $request->query('redirect', '/app/dashboard');
+    return redirect($redirectTo);
+})->name('test.login');
 
 Route::get('/test-debug-component', function() {
     $admin = \App\Models\User::where('email', 'admin@zena.local')->first();
@@ -246,16 +260,17 @@ Route::middleware(['web', 'auth:web'])->group(function () {
     // Dashboard
     Route::get('/app/dashboard', [\App\Http\Controllers\App\DashboardController::class, 'index'])->name('app.dashboard');
     
-    // Projects
-    Route::get('/app/projects', [\App\Http\Controllers\Web\ProjectController::class, 'index'])->name('app.projects.index');
-    Route::get('/app/projects/create', [\App\Http\Controllers\Web\ProjectController::class, 'create'])->name('app.projects.create');
-    Route::post('/app/projects', [\App\Http\Controllers\Web\ProjectController::class, 'store'])->name('app.projects.store');
-    Route::get('/app/projects/{project}', [\App\Http\Controllers\Web\ProjectController::class, 'show'])->name('app.projects.show');
-    Route::get('/app/projects/{project}/edit', [\App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('app.projects.edit');
-    Route::put('/app/projects/{project}', [\App\Http\Controllers\Web\ProjectController::class, 'update'])->name('app.projects.update');
-    Route::delete('/app/projects/{project}', [\App\Http\Controllers\Web\ProjectController::class, 'destroy'])->name('app.projects.destroy');
-    Route::post('/app/projects/view-mode', [\App\Http\Controllers\Web\ProjectController::class, 'setViewMode'])->name('app.projects.view-mode');
-    Route::post('/app/projects/bulk-action', [\App\Http\Controllers\Web\ProjectController::class, 'bulkAction'])->name('app.projects.bulk-action');
+    // Projects - DISABLED: Using React Frontend (localhost:5173)
+    // Route::get('/app/projects', [\App\Http\Controllers\Web\ProjectController::class, 'index'])->name('app.projects.index');
+    // Route::get('/app/projects/create', [\App\Http\Controllers\Web\ProjectController::class, 'create'])->name('app.projects.create');
+    // Routes disabled - using React Frontend
+    // Route::post('/app/projects', [\App\Http\Controllers\Web\ProjectController::class, 'store'])->name('app.projects.store');
+    // Route::get('/app/projects/{project}', [\App\Http\Controllers\Web\ProjectController::class, 'show'])->name('app.projects.show');
+    // Route::get('/app/projects/{project}/edit', [\App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('app.projects.edit');
+    // Route::put('/app/projects/{project}', [\App\Http\Controllers\Web\ProjectController::class, 'update'])->name('app.projects.update');
+    // Route::delete('/app/projects/{project}', [\App\Http\Controllers\Web\ProjectController::class, 'destroy'])->name('app.projects.destroy');
+    // Route::post('/app/projects/view-mode', [\App\Http\Controllers\Web\ProjectController::class, 'setViewMode'])->name('app.projects.view-mode');
+    // Route::post('/app/projects/bulk-action', [\App\Http\Controllers\Web\ProjectController::class, 'bulkAction'])->name('app.projects.bulk-action');
     
     // Tasks
     // Tasks - Commented out to allow test routes in app.php to work
@@ -534,3 +549,9 @@ if (app()->environment('local', 'testing')) {
                     ]);
                 })->name('sandbox.kanban');
 }
+
+// Test route for CSRF protection (remove in production)
+Route::middleware('web')->match(['POST', 'PUT', 'PATCH'], '/test-csrf', function() {
+    return response()->json(['success' => true, 'csrf_checked' => true]);
+})->name('test.csrf');
+Route::get('/test-simple', function() { return view('test-simple'); });

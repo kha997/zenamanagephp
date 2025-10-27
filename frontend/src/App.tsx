@@ -11,7 +11,6 @@ import UserDetailPage from './pages/UserDetailPage'
 import CreateUserPage from './pages/CreateUserPage'
 import ProjectsDashboard from './pages/ProjectsDashboard';
 import ProjectDetailPage from './pages/ProjectDetailPage'
-import CreateProjectPage from './pages/projects/CreateProjectPage'
 import TasksPage from './pages/TasksPage'
 import TaskDetailPage from './pages/TaskDetailPage'
 import ProfilePage from './pages/ProfilePage'
@@ -27,6 +26,10 @@ import ReportsPage from './pages/ReportsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import TestProjects from './pages/TestProjects'
 import SimpleProjectsTest from './pages/SimpleProjectsTest'
+import UsersDebugPage from './pages/UsersDebugPage'
+import LoadingSpinner from './components/LoadingSpinner'
+import pwaService from './services/pwaService'
+import FrontendIntegrationTestPage from './pages/FrontendIntegrationTestPage'
 
 function App() {
   const { user, isLoading, checkAuth } = useAuthStore()

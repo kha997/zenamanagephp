@@ -26,22 +26,9 @@ class DocumentFactory extends Factory
      */
     public function definition()
     {
-        // If tenant_id is provided in attributes, use it; otherwise create new tenant
-        $tenantId = $this->faker->optional(0.1)->passthrough($this->definition['tenant_id'] ?? null);
-        
-        if ($tenantId) {
-            $tenant = \App\Models\Tenant::find($tenantId);
-            $user = \App\Models\User::factory()->forTenant($tenantId)->create();
-        } else {
-            $tenant = Tenant::factory()->create();
-            $user = User::factory()->forTenant($tenant->id)->create();
-            $tenantId = $tenant->id;
-        }
-        
         return [
-            'id' => \Illuminate\Support\Str::ulid(),
-            'tenant_id' => $tenantId,
-            'project_id' => null, // Có thể null
+            'tenant_id' => null, // Will be provided by test
+            'project_id' => null, // Will be provided by test
             'name' => $this->faker->words(3, true),
             'original_name' => $this->faker->words(3, true) . '.pdf',
             'file_path' => '/documents/' . $this->faker->uuid() . '.pdf',
@@ -56,9 +43,7 @@ class DocumentFactory extends Factory
             'version' => $this->faker->numberBetween(1, 5),
             'is_current_version' => true,
             'parent_document_id' => null,
-            'uploaded_by' => $user->id,
-            'created_by' => null,
-            'updated_by' => null,
         ];
     }
+
 }

@@ -25,14 +25,12 @@ class TemplateServiceTest extends TestCase
     {
         parent::setUp();
         
-        $this->markTestSkipped('All TemplateServiceTest tests skipped - missing template_versions table');
-
         $this->templateService = new TemplateService();
         $this->tenant = Tenant::factory()->create(['id' => 'test-tenant-1']);
         $this->user = User::factory()->create([
             'id' => 'test-user-1',
             'tenant_id' => $this->tenant->id,
-            'email' => 'test@example.com',
+            'email' => 'test-' . uniqid() . '@example.com',
             'password' => bcrypt('password'),
         ]);
     }
@@ -123,8 +121,9 @@ class TemplateServiceTest extends TestCase
     {
         $template = Template::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'status' => Template::STATUS_PUBLISHED,
+            'status' => Template::STATUS_ACTIVE,
             'is_active' => true,
+            'usage_count' => 0,
             'template_data' => [
                 'tasks' => [
                     [
@@ -220,7 +219,7 @@ class TemplateServiceTest extends TestCase
         // Create templates with different statuses
         Template::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'status' => Template::STATUS_PUBLISHED,
+            'status' => Template::STATUS_ACTIVE,
             'is_public' => true,
             'usage_count' => 10
         ]);
@@ -264,7 +263,7 @@ class TemplateServiceTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'name' => 'Project Template',
             'category' => Template::CATEGORY_PROJECT,
-            'status' => Template::STATUS_PUBLISHED,
+            'status' => Template::STATUS_ACTIVE,
             'is_public' => true,
             'tags' => ['project', 'management']
         ]);
@@ -286,10 +285,10 @@ class TemplateServiceTest extends TestCase
 
         // Search by status
         $publishedTemplates = $this->templateService->searchTemplates($this->tenant->id, [
-            'status' => Template::STATUS_PUBLISHED
+            'status' => Template::STATUS_ACTIVE
         ]);
         $this->assertCount(1, $publishedTemplates);
-        $this->assertEquals(Template::STATUS_PUBLISHED, $publishedTemplates->first()->status);
+        $this->assertEquals(Template::STATUS_ACTIVE, $publishedTemplates->first()->status);
 
         // Search by public/private
         $publicTemplates = $this->templateService->searchTemplates($this->tenant->id, [

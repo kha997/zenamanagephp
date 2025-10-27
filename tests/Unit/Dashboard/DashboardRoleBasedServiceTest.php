@@ -17,6 +17,7 @@ use App\Models\RFI;
 use App\Models\Inspection;
 use App\Models\NCR;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Mockery;
 
 class DashboardRoleBasedServiceTest extends TestCase
@@ -34,7 +35,11 @@ class DashboardRoleBasedServiceTest extends TestCase
     {
         parent::setUp();
         
-        $this->markTestSkipped('Missing dashboard_metrics table migration');
+        // Check if dashboard_metrics table exists
+        if (!Schema::hasTable('dashboard_metrics')) {
+            $this->markTestSkipped('Missing dashboard_metrics table migration');
+            return;
+        }
         
         // Create test tenant
         $this->tenant = \App\Models\Tenant::create([
@@ -46,7 +51,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         // Create test user
         $this->user = User::create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test-' . uniqid() . '@example.com',
             'password' => bcrypt('password'),
             'role' => 'project_manager',
             'tenant_id' => $this->tenant->id
@@ -122,6 +127,7 @@ class DashboardRoleBasedServiceTest extends TestCase
 
         // Create test tasks
         Task::create([
+            'name' => 'Test Task 1',
             'title' => 'Test Task 1',
             'description' => 'Test task description',
             'status' => 'in_progress',
@@ -133,6 +139,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         ]);
 
         Task::create([
+            'name' => 'Test Task 2',
             'title' => 'Test Task 2',
             'description' => 'Test task description',
             'status' => 'completed',
@@ -145,7 +152,12 @@ class DashboardRoleBasedServiceTest extends TestCase
 
         // Create test RFIs
         RFI::create([
+            'title' => 'Test RFI 1',
             'subject' => 'Test RFI 1',
+            'question' => 'What is the question?',
+            'rfi_number' => 'RFI-001',
+            'asked_by' => $this->user->id,
+            'created_by' => $this->user->id,
             'description' => 'Test RFI description',
             'status' => 'open',
             'priority' => 'high',

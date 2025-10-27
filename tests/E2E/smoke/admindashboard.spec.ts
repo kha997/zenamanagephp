@@ -10,6 +10,30 @@ test.describe('E2E Smoke Tests - Admin Dashboard', () => {
     dashboardHelper = new DashboardHelper(page);
   });
 
+  test('@smoke @header HeaderShell mobile interactions', async ({ page }) => {
+    const adminUser = testData.users.zena.find(user => user.role === 'Admin');
+    expect(adminUser).toBeDefined();
+
+    if (!adminUser) return;
+
+    await page.setViewportSize({ width: 414, height: 896 });
+    await authHelper.login(adminUser.email, adminUser.password);
+    await dashboardHelper.navigateToDashboard();
+
+    const header = page.getByRole('banner', { name: /main navigation/i });
+    await expect(header).toBeVisible();
+
+    const hamburger = page.getByRole('button', { name: /toggle mobile menu/i });
+    await hamburger.click();
+    await expect(page.getByRole('dialog', { name: /mobile navigation menu/i })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: /mobile navigation menu/i })).toHaveAttribute('class', /closed/);
+
+    const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    expect(['light', 'dark']).toContain(theme);
+  });
+
   test('@smoke S3: Admin dashboard statistics verification', async ({ page }) => {
     // Login as admin user
     const adminUser = testData.users.zena.find(user => user.role === 'Admin');

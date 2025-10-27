@@ -20,17 +20,17 @@ return new class extends Migration
             'components' => ['updated_by'], // already has created_by
             'projects' => ['updated_by'], // already has created_by
             'rfis' => ['created_by', 'updated_by'],
-            'ncrs' => ['created_by', 'updated_by'],
+            'ncrs' => ['updated_by'], // already has created_by
             'change_requests' => ['created_by', 'updated_by'],
-            'qc_plans' => ['created_by', 'updated_by'],
+            'qc_plans' => ['updated_by'], // already has created_by
             'qc_inspections' => ['created_by', 'updated_by'],
-            'teams' => ['created_by', 'updated_by'],
+            'teams' => ['updated_by'], // already has created_by
             'notifications' => ['created_by', 'updated_by'],
             'project_milestones' => ['updated_by'], // already has created_by
             'project_activities' => ['created_by', 'updated_by'],
             'task_assignments' => ['updated_by'], // already has created_by
             'audit_logs' => ['created_by', 'updated_by'],
-            'document_versions' => ['created_by', 'updated_by'],
+            'document_versions' => ['updated_by'], // already has created_by
             'dashboard_widgets' => ['created_by', 'updated_by'],
             'user_dashboards' => ['created_by', 'updated_by'],
             'search_histories' => ['created_by', 'updated_by'],
@@ -68,7 +68,7 @@ return new class extends Migration
             'permissions' => ['created_by', 'updated_by'],
             'roles' => ['created_by', 'updated_by'],
             'clients' => ['created_by', 'updated_by'],
-            'quotes' => ['created_by', 'updated_by']
+            'quotes' => ['updated_by'] // already has created_by
         ];
 
         foreach ($tablesToUpdate as $tableName => $columns) {
@@ -105,17 +105,17 @@ return new class extends Migration
             'components' => ['updated_by'],
             'projects' => ['updated_by'],
             'rfis' => ['created_by', 'updated_by'],
-            'ncrs' => ['created_by', 'updated_by'],
+            'ncrs' => ['updated_by'], // already has created_by
             'change_requests' => ['created_by', 'updated_by'],
-            'qc_plans' => ['created_by', 'updated_by'],
+            'qc_plans' => ['updated_by'], // already has created_by
             'qc_inspections' => ['created_by', 'updated_by'],
-            'teams' => ['created_by', 'updated_by'],
+            'teams' => ['updated_by'], // already has created_by
             'notifications' => ['created_by', 'updated_by'],
             'project_milestones' => ['updated_by'],
             'project_activities' => ['created_by', 'updated_by'],
             'task_assignments' => ['updated_by'],
             'audit_logs' => ['created_by', 'updated_by'],
-            'document_versions' => ['created_by', 'updated_by'],
+            'document_versions' => ['updated_by'], // already has created_by
             'dashboard_widgets' => ['created_by', 'updated_by'],
             'user_dashboards' => ['created_by', 'updated_by'],
             'search_histories' => ['created_by', 'updated_by'],
@@ -153,7 +153,7 @@ return new class extends Migration
             'permissions' => ['created_by', 'updated_by'],
             'roles' => ['created_by', 'updated_by'],
             'clients' => ['created_by', 'updated_by'],
-            'quotes' => ['created_by', 'updated_by']
+            'quotes' => ['updated_by'] // already has created_by
         ];
 
         foreach ($tablesToUpdate as $tableName => $columns) {

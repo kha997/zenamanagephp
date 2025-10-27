@@ -16,10 +16,10 @@
                     <p class="text-sm text-gray-600">Welcome back, {{ Auth::user()->name ?? 'User' }}</p>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <button @click="refreshDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
+                    <button @click="refreshDashboard()" data-testid="refresh-dashboard-button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
                         <i class="fas fa-sync-alt mr-2"></i>Refresh
                     </button>
-                    <a href="{{ route('app.projects.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    <a href="/frontend/app/projects/create" data-testid="new-project-button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
                         <i class="fas fa-plus mr-2"></i>New Project
                     </a>
                 </div>
@@ -35,7 +35,7 @@
         <!-- Row 1: Recent Projects + Activity Feed -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <!-- Recent Projects -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200" data-testid="recent-projects-widget">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-medium text-gray-900">Recent Projects</h3>
                 </div>
@@ -62,14 +62,14 @@
                         <div class="text-center py-8">
                             <i class="fas fa-project-diagram text-4xl text-gray-300 mb-4"></i>
                             <p class="text-gray-500">No projects yet</p>
-                            <a href="{{ route('app.projects.create') }}" class="text-blue-600 hover:text-blue-800 font-medium">Create your first project</a>
+                            <a href="/frontend/app/projects/create" class="text-blue-600 hover:text-blue-800 font-medium">Create your first project</a>
                         </div>
                     @endforelse
                 </div>
             </div>
 
             <!-- Activity Feed -->
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200" data-testid="activity-feed-widget">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
                 </div>

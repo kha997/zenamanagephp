@@ -153,7 +153,7 @@ class ApiResponse
     /**
      * Paginated response
      */
-    public static function paginated($data, $meta = [], string $message = 'Success'): JsonResponse
+    public static function paginated($data, $meta = [], string $message = 'Success', $links = []): JsonResponse
     {
         $response = [
             'success' => true,
@@ -164,6 +164,10 @@ class ApiResponse
 
         if (!empty($meta)) {
             $response['meta'] = $meta;
+        }
+
+        if (!empty($links)) {
+            $response['links'] = $links;
         }
 
         return response()->json($response);

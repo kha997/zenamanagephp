@@ -25,23 +25,24 @@ class ProjectRepositoryTest extends TestCase
     {
         parent::setUp();
         
-        $this->markTestSkipped('All ProjectRepositoryTest tests skipped - foreign key constraint issues with tenant creation');
-        
         $this->projectRepository = new ProjectRepository(new Project());
         
-        // Create test tenant
+        // Create test tenant first
         $this->tenant = Tenant::factory()->create();
         
-        // Create test user
+        // Create test user with same tenant
         $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
+            'email' => 'test-' . uniqid() . '@example.com' // Ensure unique email
         ]);
         
-        // Create test project
+        // Create test project with same tenant
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'pm_id' => $this->user->id,
-            'owner_id' => $this->user->id
+            'owner_id' => $this->user->id,
+            'code' => 'PRJ-TEST-' . uniqid(), // Ensure unique code
+            'status' => 'active' // Ensure active status for tests
         ]);
     }
 
@@ -92,13 +93,21 @@ class ProjectRepositoryTest extends TestCase
     /** @test */
     public function it_can_search_projects()
     {
-        $this->markTestSkipped('Search method not implemented in ProjectRepository');
+        $projects = $this->projectRepository->search('Test', $this->tenant->id);
+        
+        $this->assertInstanceOf(Collection::class, $projects);
+        $this->assertGreaterThan(0, $projects->count());
+        $this->assertTrue($projects->contains('id', $this->project->id));
     }
 
     /** @test */
     public function it_can_get_project_by_id()
     {
-        $this->markTestSkipped('Project not found in database - possible setup issue');
+        $foundProject = $this->projectRepository->getById($this->project->id, $this->tenant->id);
+        
+        $this->assertInstanceOf(Project::class, $foundProject);
+        $this->assertEquals($this->project->id, $foundProject->id);
+        $this->assertEquals($this->project->name, $foundProject->name);
     }
 
     /** @test */
@@ -177,108 +186,295 @@ class ProjectRepositoryTest extends TestCase
     /** @test */
     public function it_can_soft_delete_project()
     {
-        $this->markTestSkipped('Soft delete method not implemented in ProjectRepository');
+        $result = $this->projectRepository->softDelete($this->project->id, $this->tenant->id);
+        
+        $this->assertTrue($result);
+        
+        // Verify project is soft deleted
+        $deletedProject = Project::withTrashed()->find($this->project->id);
+        $this->assertNotNull($deletedProject->deleted_at);
     }
 
     /** @test */
     public function it_can_restore_soft_deleted_project()
     {
-        $this->markTestSkipped('Soft delete and restore methods not implemented in ProjectRepository');
+        // First soft delete the project
+        $this->projectRepository->softDelete($this->project->id, $this->tenant->id);
+        
+        // Then restore it
+        $result = $this->projectRepository->restore($this->project->id, $this->tenant->id);
+        
+        $this->assertTrue($result);
+        
+        // Verify project is restored
+        $restoredProject = Project::find($this->project->id);
+        $this->assertNotNull($restoredProject);
+        $this->assertNull($restoredProject->deleted_at);
     }
 
     /** @test */
     public function it_can_get_active_projects()
     {
-        $this->markTestSkipped('getActive method not implemented in ProjectRepository');
+        $activeProjects = $this->projectRepository->getActive($this->tenant->id);
+        
+        $this->assertInstanceOf(Collection::class, $activeProjects);
+        $this->assertGreaterThan(0, $activeProjects->count());
     }
 
     /** @test */
     public function it_can_get_completed_projects()
     {
-        $this->markTestSkipped('getCompleted method not implemented in ProjectRepository');
+        // Create a completed project
+        $completedProject = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => 'completed',
+            'code' => 'PRJ-COMPLETED-' . uniqid()
+        ]);
+        
+        $completedProjects = $this->projectRepository->getCompleted($this->tenant->id);
+        
+        $this->assertInstanceOf(Collection::class, $completedProjects);
+        $this->assertGreaterThan(0, $completedProjects->count());
+        $this->assertTrue($completedProjects->contains('id', $completedProject->id));
     }
 
     /** @test */
     public function it_can_get_overdue_projects()
     {
-        $this->markTestSkipped('getOverdue method not implemented in ProjectRepository');
+        // Create an overdue project
+        $overdueProject = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => 'active',
+            'end_date' => now()->subDays(5), // 5 days ago
+            'code' => 'PRJ-OVERDUE-' . uniqid()
+        ]);
+        
+        $overdueProjects = $this->projectRepository->getOverdue($this->tenant->id);
+        
+        $this->assertInstanceOf(Collection::class, $overdueProjects);
+        $this->assertGreaterThan(0, $overdueProjects->count());
+        $this->assertTrue($overdueProjects->contains('id', $overdueProject->id));
     }
 
     /** @test */
     public function it_can_get_projects_starting_soon()
     {
-        $this->markTestSkipped('getStartingSoon method not implemented in ProjectRepository');
+        // Create a project starting soon
+        $startingSoonProject = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => 'planning',
+            'start_date' => now()->addDays(3), // 3 days from now
+            'code' => 'PRJ-STARTING-' . uniqid()
+        ]);
+        
+        $startingSoonProjects = $this->projectRepository->getStartingSoon($this->tenant->id);
+        
+        $this->assertInstanceOf(Collection::class, $startingSoonProjects);
+        $this->assertGreaterThan(0, $startingSoonProjects->count());
+        $this->assertTrue($startingSoonProjects->contains('id', $startingSoonProject->id));
     }
 
     /** @test */
     public function it_can_get_projects_ending_soon()
     {
-        $this->markTestSkipped('getEndingSoon method not implemented in ProjectRepository');
+        // Create a project ending soon
+        $endingSoonProject = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => 'active',
+            'end_date' => now()->addDays(3), // 3 days from now
+            'code' => 'PRJ-ENDING-' . uniqid()
+        ]);
+        
+        $endingSoonProjects = $this->projectRepository->getEndingSoon($this->tenant->id);
+        
+        $this->assertInstanceOf(Collection::class, $endingSoonProjects);
+        $this->assertGreaterThan(0, $endingSoonProjects->count());
+        $this->assertTrue($endingSoonProjects->contains('id', $endingSoonProject->id));
     }
 
     /** @test */
     public function it_can_update_project_status()
     {
-        $this->markTestSkipped('updateStatus method not implemented in ProjectRepository');
+        $updatedProject = $this->projectRepository->updateStatus($this->project->id, 'completed', $this->tenant->id);
+        
+        $this->assertInstanceOf(Project::class, $updatedProject);
+        $this->assertEquals('completed', $updatedProject->status);
+        
+        // Verify in database
+        $projectInDb = Project::find($this->project->id);
+        $this->assertEquals('completed', $projectInDb->status);
     }
 
     /** @test */
     public function it_can_assign_team_to_project()
     {
-        $this->markTestSkipped('assignTeam method not implemented in ProjectRepository');
+        // Create a team
+        $team = Team::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Test Team'
+        ]);
+        
+        $result = $this->projectRepository->assignTeam($this->project->id, $team->id, $this->tenant->id);
+        
+        $this->assertTrue($result);
+        
+        // Verify team is assigned
+        $project = Project::find($this->project->id);
+        $this->assertTrue($project->teams->contains('id', $team->id));
     }
 
     /** @test */
     public function it_can_remove_team_from_project()
     {
-        $this->markTestSkipped('assignTeam and removeTeam methods not implemented in ProjectRepository');
+        // Create a team and assign it first
+        $team = Team::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Test Team'
+        ]);
+        
+        $this->projectRepository->assignTeam($this->project->id, $team->id, $this->tenant->id);
+        
+        // Now remove the team
+        $result = $this->projectRepository->removeTeam($this->project->id, $this->tenant->id);
+        
+        $this->assertTrue($result);
+        
+        // Verify team is removed
+        $project = Project::find($this->project->id);
+        $this->assertFalse($project->teams->contains('id', $team->id));
     }
 
     /** @test */
     public function it_can_get_project_statistics()
     {
-        $this->markTestSkipped('getStatistics method not implemented in ProjectRepository');
+        $stats = $this->projectRepository->getStatistics($this->tenant->id);
+        
+        $this->assertIsArray($stats);
+        $this->assertArrayHasKey('total', $stats);
+        $this->assertArrayHasKey('by_status', $stats);
+        $this->assertArrayHasKey('by_priority', $stats);
+        $this->assertArrayHasKey('average_progress', $stats);
+        $this->assertArrayHasKey('total_budget', $stats);
+        $this->assertArrayHasKey('total_spent', $stats);
+        $this->assertArrayHasKey('created_this_month', $stats);
+        $this->assertArrayHasKey('overdue', $stats);
+        $this->assertGreaterThan(0, $stats['total']);
     }
 
     /** @test */
     public function it_can_get_projects_by_multiple_ids()
     {
-        $this->markTestSkipped('getByIds method not implemented in ProjectRepository');
+        // Create additional projects
+        $project2 = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'code' => 'PRJ-TEST2-' . uniqid()
+        ]);
+        
+        $projectIds = [$this->project->id, $project2->id];
+        $projects = $this->projectRepository->getByIds($projectIds, $this->tenant->id);
+        
+        $this->assertInstanceOf(Collection::class, $projects);
+        $this->assertEquals(2, $projects->count());
+        $this->assertTrue($projects->contains('id', $this->project->id));
+        $this->assertTrue($projects->contains('id', $project2->id));
     }
 
     /** @test */
     public function it_can_bulk_update_projects()
     {
-        $this->markTestSkipped('bulkUpdate method not implemented in ProjectRepository');
+        // Create additional project
+        $project2 = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'code' => 'PRJ-TEST2-' . uniqid()
+        ]);
+        
+        $projectIds = [$this->project->id, $project2->id];
+        $updateData = ['status' => 'completed', 'priority' => 'high'];
+        
+        $updatedCount = $this->projectRepository->bulkUpdate($projectIds, $updateData, $this->tenant->id);
+        
+        $this->assertEquals(2, $updatedCount);
+        
+        // Verify updates
+        $updatedProjects = Project::whereIn('id', $projectIds)->get();
+        foreach ($updatedProjects as $project) {
+            $this->assertEquals('completed', $project->status);
+            $this->assertEquals('high', $project->priority);
+        }
     }
 
     /** @test */
     public function it_can_bulk_delete_projects()
     {
-        $this->markTestSkipped('bulkDelete method not implemented in ProjectRepository');
+        // Create additional project
+        $project2 = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'code' => 'PRJ-TEST2-' . uniqid()
+        ]);
+        
+        $projectIds = [$this->project->id, $project2->id];
+        
+        $deletedCount = $this->projectRepository->bulkDelete($projectIds, $this->tenant->id);
+        
+        $this->assertEquals(2, $deletedCount);
+        
+        // Verify deletions
+        $deletedProjects = Project::whereIn('id', $projectIds)->get();
+        $this->assertEquals(0, $deletedProjects->count());
     }
 
     /** @test */
     public function it_can_get_project_progress()
     {
-        $this->markTestSkipped('getProgress method not implemented in ProjectRepository');
+        $progress = $this->projectRepository->getProgress($this->project->id, $this->tenant->id);
+        
+        $this->assertIsArray($progress);
+        $this->assertArrayHasKey('project_id', $progress);
+        $this->assertArrayHasKey('progress_pct', $progress);
+        $this->assertArrayHasKey('completion_percentage', $progress);
+        $this->assertArrayHasKey('budget_spent', $progress);
+        $this->assertArrayHasKey('budget_total', $progress);
+        $this->assertArrayHasKey('budget_variance', $progress);
+        $this->assertArrayHasKey('hours_estimated', $progress);
+        $this->assertArrayHasKey('hours_actual', $progress);
+        $this->assertArrayHasKey('status', $progress);
+        $this->assertArrayHasKey('last_activity_at', $progress);
+        $this->assertEquals($this->project->id, $progress['project_id']);
     }
 
     /** @test */
     public function it_can_get_project_timeline()
     {
-        $this->markTestSkipped('getTimeline method not implemented in ProjectRepository');
+        $timeline = $this->projectRepository->getTimeline($this->project->id, $this->tenant->id);
+        
+        $this->assertIsArray($timeline);
+        $this->assertArrayHasKey('project_id', $timeline);
+        $this->assertArrayHasKey('project_name', $timeline);
+        $this->assertArrayHasKey('timeline', $timeline);
+        $this->assertIsArray($timeline['timeline']);
+        $this->assertEquals($this->project->id, $timeline['project_id']);
+        $this->assertEquals($this->project->name, $timeline['project_name']);
+        
+        // Should have at least project creation event
+        $this->assertGreaterThan(0, count($timeline['timeline']));
     }
 
     /** @test */
     public function it_returns_null_for_nonexistent_project()
     {
-        $this->markTestSkipped('getById method not implemented in ProjectRepository');
+        $nonexistentId = '01HXYZ123456789ABCDEFGHIJK'; // Valid ULID format but doesn't exist
+        $result = $this->projectRepository->getById($nonexistentId, $this->tenant->id);
+        
+        $this->assertNull($result);
     }
 
     /** @test */
     public function it_returns_false_for_invalid_operations()
     {
-        $this->markTestSkipped('delete method uses firstOrFail() which throws exception instead of returning false');
+        $nonexistentId = '01HXYZ123456789ABCDEFGHIJK'; // Valid ULID format but doesn't exist
+        
+        // Test that delete throws exception for nonexistent project
+        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        $this->projectRepository->delete($nonexistentId, $this->tenant->id);
     }
 }

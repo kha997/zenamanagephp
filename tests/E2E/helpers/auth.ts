@@ -4,21 +4,57 @@ export class MinimalAuthHelper {
   constructor(private page: Page) {}
 
   async login(email: string, password: string): Promise<void> {
-    // Navigate to login page and wait for it to be ready
-    await this.page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 });
-    
-    // Wait for email input to be visible (with longer timeout for CI)
-    await this.page.waitForSelector('#email', { state: 'visible', timeout: 15000 });
-    
-    // Fill in credentials
-    await this.page.fill('#email', email);
-    await this.page.fill('#password', password);
-    
-    // Click submit and wait for universal logged-in marker
-    await Promise.all([
-      this.page.waitForSelector('[data-testid="user-menu"]', { timeout: 15000 }),
-      this.page.click('#loginButton')
-    ]);
+    try {
+      // Navigate to login page and wait for it to be ready
+      await this.page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
+      
+      // Log page URL and title for debugging
+      const url = this.page.url();
+      const title = await this.page.title();
+      console.log(`[Auth Helper] Navigated to: ${url}, Title: ${title}`);
+      
+      // Wait for email input to be visible (with longer timeout for CI)
+      await this.page.waitForSelector('#email', { state: 'visible', timeout: 20000 }).catch(async (error) => {
+        // Debug: take screenshot and log page content if selector not found
+        console.error(`[Auth Helper] #email selector not found on page: ${url}`);
+        console.error(`[Auth Helper] Page title: ${title}`);
+        
+        // Try to find alternative selectors
+        const pageContent = await this.page.content();
+        const hasEmailInput = pageContent.includes('email') || pageContent.includes('Email');
+        console.log(`[Auth Helper] Page contains 'email': ${hasEmailInput}`);
+        
+        // List all input fields on page
+        const inputs = await this.page.$$eval('input', (elements) => 
+          elements.map(el => ({
+            id: el.id,
+            name: el.getAttribute('name'),
+            type: el.type,
+            placeholder: el.getAttribute('placeholder')
+          }))
+        ).catch(() => []);
+        console.log(`[Auth Helper] Input fields found:`, JSON.stringify(inputs, null, 2));
+        
+        throw error;
+      });
+      
+      // Fill in credentials
+      await this.page.fill('#email', email);
+      await this.page.fill('#password', password);
+      
+      // Wait for login button to be ready
+      await this.page.waitForSelector('#loginButton', { state: 'visible', timeout: 10000 });
+      
+      // Click submit and wait for universal logged-in marker
+      await Promise.all([
+        this.page.waitForSelector('[data-testid="user-menu"]', { timeout: 20000 }),
+        this.page.click('#loginButton')
+      ]);
+    } catch (error) {
+      // Take screenshot on error for debugging
+      await this.page.screenshot({ path: `test-results/login-error-${Date.now()}.png`, fullPage: true }).catch(() => {});
+      throw error;
+    }
   }
 
   async logout(): Promise<void> {

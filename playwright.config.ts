@@ -54,9 +54,9 @@ export default defineConfig({
       testIgnore: '**/smoke/api-*.spec.ts',
       use: { 
         ...devices['Desktop Chrome'],
-        // Smoke tests should be fast
-        actionTimeout: 5000,
-        navigationTimeout: 15000,
+        // Increase timeouts for CI environment
+        actionTimeout: process.env.CI ? 20000 : 5000,
+        navigationTimeout: process.env.CI ? 30000 : 15000,
       },
       // Run smoke tests sequentially to avoid race conditions
       fullyParallel: false,

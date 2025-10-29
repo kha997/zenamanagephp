@@ -26,14 +26,16 @@ return new class extends Migration
             }
         });
 
-        // Add foreign key constraints
-        Schema::table('documents', function (Blueprint $table) {
-            // Add foreign key for created_by
-            $this->addForeignKeyConstraint($table, 'created_by', 'id', 'users', 'set null');
-            
-            // Add foreign key for updated_by
-            $this->addForeignKeyConstraint($table, 'updated_by', 'id', 'users', 'set null');
-        });
+        // Add foreign key constraints (only for MySQL)
+        if (DBDriver::isMysql()) {
+            Schema::table('documents', function (Blueprint $table) {
+                // Add foreign key for created_by
+                $this->addForeignKeyConstraint($table, 'created_by', 'id', 'users', 'set null');
+                
+                // Add foreign key for updated_by
+                $this->addForeignKeyConstraint($table, 'updated_by', 'id', 'users', 'set null');
+            });
+        }
 
         // Add indexes for performance
         Schema::table('documents', function (Blueprint $table) {

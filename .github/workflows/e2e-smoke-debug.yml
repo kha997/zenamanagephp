@@ -95,6 +95,24 @@ jobs:
         echo "SESSION_DRIVER=array" >> .env
         echo "QUEUE_CONNECTION=sync" >> .env
         
+    - name: Clear Laravel config cache
+      run: |
+        php artisan config:clear || true
+        php artisan cache:clear || true
+        
+    - name: Verify database configuration
+      run: |
+        echo "📊 Verifying database configuration..."
+        php artisan tinker --execute="
+          echo 'Default DB: ' . config('database.default') . PHP_EOL;
+          echo 'DB Connection: ' . config('database.connections.mysql.driver') . PHP_EOL;
+          echo 'DB Host: ' . config('database.connections.mysql.host') . PHP_EOL;
+          echo 'DB Database: ' . config('database.connections.mysql.database') . PHP_EOL;
+        " || {
+          echo "⚠️  Tinker failed, checking .env file directly:"
+          cat .env | grep "^DB_"
+        }
+        
     - name: Wait for MySQL to be ready
       run: |
         echo "Waiting for MySQL service to be ready..."
@@ -118,9 +136,32 @@ jobs:
         
     - name: Create database
       run: |
+        # Ensure we're using MySQL
+        php artisan config:clear
+        php artisan cache:clear
+        
+        # Verify DB connection one more time before migration
+        php artisan tinker --execute="
+          \$driver = config('database.default');
+          echo 'Using database driver: ' . \$driver . PHP_EOL;
+          if (\$driver !== 'mysql') {
+            echo 'ERROR: Expected mysql but got: ' . \$driver . PHP_EOL;
+            exit(1);
+          }
+          echo '✅ Database driver verified as MySQL' . PHP_EOL;
+        "
+        
+        # Run migrations
         php artisan migrate:fresh --force || {
-          echo "❌ Migration failed! Checking logs..."
-          php artisan tinker --execute="echo 'DB Config: ' . config('database.default'); echo 'Host: ' . config('database.connections.mysql.host');"
+          echo "❌ Migration failed! Checking database configuration..."
+          php artisan tinker --execute="
+            echo 'DB Default: ' . config('database.default') . PHP_EOL;
+            echo 'MySQL Driver: ' . config('database.connections.mysql.driver') . PHP_EOL;
+            echo 'MySQL Host: ' . config('database.connections.mysql.host') . PHP_EOL;
+            echo 'MySQL Database: ' . config('database.connections.mysql.database') . PHP_EOL;
+          "
+          echo "📄 Current .env DB settings:"
+          grep "^DB_" .env || echo "No DB_* settings found in .env"
           exit 1
         }
         

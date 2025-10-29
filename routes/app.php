@@ -59,12 +59,15 @@ Route::get('/test-tasks/{taskId}', function ($taskId) {
     return view('app.tasks.show', [
         'task' => $task
     ]);
-})->name('test.tasks.show')->withoutMiddleware(['web']);
+})->name('test.tasks.show.app')->withoutMiddleware(['web']);
 
 Route::prefix('app')->name('app.')->middleware(['web.test'])->group(function () {
     
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // ========================================
+    // DASHBOARD - DISABLED (Using React Frontend)
+    // ========================================
+    // Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Dashboard is now handled by React Router at /app/dashboard
 
     // ========================================
     // PROJECTS - DISABLED (Using React Frontend)
@@ -77,9 +80,13 @@ Route::prefix('app')->name('app.')->middleware(['web.test'])->group(function () 
     // Route::get('/projects/{project}/history', [ProjectController::class, 'history'])->name('projects.history');
 
     // ========================================
-    // TASKS - READ ONLY (UI renders only)
+    // TASKS - MIXED (Main route React, sub-routes Blade for advanced features)
     // ========================================
-    Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    // Main tasks list - DISABLED (Using React Frontend)
+    // Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    // Tasks list is now handled by React Router at /app/tasks
+    
+    // Advanced task features - Still using Blade for now (can be migrated later)
     Route::get('/tasks/kanban', [TaskController::class, 'kanban'])->name('tasks.kanban');
     Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
@@ -104,9 +111,12 @@ Route::prefix('app')->name('app.')->middleware(['web.test'])->group(function () 
     Route::get('/quotes/{quote}/edit', [QuoteController::class, 'edit'])->name('quotes.edit');
 
     // ========================================
-    // DOCUMENTS - READ ONLY (UI renders only)
+    // DOCUMENTS - DISABLED (Using React Frontend)
     // ========================================
-    Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+    // Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+    // Documents list is now handled by React Router at /app/documents
+    
+    // Advanced document features - Still using Blade for now
     Route::get('/documents/create', [DocumentController::class, 'create'])->name('documents.create');
     Route::get('/documents/approvals', [DocumentController::class, 'approvals'])->name('documents.approvals');
 
@@ -121,16 +131,19 @@ Route::prefix('app')->name('app.')->middleware(['web.test'])->group(function () 
     Route::get('/templates/{template}/edit', [TemplateController::class, 'edit'])->name('templates.edit');
 
     // ========================================
-    // TEAM / CALENDAR / SETTINGS - READ ONLY
+    // TEAM / CALENDAR / SETTINGS - DISABLED (Using React Frontend)
     // ========================================
-    Route::get('/team', [\App\Http\Controllers\Web\TeamController::class, 'index'])->name('team.index');
+    // Route::get('/team', [\App\Http\Controllers\Web\TeamController::class, 'index'])->name('team.index');
+    // Team page is now handled by React Router at /app/team
 
-    Route::get('/calendar', function () {
-        $kpis = []; // Placeholder
-        return view('app.calendar.index', compact('kpis'));
-    })->name('calendar.index');
+    // Route::get('/calendar', function () {
+    //     $kpis = []; // Placeholder
+    //     return view('app.calendar.index', compact('kpis'));
+    // })->name('calendar.index');
+    // Calendar page is now handled by React Router at /app/calendar
 
-    Route::get('/settings', function () {
-        return view('app.settings.index');
-    })->name('settings.index');
+    // Route::get('/settings', function () {
+    //     return view('app.settings.index');
+    // })->name('settings.index');
+    // Settings page is now handled by React Router at /app/settings
 });

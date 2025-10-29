@@ -7,6 +7,7 @@ import { ThemeContext } from './theme-context';
 import { I18nProvider } from './i18n-context';
 import { applyTheme, resolveNextMode, type ColorMode } from '../shared/tokens';
 import { initializeAuth } from '../shared/auth/store';
+import { AuthProvider } from '../contexts/AuthContext';
 
 const getInitialMode = (): ColorMode => {
   if (typeof window === 'undefined') {
@@ -75,27 +76,29 @@ export const AppShell: React.FC = () => {
   );
 
   return (
-    <I18nProvider locale="en">
-      <ThemeContext.Provider value={contextValue}>
-        <QueryClientProvider client={queryClient}>
-          <div className="min-h-screen bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
-            <RouterProvider router={router} />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 3500,
-                style: {
-                  background: 'var(--color-surface-card)',
-                  color: 'var(--color-text-primary)',
-                  border: '1px solid var(--color-border-subtle)',
-                  boxShadow: '0 12px 24px rgba(15, 23, 42, 0.12)',
-                },
-              }}
-            />
-          </div>
-        </QueryClientProvider>
-      </ThemeContext.Provider>
-    </I18nProvider>
+    <AuthProvider>
+      <I18nProvider locale="en">
+        <ThemeContext.Provider value={contextValue}>
+          <QueryClientProvider client={queryClient}>
+            <div className="min-h-screen bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
+              <RouterProvider router={router} />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 3500,
+                  style: {
+                    background: 'var(--color-surface-card)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border-subtle)',
+                    boxShadow: '0 12px 24px rgba(15, 23, 42, 0.12)',
+                  },
+                }}
+              />
+            </div>
+          </QueryClientProvider>
+        </ThemeContext.Provider>
+      </I18nProvider>
+    </AuthProvider>
   );
 };
 

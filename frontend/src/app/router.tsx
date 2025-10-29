@@ -17,6 +17,10 @@ import ProjectsListPage from '../pages/projects/ProjectsListPage';
 import ProjectDetailPage from '../pages/projects/ProjectDetailPage';
 import DocumentsPage from '../pages/documents/DocumentsPage';
 import { DocumentDetailPage } from '../pages/documents/DocumentDetailPage';
+import TeamPage from '../pages/TeamPage';
+import CalendarPage from '../pages/CalendarPage';
+import SettingsPage from '../pages/SettingsPage';
+import TasksPage from '../pages/TasksPage';
 import { useAuth } from '../shared/auth/hooks';
 
 const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -79,6 +83,22 @@ export const router = createBrowserRouter(
       {
         path: 'documents/:id',
         element: <DocumentDetailPage />,
+      },
+      {
+        path: 'tasks',
+        element: <TasksPage />,
+      },
+      {
+        path: 'team',
+        element: <TeamPage />,
+      },
+      {
+        path: 'calendar',
+        element: <CalendarPage />,
+      },
+      {
+        path: 'settings',
+        element: <SettingsPage />,
       },
     ],
   },

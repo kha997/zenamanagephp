@@ -4,13 +4,19 @@ export class MinimalAuthHelper {
   constructor(private page: Page) {}
 
   async login(email: string, password: string): Promise<void> {
-    await this.page.goto('/login');
+    // Navigate to login page and wait for it to be ready
+    await this.page.goto('/login', { waitUntil: 'networkidle', timeout: 30000 });
+    
+    // Wait for email input to be visible (with longer timeout for CI)
+    await this.page.waitForSelector('#email', { state: 'visible', timeout: 15000 });
+    
+    // Fill in credentials
     await this.page.fill('#email', email);
     await this.page.fill('#password', password);
     
     // Click submit and wait for universal logged-in marker
     await Promise.all([
-      this.page.waitForSelector('[data-testid="user-menu"]', { timeout: 10000 }),
+      this.page.waitForSelector('[data-testid="user-menu"]', { timeout: 15000 }),
       this.page.click('#loginButton')
     ]);
   }

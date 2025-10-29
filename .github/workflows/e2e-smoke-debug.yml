@@ -195,24 +195,35 @@ jobs:
           echo "env_password=${{ secrets.SMOKE_ADMIN_PASSWORD }}" >> $GITHUB_ENV
         fi
         
-    - name: Verify Laravel server can start
+    - name: Verify Laravel server can respond
       run: |
-        echo "🔍 Testing if Laravel server can start..."
-        timeout 10 php artisan serve --host=127.0.0.1 --port=8000 > /dev/null 2>&1 &
+        echo "🔍 Testing if Laravel server responds..."
+        # Start server in background for quick check
+        php artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel-server.log 2>&1 &
         SERVER_PID=$!
-        sleep 3
         
-        if curl -f http://127.0.0.1:8000 > /dev/null 2>&1; then
-          echo "✅ Laravel server started successfully!"
-          kill $SERVER_PID 2>/dev/null || true
-        else
-          echo "❌ Laravel server failed to start!"
-          kill $SERVER_PID 2>/dev/null || true
-          exit 1
-        fi
+        # Wait for server to be ready (max 30 seconds)
+        echo "⏳ Waiting for server to start..."
+        for i in {1..30}; do
+          if curl -f http://127.0.0.1:8000/health 2>/dev/null || curl -f http://127.0.0.1:8000 2>/dev/null; then
+            echo "✅ Laravel server is responding!"
+            # Don't kill server - let Playwright manage it or reuse it
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "❌ Laravel server failed to start after 30 seconds!"
+            echo "Server logs:"
+            tail -20 /tmp/laravel-server.log || true
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          fi
+          sleep 1
+        done
+        # Keep server running for Playwright to use
         
     - name: Run smoke tests
       run: npm run test:e2e:smoke
       env:
+        CI: true
         SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL != '' && secrets.SMOKE_ADMIN_EMAIL || 'admin@zena.local' }}
         SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD != '' && secrets.SMOKE_ADMIN_PASSWORD || 'password' }}

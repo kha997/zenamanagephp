@@ -47,9 +47,39 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --no-progress --prefer-dist --optimize-autoloader
       
-    - name: Copy environment file
-      run: cp .env.example .env
-      
+    - name: Check for .env.example file
+      id: check-env
+      run: |
+        if [ ! -f .env.example ]; then
+          echo "⚠️  WARNING: .env.example not found! Creating default .env..."
+          cat > .env << 'EOF'
+        APP_NAME=ZenaManage
+        APP_ENV=local
+        APP_KEY=
+        APP_DEBUG=true
+        APP_URL=http://localhost
+        
+        LOG_CHANNEL=stack
+        LOG_DEPRECATIONS_CHANNEL=null
+        LOG_LEVEL=debug
+        
+        DB_CONNECTION=mysql
+        DB_HOST=127.0.0.1
+        DB_PORT=3306
+        DB_DATABASE=zenamanage_e2e
+        DB_USERNAME=e2e_user
+        DB_PASSWORD=e2e_password
+        
+        CACHE_DRIVER=array
+        SESSION_DRIVER=array
+        QUEUE_CONNECTION=sync
+        EOF
+          echo "env_created=true" >> $GITHUB_OUTPUT
+        else
+          cp .env.example .env
+          echo "env_created=false" >> $GITHUB_OUTPUT
+        fi
+        
     - name: Generate application key
       run: php artisan key:generate
       
@@ -65,14 +95,34 @@ jobs:
         echo "SESSION_DRIVER=array" >> .env
         echo "QUEUE_CONNECTION=sync" >> .env
         
+    - name: Wait for MySQL to be ready
+      run: |
+        echo "Waiting for MySQL service to be ready..."
+        for i in {1..30}; do
+          if mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1" 2>/dev/null; then
+            echo "✅ MySQL is ready!"
+            break
+          fi
+          echo "⏳ Waiting for MySQL... (attempt $i/30)"
+          sleep 2
+        done
+        
     - name: Test MySQL connection
       run: |
         echo "Testing MySQL connection..."
-        mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1 as test;"
+        mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1 as test;" || {
+          echo "❌ MySQL connection failed!"
+          exit 1
+        }
+        echo "✅ MySQL connection successful!"
         
     - name: Create database
       run: |
-        php artisan migrate:fresh --force
+        php artisan migrate:fresh --force || {
+          echo "❌ Migration failed! Checking logs..."
+          php artisan tinker --execute="echo 'DB Config: ' . config('database.default'); echo 'Host: ' . config('database.connections.mysql.host');"
+          exit 1
+        }
         
     - name: Seed database
       run: php artisan db:seed --class=E2EDatabaseSeeder --force
@@ -86,11 +136,42 @@ jobs:
         
     - name: Test environment variables
       run: |
-        echo "SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}"
-        echo "SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}"
+        if [ -z "${{ secrets.SMOKE_ADMIN_EMAIL }}" ]; then
+          echo "⚠️  WARNING: SMOKE_ADMIN_EMAIL secret is not set!"
+          echo "   → Using default: admin@zena.local"
+          echo "env_email=admin@zena.local" >> $GITHUB_ENV
+        else
+          echo "✅ SMOKE_ADMIN_EMAIL is set"
+          echo "env_email=${{ secrets.SMOKE_ADMIN_EMAIL }}" >> $GITHUB_ENV
+        fi
+        
+        if [ -z "${{ secrets.SMOKE_ADMIN_PASSWORD }}" ]; then
+          echo "⚠️  WARNING: SMOKE_ADMIN_PASSWORD secret is not set!"
+          echo "   → Using default: password"
+          echo "env_password=password" >> $GITHUB_ENV
+        else
+          echo "✅ SMOKE_ADMIN_PASSWORD is set"
+          echo "env_password=${{ secrets.SMOKE_ADMIN_PASSWORD }}" >> $GITHUB_ENV
+        fi
+        
+    - name: Verify Laravel server can start
+      run: |
+        echo "🔍 Testing if Laravel server can start..."
+        timeout 10 php artisan serve --host=127.0.0.1 --port=8000 > /dev/null 2>&1 &
+        SERVER_PID=$!
+        sleep 3
+        
+        if curl -f http://127.0.0.1:8000 > /dev/null 2>&1; then
+          echo "✅ Laravel server started successfully!"
+          kill $SERVER_PID 2>/dev/null || true
+        else
+          echo "❌ Laravel server failed to start!"
+          kill $SERVER_PID 2>/dev/null || true
+          exit 1
+        fi
         
     - name: Run smoke tests
       run: npm run test:e2e:smoke
       env:
-        SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
-        SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+        SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL != '' && secrets.SMOKE_ADMIN_EMAIL || 'admin@zena.local' }}
+        SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD != '' && secrets.SMOKE_ADMIN_PASSWORD || 'password' }}

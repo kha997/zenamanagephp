@@ -114,24 +114,65 @@ function prepareStorage(env: NodeJS.ProcessEnv) {
 }
 
 function buildArtisanEnv(): NodeJS.ProcessEnv {
-  const envFileVars = parseEnvFile(ENV_FILE_PATH);
+  // Also check .env file (created by workflow)
+  const envFilePath = path.join(PROJECT_ROOT, '.env');
+  const envE2EFileVars = parseEnvFile(ENV_FILE_PATH);
+  const envFileVars = parseEnvFile(envFilePath);
+  
+  // Merge: .env.e2e takes precedence, but check .env and process.env too
+  const mergedEnvVars: EnvMap = {
+    ...envFileVars, // From .env (workflow created)
+    ...envE2EFileVars, // From .env.e2e (overrides)
+  };
+  
   const overrides: EnvMap = {
-    APP_ENV: envFileVars.APP_ENV ?? 'e2e',
-    APP_DEBUG: envFileVars.APP_DEBUG ?? 'true',
-    CACHE_DRIVER: envFileVars.CACHE_DRIVER ?? 'array',
-    SESSION_DRIVER: envFileVars.SESSION_DRIVER ?? 'array',
-    QUEUE_CONNECTION: envFileVars.QUEUE_CONNECTION ?? 'sync',
-    MAIL_MAILER: envFileVars.MAIL_MAILER ?? 'log',
+    APP_ENV: mergedEnvVars.APP_ENV ?? process.env.APP_ENV ?? 'e2e',
+    APP_DEBUG: mergedEnvVars.APP_DEBUG ?? process.env.APP_DEBUG ?? 'true',
+    CACHE_DRIVER: mergedEnvVars.CACHE_DRIVER ?? process.env.CACHE_DRIVER ?? 'array',
+    SESSION_DRIVER: mergedEnvVars.SESSION_DRIVER ?? process.env.SESSION_DRIVER ?? 'array',
+    QUEUE_CONNECTION: mergedEnvVars.QUEUE_CONNECTION ?? process.env.QUEUE_CONNECTION ?? 'sync',
+    MAIL_MAILER: mergedEnvVars.MAIL_MAILER ?? process.env.MAIL_MAILER ?? 'log',
   };
 
-  if (!envFileVars.DB_CONNECTION) {
+  // Only override DB_CONNECTION if not already set in .env, .env.e2e, or process.env
+  // This allows workflow to configure MySQL while local tests can use SQLite
+  if (!mergedEnvVars.DB_CONNECTION && !process.env.DB_CONNECTION) {
+    console.log('⚠️  No DB_CONNECTION found, defaulting to SQLite for local E2E tests');
     overrides.DB_CONNECTION = 'sqlite';
     overrides.DB_DATABASE = path.join(PROJECT_ROOT, 'database', 'database.sqlite');
+  } else {
+    // Use the DB config from .env or process.env (set by workflow)
+    if (mergedEnvVars.DB_CONNECTION) {
+      overrides.DB_CONNECTION = mergedEnvVars.DB_CONNECTION;
+      if (mergedEnvVars.DB_DATABASE) {
+        overrides.DB_DATABASE = mergedEnvVars.DB_DATABASE;
+      }
+      if (mergedEnvVars.DB_HOST) {
+        overrides.DB_HOST = mergedEnvVars.DB_HOST;
+      }
+      if (mergedEnvVars.DB_PORT) {
+        overrides.DB_PORT = mergedEnvVars.DB_PORT;
+      }
+      if (mergedEnvVars.DB_USERNAME) {
+        overrides.DB_USERNAME = mergedEnvVars.DB_USERNAME;
+      }
+      if (mergedEnvVars.DB_PASSWORD) {
+        overrides.DB_PASSWORD = mergedEnvVars.DB_PASSWORD;
+      }
+    } else if (process.env.DB_CONNECTION) {
+      // Use from process.env (CI/workflow)
+      overrides.DB_CONNECTION = process.env.DB_CONNECTION;
+      if (process.env.DB_DATABASE) overrides.DB_DATABASE = process.env.DB_DATABASE;
+      if (process.env.DB_HOST) overrides.DB_HOST = process.env.DB_HOST;
+      if (process.env.DB_PORT) overrides.DB_PORT = process.env.DB_PORT;
+      if (process.env.DB_USERNAME) overrides.DB_USERNAME = process.env.DB_USERNAME;
+      if (process.env.DB_PASSWORD) overrides.DB_PASSWORD = process.env.DB_PASSWORD;
+    }
   }
 
   return {
     ...process.env,
-    ...envFileVars,
+    ...mergedEnvVars,
     ...overrides,
   };
 }
@@ -166,26 +207,43 @@ export default async function globalSetup(config: FullConfig) {
   const artisanEnv = buildArtisanEnv();
 
   console.log('🧹 Clearing cached configuration before E2E run...');
+  console.log(`   📊 DB Connection: ${artisanEnv.DB_CONNECTION || 'not set'}`);
+  if (artisanEnv.DB_CONNECTION === 'mysql') {
+    console.log(`   🗄️  MySQL Host: ${artisanEnv.DB_HOST}:${artisanEnv.DB_PORT}`);
+    console.log(`   📂 Database: ${artisanEnv.DB_DATABASE}`);
+  } else if (artisanEnv.DB_CONNECTION === 'sqlite') {
+    console.log(`   📂 SQLite DB: ${artisanEnv.DB_DATABASE}`);
+  }
+  
   runArtisan('config:clear', artisanEnv);
   runArtisan('cache:clear', artisanEnv);
   runArtisan('view:clear', artisanEnv);
 
   prepareStorage(artisanEnv);
 
-  console.log('🔄 Resetting database for E2E suite...');
-  try {
-    runArtisan('migrate:fresh', artisanEnv);
-  } catch (error) {
-    console.error('Failed to run migrate:fresh for E2E setup.');
-    throw error;
-  }
+  // Only run migrations if DB_CONNECTION is set (allow workflow to handle migrations)
+  // In CI/workflow, migrations are run by workflow before this setup
+  // In local tests, we need to run migrations here
+  const shouldRunMigrations = !process.env.CI || process.env.E2E_RUN_MIGRATIONS === 'true';
+  
+  if (shouldRunMigrations) {
+    console.log('🔄 Resetting database for E2E suite...');
+    try {
+      runArtisan('migrate:fresh', artisanEnv);
+    } catch (error) {
+      console.error('Failed to run migrate:fresh for E2E setup.');
+      throw error;
+    }
 
-  console.log('🌱 Seeding dedicated E2E dataset...');
-  try {
-    runArtisan('db:seed --class="Database\\Seeders\\E2EDatabaseSeeder"', artisanEnv);
-  } catch (error) {
-    console.error('Failed to seed E2E database.');
-    throw error;
+    console.log('🌱 Seeding dedicated E2E dataset...');
+    try {
+      runArtisan('db:seed --class="Database\\Seeders\\E2EDatabaseSeeder"', artisanEnv);
+    } catch (error) {
+      console.error('Failed to seed E2E database.');
+      throw error;
+    }
+  } else {
+    console.log('⏭️  Skipping migrations (already run by workflow)');
   }
 
   console.log('✉️ Ensuring mailer is configured for test logging.');

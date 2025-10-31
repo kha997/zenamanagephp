@@ -2,36 +2,14 @@
 
 @section('title', 'Dashboard')
 
+{{-- KPI Strip Section --}}
+@section('kpi-strip')
+@include('app.dashboard._kpis')
+@endsection
+
+{{-- Main Content --}}
 @section('content')
-<div class="min-h-screen bg-gray-50" x-data="dashboardData()" x-init="init()" data-testid="dashboard">
-    <!-- Alert Banner -->
-    @include('app.dashboard._alerts')
-    
-    <!-- Header -->
-    <div class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-                    <p class="text-sm text-gray-600">Welcome back, {{ Auth::user()->name ?? 'User' }}</p>
-                </div>
-                <div class="flex items-center space-x-4">
-                    <button @click="refreshDashboard()" data-testid="refresh-dashboard-button" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">
-                        <i class="fas fa-sync-alt mr-2"></i>Refresh
-                    </button>
-                    <a href="/frontend/app/projects/create" data-testid="new-project-button" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                        <i class="fas fa-plus mr-2"></i>New Project
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- KPI Strip -->
-    @include('app.dashboard._kpis')
-
-    <!-- Main Content Grid -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div x-data="dashboardData()" data-testid="dashboard">
         <!-- Row 1: Recent Projects + Activity Feed -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <!-- Recent Projects -->
@@ -75,14 +53,14 @@
                 </div>
                 <div class="p-6">
                     @forelse($recentActivity as $activity)
-                        <div class="flex items-start space-x-3 mb-4">
+                        <div class="flex items-start space-x-3 mb-4 last:mb-0">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                                     <i class="fas fa-bell text-blue-600 text-sm"></i>
                                 </div>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="text-sm text-gray-900">{{ $activity->message }}</p>
+                                <p class="text-sm text-gray-900 break-words">{{ $activity->message }}</p>
                                 <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($activity->created_at)->diffForHumans() }}</p>
                             </div>
                         </div>
@@ -162,6 +140,34 @@
             </div>
         </div>
     </div>
+@endsection
+
+{{-- Activity Section (Optional) --}}
+@section('activity')
+<div class="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
+    </div>
+    <div class="p-6">
+        @forelse($recentActivity as $activity)
+            <div class="flex items-start space-x-3 mb-4 last:mb-0">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-bell text-blue-600 text-sm"></i>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-900">{{ $activity->message }}</p>
+                    <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($activity->created_at)->diffForHumans() }}</p>
+                </div>
+            </div>
+        @empty
+            <div class="text-center py-8">
+                <i class="fas fa-bell text-4xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500">No recent activity</p>
+            </div>
+        @endforelse
+    </div>
 </div>
 @endsection
 
@@ -172,166 +178,26 @@ window.dashboardBootstrap = {!! $dashboardBootstrap !!};
 
 // Initialize charts immediately with server data
 document.addEventListener('DOMContentLoaded', function() {
-    // Project Progress Chart
-    const projectProgressCtx = document.getElementById('projectProgressChart');
-    if (projectProgressCtx && window.dashboardBootstrap.charts.projectProgress) {
-        new Chart(projectProgressCtx, window.dashboardBootstrap.charts.projectProgress);
-    }
-    
-    // Task Completion Chart
-    const taskCompletionCtx = document.getElementById('taskCompletionChart');
-    if (taskCompletionCtx && window.dashboardBootstrap.charts.taskCompletion) {
-        new Chart(taskCompletionCtx, window.dashboardBootstrap.charts.taskCompletion);
-    }
-});
-
-// Dashboard Alpine.js component
-function dashboardData() {
-    return {
-        kpis: {
-            totalProjects: 0,
-            projectGrowth: '+0%',
-            activeTasks: 0,
-            taskGrowth: '+0%',
-            teamMembers: 0,
-            teamGrowth: '+0%',
-            completionRate: 0,
-        },
-        alerts: [],
-        recentProjects: [],
-        recentActivity: [],
-        teamStatus: [],
-        charts: {
-            projectProgress: null,
-            taskCompletion: null,
-        },
-        
-        init() {
-            // Load bootstrap data
-            if (window.dashboardBootstrap) {
-                const bootstrap = window.dashboardBootstrap;
-                
-                // Normalize data to ensure arrays
-                const normalize = (value) => 
-                    Array.isArray(value) ? value : Object.values(value || {});
-                
-                this.kpis = bootstrap.kpis || this.kpis;
-                this.alerts = normalize(bootstrap.alerts);
-                this.recentProjects = normalize(bootstrap.recentProjects);
-                this.recentActivity = normalize(bootstrap.recentActivity);
-                this.teamStatus = normalize(bootstrap.teamStatus);
-                this.charts = bootstrap.charts || {};
-                
-                // Debug log
-                console.log('Dashboard Bootstrap Data:', {
-                    kpis: this.kpis,
-                    alerts: this.alerts,
-                    recentProjects: this.recentProjects,
-                    recentActivity: this.recentActivity,
-                    teamStatus: this.teamStatus,
-                    charts: this.charts
-                });
-            }
-            
-            // Initialize charts after DOM is ready
-            this.$nextTick(() => {
-                this.initCharts();
-            });
-        },
-        
-        initCharts() {
-            // Initialize Project Progress Chart (Doughnut)
-            if (this.charts.projectProgress) {
-                this.initProjectProgressChart();
-            }
-            
-            // Initialize Task Completion Chart (Line)
-            if (this.charts.taskCompletion) {
-                this.initTaskCompletionChart();
-            }
-        },
-        
-        initProjectProgressChart() {
-            const ctx = document.getElementById('projectProgressChart');
-            if (!ctx) return;
-            
-            // Destroy existing chart
+    // Wait for Alpine to be initialized
+    document.addEventListener('alpine:initialized', () => {
+        // Project Progress Chart
+        const projectProgressCtx = document.getElementById('projectProgressChart');
+        if (projectProgressCtx && window.dashboardBootstrap?.charts?.projectProgress) {
             if (window.projectProgressChartInstance) {
                 window.projectProgressChartInstance.destroy();
             }
-            
-            window.projectProgressChartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: this.charts.projectProgress,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                        },
-                    },
-                },
-            });
-        },
+            window.projectProgressChartInstance = new Chart(projectProgressCtx, window.dashboardBootstrap.charts.projectProgress);
+        }
         
-        initTaskCompletionChart() {
-            const ctx = document.getElementById('taskCompletionChart');
-            if (!ctx) return;
-            
-            // Destroy existing chart
+        // Task Completion Chart
+        const taskCompletionCtx = document.getElementById('taskCompletionChart');
+        if (taskCompletionCtx && window.dashboardBootstrap?.charts?.taskCompletion) {
             if (window.taskCompletionChartInstance) {
                 window.taskCompletionChartInstance.destroy();
             }
-            
-            window.taskCompletionChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: this.charts.taskCompletion,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                        },
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                    },
-                },
-            });
-        },
-        
-        refreshDashboard() {
-            window.location.reload();
-        },
-        
-        formatTime(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-            
-            if (diffInHours < 1) {
-                return 'Just now';
-            } else if (diffInHours < 24) {
-                return `${diffInHours}h ago`;
-            } else {
-                const diffInDays = Math.floor(diffInHours / 24);
-                return `${diffInDays}d ago`;
-            }
-        },
-        
-        dismissAllAlerts() {
-            this.alerts = [];
-        },
-        
-        openModal(type) {
-            // Placeholder for modal functionality
-            console.log('Opening modal:', type);
-        },
-    };
-}
+            window.taskCompletionChartInstance = new Chart(taskCompletionCtx, window.dashboardBootstrap.charts.taskCompletion);
+        }
+    });
+});
 </script>
 @endsection

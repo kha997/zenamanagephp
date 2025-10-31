@@ -18,7 +18,7 @@
 @endphp
 
 <nav 
-    class="bg-white border-b border-gray-200 shadow-sm sticky top-16 z-40"
+    class="bg-white border-b border-gray-200 shadow-sm"
     data-testid="primary-navigator"
     data-source="blade"
     aria-label="Primary navigation"

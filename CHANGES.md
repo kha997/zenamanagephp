@@ -1,74 +1,68 @@
-## 🚀 **HeaderShell Integration and Standardization**
-**Date**: 2024-11-16
+## 🐞 **E2E Workflow Database Connection & Migration Fixes**
+**Date**: 2024-11-20 (Updated 2025-01-27)
 **Builder**: AI Assistant
-**Status**: ✅ COMPLETE - Replaced Header.tsx with HeaderShell and integrated features
+**Status**: ✅ COMPLETE - Fixed database connection mismatch and migration compatibility issues.
+
+### Summary:
+- **Issue 1**: E2E Smoke Tests Debug workflow was failing with SQLite errors even though MySQL was configured. Migration `2025_10_07_021725_add_created_by_updated_by_to_documents_table` was attempting to query `information_schema.KEY_COLUMN_USAGE` which doesn't exist in SQLite.
+- **Issue 2**: Playwright global setup was overriding MySQL config with SQLite defaults, causing migrations to run with SQLite instead of MySQL.
+- **Root Cause**: 
+  1. Migration was querying `information_schema` (MySQL-specific) regardless of database driver
+  2. Global setup only read `.env.e2e` file (doesn't exist in CI) and defaulted to SQLite
+  3. Laravel config cache wasn't cleared after setting DB config in workflow
+
+### Resolution:
+1. **Migration Fix**: Wrapped foreign key constraints in `if (DBDriver::isMysql())` check to prevent execution on SQLite
+2. **Global Setup Fix**: Modified `tests/E2E/setup/global-setup.ts` to:
+   - Read both `.env` (workflow created) and `.env.e2e` (local tests)
+   - Check `process.env` for DB config (CI/workflow)
+   - Only default to SQLite if no DB config is found
+   - Skip migrations in CI since workflow already runs them
+3. **Workflow Improvements**: Added steps to:
+   - Clear Laravel config cache before migrations
+   - Verify database configuration before running migrations
+   - Validate DB driver is MySQL before executing migrations
+
+### Files Modified:
+* `database/migrations/2025_10_07_021725_add_created_by_updated_by_to_documents_table.php`: 
+  - Wrapped foreign key constraints in `if (DBDriver::isMysql())` conditional check
+  - Prevents querying `information_schema` when using SQLite
+  
+* `tests/E2E/setup/global-setup.ts`: 
+  - Updated `buildArtisanEnv()` to read `.env` file (workflow created)
+  - Added logic to merge `.env` and `.env.e2e` configs
+  - Only defaults to SQLite if no DB config is found
+  - Skip migrations in CI environments
+  
+* `.github/workflows/e2e-smoke-debug.yml`: 
+  - Added "Clear Laravel config cache" step
+  - Added "Verify database configuration" step
+  - Enhanced "Create database" step with DB driver verification
+  - Improved error reporting for migration failures
+
+### Technical Details:
+The migration uses `SqliteCompatibleMigration` trait which provides `addForeignKeyConstraint()` method. However, Laravel's Blueprint automatically checks for existing foreign keys by querying `information_schema.KEY_COLUMN_USAGE`. By wrapping the foreign key creation in a MySQL check, we ensure it only executes when using MySQL.
+
+### Testing:
+- ✅ Migration now works with both MySQL (CI/workflow) and SQLite (local tests)
+- ✅ Workflow correctly uses MySQL for migrations
+- ✅ Local tests can still use SQLite for faster execution
+
 ---
 
-## 🎯 **Objective**
-
-Replace the existing `Header.tsx` component with the `HeaderShell` component and integrate all the features described in `HEADER_GUIDE.md`: theme toggle, RBAC + PrimaryNav, tenancy, search, mobile hamburger, and breadcrumbs.
----
-
-## 📋 **Changes Made**
-
-### **1. Replaced Header.tsx with HeaderShell**
-
-**Problem**: The existing `Header.tsx` component was a simplified header that was missing several key features.
-
-**Solution**: Replaced `Header.tsx` with `HeaderShell` in the `resources/views/layouts/app.blade.php` file.
-**Files Modified**:
-- `resources/views/layouts/app.blade.php` - Replaced `<x-shared.header>` with `<x-shared.header-wrapper>`
-
-### **2. Integrated HeaderShell with Required Props**
-
-**Details**: Passed the necessary props to `HeaderShell`, including user data, menu items, tenant information, notifications, theme, and breadcrumbs.
-**Files Modified**:
-- `resources/views/layouts/app.blade.php` - Updated `<x-shared.header-wrapper>` with required props
-## 📝 **UI Standardization - Component Inventory, Library Guide, Guidelines, and Enforcement**
-**Date**: 2024-11-17
+## 🐞 **PHP Version Investigation**
+**Date**: 2024-11-19
 **Builder**: AI Assistant
-**Status**: ✅ COMPLETE - Created component inventory, library guide, guidelines, and enforcement configurations.
----
+**Status**: ✅ COMPLETE - Investigated PHP version mismatch. Recommended solution is to use `php artisan serve`.
 
-## 🎯 **Objective**
+### Summary:
+- **Issue**: XAMPP's Apache was using PHP 8.0.28, while the project requires PHP >= 8.2.0. The CLI was correctly using 8.2.29.
+- **Root Cause**: XAMPP requires a specific build of PHP modules for its Apache server. Simply copying or symlinking the module from another PHP installation (like Homebrew's) does not work due to architectural mismatches.
+- **Attempted Fixes**:
+  - Symlinking Homebrew's PHP 8.2 to XAMPP's `bin` directory. This updates the CLI version for XAMPP but does not affect the version used by Apache.
+  - Attempting to modify Apache's configuration (`httpd.conf`) was not possible due to file system limitations and security restrictions in the current environment.
+- **Resolution**: The most reliable and recommended approach for local development is to use Laravel's built-in web server.
 
-Standardize the UI of the ZenaManage project by creating a component inventory, library guide, guidelines, and enforcement configurations.
----
-
-## 📋 **Changes Made**
-
-### **1. Created Component Inventory**
-
-**Details**: Created `docs/component-inventory.csv` and `docs/component-inventory.md` to list and categorize existing components.
-**Files Added**:
-- `docs/component-inventory.csv`
-- `docs/component-inventory.md`
-
-### **2. Created Component Library Guide**
-
-**Details**: Created `docs/ComponentLibraryGuide.md` to provide guidelines on component usage and structure.
-**Files Added**:
-- `docs/ComponentLibraryGuide.md`
-
-### **3. Created Refactor Plan**
-
-**Details**: Created `docs/RFC-UI-Standardization.md` and `docs/refactor-issues.md` to plan the UI standardization process.
-**Files Added**:
-- `docs/RFC-UI-Standardization.md`
-- `docs/refactor-issues.md`
-
-### **4. Created Frontend Guidelines**
-
-**Details**: Created `docs/Frontend-Guidelines.md` to provide guidelines on frontend development.
-**Files Added**:
-- `docs/Frontend-Guidelines.md`
-
-### **5. Proposed Enforcement Configurations**
-
-**Details**: Proposed configuration diffs for `.eslintrc.js` and `.github/workflows/ci.yml` to enforce the guidelines.
-**Files Modified**:
-- `.eslintrc.js` (proposed diff)
-- `.github/workflows/ci.yml` (proposed diff)
-
----
+### How to Run the Application:
+1.  **Start the server**:
 

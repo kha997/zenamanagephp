@@ -257,12 +257,18 @@ Route::post('/email/verification-notification', function () {
 
 // Dashboard and main app routes (tenant-scoped)
 Route::middleware(['web', 'auth:web'])->group(function () {
-    // Dashboard
-    Route::get('/app/dashboard', [\App\Http\Controllers\App\DashboardController::class, 'index'])->name('app.dashboard');
+    // Dashboard - Using Blade template with Unified Page Frame (Active)
+    // Handler is in routes/app.php (DashboardController@index)
+    // React version: Use '/app/dashboard-react' route if needed
     
     // Projects - DISABLED: Using React Frontend (localhost:5173)
     // Route::get('/app/projects', [\App\Http\Controllers\Web\ProjectController::class, 'index'])->name('app.projects.index');
     // Route::get('/app/projects/create', [\App\Http\Controllers\Web\ProjectController::class, 'create'])->name('app.projects.create');
+    
+    // ProjectsNext - Test route for new React-based projects page
+    Route::get('/app/projects-next', function () {
+        return view('app.projects-next');
+    })->name('app.projects-next');
     // Routes disabled - using React Frontend
     // Route::post('/app/projects', [\App\Http\Controllers\Web\ProjectController::class, 'store'])->name('app.projects.store');
     // Route::get('/app/projects/{project}', [\App\Http\Controllers\Web\ProjectController::class, 'show'])->name('app.projects.show');
@@ -468,7 +474,7 @@ Route::get('/test/tasks/{id}', function (string $id) {
         'projects' => $projects,
         'users' => $users
     ]);
-        })->name('test.tasks.show');
+        })->name('test.tasks.show.web');
 
         // Simple test route for debugging
         Route::get('/test-simple-task/{id}', function (string $id) {

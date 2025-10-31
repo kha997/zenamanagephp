@@ -21,7 +21,7 @@ class Role extends Model
 {
     use HasUlids, HasFactory;
 
-    protected $table = 'roles';
+    protected $table = 'zena_roles';
     
     /**
      * Kiểu dữ liệu của khóa chính

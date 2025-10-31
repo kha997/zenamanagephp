@@ -1,34 +1,56 @@
 {{-- Header Components Documentation --}}
 {{-- 
-HEADER COMPONENTS STRUCTURE (CONSOLIDATED):
+HEADER COMPONENTS STRUCTURE (SIMPLIFIED):
 
-1. admin/header.blade.php
-   - Purpose: Admin panel header
-   - Features: Admin-specific navigation, admin branding, greeting, notifications
-   - Usage: <x-admin.header />
-   - Target: /admin/* routes
-   - Includes: Greeting, notifications, admin navigation, system status
+Only 1 header component is used: shared/header-wrapper.blade.php
 
-2. shared/header.blade.php  
-   - Purpose: General app header for all non-admin pages
-   - Features: App navigation, user menu, notifications, theme toggle, greeting
-   - Usage: <x-shared.header />
-   - Target: /app/* routes (all non-admin pages)
-   - Includes: Greeting, notifications, theme toggle, user dropdown, navigation
+This single header handles ALL contexts (admin and app) via the variant prop:
+- variant="admin" for /admin/* routes
+- variant="app" for /app/* routes
 
-CONSOLIDATION NOTES:
-- universal-header.blade.php has been REMOVED
-- All universal-header features have been merged into shared/header.blade.php
-- Only 2 header components are allowed in the system
-- Both headers must include greeting and notifications by default
-- No delegation - features are integrated directly
+Features:
+- Context-aware navigation via HeaderService (different menu items for admin vs app)
+- Always includes: greeting, notifications, user menu, breadcrumbs
+- Theme support (light/dark)
+- Responsive design (desktop + mobile)
+- Accessibility compliant
 
-USAGE GUIDELINES:
-- Use admin/header for admin panel (/admin/* routes)
-- Use shared/header for all other pages (/app/* routes)
-- Both headers include greeting and notifications
-- Theme toggle is available in shared/header
-- Admin-specific features are in admin/header
+Architecture:
+- Blade Component: resources/views/components/shared/header-wrapper.blade.php
+- React Component: src/components/ui/header/HeaderShell.tsx
+- Service Layer: app/Services/HeaderService.php (handles navigation differences)
+
+Usage:
+```blade
+<!-- For admin routes -->
+<x-shared.header-wrapper
+    variant="admin"
+    :user="Auth::user()"
+    :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'admin')"
+    ...
+/>
+
+<!-- For app routes -->
+<x-shared.header-wrapper
+    variant="app"
+    :user="Auth::user()"
+    :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
+    ...
+/>
+```
+
+How it works:
+1. HeaderService.getNavigation() returns different navigation arrays based on context
+2. Admin context: Returns admin navigation (Users, Tenants, Security, Alerts, etc.)
+3. App context: Returns app navigation (Dashboard, Projects, Tasks, Team, Reports)
+4. React HeaderShell renders the navigation but styling is identical
+5. No need for separate header components
+
+Benefits:
+- Single source of truth
+- Easier maintenance
+- Consistent styling across contexts
+- Centralized changes in one component
 --}}
 
 {{-- This file serves as documentation only --}}

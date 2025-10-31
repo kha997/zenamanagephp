@@ -213,11 +213,7 @@ Route::prefix('auth')->group(function () {
 
 // Protected routes - All business logic operations
 Route::middleware(['auth:sanctum'])->group(function () {
-    // Dashboard endpoints
-    Route::prefix('dashboard')->group(function () {
-        Route::get('/data', [\App\Http\Controllers\Api\DashboardController::class, 'getDashboardData']);
-        Route::get('/csrf-token', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
-    });
+    // Dashboard endpoints - REMOVED (Trùng lặp với routes khác)
 
     // Rewards API endpoints (tenant-scoped)
     Route::prefix('v1/app/rewards')
@@ -272,17 +268,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
             Route::delete('/{id}', [\App\Http\Controllers\Api\SupportTicketController::class, 'destroy']);
             Route::post('/{id}/messages', [\App\Http\Controllers\Api\SupportTicketController::class, 'addMessage']);
         });
-    });
-
-    // ========================================
-    // DASHBOARDS API ENDPOINTS
-    // ========================================
-    Route::prefix('dashboards')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\DashboardController::class, 'index']);
-        Route::post('/', [\App\Http\Controllers\Api\DashboardController::class, 'store']);
-        Route::get('/{dashboard}', [\App\Http\Controllers\Api\DashboardController::class, 'show']);
-        Route::put('/{dashboard}', [\App\Http\Controllers\Api\DashboardController::class, 'update']);
-        Route::delete('/{dashboard}', [\App\Http\Controllers\Api\DashboardController::class, 'destroy']);
     });
 
     // ========================================
@@ -792,54 +777,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/metrics', [App\Http\Controllers\Api\DashboardAnalyticsController::class, 'metrics']);
     });
 
-    // Dashboard API v1
-    Route::prefix('v1/dashboard')->group(function () {
-        Route::get('/', [App\Http\Controllers\Api\DashboardController::class, 'getUserDashboard']);
-        Route::get('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'getAvailableWidgets']);
-        Route::get('/widgets/{id}/data', [App\Http\Controllers\Api\DashboardController::class, 'getWidgetData']);
-        Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget']);
-        Route::delete('/widgets/{id}', [App\Http\Controllers\Api\DashboardController::class, 'removeWidget']);
-        Route::put('/widgets/{id}', [App\Http\Controllers\Api\DashboardController::class, 'updateWidgetConfig']);
-        Route::put('/layout', [App\Http\Controllers\Api\DashboardController::class, 'updateLayout']);
-        Route::get('/alerts', [App\Http\Controllers\Api\DashboardController::class, 'getUserAlerts']);
-        Route::put('/alerts/{id}/read', [App\Http\Controllers\Api\DashboardController::class, 'markAlertAsRead']);
-        Route::put('/alerts/read-all', [App\Http\Controllers\Api\DashboardController::class, 'markAllAlertsAsRead']);
-        Route::get('/metrics', [App\Http\Controllers\Api\DashboardController::class, 'getMetrics']);
-        Route::post('/preferences', [App\Http\Controllers\Api\DashboardController::class, 'saveUserPreferences']);
-        Route::post('/reset', [App\Http\Controllers\Api\DashboardController::class, 'resetToDefault']);
-        
-        // Customization routes
-        Route::prefix('customization')->group(function () {
-            Route::get('/', [App\Http\Controllers\Api\DashboardController::class, 'getCustomizableDashboard']);
-            Route::get('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'getAvailableWidgetsForCustomization']);
-            Route::get('/templates', [App\Http\Controllers\Api\DashboardController::class, 'getLayoutTemplates']);
-            Route::get('/options', [App\Http\Controllers\Api\DashboardController::class, 'getCustomizationOptions']);
-            Route::get('/export', [App\Http\Controllers\Api\DashboardController::class, 'exportDashboard']);
-            Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget']);
-            Route::delete('/widgets/{id}', [App\Http\Controllers\Api\DashboardController::class, 'removeWidget']);
-            Route::put('/widgets/{id}', [App\Http\Controllers\Api\DashboardController::class, 'updateWidgetConfig']);
-            Route::put('/widgets/{id}/config', [App\Http\Controllers\Api\DashboardController::class, 'updateWidgetConfig']);
-            Route::put('/layout', [App\Http\Controllers\Api\DashboardController::class, 'updateLayout']);
-            Route::post('/apply-template', [App\Http\Controllers\Api\DashboardController::class, 'applyLayoutTemplate']);
-            Route::put('/preferences', [App\Http\Controllers\Api\DashboardController::class, 'saveUserPreferences']);
-            Route::post('/preferences', [App\Http\Controllers\Api\DashboardController::class, 'saveUserPreferences']);
-            Route::post('/import', [App\Http\Controllers\Api\DashboardController::class, 'importDashboard']);
-            Route::post('/reset', [App\Http\Controllers\Api\DashboardController::class, 'resetToDefault']);
-        });
-        
-        // Role-based routes
-        Route::prefix('role-based')->group(function () {
-            Route::get('/', [App\Http\Controllers\Api\DashboardController::class, 'getRoleBasedDashboard']);
-            Route::get('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'getRoleBasedWidgets']);
-            Route::get('/metrics', [App\Http\Controllers\Api\DashboardController::class, 'getRoleBasedMetrics']);
-            Route::get('/alerts', [App\Http\Controllers\Api\DashboardController::class, 'getRoleBasedAlerts']);
-            Route::get('/permissions', [App\Http\Controllers\Api\DashboardController::class, 'getRoleBasedPermissions']);
-            Route::get('/role-config', [App\Http\Controllers\Api\DashboardController::class, 'getRoleConfig']);
-            Route::get('/projects', [App\Http\Controllers\Api\DashboardController::class, 'getRoleBasedProjects']);
-            Route::get('/summary', [App\Http\Controllers\Api\DashboardController::class, 'getRoleBasedSummary']);
-            Route::post('/switch-project', [App\Http\Controllers\Api\DashboardController::class, 'switchProject']);
-        });
-    });
+    // Dashboard API v1 - REMOVED (Trùng lặp với routes/api_v1.php)
 
     // Document Management API
     Route::prefix('v1/documents')->group(function () {

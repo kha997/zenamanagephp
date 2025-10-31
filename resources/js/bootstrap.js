@@ -16,8 +16,7 @@ window.axios = axios;
 window.Alpine = Alpine;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-// Start Alpine.js
-Alpine.start();
+// Alpine.js will be started after all data functions are loaded (in app.js)
 
 // Thiết lập CSRF token
 let token = document.head.querySelector('meta[name="csrf-token"]');

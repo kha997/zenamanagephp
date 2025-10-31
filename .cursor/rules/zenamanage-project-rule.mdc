@@ -64,12 +64,12 @@ Laravel-based multi-tenant project management system với strict architectural 
 - Shared components must live under `resources/views/components/shared/`
 - KPI: only one `components/kpi/strip.blade.php` as global source of truth
 - HEADER COMPONENTS RULE:
-  • Only 2 header components are allowed:
-    - admin/header.blade.php
-    - shared/header.blade.php  
-  • Both must always include greeting and notifications  
-  • Do not create or use any other header variants (e.g. universal-header.blade.php)  
-  • If new requirements arise, extend existing headers via slots or props, not new header components.
+  • Only 1 header component is used: `shared/header-wrapper.blade.php`
+  • Different contexts (admin/app) are handled via `variant` prop (variant="admin" | variant="app")
+  • Navigation differences are managed by `HeaderService` based on context
+  • Must always include greeting and notifications for all variants
+  • Do not create separate header components for admin vs app
+  • If new requirements arise, extend via props, not new header components.
 
 🚫 ABSOLUTE PROHIBITIONS
 NEVER DO:

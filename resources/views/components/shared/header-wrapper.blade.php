@@ -32,7 +32,7 @@
 @endphp
 
 {{-- Mount point for React HeaderShell --}}
-<div id="header-shell-container" 
+<div id="header-mount" 
      data-testid="header-wrapper"
      data-source="blade"
      data-user='@json($userData)'
@@ -45,3 +45,22 @@
      data-theme="{{ $theme }}">
     {{-- HeaderShell will mount here via React --}}
 </div>
+
+{{-- Initialize Header --}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('header-mount');
+    if (container && window.initHeader) {
+        window.initHeader({
+            user: @json($userData),
+            tenant: @json($tenantData),
+            menuItems: @json($navigation),
+            notifications: @json($notifications),
+            unreadCount: {{ $unreadCount }},
+            breadcrumbs: @json($breadcrumbs),
+            logoutUrl: '{{ route('logout') }}',
+            csrfToken: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        });
+    }
+});
+</script>

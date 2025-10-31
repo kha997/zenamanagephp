@@ -7,6 +7,8 @@ import './rewards';
 import Chart from 'chart.js/auto';
 window.Chart = Chart;
 
+// Note: app.tsx is not imported to avoid React Router dependency issues
+
 // Z.E.N.A Project Management - Main JavaScript
 class ZenaApp {
     constructor() {

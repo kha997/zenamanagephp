@@ -56,17 +56,21 @@
     </style>
 </head>
 <body class="bg-gray-50" x-data="appLayout()">
-    {{-- React HeaderShell --}}
-    <x-shared.header-wrapper
-        variant="app"
-        :user="Auth::user()"
-        :tenant="Auth::user()?->tenant"
-        :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
-        :notifications="app(App\Services\HeaderService::class)->getNotifications(Auth::user())"
-        :unread-count="app(App\Services\HeaderService::class)->getUnreadCount(Auth::user())"
-        :theme="app(App\Services\HeaderService::class)->getUserTheme(Auth::user())"
-        :breadcrumbs="app(App\Services\HeaderService::class)->getBreadcrumbs(request()->route()->getName(), request()->route()->parameters())"
-    />
+    {{-- Fixed Header Only --}}
+    <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+        {{-- Simple Header (Blade-only) --}}
+        <x-shared.header
+            variant="app"
+            :user="Auth::user()"
+            :tenant="Auth::user()?->tenant"
+            :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
+            :notifications="app(App\Services\HeaderService::class)->getNotifications(Auth::user())"
+            :unread-count="app(App\Services\HeaderService::class)->getUnreadCount(Auth::user())"
+            :theme="app(App\Services\HeaderService::class)->getUserTheme(Auth::user())"
+            :breadcrumbs="app(App\Services\HeaderService::class)->getBreadcrumbs(request()->route()->getName(), request()->route()->parameters())"
+        />
+    </div>
+    
     {{-- Theme initialization script --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -77,8 +81,16 @@
         });
     </script>
     
-    <!-- Main Content with proper spacing -->
-    <main class="pt-20">
+    {{-- Navigator bên ngoài fixed container --}}
+    <div style="padding-top: 64px;">
+        <x-shared.navigation.primary-navigator
+            variant="app"
+            :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
+        />
+    </div>
+    
+    <!-- Main Content - Không cần padding vì Navigator đã có padding-top -->
+    <main class="pt-[20rem]">
         <!-- KPI Strip (if provided by page) -->
         @yield('kpi-strip')
         

@@ -130,8 +130,18 @@
         variant="admin"
         :user="Auth::user()"
         :tenant="Auth::user()->tenant ?? null"
+        :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'admin')"
+        :notifications="app(App\Services\HeaderService::class)->getNotifications(Auth::user())"
+        :unread-count="app(App\Services\HeaderService::class)->getUnreadCount(Auth::user())"
         :alert-count="$alertCount ?? 0"
         :theme="$theme ?? 'light'"
+        :breadcrumbs="app(App\Services\HeaderService::class)->getBreadcrumbs(request()->route()->getName(), request()->route()->parameters())"
+    />
+    
+    {{-- Primary Navigator (Horizontal navigation below header) --}}
+    <x-shared.navigation.primary-navigator
+        variant="admin"
+        :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'admin')"
     />
     
     <div class="flex">

@@ -1,5 +1,5 @@
 {{-- Simple test view với cùng data và columns như view chính --}}
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('content')
 <div class="container mx-auto px-4 py-8">

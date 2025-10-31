@@ -228,6 +228,12 @@ document.addEventListener('alpine:init', () => {
         alerts: [],
         kpis: {
             totalProjects: 0,
+            projectGrowth: '+0%',
+            activeTasks: 0,
+            taskGrowth: '+0%',
+            teamMembers: 0,
+            teamGrowth: '+0%',
+            completionRate: 0,
             activeProjects: 0,
             onTimeRate: 0,
             overdueProjects: 0,
@@ -393,8 +399,42 @@ document.addEventListener('alpine:init', () => {
             this.loadDashboardData();
         },
         
-        // Data loading - delegated to separate component
+        // Data loading
         async loadDashboardData() {
+            // Load bootstrap data from server if available
+            if (window.dashboardBootstrap) {
+                const bootstrap = window.dashboardBootstrap;
+                
+                // Load KPIs from bootstrap
+                if (bootstrap.kpis) {
+                    Object.assign(this.kpis, bootstrap.kpis);
+                }
+                
+                // Load alerts from bootstrap
+                if (bootstrap.alerts) {
+                    this.alerts = Array.isArray(bootstrap.alerts) ? bootstrap.alerts : Object.values(bootstrap.alerts || {});
+                }
+                
+                // Load activity from bootstrap
+                if (bootstrap.recentActivity) {
+                    this.activity = Array.isArray(bootstrap.recentActivity) ? bootstrap.recentActivity : Object.values(bootstrap.recentActivity || {});
+                }
+                
+                // Load charts data
+                if (bootstrap.charts) {
+                    this.charts = bootstrap.charts;
+                }
+                
+                // Debug log
+                console.log('✅ Dashboard data loaded from bootstrap:', {
+                    kpis: this.kpis,
+                    alerts: this.alerts,
+                    activity: this.activity,
+                    charts: this.charts
+                });
+            }
+            
+            // Try to load from API if available
             if (window.dashboardDataLoader) {
                 const result = await window.dashboardDataLoader.loadDashboardData();
                 this.kpis = result.kpis;

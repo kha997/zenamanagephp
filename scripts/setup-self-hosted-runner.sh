@@ -50,8 +50,22 @@ mkdir -p "$RUNNER_DIR"
 cd "$RUNNER_DIR"
 
 # Detect OS and architecture
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+DETECTED_OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
+
+# Map OS names to GitHub Actions runner naming
+case $DETECTED_OS in
+  darwin)
+    OS="osx"
+    ;;
+  linux)
+    OS="linux"
+    ;;
+  *)
+    echo -e "${RED}❌ Unsupported OS: $DETECTED_OS${NC}"
+    exit 1
+    ;;
+esac
 
 case $ARCH in
   x86_64)
@@ -66,7 +80,7 @@ case $ARCH in
     ;;
 esac
 
-echo -e "${BLUE}Detected: $OS-$ARCH${NC}"
+echo -e "${BLUE}Detected: $DETECTED_OS-$ARCH (Runner: $OS-$ARCH)${NC}"
 
 # Download runner
 RUNNER_VERSION="2.311.0"

@@ -246,6 +246,28 @@ jobs:
         done
         
     - name: Test MySQL connection
+      if: github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == ''
+      run: |
+        echo "Testing MySQL connection..."
+        # Find MySQL binary (same logic as setup step)
+        MYSQL_CMD=""
+        if command -v mysql &> /dev/null; then
+          MYSQL_CMD="mysql"
+        elif [ -f /Applications/XAMPP/xamppfiles/bin/mysql ]; then
+          MYSQL_CMD="/Applications/XAMPP/xamppfiles/bin/mysql"
+        else
+          echo "⚠️  MySQL client not found, skipping connection test (using SQLite)"
+          exit 0
+        fi
+        
+        $MYSQL_CMD -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1 as test;" || {
+          echo "❌ MySQL connection failed!"
+          exit 1
+        }
+        echo "✅ MySQL connection successful!"
+        
+    - name: Test MySQL connection (GitHub-hosted)
+      if: github.event.inputs.runner == 'ubuntu-latest'
       run: |
         echo "Testing MySQL connection..."
         mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1 as test;" || {

@@ -188,27 +188,26 @@ jobs:
       run: |
         echo "🔍 Detecting MySQL setup for self-hosted runner..."
         
+        # Function to setup database and user
+        setup_mysql_db() {
+          mysql -h 127.0.0.1 -u root << EOF
+        CREATE DATABASE IF NOT EXISTS zenamanage_e2e;
+        CREATE USER IF NOT EXISTS 'e2e_user'@'localhost' IDENTIFIED BY 'e2e_password';
+        GRANT ALL PRIVILEGES ON zenamanage_e2e.* TO 'e2e_user'@'localhost';
+        FLUSH PRIVILEGES;
+        EOF
+        }
+        
         # Check if MySQL is already running
         if mysql -h 127.0.0.1 -u root -e "SELECT 1" 2>/dev/null; then
           echo "✅ MySQL is already running locally"
-          # Create database and user if needed
-          mysql -h 127.0.0.1 -u root << 'SQL'
-            CREATE DATABASE IF NOT EXISTS zenamanage_e2e;
-            CREATE USER IF NOT EXISTS 'e2e_user'@'localhost' IDENTIFIED BY 'e2e_password';
-            GRANT ALL PRIVILEGES ON zenamanage_e2e.* TO 'e2e_user'@'localhost';
-            FLUSH PRIVILEGES;
-          SQL
+          setup_mysql_db
           echo "✅ Database and user created/verified"
-        elif command -v brew &> /dev/null && brew services list | grep -q mysql; then
+        elif command -v brew &> /dev/null && brew services list 2>/dev/null | grep -q mysql; then
           echo "📦 Starting MySQL via Homebrew..."
           brew services start mysql || true
           sleep 5
-          mysql -h 127.0.0.1 -u root << 'SQL'
-            CREATE DATABASE IF NOT EXISTS zenamanage_e2e;
-            CREATE USER IF NOT EXISTS 'e2e_user'@'localhost' IDENTIFIED BY 'e2e_password';
-            GRANT ALL PRIVILEGES ON zenamanage_e2e.* TO 'e2e_user'@'localhost';
-            FLUSH PRIVILEGES;
-          SQL
+          setup_mysql_db
           echo "✅ MySQL started and configured"
         else
           echo "⚠️  MySQL not found. Using SQLite for self-hosted runner..."

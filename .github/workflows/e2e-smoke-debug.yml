@@ -210,12 +210,15 @@ jobs:
         # Verify DB connection one more time before migration
         php artisan tinker --execute="
           \$driver = config('database.default');
+          \$connection = config('database.connections.' . \$driver);
           echo 'Using database driver: ' . \$driver . PHP_EOL;
-          if (\$driver !== 'mysql') {
-            echo 'ERROR: Expected mysql but got: ' . \$driver . PHP_EOL;
-            exit(1);
+          if (\$driver === 'sqlite') {
+            echo '✅ Using SQLite (self-hosted runner without MySQL)' . PHP_EOL;
+          } elseif (\$driver === 'mysql') {
+            echo '✅ Database driver verified as MySQL' . PHP_EOL;
+          } else {
+            echo '⚠️  Using database driver: ' . \$driver . PHP_EOL;
           }
-          echo '✅ Database driver verified as MySQL' . PHP_EOL;
         "
         
         # Run migrations

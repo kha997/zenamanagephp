@@ -205,14 +205,12 @@ jobs:
           exit 0
         fi
         
-        # Function to setup database and user
+        # Function to setup database and user (avoid heredoc issues)
         setup_mysql_db() {
-          $MYSQL_CMD -h 127.0.0.1 -u root << 'MYSQL_EOF'
-        CREATE DATABASE IF NOT EXISTS zenamanage_e2e;
-        CREATE USER IF NOT EXISTS 'e2e_user'@'localhost' IDENTIFIED BY 'e2e_password';
-        GRANT ALL PRIVILEGES ON zenamanage_e2e.* TO 'e2e_user'@'localhost';
-        FLUSH PRIVILEGES;
-        MYSQL_EOF
+          $MYSQL_CMD -h 127.0.0.1 -u root -e "CREATE DATABASE IF NOT EXISTS zenamanage_e2e;" 2>/dev/null || true
+          $MYSQL_CMD -h 127.0.0.1 -u root -e "CREATE USER IF NOT EXISTS 'e2e_user'@'localhost' IDENTIFIED BY 'e2e_password';" 2>/dev/null || true
+          $MYSQL_CMD -h 127.0.0.1 -u root -e "GRANT ALL PRIVILEGES ON zenamanage_e2e.* TO 'e2e_user'@'localhost';" 2>/dev/null || true
+          $MYSQL_CMD -h 127.0.0.1 -u root -e "FLUSH PRIVILEGES;" 2>/dev/null || true
         }
         
         # Check if MySQL is already running

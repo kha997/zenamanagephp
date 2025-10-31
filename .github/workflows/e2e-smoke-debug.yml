@@ -39,6 +39,18 @@ jobs:
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
       
+    - name: Build frontend assets
+      run: |
+        echo "🏗️  Building frontend assets for E2E tests..."
+        npm run build
+        echo "✅ Frontend assets built successfully"
+        # Verify manifest file exists
+        if [ -f "public/build/manifest.json" ]; then
+          echo "✅ Vite manifest found at public/build/manifest.json"
+        else
+          echo "⚠️  WARNING: Vite manifest not found, but continuing..."
+        fi
+      
     - name: Check PHP installation (self-hosted)
       if: github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == ''
       id: check-php

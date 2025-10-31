@@ -5,6 +5,9 @@ export class MinimalAuthHelper {
 
   async login(email: string, password: string): Promise<void> {
     try {
+      // First, verify base URL is accessible
+      console.log(`[Auth Helper] Base URL: ${this.page.url()}`);
+      
       // Navigate to login page and wait for it to be ready
       await this.page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
       
@@ -13,16 +16,30 @@ export class MinimalAuthHelper {
       const title = await this.page.title();
       console.log(`[Auth Helper] Navigated to: ${url}, Title: ${title}`);
       
+      // Check if we got redirected (should not happen for /login)
+      if (!url.includes('/login')) {
+        console.warn(`[Auth Helper] WARNING: Expected /login but got: ${url}`);
+        console.warn(`[Auth Helper] This might indicate a redirect issue`);
+      }
+      
+      // Wait a bit for page to fully render
+      await this.page.waitForTimeout(1000);
+      
       // Wait for email input to be visible (with longer timeout for CI)
-      await this.page.waitForSelector('#email', { state: 'visible', timeout: 20000 }).catch(async (error) => {
+      let emailSelector = '#email';
+      try {
+        await this.page.waitForSelector('#email', { state: 'visible', timeout: 20000 });
+      } catch (error) {
         // Debug: take screenshot and log page content if selector not found
         console.error(`[Auth Helper] #email selector not found on page: ${url}`);
         console.error(`[Auth Helper] Page title: ${title}`);
+        console.error(`[Auth Helper] Page HTML (first 1000 chars):`);
+        const htmlContent = await this.page.content();
+        console.error(htmlContent.substring(0, 1000));
         
         // Try to find alternative selectors
-        const pageContent = await this.page.content();
-        const hasEmailInput = pageContent.includes('email') || pageContent.includes('Email');
-        console.log(`[Auth Helper] Page contains 'email': ${hasEmailInput}`);
+        const hasEmailInput = htmlContent.includes('id="email"') || htmlContent.includes('name="email"');
+        console.log(`[Auth Helper] Page contains id/name="email": ${hasEmailInput}`);
         
         // List all input fields on page
         const inputs = await this.page.$$eval('input', (elements) => 
@@ -30,16 +47,35 @@ export class MinimalAuthHelper {
             id: el.id,
             name: el.getAttribute('name'),
             type: el.type,
-            placeholder: el.getAttribute('placeholder')
+            placeholder: el.getAttribute('placeholder'),
+            className: el.className
           }))
         ).catch(() => []);
         console.log(`[Auth Helper] Input fields found:`, JSON.stringify(inputs, null, 2));
         
-        throw error;
-      });
+        // Try alternative selectors
+        console.log(`[Auth Helper] Trying alternative selectors...`);
+        const altSelectors = ['input[name="email"]', 'input[type="email"]', '[data-testid="email-input"]'];
+        let foundAlternative = false;
+        for (const selector of altSelectors) {
+          try {
+            await this.page.waitForSelector(selector, { state: 'visible', timeout: 5000 });
+            console.log(`[Auth Helper] Found alternative selector: ${selector}`);
+            emailSelector = selector;
+            foundAlternative = true;
+            break;
+          } catch (e) {
+            // Try next selector
+          }
+        }
+        
+        if (!foundAlternative) {
+          throw error;
+        }
+      }
       
       // Fill in credentials
-      await this.page.fill('#email', email);
+      await this.page.fill(emailSelector, email);
       await this.page.fill('#password', password);
       
       // Wait for login button to be ready
@@ -52,7 +88,26 @@ export class MinimalAuthHelper {
       ]);
     } catch (error) {
       // Take screenshot on error for debugging
-      await this.page.screenshot({ path: `test-results/login-error-${Date.now()}.png`, fullPage: true }).catch(() => {});
+      const timestamp = Date.now();
+      await this.page.screenshot({ 
+        path: `test-results/login-error-${timestamp}.png`, 
+        fullPage: true 
+      }).catch(() => {});
+      
+      // Also save page HTML for analysis
+      try {
+        const html = await this.page.content();
+        const fs = require('fs');
+        const path = require('path');
+        fs.writeFileSync(
+          `test-results/login-error-${timestamp}.html`, 
+          html
+        );
+        console.log(`[Auth Helper] Saved page HTML to test-results/login-error-${timestamp}.html`);
+      } catch (e) {
+        // Ignore if fs not available
+      }
+      
       throw error;
     }
   }

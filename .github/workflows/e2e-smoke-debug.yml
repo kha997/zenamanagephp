@@ -201,13 +201,13 @@ jobs:
         # Start server in background for quick check
         php artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel-server.log 2>&1 &
         SERVER_PID=$!
+        echo "Server PID: $SERVER_PID" >> $GITHUB_ENV
         
         # Wait for server to be ready (max 30 seconds)
         echo "⏳ Waiting for server to start..."
         for i in {1..30}; do
           if curl -f http://127.0.0.1:8000/health 2>/dev/null || curl -f http://127.0.0.1:8000 2>/dev/null; then
             echo "✅ Laravel server is responding!"
-            # Don't kill server - let Playwright manage it or reuse it
             break
           fi
           if [ $i -eq 30 ]; then
@@ -219,7 +219,27 @@ jobs:
           fi
           sleep 1
         done
-        # Keep server running for Playwright to use
+        
+        # Verify login page specifically
+        echo "🔍 Verifying login page is accessible..."
+        LOGIN_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/login)
+        if [ "$LOGIN_RESPONSE" = "200" ]; then
+          echo "✅ Login page returns 200 OK"
+          
+          # Check if page contains email input
+          LOGIN_CONTENT=$(curl -s http://127.0.0.1:8000/login)
+          if echo "$LOGIN_CONTENT" | grep -q 'id="email"\|name="email"\|#email'; then
+            echo "✅ Login page contains email input field"
+          else
+            echo "⚠️  WARNING: Login page might not have email input"
+            echo "Page snippet:"
+            echo "$LOGIN_CONTENT" | head -50
+          fi
+        else
+          echo "⚠️  WARNING: Login page returned status: $LOGIN_RESPONSE"
+        fi
+        
+        # Don't kill server - let Playwright manage it or reuse it
         
     - name: Run smoke tests
       run: npm run test:e2e:smoke
@@ -227,3 +247,24 @@ jobs:
         CI: true
         SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL != '' && secrets.SMOKE_ADMIN_EMAIL || 'admin@zena.local' }}
         SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD != '' && secrets.SMOKE_ADMIN_PASSWORD || 'password' }}
+      continue-on-error: false
+      
+    - name: Upload test artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: e2e-test-results
+        path: |
+          test-results/**/*.png
+          test-results/**/*.html
+          test-results/**/*.json
+          test-results/**/*.xml
+        retention-days: 7
+        
+    - name: Upload Playwright report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 7

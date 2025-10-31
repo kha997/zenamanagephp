@@ -18,21 +18,10 @@ jobs:
   debug:
     runs-on: ${{ github.event.inputs.runner || 'self-hosted' }}
     
-    # Docker services chỉ work với GitHub-hosted runners
-    # Self-hosted runners cần MySQL được setup locally hoặc via steps
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_e2e
-          MYSQL_USER: e2e_user
-          MYSQL_PASSWORD: e2e_password
-        ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-        # Only use service for GitHub-hosted runners
-        if: github.event.inputs.runner == 'ubuntu-latest' || (github.event.inputs.runner == '' && github.runner.os == 'Linux')
+    # Note: Docker services không work với self-hosted runners
+    # MySQL sẽ được setup trong steps cho cả self-hosted và GitHub-hosted
+    # Self-hosted: Use local MySQL hoặc SQLite fallback
+    # GitHub-hosted: Use Docker MySQL service (setup in steps)
     
     steps:
     - name: Checkout code
@@ -131,8 +120,35 @@ jobs:
           cat .env | grep "^DB_"
         }
         
+    - name: Setup MySQL for GitHub-hosted runner
+      if: github.event.inputs.runner == 'ubuntu-latest'
+      run: |
+        echo "🐳 Setting up MySQL via Docker for GitHub-hosted runner..."
+        docker run -d \
+          --name mysql-e2e \
+          -e MYSQL_ROOT_PASSWORD=root_password \
+          -e MYSQL_DATABASE=zenamanage_e2e \
+          -e MYSQL_USER=e2e_user \
+          -e MYSQL_PASSWORD=e2e_password \
+          -p 3306:3306 \
+          mysql:8.0 \
+          --health-cmd="mysqladmin ping" \
+          --health-interval=10s \
+          --health-timeout=5s \
+          --health-retries=3
+        
+        echo "⏳ Waiting for MySQL to be ready..."
+        for i in {1..30}; do
+          if mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1" 2>/dev/null; then
+            echo "✅ MySQL is ready!"
+            break
+          fi
+          echo "⏳ Waiting for MySQL... (attempt $i/30)"
+          sleep 2
+        done
+        
     - name: Setup MySQL for self-hosted runner
-      if: github.event.inputs.runner == 'self-hosted' || (github.event.inputs.runner == '' && github.runner.os != 'Linux')
+      if: github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == ''
       run: |
         echo "🔍 Detecting MySQL setup for self-hosted runner..."
         
@@ -166,23 +182,8 @@ jobs:
           echo "✅ Configured to use SQLite"
         fi
         
-    - name: Wait for MySQL to be ready
-      if: github.event.inputs.runner == 'ubuntu-latest' || (github.event.inputs.runner == '' && github.runner.os == 'Linux')
-      run: |
-        echo "Waiting for MySQL service to be ready..."
-        for i in {1..30}; do
-          if mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1" 2>/dev/null; then
-            echo "✅ MySQL is ready!"
-            break
-          fi
-          echo "⏳ Waiting for MySQL... (attempt $i/30)"
-          sleep 2
-        done
-        
-    - name: Wait for MySQL (self-hosted)
-      if: github.event.inputs.runner == 'self-hosted' || (github.event.inputs.runner == '' && github.runner.os != 'Linux')
-      run: |
-        echo "Waiting for MySQL to be ready (self-hosted)..."
+        # Wait for MySQL to be ready (self-hosted)
+        echo "⏳ Waiting for MySQL to be ready (self-hosted)..."
         for i in {1..30}; do
           if mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1" 2>/dev/null || mysql -h 127.0.0.1 -u root -e "SELECT 1" 2>/dev/null; then
             echo "✅ MySQL is ready!"

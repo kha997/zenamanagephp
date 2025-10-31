@@ -188,18 +188,35 @@ jobs:
       run: |
         echo "🔍 Detecting MySQL setup for self-hosted runner..."
         
+        # Find MySQL binary (check multiple locations)
+        MYSQL_CMD=""
+        if command -v mysql &> /dev/null; then
+          MYSQL_CMD="mysql"
+        elif [ -f /Applications/XAMPP/xamppfiles/bin/mysql ]; then
+          MYSQL_CMD="/Applications/XAMPP/xamppfiles/bin/mysql"
+          export PATH="/Applications/XAMPP/xamppfiles/bin:$PATH"
+          echo "✅ Found MySQL at XAMPP location"
+        else
+          echo "⚠️  MySQL client not found. Using SQLite for self-hosted runner..."
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
+          touch database/database.sqlite
+          echo "✅ Configured to use SQLite"
+          exit 0
+        fi
+        
         # Function to setup database and user
         setup_mysql_db() {
-          mysql -h 127.0.0.1 -u root << EOF
+          $MYSQL_CMD -h 127.0.0.1 -u root << 'MYSQL_EOF'
         CREATE DATABASE IF NOT EXISTS zenamanage_e2e;
         CREATE USER IF NOT EXISTS 'e2e_user'@'localhost' IDENTIFIED BY 'e2e_password';
         GRANT ALL PRIVILEGES ON zenamanage_e2e.* TO 'e2e_user'@'localhost';
         FLUSH PRIVILEGES;
-        EOF
+        MYSQL_EOF
         }
         
         # Check if MySQL is already running
-        if mysql -h 127.0.0.1 -u root -e "SELECT 1" 2>/dev/null; then
+        if $MYSQL_CMD -h 127.0.0.1 -u root -e "SELECT 1" 2>/dev/null; then
           echo "✅ MySQL is already running locally"
           setup_mysql_db
           echo "✅ Database and user created/verified"
@@ -210,7 +227,7 @@ jobs:
           setup_mysql_db
           echo "✅ MySQL started and configured"
         else
-          echo "⚠️  MySQL not found. Using SQLite for self-hosted runner..."
+          echo "⚠️  MySQL server not found or not running. Using SQLite for self-hosted runner..."
           echo "DB_CONNECTION=sqlite" >> .env
           echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
           touch database/database.sqlite
@@ -220,7 +237,7 @@ jobs:
         # Wait for MySQL to be ready (self-hosted)
         echo "⏳ Waiting for MySQL to be ready (self-hosted)..."
         for i in {1..30}; do
-          if mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1" 2>/dev/null || mysql -h 127.0.0.1 -u root -e "SELECT 1" 2>/dev/null; then
+          if $MYSQL_CMD -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1" 2>/dev/null || $MYSQL_CMD -h 127.0.0.1 -u root -e "SELECT 1" 2>/dev/null; then
             echo "✅ MySQL is ready!"
             break
           fi

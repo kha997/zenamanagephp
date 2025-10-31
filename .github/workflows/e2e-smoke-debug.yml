@@ -39,12 +39,48 @@ jobs:
     - name: Install Playwright browsers
       run: npx playwright install --with-deps
       
-    - name: Setup PHP
+    - name: Check PHP installation (self-hosted)
+      if: github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == ''
+      id: check-php
+      run: |
+        if command -v php &> /dev/null; then
+          PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+          echo "version=$PHP_VERSION" >> $GITHUB_OUTPUT
+          echo "installed=true" >> $GITHUB_OUTPUT
+          echo "✅ PHP $PHP_VERSION is already installed"
+          php -m | head -20
+        else
+          echo "installed=false" >> $GITHUB_OUTPUT
+          echo "⚠️  PHP not found, will need to install"
+        fi
+        
+    - name: Setup PHP (GitHub-hosted only)
+      if: github.event.inputs.runner == 'ubuntu-latest'
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
         extensions: mbstring, dom, fileinfo, mysql, sqlite3, pdo_sqlite, bcmath, soap, intl, readline, libxml, zip, curl, gd, iconv, imagick, redis, memcached, pcov
         coverage: none
+        
+    - name: Verify PHP for self-hosted
+      if: (github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == '') && steps.check-php.outputs.installed == 'true'
+      run: |
+        echo "✅ Using existing PHP installation"
+        php -v
+        php -m | grep -E "mbstring|dom|fileinfo|mysql|sqlite3|pdo_sqlite|bcmath|soap|intl|zip|curl|gd"
+        
+    - name: Install PHP extensions for self-hosted (if needed)
+      if: (github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == '') && steps.check-php.outputs.installed == 'false'
+      run: |
+        echo "⚠️  PHP not found. Attempting to install..."
+        # For macOS, try Homebrew
+        if command -v brew &> /dev/null; then
+          echo "📦 Installing PHP via Homebrew..."
+          brew install php@8.2 || brew install php || echo "⚠️  Homebrew PHP installation failed"
+        else
+          echo "❌ Cannot install PHP automatically. Please install PHP 8.2+ on the runner."
+          exit 1
+        fi
         
     - name: Install Composer dependencies
       run: composer install --no-progress --prefer-dist --optimize-autoloader

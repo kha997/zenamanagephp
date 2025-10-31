@@ -383,7 +383,27 @@ jobs:
           echo "⚠️  WARNING: Login page returned status: $LOGIN_RESPONSE"
         fi
         
-        # Don't kill server - let Playwright manage it or reuse it
+        # Stop server - Playwright will start its own
+        echo "🛑 Stopping verification server (Playwright will start its own)..."
+        if [ -n "$SERVER_PID" ]; then
+          kill $SERVER_PID 2>/dev/null || true
+          sleep 2
+        fi
+        
+        # Ensure port 8000 is completely free
+        echo "🧹 Cleaning up port 8000..."
+        if command -v lsof &> /dev/null; then
+          lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+          sleep 1
+        fi
+        
+        # Final check - port should be free now
+        if command -v lsof &> /dev/null && lsof -ti:8000 &>/dev/null; then
+          echo "⚠️  WARNING: Port 8000 still in use"
+          lsof -i:8000 || true
+        else
+          echo "✅ Port 8000 is free - ready for Playwright"
+        fi
         
     - name: Run smoke tests
       run: npm run test:e2e:smoke

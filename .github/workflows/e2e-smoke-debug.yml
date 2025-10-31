@@ -344,7 +344,8 @@ jobs:
         # Start server in background for quick check
         php artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel-server.log 2>&1 &
         SERVER_PID=$!
-        echo "Server PID: $SERVER_PID" >> $GITHUB_ENV
+        echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+        echo "Laravel server started with PID: $SERVER_PID"
         
         # Wait for server to be ready (max 30 seconds)
         echo "⏳ Waiting for server to start..."

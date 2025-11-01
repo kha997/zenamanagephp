@@ -26,12 +26,49 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+      with:
+        fetch-depth: 0  # Full history to ensure fresh checkout
+        
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '22'
         cache: 'npm'
+        
+    - name: Verify Node.js version
+      run: |
+        echo "📋 Node.js version check:"
+        node --version
+        NODE_VERSION=$(node --version | sed 's/v//')
+        NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
+        if [ "$NODE_MAJOR" -lt 20 ]; then
+          echo "❌ ERROR: Node.js version $NODE_VERSION is too old for Vite 7"
+          echo "Required: Node.js 20.19+ or 22.12+"
+          exit 1
+        else
+          echo "✅ Node.js version $NODE_VERSION is compatible"
+        fi
+        
+    - name: Verify PostCSS config
+      run: |
+        echo "📋 Checking PostCSS config..."
+        if [ -f "postcss.config.js" ]; then
+          echo "✅ postcss.config.js exists"
+          if grep -q "module.exports" postcss.config.js; then
+            echo "✅ PostCSS config uses CommonJS syntax (correct)"
+          elif grep -q "export default" postcss.config.js; then
+            echo "❌ ERROR: PostCSS config still uses ES module syntax"
+            echo "Expected: module.exports"
+            echo "Found: export default"
+            cat postcss.config.js
+            exit 1
+          else
+            echo "⚠️  WARNING: Unknown PostCSS config format"
+            cat postcss.config.js
+          fi
+        else
+          echo "⚠️  WARNING: postcss.config.js not found"
+        fi
         
     - name: Install dependencies
       run: npm ci

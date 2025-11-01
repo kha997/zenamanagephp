@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# Commit message hook for duplicate detection
+# This hook checks commit messages for duplicate-related keywords
+
+echo "🔍 Checking commit message for duplicate-related keywords..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+# Get the commit message
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Check for duplicate-related keywords
+DUPLICATE_KEYWORDS=(
+    "duplicate"
+    "duplication"
+    "deduplicate"
+    "consolidate"
+    "merge"
+    "unify"
+    "refactor"
+    "cleanup"
+    "remove.*duplicate"
+    "fix.*duplicate"
+)
+
+FOUND_KEYWORDS=()
+
+for keyword in "${DUPLICATE_KEYWORDS[@]}"; do
+    if echo "$COMMIT_MSG" | grep -qi "$keyword"; then
+        FOUND_KEYWORDS+=("$keyword")
+    fi
+done
+
+if [ ${#FOUND_KEYWORDS[@]} -gt 0 ]; then
+    print_warning "Found duplicate-related keywords in commit message:"
+    for keyword in "${FOUND_KEYWORDS[@]}"; do
+        echo "  - $keyword"
+    done
+    echo ""
+    echo "📋 This commit appears to address duplication issues."
+    echo "   Make sure to:"
+    echo "   - Remove the duplicate code/files"
+    echo "   - Update any references to the removed code"
+    echo "   - Test that functionality still works"
+    echo "   - Update documentation if needed"
+    echo ""
+fi
+
+# Check for proper commit message format
+if ! echo "$COMMIT_MSG" | grep -qE "^[A-Z].*"; then
+    print_warning "Commit message should start with a capital letter"
+fi
+
+# Check for commit message length
+if [ ${#COMMIT_MSG} -lt 10 ]; then
+    print_warning "Commit message seems too short (${#COMMIT_MSG} characters)"
+fi
+
+# Check for commit message length (too long)
+if [ ${#COMMIT_MSG} -gt 100 ]; then
+    print_warning "Commit message seems too long (${#COMMIT_MSG} characters)"
+    echo "   Consider using a shorter subject line and detailed body"
+fi
+
+# Check for common commit message patterns
+if echo "$COMMIT_MSG" | grep -qiE "^(fix|feat|docs|style|refactor|test|chore)"; then
+    print_status "Commit message follows conventional commit format"
+else
+    print_warning "Consider using conventional commit format (feat:, fix:, docs:, etc.)"
+fi
+
+# Check for duplicate-related commit message patterns
+if echo "$COMMIT_MSG" | grep -qiE "duplicate|duplication|deduplicate"; then
+    echo ""
+    echo "🔍 Duplicate-related commit detected!"
+    echo "   Please ensure:"
+    echo "   - All duplicate code has been removed"
+    echo "   - Tests still pass after removal"
+    echo "   - Documentation has been updated"
+    echo "   - No broken references remain"
+    echo ""
+fi
+
+print_status "Commit message check completed"
+exit 0

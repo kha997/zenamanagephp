@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@yield('title', 'Super Admin') - ZenaManage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Suppress Tailwind CSS production warning
+        tailwind.config = {
+            suppressWarnings: true
+        };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    <script src="{{ asset('js/chart.umd.js') }}"></script>
+    <!-- Core Page Refresh CSS -->
+    <link rel="stylesheet" href="{{ asset('css/page-refresh.css') }}">
+    <!-- Loading States CSS -->
+    <link rel="stylesheet" href="{{ asset('css/loading-states.css') }}">
+    <!-- UI Loading Styles -->
+    <link rel="stylesheet" href="{{ asset('css/ui-loading.css') }}">
+    <!-- Enhanced Dashboard Styles -->
+    <link rel="stylesheet" href="{{ asset('css/dashboard-enhanced.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/tenants-enhanced.css') }}">
+    <script src="{{ asset('js/tenants/performance.js') }}" defer></script>
+    <script src="{{ asset('js/tenants/advanced-filters.js') }}" defer></script>
+    <script src="{{ asset('js/tenants/bulk-operations.js') }}" defer></script>
+    <script src="{{ asset('js/tenants/export-enhancements.js') }}" defer></script>
+    @stack('styles')
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    @yield('styles')
+</head>
+<body class="bg-gray-50" x-data="{ 
+    
+    
+    // Global Search State
+    globalSearchQuery: '',
+    showGlobalSearchResults: false,
+    globalSearchResults: {
+        tenants: [],
+        users: [],
+        errors: []
+    },
+    
+    async search(query) {
+        if (!query || query.length < 2) {
+            this.showGlobalSearchResults = false;
+            return;
+        }
+        this.globalSearchQuery = query;
+        
+        // Mock search results
+        this.globalSearchResults = {
+            tenants: [{ id: 1, name: 'Demo Tenant', domain: 'demo.example.com' }],
+            users: [{ id: 1, name: 'Demo User', email: 'demo@example.com' }],
+            errors: [{ id: 1, message: 'Demo Error', timestamp: new Date().toISOString() }]
+        };
+        this.showGlobalSearchResults = true;
+    },
+    
+    clearGlobalSearch() {
+        this.globalSearchQuery = '';
+        this.showGlobalSearchResults = false;
+        this.globalSearchResults = { tenants: [], users: [], errors: [] };
+    },
+
+    // Notification State
+    unreadNotifications: 2,
+    showNotifications: false,
+    notifications: [
+        { id: 1, title: 'New tenant registered', message: 'TechCorp has registered', read: false },
+        { id: 2, title: 'System maintenance', message: 'Scheduled tonight', read: false }
+    ],
+
+    loadNotifications() {
+        this.unreadNotifications = this.notifications.filter(n => !n.read).length;
+    },
+
+    markAllNotificationsRead() {
+        this.notifications.forEach(n => n.read = true);
+        this.unreadNotifications = 0;
+    },
+
+    toggleNotifications() {
+        this.showNotifications = !this.showNotifications;
+    },
+
+    // User Menu State
+    showUserMenu: false,
+    toggleUserMenu() {
+        this.showUserMenu = !this.showUserMenu;
+    },
+
+    // Mobile Menu State
+    showMobileMenu: false,
+    toggleMobileMenu() {
+        this.showMobileMenu = !this.showMobileMenu;
+    },
+
+    // Global Modal State
+    showModal: false,
+    modalTitle: '',
+    modalContent: '',
+    modalAction: null,
+
+    closeModal() {
+        this.showModal = false;
+        this.modalTitle = '';
+        this.modalContent = '';
+        this.modalAction = null;
+    },
+
+    openModal(title, content, action = null) {
+        this.modalTitle = title;
+        this.modalContent = content;
+        this.modalAction = action;
+        this.showModal = true;
+    },
+
+    executeModalAction() {
+        if (this.modalAction && typeof this.modalAction === 'function') {
+            this.modalAction();
+        }
+        this.closeModal();
+    }
+}"  x-cloak>
+    <!-- Unified HeaderShell for Admin -->
+    <x-shared.header-wrapper 
+        variant="admin"
+        :user="Auth::user()"
+        :tenant="Auth::user()->tenant ?? null"
+        :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'admin')"
+        :notifications="app(App\Services\HeaderService::class)->getNotifications(Auth::user())"
+        :unread-count="app(App\Services\HeaderService::class)->getUnreadCount(Auth::user())"
+        :alert-count="$alertCount ?? 0"
+        :theme="$theme ?? 'light'"
+        :breadcrumbs="app(App\Services\HeaderService::class)->getBreadcrumbs(request()->route()->getName(), request()->route()->parameters())"
+    />
+    
+    {{-- Primary Navigator (Horizontal navigation below header) --}}
+    <x-shared.navigation.primary-navigator
+        variant="admin"
+        :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'admin')"
+    />
+    
+    <div class="flex">
+        
+        <!-- Main Content -->
+        <main class="flex-1 transition-all duration-300 pb-16 lg:pb-0">
+            <!-- Breadcrumb -->
+            <nav class="bg-white border-b border-gray-200 px-6 py-3">
+                <ol class="flex items-center space-x-2 text-sm text-gray-500">
+                    <li><a href="/admin" class="hover:text-gray-700">Super Admin</a></li>
+                    @yield('breadcrumb')
+                </ol>
+            </nav>
+            
+            <!-- Page Content -->
+            <div class="p-6">
+                @yield('content')
+            </div>
+        </main>
+    </div>
+    
+    
+    
+    <!-- Footer -->
+    @include('layouts.partials._footer')
+    
+    <!-- Global Modal Template - Only Mounts When Open -->
+    <template x-if="showModal">
+        <div x-cloak x-transition.opacity class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
+            <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.stop>
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900" x-text="modalTitle"></h3>
+                        <button @click="closeModal" class="text-gray-400 hover:text-gray-600" aria-label="Close modal">
+                            <i class="fas fa-times"></i>
+                        </button>
+        </div>
+                    <div x-html="modalContent"></div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button @click="closeModal" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                            Cancel
+                        </button>
+                        <button @click="executeModalAction" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Confirm
+                        </button>
+        </div>
+        </div>
+        </div>
+        </div>
+    </template>
+        
+    @stack('scripts')
+    
+    <!-- Admin Global Alpine State -->
+    <script src="{{ asset('js/admin-global-state.js') }}" defer></script>
+    
+    <!-- Global Soft Refresh Orchestrator -->
+    <script type="module">
+        import { installSoftRefresh } from '/js/core/soft-refresh.js';
+        
+        // Install soft refresh for all admin pages
+        const softRefreshConfigs = [
+            { 
+                linkSelector: '[data-soft-refresh="dashboard"]', 
+                route: '/admin/dashboard', 
+                refreshFn: () => window.Dashboard?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="tenants"]', 
+                route: '/admin/tenants', 
+                refreshFn: () => window.Tenants?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="users"]', 
+                route: '/admin/users', 
+                refreshFn: () => window.Users?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="security"]', 
+                route: '/admin/security', 
+                refreshFn: () => window.Security?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="settings"]', 
+                route: '/admin/settings', 
+                refreshFn: () => window.Settings?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="billing"]', 
+                route: '/admin/billing', 
+                refreshFn: () => window.Billing?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="maintenance"]', 
+                route: '/admin/maintenance', 
+                refreshFn: () => window.Maintenance?.refresh() 
+            },
+            { 
+                linkSelector: '[data-soft-refresh="alerts"]', 
+                route: '/admin/alerts', 
+                refreshFn: () => window.Alerts?.refresh() 
+            }
+        ];
+        
+        // Install all soft refresh handlers
+        softRefreshConfigs.forEach(config => {
+            try {
+                installSoftRefresh(config);
+            } catch (error) {
+                console.error(`Failed to install soft refresh for ${config.route}:`, error);
+            }
+        });
+        
+        // Global refresh state management
+        window.AdminRefresh = window.AdminRefresh || {
+            // Track active refreshes globally
+            activeRefreshes: new Set(),
+            
+            // Show loading state
+            setLoading: (isLoading) => {
+                document.body.classList.toggle('page-reloading', isLoading);
+                
+                // Update aria-busy for accessibility
+                const main = document.querySelector('main');
+                if (main) {
+                    main.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+                }
+                
+                if (isLoading) {
+                    // Track active refresh with timestamp
+                    const id = Date.now();
+                    this.activeRefreshes.add(id);
+                    
+                    // Auto-cleanup after 10 seconds
+                    setTimeout(() => {
+                        this.activeRefreshes.delete(id);
+                        // If no more active refreshes, ensure loading state is off
+                        if (this.activeRefreshes.size === 0) {
+                            document.body.classList.remove('page-reloading');
+                            if (main) main.setAttribute('aria-busy', 'false');
+                        }
+                    }, 10000);
+                }
+            },
+            
+            // Get global refresh health
+            getHealth: () => {
+                return {
+                    activeRefreshes: this.activeRefreshes.size,
+                    timestamp: new Date().toISOString(),
+                    debugMode: window.SoftRefresh?.debug || false
+                };
+            }
+        };
+        
+        console.log('🎯 Global soft refresh orchestrator loaded');
+</script>
+    
+    <!-- Security Charts Module (only on Security page) -->
+    @if(request()->is('admin/security'))
+    <script src="{{ asset('js/security/charts.js') }}" defer></script>
+    @endif
+    
+    <!-- Dashboard Modules (only load on dashboard)-->
+    @if(request()->is('admin') || request()->is('admin/dashboard'))
+    <script src="{{ asset('js/dashboard/charts.js') }}" defer></script>
+    <script src="{{ asset('js/shared/dashboard-monitor.js') }}" defer></script>
+    @endif
+    
+    <!-- Re-enabled for dashboard functionality -->
+    <script src="{{ asset('js/core/page-refresh-manager.js') }}" defer></script>
+    <script src="{{ asset('js/core/page-auto-init.js') }}" defer></script>
+    <script src="{{ asset('js/shared/swr.js') }}" defer></script>
+    <script src="{{ asset('js/shared/panel-fetch.js') }}" defer></script>
+    <script src="{{ asset('js/shared/soft-refresh.js') }}" defer></script>
+    <script src="{{ asset('js/shared/progress.js') }}" defer></script>
+    <script src="{{ asset('js/shared/cleanup.js') }}" defer></script>
+    
+    @stack('scripts')
+</body>
+</html>

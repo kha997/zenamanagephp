@@ -2,139 +2,110 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
-use Src\CoreProject\Models\Project;
+use App\Models\Project;
 use App\Models\Tenant;
-use Carbon\Carbon;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * Factory cho Project model
- * 
- * Tạo dữ liệu giả cho testing Project
- * Hỗ trợ các trạng thái và cấu hình khác nhau
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<App\Models\Project>
  */
 class ProjectFactory extends Factory
 {
-    /**
-     * Model tương ứng với factory này
-     */
     protected $model = Project::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
      */
     public function definition(): array
     {
-        $startDate = $this->faker->dateTimeBetween('-6 months', '+1 month');
-        $endDate = $this->faker->dateTimeBetween($startDate, '+1 year');
-        
         return [
-            // Xóa dòng này: 'id' => Str::ulid()->toString(),
             'tenant_id' => Tenant::factory(),
-            'name' => $this->faker->sentence(3),
-            'description' => $this->faker->paragraph(2),
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'status' => $this->faker->randomElement(Project::VALID_STATUSES),
-            'progress' => $this->faker->randomFloat(2, 0, 100),
-            'actual_cost' => $this->faker->randomFloat(2, 0, 1000000),
+            'name' => $this->faker->company() . ' Project',
+            'code' => 'PRJ-' . strtoupper($this->faker->unique()->regexify('[A-Z0-9]{8}')),
+            'description' => $this->faker->paragraph(),
+            'status' => $this->faker->randomElement(['active', 'archived', 'completed', 'on_hold', 'cancelled', 'planning']),
+            'owner_id' => function (array $attributes) {
+                return User::factory()->create(['tenant_id' => $attributes['tenant_id']])->id;
+            },
+            'tags' => json_encode($this->faker->words(3)),
+            'start_date' => $this->faker->dateTimeBetween('-1 month', '+1 month'),
+            'end_date' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
+            'priority' => $this->faker->randomElement(['low', 'normal', 'high', 'urgent']),
+            'progress_pct' => $this->faker->numberBetween(0, 100),
+            'budget_total' => $this->faker->randomFloat(2, 10000, 1000000),
+            'budget_planned' => $this->faker->randomFloat(2, 10000, 1000000),
+            'budget_actual' => $this->faker->randomFloat(2, 0, 1000000),
+            'estimated_hours' => $this->faker->randomFloat(2, 40, 1000),
+            'actual_hours' => $this->faker->randomFloat(2, 0, 1000),
+            'risk_level' => $this->faker->randomElement(['low', 'medium', 'high', 'critical']),
+            'is_template' => false,
+            'template_id' => null,
+            'last_activity_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
+            'completion_percentage' => $this->faker->randomFloat(2, 0, 100),
+            'settings' => json_encode([
+                'notifications' => $this->faker->boolean(),
+                'auto_assign' => $this->faker->boolean(),
+                'require_approval' => $this->faker->boolean(),
+            ]),
         ];
     }
 
     /**
-     * State cho project đang trong giai đoạn planning
-     */
-    public function planning(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'status' => Project::STATUS_PLANNING,
-            'progress' => 0.0,
-            'actual_cost' => 0.0,
-        ]);
-    }
-
-    /**
-     * State cho project đang active
+     * Indicate that the project is active.
      */
     public function active(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Project::STATUS_ACTIVE,
-            'progress' => $this->faker->randomFloat(2, 10, 80),
+            'status' => 'active',
+            'progress_pct' => $this->faker->numberBetween(10, 90),
+            'completion_percentage' => $this->faker->randomFloat(2, 10, 90),
         ]);
     }
 
     /**
-     * State cho project đã completed
+     * Indicate that the project is completed.
      */
     public function completed(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Project::STATUS_COMPLETED,
-            'progress' => 100.0,
-            'end_date' => $this->faker->dateTimeBetween('-3 months', 'now'),
+            'status' => 'completed',
+            'progress_pct' => 100,
+            'completion_percentage' => 100.0,
+            'end_date' => $this->faker->dateTimeBetween('-1 month', 'now'),
         ]);
     }
 
     /**
-     * State cho project bị on hold
+     * Indicate that the project is overdue.
      */
-    public function onHold(): static
+    public function overdue(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Project::STATUS_ON_HOLD,
+            'status' => 'active',
+            'end_date' => $this->faker->dateTimeBetween('-1 month', '-1 day'),
         ]);
     }
 
     /**
-     * State cho project bị cancelled
+     * Indicate that the project has high priority.
      */
-    public function cancelled(): static
+    public function highPriority(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Project::STATUS_CANCELLED,
+            'priority' => 'high',
         ]);
     }
 
     /**
-     * State cho project với tenant cụ thể (nhận ULID string)
+     * Indicate that the project has low priority.
      */
-    public function forTenant(string $tenantId): static
+    public function lowPriority(): static
     {
         return $this->state(fn (array $attributes) => [
-            'tenant_id' => $tenantId,
-        ]);
-    }
-
-    /**
-     * State cho project với thời gian cụ thể
-     */
-    public function withDates(Carbon $startDate, Carbon $endDate): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-        ]);
-    }
-
-    /**
-     * State cho project với progress cụ thể
-     */
-    public function withProgress(float $progress): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'progress' => $progress,
-        ]);
-    }
-
-    /**
-     * State cho project với cost cụ thể
-     */
-    public function withCost(float $actualCost): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'actual_cost' => $actualCost,
+            'priority' => 'low',
         ]);
     }
 }

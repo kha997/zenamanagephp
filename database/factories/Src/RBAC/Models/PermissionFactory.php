@@ -8,92 +8,62 @@ use Src\RBAC\Models\Permission;
 /**
  * Factory cho Permission model
  * 
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\RBAC\Models\Permission>
+ * Tạo test data cho RBAC permissions với các modules và actions
  */
 class PermissionFactory extends Factory
 {
-    /**
-     * Model được tạo bởi factory này
-     */
     protected $model = Permission::class;
 
     /**
-     * Định nghĩa trạng thái mặc định của model
-     *
-     * @return array<string, mixed>
+     * Define the model's default state
      */
     public function definition(): array
     {
-        $modules = ['project', 'task', 'document', 'user', 'role', 'component', 'template'];
-        $actions = ['create', 'read', 'update', 'delete', 'list', 'approve', 'reject'];
+        $modules = ['project', 'task', 'component', 'document', 'notification', 'user'];
+        $actions = ['create', 'read', 'update', 'delete', 'manage'];
         
         $module = $this->faker->randomElement($modules);
         $action = $this->faker->randomElement($actions);
         
         return [
+            'code' => "{$module}.{$action}",
             'module' => $module,
             'action' => $action,
-            'code' => strtolower($module) . '.' . strtolower($action),
-            'description' => $this->faker->sentence(6),
+            'description' => "Permission to {$action} {$module} resources",
+            'created_at' => now(),
+            'updated_at' => now()
         ];
     }
 
     /**
-     * Tạo permission cho module cụ thể
+     * Project module permissions
      */
-    public function forModule(string $module): static
+    public function projectModule(): static
     {
-        return $this->state(function (array $attributes) use ($module) {
-            $action = $attributes['action'] ?? 'read';
+        return $this->state(function (array $attributes) {
+            $action = $this->faker->randomElement(['create', 'read', 'update', 'delete', 'manage']);
             return [
-                'module' => $module,
-                'code' => strtolower($module) . '.' . strtolower($action),
-            ];
-        });
-    }
-
-    /**
-     * Tạo permission cho action cụ thể
-     */
-    public function forAction(string $action): static
-    {
-        return $this->state(function (array $attributes) use ($action) {
-            $module = $attributes['module'] ?? 'general';
-            return [
+                'code' => "project.{$action}",
+                'module' => 'project',
                 'action' => $action,
-                'code' => strtolower($module) . '.' . strtolower($action),
+                'description' => "Permission to {$action} project resources"
             ];
         });
     }
 
     /**
-     * Tạo permission với code cụ thể
+     * Task module permissions
      */
-    public function withCode(string $code): static
+    public function taskModule(): static
     {
-        $parts = explode('.', $code);
-        $module = $parts[0] ?? 'general';
-        $action = $parts[1] ?? 'read';
-        
-        return $this->state([
-            'module' => $module,
-            'action' => $action,
-            'code' => $code,
-        ]);
-    }
-
-    /**
-     * Tạo các permission cơ bản cho CRUD
-     */
-    public function crudPermissions(string $module): array
-    {
-        $actions = ['create', 'read', 'update', 'delete'];
-        $permissions = [];
-        
-        foreach ($actions as $action) {
-            $permissions[] = $this->forModule($module)->forAction($action)->make();
-        }
-        
-        return $permissions;
+        return $this->state(function (array $attributes) {
+            $action = $this->faker->randomElement(['create', 'read', 'update', 'delete', 'assign']);
+            return [
+                'code' => "task.{$action}",
+                'module' => 'task',
+                'action' => $action,
+                'description' => "Permission to {$action} task resources"
+            ];
+        });
     }
 }

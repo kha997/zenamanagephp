@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
-import { ApiResponse, ApiError } from '../types/api'
+import { ApiResponse, ApiError } from '../types'
 import { getToken, removeToken } from '../utils/auth'
 
 /**
@@ -11,7 +11,7 @@ class ApiClient {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',
+      baseURL: 'http://localhost:8000/api/v1',
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',

@@ -4,8 +4,6 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Service quản lý caching strategy cho toàn bộ hệ thống
@@ -46,6 +44,36 @@ class CacheService
         $key = "project:{$projectId}:components";
         
         return Cache::remember($key, self::TTL_MEDIUM, $callback);
+    }
+
+    /**
+     * Cache dashboard data với tenant isolation
+     * 
+     * @param string $tenantId
+     * @param callable $callback
+     * @param int $ttl
+     * @return mixed
+     */
+    public function cacheDashboardData(string $tenantId, callable $callback, int $ttl = self::TTL_MEDIUM)
+    {
+        $key = "dashboard:{$tenantId}";
+        
+        return Cache::remember($key, $ttl, $callback);
+    }
+
+    /**
+     * Cache KPI data với tenant isolation
+     * 
+     * @param string $tenantId
+     * @param callable $callback
+     * @param int $ttl
+     * @return mixed
+     */
+    public function cacheKPIs(string $tenantId, callable $callback, int $ttl = self::TTL_SHORT)
+    {
+        $key = "kpis:{$tenantId}";
+        
+        return Cache::remember($key, $ttl, $callback);
     }
 
     /**
@@ -153,14 +181,14 @@ class CacheService
     public function warmUpUserCaches(int $userId): void
     {
         // Warm up user permissions
-        $this->cacheUserPermissions($userId, null, function () use ($userId) {
-            // Logic to load user permissions
+        $this->cacheUserPermissions($userId, null, function () {
+            // TODO: Implement user permissions retrieval logic
             return [];
         });
 
         // Warm up dashboard stats
-        $this->cacheDashboardStats($userId, function () use ($userId) {
-            // Logic to calculate dashboard stats
+        $this->cacheDashboardStats($userId, function () {
+            // TODO: Implement dashboard stats retrieval logic
             return [];
         });
     }

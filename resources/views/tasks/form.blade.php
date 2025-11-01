@@ -22,7 +22,11 @@
                     <h5 class="card-title">Thông tin cơ bản</h5>
                 </div>
                 <div class="card-body">
-                    <form id="task-form">
+                    <form id="task-form" method="POST">
+                        @csrf
+                        @if(isset($task))
+                            @method('PUT')
+                        @endif
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">

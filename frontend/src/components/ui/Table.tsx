@@ -3,7 +3,7 @@
  * Responsive table với sorting, pagination và selection
  */
 import React from 'react';
-import { cn } from '../../lib/utils/format';
+import { cn } from '../../lib/utils';
 
 interface Column<T> {
   key: keyof T | string;
@@ -75,7 +75,7 @@ export function Table<T extends Record<string, any>>({
     }
   };
 
-  const handleSelectRow = (record: T, index: number, checked: boolean) => {
+  const handleSelectRow = (_record: T, index: number, checked: boolean) => {
     if (!rowSelection) return;
     
     const { selectedRowKeys } = rowSelection;

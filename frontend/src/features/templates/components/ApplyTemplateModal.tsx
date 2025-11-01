@@ -7,7 +7,7 @@ import { Modal, ModalBody, ModalFooter } from '../../../components/ui/Modal';
 import { useTemplatesStore } from '../../../store/templates';
 import { useProjectsStore } from '../../../store/projects';
 import { WorkTemplate, ApplyTemplateForm, Project } from '../../../lib/types';
-import { cn } from '../../../lib/utils/format';
+import { cn } from '../../../lib/utils';
 
 interface ApplyTemplateModalProps {
   isOpen: boolean;

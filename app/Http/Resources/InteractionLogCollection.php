@@ -3,7 +3,6 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\ResourceCollection;
-use Illuminate\Http\Request;
 
 /**
  * Collection resource for InteractionLog with metadata

@@ -1,0 +1,88 @@
+name: Playwright Smoke Tests
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'resources/views/**'
+      - 'routes/**'
+      - 'app/Http/Controllers/**'
+      - 'tests/e2e/smoke/**'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'resources/views/**'
+      - 'routes/**'
+      - 'app/Http/Controllers/**'
+      - 'tests/e2e/smoke/**'
+
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, bcmath, gd, zip
+        coverage: none
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install PHP dependencies
+      run: composer install --no-dev --optimize-autoloader
+      
+    - name: Install Node dependencies
+      run: npm ci
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Create database
+      run: |
+        mysql --host=127.0.0.1 --port=3306 --user=root --password= -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        
+    - name: Run database migrations
+      run: php artisan migrate --env=testing --force
+      
+    - name: Seed test database
+      run: php artisan db:seed --class=E2EDatabaseSeeder --env=testing --force
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+      
+    - name: Start Laravel server
+      run: php artisan serve --host=127.0.0.1 --port=8000 &
+      
+    - name: Wait for server
+      run: sleep 10
+      
+    - name: Run Playwright smoke tests
+      run: npx playwright test --project=smoke-chromium
+      
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-smoke-report
+        path: playwright-report/
+        retention-days: 30
+        
+    - name: Upload screenshots
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-smoke-screenshots
+        path: test-results/
+        retention-days: 7

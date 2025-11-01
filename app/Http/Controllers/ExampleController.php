@@ -1,6 +1,6 @@
 // Thay vì:
-$user = auth()->user();
-$userId = auth()->id();
+$user = Auth::user();
+$userId = Auth::id();
 
 // Sử dụng:
 $user = Auth::user();

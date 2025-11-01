@@ -21,7 +21,7 @@ class Permission extends Model
 {
     use HasFactory, HasUlids, HasTimestamps;
 
-    protected $table = 'permissions';
+    protected $table = 'zena_permissions';
     protected $primaryKey = 'id';
     
     /**
@@ -48,10 +48,10 @@ class Permission extends Model
     {
         return $this->belongsToMany(
             Role::class,
-            'role_permissions',
-            'permission_id', // Sửa từ 'permission_code' thành 'permission_id'
+            'zena_role_permissions',
+            'permission_id',
             'role_id',
-            'id', // Sửa từ 'code' thành 'id'
+            'id',
             'id'
         )->withPivot(['allow_override'])
           ->withTimestamps();

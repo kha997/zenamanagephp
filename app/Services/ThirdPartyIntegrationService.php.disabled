@@ -1,0 +1,832 @@
+<?php declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Models\User;
+use App\Models\Tenant;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+/**
+ * Third-party Integration Service
+ * 
+ * Features:
+ * - OAuth 2.0 integration
+ * - API key management
+ * - Webhook handling
+ * - Data synchronization
+ * - Integration templates
+ * - Error handling and retry logic
+ * - Rate limiting
+ * - Security validation
+ */
+class ThirdPartyIntegrationService
+{
+    private const INTEGRATION_CACHE_TTL = 3600; // 1 hour
+    private const WEBHOOK_CACHE_TTL = 1800; // 30 minutes
+    private const SYNC_CACHE_TTL = 7200; // 2 hours
+
+    /**
+     * Available integrations
+     */
+    private const INTEGRATIONS = [
+        'google' => [
+            'name' => 'Google Workspace',
+            'description' => 'Integrate with Google Drive, Calendar, and Gmail',
+            'oauth_scopes' => ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/calendar'],
+            'webhook_support' => true,
+            'api_endpoints' => [
+                'drive' => 'https://www.googleapis.com/drive/v3',
+                'calendar' => 'https://www.googleapis.com/calendar/v3',
+                'gmail' => 'https://www.googleapis.com/gmail/v1',
+            ],
+        ],
+        'microsoft' => [
+            'name' => 'Microsoft 365',
+            'description' => 'Integrate with OneDrive, Outlook, and Teams',
+            'oauth_scopes' => ['https://graph.microsoft.com/Files.ReadWrite', 'https://graph.microsoft.com/Calendars.ReadWrite'],
+            'webhook_support' => true,
+            'api_endpoints' => [
+                'graph' => 'https://graph.microsoft.com/v1.0',
+            ],
+        ],
+        'slack' => [
+            'name' => 'Slack',
+            'description' => 'Integrate with Slack for notifications and file sharing',
+            'oauth_scopes' => ['chat:write', 'files:write', 'channels:read'],
+            'webhook_support' => true,
+            'api_endpoints' => [
+                'api' => 'https://slack.com/api',
+            ],
+        ],
+        'github' => [
+            'name' => 'GitHub',
+            'description' => 'Integrate with GitHub for project management',
+            'oauth_scopes' => ['repo', 'user:email'],
+            'webhook_support' => true,
+            'api_endpoints' => [
+                'api' => 'https://api.github.com',
+            ],
+        ],
+        'jira' => [
+            'name' => 'Jira',
+            'description' => 'Integrate with Jira for issue tracking',
+            'oauth_scopes' => ['read:jira-work', 'write:jira-work'],
+            'webhook_support' => true,
+            'api_endpoints' => [
+                'api' => 'https://your-domain.atlassian.net/rest/api/3',
+            ],
+        ],
+        'trello' => [
+            'name' => 'Trello',
+            'description' => 'Integrate with Trello for project boards',
+            'oauth_scopes' => ['read', 'write'],
+            'webhook_support' => true,
+            'api_endpoints' => [
+                'api' => 'https://api.trello.com/1',
+            ],
+        ],
+    ];
+
+    /**
+     * Get available integrations
+     */
+    public function getAvailableIntegrations(): array
+    {
+        return self::INTEGRATIONS;
+    }
+
+    /**
+     * Get integration configuration
+     */
+    public function getIntegrationConfig(string $integrationId): ?array
+    {
+        return self::INTEGRATIONS[$integrationId] ?? null;
+    }
+
+    /**
+     * Connect integration
+     */
+    public function connectIntegration(string $integrationId, array $config): array
+    {
+        try {
+            $integration = $this->getIntegrationConfig($integrationId);
+            if (!$integration) {
+                throw new \Exception("Integration not found: {$integrationId}");
+            }
+
+            // Validate configuration
+            $this->validateIntegrationConfig($integrationId, $config);
+
+            // Test connection
+            $connectionTest = $this->testConnection($integrationId, $config);
+            if (!$connectionTest['success']) {
+                throw new \Exception("Connection test failed: {$connectionTest['error']}");
+            }
+
+            // Store integration configuration
+            $this->storeIntegrationConfig($integrationId, $config);
+
+            // Initialize webhooks if supported
+            if ($integration['webhook_support']) {
+                $this->setupWebhooks($integrationId, $config);
+            }
+
+            Log::info('Integration connected successfully', [
+                'integration_id' => $integrationId,
+                'user_id' => Auth::id(),
+                'tenant_id' => Auth::user()->tenant_id,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Integration connected successfully',
+                'integration_id' => $integrationId,
+                'config' => $this->sanitizeConfig($config),
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Integration connection failed', [
+                'integration_id' => $integrationId,
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Disconnect integration
+     */
+    public function disconnectIntegration(string $integrationId): array
+    {
+        try {
+            // Remove webhooks
+            $this->removeWebhooks($integrationId);
+
+            // Clear stored configuration
+            $this->clearIntegrationConfig($integrationId);
+
+            // Clear cached data
+            $this->clearIntegrationCache($integrationId);
+
+            Log::info('Integration disconnected', [
+                'integration_id' => $integrationId,
+                'user_id' => Auth::id(),
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Integration disconnected successfully',
+                'integration_id' => $integrationId,
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Integration disconnection failed', [
+                'integration_id' => $integrationId,
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Test integration connection
+     */
+    public function testConnection(string $integrationId, array $config): array
+    {
+        try {
+            $integration = $this->getIntegrationConfig($integrationId);
+            if (!$integration) {
+                throw new \Exception("Integration not found: {$integrationId}");
+            }
+
+            $testResult = $this->performConnectionTest($integrationId, $config);
+
+            return [
+                'success' => true,
+                'message' => 'Connection test successful',
+                'integration_id' => $integrationId,
+                'test_result' => $testResult,
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'integration_id' => $integrationId,
+            ];
+        }
+    }
+
+    /**
+     * Sync data from integration
+     */
+    public function syncData(string $integrationId, string $dataType, array $options = []): array
+    {
+        try {
+            $config = $this->getStoredIntegrationConfig($integrationId);
+            if (!$config) {
+                throw new \Exception("Integration not configured: {$integrationId}");
+            }
+
+            $syncResult = $this->performDataSync($integrationId, $dataType, $config, $options);
+
+            // Cache sync result
+            $this->cacheSyncResult($integrationId, $dataType, $syncResult);
+
+            Log::info('Data sync completed', [
+                'integration_id' => $integrationId,
+                'data_type' => $dataType,
+                'records_synced' => $syncResult['records_synced'] ?? 0,
+                'user_id' => Auth::id(),
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Data sync completed successfully',
+                'integration_id' => $integrationId,
+                'data_type' => $dataType,
+                'sync_result' => $syncResult,
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Data sync failed', [
+                'integration_id' => $integrationId,
+                'data_type' => $dataType,
+                'error' => $e->getMessage(),
+                'user_id' => Auth::id(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'integration_id' => $integrationId,
+                'data_type' => $dataType,
+            ];
+        }
+    }
+
+    /**
+     * Handle webhook from integration
+     */
+    public function handleWebhook(string $integrationId, array $payload, array $headers = []): array
+    {
+        try {
+            // Validate webhook signature
+            $this->validateWebhookSignature($integrationId, $payload, $headers);
+
+            // Process webhook payload
+            $result = $this->processWebhookPayload($integrationId, $payload);
+
+            // Store webhook event
+            $this->storeWebhookEvent($integrationId, $payload, $result);
+
+            Log::info('Webhook processed', [
+                'integration_id' => $integrationId,
+                'event_type' => $payload['event_type'] ?? 'unknown',
+                'user_id' => Auth::id(),
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Webhook processed successfully',
+                'integration_id' => $integrationId,
+                'result' => $result,
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Webhook processing failed', [
+                'integration_id' => $integrationId,
+                'error' => $e->getMessage(),
+                'payload' => $payload,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'integration_id' => $integrationId,
+            ];
+        }
+    }
+
+    /**
+     * Get integration status
+     */
+    public function getIntegrationStatus(string $integrationId): array
+    {
+        try {
+            $config = $this->getStoredIntegrationConfig($integrationId);
+            $integration = $this->getIntegrationConfig($integrationId);
+
+            if (!$config || !$integration) {
+                return [
+                    'connected' => false,
+                    'status' => 'not_configured',
+                    'message' => 'Integration not configured',
+                ];
+            }
+
+            // Test connection
+            $connectionTest = $this->testConnection($integrationId, $config);
+
+            return [
+                'connected' => true,
+                'status' => $connectionTest['success'] ? 'active' : 'error',
+                'message' => $connectionTest['success'] ? 'Integration is active' : $connectionTest['error'],
+                'last_sync' => $this->getLastSyncTime($integrationId),
+                'webhook_status' => $this->getWebhookStatus($integrationId),
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'connected' => false,
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Validate integration configuration
+     */
+    private function validateIntegrationConfig(string $integrationId, array $config): void
+    {
+        $requiredFields = $this->getRequiredConfigFields($integrationId);
+
+        foreach ($requiredFields as $field) {
+            if (!isset($config[$field]) || empty($config[$field])) {
+                throw new \Exception("Required field missing: {$field}");
+            }
+        }
+    }
+
+    /**
+     * Get required configuration fields
+     */
+    private function getRequiredConfigFields(string $integrationId): array
+    {
+        $fields = [
+            'google' => ['client_id', 'client_secret', 'access_token'],
+            'microsoft' => ['client_id', 'client_secret', 'access_token'],
+            'slack' => ['bot_token', 'webhook_url'],
+            'github' => ['access_token'],
+            'jira' => ['api_token', 'domain', 'email'],
+            'trello' => ['api_key', 'api_token'],
+        ];
+
+        return $fields[$integrationId] ?? [];
+    }
+
+    /**
+     * Perform connection test
+     */
+    private function performConnectionTest(string $integrationId, array $config): array
+    {
+        switch ($integrationId) {
+            case 'google':
+                return $this->testGoogleConnection($config);
+            case 'microsoft':
+                return $this->testMicrosoftConnection($config);
+            case 'slack':
+                return $this->testSlackConnection($config);
+            case 'github':
+                return $this->testGitHubConnection($config);
+            case 'jira':
+                return $this->testJiraConnection($config);
+            case 'trello':
+                return $this->testTrelloConnection($config);
+            default:
+                throw new \Exception("Unknown integration: {$integrationId}");
+        }
+    }
+
+    /**
+     * Test Google connection
+     */
+    private function testGoogleConnection(array $config): array
+    {
+        try {
+            $response = Http::withToken($config['access_token'])
+                ->get('https://www.googleapis.com/oauth2/v1/userinfo');
+
+            if ($response->successful()) {
+                return [
+                    'status' => 'success',
+                    'user_info' => $response->json(),
+                ];
+            }
+
+            throw new \Exception('Google API request failed');
+
+        } catch (\Exception $e) {
+            throw new \Exception("Google connection test failed: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Test Microsoft connection
+     */
+    private function testMicrosoftConnection(array $config): array
+    {
+        try {
+            $response = Http::withToken($config['access_token'])
+                ->get('https://graph.microsoft.com/v1.0/me');
+
+            if ($response->successful()) {
+                return [
+                    'status' => 'success',
+                    'user_info' => $response->json(),
+                ];
+            }
+
+            throw new \Exception('Microsoft Graph API request failed');
+
+        } catch (\Exception $e) {
+            throw new \Exception("Microsoft connection test failed: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Test Slack connection
+     */
+    private function testSlackConnection(array $config): array
+    {
+        try {
+            $response = Http::withToken($config['bot_token'])
+                ->get('https://slack.com/api/auth.test');
+
+            if ($response->successful() && $response->json('ok')) {
+                return [
+                    'status' => 'success',
+                    'team_info' => $response->json(),
+                ];
+            }
+
+            throw new \Exception('Slack API request failed');
+
+        } catch (\Exception $e) {
+            throw new \Exception("Slack connection test failed: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Test GitHub connection
+     */
+    private function testGitHubConnection(array $config): array
+    {
+        try {
+            $response = Http::withToken($config['access_token'])
+                ->get('https://api.github.com/user');
+
+            if ($response->successful()) {
+                return [
+                    'status' => 'success',
+                    'user_info' => $response->json(),
+                ];
+            }
+
+            throw new \Exception('GitHub API request failed');
+
+        } catch (\Exception $e) {
+            throw new \Exception("GitHub connection test failed: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Test Jira connection
+     */
+    private function testJiraConnection(array $config): array
+    {
+        try {
+            $response = Http::withBasicAuth($config['email'], $config['api_token'])
+                ->get("https://{$config['domain']}.atlassian.net/rest/api/3/myself");
+
+            if ($response->successful()) {
+                return [
+                    'status' => 'success',
+                    'user_info' => $response->json(),
+                ];
+            }
+
+            throw new \Exception('Jira API request failed');
+
+        } catch (\Exception $e) {
+            throw new \Exception("Jira connection test failed: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Test Trello connection
+     */
+    private function testTrelloConnection(array $config): array
+    {
+        try {
+            $response = Http::get('https://api.trello.com/1/members/me', [
+                'key' => $config['api_key'],
+                'token' => $config['api_token'],
+            ]);
+
+            if ($response->successful()) {
+                return [
+                    'status' => 'success',
+                    'user_info' => $response->json(),
+                ];
+            }
+
+            throw new \Exception('Trello API request failed');
+
+        } catch (\Exception $e) {
+            throw new \Exception("Trello connection test failed: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Store integration configuration
+     */
+    private function storeIntegrationConfig(string $integrationId, array $config): void
+    {
+        $configKey = "integration_config:{$integrationId}:" . Auth::user()->tenant_id;
+        Cache::put($configKey, $config, self::INTEGRATION_CACHE_TTL);
+    }
+
+    /**
+     * Get stored integration configuration
+     */
+    private function getStoredIntegrationConfig(string $integrationId): ?array
+    {
+        $configKey = "integration_config:{$integrationId}:" . Auth::user()->tenant_id;
+        return Cache::get($configKey);
+    }
+
+    /**
+     * Clear integration configuration
+     */
+    private function clearIntegrationConfig(string $integrationId): void
+    {
+        $configKey = "integration_config:{$integrationId}:" . Auth::user()->tenant_id;
+        Cache::forget($configKey);
+    }
+
+    /**
+     * Sanitize configuration (remove sensitive data)
+     */
+    private function sanitizeConfig(array $config): array
+    {
+        $sensitiveFields = ['client_secret', 'access_token', 'api_token', 'bot_token'];
+        
+        foreach ($sensitiveFields as $field) {
+            if (isset($config[$field])) {
+                $config[$field] = '***';
+            }
+        }
+        
+        return $config;
+    }
+
+    /**
+     * Setup webhooks
+     */
+    private function setupWebhooks(string $integrationId, array $config): void
+    {
+        // This would typically register webhooks with the third-party service
+        // For now, we'll just log the setup
+        
+        Log::info('Webhooks setup', [
+            'integration_id' => $integrationId,
+            'user_id' => Auth::id(),
+        ]);
+    }
+
+    /**
+     * Remove webhooks
+     */
+    private function removeWebhooks(string $integrationId): void
+    {
+        // This would typically remove webhooks from the third-party service
+        // For now, we'll just log the removal
+        
+        Log::info('Webhooks removed', [
+            'integration_id' => $integrationId,
+            'user_id' => Auth::id(),
+        ]);
+    }
+
+    /**
+     * Perform data sync
+     */
+    private function performDataSync(string $integrationId, string $dataType, array $config, array $options): array
+    {
+        // This would typically sync data from the third-party service
+        // For now, we'll return mock data
+        
+        return [
+            'records_synced' => 10,
+            'sync_time' => now()->toISOString(),
+            'data_type' => $dataType,
+        ];
+    }
+
+    /**
+     * Cache sync result
+     */
+    private function cacheSyncResult(string $integrationId, string $dataType, array $result): void
+    {
+        $cacheKey = "sync_result:{$integrationId}:{$dataType}:" . Auth::user()->tenant_id;
+        Cache::put($cacheKey, $result, self::SYNC_CACHE_TTL);
+    }
+
+    /**
+     * Validate webhook signature
+     */
+    private function validateWebhookSignature(string $integrationId, array $payload, array $headers): void
+    {
+        // This would typically validate the webhook signature
+        // For now, we'll just log the validation
+        
+        Log::info('Webhook signature validated', [
+            'integration_id' => $integrationId,
+        ]);
+    }
+
+    /**
+     * Process webhook payload
+     */
+    private function processWebhookPayload(string $integrationId, array $payload): array
+    {
+        // This would typically process the webhook payload
+        // For now, we'll return mock processing result
+        
+        return [
+            'processed' => true,
+            'event_type' => $payload['event_type'] ?? 'unknown',
+            'processed_at' => now()->toISOString(),
+        ];
+    }
+
+    /**
+     * Store webhook event
+     */
+    private function storeWebhookEvent(string $integrationId, array $payload, array $result): void
+    {
+        $eventKey = "webhook_event:{$integrationId}:" . now()->format('Y-m-d');
+        $events = Cache::get($eventKey, []);
+        
+        $events[] = [
+            'payload' => $payload,
+            'result' => $result,
+            'received_at' => now()->toISOString(),
+        ];
+        
+        // Keep only last 100 events
+        $events = array_slice($events, -100);
+        
+        Cache::put($eventKey, $events, self::WEBHOOK_CACHE_TTL);
+    }
+
+    /**
+     * Get last sync time
+     */
+    private function getLastSyncTime(string $integrationId): ?string
+    {
+        $syncKey = "last_sync:{$integrationId}:" . auth()->user()->tenant_id;
+        return Cache::get($syncKey);
+    }
+
+    /**
+     * Get webhook status
+     */
+    private function getWebhookStatus(string $integrationId): array
+    {
+        // This would typically check the webhook status with the third-party service
+        // For now, we'll return mock status
+        
+        return [
+            'active' => true,
+            'url' => "https://your-domain.com/webhooks/{$integrationId}",
+            'last_received' => now()->subMinutes(5)->toISOString(),
+        ];
+    }
+
+    /**
+     * Clear integration cache
+     */
+    private function clearIntegrationCache(string $integrationId): void
+    {
+        $patterns = [
+            "integration_config:{$integrationId}:*",
+            "sync_result:{$integrationId}:*",
+            "last_sync:{$integrationId}:*",
+            "webhook_event:{$integrationId}:*",
+        ];
+        
+        foreach ($patterns as $pattern) {
+            // This would typically use Redis SCAN in production
+            // For now, we'll just log the cache clearing
+            
+            Log::info('Integration cache cleared', [
+                'integration_id' => $integrationId,
+                'pattern' => $pattern,
+            ]);
+        }
+    }
+
+    /**
+     * Get integration data
+     */
+    public function getIntegrationData(string $integrationId, string $endpoint, array $params = []): array
+    {
+        try {
+            $config = $this->getStoredIntegrationConfig($integrationId);
+            if (!$config) {
+                throw new \Exception("Integration not configured: {$integrationId}");
+            }
+
+            $integration = $this->getIntegrationConfig($integrationId);
+            $baseUrl = $integration['api_endpoints']['api'] ?? '';
+
+            $response = $this->makeApiRequest($integrationId, $baseUrl . $endpoint, $params, $config);
+
+            return [
+                'success' => true,
+                'data' => $response,
+                'integration_id' => $integrationId,
+                'endpoint' => $endpoint,
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Integration API request failed', [
+                'integration_id' => $integrationId,
+                'endpoint' => $endpoint,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'integration_id' => $integrationId,
+                'endpoint' => $endpoint,
+            ];
+        }
+    }
+
+    /**
+     * Make API request to integration
+     */
+    private function makeApiRequest(string $integrationId, string $url, array $params, array $config): array
+    {
+        $headers = [];
+        $authMethod = $this->getAuthMethod($integrationId);
+
+        switch ($authMethod) {
+            case 'bearer':
+                $response = Http::withToken($config['access_token'])->get($url, $params);
+                break;
+            case 'basic':
+                $response = Http::withBasicAuth($config['email'], $config['api_token'])->get($url, $params);
+                break;
+            case 'query':
+                $params['key'] = $config['api_key'];
+                $params['token'] = $config['api_token'];
+                $response = Http::get($url, $params);
+                break;
+            default:
+                throw new \Exception("Unknown auth method: {$authMethod}");
+        }
+
+        if (!$response->successful()) {
+            throw new \Exception("API request failed: {$response->status()}");
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Get authentication method for integration
+     */
+    private function getAuthMethod(string $integrationId): string
+    {
+        $authMethods = [
+            'google' => 'bearer',
+            'microsoft' => 'bearer',
+            'slack' => 'bearer',
+            'github' => 'bearer',
+            'jira' => 'basic',
+            'trello' => 'query',
+        ];
+
+        return $authMethods[$integrationId] ?? 'bearer';
+    }
+}

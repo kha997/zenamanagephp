@@ -6,7 +6,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTemplatesStore } from '../../../store/templates';
 import { ApplyTemplateModal } from '../components/ApplyTemplateModal';
-import { cn } from '../../../lib/utils/format';
+import { cn } from '../../../lib/utils';
 
 export const TemplateDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

@@ -28,19 +28,20 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             UserRoleSeeder::class,
             
+            // Test Data (comprehensive)
+            TestDataSeeder::class,
+            
             // Project Structure
-            WorkTemplateSeeder::class,
             ProjectSeeder::class,
-            ComponentSeeder::class,
             TaskSeeder::class,
             
+            // Business Domains
+            ClientSeeder::class,
+            QuoteSeeder::class,
+            
             // Feature-Specific Data
-            InteractionLogSeeder::class,
-            NotificationSeeder::class,
-            DocumentSeeder::class,
-            ChangeRequestSeeder::class,
-            BaselineSeeder::class,
-            CompensationSeeder::class,
+            // NotificationSeeder::class,
+            // DocumentSeeder::class,
         ]);
     }
 }

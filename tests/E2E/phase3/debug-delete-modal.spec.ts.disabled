@@ -1,0 +1,98 @@
+import { test, expect } from '@playwright/test';
+import { AuthHelper } from '../helpers/auth-helper';
+
+test.describe('Debug Comment Delete Modal', () => {
+  test('should debug comment delete modal visibility', async ({ page }) => {
+    // Authenticate first
+    const authHelper = new AuthHelper(page);
+    await authHelper.login('uat-pm@test.com', 'password');
+    
+    // Navigate to task detail page
+    await page.goto('/app/tasks/01K83FPM28B0NSDKE77REAFQ4P');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for Alpine.js to initialize
+    await page.waitForTimeout(2000);
+
+    // Check if comment delete button exists
+    const deleteButton = page.locator('[data-testid="delete-button"]').first();
+    const deleteButtonCount = await deleteButton.count();
+    console.log('Delete button count:', deleteButtonCount);
+
+    if (deleteButtonCount > 0) {
+      // Click delete button
+      await deleteButton.click();
+      await page.waitForTimeout(2000); // Wait longer for Alpine.js to update
+
+      // Check modal visibility
+      const modal = page.locator('[data-testid="confirm-delete"]');
+      const modalCount = await modal.count();
+      const modalVisible = await modal.isVisible();
+      
+      console.log('Modal count:', modalCount);
+      console.log('Modal visible:', modalVisible);
+
+      // Check if modal exists in DOM at all
+      const modalInDOM = await page.evaluate(() => {
+        return document.querySelector('[data-testid="confirm-delete"]') !== null;
+      });
+      console.log('Modal in DOM:', modalInDOM);
+
+      // Check modal computed styles
+      const modalStyles = await page.evaluate(() => {
+        const modal = document.querySelector('[data-testid="confirm-delete"]');
+        if (modal) {
+          const styles = window.getComputedStyle(modal);
+          return {
+            display: styles.display,
+            visibility: styles.visibility,
+            opacity: styles.opacity,
+            zIndex: styles.zIndex
+          };
+        }
+        return null;
+      });
+      console.log('Modal styles:', modalStyles);
+
+      // Check parent modal styles
+      const parentModalStyles = await page.evaluate(() => {
+        const modal = document.querySelector('[data-testid="confirm-delete"]');
+        if (modal) {
+          const parent = modal.closest('[x-show="showDeleteModal"]');
+          if (parent) {
+            const styles = window.getComputedStyle(parent);
+            return {
+              display: styles.display,
+              visibility: styles.visibility,
+              opacity: styles.opacity,
+              zIndex: styles.zIndex
+            };
+          }
+        }
+        return null;
+      });
+      console.log('Parent modal styles:', parentModalStyles);
+
+      // Check Alpine.js state
+      const alpineState = await page.evaluate(() => {
+        const element = document.querySelector('[x-data*="taskDetail"]');
+        if (element && element._x_dataStack) {
+          const data = element._x_dataStack[0];
+          return {
+            showDeleteModal: data.showDeleteModal,
+            pendingCommentId: data.pendingCommentId
+          };
+        }
+        return null;
+      });
+
+      console.log('Alpine state:', alpineState);
+
+      // Take screenshot for debugging
+      await page.screenshot({ path: 'test-results/debug-delete-modal.png' });
+    }
+
+    // Basic assertion
+    expect(deleteButtonCount).toBeGreaterThan(0);
+  });
+});

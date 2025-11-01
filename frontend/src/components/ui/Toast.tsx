@@ -4,7 +4,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { cn } from '../../lib/utils/format';
+import { cn } from '../../lib/utils';
 
 export interface ToastProps {
   id: string;

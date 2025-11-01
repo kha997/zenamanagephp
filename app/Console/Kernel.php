@@ -9,13 +9,92 @@ class Kernel extends ConsoleKernel
 {
     /**
      * Define the application's command schedule.
-     *
-     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
-     * @return void
      */
-    protected function schedule(Schedule $schedule)
+    protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Metrics Collection - Every 5 minutes
+        $schedule->command('metrics:collect --format=json --log')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Metrics Export for Prometheus - Every minute
+        $schedule->command('metrics:collect --format=prometheus --output=' . storage_path('logs/metrics.prometheus'))
+            ->everyMinute()
+            ->withoutOverlapping();
+
+        // Temporarily commented out to avoid dependency issues
+        /*
+        // System Health Monitoring
+        $schedule->command('maintenance:run --task=metrics')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Cache Maintenance
+        $schedule->command('maintenance:run --task=cache')
+            ->dailyAt('02:00')
+            ->withoutOverlapping();
+
+        // Database Optimization
+        $schedule->command('maintenance:run --task=database')
+            ->weekly()
+            ->sundays()
+            ->at('03:00')
+            ->withoutOverlapping();
+
+        // Log Cleanup
+        $schedule->command('maintenance:run --task=logs')
+            ->dailyAt('04:00')
+            ->withoutOverlapping();
+
+        // System Backup
+        $schedule->command('backup:run --type=all')
+            ->dailyAt('01:00')
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Database Backup
+        $schedule->command('backup:run --type=database')
+            ->everySixHours()
+            ->withoutOverlapping()
+            ->runInBackground();
+
+        // Queue Health Check
+        $schedule->command('queue:monitor')
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
+
+        // Failed Job Cleanup
+        $schedule->command('queue:flush')
+            ->dailyAt('07:00')
+            ->withoutOverlapping();
+
+        // Session Cleanup
+        $schedule->command('session:gc')
+            ->dailyAt('08:00')
+            ->withoutOverlapping();
+
+        // Cache Optimization
+        $schedule->command('cache:optimize')
+            ->dailyAt('09:00')
+            ->withoutOverlapping();
+
+        // Route Cache
+        $schedule->command('route:cache')
+            ->dailyAt('10:00')
+            ->withoutOverlapping();
+
+        // View Cache
+        $schedule->command('view:cache')
+            ->dailyAt('11:00')
+            ->withoutOverlapping();
+
+        // Config Cache
+        $schedule->command('config:cache')
+            ->dailyAt('12:00')
+            ->withoutOverlapping();
+        */
     }
 
     /**

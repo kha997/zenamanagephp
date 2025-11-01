@@ -1,292 +1,412 @@
 @extends('layouts.app')
 
-@section('title', 'Quản lý Dự án')
+@section('title', 'Projects Dashboard')
 
 @section('content')
-<div class="page-header">
-    <div class="page-header-content">
-        <h1 class="page-title">Quản lý Dự án</h1>
-        <div class="page-actions">
-            <button class="btn btn-primary" onclick="window.location.href='/projects/create'">
-                <i class="icon-plus"></i> Tạo dự án mới
-            </button>
-        </div>
-    </div>
-</div>
+<div class="min-h-screen bg-gray-50">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div x-data="projectsDashboard()">
+            <!-- Projects Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="dashboard-card metric-card blue p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">Total Projects</p>
+                            <p class="text-3xl font-bold text-white" x-text="stats?.totalProjects || {{ $mockProjects->count() }}"></p>
+                            <p class="text-white/80 text-sm">
+                                <span x-text="stats?.activeProjects || {{ $mockProjects->where('status', 'in_progress')->count() }}"></span> active
+                            </p>
+                        </div>
+                        <i class="fas fa-project-diagram text-4xl text-white/60"></i>
+                    </div>
+                </div>
 
-<div class="content-wrapper">
-    <!-- Filters -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <label for="status-filter">Trạng thái:</label>
-                    <select id="status-filter" class="form-control">
-                        <option value="">Tất cả</option>
-                        <option value="planning">Lập kế hoạch</option>
-                        <option value="active">Đang thực hiện</option>
-                        <option value="on_hold">Tạm dừng</option>
-                        <option value="completed">Hoàn thành</option>
-                        <option value="cancelled">Đã hủy</option>
-                    </select>
+                <div class="dashboard-card metric-card green p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">In Progress</p>
+                            <p class="text-3xl font-bold text-white" x-text="stats?.inProgress || {{ $mockProjects->where('status', 'in_progress')->count() }}"></p>
+                            <p class="text-white/80 text-sm">
+                                <span x-text="stats?.completedThisWeek || 3"></span> completed this week
+                            </p>
+                        </div>
+                        <i class="fas fa-play text-4xl text-white/60"></i>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <label for="search-input">Tìm kiếm:</label>
-                    <input type="text" id="search-input" class="form-control" placeholder="Tên dự án...">
-                </div>
-                <div class="col-md-3">
-                    <label for="date-from">Từ ngày:</label>
-                    <input type="date" id="date-from" class="form-control">
-                </div>
-                <div class="col-md-3">
-                    <label for="date-to">Đến ngày:</label>
-                    <input type="date" id="date-to" class="form-control">
-                </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-12">
-                    <button class="btn btn-secondary" onclick="applyFilters()">Áp dụng bộ lọc</button>
-                    <button class="btn btn-outline-secondary" onclick="clearFilters()">Xóa bộ lọc</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Projects Table -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover" id="projects-table">
-                    <thead>
-                        <tr>
-                            <th>Tên dự án</th>
-                            <th>Trạng thái</th>
-                            <th>Tiến độ</th>
-                            <th>Ngày bắt đầu</th>
-                            <th>Ngày kết thúc</th>
-                            <th>Chi phí thực tế</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody id="projects-tbody">
-                        <!-- Data will be loaded via AJAX -->
-                    </tbody>
-                </table>
+                <div class="dashboard-card metric-card orange p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">On Hold</p>
+                            <p class="text-3xl font-bold text-white" x-text="stats?.onHold || {{ $mockProjects->where('status', 'on_hold')->count() }}"></p>
+                            <div class="flex space-x-2 mt-1">
+                                <p class="text-white/80 text-sm">
+                                    <span x-text="stats?.needsReview || 1"></span> needs review
+                                </p>
+                            </div>
+                        </div>
+                        <i class="fas fa-pause text-4xl text-white/60"></i>
+                    </div>
+                </div>
+
+                <div class="dashboard-card metric-card purple p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">Completed</p>
+                            <p class="text-3xl font-bold text-white" x-text="stats?.completed || {{ $mockProjects->where('status', 'completed')->count() }}"></p>
+                            <p class="text-white/80 text-sm">
+                                <span x-text="stats?.completionRate || 85"></span>% completion rate
+                            </p>
+                        </div>
+                        <i class="fas fa-check-circle text-4xl text-white/60"></i>
+                    </div>
+                </div>
             </div>
-            
-            <!-- Pagination -->
-            <div class="pagination-wrapper" id="pagination-wrapper">
-                <!-- Pagination will be loaded via AJAX -->
+
+            <!-- Projects Overview Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Recent Projects -->
+                <div class="dashboard-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Recent Projects</h3>
+                        <div class="flex items-center gap-2">
+                            <button class="zena-btn zena-btn-primary zena-btn-sm" @click="createProject()">
+                                <i class="fas fa-plus mr-2"></i>
+                                New Project
+                            </button>
+                            <a href="/tasks" class="zena-btn zena-btn-outline zena-btn-sm">
+                                <i class="fas fa-tasks mr-2"></i>
+                                View Tasks
+                            </a>
+                            <a href="/documents" class="zena-btn zena-btn-outline zena-btn-sm">
+                                <i class="fas fa-file-alt mr-2"></i>
+                                View Documents
+                            </a>
+                            <div class="relative group">
+                                <button class="zena-btn zena-btn-outline zena-btn-sm">
+                                    <i class="fas fa-download mr-2"></i>
+                                    Export
+                                    <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                                </button>
+                                
+                                <!-- Dropdown Menu -->
+                                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                    <div class="py-1">
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" @click="exportProjects('excel')">
+                                            <i class="fas fa-file-excel mr-2 text-green-600"></i>
+                                            Excel (.xlsx)
+                                        </a>
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" @click="exportProjects('pdf')">
+                                            <i class="fas fa-file-pdf mr-2 text-red-600"></i>
+                                            PDF (.pdf)
+                                        </a>
+                                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" @click="exportProjects('csv')">
+                                            <i class="fas fa-file-csv mr-2 text-blue-600"></i>
+                                            CSV (.csv)
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        @forelse($mockProjects->take(4) as $project)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-project-diagram text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900">{{ $project['name'] }}</h4>
+                                    <p class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($project['start_date'])->format('M d, Y') }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                @php
+                                    $statusConfig = [
+                                        'planning' => ['color' => 'bg-blue-100 text-blue-800', 'text' => 'Planning'],
+                                        'in_progress' => ['color' => 'bg-green-100 text-green-800', 'text' => 'Active'],
+                                        'on_hold' => ['color' => 'bg-orange-100 text-orange-800', 'text' => 'On Hold'],
+                                        'completed' => ['color' => 'bg-gray-100 text-gray-800', 'text' => 'Completed'],
+                                    ];
+                                    $status = $statusConfig[$project['status']] ?? ['color' => 'bg-gray-100 text-gray-800', 'text' => 'Unknown'];
+                                @endphp
+                                <span class="px-2 py-1 text-xs font-medium rounded-full {{ $status['color'] }}">
+                                    {{ $status['text'] }}
+                                </span>
+                                <span class="text-sm font-medium text-gray-900">{{ $project['progress'] ?? 0 }}%</span>
+                            </div>
+                        </div>
+                        @empty
+                        <div class="text-center py-8">
+                            <i class="fas fa-project-diagram text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No projects found</p>
+                        </div>
+                        @endforelse
+                    </div>
+                </div>
+
+                <!-- Project Performance -->
+                <div class="dashboard-card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Project Performance</h3>
+                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                            <i class="fas fa-arrow-up mr-1"></i>+8.2%
+                        </span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Average Completion Time</span>
+                            <span class="text-lg font-semibold text-gray-900">45 days</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Budget Utilization</span>
+                            <span class="text-lg font-semibold text-gray-900">78%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Client Satisfaction</span>
+                            <span class="text-lg font-semibold text-gray-900">4.8/5</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-green-600 h-2 rounded-full" style="width: 78%"></div>
+                        </div>
+                        <p class="text-xs text-gray-500">78% of projects completed on time</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Items Section -->
+            <div class="dashboard-card p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Quick Access</h3>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-500">Navigate to related sections</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Tasks Card -->
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/tasks'">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-blue-900">My Tasks</h4>
+                                <p class="text-sm text-blue-700">View assigned tasks</p>
+                                <div class="mt-2 flex items-center text-sm text-blue-600">
+                                    <i class="fas fa-tasks mr-2"></i>
+                                    <span>5 active tasks</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-tasks text-3xl text-blue-500"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Documents Card -->
+                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/documents'">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-green-900">Project Documents</h4>
+                                <p class="text-sm text-green-700">Manage project files</p>
+                                <div class="mt-2 flex items-center text-sm text-green-600">
+                                    <i class="fas fa-file-alt mr-2"></i>
+                                    <span>12 documents</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-file-alt text-3xl text-green-500"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Team Card -->
+                    <div class="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/team'">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-semibold text-purple-900">Project Team</h4>
+                                <p class="text-sm text-purple-700">View team members</p>
+                                <div class="mt-2 flex items-center text-sm text-purple-600">
+                                    <i class="fas fa-users mr-2"></i>
+                                    <span>8 members</span>
+                                </div>
+                            </div>
+                            <i class="fas fa-users text-3xl text-purple-500"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Projects Table -->
+            <div class="dashboard-card p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">All Projects</h3>
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <input type="text" placeholder="Search projects..." class="zena-input zena-input-sm" x-model="searchQuery">
+                            <i class="fas fa-search absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        </div>
+                        <select class="zena-select zena-select-sm" x-model="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="planning">Planning</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="on_hold">On Hold</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="zena-table">
+                        <thead>
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th>Team</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($mockProjects as $project)
+                            <tr>
+                                <td>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-project-diagram text-blue-600 text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <div class="font-medium text-gray-900">{{ $project['name'] }}</div>
+                                            <div class="text-sm text-gray-500">{{ Str::limit($project['description'], 50) }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @php
+                                        $statusConfig = [
+                                            'planning' => ['color' => 'zena-badge-info', 'text' => 'Planning'],
+                                            'in_progress' => ['color' => 'zena-badge-success', 'text' => 'In Progress'],
+                                            'on_hold' => ['color' => 'zena-badge-warning', 'text' => 'On Hold'],
+                                            'completed' => ['color' => 'zena-badge-neutral', 'text' => 'Completed'],
+                                        ];
+                                        $status = $statusConfig[$project['status']] ?? ['color' => 'zena-badge-neutral', 'text' => 'Unknown'];
+                                    @endphp
+                                    <span class="zena-badge {{ $status['color'] }}">
+                                        {{ $status['text'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="zena-progress w-16">
+                                            <div class="zena-progress-bar zena-progress-bar-success" style="width: {{ $project['progress'] ?? 0 }}%"></div>
+                                        </div>
+                                        <span class="text-sm font-medium text-gray-900">{{ $project['progress'] ?? 0 }}%</span>
+                                    </div>
+                                </td>
+                                <td class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($project['start_date'])->format('M d, Y') }}</td>
+                                <td class="text-sm text-gray-600">{{ \Carbon\Carbon::parse($project['end_date'])->format('M d, Y') }}</td>
+                                <td>
+                                    <div class="flex -space-x-2">
+                                        <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-medium">A</div>
+                                        <div class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-white text-xs font-medium">B</div>
+                                        <div class="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-medium">C</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center space-x-2">
+                                        <button class="zena-btn zena-btn-outline zena-btn-sm" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="zena-btn zena-btn-outline zena-btn-sm" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="zena-btn zena-btn-outline zena-btn-sm zena-btn-danger" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="7" class="text-center py-8">
+                                    <i class="fas fa-project-diagram text-4xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500">No projects found</p>
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="mt-6 flex items-center justify-between">
+                    <div class="flex items-center text-sm text-gray-700">
+                        <span>Showing</span>
+                        <select class="mx-2 border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span>of <span class="font-medium">{{ $mockProjects->count() }}</span> projects</span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <button class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fas fa-chevron-left mr-1"></i>
+                            Previous
+                        </button>
+                        
+                        <div class="flex items-center space-x-1">
+                            <button class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700">
+                                1
+                            </button>
+                            <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                                2
+                            </button>
+                            <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                                3
+                            </button>
+                            <span class="px-2 py-2 text-sm text-gray-500">...</span>
+                            <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                                10
+                            </button>
+                        </div>
+                        
+                        <button class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 hover:text-gray-900">
+                            Next
+                            <i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 </div>
 
 <script>
-class ProjectsManager {
-    constructor() {
-        this.currentPage = 1;
-        this.filters = {};
-        this.loadProjects();
-        this.initializeEventListeners();
-    }
-
-    initializeEventListeners() {
-        // Search input with debounce
-        let searchTimeout;
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.filters.search = e.target.value;
-                this.loadProjects();
-            }, 500);
-        });
-    }
-
-    async loadProjects() {
-        try {
-            const params = new URLSearchParams({
-                page: this.currentPage,
-                ...this.filters
-            });
-
-            const response = await zenaApp.apiCall('GET', `/api/v1/projects?${params}`);
-            
-            if (response.status === 'success') {
-                this.renderProjectsTable(response.data.data);
-                this.renderPagination(response.data);
-            }
-        } catch (error) {
-            zenaApp.showNotification('Lỗi khi tải danh sách dự án', 'error');
-        }
-    }
-
-    renderProjectsTable(projects) {
-        const tbody = document.getElementById('projects-tbody');
+function projectsDashboard() {
+    return {
+        searchQuery: '',
+        statusFilter: '',
         
-        if (projects.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center py-4">
-                        <div class="empty-state">
-                            <i class="icon-folder-open"></i>
-                            <p>Không có dự án nào</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        tbody.innerHTML = projects.map(project => `
-            <tr>
-                <td>
-                    <div class="project-info">
-                        <h6 class="mb-1">${project.name}</h6>
-                        <small class="text-muted">${project.description || 'Không có mô tả'}</small>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge badge-${this.getStatusColor(project.status)}">
-                        ${this.getStatusText(project.status)}
-                    </span>
-                </td>
-                <td>
-                    <div class="progress-container">
-                        <div class="progress">
-                            <div class="progress-bar" style="width: ${project.progress}%"></div>
-                        </div>
-                        <span class="progress-text">${project.progress}%</span>
-                    </div>
-                </td>
-                <td>${zenaApp.formatDate(project.start_date)}</td>
-                <td>${zenaApp.formatDate(project.end_date)}</td>
-                <td>${zenaApp.formatCurrency(project.actual_cost)}</td>
-                <td>
-                    <div class="action-buttons">
-                        <button class="btn btn-sm btn-outline-primary" onclick="viewProject(${project.id})" title="Xem chi tiết">
-                            <i class="icon-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="editProject(${project.id})" title="Chỉnh sửa">
-                            <i class="icon-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteProject(${project.id})" title="Xóa">
-                            <i class="icon-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    renderPagination(data) {
-        const wrapper = document.getElementById('pagination-wrapper');
+        stats: {
+            totalProjects: {{ $mockProjects->count() }},
+            activeProjects: {{ $mockProjects->where('status', 'in_progress')->count() }},
+            inProgress: {{ $mockProjects->where('status', 'in_progress')->count() }},
+            onHold: {{ $mockProjects->where('status', 'on_hold')->count() }},
+            completed: {{ $mockProjects->where('status', 'completed')->count() }},
+            completedThisWeek: 3,
+            needsReview: 1,
+            completionRate: 85
+        },
         
-        if (data.last_page <= 1) {
-            wrapper.innerHTML = '';
-            return;
-        }
-
-        let paginationHtml = '<nav><ul class="pagination">';
+        exportProjects(format) {
+            console.log('Exporting projects in', format, 'format');
+            // Implementation for export functionality
+        },
         
-        // Previous button
-        if (data.current_page > 1) {
-            paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="projectsManager.goToPage(${data.current_page - 1})">Trước</a></li>`;
+        createProject() {
+            console.log('Creating new project');
+            // Implementation for create project functionality
         }
-        
-        // Page numbers
-        for (let i = Math.max(1, data.current_page - 2); i <= Math.min(data.last_page, data.current_page + 2); i++) {
-            paginationHtml += `<li class="page-item ${i === data.current_page ? 'active' : ''}"><a class="page-link" href="#" onclick="projectsManager.goToPage(${i})">${i}</a></li>`;
-        }
-        
-        // Next button
-        if (data.current_page < data.last_page) {
-            paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="projectsManager.goToPage(${data.current_page + 1})">Sau</a></li>`;
-        }
-        
-        paginationHtml += '</ul></nav>';
-        wrapper.innerHTML = paginationHtml;
-    }
-
-    goToPage(page) {
-        this.currentPage = page;
-        this.loadProjects();
-    }
-
-    getStatusColor(status) {
-        const colors = {
-            'planning': 'info',
-            'active': 'success',
-            'on_hold': 'warning',
-            'completed': 'primary',
-            'cancelled': 'danger'
-        };
-        return colors[status] || 'secondary';
-    }
-
-    getStatusText(status) {
-        const texts = {
-            'planning': 'Lập kế hoạch',
-            'active': 'Đang thực hiện',
-            'on_hold': 'Tạm dừng',
-            'completed': 'Hoàn thành',
-            'cancelled': 'Đã hủy'
-        };
-        return texts[status] || status;
     }
 }
-
-// Global functions
-function applyFilters() {
-    projectsManager.filters = {
-        status: document.getElementById('status-filter').value,
-        search: document.getElementById('search-input').value,
-        date_from: document.getElementById('date-from').value,
-        date_to: document.getElementById('date-to').value
-    };
-    projectsManager.currentPage = 1;
-    projectsManager.loadProjects();
-}
-
-function clearFilters() {
-    document.getElementById('status-filter').value = '';
-    document.getElementById('search-input').value = '';
-    document.getElementById('date-from').value = '';
-    document.getElementById('date-to').value = '';
-    projectsManager.filters = {};
-    projectsManager.currentPage = 1;
-    projectsManager.loadProjects();
-}
-
-function viewProject(id) {
-    window.location.href = `/projects/${id}`;
-}
-
-function editProject(id) {
-    window.location.href = `/projects/${id}/edit`;
-}
-
-async function deleteProject(id) {
-    if (!confirm('Bạn có chắc chắn muốn xóa dự án này?')) {
-        return;
-    }
-
-    try {
-        const response = await zenaApp.apiCall('DELETE', `/api/v1/projects/${id}`);
-        
-        if (response.status === 'success') {
-            zenaApp.showNotification('Xóa dự án thành công', 'success');
-            projectsManager.loadProjects();
-        }
-    } catch (error) {
-        zenaApp.showNotification('Lỗi khi xóa dự án', 'error');
-    }
-}
-
-// Initialize when page loads
-let projectsManager;
-document.addEventListener('DOMContentLoaded', () => {
-    projectsManager = new ProjectsManager();
-});
 </script>
 @endsection

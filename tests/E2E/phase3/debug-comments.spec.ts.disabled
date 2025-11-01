@@ -1,0 +1,138 @@
+import { test, expect } from '@playwright/test';
+
+test('Check comments section visibility', async ({ page }) => {
+  // Login first
+  await page.goto('http://127.0.0.1:8000/login');
+  await page.fill('[name="email"]', 'uat-pm@test.com');
+  await page.fill('[name="password"]', 'password');
+  
+  // Intercept the login request to add the X-Web-Login header
+  await page.route('**/api/auth/login', async route => {
+    const request = route.request();
+    const postData = request.postData();
+    const headers = {
+      ...request.headers(),
+      'X-Web-Login': 'true'
+    };
+    
+    await route.continue({ headers });
+  });
+  
+  await page.click('button[type="submit"]');
+  await page.waitForURL('**/app/dashboard');
+  
+  // Navigate to task detail page
+  await page.goto('http://127.0.0.1:8000/app/tasks/01K83FPM28B0NSDKE77REAFQ4P');
+  
+  // Wait for page to load
+  await page.waitForLoadState('networkidle');
+  
+  // Check if comments section exists
+  const commentsSection = page.locator('[data-testid="comments-section"]');
+  await expect(commentsSection).toBeVisible();
+  
+  // Check if comments container exists (but don't fail if it's hidden)
+  const commentsContainer = page.locator('[data-testid="comments-container"]');
+  const isVisible = await commentsContainer.isVisible();
+  console.log('Comments container visible:', isVisible);
+  
+  // Check console logs
+  const logs = [];
+  page.on('console', msg => {
+    logs.push(`${msg.type()}: ${msg.text()}`);
+  });
+  
+  // Wait a bit for any JavaScript to execute
+  await page.waitForTimeout(2000);
+  
+  // Log all console messages
+  console.log('Console logs:', logs);
+  
+  // Check if Alpine.js is working
+  const alpineStatus = await page.evaluate(() => {
+    return {
+      alpineExists: !!window.Alpine,
+      alpineStarted: window.Alpine?.started,
+      alpineVersion: window.Alpine?.version,
+      taskCommentsFunction: typeof window.Alpine?.data('taskComments'),
+      allAlpineFunctions: Object.keys(window.Alpine?.data || {}),
+      scripts: Array.from(document.querySelectorAll('script')).map(s => s.src || s.textContent?.substring(0, 100))
+    };
+  });
+  
+  console.log('Alpine.js status:', alpineStatus);
+  
+  // Check if the task-comments script is loaded
+  const scriptLoaded = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll('script')).some(s => 
+      s.src && s.src.includes('task-comments')
+    );
+  });
+  
+  console.log('Task-comments script loaded:', scriptLoaded);
+  
+  // Check the HTML source to see how the script is loaded
+  const htmlSource = await page.content();
+  const scriptTag = htmlSource.match(/<script[^>]*task-comments[^>]*><\/script>/);
+  console.log('Script tag in HTML:', scriptTag);
+  
+  // Try to manually register the Alpine.js component
+  const manualRegistration = await page.evaluate(() => {
+    try {
+      // Register a simple test component
+      window.Alpine.data('testComments', () => ({
+        comments: [],
+        loading: false,
+        init() {
+          console.log('Test component initialized');
+          this.loading = false;
+        }
+      }));
+      
+      // Start Alpine.js if not started
+      if (!window.Alpine.started) {
+        window.Alpine.start();
+      }
+      
+      return {
+        success: true,
+        alpineStarted: window.Alpine.started,
+        testFunction: typeof window.Alpine.data('testComments')
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  });
+  
+  console.log('Manual registration result:', manualRegistration);
+  
+  // Try to manually start Alpine.js and check if it works
+  const alpineStartResult = await page.evaluate(() => {
+    try {
+      // Force start Alpine.js
+      if (window.Alpine && !window.Alpine.started) {
+        window.Alpine.start();
+        console.log('Alpine.js manually started');
+      }
+      
+      // Check if Alpine.js is now started
+      return {
+        alpineStarted: window.Alpine?.started,
+        alpineVersion: window.Alpine?.version,
+        allFunctions: Object.keys(window.Alpine?.data || {})
+      };
+    } catch (error) {
+      return {
+        error: error.message
+      };
+    }
+  });
+  
+  console.log('Alpine.js start result:', alpineStartResult);
+  
+  // Take a screenshot
+  await page.screenshot({ path: 'test-results/comments-debug.png' });
+});

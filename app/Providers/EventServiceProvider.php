@@ -5,7 +5,6 @@ namespace App\Providers;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
-use Illuminate\Support\Facades\Event;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -18,6 +17,37 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
+        
+        // Task Events
+        \App\Events\TaskCreated::class => [
+            \App\Listeners\SendTaskNotification::class,
+        ],
+        \App\Events\TaskCompleted::class => [
+            \App\Listeners\UpdateProjectProgress::class,
+        ],
+        \App\Events\TaskUpdated::class => [
+            \App\Listeners\LogTaskAudit::class,
+        ],
+        
+        // Component Events
+        \App\Events\ComponentCreated::class => [
+            // Add listeners as needed
+        ],
+        
+        // Core Project Events
+        \Src\CoreProject\Events\ComponentProgressUpdated::class => [
+            \App\Listeners\ComponentProgressUpdatedListener::class,
+        ],
+        
+        // Change Request Events
+        \App\Events\ChangeRequested::class => [
+            // Add listeners as needed
+        ],
+        
+        // Document Events
+        \App\Events\DocumentUploaded::class => [
+            // Add listeners as needed
+        ],
     ];
 
     /**
@@ -27,7 +57,7 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        
     }
 
     /**

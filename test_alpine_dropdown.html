@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpine.js Test</title>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .dropdown { 
+            position: relative; 
+            display: inline-block; 
+        }
+        .dropdown-content {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Alpine.js Dropdown Test</h1>
+    
+    <div class="dropdown" x-data="{ open: false }">
+        <button @click="open = !open">
+            Click me to toggle dropdown
+        </button>
+        
+        <div x-show="open" 
+             x-cloak
+             @click.away="open = false"
+             class="dropdown-content">
+            <p>This is the dropdown content!</p>
+            <p>It should show/hide when you click the button.</p>
+        </div>
+    </div>
+    
+    <script>
+        console.log('Alpine.js should be loaded');
+        document.addEventListener('alpine:init', () => {
+            console.log('Alpine.js initialized');
+        });
+    </script>
+</body>
+</html>

@@ -1,17 +1,17 @@
 <?php declare(strict_types=1);
 
-namespace App\InteractionLogs\Controllers;
+namespace Src\InteractionLogs\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
-use App\InteractionLogs\Models\InteractionLog;
-use App\InteractionLogs\Requests\StoreInteractionLogRequest;
-use App\InteractionLogs\Requests\UpdateInteractionLogRequest;
-use App\InteractionLogs\Resources\InteractionLogResource;
-use App\InteractionLogs\Resources\InteractionLogCollection;
+use Src\InteractionLogs\Models\InteractionLog;
+use Src\InteractionLogs\Requests\StoreInteractionLogRequest;
+use Src\InteractionLogs\Requests\UpdateInteractionLogRequest;
+use Src\InteractionLogs\Resources\InteractionLogResource;
+use Src\InteractionLogs\Resources\InteractionLogCollection;
 use Src\InteractionLogs\Services\InteractionLogService; // Sửa từ App\ thành Src\
-use App\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 
 /**
  * Controller quản lý Interaction Logs
@@ -42,12 +42,12 @@ class InteractionLogController extends Controller
                 $filters
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogCollection($logs),
                 'Danh sách logs theo tag path được tải thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể tải logs theo tag path: ' . $e->getMessage(),
                 500
             );
@@ -73,12 +73,12 @@ class InteractionLogController extends Controller
                 $perPage
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogCollection($logs),
                 'Danh sách interaction logs được tải thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể tải danh sách interaction logs: ' . $e->getMessage(),
                 500
             );
@@ -96,13 +96,13 @@ class InteractionLogController extends Controller
         try {
             $log = $this->interactionLogService->createLog($request->validated());
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogResource($log),
                 'Interaction log được tạo thành công',
                 201
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể tạo interaction log: ' . $e->getMessage(),
                 500
             );
@@ -118,12 +118,12 @@ class InteractionLogController extends Controller
     public function show(InteractionLog $interactionLog): JsonResponse
     {
         try {
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogResource($interactionLog->load(['project', 'linkedTask', 'creator'])),
                 'Chi tiết interaction log được tải thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể tải chi tiết interaction log: ' . $e->getMessage(),
                 500
             );
@@ -145,12 +145,12 @@ class InteractionLogController extends Controller
                 $request->validated()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogResource($updatedLog),
                 'Interaction log được cập nhật thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể cập nhật interaction log: ' . $e->getMessage(),
                 500
             );
@@ -168,12 +168,12 @@ class InteractionLogController extends Controller
         try {
             $this->interactionLogService->deleteLogInstance($interactionLog);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 null,
                 'Interaction log được xóa thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể xóa interaction log: ' . $e->getMessage(),
                 500
             );
@@ -191,12 +191,12 @@ class InteractionLogController extends Controller
         try {
             $approvedLog = $this->interactionLogService->approveForClientInstance($interactionLog);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogResource($approvedLog),
                 'Interaction log đã được phê duyệt cho client'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể phê duyệt interaction log: ' . $e->getMessage(),
                 500
             );
@@ -228,12 +228,12 @@ class InteractionLogController extends Controller
                 $perPage
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogCollection($logs),
                 'Danh sách interaction logs của project được tải thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể tải danh sách interaction logs: ' . $e->getMessage(),
                 500
             );
@@ -248,7 +248,7 @@ class InteractionLogController extends Controller
         try {
             // Kiểm tra log có thuộc project không
             if ($interactionLog->project_id !== $projectId) {
-                return JSendResponse::error(
+                return ApiResponse::error(
                     'Interaction log không thuộc project này',
                     404
                 );
@@ -260,12 +260,12 @@ class InteractionLogController extends Controller
                 $request->validated()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogResource($updatedLog),
                 'Interaction log được cập nhật thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể cập nhật interaction log: ' . $e->getMessage(),
                 500
             );
@@ -280,7 +280,7 @@ class InteractionLogController extends Controller
         try {
             // Kiểm tra log có thuộc project không
             if ($interactionLog->project_id !== $projectId) {
-                return JSendResponse::error(
+                return ApiResponse::error(
                     'Interaction log không thuộc project này',
                     404
                 );
@@ -289,12 +289,12 @@ class InteractionLogController extends Controller
             // Sửa từ deleteLogInstance thành deleteLog
             $this->interactionLogService->deleteLog($interactionLog);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 null,
                 'Interaction log được xóa thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể xóa interaction log: ' . $e->getMessage(),
                 500
             );
@@ -309,7 +309,7 @@ class InteractionLogController extends Controller
         try {
             // Kiểm tra log có thuộc project không
             if ($interactionLog->project_id !== $projectId) {
-                return JSendResponse::error(
+                return ApiResponse::error(
                     'Interaction log không thuộc project này',
                     404
                 );
@@ -318,12 +318,12 @@ class InteractionLogController extends Controller
             // Sửa từ approveForClientInstance thành approveForClient
             $approvedLog = $this->interactionLogService->approveForClient($interactionLog);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogResource($approvedLog),
                 'Interaction log đã được phê duyệt cho client'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể phê duyệt interaction log: ' . $e->getMessage(),
                 500
             );
@@ -346,12 +346,12 @@ class InteractionLogController extends Controller
                 $perPage
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new InteractionLogCollection($logs),
                 'Danh sách logs theo tag path trong project được tải thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể tải logs theo tag path: ' . $e->getMessage(),
                 500
             );
@@ -374,12 +374,12 @@ class InteractionLogController extends Controller
                 $limit
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 $suggestions,
                 'Gợi ý tag path được tải thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể tải gợi ý tag path: ' . $e->getMessage(),
                 500
             );
@@ -402,12 +402,12 @@ class InteractionLogController extends Controller
                 $dateTo
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 $stats,
                 'Thống kê interaction logs của project được tải thành công'
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Không thể tải thống kê: ' . $e->getMessage(),
                 500
             );

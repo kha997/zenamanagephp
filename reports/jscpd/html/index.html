@@ -1,0 +1,1607 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Copy/Paste Detector Report</title><link href="styles/tailwind.css" rel="stylesheet"><link href="styles/prism.css" rel="stylesheet"></head><body class="bg-gray-100"><header class="bg-white shadow py-4"><div class="container mx-auto px-4"><h1 class="text-3xl font-semibold text-gray-800">jscpd - copy/paste report</h1></div></header><main class="container mx-auto my-8 p-4 bg-white shadow rounded"><section class="mb-8" id="dashboard"><h2 class="text-2xl font-semibold text-gray-700 mb-4">Dashboard</h2><div class="grid grid-cols-4 gap-4"><div class="bg-blue-200 p-4 rounded text-center"><h3 class="text-lg font-semibold text-blue-800 mb-2">Total Files</h3><span class="text-4xl font-bold text-blue-800">318</span></div><div class="bg-green-200 p-4 rounded text-center"><h3 class="text-lg font-semibold text-green-800 mb-2">Total Lines of Code</h3><span class="text-4xl font-bold text-green-800">48718</span></div><div class="bg-yellow-200 p-4 rounded text-center"><h3 class="text-lg font-semibold text-yellow-800 mb-2">Number of Clones</h3><span class="text-4xl font-bold text-yellow-800">70</span></div><div class="bg-red-200 p-4 rounded text-center"><h3 class="text-lg font-semibold text-red-800 mb-2">Duplicated Lines</h3><span class="text-4xl font-bold text-red-800">1615 (3.31%)</span></div></div></section><section class="mb-8" id="formats"><h2 class="text-2xl font-semibold text-gray-700 mb-4">Formats with Duplications</h2><table class="w-full table-auto"><thead><tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal"><th class="py-3 px-6 text-left">Format</th><th class="py-3 px-6 text-left">Files</th><th class="py-3 px-6 text-left">Lines</th><th class="py-3 px-6 text-left">Clones</th><th class="py-3 px-6 text-left">Duplicated Lines</th><th class="py-3 px-6 text-left">Duplicated Tokens</th></tr></thead><tbody><tr class="bg-white border-b border-gray-200 text-gray-800 text-sm"><td class="py-3 px-6"><a class="text-blue-600 hover:underline" href="#javascript-clones">javascript</a></td><td class="py-3 px-6">28</td><td class="py-3 px-6">4565</td><td class="py-3 px-6">7</td><td class="py-3 px-6">144</td><td class="py-3 px-6">1137</td></tr><tr class="bg-white border-b border-gray-200 text-gray-800 text-sm"><td class="py-3 px-6"><a class="text-blue-600 hover:underline" href="#tsx-clones">tsx</a></td><td class="py-3 px-6">19</td><td class="py-3 px-6">3486</td><td class="py-3 px-6">7</td><td class="py-3 px-6">143</td><td class="py-3 px-6">1115</td></tr><tr class="bg-white border-b border-gray-200 text-gray-800 text-sm"><td class="py-3 px-6"><a class="text-blue-600 hover:underline" href="#typescript-clones">typescript</a></td><td class="py-3 px-6">6</td><td class="py-3 px-6">509</td><td class="py-3 px-6">1</td><td class="py-3 px-6">10</td><td class="py-3 px-6">123</td></tr><tr class="bg-white border-b border-gray-200 text-gray-800 text-sm"><td class="py-3 px-6"><a class="text-blue-600 hover:underline" href="#php-clones">php</a></td><td class="py-3 px-6">264</td><td class="py-3 px-6">40131</td><td class="py-3 px-6">55</td><td class="py-3 px-6">1318</td><td class="py-3 px-6">7783</td></tr><tr class="bg-white border-b border-gray-200 text-gray-800 text-sm"><td class="py-3 px-6"><a class="text-blue-600 hover:underline" href="#json-clones">json</a></td><td class="py-3 px-6">1</td><td class="py-3 px-6">27</td><td class="py-3 px-6">0</td><td class="py-3 px-6">0</td><td class="py-3 px-6">0</td></tr></tbody></table></section><section class="mb-8" id="txt-clones"><a name="javascript-clones"></a><h2 class="text-2xl font-semibold text-gray-700 mb-4">javascript</h2><div class="divide-y divide-gray-200 border-b-2"><div class="py-4"><p class="text-gray-600">resources/js/pages/admin/UsersManagementPage.tsx (Line 551:19 - Line 575:7), resources/js/pages/admin/UsersManagementPage.tsx (Line 457:21 - Line 479:9)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn59" onclick="toggleCodeBlock('cloneGroup59', 'expandBtn59', 'collapseBtn59')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn59" onclick="toggleCodeBlock('cloneGroup59', 'expandBtn59', 'collapseBtn59')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup59"><code class="language-javascript text-sm text-gray-800">(false);
+            resetForm();
+          }}
+          title=&quot;Chỉnh sửa người dùng&quot;
+        &gt;
+          &lt;div className=&quot;space-y-4&quot;&gt;
+            &lt;Input
+              label=&quot;Tên người dùng&quot;
+              value={formData.name}
+              onChange={(e) =&gt; setFormData({ ...formData, name: e.target.value })}
+              placeholder=&quot;Nhập tên người dùng&quot;
+            /&gt;
+            &lt;Input
+              label=&quot;Email&quot;
+              type=&quot;email&quot;
+              value={formData.email}
+              onChange={(e) =&gt; setFormData({ ...formData, email: e.target.value })}
+              placeholder=&quot;Nhập email&quot;
+            /&gt;
+            &lt;div&gt;
+              &lt;label className=&quot;block text-sm font-medium text-gray-700 mb-2&quot;&gt;
+                Trạng thái
+              &lt;/label&gt;
+              &lt;select
+                value={formData.status</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/pages/admin/UsersManagementPage.tsx (Line 567:2 - Line 591:19), resources/js/pages/admin/UsersManagementPage.tsx (Line 489:3 - Line 534:21)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn60" onclick="toggleCodeBlock('cloneGroup60', 'expandBtn60', 'collapseBtn60')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn60" onclick="toggleCodeBlock('cloneGroup60', 'expandBtn60', 'collapseBtn60')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup60"><code class="language-javascript text-sm text-gray-800">}
+              placeholder=&quot;Nhập email&quot;
+            /&gt;
+            &lt;div&gt;
+              &lt;label className=&quot;block text-sm font-medium text-gray-700 mb-2&quot;&gt;
+                Trạng thái
+              &lt;/label&gt;
+              &lt;select
+                value={formData.status}
+                onChange={(e) =&gt; setFormData({ 
+                  ...formData, 
+                  status: e.target.value as 'active' | 'inactive' | 'suspended'
+                })}
+                className=&quot;w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500&quot;
+              &gt;
+                &lt;option value=&quot;active&quot;&gt;Hoạt động&lt;/option&gt;
+                &lt;option value=&quot;inactive&quot;&gt;Không hoạt động&lt;/option&gt;
+                &lt;option value=&quot;suspended&quot;&gt;Bị khóa&lt;/option&gt;
+              &lt;/select&gt;
+            &lt;/div&gt;
+            &lt;div className=&quot;flex justify-end space-x-3 pt-4&quot;&gt;
+              &lt;Button
+                variant=&quot;outline&quot;
+                onClick={() =&gt; {
+                  setIsEditModalOpen</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/security/charts.js (Line 44:10 - Line 78:2), resources/js/security/charts.js (Line 5:10 - Line 40:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn63" onclick="toggleCodeBlock('cloneGroup63', 'expandBtn63', 'collapseBtn63')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn63" onclick="toggleCodeBlock('cloneGroup63', 'expandBtn63', 'collapseBtn63')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup63"><code class="language-javascript text-sm text-gray-800">(el, {labels, datasets}) {
+    if (el._chart) { 
+        el._chart.destroy(); 
+    }
+    
+    el._chart = new Chart(el.getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { 
+                mode: 'index', 
+                intersect: false 
+            },
+            plugins: { 
+                legend: { display: true }, 
+                tooltip: { enabled: true } 
+            },
+            scales: { 
+                x: { 
+                    ticks: { maxRotation: 0 },
+                    type: 'time',
+                    time: {
+                        displayFormats: {
+                            hour: 'MMM dd HH:mm',
+                            day: 'MMM dd',
+                            week: 'MMM dd',
+                            month: 'MMM yyyy'
+                        }
+                    }
+                }, 
+                y: { beginAtZero: true } 
+            },</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/security/charts.js (Line 94:6 - Line 122:2), resources/js/security/charts.js (Line 11:7 - Line 38:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn64" onclick="toggleCodeBlock('cloneGroup64', 'expandBtn64', 'collapseBtn64')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn64" onclick="toggleCodeBlock('cloneGroup64', 'expandBtn64', 'collapseBtn64')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup64"><code class="language-javascript text-sm text-gray-800">,
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            interaction: { 
+                mode: 'index', 
+                intersect: false 
+            },
+            plugins: { 
+                legend: { display: true }, 
+                tooltip: { enabled: true } 
+            },
+            scales: { 
+                x: { 
+                    ticks: { maxRotation: 0 },
+                    type: 'time',
+                    time: {
+                        displayFormats: {
+                            hour: 'MMM dd HH:mm',
+                            day: 'MMM dd',
+                            week: 'MMM dd',
+                            month: 'MMM yyyy'
+                        }
+                    }
+                }, 
+                y: { 
+                    beginAtZero: true,</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/rewards.js (Line 97:7 - Line 108:16), resources/js/rewards.js (Line 72:6 - Line 83:15)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn67" onclick="toggleCodeBlock('cloneGroup67', 'expandBtn67', 'collapseBtn67')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn67" onclick="toggleCodeBlock('cloneGroup67', 'expandBtn67', 'collapseBtn67')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup67"><code class="language-javascript text-sm text-gray-800">,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').getAttribute('content')
+                },
+                credentials: 'same-origin'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.isActive = data.data.rewards_enabled</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/focus-mode.js (Line 31:32 - Line 42:3), resources/js/rewards.js (Line 71:29 - Line 82:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn68" onclick="toggleCodeBlock('cloneGroup68', 'expandBtn68', 'collapseBtn68')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn68" onclick="toggleCodeBlock('cloneGroup68', 'expandBtn68', 'collapseBtn68')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup68"><code class="language-javascript text-sm text-gray-800">, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').getAttribute('content')
+                },
+                credentials: 'same-origin'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success &amp;&amp;</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/focus-mode.js (Line 56:32 - Line 68:9), resources/js/rewards.js (Line 96:29 - Line 83:9)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn69" onclick="toggleCodeBlock('cloneGroup69', 'expandBtn69', 'collapseBtn69')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn69" onclick="toggleCodeBlock('cloneGroup69', 'expandBtn69', 'collapseBtn69')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup69"><code class="language-javascript text-sm text-gray-800">, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=&quot;csrf-token&quot;]').getAttribute('content')
+                },
+                credentials: 'same-origin'
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.toggleUI</code></pre></div><!-- Add more clone groups for .txt format as needed         // Add more clone groups for .txt format as needed--></div><a name="tsx-clones"></a><h2 class="text-2xl font-semibold text-gray-700 mb-4">tsx</h2><div class="divide-y divide-gray-200 border-b-2"><div class="py-4"><p class="text-gray-600">src/components/ui/header/UserMenu.tsx (Line 240:40 - Line 254:2), src/components/ui/header/UserMenu.tsx (Line 163:15 - Line 176:3)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn0" onclick="toggleCodeBlock('cloneGroup0', 'expandBtn0', 'collapseBtn0')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn0" onclick="toggleCodeBlock('cloneGroup0', 'expandBtn0', 'collapseBtn0')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup0"><code class="language-tsx text-sm text-gray-800">&quot;&gt;
+            &lt;p className=&quot;text-sm font-medium text-header-fg truncate&quot;&gt;
+              {user.name}
+            &lt;/p&gt;
+            &lt;p className=&quot;text-xs text-header-fg-muted truncate&quot;&gt;
+              {user.email}
+            &lt;/p&gt;
+            {user.tenant &amp;&amp; (
+              &lt;p className=&quot;text-xs text-header-fg-muted truncate&quot;&gt;
+                {user.tenant.name}
+              &lt;/p&gt;
+            )}
+          &lt;/div&gt;
+
+          {</code></pre></div><div class="py-4"><p class="text-gray-600">src/components/ui/header/SearchToggle.tsx (Line 36:11 - Line 50:21), src/components/ui/header/UserMenu.tsx (Line 36:8 - Line 50:30)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn1" onclick="toggleCodeBlock('cloneGroup1', 'expandBtn1', 'collapseBtn1')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn1" onclick="toggleCodeBlock('cloneGroup1', 'expandBtn1', 'collapseBtn1')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup1"><code class="language-tsx text-sm text-gray-800">.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () =&gt; {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Handle escape key</code></pre></div><div class="py-4"><p class="text-gray-600">src/components/ui/header/NotificationsOverlay.tsx (Line 86:2 - Line 100:2), src/components/ui/header/SearchOverlay.tsx (Line 138:2 - Line 150:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn2" onclick="toggleCodeBlock('cloneGroup2', 'expandBtn2', 'collapseBtn2')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn2" onclick="toggleCodeBlock('cloneGroup2', 'expandBtn2', 'collapseBtn2')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup2"><code class="language-tsx text-sm text-gray-800">
+                onClick={() =&gt; handleNotificationClick(notification)}
+              &gt;
+                &lt;div className=&quot;flex items-start space-x-3&quot;&gt;
+                  {/* Icon */}
+                  &lt;div className=&quot;flex-shrink-0 mt-0.5&quot;&gt;
+                    &lt;i className={`${getNotificationIcon(notification.type)} text-sm`} aria-hidden=&quot;true&quot; /&gt;
+                  &lt;/div&gt;
+
+                  {/* Content */}
+                  &lt;div className=&quot;flex-1 min-w-0&quot;&gt;
+                    &lt;div className=&quot;flex items-center justify-between&quot;&gt;
+                      &lt;p className={`text-sm font-medium ${
+                        !notification.read ? 'text-header-fg' : 'text-header-fg-muted'
+                      }`}&gt;</code></pre></div><div class="py-4"><p class="text-gray-600">src/components/ui/header/NotificationsBell.tsx (Line 35:2 - Line 60:8), src/components/ui/header/SearchToggle.tsx (Line 30:2 - Line 55:10)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn3" onclick="toggleCodeBlock('cloneGroup3', 'expandBtn3', 'collapseBtn3')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn3" onclick="toggleCodeBlock('cloneGroup3', 'expandBtn3', 'collapseBtn3')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup3"><code class="language-tsx text-sm text-gray-800">= useRef&lt;HTMLButtonElement&gt;(null);
+  const overlayRef = useRef&lt;HTMLDivElement&gt;(null);
+
+  // Handle click outside to close
+  useEffect(() =&gt; {
+    const handleClickOutside = (event: MouseEvent) =&gt; {
+      if (overlayRef.current &amp;&amp; !overlayRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () =&gt; {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Handle escape key
+  useEffect(() =&gt; {
+    const handleEscape = (event: KeyboardEvent) =&gt; {
+      if (event.key === 'Escape' &amp;&amp; isOpen) {
+        setIsOpen(false);
+        bellRef</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/pages/admin/UsersManagementPage.tsx (Line 554:21 - Line 570:4), resources/js/pages/admin/UsersManagementPage.tsx (Line 460:20 - Line 476:6)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn61" onclick="toggleCodeBlock('cloneGroup61', 'expandBtn61', 'collapseBtn61')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn61" onclick="toggleCodeBlock('cloneGroup61', 'expandBtn61', 'collapseBtn61')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup61"><code class="language-tsx text-sm text-gray-800">&quot;
+        &gt;
+          &lt;div className=&quot;space-y-4&quot;&gt;
+            &lt;Input
+              label=&quot;Tên người dùng&quot;
+              value={formData.name}
+              onChange={(e) =&gt; setFormData({ ...formData, name: e.target.value })}
+              placeholder=&quot;Nhập tên người dùng&quot;
+            /&gt;
+            &lt;Input
+              label=&quot;Email&quot;
+              type=&quot;email&quot;
+              value={formData.email}
+              onChange={(e) =&gt; setFormData({ ...formData, email: e.target.value })}
+              placeholder=&quot;Nhập email&quot;
+            /&gt;
+            &lt;div</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/pages/admin/UsersManagementPage.tsx (Line 570:13 - Line 598:2), resources/js/pages/admin/UsersManagementPage.tsx (Line 513:13 - Line 541:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn62" onclick="toggleCodeBlock('cloneGroup62', 'expandBtn62', 'collapseBtn62')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn62" onclick="toggleCodeBlock('cloneGroup62', 'expandBtn62', 'collapseBtn62')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup62"><code class="language-tsx text-sm text-gray-800">&lt;div&gt;
+              &lt;label className=&quot;block text-sm font-medium text-gray-700 mb-2&quot;&gt;
+                Trạng thái
+              &lt;/label&gt;
+              &lt;select
+                value={formData.status}
+                onChange={(e) =&gt; setFormData({ 
+                  ...formData, 
+                  status: e.target.value as 'active' | 'inactive' | 'suspended'
+                })}
+                className=&quot;w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500&quot;
+              &gt;
+                &lt;option value=&quot;active&quot;&gt;Hoạt động&lt;/option&gt;
+                &lt;option value=&quot;inactive&quot;&gt;Không hoạt động&lt;/option&gt;
+                &lt;option value=&quot;suspended&quot;&gt;Bị khóa&lt;/option&gt;
+              &lt;/select&gt;
+            &lt;/div&gt;
+            &lt;div className=&quot;flex justify-end space-x-3 pt-4&quot;&gt;
+              &lt;Button
+                variant=&quot;outline&quot;
+                onClick={() =&gt; {
+                  setIsEditModalOpen(false);
+                  resetForm();
+                }}
+              &gt;
+                Hủy
+              &lt;/Button&gt;
+              &lt;Button onClick={handleUpdateUser}&gt;
+                C</code></pre></div><div class="py-4"><p class="text-gray-600">resources/js/components/DashboardDemo.tsx (Line 90:2 - Line 122:7), resources/js/components/DashboardDemo.tsx (Line 11:2 - Line 43:6)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn66" onclick="toggleCodeBlock('cloneGroup66', 'expandBtn66', 'collapseBtn66')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn66" onclick="toggleCodeBlock('cloneGroup66', 'expandBtn66', 'collapseBtn66')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup66"><code class="language-tsx text-sm text-gray-800">dashboard...&lt;/span&gt;
+      &lt;/div&gt;
+    );
+  }
+
+  if (error) {
+    return (
+      &lt;div className=&quot;bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded&quot;&gt;
+        &lt;div className=&quot;flex&quot;&gt;
+          &lt;div className=&quot;py-1&quot;&gt;
+            &lt;i className=&quot;fas fa-exclamation-circle&quot;&gt;&lt;/i&gt;
+          &lt;/div&gt;
+          &lt;div className=&quot;ml-3&quot;&gt;
+            &lt;p className=&quot;font-bold&quot;&gt;Error loading dashboard&lt;/p&gt;
+            &lt;p&gt;{error}&lt;/p&gt;
+            &lt;button 
+              onClick={refetch}
+              className=&quot;mt-2 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600&quot;
+            &gt;
+              Retry
+            &lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    );
+  }
+
+  return (
+    &lt;div className=&quot;grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6&quot;&gt;
+      &lt;div className=&quot;bg-white p-6 rounded-lg shadow&quot;&gt;
+        &lt;div className=&quot;flex items-center justify-between&quot;&gt;
+          &lt;div&gt;
+            &lt;p className=&quot;text-sm font-medium text-gray-500&quot;&gt;Active</code></pre></div><!-- Add more clone groups for .txt format as needed         // Add more clone groups for .txt format as needed--></div><a name="typescript-clones"></a><h2 class="text-2xl font-semibold text-gray-700 mb-4">typescript</h2><div class="divide-y divide-gray-200 border-b-2"><div class="py-4"><p class="text-gray-600">resources/js/hooks/useDashboard.ts (Line 66:2 - Line 76:16), resources/js/hooks/useDashboard.ts (Line 28:2 - Line 38:18)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn65" onclick="toggleCodeBlock('cloneGroup65', 'expandBtn65', 'collapseBtn65')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn65" onclick="toggleCodeBlock('cloneGroup65', 'expandBtn65', 'collapseBtn65')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup65"><code class="language-typescript text-sm text-gray-800">} = useApi();
+  const [stats, setStats] = useState&lt;DashboardStats&gt;({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState&lt;string | null&gt;(null);
+
+  const fetchData = useCallback(async () =&gt; {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await getAppDashboard</code></pre></div><!-- Add more clone groups for .txt format as needed         // Add more clone groups for .txt format as needed--></div><a name="php-clones"></a><h2 class="text-2xl font-semibold text-gray-700 mb-4">php</h2><div class="divide-y divide-gray-200 border-b-2"><div class="py-4"><p class="text-gray-600">src/WorkTemplate/Requests/CreateTemplateRequest.php (Line 165:9 - Line 180:2), src/WorkTemplate/Requests/UpdateTemplateRequest.php (Line 164:9 - Line 180:44)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn4" onclick="toggleCodeBlock('cloneGroup4', 'expandBtn4', 'collapseBtn4')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn4" onclick="toggleCodeBlock('cloneGroup4', 'expandBtn4', 'collapseBtn4')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup4"><code class="language-php text-sm text-gray-800">// Chuẩn hóa conditional_tag về lowercase
+        if ($this-&gt;has('phases')) {
+            $phases = $this-&gt;input('phases');
+            foreach ($phases as $phaseIndex =&gt; $phase) {
+                if (isset($phase['tasks'])) {
+                    foreach ($phase['tasks'] as $taskIndex =&gt; $task) {
+                        if (isset($task['conditional_tag'])) {
+                            $phases[$phaseIndex]['tasks'][$taskIndex]['conditional_tag'] = 
+                                strtolower(trim($task['conditional_tag']));
+                        }
+                    }
+                }
+            }
+            $this-&gt;merge(['phases' =&gt; $phases]);
+        }
+    }</code></pre></div><div class="py-4"><p class="text-gray-600">src/WorkTemplate/Requests/CreateTemplateRequest.php (Line 196:9 - Line 241:63), src/WorkTemplate/Requests/UpdateTemplateRequest.php (Line 198:9 - Line 243:24)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn5" onclick="toggleCodeBlock('cloneGroup5', 'expandBtn5', 'collapseBtn5')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn5" onclick="toggleCodeBlock('cloneGroup5', 'expandBtn5', 'collapseBtn5')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup5"><code class="language-php text-sm text-gray-800">});
+    }
+
+    /**
+     * Validate phase orders are unique
+     */
+    private function validatePhaseOrders($validator): void
+    {
+        $phases = $this-&gt;input('phases', []);
+        $orders = array_column($phases, 'order');
+        
+        if (count($orders) !== count(array_unique($orders))) {
+            $validator-&gt;errors()-&gt;add('phases', 'Thứ tự các giai đoạn không được trùng lặp.');
+        }
+    }
+
+    /**
+     * Validate task orders are unique within each phase
+     */
+    private function validateTaskOrders($validator): void
+    {
+        $phases = $this-&gt;input('phases', []);
+        
+        foreach ($phases as $phaseIndex =&gt; $phase) {
+            if (isset($phase['tasks'])) {
+                $orders = array_column($phase['tasks'], 'order');
+                
+                if (count($orders) !== count(array_unique($orders))) {
+                    $validator-&gt;errors()-&gt;add(
+                        &quot;phases.{$phaseIndex}.tasks&quot;,
+                        'Thứ tự các công việc trong giai đoạn không được trùng lặp.'
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Validate task dependencies reference valid tasks
+     */
+    private function validateTaskDependencies($validator): void
+    {
+        $phases = $this-&gt;input('phases', []);
+        $allTaskIds = [];
+        
+        // Collect all task IDs (sử dụng t</code></pre></div><div class="py-4"><p class="text-gray-600">src/WorkTemplate/Requests/CreateTemplateRequest.php (Line 242:9 - Line 268:2), src/WorkTemplate/Requests/UpdateTemplateRequest.php (Line 244:9 - Line 270:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn6" onclick="toggleCodeBlock('cloneGroup6', 'expandBtn6', 'collapseBtn6')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn6" onclick="toggleCodeBlock('cloneGroup6', 'expandBtn6', 'collapseBtn6')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup6"><code class="language-php text-sm text-gray-800">IDs cho validation)
+        foreach ($phases as $phaseIndex =&gt; $phase) {
+            if (isset($phase['tasks'])) {
+                foreach ($phase['tasks'] as $taskIndex =&gt; $task) {
+                    $allTaskIds[] = &quot;phase_{$phaseIndex}_task_{$taskIndex}&quot;;
+                }
+            }
+        }
+        
+        // Validate dependencies
+        foreach ($phases as $phaseIndex =&gt; $phase) {
+            if (isset($phase['tasks'])) {
+                foreach ($phase['tasks'] as $taskIndex =&gt; $task) {
+                    if (isset($task['dependencies'])) {
+                        foreach ($task['dependencies'] as $depIndex =&gt; $dependency) {
+                            if (!in_array($dependency, $allTaskIds)) {
+                                $validator-&gt;errors()-&gt;add(
+                                    &quot;phases.{$phaseIndex}.tasks.{$taskIndex}.dependencies.{$depIndex}&quot;,
+                                    'Phụ thuộc công việc không hợp lệ.'
+                             </code></pre></div><div class="py-4"><p class="text-gray-600">src/WorkTemplate/Models/ProjectPhase.php (Line 6:11 - Line 27:4), src/WorkTemplate/Models/ProjectTask.php (Line 5:6 - Line 33:4)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn7" onclick="toggleCodeBlock('cloneGroup7', 'expandBtn7', 'collapseBtn7')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn7" onclick="toggleCodeBlock('cloneGroup7', 'expandBtn7', 'collapseBtn7')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup7"><code class="language-php text-sm text-gray-800">;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Src\Foundation\Traits\HasAuditFields;
+
+/**
+ * ProjectPhase Model
+ * 
+ * Quản lý các giai đoạn (phases) trong dự án
+ * Được tạo từ template hoặc thêm thủ công
+ * 
+ * @property string $id
+ * @property string $project_id
+ * @property string $name
+ * @property int $order
+ * @property string|null $template_id
+ * @property string|null $template_phase_id
+ * @property string|null $created_by
+ * @property string|null $updated_by
+ */</code></pre></div><div class="py-4"><p class="text-gray-600">src/WorkTemplate/Events/TaskConditionalToggled.php (Line 101:20 - Line 116:55), src/WorkTemplate/Events/TemplateApplied.php (Line 92:9 - Line 107:48)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn8" onclick="toggleCodeBlock('cloneGroup8', 'expandBtn8', 'collapseBtn8')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn8" onclick="toggleCodeBlock('cloneGroup8', 'expandBtn8', 'collapseBtn8')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup8"><code class="language-php text-sm text-gray-800">;
+        $this-&gt;actorId = $this-&gt;resolveActorId();
+        $this-&gt;timestamp = Carbon::now();
+    }
+    
+    /**
+     * Resolve actor ID với fallback an toàn
+     * 
+     * @return string
+     */
+    protected function resolveActorId(): string
+    {
+        try {
+            return AuthHelper::idOrSystem();
+        } catch (\Exception $e) {
+            Log::warning('Failed to resolve actor ID in TaskConditionalToggled'</code></pre></div><div class="py-4"><p class="text-gray-600">src/WorkTemplate/Controllers/ProjectTaskController.php (Line 67:18 - Line 77:6), src/WorkTemplate/Controllers/TemplateController.php (Line 69:12 - Line 79:7)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn9" onclick="toggleCodeBlock('cloneGroup9', 'expandBtn9', 'collapseBtn9')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn9" onclick="toggleCodeBlock('cloneGroup9', 'expandBtn9', 'collapseBtn9')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup9"><code class="language-php text-sm text-gray-800">));
+        }
+        
+        // Search theo name nếu có
+        if ($request-&gt;has('search')) {
+            $query-&gt;where('name', 'like', '%' . $request-&gt;get('search') . '%');
+        }
+        
+        // Sắp xếp
+        $sortBy = $request-&gt;get('sort_by', 'created_at');
+        $sortOrder = $request-&gt;get('sort_order', 'asc'</code></pre></div><div class="py-4"><p class="text-gray-600">src/RBAC/Services/RBACManager.php (Line 136:15 - Line 163:8), src/RBAC/Services/RBACManager.php (Line 106:15 - Line 133:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn10" onclick="toggleCodeBlock('cloneGroup10', 'expandBtn10', 'collapseBtn10')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn10" onclick="toggleCodeBlock('cloneGroup10', 'expandBtn10', 'collapseBtn10')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup10"><code class="language-php text-sm text-gray-800">       $userRoles = UserRoleCustom::where('user_id', $userId)
+            -&gt;active() // Sử dụng scope active để lọc soft delete
+            -&gt;with(['role.permissions'])
+            -&gt;get();
+
+        $permissions = [];
+        $overrides = [];
+
+        foreach ($userRoles as $userRole) {
+            foreach ($userRole-&gt;role-&gt;permissions as $permission) {
+                $permissions[] = $permission-&gt;code;
+                
+                // Kiểm tra allow_override ở pivot table role_permissions
+                if ($permission-&gt;pivot-&gt;allow_override) {
+                    $overrides[] = $permission-&gt;code;
+                }
+            }
+        }
+
+        return [
+            'permissions' =&gt; array_unique($permissions),
+            'overrides' =&gt; array_unique($overrides)
+        ];
+    }
+
+    /**
+     * Lấy quyền dự</code></pre></div><div class="py-4"><p class="text-gray-600">src/RBAC/Services/RBACManager.php (Line 167:11 - Line 194:8), src/RBAC/Services/RBACManager.php (Line 106:8 - Line 133:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn11" onclick="toggleCodeBlock('cloneGroup11', 'expandBtn11', 'collapseBtn11')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn11" onclick="toggleCodeBlock('cloneGroup11', 'expandBtn11', 'collapseBtn11')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup11"><code class="language-php text-sm text-gray-800">  -&gt;where('project_id', $projectId)
+            -&gt;active() // Sử dụng scope active để lọc soft delete
+            -&gt;with(['role.permissions'])
+            -&gt;get();
+
+        $permissions = [];
+        $overrides = [];
+
+        foreach ($userRoles as $userRole) {
+            foreach ($userRole-&gt;role-&gt;permissions as $permission) {
+                $permissions[] = $permission-&gt;code;
+                
+                // Kiểm tra allow_override ở pivot table role_permissions
+                if ($permission-&gt;pivot-&gt;allow_override) {
+                    $overrides[] = $permission-&gt;code;
+                }
+            }
+        }
+
+        return [
+            'permissions' =&gt; array_unique($permissions),
+            'overrides' =&gt; array_unique($overrides)
+        ];
+    }
+
+    /**
+     * Kiểm tra </code></pre></div><div class="py-4"><p class="text-gray-600">src/RBAC/Models/UserRoleCustom.php (Line 1:1 - Line 21:4), src/RBAC/Models/UserRoleProject.php (Line 1:1 - Line 22:4)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn12" onclick="toggleCodeBlock('cloneGroup12', 'expandBtn12', 'collapseBtn12')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn12" onclick="toggleCodeBlock('cloneGroup12', 'expandBtn12', 'collapseBtn12')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup12"><code class="language-php text-sm text-gray-800">&lt;?php declare(strict_types=1);
+
+namespace Src\RBAC\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Src\Foundation\Traits\HasTimestamps;
+use Src\Foundation\Traits\HasSoftDeletes;
+use Src\Foundation\Traits\HasAuditLog;
+
+/**
+ * Model UserRoleCustom - Quản lý vai trò tùy chỉnh của user
+ * 
+ * @property string $id
+ * @property string $user_id ID người dùng (ULID)
+ * @property string $role_id ID vai trò (ULID)
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
+ * @property \Carbon\Carbon|null $deleted_at Soft delete timestamp
+ */</code></pre></div><div class="py-4"><p class="text-gray-600">src/RBAC/Models/UserRoleCustom.php (Line 46:2 - Line 67:8), src/RBAC/Models/UserRoleSystem.php (Line 36:2 - Line 57:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn13" onclick="toggleCodeBlock('cloneGroup13', 'expandBtn13', 'collapseBtn13')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn13" onclick="toggleCodeBlock('cloneGroup13', 'expandBtn13', 'collapseBtn13')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup13"><code class="language-php text-sm text-gray-800">=&gt; 'datetime:c'
+    ];
+
+    /**
+     * Relationship: Thuộc về user
+     */
+    public function user(): BelongsTo
+    {
+        return $this-&gt;belongsTo(\App\Models\User::class);
+    }
+
+    /**
+     * Relationship: Thuộc về role
+     */
+    public function role(): BelongsTo
+    {
+        return $this-&gt;belongsTo(Role::class);
+    }
+
+    /**
+     * Scope: Lọc theo user
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/RBAC/Models/UserRoleCustom.php (Line 62:6 - Line 88:2), src/RBAC/Models/UserRoleProject.php (Line 80:11 - Line 109:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn14" onclick="toggleCodeBlock('cloneGroup14', 'expandBtn14', 'collapseBtn14')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn14" onclick="toggleCodeBlock('cloneGroup14', 'expandBtn14', 'collapseBtn14')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup14"><code class="language-php text-sm text-gray-800">);
+    }
+
+    /**
+     * Scope: Lọc theo user
+     */
+    public function scopeForUser($query, string $userId)
+    {
+        return $query-&gt;where('user_id', $userId);
+    }
+
+    /**
+     * Scope: Lọc theo role
+     */
+    public function scopeForRole($query, string $roleId)
+    {
+        return $query-&gt;where('role_id', $roleId);
+    }
+
+    /**
+     * Scope: Chỉ lấy các assignment đang hoạt động (chưa bị soft delete)
+     */
+    public function scopeActive($query)
+    {
+        return $query-&gt;whereNull('deleted_at');
+    }
+}</code></pre></div><div class="py-4"><p class="text-gray-600">src/RBAC/Controllers/AssignmentController.php (Line 75:13 - Line 90:39), src/RBAC/Controllers/AssignmentController.php (Line 27:13 - Line 42:39)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn15" onclick="toggleCodeBlock('cloneGroup15', 'expandBtn15', 'collapseBtn15')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn15" onclick="toggleCodeBlock('cloneGroup15', 'expandBtn15', 'collapseBtn15')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup15"><code class="language-php text-sm text-gray-800">(Request $request): JsonResponse
+    {
+        $errors = [];
+        
+        $userId = $request-&gt;get('user_id');
+        $roleId = $request-&gt;get('role_id');
+        
+        if (empty($userId)) {
+            $errors['user_id'] = 'User ID không được để trống';
+        }
+        
+        if (empty($roleId)) {
+            $errors['role_id'] = 'Role ID không được để trống';
+        }
+        
+        // Kiểm tra role có scope custom không</code></pre></div><div class="py-4"><p class="text-gray-600">src/RBAC/Controllers/AssignmentController.php (Line 104:17 - Line 115:32), src/RBAC/Controllers/AssignmentController.php (Line 56:17 - Line 67:32)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn16" onclick="toggleCodeBlock('cloneGroup16', 'expandBtn16', 'collapseBtn16')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn16" onclick="toggleCodeBlock('cloneGroup16', 'expandBtn16', 'collapseBtn16')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup16"><code class="language-php text-sm text-gray-800">($userId, $roleId);
+        
+        if (!$success) {
+            return response()-&gt;json([
+                'status' =&gt; 'error',
+                'message' =&gt; 'Không thể gán role'
+            ], 500);
+        }
+
+        return response()-&gt;json([
+            'status' =&gt; 'success',
+            'message' =&gt; 'Đã gán role custom thành công'</code></pre></div><div class="py-4"><p class="text-gray-600">src/Notification/Requests/StoreNotificationRuleRequest.php (Line 61:17 - Line 90:19), src/Notification/Requests/UpdateNotificationRuleRequest.php (Line 60:17 - Line 89:20)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn17" onclick="toggleCodeBlock('cloneGroup17', 'expandBtn17', 'collapseBtn17')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn17" onclick="toggleCodeBlock('cloneGroup17', 'expandBtn17', 'collapseBtn17')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup17"><code class="language-php text-sm text-gray-800">'nullable',
+                'array'
+            ],
+            'conditions.*.field' =&gt; [
+                'required_with:conditions',
+                'string',
+                'max:100'
+            ],
+            'conditions.*.operator' =&gt; [
+                'required_with:conditions',
+                'string',
+                Rule::in(['=', '!=', '&gt;', '&lt;', '&gt;=', '&lt;=', 'contains', 'not_contains', 'in', 'not_in'])
+            ],
+            'conditions.*.value' =&gt; [
+                'required_with:conditions'
+            ],
+            'is_enabled' =&gt; [
+                'sometimes',
+                'boolean'
+            ]
+        ];
+    }
+
+    /**
+     * Các thông báo lỗi tùy chỉnh
+     */
+    public function messages(): array
+    {
+        return [
+            'user_id.required'</code></pre></div><div class="py-4"><p class="text-gray-600">src/Notification/Requests/StoreNotificationRuleRequest.php (Line 92:13 - Line 111:8), src/Notification/Requests/UpdateNotificationRuleRequest.php (Line 89:13 - Line 106:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn18" onclick="toggleCodeBlock('cloneGroup18', 'expandBtn18', 'collapseBtn18')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn18" onclick="toggleCodeBlock('cloneGroup18', 'expandBtn18', 'collapseBtn18')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup18"><code class="language-php text-sm text-gray-800">'project_id.exists' =&gt; 'Project không tồn tại.',
+            'event_key.required' =&gt; 'Event key là bắt buộc.',
+            'event_key.max' =&gt; 'Event key không được vượt quá 100 ký tự.',
+            'min_priority.required' =&gt; 'Mức độ ưu tiên tối thiểu là bắt buộc.',
+            'min_priority.in' =&gt; 'Mức độ ưu tiên phải là: critical, normal, hoặc low.',
+            'channels.required' =&gt; 'Ít nhất một kênh gửi là bắt buộc.',
+            'channels.min' =&gt; 'Phải có ít nhất một kênh gửi.',
+            'channels.*.in' =&gt; 'Kênh gửi phải là: inapp, email, hoặc webhook.',
+            'conditions.*.field.required_with' =&gt; 'Trường điều kiện là bắt buộc.',
+            'conditions.*.operator.required_with' =&gt; 'Toán tử điều kiện là bắt buộc.',
+            'conditions.*.operator.in' =&gt; 'Toán tử phải là một trong: =, !=, &gt;, &lt;, &gt;=, &lt;=, contains, not_contains, in, not_in.',
+            'conditions.*.value.required_with' =&gt; 'Giá trị điều kiện là bắt buộc.'
+        ];
+    }
+
+    /**
+     * Lấy ID của user hiện tại một cách an toàn
+     * 
+     * @return int|null
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/Notification/Requests/StoreNotificationRuleRequest.php (Line 147:5 - Line 169:2), src/Notification/Requests/UpdateNotificationRuleRequest.php (Line 102:5 - Line 124:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn19" onclick="toggleCodeBlock('cloneGroup19', 'expandBtn19', 'collapseBtn19')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn19" onclick="toggleCodeBlock('cloneGroup19', 'expandBtn19', 'collapseBtn19')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup19"><code class="language-php text-sm text-gray-800">}
+
+    /**
+     * Xử lý sau khi validation thành công
+     */
+    public function withValidator($validator): void
+    {
+        $validator-&gt;after(function ($validator) {
+            // Validate event_key format
+            if ($this-&gt;has('event_key')) {
+                $eventKey = $this-&gt;input('event_key');
+                if (!preg_match('/^[A-Za-z]+\.[A-Za-z]+\.[A-Za-z]+$/', $eventKey)) {
+                    $validator-&gt;errors()-&gt;add('event_key', 'Event key phải có định dạng Domain.Entity.Action (ví dụ: Project.Task.Created)');
+                }
+            }
+
+            // Validate channels array không rỗng
+            if ($this-&gt;has('channels') &amp;&amp; empty($this-&gt;input('channels'))) {
+                $validator-&gt;errors()-&gt;add('channels', 'Phải có ít nhất một kênh gửi.');
+            }
+        });
+    }
+}</code></pre></div><div class="py-4"><p class="text-gray-600">src/Notification/Requests/StoreNotificationRequest.php (Line 73:13 - Line 90:8), src/Notification/Requests/UpdateNotificationRequest.php (Line 69:13 - Line 81:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn20" onclick="toggleCodeBlock('cloneGroup20', 'expandBtn20', 'collapseBtn20')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn20" onclick="toggleCodeBlock('cloneGroup20', 'expandBtn20', 'collapseBtn20')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup20"><code class="language-php text-sm text-gray-800">'priority.required' =&gt; 'Mức độ ưu tiên là bắt buộc.',
+            'priority.in' =&gt; 'Mức độ ưu tiên phải là: critical, normal, hoặc low.',
+            'title.required' =&gt; 'Tiêu đề là bắt buộc.',
+            'title.max' =&gt; 'Tiêu đề không được vượt quá 255 ký tự.',
+            'body.required' =&gt; 'Nội dung là bắt buộc.',
+            'body.max' =&gt; 'Nội dung không được vượt quá 5000 ký tự.',
+            'link_url.url' =&gt; 'Link URL phải có định dạng hợp lệ.',
+            'link_url.max' =&gt; 'Link URL không được vượt quá 500 ký tự.',
+            'channel.required' =&gt; 'Kênh gửi là bắt buộc.',
+            'channel.in' =&gt; 'Kênh gửi phải là: inapp, email, hoặc webhook.'
+        ];
+    }
+
+    /**
+     * Lấy ID của user hiện tại một cách an toàn
+     * 
+     * @return int|null
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/Notification/Requests/StoreNotificationRequest.php (Line 83:9 - Line 120:53), src/Notification/Requests/StoreNotificationRuleRequest.php (Line 104:9 - Line 141:55)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn21" onclick="toggleCodeBlock('cloneGroup21', 'expandBtn21', 'collapseBtn21')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn21" onclick="toggleCodeBlock('cloneGroup21', 'expandBtn21', 'collapseBtn21')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup21"><code class="language-php text-sm text-gray-800">];
+    }
+
+    /**
+     * Lấy ID của user hiện tại một cách an toàn
+     * 
+     * @return int|null
+     */
+    private function getUserId(): ?int
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+        } catch (\Exception $e) {
+            // Log error nếu cần thiết
+            // Log::warning('Cannot get user ID: ' . $e-&gt;getMessage());
+        }
+        
+        return null;
+    }
+
+    /**
+     * Chuẩn bị dữ liệu cho validation
+     */
+    protected function prepareForValidation(): void
+    {
+        // Nếu không có user_id, sử dụng user hiện tại
+        if (!$this-&gt;has('user_id')) {
+            $userId = $this-&gt;getUserId();
+            if ($userId !== null) {
+                $this-&gt;merge([
+                    'user_id' =&gt; $userId
+                ]);
+            }
+        }
+
+        // Mặc định channel là inapp nếu không được chỉ định</code></pre></div><div class="py-4"><p class="text-gray-600">src/InteractionLogs/Services/InteractionLogService.php (Line 260:2 - Line 280:8), src/InteractionLogs/Services/InteractionLogService.php (Line 221:2 - Line 241:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn22" onclick="toggleCodeBlock('cloneGroup22', 'expandBtn22', 'collapseBtn22')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn22" onclick="toggleCodeBlock('cloneGroup22', 'expandBtn22', 'collapseBtn22')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup22"><code class="language-php text-sm text-gray-800">=&gt; AuthHelper::id(),
+                'timestamp' =&gt; now()
+            ]);
+            
+            DB::commit();
+            
+            return $log-&gt;fresh(['project', 'linkedTask', 'creator']);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Validate dữ liệu interaction log
+     * 
+     * @param array $data
+     * @param bool $isUpdate
+     * @throws ValidationException
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/InteractionLogs/Services/InteractionLogService.php (Line 505:9 - Line 565:8), src/InteractionLogs/Services/InteractionLogService.php (Line 96:9 - Line 157:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn23" onclick="toggleCodeBlock('cloneGroup23', 'expandBtn23', 'collapseBtn23')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn23" onclick="toggleCodeBlock('cloneGroup23', 'expandBtn23', 'collapseBtn23')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup23"><code class="language-php text-sm text-gray-800">eractionLog
+    {
+        // Validate dữ liệu cập nhật
+        $this-&gt;validateLogData($data, true);
+        
+        // Kiểm tra quyền cập nhật (chỉ người tạo hoặc admin mới được cập nhật)
+        if ($log-&gt;created_by !== AuthHelper::id() &amp;&amp; !$this-&gt;hasAdminPermission()) {
+            throw new \Exception('Không có quyền cập nhật interaction log này');
+        }
+        
+        DB::beginTransaction();
+        try {
+            $oldData = $log-&gt;toArray();
+            
+            // Cập nhật các trường được phép
+            $updateData = [];
+            $allowedFields = ['description', 'tag_path', 'visibility'];
+            
+            foreach ($allowedFields as $field) {
+                if (array_key_exists($field, $data)) {
+                    $updateData[$field] = $data[$field];
+                }
+            }
+            
+            // Nếu thay đổi visibility thành client, reset client_approved
+            if (isset($updateData['visibility']) &amp;&amp; 
+                $updateData['visibility'] === InteractionLog::VISIBILITY_CLIENT &amp;&amp;
+                $log-&gt;visibility !== InteractionLog::VISIBILITY_CLIENT) {
+                $updateData['client_approved'] = false;
+            }
+            
+            $log-&gt;update($updateData);
+            
+            // Dispatch event nếu có thay đổi
+            if (!empty($updateData)) {
+                EventBus::dispatch('InteractionLog.Updated', [
+                    'log_id' =&gt; $log-&gt;id,
+                    'project_id' =&gt; $log-&gt;project_id,
+                    'linked_task_id' =&gt; $log-&gt;linked_task_id,
+                    'changed_fields' =&gt; array_keys($updateData),
+                    'old_data' =&gt; $oldData,
+                    'new_data' =&gt; $log-&gt;fresh()-&gt;toArray(),
+                    'actor_id' =&gt; AuthHelper::id(),
+                    'timestamp' =&gt; now()
+                ]);
+            }
+            
+            DB::commit();
+            
+            return $log-&gt;fresh(['project', 'linkedTask', 'creator']);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Xóa interaction log với instance
+     * 
+     * @param InteractionLog $log Instance của log
+ </code></pre></div><div class="py-4"><p class="text-gray-600">src/InteractionLogs/Services/InteractionLogService.php (Line 568:9 - Line 602:8), src/InteractionLogs/Services/InteractionLogService.php (Line 162:9 - Line 197:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn24" onclick="toggleCodeBlock('cloneGroup24', 'expandBtn24', 'collapseBtn24')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn24" onclick="toggleCodeBlock('cloneGroup24', 'expandBtn24', 'collapseBtn24')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup24"><code class="language-php text-sm text-gray-800">$log): bool
+    {
+        // Kiểm tra quyền xóa
+        if ($log-&gt;created_by !== AuthHelper::id() &amp;&amp; !$this-&gt;hasAdminPermission()) {
+            throw new \Exception('Không có quyền xóa interaction log này');
+        }
+        
+        DB::beginTransaction();
+        try {
+            // Dispatch event trước khi xóa
+            EventBus::dispatch('InteractionLog.Deleted', [
+                'log_id' =&gt; $log-&gt;id,
+                'project_id' =&gt; $log-&gt;project_id,
+                'linked_task_id' =&gt; $log-&gt;linked_task_id,
+                'type' =&gt; $log-&gt;type,
+                'actor_id' =&gt; AuthHelper::id(),
+                'timestamp' =&gt; now()
+            ]);
+            
+            $result = $log-&gt;delete();
+            
+            DB::commit();
+            
+            return $result;
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Approve log để hiển thị cho client với instance
+     * 
+     * @param InteractionLog $log Instance của log
+     * @ret</code></pre></div><div class="py-4"><p class="text-gray-600">src/InteractionLogs/Services/InteractionLogService.php (Line 605:9 - Line 637:2), src/InteractionLogs/Services/InteractionLogService.php (Line 202:9 - Line 241:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn25" onclick="toggleCodeBlock('cloneGroup25', 'expandBtn25', 'collapseBtn25')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn25" onclick="toggleCodeBlock('cloneGroup25', 'expandBtn25', 'collapseBtn25')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup25"><code class="language-php text-sm text-gray-800">eractionLog
+    {
+        // Kiểm tra quyền approve (chỉ admin hoặc project manager)
+        if (!$this-&gt;hasApprovalPermission($log-&gt;project_id)) {
+            throw new \Exception('Không có quyền approve interaction log này');
+        }
+        
+        // Chỉ approve được log có visibility = client
+        if ($log-&gt;visibility !== InteractionLog::VISIBILITY_CLIENT) {
+            throw new \Exception('Chỉ có thể approve log có visibility là client');
+        }
+        
+        DB::beginTransaction();
+        try {
+            $log-&gt;update(['client_approved' =&gt; true]);
+            
+            // Dispatch event
+            EventBus::dispatch('InteractionLog.ClientApproved', [
+                'log_id' =&gt; $log-&gt;id,
+                'project_id' =&gt; $log-&gt;project_id,
+                'linked_task_id' =&gt; $log-&gt;linked_task_id,
+                'approved_by' =&gt; AuthHelper::id(),
+                'timestamp' =&gt; now()
+            ]);
+            
+            DB::commit();
+            
+            return $log-&gt;fresh(['project', 'linkedTask', 'creator']);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            t</code></pre></div><div class="py-4"><p class="text-gray-600">src/InteractionLogs/Controllers/InteractionLogController.php (Line 258:10 - Line 277:8), src/InteractionLogs/Controllers/InteractionLogController.php (Line 143:18 - Line 165:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn26" onclick="toggleCodeBlock('cloneGroup26', 'expandBtn26', 'collapseBtn26')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn26" onclick="toggleCodeBlock('cloneGroup26', 'expandBtn26', 'collapseBtn26')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup26"><code class="language-php text-sm text-gray-800">(
+                $interactionLog,
+                $request-&gt;validated()
+            );
+
+            return JSendResponse::success(
+                new InteractionLogResource($updatedLog),
+                'Interaction log được cập nhật thành công'
+            );
+        } catch (\Exception $e) {
+            return JSendResponse::error(
+                'Không thể cập nhật interaction log: ' . $e-&gt;getMessage(),
+                500
+            );
+        }
+    }
+
+    /**
+     * Xóa interaction log của project cụ thể
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/DocumentManagement/Requests/StoreDocumentRequest.php (Line 35:17 - Line 62:11), src/DocumentManagement/Requests/UpdateDocumentRequest.php (Line 31:17 - Line 58:12)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn27" onclick="toggleCodeBlock('cloneGroup27', 'expandBtn27', 'collapseBtn27')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn27" onclick="toggleCodeBlock('cloneGroup27', 'expandBtn27', 'collapseBtn27')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup27"><code class="language-php text-sm text-gray-800">'required',
+                'string',
+                'max:255'
+            ],
+            'description' =&gt; [
+                'nullable',
+                'string',
+                'max:2000'
+            ],
+            'linked_entity_type' =&gt; [
+                'nullable',
+                Rule::in(['task', 'diary', 'cr'])
+            ],
+            'linked_entity_id' =&gt; [
+                'nullable',
+                'integer',
+                'required_with:linked_entity_type'
+            ],
+            'tags' =&gt; [
+                'nullable',
+                'array'
+            ],
+            'tags.*' =&gt; [
+                'string',
+                'max:50'
+            ],
+            'visibility' =&gt; [
+                'required'</code></pre></div><div class="py-4"><p class="text-gray-600">src/DocumentManagement/Requests/StoreDocumentRequest.php (Line 94:9 - Line 109:2), src/DocumentManagement/Requests/UpdateDocumentRequest.php (Line 75:9 - Line 90:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn28" onclick="toggleCodeBlock('cloneGroup28', 'expandBtn28', 'collapseBtn28')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn28" onclick="toggleCodeBlock('cloneGroup28', 'expandBtn28', 'collapseBtn28')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup28"><code class="language-php text-sm text-gray-800">];
+    }
+
+    /**
+     * Prepare data for validation
+     */
+    protected function prepareForValidation(): void
+    {
+        // Convert tags string to array if needed
+        if ($this-&gt;has('tags') &amp;&amp; is_string($this-&gt;tags)) {
+            $this-&gt;merge([
+                'tags' =&gt; array_filter(array_map('trim', explode(',', $this-&gt;tags)))
+            ]);
+        }
+    }
+}</code></pre></div><div class="py-4"><p class="text-gray-600">src/DocumentManagement/Listeners/DocumentEventListener.php (Line 10:5 - Line 20:4), src/DocumentManagement/Services/DocumentService.php (Line 9:16 - Line 16:4)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn29" onclick="toggleCodeBlock('cloneGroup29', 'expandBtn29', 'collapseBtn29')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn29" onclick="toggleCodeBlock('cloneGroup29', 'expandBtn29', 'collapseBtn29')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup29"><code class="language-php text-sm text-gray-800">;
+use Src\DocumentManagement\Events\DocumentCreated;
+use Src\DocumentManagement\Events\DocumentUpdated;
+use Src\DocumentManagement\Events\DocumentDeleted;
+use Src\DocumentManagement\Events\DocumentVersionCreated;
+use Src\DocumentManagement\Events\DocumentVersionReverted;
+use Src\DocumentManagement\Events\DocumentApprovedForClient;
+
+/**
+ * Event Listener cho các sự kiện của Document Management
+ */</code></pre></div><div class="py-4"><p class="text-gray-600">src/DocumentManagement/Events/DocumentCreated.php (Line 23:9 - Line 37:2), src/DocumentManagement/Events/DocumentUpdated.php (Line 24:9 - Line 39:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn30" onclick="toggleCodeBlock('cloneGroup30', 'expandBtn30', 'collapseBtn30')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn30" onclick="toggleCodeBlock('cloneGroup30', 'expandBtn30', 'collapseBtn30')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup30"><code class="language-php text-sm text-gray-800">);
+    }
+
+    /**
+     * Lấy payload cho event
+     */
+    public function getPayload(): array
+    {
+        return array_merge(parent::getPayload(), [
+            'document' =&gt; [
+                'id' =&gt; $this-&gt;document-&gt;id,
+                'ulid' =&gt; $this-&gt;document-&gt;ulid,
+                'title' =&gt; $this-&gt;document-&gt;title,
+                'visibility' =&gt; $this-&gt;document-&gt;visibility,
+                'client_approved' =&gt; $this-&gt;document-&gt;client_approved,</code></pre></div><div class="py-4"><p class="text-gray-600">src/DocumentManagement/Events/DocumentApprovedForClient.php (Line 11:2 - Line 21:18), src/DocumentManagement/Events/DocumentCreated.php (Line 11:2 - Line 21:10)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn31" onclick="toggleCodeBlock('cloneGroup31', 'expandBtn31', 'collapseBtn31')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn31" onclick="toggleCodeBlock('cloneGroup31', 'expandBtn31', 'collapseBtn31')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup31"><code class="language-php text-sm text-gray-800">extends BaseEvent
+{
+    public function __construct(
+        public Document $document,
+        public int $userId
+    ) {
+        parent::__construct(
+            entityId: $this-&gt;document-&gt;id,
+            projectId: $this-&gt;document-&gt;project_id,
+            actorId: $this-&gt;userId,
+            changedFields: ['client_approved'</code></pre></div><div class="py-4"><p class="text-gray-600">src/DocumentManagement/Events/DocumentApprovedForClient.php (Line 23:9 - Line 39:2), src/DocumentManagement/Events/DocumentUpdated.php (Line 24:9 - Line 39:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn32" onclick="toggleCodeBlock('cloneGroup32', 'expandBtn32', 'collapseBtn32')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn32" onclick="toggleCodeBlock('cloneGroup32', 'expandBtn32', 'collapseBtn32')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup32"><code class="language-php text-sm text-gray-800">);
+    }
+
+    /**
+     * Lấy payload cho event
+     */
+    public function getPayload(): array
+    {
+        return array_merge(parent::getPayload(), [
+            'document' =&gt; [
+                'id' =&gt; $this-&gt;document-&gt;id,
+                'ulid' =&gt; $this-&gt;document-&gt;ulid,
+                'title' =&gt; $this-&gt;document-&gt;title,
+                'visibility' =&gt; $this-&gt;document-&gt;visibility,
+                'client_approved' =&gt; $this-&gt;document-&gt;client_approved
+            ]
+        ]</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Services/WorkTemplateApplicationService.php (Line 37:13 - Line 70:8), src/WorkTemplate/Services/TemplateService.php (Line 484:2 - Line 507:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn33" onclick="toggleCodeBlock('cloneGroup33', 'expandBtn33', 'collapseBtn33')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn33" onclick="toggleCodeBlock('cloneGroup33', 'expandBtn33', 'collapseBtn33')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup33"><code class="language-php text-sm text-gray-800">;
+    }
+    
+    /**
+     * Resolve actor ID từ Auth facade với fallback an toàn
+     * 
+     * @return string|int
+     */
+    private function resolveActorId()
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+            return 'system';
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from Auth facade', [
+                'error' =&gt; $e-&gt;getMessage(),
+                'trace' =&gt; $e-&gt;getTraceAsString()
+            ]);
+            return 'system';
+        }
+    }
+    
+    /**
+     * Áp dụng work template vào project
+     * 
+     * @param WorkTemplate $template Template cần áp dụng
+     * @param Project $project Project đích
+     * @param Component|null $component Component đích (optional)
+     * @param array $options Tùy chọn bổ sung
+     * @return array Kết quả áp dụng template
+     * @throws ValidationException
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Services/TaskService.php (Line 348:9 - Line 358:21), src/CoreProject/Services/TaskService.php (Line 319:9 - Line 329:18)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn34" onclick="toggleCodeBlock('cloneGroup34', 'expandBtn34', 'collapseBtn34')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn34" onclick="toggleCodeBlock('cloneGroup34', 'expandBtn34', 'collapseBtn34')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup34"><code class="language-php text-sm text-gray-800">sk $task): void
+    {
+        // Validate status
+        if (isset($data['status']) &amp;&amp; !in_array($data['status'], Task::VALID_STATUSES)) {
+            throw new \InvalidArgumentException('Trạng thái không hợp lệ.');
+        }
+        
+        // Validate priority
+        if (isset($data['priority']) &amp;&amp; !in_array($data['priority'], Task::VALID_PRIORITIES)) {
+            throw new \InvalidArgumentException('Độ ưu tiên không hợp lệ.');
+        }
+       </code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Services/ComponentService.php (Line 22:1 - Line 48:8), src/CoreProject/Services/ProjectService.php (Line 28:1 - Line 53:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn35" onclick="toggleCodeBlock('cloneGroup35', 'expandBtn35', 'collapseBtn35')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn35" onclick="toggleCodeBlock('cloneGroup35', 'expandBtn35', 'collapseBtn35')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup35"><code class="language-php text-sm text-gray-800">{
+    /**
+     * Resolve actor ID từ auth helper với fallback an toàn
+     * 
+     * @return string|int
+     */
+    private function resolveActorId()
+    {
+        try {
+            return AuthHelper::idOrSystem();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from auth helper', [
+                'error' =&gt; $e-&gt;getMessage(),
+                'trace' =&gt; $e-&gt;getTraceAsString()
+            ]);
+            return 'system';
+        }
+    }
+    
+    /**
+     * Tạo component mới cho project
+     *
+     * @param string $projectId
+     * @param array $data
+     * @return Component
+     * @throws Exception
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Resources/ProjectResource.php (Line 11:2 - Line 26:14), src/CoreProject/Resources/UserResource.php (Line 11:2 - Line 26:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn36" onclick="toggleCodeBlock('cloneGroup36', 'expandBtn36', 'collapseBtn36')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn36" onclick="toggleCodeBlock('cloneGroup36', 'expandBtn36', 'collapseBtn36')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup36"><code class="language-php text-sm text-gray-800">extends BaseApiResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    public function toArray($request): array
+    {
+        return [
+            'id' =&gt; $this-&gt;id,
+            'ulid' =&gt; $this-&gt;formatUlid($this-&gt;ulid),
+            'tenant_id' =&gt; $this-&gt;tenant_id,
+            'name' =&gt; $this-&gt;name,
+            'description'</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Requests/UpdateProjectRequest.php (Line 71:13 - Line 98:6), src/CoreProject/Requests/UpdateTaskRequest.php (Line 130:13 - Line 157:37)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn37" onclick="toggleCodeBlock('cloneGroup37', 'expandBtn37', 'collapseBtn37')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn37" onclick="toggleCodeBlock('cloneGroup37', 'expandBtn37', 'collapseBtn37')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup37"><code class="language-php text-sm text-gray-800">],
+            'tags' =&gt; [
+                'nullable',
+                'array'
+            ],
+            'tags.*' =&gt; [
+                'string',
+                'max:50'
+            ],
+            'visibility' =&gt; [
+                'nullable',
+                'string',
+                'in:internal,client'
+            ],
+            'client_approved' =&gt; [
+                'nullable',
+                'boolean'
+            ]
+        ];
+    }
+
+    /**
+     * Validation sau khi rules cơ bản đã pass
+     */
+    public function withValidator($validator)
+    {
+        $validator-&gt;after(function ($validator) {
+            $this</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Requests/UpdateComponentRequest.php (Line 72:2 - Line 110:8), src/CoreProject/Requests/UpdateProjectRequest.php (Line 56:2 - Line 94:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn38" onclick="toggleCodeBlock('cloneGroup38', 'expandBtn38', 'collapseBtn38')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn38" onclick="toggleCodeBlock('cloneGroup38', 'expandBtn38', 'collapseBtn38')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup38"><code class="language-php text-sm text-gray-800">=&gt; [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:100'
+            ],
+            'planned_cost' =&gt; [
+                'nullable',
+                'numeric',
+                'min:0'
+            ],
+            'actual_cost' =&gt; [
+                'nullable',
+                'numeric',
+                'min:0'
+            ],
+            'tags' =&gt; [
+                'nullable',
+                'array'
+            ],
+            'tags.*' =&gt; [
+                'string',
+                'max:50'
+            ],
+            'visibility' =&gt; [
+                'nullable',
+                'string',
+                'in:internal,client'
+            ],
+            'client_approved' =&gt; [
+                'nullable',
+                'boolean'
+            ]
+        ];
+    }
+
+    /**
+     * Kiểm tra xem việc thay đổi parent có tạo vòng lặp không
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Requests/StoreWorkTemplateRequest.php (Line 42:17 - Line 71:10), src/CoreProject/Requests/UpdateWorkTemplateRequest.php (Line 47:17 - Line 76:12)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn39" onclick="toggleCodeBlock('cloneGroup39', 'expandBtn39', 'collapseBtn39')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn39" onclick="toggleCodeBlock('cloneGroup39', 'expandBtn39', 'collapseBtn39')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup39"><code class="language-php text-sm text-gray-800">'required',
+                'array'
+            ],
+            'template_data.tasks' =&gt; [
+                'nullable',
+                'array'
+            ],
+            'template_data.tasks.*.name' =&gt; [
+                'required_with:template_data.tasks',
+                'string',
+                'max:255'
+            ],
+            'template_data.tasks.*.description' =&gt; [
+                'nullable',
+                'string'
+            ],
+            'template_data.tasks.*.estimated_hours' =&gt; [
+                'nullable',
+                'numeric',
+                'min:0'
+            ],
+            'template_data.tasks.*.dependencies' =&gt; [
+                'nullable',
+                'array'
+            ],
+            'template_data.metadata' =&gt; [
+                'nullable',
+                'array'
+            ],
+            'version'</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Requests/StoreWorkTemplateRequest.php (Line 98:13 - Line 127:2), src/CoreProject/Requests/UpdateWorkTemplateRequest.php (Line 99:17 - Line 130:65)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn40" onclick="toggleCodeBlock('cloneGroup40', 'expandBtn40', 'collapseBtn40')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn40" onclick="toggleCodeBlock('cloneGroup40', 'expandBtn40', 'collapseBtn40')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup40"><code class="language-php text-sm text-gray-800">$templateData = $this-&gt;input('template_data', []);
+            
+            if (isset($templateData['tasks']) &amp;&amp; is_array($templateData['tasks'])) {
+                $taskNames = [];
+                foreach ($templateData['tasks'] as $index =&gt; $task) {
+                    // Kiểm tra tên task trùng lặp
+                    if (isset($task['name'])) {
+                        if (in_array($task['name'], $taskNames)) {
+                            $validator-&gt;errors()-&gt;add(
+                                &quot;template_data.tasks.{$index}.name&quot;,
+                                'Tên task bị trùng lặp trong template.'
+                            );
+                        }
+                        $taskNames[] = $task['name'];
+                    }
+                    
+                    // Kiểm tra dependencies hợp lệ
+                    if (isset($task['dependencies']) &amp;&amp; is_array($task['dependencies'])) {
+                        foreach ($task['dependencies'] as $depIndex =&gt; $dependency) {
+                            if (!is_string($dependency)) {
+                                $validator-&gt;errors()-&gt;add(
+                                    &quot;template_data.tasks.{$index}.dependencies.{$depIndex}&quot;,
+                                    'Dependency phải là chuỗi tên task.'
+                                );
+                            }
+</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Requests/StoreComponentRequest.php (Line 54:20 - Line 99:8), src/CoreProject/Requests/UpdateComponentRequest.php (Line 65:2 - Line 94:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn41" onclick="toggleCodeBlock('cloneGroup41', 'expandBtn41', 'collapseBtn41')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn41" onclick="toggleCodeBlock('cloneGroup41', 'expandBtn41', 'collapseBtn41')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup41"><code class="language-php text-sm text-gray-800">)
+            ],
+            'description' =&gt; [
+                'nullable',
+                'string',
+                'max:1000'
+            ],
+            'progress_percent' =&gt; [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:100'
+            ],
+            'planned_cost' =&gt; [
+                'nullable',
+                'numeric',
+                'min:0'
+            ],
+            'actual_cost' =&gt; [
+                'nullable',
+                'numeric',
+                'min:0'
+            ],
+            'tags' =&gt; [
+                'nullable',
+                'array'
+            ],
+            'tags.*' =&gt; [
+                'string',
+                'max:50'
+            ],
+            'visibility' =&gt; [
+                'nullable',
+                'string',
+                'in:internal,client'
+            ],
+            'client_approved' =&gt; [
+                'nullable',
+                'boolean'
+            ]
+        ];
+    }
+
+    /**
+     * Chuẩn bị dữ liệu trước khi validation
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Models/WorkTemplate.php (Line 164:2 - Line 187:2), src/WorkTemplate/Services/TemplateService.php (Line 484:2 - Line 507:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn42" onclick="toggleCodeBlock('cloneGroup42', 'expandBtn42', 'collapseBtn42')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn42" onclick="toggleCodeBlock('cloneGroup42', 'expandBtn42', 'collapseBtn42')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup42"><code class="language-php text-sm text-gray-800">);
+    }
+
+    /**
+     * Resolve actor ID từ Auth facade với fallback an toàn
+     * 
+     * @return string|int
+     */
+    private function resolveActorId()
+    {
+        try {
+            if (AuthHelper::check()) {
+                return AuthHelper::id();
+            }
+            return 'system';
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve actor ID from Auth facade', [
+                'error' =&gt; $e-&gt;getMessage(),
+                'trace' =&gt; $e-&gt;getTraceAsString()
+            ]);
+            return 'system';
+        }
+    }
+}</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Models/Baseline.php (Line 68:10 - Line 91:8), src/DocumentManagement/Models/Document.php (Line 88:10 - Line 111:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn43" onclick="toggleCodeBlock('cloneGroup43', 'expandBtn43', 'collapseBtn43')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn43" onclick="toggleCodeBlock('cloneGroup43', 'expandBtn43', 'collapseBtn43')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup43"><code class="language-php text-sm text-gray-800">,
+        'created_at' =&gt; 'datetime',
+        'updated_at' =&gt; 'datetime',
+    ];
+
+    /**
+     * Quan hệ với Project
+     */
+    public function project(): BelongsTo
+    {
+        return $this-&gt;belongsTo(Project::class);
+    }
+
+    /**
+     * Quan hệ với User (người tạo)
+     */
+    public function creator(): BelongsTo
+    {
+        return $this-&gt;belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Quan hệ với ChangeRequest (contract liên quan)
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Middleware/ProjectAccessMiddleware.php (Line 143:4 - Line 179:8), src/CoreProject/Middleware/ProjectOwnershipMiddleware.php (Line 96:11 - Line 126:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn44" onclick="toggleCodeBlock('cloneGroup44', 'expandBtn44', 'collapseBtn44')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn44" onclick="toggleCodeBlock('cloneGroup44', 'expandBtn44', 'collapseBtn44')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup44"><code class="language-php text-sm text-gray-800">           'message' =&gt; $message
+        ], 400);
+    }
+    
+    /**
+     * Return unauthorized response
+     * 
+     * @param string $message
+     * @return Response
+     */
+    private function unauthorizedResponse(string $message): Response
+    {
+        return response()-&gt;json([
+            'status' =&gt; 'error',
+            'message' =&gt; $message
+        ], 401);
+    }
+    
+    /**
+     * Return forbidden response
+     * 
+     * @param string $message
+     * @return Response
+     */
+    private function forbiddenResponse(string $message): Response
+    {
+        return response()-&gt;json([
+            'status' =&gt; 'error',
+            'message' =&gt; $message
+        ], 403);
+    }
+    
+    /**
+     * Return not found response
+     * 
+     * @param </code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Middleware/ProjectAccessMiddleware.php (Line 157:4 - Line 187:2), src/CoreProject/Middleware/TaskAccessMiddleware.php (Line 97:4 - Line 127:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn45" onclick="toggleCodeBlock('cloneGroup45', 'expandBtn45', 'collapseBtn45')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn45" onclick="toggleCodeBlock('cloneGroup45', 'expandBtn45', 'collapseBtn45')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup45"><code class="language-php text-sm text-gray-800">           'message' =&gt; $message
+        ], 401);
+    }
+    
+    /**
+     * Return forbidden response
+     * 
+     * @param string $message
+     * @return Response
+     */
+    private function forbiddenResponse(string $message): Response
+    {
+        return response()-&gt;json([
+            'status' =&gt; 'error',
+            'message' =&gt; $message
+        ], 403);
+    }
+    
+    /**
+     * Return not found response
+     * 
+     * @param string $message
+     * @return Response
+     */
+    private function notFoundResponse(string $message): Response
+    {
+        return response()-&gt;json([
+            'status' =&gt; 'error',
+           </code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Middleware/ComponentAccessMiddleware.php (Line 70:9 - Line 116:2), src/CoreProject/Middleware/TaskAccessMiddleware.php (Line 81:9 - Line 127:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn46" onclick="toggleCodeBlock('cloneGroup46', 'expandBtn46', 'collapseBtn46')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn46" onclick="toggleCodeBlock('cloneGroup46', 'expandBtn46', 'collapseBtn46')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup46"><code class="language-php text-sm text-gray-800">]);
+        
+        return $next($request);
+    }
+    
+    /**
+     * Return bad request response
+     * 
+     * @param string $message
+     * @return Response
+     */
+    private function badRequestResponse(string $message): Response
+    {
+        return response()-&gt;json([
+            'status' =&gt; 'error',
+            'message' =&gt; $message
+        ], 400);
+    }
+    
+    /**
+     * Return forbidden response
+     * 
+     * @param string $message
+     * @return Response
+     */
+    private function forbiddenResponse(string $message): Response
+    {
+        return response()-&gt;json([
+            'status' =&gt; 'error',
+            'message' =&gt; $message
+        ], 403);
+    }
+    
+    /**
+     * Return not found response
+     * 
+     * @param string $message
+     * @return Response
+     */
+    private function notFoundResponse(string $message): Response
+    {
+        return response()-&gt;json([
+            'status' =&gt; 'error',
+            'message' =&gt; $message
+        ], 404);
+    }
+}</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Listeners/ConditionalTagListener.php (Line 60:13 - Line 73:2), src/CoreProject/Listeners/ConditionalTagListener.php (Line 34:13 - Line 53:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn47" onclick="toggleCodeBlock('cloneGroup47', 'expandBtn47', 'collapseBtn47')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn47" onclick="toggleCodeBlock('cloneGroup47', 'expandBtn47', 'collapseBtn47')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup47"><code class="language-php text-sm text-gray-800">;
+            
+            // Xử lý lại conditional tags khi project tags thay đổi
+            $this-&gt;conditionalTagService-&gt;processProjectConditionalTags($projectId);
+            
+            Log::info(&quot;Conditional tags reprocessed after project tags update&quot;, [
+                'project_id' =&gt; $projectId
+            ]);
+            
+        } catch (\Exception $e) {
+            Log</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Events/BaselineCreated.php (Line 42:27 - Line 56:16), src/CoreProject/Events/BaselineUpdated.php (Line 46:27 - Line 60:17)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn48" onclick="toggleCodeBlock('cloneGroup48', 'expandBtn48', 'collapseBtn48')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn48" onclick="toggleCodeBlock('cloneGroup48', 'expandBtn48', 'collapseBtn48')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup48"><code class="language-php text-sm text-gray-800">;
+    }
+
+    /**
+     * Lấy payload đầy đủ của event
+     */
+    public function getPayload(): array
+    {
+        return [
+            'baseline_id' =&gt; $this-&gt;baselineId,
+            'project_id' =&gt; $this-&gt;projectId,
+            'type' =&gt; $this-&gt;type,
+            'version' =&gt; $this-&gt;version,
+            'actor_id' =&gt; $this-&gt;actorId,
+            'baseline_data'</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Controllers/TaskAssignmentController.php (Line 184:8 - Line 194:12), src/CoreProject/Controllers/TaskAssignmentController.php (Line 103:5 - Line 143:16)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn49" onclick="toggleCodeBlock('cloneGroup49', 'expandBtn49', 'collapseBtn49')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn49" onclick="toggleCodeBlock('cloneGroup49', 'expandBtn49', 'collapseBtn49')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup49"><code class="language-php text-sm text-gray-800">(string $projectId, string $taskId, string $assignmentId): JsonResponse
+    {
+        try {
+            $assignment = TaskAssignment::where('id', $assignmentId)
+                -&gt;where('task_id', $taskId)
+                -&gt;whereHas('task', function ($query) use ($projectId) {
+                    $query-&gt;where('project_id', $projectId);
+                })
+                -&gt;firstOrFail();
+
+            $assignment</code></pre></div><div class="py-4"><p class="text-gray-600">src/CoreProject/Controllers/BaselineController.php (Line 257:18 - Line 267:7), src/CoreProject/Controllers/BaselineController.php (Line 82:6 - Line 92:13)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn50" onclick="toggleCodeBlock('cloneGroup50', 'expandBtn50', 'collapseBtn50')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn50" onclick="toggleCodeBlock('cloneGroup50', 'expandBtn50', 'collapseBtn50')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup50"><code class="language-php text-sm text-gray-800">(Request $request, string $projectId): JsonResponse
+    {
+        try {
+            // Kiểm tra quyền
+            if (!$this-&gt;hasPermission($request, 'baseline.create', $projectId)) {
+                return JSendResponse::error('Không có quyền tạo baseline', 403);
+            }
+            
+            $validator = Validator::make($request-&gt;all(), [
+                'type' =&gt; 'required|in:contract,execution',
+                'note'</code></pre></div><div class="py-4"><p class="text-gray-600">src/Compensation/Resources/TaskCompensationCollection.php (Line 11:2 - Line 29:2), src/DocumentManagement/Resources/DocumentCollection.php (Line 11:2 - Line 30:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn51" onclick="toggleCodeBlock('cloneGroup51', 'expandBtn51', 'collapseBtn51')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn51" onclick="toggleCodeBlock('cloneGroup51', 'expandBtn51', 'collapseBtn51')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup51"><code class="language-php text-sm text-gray-800">extends ResourceCollection
+{
+    /**
+     * Transform the resource collection into an array.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return array
+     */
+    public function toArray($request): array
+    {
+        return [
+            'data' =&gt; $this-&gt;collection,
+            'meta' =&gt; [
+                'total' =&gt; $this-&gt;total(),
+                'count' =&gt; $this-&gt;count(),
+                'per_page' =&gt; $this-&gt;perPage(),
+                'current_page' =&gt; $this-&gt;currentPage(),
+                'total_pages' =&gt; $this-&gt;lastPage(),
+                'has_more_pages' =&gt; $this-&gt;hasMorePages(),</code></pre></div><div class="py-4"><p class="text-gray-600">src/Compensation/Requests/ApplyContractRequest.php (Line 12:2 - Line 45:2), src/Compensation/Requests/PreviewCompensationRequest.php (Line 12:2 - Line 46:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn52" onclick="toggleCodeBlock('cloneGroup52', 'expandBtn52', 'collapseBtn52')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn52" onclick="toggleCodeBlock('cloneGroup52', 'expandBtn52', 'collapseBtn52')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup52"><code class="language-php text-sm text-gray-800">extends FormRequest
+{
+    /**
+     * Xác định user có quyền thực hiện request này không
+     */
+    public function authorize(): bool
+    {
+        return true; // Authorization được xử lý bởi RBAC middleware
+    }
+
+    /**
+     * Các quy tắc validation cho request
+     */
+    public function rules(): array
+    {
+        return [
+            'project_id' =&gt; [
+                'required',
+                'integer',
+                'exists:projects,id'
+            ],
+            'contract_id' =&gt; [
+                'required',
+                'integer',
+                'exists:contracts,id'
+            ],
+            'task_ids' =&gt; [
+                'nullable',
+                'array'
+            ],
+            'task_ids.*' =&gt; [
+                'integer',
+                'exists:tasks,id'
+            ],</code></pre></div><div class="py-4"><p class="text-gray-600">src/Common/Services/AuditService.php (Line 216:2 - Line 230:7), src/Common/Services/AuditService.php (Line 172:2 - Line 186:11)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn53" onclick="toggleCodeBlock('cloneGroup53', 'expandBtn53', 'collapseBtn53')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn53" onclick="toggleCodeBlock('cloneGroup53', 'expandBtn53', 'collapseBtn53')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup53"><code class="language-php text-sm text-gray-800">);
+
+        if ($tenantId) {
+            $query-&gt;where('tenant_id', $tenantId);
+        }
+
+        if ($startDate) {
+            $query-&gt;where('created_at', '&gt;=', $startDate);
+        }
+
+        if ($endDate) {
+            $query-&gt;where('created_at', '&lt;=', $endDate);
+        }
+
+        return</code></pre></div><div class="py-4"><p class="text-gray-600">src/ChangeRequest/Requests/StoreChangeRequestRequest.php (Line 96:17 - Line 141:2), src/ChangeRequest/Requests/UpdateChangeRequestRequest.php (Line 106:17 - Line 151:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn54" onclick="toggleCodeBlock('cloneGroup54', 'expandBtn54', 'collapseBtn54')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn54" onclick="toggleCodeBlock('cloneGroup54', 'expandBtn54', 'collapseBtn54')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup54"><code class="language-php text-sm text-gray-800">'required',
+                Rule::in(['internal', 'client'])
+            ]
+        ];
+    }
+
+    /**
+     * Thông báo lỗi tùy chỉnh
+     */
+    public function messages(): array
+    {
+        return [
+            'title.required' =&gt; 'Tiêu đề change request là bắt buộc',
+            'title.max' =&gt; 'Tiêu đề không được vượt quá 255 ký tự',
+            'description.required' =&gt; 'Mô tả change request là bắt buộc',
+            'description.max' =&gt; 'Mô tả không được vượt quá 5000 ký tự',
+            'impact_days.integer' =&gt; 'Số ngày ảnh hưởng phải là số nguyên',
+            'impact_days.min' =&gt; 'Số ngày ảnh hưởng không được âm',
+            'impact_days.max' =&gt; 'Số ngày ảnh hưởng không được vượt quá 365 ngày',
+            'impact_cost.numeric' =&gt; 'Chi phí ảnh hưởng phải là số',
+            'impact_cost.min' =&gt; 'Chi phí ảnh hưởng không được âm',
+            'priority.required' =&gt; 'Mức độ ưu tiên là bắt buộc',
+            'priority.in' =&gt; 'Mức độ ưu tiên không hợp lệ',
+            'visibility.required' =&gt; 'Mức độ hiển thị là bắt buộc',
+            'visibility.in' =&gt; 'Mức độ hiển thị không hợp lệ'
+        ];
+    }
+
+    /**
+     * Chuẩn bị dữ liệu trước khi validation
+     */
+    protected function prepareForValidation(): void
+    {
+        // Chuyển đổi tags thành array nếu là string
+        if ($this-&gt;has('tags') &amp;&amp; is_string($this-&gt;tags)) {
+            $this-&gt;merge([
+                'tags' =&gt; array_filter(array_map('trim', explode(',', $this-&gt;tags)))
+            ]);
+        }
+
+        // Đảm bảo impact_kpi là array
+        if ($this-&gt;has('impact_kpi') &amp;&amp; !is_array($this-&gt;impact_kpi)) {
+            $this-&gt;merge(['impact_kpi' =&gt; []]);
+        }
+    }
+}</code></pre></div><div class="py-4"><p class="text-gray-600">src/ChangeRequest/Models/ChangeRequest.php (Line 91:11 - Line 114:8), src/DocumentManagement/Models/Document.php (Line 88:10 - Line 111:8)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn55" onclick="toggleCodeBlock('cloneGroup55', 'expandBtn55', 'collapseBtn55')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn55" onclick="toggleCodeBlock('cloneGroup55', 'expandBtn55', 'collapseBtn55')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup55"><code class="language-php text-sm text-gray-800">,
+        'created_at' =&gt; 'datetime',
+        'updated_at' =&gt; 'datetime',
+    ];
+
+    /**
+     * Quan hệ với Project
+     */
+    public function project(): BelongsTo
+    {
+        return $this-&gt;belongsTo(Project::class);
+    }
+
+    /**
+     * Quan hệ với User (người tạo)
+     */
+    public function creator(): BelongsTo
+    {
+        return $this-&gt;belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Quan hệ với User (người quyết định)
+     */</code></pre></div><div class="py-4"><p class="text-gray-600">src/ChangeRequest/Events/ChangeRequestUpdated.php (Line 36:5 - Line 56:38), src/Notification/Events/NotificationRuleUpdated.php (Line 36:5 - Line 56:40)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn56" onclick="toggleCodeBlock('cloneGroup56', 'expandBtn56', 'collapseBtn56')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn56" onclick="toggleCodeBlock('cloneGroup56', 'expandBtn56', 'collapseBtn56')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup56"><code class="language-php text-sm text-gray-800">public function __construct(
+        string $entityId,
+        string $projectId,
+        string $actorId,
+        array $oldData,
+        array $newData,
+        array $changedFields = []
+    ) {
+        parent::__construct($entityId, $projectId, $actorId, $changedFields);
+        $this-&gt;oldData = $oldData;
+        $this-&gt;newData = $newData;
+    }
+    
+    /**
+     * Lấy tên sự kiện theo format Domain.Entity.Action
+     * 
+     * @return string
+     */
+    public function getEventName(): string
+    {
+        return 'ChangeRequest.ChangeRequest.Updated'</code></pre></div><div class="py-4"><p class="text-gray-600">src/ChangeRequest/Events/ChangeRequestCreated.php (Line 28:5 - Line 46:38), src/ChangeRequest/Events/ChangeRequestSubmitted.php (Line 28:5 - Line 46:40)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn57" onclick="toggleCodeBlock('cloneGroup57', 'expandBtn57', 'collapseBtn57')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn57" onclick="toggleCodeBlock('cloneGroup57', 'expandBtn57', 'collapseBtn57')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup57"><code class="language-php text-sm text-gray-800">public function __construct(
+        string $entityId,
+        string $projectId,
+        string $actorId,
+        array $changeRequestData,
+        array $changedFields = []
+    ) {
+        parent::__construct($entityId, $projectId, $actorId, $changedFields);
+        $this-&gt;changeRequestData = $changeRequestData;
+    }
+    
+    /**
+     * Lấy tên sự kiện theo format Domain.Entity.Action
+     * 
+     * @return string
+     */
+    public function getEventName(): string
+    {
+        return 'ChangeRequest.ChangeRequest.Created'</code></pre></div><div class="py-4"><p class="text-gray-600">src/ChangeRequest/Controllers/ChangeRequestController.php (Line 310:2 - Line 340:2), src/Compensation/Controllers/CompensationController.php (Line 285:2 - Line 315:2)</p><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2" id="expandBtn58" onclick="toggleCodeBlock('cloneGroup58', 'expandBtn58', 'collapseBtn58')">Show code</button><button class="bg-gray-500 text-white px-1 py-0.5 text-xs rounded focus:outline-none ml-2 hidden" id="collapseBtn58" onclick="toggleCodeBlock('cloneGroup58', 'expandBtn58', 'collapseBtn58')">Hide code</button><pre class="bg-gray-100 border border-gray-200 p-4 rounded mt-2 hidden" id="cloneGroup58"><code class="language-php text-sm text-gray-800">. $e-&gt;getMessage());
+        }
+    }
+
+    /**
+     * Resolve the current actor ID for audit trails
+     * Uses Auth facade instead of auth() helper for better testability
+     *
+     * @return string|int The actor ID or 'system' as fallback
+     */
+    private function resolveActorId()
+    {
+        try {
+            // Check if user is authenticated using Auth facade
+            if (AuthHelper::check()) {
+                return AuthHelper::idOrSystem();
+            }
+        } catch (\Throwable $e) {
+            // Log the error for debugging in non-production environments
+            if (config('app.debug')) {
+                \Log::warning('Controller: Unable to resolve actor ID', [
+                    'error' =&gt; $e-&gt;getMessage(),
+                    'controller' =&gt; static::class
+                ]);
+            }
+        }
+        
+        // Fallback to 'system' for test environments or when auth is unavailable
+        return 'system';
+    }
+}</code></pre></div><!-- Add more clone groups for .txt format as needed         // Add more clone groups for .txt format as needed--></div><a name="json-clones"></a><h2 class="text-2xl font-semibold text-gray-700 mb-4">json</h2><div class="divide-y divide-gray-200 border-b-2"><!-- Add more clone groups for .txt format as needed         // Add more clone groups for .txt format as needed--></div></section><!-- Add more sections for other formats and clone groups as needed--></main><footer class="bg-white shadow mt-8 py-4"><div class="container mx-auto px-4 text-center"><p class="text-sm text-gray-600">This report is generated by jscpd, an open-source copy/paste detector.</p><p class="text-sm text-gray-600">jscpd is licensed under the MIT License.</p><a class="text-blue-500 text-sm" href="https://github.com/kucherenko/jscpd" target="_blank" rel="noopener noreferrer">View jscpd on GitHub</a></div></footer><script src="js/prism.js"></script><script>function toggleCodeBlock(codeBlockId, expandBtnId, collapseBtnId) {
+  const codeBlock = document.getElementById(codeBlockId);
+  const expandBtn = document.getElementById(expandBtnId);
+  const collapseBtn = document.getElementById(collapseBtnId);
+
+  codeBlock.classList.toggle('hidden');
+  expandBtn.classList.toggle('hidden');
+  collapseBtn.classList.toggle('hidden');
+}</script></body></html>

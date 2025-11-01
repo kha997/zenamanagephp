@@ -1,40 +1,70 @@
-<?php declare(strict_types=1);
+<?php
+
+use Illuminate\Support\Str;
 
 return [
-    'default' => env('CACHE_DRIVER', 'redis'),
-
+    'default' => env('CACHE_DRIVER', 'file'),
+    
     'stores' => [
-        'redis' => [
-            'driver' => 'redis',
-            'connection' => 'cache',
-            'lock_connection' => 'default',
+        'array' => [
+            'driver' => 'array',
         ],
-
+        
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
         ],
-
-        // Dedicated cache store for sessions
-        'session' => [
-            'driver' => 'redis',
-            'connection' => 'session',
+        
+        'redis' => [
+            'client' => env('REDIS_CLIENT', 'phpredis'),
+            'options' => [
+                'cluster' => env('REDIS_CLUSTER', 'redis'),
+                'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
+            ],
+            'default' => [
+                'url' => env('REDIS_URL'),
+                'host' => env('REDIS_HOST', '127.0.0.1'),
+                'password' => env('REDIS_PASSWORD'),
+                'port' => env('REDIS_PORT', '6379'),
+                'database' => env('REDIS_DB', '0'),
+            ],
         ],
-
-        // Dedicated cache store for user data
-        'users' => [
+        
+        'redis_session' => [
             'driver' => 'redis',
-            'connection' => 'users',
-            'prefix' => 'zena_users',
+            'connection' => 'default',
         ],
-
-        // Dedicated cache store for projects
-        'projects' => [
+        
+        'redis_queue' => [
             'driver' => 'redis',
-            'connection' => 'projects',
-            'prefix' => 'zena_projects',
+            'connection' => 'default',
+        ],
+        
+        'database' => [
+            'driver' => 'database',
+            'table' => 'cache',
+            'connection' => null,
+        ],
+        
+        'memcached' => [
+            'driver' => 'memcached',
+            'persistent_id' => env('MEMCACHED_PERSISTENT_ID'),
+            'sasl' => [
+                env('MEMCACHED_USERNAME'),
+                env('MEMCACHED_PASSWORD'),
+            ],
+            'options' => [
+                // Memcached::OPT_CONNECT_TIMEOUT => 2000,
+            ],
+            'servers' => [
+                [
+                    'host' => env('MEMCACHED_HOST', '127.0.0.1'),
+                    'port' => env('MEMCACHED_PORT', 11211),
+                    'weight' => 100,
+                ],
+            ],
         ],
     ],
-
-    'prefix' => env('CACHE_PREFIX', 'zena_cache'),
+    
+    'prefix' => env('CACHE_PREFIX', 'zenamanage_cache'),
 ];

@@ -1,32 +1,44 @@
-import { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
-import { usePermissions } from '@/hooks/usePermissions'
-import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuthStore } from '@/store/auth';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface AdminRouteProps {
-  children: ReactNode
+  children: React.ReactNode;
+  fallbackPath?: string;
 }
 
-/**
- * Component bảo vệ admin route - chỉ cho phép admin truy cập
- * Sử dụng RBAC để kiểm tra quyền admin
- */
-export function AdminRoute({ children }: AdminRouteProps) {
-  const { can, isLoading } = usePermissions()
+const ADMIN_ROLE_NAMES = new Set(['admin', 'super_admin', 'Admin', 'SuperAdmin']);
 
-  // Hiển thị loading trong khi kiểm tra permissions
+const AdminRoute: React.FC<AdminRouteProps> = ({ children, fallbackPath = '/unauthorized' }) => {
+  const { user, isAuthenticated, isLoading } = useAuthStore();
+  const location = useLocation();
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
-    )
+    );
   }
 
-  // Kiểm tra quyền admin system
-  if (!can('system.admin')) {
-    return <Navigate to="/" replace />
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
 
-  return <>{children}</>
-}
+  const normalizedRoles = Array.isArray(user.roles)
+    ? user.roles
+        .map((role) => (typeof role === 'string' ? role : role?.name))
+        .filter(Boolean)
+    : [];
+
+  const hasAdminRole = normalizedRoles.some((role) => role && ADMIN_ROLE_NAMES.has(role));
+
+  if (!hasAdminRole) {
+    return <Navigate to={fallbackPath} replace />;
+  }
+
+  return <>{children}</>;
+};
+
+export default AdminRoute;

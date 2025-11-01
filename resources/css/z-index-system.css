@@ -1,0 +1,112 @@
+/* Z-Index System - Standardized Layering */
+/* 
+ * This file defines a consistent z-index hierarchy for the entire application.
+ * All components should use these semantic classes instead of arbitrary z-index values.
+ * 
+ * Hierarchy (from lowest to highest):
+ * - Base: 0-10 (background elements, content)
+ * - Navigation: 20-30 (nav bars, breadcrumbs)
+ * - Dropdowns: 40-50 (menus, selects, tooltips)
+ * - Overlays: 60-70 (modals, drawers, notifications)
+ * - Critical: 80-90 (loading screens, error states)
+ * - Debug: 100+ (development tools)
+ */
+
+/* Base Layer (0-10) */
+.z-base { z-index: 0; }
+.z-content { z-index: 1; }
+.z-elevated { z-index: 2; }
+.z-sticky { z-index: 10; }
+
+/* Navigation Layer (20-30) */
+.z-nav { z-index: 20; }
+.z-nav-sticky { z-index: 25; }
+.z-nav-fixed { z-index: 30; }
+
+/* Dropdown Layer (40-50) */
+.z-dropdown { z-index: 40; }
+.z-dropdown-menu { z-index: 45; }
+.z-dropdown-user { z-index: 50; }
+
+/* Overlay Layer (60-70) */
+.z-overlay { z-index: 60; }
+.z-modal { z-index: 65; }
+.z-drawer { z-index: 70; }
+
+/* Critical Layer (80-90) */
+.z-critical { z-index: 80; }
+.z-loading { z-index: 85; }
+.z-error { z-index: 90; }
+
+/* Debug Layer (100+) */
+.z-debug { z-index: 100; }
+
+/* Specific Component Classes */
+.z-header { z-index: 30; }
+.z-header-dropdown { z-index: 50; }
+.z-notification { z-index: 45; }
+.z-focus-mode { z-index: 40; }
+.z-mobile-fab { z-index: 60; }
+.z-mobile-nav { z-index: 70; }
+.z-admin-header { z-index: 30; }
+.z-admin-dropdown { z-index: 50; }
+
+/* Modal System */
+.z-modal-backdrop { z-index: 60; }
+.z-modal-content { z-index: 65; }
+.z-modal-dialog { z-index: 70; }
+
+/* Toast/Notification System */
+.z-toast { z-index: 80; }
+.z-toast-container { z-index: 85; }
+
+/* Loading States */
+.z-loading-overlay { z-index: 90; }
+.z-loading-spinner { z-index: 95; }
+
+/* Development/Debug */
+.z-debug-panel { z-index: 100; }
+.z-debug-console { z-index: 105; }
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .z-mobile-nav { z-index: 75; }
+    .z-mobile-fab { z-index: 70; }
+    .z-mobile-dropdown { z-index: 65; }
+}
+
+/* Print Styles */
+@media print {
+    .z-header,
+    .z-nav,
+    .z-dropdown,
+    .z-overlay,
+    .z-modal,
+    .z-toast,
+    .z-loading {
+        z-index: auto !important;
+    }
+}
+
+/* Focus Management */
+.z-focus-trap {
+    position: relative;
+    z-index: inherit;
+}
+
+/* Stacking Context Helpers */
+.create-stacking-context {
+    position: relative;
+    z-index: 0;
+}
+
+.isolate-stacking-context {
+    isolation: isolate;
+}
+
+/* Utility Classes for Common Patterns */
+.z-above-content { z-index: 10; }
+.z-above-nav { z-index: 35; }
+.z-above-dropdown { z-index: 55; }
+.z-above-modal { z-index: 75; }
+.z-above-everything { z-index: 100; }

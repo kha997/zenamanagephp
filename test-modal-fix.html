@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Modal Fix Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-center; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; max-width: 500px; }
+    </style>
+</head>
+<body x-data="{
+    showDeleteModal: false,
+    selectedProject: null,
+    openModal(project) {
+        console.log('Opening modal with:', project);
+        if (!project || !project.id) {
+            console.error('Invalid project:', project);
+            return;
+        }
+        this.selectedProject = project;
+        this.showDeleteModal = true;
+    },
+    closeModal() {
+        this.showDeleteModal = false;
+        this.selectedProject = null;
+    }
+}">
+    <button @click="openModal({id: 1, name: 'Test Project'})">Open Modal</button>
+    <button @click="openModal(null)">Open Modal (Invalid)</button>
+    <button @click="showDeleteModal = true">Open Modal (No Data)</button>
+    
+    <div x-show="showDeleteModal && selectedProject" class="modal" @click.self="closeModal()">
+        <div class="modal-content">
+            <h3>Delete Project</h3>
+            <p>Are you sure you want to delete "<span x-text="selectedProject?.name"></span>"?</p>
+            <button @click="closeModal()">Cancel</button>
+            <button @click="closeModal()">Delete</button>
+        </div>
+    </div>
+</body>
+</html>

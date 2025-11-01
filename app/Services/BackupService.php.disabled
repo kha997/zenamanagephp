@@ -1,0 +1,497 @@
+<?php declare(strict_types=1);
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Artisan;
+use Exception;
+
+class BackupService
+{
+    /**
+     * Create full system backup
+     */
+    public function createFullBackup(): array
+    {
+        $backupId = 'backup_' . date('Y-m-d_H-i-s');
+        $results = [];
+
+        try {
+            // Database backup
+            $results['database'] = $this->backupDatabase($backupId);
+            
+            // File backup
+            $results['files'] = $this->backupFiles($backupId);
+            
+            // Configuration backup
+            $results['config'] = $this->backupConfiguration($backupId);
+            
+            // Log backup
+            $results['logs'] = $this->backupLogs($backupId);
+            
+            // Create backup manifest
+            $results['manifest'] = $this->createBackupManifest($backupId, $results);
+            
+            Log::info('Full backup completed', ['backup_id' => $backupId, 'results' => $results]);
+
+        } catch (Exception $e) {
+            Log::error('Full backup failed', ['backup_id' => $backupId, 'error' => $e->getMessage()]);
+            $results['error'] = $e->getMessage();
+        }
+
+        return $results;
+    }
+
+    /**
+     * Backup database
+     */
+    private function backupDatabase(string $backupId): array
+    {
+        try {
+            $filename = "database_{$backupId}.sql";
+            $path = "backups/{$backupId}/{$filename}";
+            
+            // Get database configuration
+            $config = config('database.connections.mysql');
+            
+            // Create mysqldump command
+            $command = sprintf(
+                'mysqldump --host=%s --port=%s --user=%s --password=%s %s > %s',
+                $config['host'],
+                $config['port'],
+                $config['username'],
+                $config['password'],
+                $config['database'],
+                storage_path("app/{$path}")
+            );
+            
+            // Execute backup
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                return [
+                    'status' => 'success',
+                    'filename' => $filename,
+                    'path' => $path,
+                    'size' => Storage::size($path),
+                ];
+            } else {
+                throw new Exception('Database backup failed with return code: ' . $returnCode);
+            }
+
+        } catch (Exception $e) {
+            return [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Backup files
+     */
+    private function backupFiles(string $backupId): array
+    {
+        try {
+            $filename = "files_{$backupId}.tar.gz";
+            $path = "backups/{$backupId}/{$filename}";
+            
+            // Create tar command for important directories
+            $directories = [
+                'storage/app/public',
+                'storage/logs',
+                'storage/framework/cache',
+                'storage/framework/sessions',
+                'storage/framework/views',
+            ];
+            
+            $command = sprintf(
+                'tar -czf %s -C %s %s',
+                storage_path("app/{$path}"),
+                base_path(),
+                implode(' ', $directories)
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                return [
+                    'status' => 'success',
+                    'filename' => $filename,
+                    'path' => $path,
+                    'size' => Storage::size($path),
+                ];
+            } else {
+                throw new Exception('File backup failed with return code: ' . $returnCode);
+            }
+
+        } catch (Exception $e) {
+            return [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Backup configuration
+     */
+    private function backupConfiguration(string $backupId): array
+    {
+        try {
+            $filename = "config_{$backupId}.tar.gz";
+            $path = "backups/{$backupId}/{$filename}";
+            
+            // Backup configuration files
+            $configFiles = [
+                '.env',
+                'config/app.php',
+                'config/database.php',
+                'config/cache.php',
+                'config/session.php',
+                'config/logging.php',
+                'config/permissions.php',
+            ];
+            
+            $command = sprintf(
+                'tar -czf %s -C %s %s',
+                storage_path("app/{$path}"),
+                base_path(),
+                implode(' ', $configFiles)
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                return [
+                    'status' => 'success',
+                    'filename' => $filename,
+                    'path' => $path,
+                    'size' => Storage::size($path),
+                ];
+            } else {
+                throw new Exception('Configuration backup failed with return code: ' . $returnCode);
+            }
+
+        } catch (Exception $e) {
+            return [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Backup logs
+     */
+    private function backupLogs(string $backupId): array
+    {
+        try {
+            $filename = "logs_{$backupId}.tar.gz";
+            $path = "backups/{$backupId}/{$filename}";
+            
+            // Backup log files
+            $logPath = storage_path('logs');
+            
+            $command = sprintf(
+                'tar -czf %s -C %s .',
+                storage_path("app/{$path}"),
+                $logPath
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                return [
+                    'status' => 'success',
+                    'filename' => $filename,
+                    'path' => $path,
+                    'size' => Storage::size($path),
+                ];
+            } else {
+                throw new Exception('Log backup failed with return code: ' . $returnCode);
+            }
+
+        } catch (Exception $e) {
+            return [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Create backup manifest
+     */
+    private function createBackupManifest(string $backupId, array $results): array
+    {
+        $manifest = [
+            'backup_id' => $backupId,
+            'created_at' => now()->toISOString(),
+            'created_by' => auth()->id(),
+            'components' => $results,
+            'total_size' => 0,
+            'status' => 'completed',
+        ];
+
+        // Calculate total size
+        foreach ($results as $component => $data) {
+            if (isset($data['size'])) {
+                $manifest['total_size'] += $data['size'];
+            }
+        }
+
+        // Save manifest
+        $manifestPath = "backups/{$backupId}/manifest.json";
+        Storage::put($manifestPath, json_encode($manifest, JSON_PRETTY_PRINT));
+
+        return [
+            'status' => 'success',
+            'path' => $manifestPath,
+            'manifest' => $manifest,
+        ];
+    }
+
+    /**
+     * Restore from backup
+     */
+    public function restoreFromBackup(string $backupId): array
+    {
+        $results = [];
+
+        try {
+            // Load manifest
+            $manifestPath = "backups/{$backupId}/manifest.json";
+            if (!Storage::exists($manifestPath)) {
+                throw new Exception("Backup manifest not found: {$backupId}");
+            }
+
+            $manifest = json_decode(Storage::get($manifestPath), true);
+            
+            // Restore database
+            $results['database'] = $this->restoreDatabase($backupId);
+            
+            // Restore files
+            $results['files'] = $this->restoreFiles($backupId);
+            
+            // Restore configuration
+            $results['config'] = $this->restoreConfiguration($backupId);
+            
+            Log::info('Backup restore completed', ['backup_id' => $backupId, 'results' => $results]);
+
+        } catch (Exception $e) {
+            Log::error('Backup restore failed', ['backup_id' => $backupId, 'error' => $e->getMessage()]);
+            $results['error'] = $e->getMessage();
+        }
+
+        return $results;
+    }
+
+    /**
+     * Restore database
+     */
+    private function restoreDatabase(string $backupId): array
+    {
+        try {
+            $filename = "database_{$backupId}.sql";
+            $path = "backups/{$backupId}/{$filename}";
+            
+            if (!Storage::exists($path)) {
+                throw new Exception("Database backup file not found: {$filename}");
+            }
+
+            // Get database configuration
+            $config = config('database.connections.mysql');
+            
+            // Create mysql command
+            $command = sprintf(
+                'mysql --host=%s --port=%s --user=%s --password=%s %s < %s',
+                $config['host'],
+                $config['port'],
+                $config['username'],
+                $config['password'],
+                $config['database'],
+                storage_path("app/{$path}")
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                return ['status' => 'success'];
+            } else {
+                throw new Exception('Database restore failed with return code: ' . $returnCode);
+            }
+
+        } catch (Exception $e) {
+            return [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Restore files
+     */
+    private function restoreFiles(string $backupId): array
+    {
+        try {
+            $filename = "files_{$backupId}.tar.gz";
+            $path = "backups/{$backupId}/{$filename}";
+            
+            if (!Storage::exists($path)) {
+                throw new Exception("File backup not found: {$filename}");
+            }
+
+            $command = sprintf(
+                'tar -xzf %s -C %s',
+                storage_path("app/{$path}"),
+                base_path()
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                return ['status' => 'success'];
+            } else {
+                throw new Exception('File restore failed with return code: ' . $returnCode);
+            }
+
+        } catch (Exception $e) {
+            return [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Restore configuration
+     */
+    private function restoreConfiguration(string $backupId): array
+    {
+        try {
+            $filename = "config_{$backupId}.tar.gz";
+            $path = "backups/{$backupId}/{$filename}";
+            
+            if (!Storage::exists($path)) {
+                throw new Exception("Configuration backup not found: {$filename}");
+            }
+
+            $command = sprintf(
+                'tar -xzf %s -C %s',
+                storage_path("app/{$path}"),
+                base_path()
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                return ['status' => 'success'];
+            } else {
+                throw new Exception('Configuration restore failed with return code: ' . $returnCode);
+            }
+
+        } catch (Exception $e) {
+            return [
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * List available backups
+     */
+    public function listBackups(): array
+    {
+        $backups = [];
+
+        try {
+            $backupDirs = Storage::directories('backups');
+            
+            foreach ($backupDirs as $dir) {
+                $backupId = basename($dir);
+                $manifestPath = "{$dir}/manifest.json";
+                
+                if (Storage::exists($manifestPath)) {
+                    $manifest = json_decode(Storage::get($manifestPath), true);
+                    $backups[] = $manifest;
+                }
+            }
+
+            // Sort by creation date (newest first)
+            usort($backups, fn($a, $b) => strtotime($b['created_at']) - strtotime($a['created_at']));
+
+        } catch (Exception $e) {
+            Log::error('Failed to list backups', ['error' => $e->getMessage()]);
+        }
+
+        return $backups;
+    }
+
+    /**
+     * Delete backup
+     */
+    public function deleteBackup(string $backupId): bool
+    {
+        try {
+            $backupPath = "backups/{$backupId}";
+            
+            if (Storage::exists($backupPath)) {
+                Storage::deleteDirectory($backupPath);
+                Log::info('Backup deleted', ['backup_id' => $backupId]);
+                return true;
+            }
+
+            return false;
+
+        } catch (Exception $e) {
+            Log::error('Failed to delete backup', ['backup_id' => $backupId, 'error' => $e->getMessage()]);
+            return false;
+        }
+    }
+
+    /**
+     * Get backup statistics
+     */
+    public function getBackupStatistics(): array
+    {
+        $backups = $this->listBackups();
+        
+        return [
+            'total_backups' => count($backups),
+            'total_size' => array_sum(array_column($backups, 'total_size')),
+            'last_backup' => $backups[0]['created_at'] ?? null,
+            'oldest_backup' => end($backups)['created_at'] ?? null,
+        ];
+    }
+
+    /**
+     * Schedule automatic backups
+     */
+    public function scheduleAutomaticBackups(): array
+    {
+        return [
+            'daily' => [
+                'enabled' => true,
+                'time' => '02:00',
+                'retention_days' => 7,
+            ],
+            'weekly' => [
+                'enabled' => true,
+                'day' => 'sunday',
+                'time' => '03:00',
+                'retention_weeks' => 4,
+            ],
+            'monthly' => [
+                'enabled' => true,
+                'day' => 1,
+                'time' => '04:00',
+                'retention_months' => 12,
+            ],
+        ];
+    }
+}

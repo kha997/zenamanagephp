@@ -1,0 +1,910 @@
+[
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "\/",
+        "name": "root",
+        "action": "Closure",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "_dusk\/login\/{userId}\/{guard?}",
+        "name": "dusk.login",
+        "action": "Laravel\\Dusk\\Http\\Controllers\\UserController@login",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "_dusk\/logout\/{guard?}",
+        "name": "dusk.logout",
+        "action": "Laravel\\Dusk\\Http\\Controllers\\UserController@logout",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "_dusk\/user\/{guard?}",
+        "name": "dusk.user",
+        "action": "Laravel\\Dusk\\Http\\Controllers\\UserController@user",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "_ignition\/execute-solution",
+        "name": "ignition.executeSolution",
+        "action": "Spatie\\LaravelIgnition\\Http\\Controllers\\ExecuteSolutionController",
+        "middleware": [
+            "Spatie\\LaravelIgnition\\Http\\Middleware\\RunnableSolutionsEnabled"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "_ignition\/health-check",
+        "name": "ignition.healthCheck",
+        "action": "Spatie\\LaravelIgnition\\Http\\Controllers\\HealthCheckController",
+        "middleware": [
+            "Spatie\\LaravelIgnition\\Http\\Middleware\\RunnableSolutionsEnabled"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "_ignition\/update-config",
+        "name": "ignition.updateConfig",
+        "action": "Spatie\\LaravelIgnition\\Http\\Controllers\\UpdateConfigController",
+        "middleware": [
+            "Spatie\\LaravelIgnition\\Http\\Middleware\\RunnableSolutionsEnabled"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api-docs",
+        "name": "l5-swagger.default.api",
+        "action": "L5Swagger\\Http\\Controllers\\SwaggerController@api",
+        "middleware": [
+            "L5Swagger\\Http\\Middleware\\Config"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "api\/oauth2-callback",
+        "name": "l5-swagger.default.oauth2_callback",
+        "action": "L5Swagger\\Http\\Controllers\\SwaggerController@oauth2Callback",
+        "middleware": [
+            "L5Swagger\\Http\\Middleware\\Config"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/calendar",
+        "name": "app.calendar.index",
+        "action": "Closure",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/clients",
+        "name": "app.clients.index",
+        "action": "App\\Http\\Controllers\\Web\\ClientController@index",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/clients",
+        "name": "app.clients.store",
+        "action": "App\\Http\\Controllers\\Web\\ClientController@store",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/clients\/create",
+        "name": "app.clients.create",
+        "action": "App\\Http\\Controllers\\Web\\ClientController@create",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/clients\/{client}",
+        "name": "app.clients.show",
+        "action": "App\\Http\\Controllers\\Web\\ClientController@show",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT|PATCH",
+        "uri": "app\/clients\/{client}",
+        "name": "app.clients.update",
+        "action": "App\\Http\\Controllers\\Web\\ClientController@update",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "DELETE",
+        "uri": "app\/clients\/{client}",
+        "name": "app.clients.destroy",
+        "action": "App\\Http\\Controllers\\Web\\ClientController@destroy",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/clients\/{client}\/edit",
+        "name": "app.clients.edit",
+        "action": "App\\Http\\Controllers\\Web\\ClientController@edit",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PATCH",
+        "uri": "app\/clients\/{client}\/lifecycle-stage",
+        "name": "app.clients.updateLifecycleStage",
+        "action": "App\\Http\\Controllers\\Web\\ClientController@updateLifecycleStage",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/dashboard",
+        "name": "app.dashboard",
+        "action": "App\\Http\\Controllers\\DashboardController@index",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/documents",
+        "name": "app.documents.index",
+        "action": "App\\Http\\Controllers\\Web\\DocumentController@index",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/documents\/approvals",
+        "name": "app.documents.approvals",
+        "action": "App\\Http\\Controllers\\Web\\DocumentController@approvals",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/documents\/create",
+        "name": "app.documents.create",
+        "action": "App\\Http\\Controllers\\Web\\DocumentController@create",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/projects",
+        "name": "app.projects.index",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@index",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/projects",
+        "name": "app.projects.store",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@store",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/projects\/create",
+        "name": "app.projects.create",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@create",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/projects\/{project}",
+        "name": "app.projects.show",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@show",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT",
+        "uri": "app\/projects\/{project}",
+        "name": "app.projects.update",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@update",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "DELETE",
+        "uri": "app\/projects\/{project}",
+        "name": "app.projects.destroy",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@destroy",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/projects\/{project}\/documents",
+        "name": "app.projects.documents",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@documents",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/projects\/{project}\/edit",
+        "name": "app.projects.edit",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@edit",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/projects\/{project}\/history",
+        "name": "app.projects.history",
+        "action": "App\\Http\\Controllers\\Web\\ProjectController@history",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/quotes",
+        "name": "app.quotes.index",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@index",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/quotes",
+        "name": "app.quotes.store",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@store",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/quotes\/create",
+        "name": "app.quotes.create",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@create",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/quotes\/{quote}",
+        "name": "app.quotes.show",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@show",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT|PATCH",
+        "uri": "app\/quotes\/{quote}",
+        "name": "app.quotes.update",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@update",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "DELETE",
+        "uri": "app\/quotes\/{quote}",
+        "name": "app.quotes.destroy",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@destroy",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/quotes\/{quote}\/accept",
+        "name": "app.quotes.accept",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@accept",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/quotes\/{quote}\/edit",
+        "name": "app.quotes.edit",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@edit",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/quotes\/{quote}\/reject",
+        "name": "app.quotes.reject",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@reject",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/quotes\/{quote}\/send",
+        "name": "app.quotes.send",
+        "action": "App\\Http\\Controllers\\Web\\QuoteController@send",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/settings",
+        "name": "app.settings.index",
+        "action": "Closure",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/tasks",
+        "name": "app.tasks.index",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@index",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/tasks",
+        "name": "app.tasks.store",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@store",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/tasks\/create",
+        "name": "app.tasks.create",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@create",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/tasks\/{task}",
+        "name": "app.tasks.show",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@show",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "PUT",
+        "uri": "app\/tasks\/{task}",
+        "name": "app.tasks.update",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@update",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "DELETE",
+        "uri": "app\/tasks\/{task}",
+        "name": "app.tasks.destroy",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@destroy",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/tasks\/{task}\/assign",
+        "name": "app.tasks.assign",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@assign",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/tasks\/{task}\/documents",
+        "name": "app.tasks.documents",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@documents",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/tasks\/{task}\/edit",
+        "name": "app.tasks.edit",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@edit",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/tasks\/{task}\/history",
+        "name": "app.tasks.history",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@history",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/tasks\/{task}\/progress",
+        "name": "app.tasks.progress",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@updateProgress",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "app\/tasks\/{task}\/unassign",
+        "name": "app.tasks.unassign",
+        "action": "App\\Http\\Controllers\\Web\\TaskController@unassign",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/team",
+        "name": "app.team.index",
+        "action": "Closure",
+        "middleware": [
+            "web",
+            "auth:web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/templates",
+        "name": "app.templates.index",
+        "action": "App\\Http\\Controllers\\Web\\TemplateController@index",
+        "middleware": [
+            "web",
+            "auth:web",
+            "auth"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/templates\/builder",
+        "name": "app.templates.builder",
+        "action": "App\\Http\\Controllers\\Web\\TemplateController@builder",
+        "middleware": [
+            "web",
+            "auth:web",
+            "auth"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/templates\/create",
+        "name": "app.templates.create",
+        "action": "App\\Http\\Controllers\\Web\\TemplateController@create",
+        "middleware": [
+            "web",
+            "auth:web",
+            "auth"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/templates\/library",
+        "name": "app.templates.library",
+        "action": "App\\Http\\Controllers\\Web\\TemplateController@library",
+        "middleware": [
+            "web",
+            "auth:web",
+            "auth"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/templates\/{template}",
+        "name": "app.templates.show",
+        "action": "App\\Http\\Controllers\\Web\\TemplateController@show",
+        "middleware": [
+            "web",
+            "auth:web",
+            "auth"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "app\/templates\/{template}\/edit",
+        "name": "app.templates.edit",
+        "action": "App\\Http\\Controllers\\Web\\TemplateController@edit",
+        "middleware": [
+            "web",
+            "auth:web",
+            "auth"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "calendar",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "clear-cache",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "clients",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "dashboard",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "docs",
+        "name": "l5-swagger.default.docs",
+        "action": "L5Swagger\\Http\\Controllers\\SwaggerController@docs",
+        "middleware": [
+            "L5Swagger\\Http\\Middleware\\Config"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "docs\/asset\/{asset}",
+        "name": "l5-swagger.default.asset",
+        "action": "L5Swagger\\Http\\Controllers\\SwaggerAssetController@index",
+        "middleware": [
+            "L5Swagger\\Http\\Middleware\\Config"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "documents",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "health",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "health-check",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "invite\/accept\/{token}",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "invite\/decline\/{token}",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "login",
+        "name": "login",
+        "action": "App\\Http\\Controllers\\Auth\\LoginController@showLoginForm",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "login",
+        "name": "login.post",
+        "action": "App\\Http\\Controllers\\Auth\\LoginController@login",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "logout",
+        "name": "logout",
+        "action": "App\\Http\\Controllers\\Auth\\LoginController@logout",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "metrics",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "projects",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "quotes",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "register",
+        "name": "register",
+        "action": "App\\Http\\Controllers\\Auth\\RegisterController@showRegistrationForm",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "POST",
+        "uri": "register",
+        "name": "register.post",
+        "action": "App\\Http\\Controllers\\Auth\\RegisterController@register",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD",
+        "uri": "sanctum\/csrf-cookie",
+        "name": "sanctum.csrf-cookie",
+        "action": "Laravel\\Sanctum\\Http\\Controllers\\CsrfCookieController@show",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "settings",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "tasks",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "team",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    },
+    {
+        "domain": null,
+        "method": "GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS",
+        "uri": "templates",
+        "name": "generated::stable",
+        "action": "Illuminate\\Routing\\RedirectController",
+        "middleware": [
+            "web"
+        ]
+    }
+]

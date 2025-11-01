@@ -1,306 +1,412 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Tests\Unit;
 
-use Tests\TestCase;
+use App\Models\Template;
+use App\Models\TemplateVersion;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Src\WorkTemplate\Models\Template;
-use Src\WorkTemplate\Models\TemplateVersion;
-use Database\Factories\TemplateFactory;
+use Tests\TestCase;
+use Illuminate\Support\Str;
 
 class TemplateTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test template creation với valid data
-     */
-    public function test_can_create_template_with_valid_data(): void
+    protected Tenant $tenant;
+    protected User $user;
+
+    protected function setUp(): void
     {
-        $templateData = [
-            'template_name' => 'Test Template',
-            'category' => 'Design',
-            'json_body' => [
-                'template_name' => 'Test Template',
+        parent::setUp();
+
+        $this->tenant = Tenant::factory()->create(['id' => 'test-tenant-1']);
+        $this->user = User::factory()->create([
+            'id' => 'test-user-1',
+            'tenant_id' => $this->tenant->id,
+            'email' => 'test-' . uniqid() . '@example.com',
+            'password' => bcrypt('password'),
+        ]);
+    }
+
+    /** @test */
+    public function it_can_create_a_template()
+    {
+        $template = Template::create([
+            'id' => Str::ulid(),
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Test Template',
+            'category' => Template::CATEGORY_PROJECT,
+            'template_data' => [
                 'phases' => [
                     [
                         'name' => 'Phase 1',
-                        'tasks' => [
-                            [
-                                'name' => 'Task 1',
-                                'duration_days' => 5,
-                                'role' => 'Developer',
-                                'contract_value_percent' => 10.0,
-                            ],
-                        ],
-                    ],
-                ],
+                        'duration_days' => 5,
+                        'tasks' => []
+                    ]
+                ]
             ],
             'version' => 1,
-            'is_active' => true,
-        ];
-
-        $template = Template::create($templateData);
-
-        $this->assertInstanceOf(Template::class, $template);
-        $this->assertEquals('Test Template', $template->template_name);
-        $this->assertEquals('Design', $template->category);
-        $this->assertTrue($template->is_active);
-        $this->assertEquals(1, $template->version);
-        $this->assertIsArray($template->json_body);
-    }
-
-    /**
-     * Test validateJsonStructure method với valid JSON
-     */
-    public function test_validate_json_structure_with_valid_data(): void
-    {
-        $template = new Template();
-        
-        $validJson = [
-            'template_name' => 'Valid Template',
-            'phases' => [
-                [
-                    'name' => 'Phase 1',
-                    'tasks' => [
-                        [
-                            'name' => 'Task 1',
-                            'duration_days' => 5,
-                            'role' => 'Developer',
-                            'contract_value_percent' => 10.0,
-                        ],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->assertTrue($template->validateJsonStructure($validJson));
-    }
-
-    /**
-     * Test validateJsonStructure method với invalid JSON
-     */
-    public function test_validate_json_structure_with_invalid_data(): void
-    {
-        $template = new Template();
-        
-        // Test thiếu template_name
-        $invalidJson1 = [
-            'phases' => [
-                [
-                    'name' => 'Phase 1',
-                    'tasks' => [],
-                ],
-            ],
-        ];
-        $this->assertFalse($template->validateJsonStructure($invalidJson1));
-
-        // Test thiếu phases
-        $invalidJson2 = [
-            'template_name' => 'Invalid Template',
-        ];
-        $this->assertFalse($template->validateJsonStructure($invalidJson2));
-
-        // Test phases không phải array
-        $invalidJson3 = [
-            'template_name' => 'Invalid Template',
-            'phases' => 'not an array',
-        ];
-        $this->assertFalse($template->validateJsonStructure($invalidJson3));
-
-        // Test phase thiếu name
-        $invalidJson4 = [
-            'template_name' => 'Invalid Template',
-            'phases' => [
-                [
-                    'tasks' => [],
-                ],
-            ],
-        ];
-        $this->assertFalse($template->validateJsonStructure($invalidJson4));
-
-        // Test task thiếu required fields
-        $invalidJson5 = [
-            'template_name' => 'Invalid Template',
-            'phases' => [
-                [
-                    'name' => 'Phase 1',
-                    'tasks' => [
-                        [
-                            'name' => 'Task 1',
-                            // Thiếu duration_days, role, contract_value_percent
-                        ],
-                    ],
-                ],
-            ],
-        ];
-        $this->assertFalse($template->validateJsonStructure($invalidJson5));
-    }
-
-    /**
-     * Test createNewVersion method
-     */
-    public function test_create_new_version(): void
-    {
-        $template = Template::factory()->create([
-            'version' => 1,
+            'created_by' => $this->user->id,
+            'updated_by' => $this->user->id,
         ]);
 
-        $newJsonBody = [
-            'template_name' => 'Updated Template',
-            'phases' => [
-                [
-                    'name' => 'Updated Phase',
-                    'tasks' => [
-                        [
-                            'name' => 'Updated Task',
-                            'duration_days' => 10,
-                            'role' => 'Senior Developer',
-                            'contract_value_percent' => 15.0,
-                        ],
-                    ],
-                ],
-            ],
-        ];
-
-        $templateVersion = $template->createNewVersion(
-            $newJsonBody,
-            'Updated template with new requirements',
-            'user123'
-        );
-
-        // Kiểm tra template version được tạo
-        $this->assertInstanceOf(TemplateVersion::class, $templateVersion);
-        $this->assertEquals(2, $templateVersion->version);
-        $this->assertEquals($newJsonBody, $templateVersion->json_body);
-        $this->assertEquals('Updated template with new requirements', $templateVersion->note);
-        $this->assertEquals('user123', $templateVersion->created_by);
-
-        // Kiểm tra template được cập nhật
-        $template->refresh();
-        $this->assertEquals(2, $template->version);
-        $this->assertEquals($newJsonBody, $template->json_body);
-        $this->assertEquals('user123', $template->updated_by);
+        $this->assertInstanceOf(Template::class, $template);
+        $this->assertEquals('Test Template', $template->name);
+        $this->assertEquals($this->tenant->id, $template->tenant_id);
+        $this->assertEquals(Template::CATEGORY_PROJECT, $template->category);
+        $this->assertEquals(Template::STATUS_DRAFT, $template->status);
+        $this->assertFalse($template->is_public);
+        $this->assertTrue($template->is_active);
+        $this->assertEquals(1, $template->version);
+        $this->assertEquals(0, $template->usage_count);
     }
 
-    /**
-     * Test getTotalTasksAttribute accessor
-     */
-    public function test_get_total_tasks_attribute(): void
+    /** @test */
+    public function it_can_get_template_phases()
     {
-        $template = Template::factory()->withComplexStructure()->create();
-        
-        $expectedTotal = 0;
-        foreach ($template->json_body['phases'] as $phase) {
-            $expectedTotal += count($phase['tasks']);
-        }
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'template_data' => [
+                'phases' => [
+                    ['name' => 'Phase 1', 'duration_days' => 5],
+                    ['name' => 'Phase 2', 'duration_days' => 10]
+                ]
+            ]
+        ]);
 
-        $this->assertEquals($expectedTotal, $template->total_tasks);
+        $phases = $template->getPhases();
+
+        $this->assertCount(2, $phases);
+        $this->assertEquals('Phase 1', $phases[0]['name']);
+        $this->assertEquals('Phase 2', $phases[1]['name']);
     }
 
-    /**
-     * Test getEstimatedDurationAttribute accessor
-     */
-    public function test_get_estimated_duration_attribute(): void
+    /** @test */
+    public function it_can_get_template_tasks()
     {
-        $jsonBody = [
-            'template_name' => 'Duration Test Template',
-            'phases' => [
-                [
-                    'name' => 'Phase 1',
-                    'tasks' => [
-                        ['name' => 'Task 1', 'duration_days' => 5, 'role' => 'Dev', 'contract_value_percent' => 10],
-                        ['name' => 'Task 2', 'duration_days' => 3, 'role' => 'Dev', 'contract_value_percent' => 10],
-                    ],
-                ],
-                [
-                    'name' => 'Phase 2',
-                    'tasks' => [
-                        ['name' => 'Task 3', 'duration_days' => 8, 'role' => 'Dev', 'contract_value_percent' => 10],
-                        ['name' => 'Task 4', 'duration_days' => 2, 'role' => 'Dev', 'contract_value_percent' => 10],
-                    ],
-                ],
-            ],
-        ];
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'template_data' => [
+                'tasks' => [
+                    ['name' => 'Task 1', 'duration_days' => 3],
+                    ['name' => 'Task 2', 'duration_days' => 5]
+                ]
+            ]
+        ]);
 
-        $template = Template::factory()->create(['json_body' => $jsonBody]);
-        
-        // Phase 1: max(5, 3) = 5 days
-        // Phase 2: max(8, 2) = 8 days
-        // Total: 5 + 8 = 13 days
-        $this->assertEquals(13, $template->estimated_duration);
+        $tasks = $template->getTasks();
+
+        $this->assertCount(2, $tasks);
+        $this->assertEquals('Task 1', $tasks[0]['name']);
+        $this->assertEquals('Task 2', $tasks[1]['name']);
     }
 
-    /**
-     * Test active scope
-     */
-    public function test_active_scope(): void
+    /** @test */
+    public function it_can_calculate_estimated_duration()
     {
-        Template::factory()->create(['is_active' => true]);
-        Template::factory()->create(['is_active' => true]);
-        Template::factory()->inactive()->create();
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'template_data' => [
+                'tasks' => [
+                    ['name' => 'Task 1', 'duration_days' => 3],
+                    ['name' => 'Task 2', 'duration_days' => 5],
+                    ['name' => 'Task 3', 'duration_days' => 2]
+                ]
+            ]
+        ]);
 
-        $activeTemplates = Template::active()->get();
-        
-        $this->assertCount(2, $activeTemplates);
-        $this->assertTrue($activeTemplates->every(fn($template) => $template->is_active));
+        $duration = $template->getEstimatedDuration();
+
+        $this->assertEquals(10, $duration);
     }
 
-    /**
-     * Test byCategory scope
-     */
-    public function test_by_category_scope(): void
+    /** @test */
+    public function it_can_calculate_estimated_cost()
     {
-        Template::factory()->withCategory('Design')->create();
-        Template::factory()->withCategory('Design')->create();
-        Template::factory()->withCategory('Construction')->create();
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'template_data' => [
+                'tasks' => [
+                    ['name' => 'Task 1', 'estimated_cost' => 100.50],
+                    ['name' => 'Task 2', 'estimated_cost' => 200.75],
+                    ['name' => 'Task 3', 'estimated_cost' => 150.25]
+                ]
+            ]
+        ]);
 
-        $designTemplates = Template::byCategory('Design')->get();
-        
-        $this->assertCount(2, $designTemplates);
-        $this->assertTrue($designTemplates->every(fn($template) => $template->category === 'Design'));
+        $cost = $template->getEstimatedCost();
+
+        $this->assertEquals(451.50, $cost);
     }
 
-    /**
-     * Test relationships
-     */
-    public function test_template_relationships(): void
+    /** @test */
+    public function it_can_validate_template()
     {
-        $template = Template::factory()->create();
+        $validTemplate = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Valid Template',
+            'category' => Template::CATEGORY_PROJECT,
+            'template_data' => ['phases' => []],
+            'status' => Template::STATUS_DRAFT
+        ]);
 
-        // Test versions relationship
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class, $template->versions());
-        
-        // Test projectPhases relationship
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class, $template->projectPhases());
-        
-        // Test projectTasks relationship
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class, $template->projectTasks());
+        $this->assertTrue($validTemplate->isValid());
+
+        $invalidTemplate = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => '', // Invalid: empty name
+            'category' => Template::CATEGORY_PROJECT,
+            'template_data' => ['phases' => []],
+            'status' => Template::STATUS_DRAFT
+        ]);
+
+        $this->assertFalse($invalidTemplate->isValid());
     }
 
-    /**
-     * Test template với empty phases
-     */
-    public function test_template_with_empty_phases(): void
+    /** @test */
+    public function it_can_check_if_template_can_be_used()
     {
-        $jsonBody = [
-            'template_name' => 'Empty Template',
-            'phases' => [],
-        ];
+        $usableTemplate = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => Template::STATUS_PUBLISHED,
+            'is_active' => true,
+            'name' => 'Usable Template',
+            'category' => Template::CATEGORY_PROJECT,
+            'template_data' => ['phases' => []]
+        ]);
 
-        $template = Template::factory()->create(['json_body' => $jsonBody]);
-        
-        $this->assertEquals(0, $template->total_tasks);
-        $this->assertEquals(0, $template->estimated_duration);
+        $this->assertTrue($usableTemplate->canBeUsed());
+
+        $unusableTemplate = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => Template::STATUS_DRAFT, // Not published
+            'is_active' => true,
+            'name' => 'Unusable Template',
+            'category' => Template::CATEGORY_PROJECT,
+            'template_data' => ['phases' => []]
+        ]);
+
+        $this->assertFalse($unusableTemplate->canBeUsed());
     }
 
-    /**
-     * Test template constants
-     */
-    public function test_template_categories_constant(): void
+    /** @test */
+    public function it_can_increment_usage_count()
     {
-        $expectedCategories = ['Design', 'Construction', 'QC', 'Inspection'];
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'usage_count' => 5
+        ]);
+
+        $template->incrementUsage();
+
+        $this->assertEquals(6, $template->fresh()->usage_count);
+    }
+
+    /** @test */
+    public function it_can_publish_template()
+    {
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => Template::STATUS_DRAFT
+        ]);
+
+        $result = $template->publish();
+
+        $this->assertTrue($result);
+        $this->assertEquals(Template::STATUS_PUBLISHED, $template->fresh()->status);
+    }
+
+    /** @test */
+    public function it_can_archive_template()
+    {
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => Template::STATUS_PUBLISHED
+        ]);
+
+        $result = $template->archive();
+
+        $this->assertTrue($result);
+        $this->assertEquals(Template::STATUS_ARCHIVED, $template->fresh()->status);
+    }
+
+    /** @test */
+    public function it_can_duplicate_template()
+    {
+        $originalTemplate = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Original Template',
+            'usage_count' => 10
+        ]);
+
+        $duplicate = $originalTemplate->duplicate('Duplicated Template', $this->user->id);
+
+        $this->assertInstanceOf(Template::class, $duplicate);
+        $this->assertEquals('Duplicated Template', $duplicate->name);
+        $this->assertEquals($this->tenant->id, $duplicate->tenant_id);
+        $this->assertEquals(1, $duplicate->version);
+        $this->assertEquals(Template::STATUS_DRAFT, $duplicate->status);
+        $this->assertEquals(0, $duplicate->usage_count);
+        $this->assertEquals($this->user->id, $duplicate->created_by);
+        $this->assertNotEquals($originalTemplate->id, $duplicate->id);
+    }
+
+    /** @test */
+    public function it_can_filter_by_tenant()
+    {
+        $otherTenant = Tenant::factory()->create(['id' => 'other-tenant-1']);
         
-        $this->assertEquals($expectedCategories, Template::CATEGORIES);
+        Template::factory()->create(['tenant_id' => $this->tenant->id]);
+        Template::factory()->create(['tenant_id' => $otherTenant->id]);
+
+        $templates = Template::byTenant($this->tenant->id)->get();
+
+        $this->assertCount(1, $templates);
+        $this->assertEquals($this->tenant->id, $templates->first()->tenant_id);
+    }
+
+    /** @test */
+    public function it_can_filter_by_category()
+    {
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'category' => Template::CATEGORY_PROJECT
+        ]);
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'category' => Template::CATEGORY_TASK
+        ]);
+
+        $projectTemplates = Template::byTenant($this->tenant->id)->byCategory(Template::CATEGORY_PROJECT)->get();
+
+        $this->assertCount(1, $projectTemplates);
+        $this->assertEquals(Template::CATEGORY_PROJECT, $projectTemplates->first()->category);
+    }
+
+    /** @test */
+    public function it_can_filter_active_templates()
+    {
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'is_active' => true
+        ]);
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'is_active' => false
+        ]);
+
+        $activeTemplates = Template::byTenant($this->tenant->id)->active()->get();
+
+        $this->assertCount(1, $activeTemplates);
+        $this->assertTrue($activeTemplates->first()->is_active);
+    }
+
+    /** @test */
+    public function it_can_filter_public_templates()
+    {
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'is_public' => true
+        ]);
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'is_public' => false
+        ]);
+
+        $publicTemplates = Template::byTenant($this->tenant->id)->public()->get();
+
+        $this->assertCount(1, $publicTemplates);
+        $this->assertTrue($publicTemplates->first()->is_public);
+    }
+
+    /** @test */
+    public function it_can_filter_published_templates()
+    {
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => Template::STATUS_PUBLISHED
+        ]);
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => Template::STATUS_DRAFT
+        ]);
+
+        $publishedTemplates = Template::byTenant($this->tenant->id)->published()->get();
+
+        $this->assertCount(1, $publishedTemplates);
+        $this->assertEquals(Template::STATUS_PUBLISHED, $publishedTemplates->first()->status);
+    }
+
+    /** @test */
+    public function it_can_get_popular_templates()
+    {
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'usage_count' => 100
+        ]);
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'usage_count' => 50
+        ]);
+        Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'usage_count' => 200
+        ]);
+
+        $popularTemplates = Template::byTenant($this->tenant->id)->popular(2)->get();
+
+        $this->assertCount(2, $popularTemplates);
+        $this->assertEquals(200, $popularTemplates->first()->usage_count);
+        $this->assertEquals(100, $popularTemplates->last()->usage_count);
+    }
+
+    /** @test */
+    public function it_has_relationships()
+    {
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'created_by' => $this->user->id,
+            'updated_by' => $this->user->id
+        ]);
+
+        $this->assertInstanceOf(Tenant::class, $template->tenant);
+        $this->assertInstanceOf(User::class, $template->creator);
+        $this->assertInstanceOf(User::class, $template->updater);
+    }
+
+    /** @test */
+    public function it_can_have_versions()
+    {
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id
+        ]);
+
+        $version = TemplateVersion::factory()->create([
+            'template_id' => $template->id,
+            'version' => 1,
+            'created_by' => $this->user->id
+        ]);
+
+        $this->assertTrue($template->versions->contains($version));
+        $this->assertEquals(1, $template->versions->count());
+    }
+
+    /** @test */
+    public function it_can_have_projects()
+    {
+        $template = Template::factory()->create([
+            'tenant_id' => $this->tenant->id
+        ]);
+
+        $project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'template_id' => $template->id
+        ]);
+
+        $this->assertTrue($template->projects->contains($project));
+        $this->assertEquals(1, $template->projects->count());
     }
 }

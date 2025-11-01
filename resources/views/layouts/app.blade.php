@@ -1,183 +1,134 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Z.E.N.A Project Management')</title>
-    
-    <!-- Fonts -->
+    <meta name="user-id" content="{{ auth()->id() }}">
+    <meta name="tenant-id" content="{{ auth()->user()->tenant_id ?? '' }}">
+    <title>@yield('title', 'Dashboard') - ZenaManage</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     
-    <!-- Icons -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
-    <!-- Styles -->
-    @vite(['resources/css/app.css'])
+    <script>
+        // Suppress Tailwind CDN warning only if Tailwind CDN is present
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = { suppressWarnings: true };
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+    @yield('head')
     
-    @stack('styles')
+    <!-- App Layout Alpine.js Component -->
+    <script>
+        // Use Alpine.data to define global components
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('appLayout', () => ({
+                // Notifications
+                showNotifications: false,
+                unreadNotifications: 0,
+                notifications: [],
+                
+                // Alerts - Load from real API
+                alerts: [],
+                
+                // Methods
+                dismissAlert(alertId) {
+                    this.alerts = this.alerts.filter(alert => alert.id !== alertId);
+                },
+                
+                toggleNotifications() {
+                    this.showNotifications = !this.showNotifications;
+                }
+            }));
+        });
+    </script>
+    
+    <style>
+        body.loading {
+            opacity: 0.5;
+        }
+    </style>
 </head>
-<body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <a href="{{ route('dashboard') }}" class="logo">
-                    <i class="fas fa-project-diagram"></i>
-                    Z.E.N.A
-                </a>
-            </div>
-            
-            <nav class="sidebar-nav">
-                <ul class="nav-menu">
-                    <li class="nav-item">
-                        <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                            <i class="fas fa-tachometer-alt nav-icon"></i>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('projects.index') }}" class="nav-link {{ request()->routeIs('projects.*') ? 'active' : '' }}">
-                            <i class="fas fa-folder-open nav-icon"></i>
-                            Dự án
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('tasks.index') }}" class="nav-link {{ request()->routeIs('tasks.*') ? 'active' : '' }}">
-                            <i class="fas fa-tasks nav-icon"></i>
-                            Công việc
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('documents.index') }}" class="nav-link {{ request()->routeIs('documents.*') ? 'active' : '' }}">
-                            <i class="fas fa-file-alt nav-icon"></i>
-                            Tài liệu
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('change-requests.index') }}" class="nav-link {{ request()->routeIs('change-requests.*') ? 'active' : '' }}">
-                            <i class="fas fa-exchange-alt nav-icon"></i>
-                            Yêu cầu thay đổi
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('reports.index') }}" class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}">
-                            <i class="fas fa-chart-bar nav-icon"></i>
-                            Báo cáo
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('notifications.index') }}" class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
-                            <i class="fas fa-bell nav-icon"></i>
-                            Thông báo
-                            @if(Auth::user()->unreadNotifications->count() > 0)
-                                <span class="badge badge-danger">{{ Auth::user()->unreadNotifications->count() }}</span>
-                            @endif
-                        </a>
-                    </li>
-                    
-                    @can('manage_users')
-                    <li class="nav-item">
-                        <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
-                            <i class="fas fa-users nav-icon"></i>
-                            Người dùng
-                        </a>
-                    </li>
-                    @endcan
-                    
-                    @can('manage_roles')
-                    <li class="nav-item">
-                        <a href="{{ route('roles.index') }}" class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}">
-                            <i class="fas fa-user-shield nav-icon"></i>
-                            Phân quyền
-                        </a>
-                    </li>
-                    @endcan
-                </ul>
-            </nav>
-        </aside>
-        
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-left">
-                    <button class="btn btn-secondary" id="menu-toggle">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    <h1 class="page-title">@yield('page-title', 'Dashboard')</h1>
-                </div>
-                
-                <div class="header-right d-flex align-center gap-3">
-                    <!-- Notifications -->
-                    <div class="dropdown">
-                        <button class="btn btn-secondary" id="notifications-toggle">
-                            <i class="fas fa-bell"></i>
-                            @if(Auth::user()->unreadNotifications->count() > 0)
-                                <span class="badge badge-danger">{{ Auth::user()->unreadNotifications->count() }}</span>
-                            @endif
-                        </button>
-                    </div>
-                    
-                    <!-- User Menu -->
-                    <div class="dropdown">
-                        <button class="btn btn-secondary" id="user-menu-toggle">
-                            <i class="fas fa-user"></i>
-                            {{ Auth::user()->name }}
-                        </button>
-                        <div class="dropdown-menu" id="user-menu">
-                            <a href="{{ route('profile.edit') }}" class="dropdown-item">
-                                <i class="fas fa-user-edit"></i>
-                                Hồ sơ
-                            </a>
-                            <a href="{{ route('settings.index') }}" class="dropdown-item">
-                                <i class="fas fa-cog"></i>
-                                Cài đặt
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a href="#" class="dropdown-item" id="logout-btn">
-                                <i class="fas fa-sign-out-alt"></i>
-                                Đăng xuất
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </header>
-            
-            <!-- Page Content -->
-            <div class="content">
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible">
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        {{ session('success') }}
-                    </div>
-                @endif
-                
-                @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible">
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        {{ session('error') }}
-                    </div>
-                @endif
-                
-                @if($errors->any())
-                    <div class="alert alert-danger alert-dismissible">
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        <ul class="mb-0">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-                
-                @yield('content')
-            </div>
-        </main>
+<body class="bg-gray-50" x-data="appLayout()">
+    {{-- Fixed Header Only --}}
+    <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+        {{-- Simple Header (Blade-only) --}}
+        <x-shared.header
+            variant="app"
+            :user="Auth::user()"
+            :tenant="Auth::user()?->tenant"
+            :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
+            :notifications="app(App\Services\HeaderService::class)->getNotifications(Auth::user())"
+            :unread-count="app(App\Services\HeaderService::class)->getUnreadCount(Auth::user())"
+            :theme="app(App\Services\HeaderService::class)->getUserTheme(Auth::user())"
+            :breadcrumbs="app(App\Services\HeaderService::class)->getBreadcrumbs(request()->route()->getName(), request()->route()->parameters())"
+        />
     </div>
     
-    <!-- Scripts -->
-    @vite(['resources/js/app.js'])
+    {{-- Theme initialization script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        });
+    </script>
+    
+    {{-- Navigator bên ngoài fixed container --}}
+    <div style="padding-top: 64px;">
+        <x-shared.navigation.primary-navigator
+            variant="app"
+            :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
+        />
+    </div>
+    
+    <!-- Main Content - Không cần padding vì Navigator đã có padding-top -->
+    <main class="pt-[20rem]">
+        <!-- KPI Strip (if provided by page) -->
+        @yield('kpi-strip')
+        
+        <!-- Alert Bar (if provided by page) -->
+        @yield('alert-bar')
+        
+        <!-- Page Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            @yield('content')
+        </div>
+        
+        <!-- Activity/History (if provided by page) -->
+        @yield('activity')
+    </main>
+
+    <!-- Alpine.js Data -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('appLayout', () => ({
+                // Notifications
+                showNotifications: false,
+                unreadNotifications: 0,
+                notifications: [],
+                
+                // Alerts - Load from real API
+                alerts: [],
+                
+                // Methods
+                dismissAlert(alertId) {
+                    this.alerts = this.alerts.filter(alert => alert.id !== alertId);
+                },
+                
+                toggleNotifications() {
+                    this.showNotifications = !this.showNotifications;
+                }
+            }));
+        });
+    </script>
     
     @stack('scripts')
 </body>

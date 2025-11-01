@@ -1,0 +1,317 @@
+{
+  "version": "1.0",
+  "created": "2025-01-24",
+  "description": "Comprehensive rename map for ZenaManage repository cleanup",
+  "renames": [
+    {
+      "from": "app/Http/Controllers/SimpleUserControllerV2.php",
+      "to": "app/Http/Controllers/UserControllerV2.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaChangeRequest.php",
+      "to": "app/Models/ChangeRequest.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaDocument.php",
+      "to": "app/Models/Document.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaProject.php",
+      "to": "app/Models/Project.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaTask.php",
+      "to": "app/Models/Task.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaUser.php",
+      "to": "app/Models/User.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaRole.php",
+      "to": "app/Models/Role.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaPermission.php",
+      "to": "app/Models/Permission.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaNotification.php",
+      "to": "app/Models/Notification.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaDrawing.php",
+      "to": "app/Models/Drawing.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaMaterialRequest.php",
+      "to": "app/Models/MaterialRequest.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaNcr.php",
+      "to": "app/Models/Ncr.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaQcInspection.php",
+      "to": "app/Models/QcInspection.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaRfi.php",
+      "to": "app/Models/Rfi.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaSubmittal.php",
+      "to": "app/Models/Submittal.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaRolePermission.php",
+      "to": "app/Models/RolePermission.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaUserRole.php",
+      "to": "app/Models/UserRole.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/Api/SimpleDocumentController.php",
+      "to": "app/Http/Controllers/Api/DocumentController.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/SimpleUserController.php",
+      "to": "app/Http/Controllers/UserController.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/Api/ProjectManagerDashboardController.php",
+      "to": "app/Http/Controllers/Api/DashboardController.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/Api/ZenaDashboardController.php",
+      "to": "app/Http/Controllers/Api/DashboardController.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/admin.blade.php",
+      "to": "resources/views/admin/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/client.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/pm.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/site-engineer.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/designer.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/finance.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/marketing.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/performance.blade.php",
+      "to": "resources/views/admin/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/projects.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/qc-inspector.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/sales.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/subcontractor-lead.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "resources/views/dashboards/users.blade.php",
+      "to": "resources/views/admin/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "database/factories/ZenaChangeRequestFactory.php",
+      "to": "database/factories/ChangeRequestFactory.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "database/factories/ZenaNotificationFactory.php",
+      "to": "database/factories/NotificationFactory.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "database/factories/ZenaPermissionFactory.php",
+      "to": "database/factories/PermissionFactory.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "database/factories/ZenaProjectFactory.php",
+      "to": "database/factories/ProjectFactory.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "database/factories/ZenaRoleFactory.php",
+      "to": "database/factories/RoleFactory.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "database/factories/ZenaTaskFactory.php",
+      "to": "database/factories/TaskFactory.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/InvitationController.php",
+      "to": "app/Http/Controllers/Web/InvitationController.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/ProjectController.php",
+      "to": "app/Http/Controllers/Web/ProjectController.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/ExampleController.php",
+      "to": "app/Http/Controllers/Web/ExampleController.php",
+      "reason": "Boundary",
+      "status": "pending"
+    },
+    {
+      "from": "app/Http/Controllers/TestController.php",
+      "to": "app/Http/Controllers/Web/TestController.php",
+      "reason": "Boundary",
+      "status": "pending"
+    },
+    {
+      "from": "resources/views/test-*.blade.php",
+      "to": "resources/views/_debug/test-*.blade.php",
+      "reason": "Boundary",
+      "status": "pending"
+    },
+    {
+      "from": "resources/views/debug/*.blade.php",
+      "to": "resources/views/_debug/*.blade.php",
+      "reason": "Boundary",
+      "status": "pending"
+    },
+    {
+      "from": "routes/debug.php",
+      "to": "routes/_debug.php",
+      "reason": "Naming",
+      "status": "pending"
+    },
+    {
+      "from": "app/Http/Controllers/Api/SimpleDocumentController",
+      "to": "app/Http/Controllers/Api/DocumentController",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/Api/ProjectManagerDashboardController",
+      "to": "app/Http/Controllers/Api/DashboardController",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/Api/ZenaDashboardController",
+      "to": "app/Http/Controllers/Api/DashboardController",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    }
+  ],
+  "summary": {
+    "total_renames": 45,
+    "completed": 35,
+    "pending": 10,
+    "by_reason": {
+      "DuplicateRemoval": 15,
+      "Naming": 12,
+      "Boundary": 18
+    }
+  }
+}

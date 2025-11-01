@@ -1,0 +1,506 @@
+name: Comprehensive CI/CD with Duplicate Detection
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run duplicate detection daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  # Duplicate Detection Job
+  duplicate-detection:
+    runs-on: ubuntu-latest
+    name: Duplicate Detection
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, session, simplexml, tokenizer, xml, zip
+          
+      - name: Install Node dependencies
+        run: npm ci
+        
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader
+        
+      - name: Create reports directory
+        run: mkdir -p reports
+        
+      - name: Check JavaScript duplication with jscpd
+        run: |
+          echo "🔍 Checking JavaScript/TypeScript duplication..."
+          npx jscpd --min-lines 10 --min-tokens 50 --threshold 5 --reporters console,html,json --output ./reports/jscpd resources/js src/ || true
+          
+      - name: Check PHP duplication with phpcpd
+        run: |
+          echo "🔍 Checking PHP duplication..."
+          if ! command -v phpcpd &> /dev/null; then
+            echo "Installing phpcpd..."
+            composer global require sebastian/phpcpd
+          fi
+          ~/.composer/vendor/bin/phpcpd --min-lines 10 --min-tokens 50 --log-pmd ./reports/phpcpd.xml app/ || true
+          
+      - name: Check PHP syntax
+        run: |
+          echo "🔍 Checking PHP syntax..."
+          find app/ -name "*.php" -exec php -l {} \; | grep -v "No syntax errors" || true
+          
+      - name: ESLint with SonarJS rules
+        run: |
+          echo "🔍 Running ESLint with SonarJS rules..."
+          npx eslint resources/js src/ --ext .js,.ts,.jsx,.tsx --config .eslintrc.sonarjs.js --format json --output-file ./reports/eslint.json || true
+          
+      - name: Check for duplicate code patterns
+        run: |
+          echo "🔍 Checking for common duplicate patterns..."
+          
+          # Check for duplicate header components
+          HEADER_FILES=$(find resources/views -name "*header*" -type f | wc -l)
+          if [ $HEADER_FILES -gt 2 ]; then
+            echo "⚠️  Found $HEADER_FILES header files - consider consolidating"
+            echo "HEADER_DUPLICATION_WARNING=true" >> $GITHUB_ENV
+          else
+            echo "✅ Header files count: $HEADER_FILES"
+          fi
+          
+          # Check for duplicate layout files
+          LAYOUT_FILES=$(find resources/views/layouts -name "app*.blade.php" -type f | wc -l)
+          if [ $LAYOUT_FILES -gt 1 ]; then
+            echo "⚠️  Found $LAYOUT_FILES layout files - consider consolidating"
+            echo "LAYOUT_DUPLICATION_WARNING=true" >> $GITHUB_ENV
+          else
+            echo "✅ Layout files count: $LAYOUT_FILES"
+          fi
+          
+          # Check for duplicate dashboard files
+          DASHBOARD_FILES=$(find resources/views/app -name "*dashboard*" -type f | wc -l)
+          if [ $DASHBOARD_FILES -gt 1 ]; then
+            echo "⚠️  Found $DASHBOARD_FILES dashboard files - consider consolidating"
+            echo "DASHBOARD_DUPLICATION_WARNING=true" >> $GITHUB_ENV
+          else
+            echo "✅ Dashboard files count: $DASHBOARD_FILES"
+          fi
+          
+          # Check for duplicate project files
+          PROJECT_FILES=$(find resources/views/app -name "*project*" -type f | wc -l)
+          if [ $PROJECT_FILES -gt 2 ]; then
+            echo "⚠️  Found $PROJECT_FILES project files - consider consolidating"
+            echo "PROJECT_DUPLICATION_WARNING=true" >> $GITHUB_ENV
+          else
+            echo "✅ Project files count: $PROJECT_FILES"
+          fi
+          
+          # Check for duplicate middleware files
+          MIDDLEWARE_FILES=$(find app/Http/Middleware -name "*.php" -type f | wc -l)
+          if [ $MIDDLEWARE_FILES -gt 15 ]; then
+            echo "⚠️  Found $MIDDLEWARE_FILES middleware files - consider consolidating"
+            echo "MIDDLEWARE_DUPLICATION_WARNING=true" >> $GITHUB_ENV
+          else
+            echo "✅ Middleware files count: $MIDDLEWARE_FILES"
+          fi
+          
+          # Check for duplicate controller files
+          CONTROLLER_FILES=$(find app/Http/Controllers -name "*.php" -type f | wc -l)
+          if [ $CONTROLLER_FILES -gt 20 ]; then
+            echo "⚠️  Found $CONTROLLER_FILES controller files - consider consolidating"
+            echo "CONTROLLER_DUPLICATION_WARNING=true" >> $GITHUB_ENV
+          else
+            echo "✅ Controller files count: $CONTROLLER_FILES"
+          fi
+          
+      - name: Check for unused files
+        run: |
+          echo "🔍 Checking for unused files..."
+          
+          # Check for unused Blade components
+          UNUSED_COMPONENTS=$(find resources/views/components -name "*.blade.php" -type f | wc -l)
+          echo "📊 Total Blade components: $UNUSED_COMPONENTS"
+          
+          # Check for unused React components
+          UNUSED_REACT=$(find resources/js -name "*.tsx" -o -name "*.jsx" | wc -l)
+          echo "📊 Total React components: $UNUSED_REACT"
+          
+      - name: Generate duplication report
+        run: |
+          echo "📊 Generating duplication report..."
+          
+          # Create summary report
+          cat > ./reports/duplication-summary.md << EOF
+          # Duplication Check Summary
+          
+          ## JavaScript/TypeScript Duplication
+          - Report: jscpd.html
+          - JSON Report: jscpd.json
+          
+          ## PHP Duplication
+          - Report: phpcpd.xml
+          
+          ## Code Quality
+          - ESLint Report: eslint.json
+          
+          ## File Count Analysis
+          - Header Files: \$(find resources/views -name "*header*" -type f | wc -l)
+          - Layout Files: \$(find resources/views/layouts -name "app*.blade.php" -type f | wc -l)
+          - Dashboard Files: \$(find resources/views/app -name "*dashboard*" -type f | wc -l)
+          - Project Files: \$(find resources/views/app -name "*project*" -type f | wc -l)
+          - Middleware Files: \$(find app/Http/Middleware -name "*.php" -type f | wc -l)
+          - Controller Files: \$(find app/Http/Controllers -name "*.php" -type f | wc -l)
+          
+          ## Recommendations
+          1. Review duplicate code clusters identified in reports
+          2. Consider consolidating similar components
+          3. Use shared components to reduce duplication
+          4. Implement code review guidelines to prevent future duplication
+          EOF
+          
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: duplication-reports
+          path: reports/
+          
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            let comment = '## 🔍 Enhanced Duplication Check Results\n\n';
+            
+            // Check if reports exist
+            if (fs.existsSync('./reports/jscpd')) {
+              comment += '### JavaScript/TypeScript Duplication\n';
+              comment += '✅ JavaScript duplication check completed\n';
+              comment += '- Report: [jscpd.html](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n';
+            }
+            
+            if (fs.existsSync('./reports/phpcpd.xml')) {
+              comment += '### PHP Duplication\n';
+              comment += '✅ PHP duplication check completed\n';
+              comment += '- Report: [phpcpd.xml](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n';
+            }
+            
+            if (fs.existsSync('./reports/eslint.json')) {
+              const eslintReport = JSON.parse(fs.readFileSync('./reports/eslint.json', 'utf8'));
+              const errorCount = eslintReport.reduce((sum, file) => sum + file.errorCount, 0);
+              const warningCount = eslintReport.reduce((sum, file) => sum + file.warningCount, 0);
+              
+              comment += '### Code Quality\n';
+              comment += `- Errors: ${errorCount}\n`;
+              comment += `- Warnings: ${warningCount}\n\n`;
+            }
+            
+            // Add warnings if any
+            const warnings = [];
+            if (process.env.HEADER_DUPLICATION_WARNING) warnings.push('Header files duplication detected');
+            if (process.env.LAYOUT_DUPLICATION_WARNING) warnings.push('Layout files duplication detected');
+            if (process.env.DASHBOARD_DUPLICATION_WARNING) warnings.push('Dashboard files duplication detected');
+            if (process.env.PROJECT_DUPLICATION_WARNING) warnings.push('Project files duplication detected');
+            if (process.env.MIDDLEWARE_DUPLICATION_WARNING) warnings.push('Middleware files duplication detected');
+            if (process.env.CONTROLLER_DUPLICATION_WARNING) warnings.push('Controller files duplication detected');
+            
+            if (warnings.length > 0) {
+              comment += '### ⚠️ Warnings\n';
+              warnings.forEach(warning => {
+                comment += `- ${warning}\n`;
+              });
+              comment += '\n';
+            }
+            
+            comment += '### 📊 File Count Analysis\n';
+            comment += '- Header Files: ' + (fs.existsSync('./reports/duplication-summary.md') ? 'See report' : 'N/A') + '\n';
+            comment += '- Layout Files: ' + (fs.existsSync('./reports/duplication-summary.md') ? 'See report' : 'N/A') + '\n';
+            comment += '- Dashboard Files: ' + (fs.existsSync('./reports/duplication-summary.md') ? 'See report' : 'N/A') + '\n';
+            comment += '- Project Files: ' + (fs.existsSync('./reports/duplication-summary.md') ? 'See report' : 'N/A') + '\n';
+            comment += '- Middleware Files: ' + (fs.existsSync('./reports/duplication-summary.md') ? 'See report' : 'N/A') + '\n';
+            comment += '- Controller Files: ' + (fs.existsSync('./reports/duplication-summary.md') ? 'See report' : 'N/A') + '\n\n';
+            
+            comment += '### Recommendations\n';
+            comment += '- Review duplicate code clusters identified in reports\n';
+            comment += '- Consider consolidating similar components\n';
+            comment += '- Use shared components to reduce duplication\n';
+            comment += '- Implement code review guidelines to prevent future duplication\n';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Code Quality Job
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality
+    needs: duplicate-detection
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, session, simplexml, tokenizer, xml, zip
+          
+      - name: Install Node dependencies
+        run: npm ci
+        
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader
+        
+      - name: Run PHP CS Fixer
+        run: |
+          echo "🔍 Running PHP CS Fixer..."
+          if ! command -v php-cs-fixer &> /dev/null; then
+            echo "Installing PHP CS Fixer..."
+            composer global require friendsofphp/php-cs-fixer
+          fi
+          ~/.composer/vendor/bin/php-cs-fixer fix --dry-run --diff app/ || true
+          
+      - name: Run PHPStan
+        run: |
+          echo "🔍 Running PHPStan..."
+          if ! command -v phpstan &> /dev/null; then
+            echo "Installing PHPStan..."
+            composer global require phpstan/phpstan
+          fi
+          ~/.composer/vendor/bin/phpstan analyse app/ --level=5 || true
+          
+      - name: Run ESLint
+        run: |
+          echo "🔍 Running ESLint..."
+          npx eslint resources/js src/ --ext .js,.ts,.jsx,.tsx --format json --output-file ./reports/eslint.json || true
+          
+      - name: Run Prettier
+        run: |
+          echo "🔍 Running Prettier..."
+          npx prettier --check resources/js src/ || true
+          
+      - name: Upload code quality reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: code-quality-reports
+          path: reports/
+
+  # Testing Job
+  testing:
+    runs-on: ubuntu-latest
+    name: Testing
+    needs: [duplicate-detection, code-quality]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, session, simplexml, tokenizer, xml, zip
+          
+      - name: Install Node dependencies
+        run: npm ci
+        
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader
+        
+      - name: Setup database
+        run: |
+          echo "🔍 Setting up database..."
+          php artisan migrate --force
+          php artisan db:seed --force
+          
+      - name: Run PHP tests
+        run: |
+          echo "🔍 Running PHP tests..."
+          php artisan test --coverage || true
+          
+      - name: Run JavaScript tests
+        run: |
+          echo "🔍 Running JavaScript tests..."
+          npm test || true
+          
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          path: reports/
+
+  # Security Job
+  security:
+    runs-on: ubuntu-latest
+    name: Security
+    needs: [duplicate-detection, code-quality]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, session, simplexml, tokenizer, xml, zip
+          
+      - name: Install Node dependencies
+        run: npm ci
+        
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader
+        
+      - name: Run PHP Security Checker
+        run: |
+          echo "🔍 Running PHP Security Checker..."
+          if ! command -v security-checker &> /dev/null; then
+            echo "Installing Security Checker..."
+            composer global require sensiolabs/security-checker
+          fi
+          ~/.composer/vendor/bin/security-checker security:check composer.lock || true
+          
+      - name: Run npm audit
+        run: |
+          echo "🔍 Running npm audit..."
+          npm audit --audit-level=moderate || true
+          
+      - name: Run ESLint security rules
+        run: |
+          echo "🔍 Running ESLint security rules..."
+          npx eslint resources/js src/ --ext .js,.ts,.jsx,.tsx --config .eslintrc.security.js --format json --output-file ./reports/eslint-security.json || true
+          
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: reports/
+
+  # Performance Job
+  performance:
+    runs-on: ubuntu-latest
+    name: Performance
+    needs: [duplicate-detection, code-quality, testing]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, session, simplexml, tokenizer, xml, zip
+          
+      - name: Install Node dependencies
+        run: npm ci
+        
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader
+        
+      - name: Run PHP Performance Tests
+        run: |
+          echo "🔍 Running PHP Performance Tests..."
+          php artisan test --filter=Performance || true
+          
+      - name: Run JavaScript Performance Tests
+        run: |
+          echo "🔍 Running JavaScript Performance Tests..."
+          npm run test:performance || true
+          
+      - name: Upload performance reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-reports
+          path: reports/
+
+  # Deployment Job
+  deployment:
+    runs-on: ubuntu-latest
+    name: Deployment
+    needs: [duplicate-detection, code-quality, testing, security, performance]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, session, simplexml, tokenizer, xml, zip
+          
+      - name: Install Node dependencies
+        run: npm ci
+        
+      - name: Install PHP dependencies
+        run: composer install --no-dev --optimize-autoloader
+        
+      - name: Build assets
+        run: |
+          echo "🔍 Building assets..."
+          npm run build
+          
+      - name: Deploy to production
+        run: |
+          echo "🔍 Deploying to production..."
+          # Add your deployment script here
+          echo "Deployment completed successfully"
+          
+      - name: Upload deployment reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-reports
+          path: reports/

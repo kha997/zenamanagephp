@@ -14,6 +14,33 @@ use Src\ChangeRequest\Events\ChangeRequestApproved;
 class InterModuleCommunicationListener
 {
     /**
+     * Handle incoming events và route tới method tương ứng
+     */
+    public function handle($event): void
+    {
+        $eventClass = get_class($event);
+        
+        switch ($eventClass) {
+            case 'Src\\CoreProject\\Events\\ProjectCreated':
+                $this->handleProjectCreated($event);
+                break;
+                
+            case 'Src\\CoreProject\\Events\\ComponentProgressUpdated':
+                $this->handleComponentProgressUpdated($event);
+                break;
+                
+            case 'Src\\ChangeRequest\\Events\\ChangeRequestApproved':
+                $this->handleChangeRequestApproved($event);
+                break;
+                
+            default:
+                Log::warning('InterModuleCommunicationListener: Unhandled event type', [
+                    'event_class' => $eventClass
+                ]);
+        }
+    }
+
+    /**
      * Xử lý khi project được tạo
      * Trigger các modules khác setup initial data
      */

@@ -1,0 +1,210 @@
+{
+  "legacy_route_mapping": {
+    "version": "2.0.0",
+    "created_date": "2024-01-21",
+    "updated_date": "2024-01-21",
+    "description": "Optimized legacy route mapping for ZenaManage system - 3-phase removal strategy",
+    "strategy": "3-phase removal (Announce → 301 → 410)",
+    "current_status": "Phase 1: Essential routes only (3 routes)",
+    "removal_schedule": {
+      "phase_1": {
+        "status": "active",
+        "start_date": "2024-01-21",
+        "end_date": "2024-02-21",
+        "description": "Essential routes only - keep minimal set",
+        "routes": [
+          {
+            "legacy": "/dashboard",
+            "target": "/app/dashboard",
+            "reason": "Most common entry point",
+            "traffic_level": "high"
+          },
+          {
+            "legacy": "/projects",
+            "target": "/app/projects",
+            "reason": "Core functionality",
+            "traffic_level": "high"
+          },
+          {
+            "legacy": "/tasks",
+            "target": "/app/tasks",
+            "reason": "Keep based on traffic analysis",
+            "traffic_level": "medium"
+          }
+        ]
+      },
+      "phase_2": {
+        "status": "scheduled",
+        "start_date": "2024-02-21",
+        "end_date": "2024-03-21",
+        "description": "Performance routes - moved to API",
+        "routes": [
+          {
+            "legacy": "/health",
+            "target": "/api/v1/public/health",
+            "reason": "Moved to proper API endpoint",
+            "traffic_level": "low"
+          },
+          {
+            "legacy": "/metrics",
+            "target": "/api/v1/admin/perf/metrics",
+            "reason": "Moved to admin API",
+            "traffic_level": "low"
+          },
+          {
+            "legacy": "/health-check",
+            "target": "/api/v1/admin/perf/health",
+            "reason": "Moved to admin API",
+            "traffic_level": "low"
+          },
+          {
+            "legacy": "/clear-cache",
+            "target": "/api/v1/admin/perf/clear-caches",
+            "reason": "Moved to admin API",
+            "traffic_level": "low"
+          },
+          {
+            "legacy": "/performance/metrics",
+            "target": "/api/v1/admin/perf/metrics",
+            "reason": "Moved to admin API",
+            "traffic_level": "low"
+          },
+          {
+            "legacy": "/performance/health",
+            "target": "/api/v1/admin/perf/health",
+            "reason": "Moved to admin API",
+            "traffic_level": "low"
+          },
+          {
+            "legacy": "/performance/clear-caches",
+            "target": "/api/v1/admin/perf/clear-caches",
+            "reason": "Moved to admin API",
+            "traffic_level": "low"
+          }
+        ]
+      },
+      "phase_3": {
+        "status": "scheduled",
+        "start_date": "2025-03-21",
+        "end_date": "2025-04-21",
+        "description": "Invitation routes - standardized naming",
+        "routes": [
+          {
+            "legacy": "/invite/accept/{token}",
+            "target": "/invitations/accept/{token}",
+            "reason": "Standardize naming convention",
+            "traffic_level": "medium",
+            "removal_410_date": "2025-05-21"
+          },
+          {
+            "legacy": "/invite/decline/{token}",
+            "target": "/invitations/decline/{token}",
+            "reason": "Standardize naming convention",
+            "traffic_level": "low",
+            "removal_410_date": "2025-05-21"
+          }
+        ]
+      }
+    },
+    "removed_routes": {
+      "removal_date": "2024-01-21",
+      "description": "Non-essential legacy routes removed to reduce maintenance burden",
+      "routes": [
+        {
+          "legacy": "/users",
+          "target": "/app/team/users",
+          "reason": "Low traffic, users can use /app/team",
+          "traffic_level": "low"
+        },
+        {
+          "legacy": "/tenants",
+          "target": "/admin/tenants",
+          "reason": "Admin-only route, low traffic",
+          "traffic_level": "low"
+        },
+        {
+          "legacy": "/documents",
+          "target": "/app/documents",
+          "reason": "Low traffic, users can use /app/documents",
+          "traffic_level": "low"
+        },
+        {
+          "legacy": "/templates",
+          "target": "/app/templates",
+          "reason": "Low traffic, users can use /app/templates",
+          "traffic_level": "low"
+        },
+        {
+          "legacy": "/settings",
+          "target": "/app/settings",
+          "reason": "Low traffic, users can use /app/settings",
+          "traffic_level": "low"
+        },
+        {
+          "legacy": "/profile",
+          "target": "/app/profile",
+          "reason": "Low traffic, users can use /app/profile",
+          "traffic_level": "low"
+        },
+        {
+          "legacy": "/team",
+          "target": "/app/team",
+          "reason": "Low traffic, users can use /app/team",
+          "traffic_level": "low"
+        },
+        {
+          "legacy": "/admin-dashboard",
+          "target": "/admin",
+          "reason": "Redundant with /admin",
+          "traffic_level": "very_low"
+        },
+        {
+          "legacy": "/role-dashboard",
+          "target": "/app/dashboard",
+          "reason": "Role-based dashboards handled by RBAC",
+          "traffic_level": "very_low"
+        }
+      ]
+    },
+    "three_phase_strategy": {
+      "phase_1_announce": {
+        "duration": "30 days",
+        "action": "Log usage, send deprecation warnings",
+        "response_code": "200 with deprecation header"
+      },
+      "phase_2_redirect": {
+        "duration": "30 days",
+        "action": "301 permanent redirects",
+        "response_code": "301"
+      },
+      "phase_3_remove": {
+        "duration": "permanent",
+        "action": "410 Gone",
+        "response_code": "410"
+      }
+    },
+    "monitoring": {
+      "log_legacy_access": true,
+      "alert_threshold": 50,
+      "description": "Monitor legacy route usage to determine removal timeline",
+      "metrics": [
+        "daily_access_count",
+        "unique_users",
+        "referrer_analysis",
+        "user_agent_analysis"
+      ]
+    },
+    "benefits": {
+      "reduced_maintenance": "From 19 legacy routes to 3 essential routes",
+      "clearer_architecture": "Eliminated redundant routes",
+      "better_security": "Reduced attack surface",
+      "easier_debugging": "Fewer routes to troubleshoot",
+      "consistent_naming": "Web and API routes aligned"
+    },
+    "documentation": {
+      "last_updated": "2024-01-21",
+      "maintainer": "ZenaManage Development Team",
+      "notes": "This file should be updated whenever new legacy routes are added or removed. Follow 3-phase strategy for all future legacy route management."
+    }
+  }
+}

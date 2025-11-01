@@ -103,12 +103,10 @@ class DocumentApiTest extends TestCase
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
         ])->postJson('/api/v1/documents', [
-            'title' => 'Test Document',
+            'name' => 'Test Document',
             'project_id' => $this->project->id,
-            'linked_entity_type' => 'project',
-            'linked_entity_id' => $this->project->id,
             'file' => $file,
-            'comment' => 'Initial upload'
+            'description' => 'Initial upload'
         ]);
 
         $response->assertStatus(201)
@@ -127,13 +125,13 @@ class DocumentApiTest extends TestCase
                  ]);
 
         $this->assertDatabaseHas('documents', [
-            'title' => 'Test Document',
+            'name' => 'Test Document',
             'project_id' => $this->project->id
         ]);
 
         $this->assertDatabaseHas('document_versions', [
             'version_number' => 1,
-            'comment' => 'Initial upload'
+            'comment' => 'Initial version'
         ]);
     }
 
@@ -174,17 +172,36 @@ class DocumentApiTest extends TestCase
      */
     public function test_can_upload_new_version()
     {
-        $document = Document::factory()->create([
-            'project_id' => $this->project->id
+        // First create a document via API
+        $file1 = UploadedFile::fake()->create('test-document.pdf', 1024, 'application/pdf');
+        $uploadResponse = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson('/api/v1/documents', [
+            'name' => 'Test Document',
+            'project_id' => $this->project->id,
+            'file' => $file1,
+            'description' => 'Initial upload'
+        ]);
+        
+        $uploadResponse->assertStatus(201);
+        $documentId = $uploadResponse->json('data.document.id');
+        
+        // Wait a moment to ensure document is fully created and indexed
+        usleep(100000); // 100ms delay
+        
+        // Verify document exists before proceeding
+        $this->assertDatabaseHas('documents', [
+            'id' => $documentId,
+            'name' => 'Test Document'
         ]);
 
         $file = UploadedFile::fake()->create('test-document-v2.pdf', 1024, 'application/pdf');
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/v1/documents/{$document->id}/versions", [
+        ])->postJson("/api/v1/documents/{$documentId}/versions", [
             'file' => $file,
-            'comment' => 'Updated version'
+            'change_description' => 'Updated version'
         ]);
 
         $response->assertStatus(201)
@@ -203,7 +220,7 @@ class DocumentApiTest extends TestCase
                  ]);
 
         $this->assertDatabaseHas('document_versions', [
-            'document_id' => $document->id,
+            'document_id' => $documentId,
             'version_number' => 2,
             'comment' => 'Updated version'
         ]);
@@ -258,16 +275,22 @@ class DocumentApiTest extends TestCase
     public function test_can_download_document()
     {
         $document = Document::factory()->create([
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
+            'tenant_id' => $this->tenant->id
         ]);
 
         $version = DocumentVersion::factory()->create([
             'document_id' => $document->id,
-            'file_path' => 'documents/test-file.pdf'
+            'file_path' => 'documents/1/test-file.pdf'
         ]);
 
-        // Tạo file giả trong storage
-        Storage::put('documents/test-file.pdf', 'fake file content');
+        // Tạo thư mục và file giả trong storage
+        $filePath = storage_path('app/documents/1/test-file.pdf');
+        $dir = dirname($filePath);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        file_put_contents($filePath, 'fake file content');
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
@@ -287,6 +310,6 @@ class DocumentApiTest extends TestCase
         ])->postJson('/api/v1/documents', []);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['title', 'project_id', 'file']);
+                 ->assertJsonValidationErrors(['name', 'file']);
     }
 }

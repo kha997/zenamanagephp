@@ -1,0 +1,281 @@
+{
+  "version": "1.0",
+  "created": "2025-01-24",
+  "description": "Legacy route migration map for ZenaManage 3-phase deprecation",
+    "phases": {
+    "announce": {
+      "start": "2025-01-24",
+      "end": "2025-02-23",
+      "status": "deprecated",
+      "http_status": 200,
+      "headers": {
+        "X-Deprecated": "true",
+        "X-Sunset": "2025-04-24",
+        "X-Migration-Guide": "/docs/migration/legacy-routes"
+      }
+    },
+    "redirect": {
+      "start": "2025-02-24",
+      "end": "2025-04-23",
+      "status": "redirect",
+      "http_status": 301,
+      "headers": {
+        "Location": "{new_url}",
+        "X-Deprecated": "true",
+        "X-Sunset": "2025-04-24"
+      }
+    },
+    "gone": {
+      "start": "2025-04-24",
+      "end": null,
+      "status": "gone",
+      "http_status": 410,
+      "headers": {
+        "X-Gone": "true",
+        "X-Migration-Guide": "/docs/migration/legacy-routes"
+      }
+    }
+  },
+  "routes": [
+    {
+      "old_path": "/dashboard",
+      "new_path": "/app/dashboard",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/dashboard-to-app-dashboard"
+    },
+    {
+      "old_path": "/projects",
+      "new_path": "/app/projects",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/projects-to-app-projects"
+    },
+    {
+      "old_path": "/tasks",
+      "new_path": "/app/tasks",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/tasks-to-app-tasks"
+    },
+    {
+      "old_path": "/team",
+      "new_path": "/app/team",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/team-to-app-team"
+    },
+    {
+      "old_path": "/documents",
+      "new_path": "/app/documents",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/documents-to-app-documents"
+    },
+    {
+      "old_path": "/calendar",
+      "new_path": "/app/calendar",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/calendar-to-app-calendar"
+    },
+    {
+      "old_path": "/templates",
+      "new_path": "/app/templates",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/templates-to-app-templates"
+    },
+    {
+      "old_path": "/settings",
+      "new_path": "/app/settings",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/settings-to-app-settings"
+    },
+    {
+      "old_path": "/admin/dashboard",
+      "new_path": "/admin",
+      "phase": "announce",
+      "reason": "Route simplification",
+      "migration_guide": "/docs/migration/admin-dashboard-to-admin"
+    },
+    {
+      "old_path": "/admin/users",
+      "new_path": "/admin/users",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-users-normalization"
+    },
+    {
+      "old_path": "/admin/tenants",
+      "new_path": "/admin/tenants",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-tenants-normalization"
+    },
+    {
+      "old_path": "/admin/projects",
+      "new_path": "/admin/projects",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-projects-normalization"
+    },
+    {
+      "old_path": "/admin/tasks",
+      "new_path": "/admin/tasks",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-tasks-normalization"
+    },
+    {
+      "old_path": "/admin/security",
+      "new_path": "/admin/security",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-security-normalization"
+    },
+    {
+      "old_path": "/admin/alerts",
+      "new_path": "/admin/alerts",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-alerts-normalization"
+    },
+    {
+      "old_path": "/admin/activities",
+      "new_path": "/admin/activities",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-activities-normalization"
+    },
+    {
+      "old_path": "/admin/analytics",
+      "new_path": "/admin/analytics",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-analytics-normalization"
+    },
+    {
+      "old_path": "/admin/settings",
+      "new_path": "/admin/settings",
+      "phase": "announce",
+      "reason": "Route normalization",
+      "migration_guide": "/docs/migration/admin-settings-normalization"
+    },
+    {
+      "old_path": "/api/documents",
+      "new_path": "/api/v1/documents",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-documents-versioning"
+    },
+    {
+      "old_path": "/api/projects",
+      "new_path": "/api/v1/projects",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-projects-versioning"
+    },
+    {
+      "old_path": "/api/tasks",
+      "new_path": "/api/v1/tasks",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-tasks-versioning"
+    },
+    {
+      "old_path": "/api/team",
+      "new_path": "/api/v1/team",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-team-versioning"
+    },
+    {
+      "old_path": "/api/users",
+      "new_path": "/api/v1/users",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-users-versioning"
+    },
+    {
+      "old_path": "/api/tenants",
+      "new_path": "/api/v1/tenants",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-tenants-versioning"
+    },
+    {
+      "old_path": "/api/dashboard",
+      "new_path": "/api/v1/dashboard",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-dashboard-versioning"
+    },
+    {
+      "old_path": "/api/notifications",
+      "new_path": "/api/v1/notifications",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-notifications-versioning"
+    },
+    {
+      "old_path": "/api/auth",
+      "new_path": "/api/v1/auth",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-auth-versioning"
+    },
+    {
+      "old_path": "/api/export",
+      "new_path": "/api/v1/export",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-export-versioning"
+    },
+    {
+      "old_path": "/api/analytics",
+      "new_path": "/api/v1/analytics",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-analytics-versioning"
+    },
+    {
+      "old_path": "/api/security",
+      "new_path": "/api/v1/security",
+      "phase": "announce",
+      "reason": "API versioning",
+      "migration_guide": "/docs/migration/api-security-versioning"
+    }
+  ],
+  "summary": {
+    "total_routes": 30,
+    "by_phase": {
+      "announce": 30,
+      "redirect": 0,
+      "gone": 0
+    },
+    "by_type": {
+      "web": 18,
+      "api": 12
+    },
+    "by_reason": {
+      "route_normalization": 18,
+      "api_versioning": 12
+    }
+  },
+  "timeline": {
+    "announce_start": "2025-01-24",
+    "announce_end": "2025-02-23",
+    "redirect_start": "2025-02-24",
+    "redirect_end": "2025-04-23",
+    "gone_start": "2025-04-24",
+    "gone_end": null
+  },
+  "migration_guides": {
+    "overview": "/docs/migration/legacy-routes",
+    "web_routes": "/docs/migration/web-routes",
+    "api_routes": "/docs/migration/api-routes",
+    "breaking_changes": "/docs/migration/breaking-changes"
+  }
+}

@@ -4,18 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Src\Foundation\Traits\HasTimestamps;
-use Src\Foundation\Traits\HasSoftDeletes;
-use Src\Foundation\Traits\HasAuditLog;
-use Src\RBAC\Traits\HasRBACContext;
-// Thêm import cho JWTSubject
-use Tymon\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use App\Traits\HasRoles;
 
 /**
  * Model User - Quản lý người dùng với RBAC và Multi-tenancy
@@ -33,11 +28,9 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
  * @property \Carbon\Carbon $updated_at
  * @property \Carbon\Carbon|null $deleted_at Soft delete timestamp
  */
-class User extends Authenticatable implements JWTSubject
+class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable, HasUlids;
-    
-    use HasTimestamps, HasSoftDeletes, HasAuditLog, HasRBACContext;
+    use HasUlids, HasFactory, HasApiTokens, Notifiable, HasRoles;
 
     /**
      * Cấu hình ULID primary key
@@ -50,8 +43,25 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
+        'phone',
+        'avatar',
+        'preferences',
+        'last_login_at',
         'is_active',
-        'profile_data'
+        'status',
+        'role',
+        'mfa_enabled',
+        'oidc_provider',
+        'oidc_subject_id',
+        'oidc_data',
+        'saml_provider',
+        'saml_name_id',
+        'saml_data',
+        'first_name',
+        'last_name',
+        'department',
+        'job_title',
+        'manager',
     ];
 
     protected $hidden = [
@@ -61,8 +71,11 @@ class User extends Authenticatable implements JWTSubject
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
         'is_active' => 'boolean',
-        'profile_data' => 'array'
+        'preferences' => 'array',
+        'oidc_data' => 'array',
+        'saml_data' => 'array',
     ];
 
     protected $attributes = [
@@ -70,7 +83,17 @@ class User extends Authenticatable implements JWTSubject
     ];
 
     /**
-     * Relationship: User thuộc về tenant
+     * Relationship: User có nhiều Z.E.N.A roles
+     */
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id')
+            ->using(UserRole::class)
+            ->withTimestamps();
+    }
+
+    /**
+     * Relationship: User thuộc về một tenant
      */
     public function tenant(): BelongsTo
     {
@@ -78,61 +101,81 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
-     * Relationship: User có nhiều system roles
+     * Relationship: User có nhiều Z.E.N.A notifications
      */
-    public function systemRoles(): BelongsToMany
+    public function zenaNotifications(): HasMany
     {
-        return $this->belongsToMany(
-            \Src\RBAC\Models\Role::class,
-            'system_user_roles', // Thay đổi từ 'user_roles_system'
-            'user_id',
-            'role_id'
-        )->withTimestamps(); // Bỏ using() vì bảng system_user_roles sử dụng composite primary key
+        return $this->hasMany(Notification::class);
     }
 
     /**
-     * Relationship: User có nhiều project roles
+     * Check if user has role.
      */
-    public function projectRoles(): HasMany
+    public function hasRole(string $role): bool
     {
-        return $this->hasMany(\Src\RBAC\Models\UserRoleProject::class);
+        return $this->roles()->where('name', $role)->exists();
     }
 
     /**
-     * Relationship: User có nhiều custom roles
+     * Relationship: User belongs to many teams
      */
-    public function customRoles(): BelongsToMany
+    public function teams(): BelongsToMany
     {
-        return $this->belongsToMany(
-            \Src\RBAC\Models\Role::class,
-            'user_roles_custom',
-            'user_id',
-            'role_id'
-        )->withTimestamps();
+        return $this->belongsToMany(Team::class, 'team_members', 'user_id', 'team_id')
+                    ->withPivot(['role', 'joined_at', 'left_at'])
+                    ->withTimestamps();
     }
 
     /**
-     * Relationship: User có nhiều task assignments
+     * Relationship: User has many task assignments
      */
     public function taskAssignments(): HasMany
     {
-        return $this->hasMany(\Src\CoreProject\Models\TaskAssignment::class);
+        return $this->hasMany(TaskAssignment::class);
     }
 
     /**
-     * Relationship: User có nhiều notifications
+     * Relationship: User has many assigned tasks
      */
-    public function notifications(): HasMany
+    public function tasks(): HasMany
     {
-        return $this->hasMany(\Src\Notification\Models\Notification::class);
+        return $this->hasMany(Task::class, 'assigned_to');
     }
 
     /**
-     * Relationship: User có nhiều notification rules
+     * Relationship: User has many created tasks
      */
-    public function notificationRules(): HasMany
+    public function createdTasks(): HasMany
     {
-        return $this->hasMany(\Src\Notification\Models\NotificationRule::class);
+        return $this->hasMany(Task::class, 'created_by');
+    }
+
+    /**
+     * Check if user has any of the given roles.
+     */
+    public function hasAnyRole(array $roles): bool
+    {
+        return $this->roles()->whereIn('name', $roles)->exists();
+    }
+
+    /**
+     * Check if user has permission.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        return $this->roles()->whereHas('permissions', function ($query) use ($permission) {
+            return $query->where('name', $permission);
+        })->exists();
+    }
+
+    /**
+     * Check if user has any of the given permissions.
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        return $this->roles()->whereHas('permissions', function ($query) use ($permissions) {
+            return $query->whereIn('name', $permissions);
+        })->exists();
     }
 
     /**
@@ -140,25 +183,7 @@ class User extends Authenticatable implements JWTSubject
      */
     public function isActive(): bool
     {
-        return $this->is_active && $this->tenant->isActive();
-    }
-
-    /**
-     * Lấy profile data theo key
-     */
-    public function getProfileData(string $key, $default = null)
-    {
-        return data_get($this->profile_data, $key, $default);
-    }
-
-    /**
-     * Cập nhật profile data
-     */
-    public function updateProfileData(string $key, $value): void
-    {
-        $profileData = $this->profile_data ?? [];
-        data_set($profileData, $key, $value);
-        $this->update(['profile_data' => $profileData]);
+        return $this->is_active;
     }
 
     /**
@@ -166,41 +191,145 @@ class User extends Authenticatable implements JWTSubject
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)
-                    ->whereHas('tenant', function($q) {
-                        $q->where('is_active', true);
-                    });
+        return $query->where('is_active', true);
     }
 
     /**
-     * Scope: Lọc theo tenant
+     * Get the organization for the user.
      */
-    public function scopeForTenant($query, string $tenantId)
+    public function organization(): BelongsTo
     {
-        return $query->where('tenant_id', $tenantId);
+        return $this->belongsTo(Organization::class);
     }
 
     /**
-     * Get the identifier that will be stored in the subject claim of the JWT.
-     *
-     * @return mixed
+     * Get the invitation that created this user.
      */
-    public function getJWTIdentifier()
+    public function invitation(): BelongsTo
     {
-        return $this->getKey();
+        return $this->belongsTo(Invitation::class);
     }
 
     /**
-     * Return a key value array, containing any custom claims to be added to the JWT.
-     *
-     * @return array
+     * Relationship: User has many change requests
      */
-    public function getJWTCustomClaims()
+    public function changeRequests(): HasMany
     {
-        return [
-            'user_id' => $this->id,
-            'tenant_id' => $this->tenant_id,
-            'is_active' => $this->is_active,
-        ];
+        return $this->hasMany(ChangeRequest::class, 'created_by');
     }
+
+    /**
+     * Relationship: User has many assigned change requests
+     */
+    public function assignedChangeRequests(): HasMany
+    {
+        return $this->hasMany(ChangeRequest::class, 'assigned_to');
+    }
+
+    /**
+     * Relationship: User has many projects as project manager
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'pm_id');
+    }
+
+    /**
+     * Relationship: User has many support tickets
+     */
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User has many assigned support tickets
+     */
+    public function assignedSupportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'assigned_to');
+    }
+
+    /**
+     * Relationship: User has many calendar events
+     */
+    public function calendarEvents(): HasMany
+    {
+        return $this->hasMany(CalendarEvent::class, 'created_by');
+    }
+
+    /**
+     * Get invitations sent by this user.
+     */
+    public function sentInvitations(): HasMany
+    {
+        return $this->hasMany(Invitation::class, 'invited_by');
+    }
+
+    /**
+     * Check if user is admin (super_admin, admin, project_manager)
+     */
+    public function isAdmin(): bool
+    {
+        return $this->hasAnyRole(['super_admin', 'admin', 'project_manager']);
+    }
+
+    /**
+     * Check if user can manage invitations
+     */
+    public function canManageInvitations(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    /**
+     * Relationship: User has many system roles
+     */
+    public function systemRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(ZenaRole::class, 'user_roles', 'user_id', 'role_id');
+    }
+
+    /**
+     * Relationship: User has many role permissions through roles
+     */
+    public function rolePermissions(): BelongsToMany
+    {
+        return $this->belongsToMany(ZenaPermission::class, 'zena_role_permissions', 'role_id', 'permission_id')
+            ->join('user_roles', 'user_roles.role_id', '=', 'zena_role_permissions.role_id')
+            ->where('user_roles.user_id', $this->id);
+    }
+
+    /**
+     * Relationship: User has many dashboard metrics
+     */
+    public function dashboardMetrics(): HasMany
+    {
+        return $this->hasMany(DashboardMetric::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User has many documents uploaded
+     */
+    public function documentsUploaded(): HasMany
+    {
+        return $this->hasMany(Document::class, 'uploaded_by');
+    }
+
+    /**
+     * Relationship: User has many dashboards
+     */
+    public function dashboards(): HasMany
+    {
+        return $this->hasMany(Dashboard::class, 'user_id');
+    }
+
+    /**
+     * Relationship: User has many widgets
+     */
+    public function widgets(): HasMany
+    {
+        return $this->hasMany(Widget::class, 'user_id');
+    }
+
 }

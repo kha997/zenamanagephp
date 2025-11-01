@@ -15,7 +15,11 @@
 </div>
 
 <div class="content-wrapper">
-    <form id="change-request-form">
+    <form id="change-request-form" method="POST">
+        @csrf
+        @if(isset($changeRequest))
+            @method('PUT')
+        @endif
         <div class="row">
             <!-- Main Form -->
             <div class="col-lg-8">

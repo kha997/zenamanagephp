@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Src\Foundation\Services\EnhancedMimeValidationService;
 
 /**
  * Service quản lý file storage với multiple drivers
@@ -33,8 +34,8 @@ class FileStorageService
      */
     public function uploadFile(
         UploadedFile $file,
-        string $directory = 'uploads',
         ?string $disk = null,
+        ?string $directory = null,
         ?string $filename = null
     ): array {
         try {
@@ -42,6 +43,7 @@ class FileStorageService
             $this->validateFile($file);
             
             $disk = $disk ?? $this->defaultDisk;
+            $directory = $directory ?? 'uploads';
             $filename = $filename ?? $this->generateUniqueFilename($file);
             $path = $directory . '/' . $filename;
             
@@ -223,25 +225,32 @@ class FileStorageService
     }
     
     /**
-     * Validate uploaded file
+     * Validate uploaded file with enhanced MIME validation
      */
     private function validateFile(UploadedFile $file): void
     {
-        // Check file size
-        if ($file->getSize() > $this->maxFileSize) {
-            throw new \Exception('File size exceeds maximum allowed size');
-        }
-        
-        // Check mime type
-        $extension = strtolower($file->getClientOriginalExtension());
-        if (!in_array($extension, $this->allowedMimes, true)) {
-            throw new \Exception('File type not allowed');
-        }
-        
         // Check if file is valid
         if (!$file->isValid()) {
             throw new \Exception('Invalid file upload');
         }
+
+        // Use enhanced MIME validation service
+        $mimeValidator = new EnhancedMimeValidationService();
+        $validationResult = $mimeValidator->validateFile($file);
+
+        if (!$validationResult['is_valid']) {
+            $errors = implode(', ', $validationResult['errors']);
+            throw new \Exception('File validation failed: ' . $errors);
+        }
+
+        // Log successful validation
+        Log::info('File validation successful', [
+            'original_name' => $file->getClientOriginalName(),
+            'extension' => $validationResult['file_info']['extension'],
+            'reported_mime' => $validationResult['file_info']['reported_mime'],
+            'detected_mime' => $validationResult['file_info']['detected_mime'],
+            'signature_match' => $validationResult['file_info']['signature_match']
+        ]);
     }
     
     /**

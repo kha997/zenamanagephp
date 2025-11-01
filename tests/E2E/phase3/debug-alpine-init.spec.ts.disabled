@@ -1,0 +1,68 @@
+import { test, expect } from '@playwright/test';
+import { AuthHelper } from '../helpers/auth-helper';
+
+test.describe('Debug Alpine Initialization', () => {
+  test('should debug Alpine.js component initialization', async ({ page }) => {
+    // Authenticate first
+    const authHelper = new AuthHelper(page);
+    await authHelper.login('uat-pm@test.com', 'password');
+    
+    // Capture console messages
+    const consoleMessages: string[] = [];
+    page.on('console', msg => {
+      consoleMessages.push(`${msg.type()}: ${msg.text()}`);
+    });
+
+    // Navigate to task detail page
+    await page.goto('/app/tasks/01K83FPM28B0NSDKE77REAFQ4P');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for Alpine.js to initialize
+    await page.waitForTimeout(3000);
+
+    // Check Alpine.js availability
+    const alpineInfo = await page.evaluate(() => {
+      return {
+        alpineExists: typeof window.Alpine !== 'undefined',
+        alpineVersion: window.Alpine?.version || 'unknown',
+        taskDetailExists: typeof window.Alpine?.data === 'function' && window.Alpine.data('taskDetail') !== undefined
+      };
+    });
+
+    console.log('Alpine info:', alpineInfo);
+
+    // Check if the component is initialized
+    const componentState = await page.evaluate(() => {
+      const element = document.querySelector('[x-data*="taskDetail"]');
+      if (element && element._x_dataStack) {
+        const data = element._x_dataStack[0];
+        return {
+          taskId: data.taskId,
+          allComments: data.allComments?.length || 0,
+          visibleComments: data.visibleComments?.length || 0,
+          loading: data.loading,
+          submitting: data.submitting
+        };
+      }
+      return null;
+    });
+
+    console.log('Component state:', componentState);
+
+    // Check if comments container is visible
+    const commentsContainerVisible = await page.locator('[data-testid="comments-container"]').isVisible();
+    console.log('Comments container visible:', commentsContainerVisible);
+
+    // Check if comments are rendered
+    const commentCount = await page.locator('[data-testid="comment-item"]').count();
+    console.log('Comment count:', commentCount);
+
+    // Log all console messages
+    console.log('Console messages:', consoleMessages);
+
+    // Basic assertions
+    expect(alpineInfo.alpineExists).toBe(true);
+    expect(componentState).not.toBeNull();
+    expect(componentState?.allComments).toBeGreaterThan(0);
+  });
+});

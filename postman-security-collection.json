@@ -1,0 +1,863 @@
+{
+  "info": {
+    "name": "ZenaManage Security Center API",
+    "description": "Collection for Super Admin Security Center API endpoints",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{admin_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "{{ADMIN_TOKEN}}",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Security KPIs",
+      "item": [
+        {
+          "name": "Get KPIs (30d)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/kpis?period=30d",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "kpis"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "30d"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get KPIs (7d)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/kpis?period=7d",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "kpis"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "7d"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get KPIs (90d)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/kpis?period=90d",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "kpis"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "90d"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get KPIs (Invalid Period)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/kpis?period=invalid",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "kpis"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "invalid"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "MFA Management",
+      "item": [
+        {
+          "name": "Get MFA Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/mfa?per_page=20&page=1&sort_by=last_login_at&sort_order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "mfa"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "last_login_at"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get MFA Users (No MFA)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/mfa?mfa_enabled=false&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "mfa"],
+              "query": [
+                {
+                  "key": "mfa_enabled",
+                  "value": "false"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Force MFA for User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/users/1:force-mfa",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "users", "1:force-mfa"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Login Monitoring",
+      "item": [
+        {
+          "name": "Get Login Attempts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/logins?per_page=20&page=1&sort_by=created_at&sort_order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "logins"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Failed Login Attempts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/logins?result=failed&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "logins"],
+              "query": [
+                {
+                  "key": "result",
+                  "value": "failed"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Login Attempts (Date Range)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/logins?date_from=2025-09-01T00:00:00Z&date_to=2025-09-28T23:59:59Z",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "logins"],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "2025-09-01T00:00:00Z"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2025-09-28T23:59:59Z"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "Get Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit?per_page=20&page=1&sort_by=created_at&sort_order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs (High Severity)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit?severity=high&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit"],
+              "query": [
+                {
+                  "key": "severity",
+                  "value": "high"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Logs (Specific Action)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit?action=login_failed&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "login_failed"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Session Management",
+      "item": [
+        {
+          "name": "Get Active Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/sessions?active_only=true&per_page=20&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "sessions"],
+              "query": [
+                {
+                  "key": "active_only",
+                  "value": "true"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/sessions?active_only=false&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "sessions"],
+              "query": [
+                {
+                  "key": "active_only",
+                  "value": "false"
+                },
+                {
+                  "key": "per_page",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Export",
+      "item": [
+        {
+          "name": "Export Audit Logs (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit/export",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit", "export"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Audit Logs (Filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit/export?severity=high&action=login_failed",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit", "export"],
+              "query": [
+                {
+                  "key": "severity",
+                  "value": "high"
+                },
+                {
+                  "key": "action",
+                  "value": "login_failed"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export MFA Users (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/mfa/export",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "mfa", "export"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Export Login Attempts (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/logins/export",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "logins", "export"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Error Tests",
+      "item": [
+        {
+          "name": "422 Invalid Period",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/kpis?period=invalid",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "kpis"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "invalid"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "422 Date Range Invalid",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit?date_from=2025-09-30T00:00:00Z&date_to=2025-09-01T00:00:00Z",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit"],
+              "query": [
+                {
+                  "key": "date_from",
+                  "value": "2025-09-30T00:00:00Z"
+                },
+                {
+                  "key": "date_to",
+                  "value": "2025-09-01T00:00:00Z"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "304 ETag Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "If-None-Match",
+                "value": "{{etag_value}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit?per_page=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "429 Rate Limit Test",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit/export",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit", "export"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CSV Injection Test",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit/export?action==1+2",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit", "export"],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "=1+2"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Testing (Dev Only)",
+      "item": [
+        {
+          "name": "Test Login Failed Event",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Skip test in production",
+                  "if (pm.environment.get('ENV') === 'production') {",
+                  "    pm.test.skip('Skipping test event in production');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"login_failed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/test-event",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "test-event"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Key Revoked Event",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Skip test in production",
+                  "if (pm.environment.get('ENV') === 'production') {",
+                  "    pm.test.skip('Skipping test event in production');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"key_revoked\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/test-event",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "test-event"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test Session Ended Event",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Skip test in production",
+                  "if (pm.environment.get('ENV') === 'production') {",
+                  "    pm.test.skip('Skipping test event in production');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"session_ended\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/test-event",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "test-event"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Unauthorized Tests",
+      "item": [
+        {
+          "name": "Unauthorized Request",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/kpis",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "kpis"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Rate Limit Test",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/admin/security/audit/export",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "security", "audit", "export"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -37,10 +37,11 @@ export const TaskBoardPage: React.FC = () => {
 
   // Load dữ liệu khi component mount
   useEffect(() => {
-    fetchTasks({ 
-      project_id: selectedProject,
-      assigned_to: selectedAssignee 
-    });
+    if (selectedProject) {
+      fetchTasks(selectedProject, { 
+        assigned_to: selectedAssignee 
+      });
+    }
   }, [selectedProject, selectedAssignee, fetchTasks]);
 
   // Định nghĩa các cột trạng thái
@@ -92,9 +93,15 @@ export const TaskBoardPage: React.FC = () => {
       return;
     }
 
+    // Cần có project được chọn để cập nhật task
+    if (!selectedProject) {
+      console.warn('No project selected for task update');
+      return;
+    }
+
     // Cập nhật trạng thái task
     const newStatus = destination.droppableId;
-    await updateTaskStatus(draggableId, newStatus);
+    await updateTaskStatus(selectedProject, draggableId, newStatus);
   };
 
   // Component TaskCard
@@ -186,6 +193,86 @@ export const TaskBoardPage: React.FC = () => {
 
   if (isLoading) {
     return <Loading.Skeleton />;
+  }
+
+  // Show message when no project is selected
+  if (!selectedProject) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Bảng Kanban</h1>
+            <p className="text-gray-600 mt-1">
+              Quản lý nhiệm vụ theo trạng thái
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              as={Link}
+              to="/tasks"
+            >
+              <List className="w-4 h-4 mr-2" />
+              Danh sách
+            </Button>
+            <Button as={Link} to="/tasks/create">
+              <Plus className="w-4 h-4 mr-2" />
+              Tạo nhiệm vụ
+            </Button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex gap-4">
+              <div className="w-64">
+                <Select
+                  placeholder="Chọn dự án"
+                  value={selectedProject}
+                  onChange={setSelectedProject}
+                  options={[
+                    { value: '', label: 'Tất cả dự án' },
+                    ...projects.map(p => ({ value: p.id, label: p.name }))
+                  ]}
+                />
+              </div>
+              <div className="w-64">
+                <Select
+                  placeholder="Người thực hiện"
+                  value={selectedAssignee}
+                  onChange={setSelectedAssignee}
+                  options={[
+                    { value: '', label: 'Tất cả người dùng' }
+                    // TODO: Add users from store
+                  ]}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* No Project Selected Message */}
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="space-y-4">
+              <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
+                <Filter className="w-8 h-8 text-gray-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Chọn dự án để xem bảng Kanban
+                </h3>
+                <p className="text-gray-600">
+                  Vui lòng chọn một dự án từ danh sách trên để xem và quản lý các nhiệm vụ.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (

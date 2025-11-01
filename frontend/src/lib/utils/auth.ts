@@ -72,7 +72,7 @@ export const getUserProfile = (): User | null => {
 /**
  * Kiểm tra user có permission không
  */
-export const hasPermission = (permission: string, user?: User): boolean => {
+export const hasPermission = (permission: string, user?: User | null): boolean => {
   if (!user) {
     user = getUserProfile()
   }
@@ -85,7 +85,7 @@ export const hasPermission = (permission: string, user?: User): boolean => {
 /**
  * Kiểm tra user có role không
  */
-export const hasRole = (roleName: string, user?: User): boolean => {
+export const hasRole = (roleName: string, user?: User | null): boolean => {
   if (!user) {
     user = getUserProfile()
   }
@@ -105,7 +105,7 @@ export const isAdmin = (user?: User): boolean => {
 /**
  * Kiểm tra user có quyền truy cập project không
  */
-export const canAccessProject = (projectId: string, user?: User): boolean => {
+export const canAccessProject = (_projectId: string, user?: User | null): boolean => {
   if (!user) {
     user = getUserProfile()
   }

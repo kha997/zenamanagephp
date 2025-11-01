@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects Dashboard Test</title>
+    <link rel="stylesheet" href="http://localhost:8000/css/tailwind.css">
+    <link rel="stylesheet" href="http://localhost:8000/css/design-system.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Header -->
+            <div class="mb-8">
+                <div class="dashboard-card p-6">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="p-3 bg-blue-100 rounded-lg">
+                                <i class="fas fa-project-diagram text-blue-600 text-2xl"></i>
+                            </div>
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-900">
+                                    Quản lý Dự án
+                                </h1>
+                                <p class="mt-1 text-gray-600 text-lg">
+                                    Dashboard quản lý và theo dõi các dự án của bạn
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6 lg:mt-0 flex flex-col sm:flex-row gap-3">
+                            <button class="zena-btn zena-btn-outline zena-btn-lg">
+                                <i class="fas fa-download"></i>
+                                Xuất báo cáo
+                            </button>
+                            <button class="zena-btn zena-btn-primary zena-btn-lg">
+                                <i class="fas fa-plus"></i>
+                                Tạo dự án mới
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="dashboard-card metric-card blue p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">Tổng dự án</p>
+                            <p class="text-3xl font-bold text-white">5</p>
+                            <p class="text-white/80 text-sm">dự án hiện tại</p>
+                        </div>
+                        <i class="fas fa-project-diagram text-4xl text-white/60"></i>
+                    </div>
+                </div>
+
+                <div class="dashboard-card metric-card green p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">Đang thực hiện</p>
+                            <p class="text-3xl font-bold text-white">3</p>
+                            <p class="text-white/80 text-sm">đang hoạt động</p>
+                        </div>
+                        <i class="fas fa-play text-4xl text-white/60"></i>
+                    </div>
+                </div>
+
+                <div class="dashboard-card metric-card orange p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">Tạm dừng</p>
+                            <p class="text-3xl font-bold text-white">1</p>
+                            <p class="text-white/80 text-sm">cần xem xét</p>
+                        </div>
+                        <i class="fas fa-pause text-4xl text-white/60"></i>
+                    </div>
+                </div>
+
+                <div class="dashboard-card metric-card purple p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-white/80 text-sm">Hoàn thành</p>
+                            <p class="text-3xl font-bold text-white">1</p>
+                            <p class="text-white/80 text-sm">đã hoàn thành</p>
+                        </div>
+                        <i class="fas fa-check-circle text-4xl text-white/60"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters and Controls -->
+            <div class="mb-8">
+                <div class="dashboard-card p-6">
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <!-- Search Input -->
+                        <div class="flex-1">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-gray-400"></i>
+                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Tìm kiếm dự án theo tên hoặc mô tả..."
+                                    class="zena-input pl-12"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Status Filter -->
+                        <div class="lg:w-64">
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <i class="fas fa-filter text-gray-400"></i>
+                                </div>
+                                <select class="zena-select pl-12">
+                                    <option value="all">Tất cả trạng thái</option>
+                                    <option value="planning">Đang lập kế hoạch</option>
+                                    <option value="in_progress">Đang thực hiện</option>
+                                    <option value="on_hold">Tạm dừng</option>
+                                    <option value="completed">Hoàn thành</option>
+                                    <option value="cancelled">Đã hủy</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- View Mode Toggle -->
+                        <div class="flex gap-2">
+                            <div class="bg-gray-100 rounded-lg p-1 flex">
+                                <button class="px-4 py-2 rounded-md bg-white shadow-sm text-blue-600">
+                                    <i class="fas fa-th mr-2"></i>
+                                    Grid
+                                </button>
+                                <button class="px-4 py-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-200">
+                                    <i class="fas fa-list mr-2"></i>
+                                    List
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Content -->
+            <div>
+                <div class="dashboard-card overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <h2 class="text-xl font-bold text-gray-900">Danh sách dự án</h2>
+                        <p class="text-gray-600 mt-1">Quản lý và theo dõi tiến độ các dự án</p>
+                    </div>
+                    
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Project Card 1 -->
+                            <div class="dashboard-card zena-card-interactive p-6">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex-1">
+                                        <h3 class="font-bold text-gray-900 mb-2 text-lg">
+                                            Dự án Website Công ty
+                                        </h3>
+                                        <p class="text-gray-600 text-sm">
+                                            Phát triển website chính thức cho công ty
+                                        </p>
+                                    </div>
+                                    <div class="ml-4">
+                                        <span class="zena-badge zena-badge-success">
+                                            <i class="fas fa-play mr-1"></i>
+                                            Đang thực hiện
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm font-medium text-gray-700">Tiến độ</span>
+                                        <span class="text-sm font-bold text-gray-900">75%</span>
+                                    </div>
+                                    <div class="zena-progress">
+                                        <div class="zena-progress-bar zena-progress-bar-success" style="width: 75%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between text-sm text-gray-600 mb-6">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-blue-500"></i>
+                                        <span class="font-medium">15/01/2024</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-clock text-green-500"></i>
+                                        <span class="font-medium">15/03/2024</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm zena-btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Project Card 2 -->
+                            <div class="dashboard-card zena-card-interactive p-6">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex-1">
+                                        <h3 class="font-bold text-gray-900 mb-2 text-lg">
+                                            Hệ thống Quản lý Nhân sự
+                                        </h3>
+                                        <p class="text-gray-600 text-sm">
+                                            Xây dựng hệ thống quản lý nhân sự toàn diện
+                                        </p>
+                                    </div>
+                                    <div class="ml-4">
+                                        <span class="zena-badge zena-badge-info">
+                                            <i class="fas fa-clock mr-1"></i>
+                                            Đang lập kế hoạch
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm font-medium text-gray-700">Tiến độ</span>
+                                        <span class="text-sm font-bold text-gray-900">25%</span>
+                                    </div>
+                                    <div class="zena-progress">
+                                        <div class="zena-progress-bar zena-progress-bar-info" style="width: 25%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between text-sm text-gray-600 mb-6">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-blue-500"></i>
+                                        <span class="font-medium">01/02/2024</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-clock text-green-500"></i>
+                                        <span class="font-medium">01/05/2024</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm zena-btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Project Card 3 -->
+                            <div class="dashboard-card zena-card-interactive p-6">
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex-1">
+                                        <h3 class="font-bold text-gray-900 mb-2 text-lg">
+                                            Ứng dụng Mobile
+                                        </h3>
+                                        <p class="text-gray-600 text-sm">
+                                            Phát triển ứng dụng di động cho khách hàng
+                                        </p>
+                                    </div>
+                                    <div class="ml-4">
+                                        <span class="zena-badge zena-badge-neutral">
+                                            <i class="fas fa-check-circle mr-1"></i>
+                                            Hoàn thành
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-6">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm font-medium text-gray-700">Tiến độ</span>
+                                        <span class="text-sm font-bold text-gray-900">100%</span>
+                                    </div>
+                                    <div class="zena-progress">
+                                        <div class="zena-progress-bar zena-progress-bar-success" style="width: 100%"></div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between text-sm text-gray-600 mb-6">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-blue-500"></i>
+                                        <span class="font-medium">01/11/2023</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-clock text-green-500"></i>
+                                        <span class="font-medium">15/01/2024</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="zena-btn zena-btn-outline zena-btn-sm zena-btn-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

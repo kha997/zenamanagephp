@@ -1,0 +1,287 @@
+version: '3.8'
+
+services:
+  # Load Balancer (Nginx)
+  nginx:
+    image: nginx:alpine
+    container_name: zenamanage_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./public:/var/www/html/public:ro
+    depends_on:
+      - app1
+      - app2
+      - app3
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Application Server 1 (Primary)
+  app1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zenamanage_app1
+    ports:
+      - "8001:8000"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - SERVER_PORT=8000
+      - SERVER_NAME=app1
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "php", "artisan", "health:check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Application Server 2 (Primary)
+  app2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zenamanage_app2
+    ports:
+      - "8002:8000"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - SERVER_PORT=8000
+      - SERVER_NAME=app2
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "php", "artisan", "health:check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Application Server 3 (Secondary)
+  app3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zenamanage_app3
+    ports:
+      - "8003:8000"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - SERVER_PORT=8000
+      - SERVER_NAME=app3
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "php", "artisan", "health:check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backup Application Server 1
+  app4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zenamanage_app4
+    ports:
+      - "8004:8000"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - SERVER_PORT=8000
+      - SERVER_NAME=app4
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - app_network
+    restart: unless-stopped
+    profiles:
+      - backup
+
+  # Backup Application Server 2
+  app5:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zenamanage_app5
+    ports:
+      - "8005:8000"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - SERVER_PORT=8000
+      - SERVER_NAME=app5
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - app_network
+    restart: unless-stopped
+    profiles:
+      - backup
+
+  # MySQL Database (Primary)
+  mysql:
+    image: mysql:8.0
+    container_name: zenamanage_mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MySQL Database (Read Replica)
+  mysql_read:
+    image: mysql:8.0
+    container_name: zenamanage_mysql_read
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DB_DATABASE}
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - mysql_read_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - app_network
+    restart: unless-stopped
+    profiles:
+      - replication
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: zenamanage_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Sentinel (for high availability)
+  redis_sentinel:
+    image: redis:7-alpine
+    container_name: zenamanage_redis_sentinel
+    ports:
+      - "26379:26379"
+    volumes:
+      - ./docker/redis/sentinel.conf:/usr/local/etc/redis/sentinel.conf
+    command: redis-sentinel /usr/local/etc/redis/sentinel.conf
+    depends_on:
+      - redis
+    networks:
+      - app_network
+    restart: unless-stopped
+    profiles:
+      - high_availability
+
+  # Load Balancer Monitor
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: zenamanage_nginx_exporter
+    ports:
+      - "9113:9113"
+    command:
+      - '-nginx.scrape-uri=http://nginx:80/nginx-status'
+    depends_on:
+      - nginx
+    networks:
+      - app_network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Application Monitor
+  app_exporter:
+    build:
+      context: .
+      dockerfile: Dockerfile.monitoring
+    container_name: zenamanage_app_exporter
+    ports:
+      - "9090:9090"
+    environment:
+      - APP_ENV=production
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - app_network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+volumes:
+  mysql_data:
+    driver: local
+  mysql_read_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

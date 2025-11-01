@@ -1,344 +1,212 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
 
-/**
- * Controller để kiểm tra tình trạng sức khỏe của ứng dụng
- */
 class HealthController extends Controller
 {
     /**
-     * Kiểm tra tình trạng cơ bản của ứng dụng
-     *
-     * @return JsonResponse
+     * Comprehensive health check endpoint for production monitoring
      */
-    public function health(): JsonResponse
+    public function health(Request $request): JsonResponse
     {
-        $checks = [
-            'database' => $this->checkDatabase(),
-            'redis' => $this->checkRedis(),
-            'storage' => $this->checkStorage(),
-            'websocket' => $this->checkWebSocket(),
+        $startTime = microtime(true);
+        $checks = [];
+        $overallStatus = 'healthy';
+
+        // Database connectivity check
+        try {
+            $dbStart = microtime(true);
+            DB::connection()->getPdo();
+            $dbTime = round((microtime(true) - $dbStart) * 1000, 2);
+            
+            $checks['database'] = [
+                'status' => 'healthy',
+                'response_time_ms' => $dbTime,
+                'connection' => DB::connection()->getDatabaseName(),
+            ];
+        } catch (\Exception $e) {
+            $checks['database'] = [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+            ];
+            $overallStatus = 'unhealthy';
+        }
+
+        // Redis connectivity check
+        try {
+            $redisStart = microtime(true);
+            Redis::ping();
+            $redisTime = round((microtime(true) - $redisStart) * 1000, 2);
+            
+            $checks['redis'] = [
+                'status' => 'healthy',
+                'response_time_ms' => $redisTime,
+            ];
+        } catch (\Exception $e) {
+            $checks['redis'] = [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+            ];
+            $overallStatus = 'unhealthy';
+        }
+
+        // Cache functionality check
+        try {
+            $cacheKey = 'health_check_' . time();
+            Cache::put($cacheKey, 'test', 60);
+            $cacheValue = Cache::get($cacheKey);
+            Cache::forget($cacheKey);
+            
+            $checks['cache'] = [
+                'status' => $cacheValue === 'test' ? 'healthy' : 'unhealthy',
+                'driver' => config('cache.default'),
+            ];
+            
+            if ($cacheValue !== 'test') {
+                $overallStatus = 'unhealthy';
+            }
+        } catch (\Exception $e) {
+            $checks['cache'] = [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+            ];
+            $overallStatus = 'unhealthy';
+        }
+
+        // File system check
+        try {
+            $testFile = 'health_check_' . time() . '.txt';
+            Storage::put($testFile, 'test');
+            $content = Storage::get($testFile);
+            Storage::delete($testFile);
+            
+            $checks['filesystem'] = [
+                'status' => $content === 'test' ? 'healthy' : 'unhealthy',
+                'driver' => config('filesystems.default'),
+            ];
+            
+            if ($content !== 'test') {
+                $overallStatus = 'unhealthy';
+            }
+        } catch (\Exception $e) {
+            $checks['filesystem'] = [
+                'status' => 'unhealthy',
+                'error' => $e->getMessage(),
+            ];
+            $overallStatus = 'unhealthy';
+        }
+
+        // Application metrics
+        $checks['application'] = [
+            'status' => 'healthy',
+            'version' => config('app.version', '1.0.0'),
+            'environment' => config('app.env'),
+            'debug_mode' => config('app.debug'),
+            'timezone' => config('app.timezone'),
+            'locale' => config('app.locale'),
         ];
+
+        // System metrics
+        $checks['system'] = [
+            'status' => 'healthy',
+            'php_version' => PHP_VERSION,
+            'memory_usage' => round(memory_get_usage(true) / 1024 / 1024, 2) . ' MB',
+            'memory_limit' => ini_get('memory_limit'),
+            'disk_free_space' => round(disk_free_space('/') / 1024 / 1024 / 1024, 2) . ' GB',
+        ];
+
+        // Security check
+        $checks['security'] = [
+            'status' => 'healthy',
+            'https_enabled' => $request->isSecure(),
+            'csrf_protection' => config('session.csrf_protection', true),
+            'session_secure' => config('session.secure', false),
+        ];
+
+        // Performance metrics
+        $totalTime = round((microtime(true) - $startTime) * 1000, 2);
         
-        $allHealthy = collect($checks)->every(fn($check) => $check['status'] === 'ok');
-        
-        return response()->json([
-            'status' => $allHealthy ? 'ok' : 'error',
+        $response = [
+            'status' => $overallStatus,
             'timestamp' => now()->toISOString(),
+            'response_time_ms' => $totalTime,
             'checks' => $checks,
             'version' => config('app.version', '1.0.0'),
-        ], $allHealthy ? 200 : 503);
+            'environment' => config('app.env'),
+        ];
+
+        // Add request correlation ID if available
+        if ($request->hasHeader('X-Request-ID')) {
+            $response['request_id'] = $request->header('X-Request-ID');
+        }
+
+        $statusCode = $overallStatus === 'healthy' ? 200 : 503;
+        
+        return response()->json($response, $statusCode);
     }
 
     /**
-     * Kiểm tra tình trạng sẵn sàng của ứng dụng
-     *
-     * @return JsonResponse
+     * Simple health check for load balancers
      */
-    public function ready(): JsonResponse
+    public function ping(): JsonResponse
     {
-        $checks = [
-            'database_migrations' => $this->checkMigrations(),
-            'required_services' => $this->checkRequiredServices(),
-            'configuration' => $this->checkConfiguration(),
-        ];
-        
-        $allReady = collect($checks)->every(fn($check) => $check['status'] === 'ok');
-        
         return response()->json([
-            'status' => $allReady ? 'ready' : 'not_ready',
+            'status' => 'ok',
             'timestamp' => now()->toISOString(),
-            'checks' => $checks,
-        ], $allReady ? 200 : 503);
+        ]);
     }
 
     /**
-     * Lấy metrics của ứng dụng
-     *
-     * @return JsonResponse
+     * Detailed system information (for debugging)
      */
-    public function metrics(): JsonResponse
+    public function info(Request $request): JsonResponse
     {
-        if (!config('metrics.enabled')) {
-            return response()->json(['error' => 'Metrics disabled'], 404);
+        // Only allow in non-production environments or with proper authentication
+        if (config('app.env') === 'production' && !$request->hasHeader('X-Debug-Token')) {
+            return response()->json(['error' => 'Not available in production'], 403);
         }
-        
-        $metrics = [
-            'system' => [
-                'memory_usage' => memory_get_usage(true),
-                'memory_peak' => memory_get_peak_usage(true),
-                'cpu_usage' => sys_getloadavg()[0] ?? 0,
-                'disk_usage' => $this->getDiskUsage(),
-            ],
+
+        return response()->json([
             'application' => [
-                'uptime' => $this->getUptime(),
-                'active_users' => $this->getActiveUsers(),
-                'total_projects' => $this->getTotalProjects(),
-                'pending_tasks' => $this->getPendingTasks(),
+                'name' => config('app.name'),
+                'version' => config('app.version', '1.0.0'),
+                'environment' => config('app.env'),
+                'debug' => config('app.debug'),
+                'url' => config('app.url'),
             ],
-        ];
-        
-        return response()->json($metrics);
-    }
-
-    /**
-     * Kiểm tra kết nối database
-     *
-     * @return array
-     */
-    private function checkDatabase(): array
-    {
-        try {
-            $startTime = microtime(true);
-            DB::select('SELECT 1');
-            $responseTime = (microtime(true) - $startTime) * 1000;
-            
-            return [
-                'status' => 'ok',
-                'response_time_ms' => round($responseTime, 2),
+            'database' => [
                 'connection' => config('database.default'),
-            ];
-        } catch (\Exception $e) {
-            return [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Kiểm tra kết nối Redis
-     *
-     * @return array
-     */
-    private function checkRedis(): array
-    {
-        try {
-            $startTime = microtime(true);
-            Redis::ping();
-            $responseTime = (microtime(true) - $startTime) * 1000;
-            
-            return [
-                'status' => 'ok',
-                'response_time_ms' => round($responseTime, 2),
-                'connection' => config('database.redis.default.host'),
-            ];
-        } catch (\Exception $e) {
-            return [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Kiểm tra storage
-     *
-     * @return array
-     */
-    private function checkStorage(): array
-    {
-        try {
-            $disks = config('metrics.health_checks.storage.disks', ['local']);
-            $results = [];
-            
-            foreach ($disks as $disk) {
-                $testFile = 'health-check-' . time() . '.txt';
-                Storage::disk($disk)->put($testFile, 'health check');
-                $exists = Storage::disk($disk)->exists($testFile);
-                Storage::disk($disk)->delete($testFile);
-                
-                $results[$disk] = $exists ? 'ok' : 'error';
-            }
-            
-            $allOk = collect($results)->every(fn($status) => $status === 'ok');
-            
-            return [
-                'status' => $allOk ? 'ok' : 'error',
-                'disks' => $results,
-            ];
-        } catch (\Exception $e) {
-            return [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Kiểm tra WebSocket server
-     *
-     * @return array
-     */
-    private function checkWebSocket(): array
-    {
-        try {
-            $url = config('metrics.health_checks.websocket.url');
-            if (!$url) {
-                return ['status' => 'skipped', 'reason' => 'URL not configured'];
-            }
-            
-            $client = new Client(['timeout' => 5]);
-            $startTime = microtime(true);
-            $response = $client->get($url);
-            $responseTime = (microtime(true) - $startTime) * 1000;
-            
-            return [
-                'status' => $response->getStatusCode() === 200 ? 'ok' : 'error',
-                'response_time_ms' => round($responseTime, 2),
-                'url' => $url,
-            ];
-        } catch (RequestException $e) {
-            return [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Kiểm tra migrations
-     *
-     * @return array
-     */
-    private function checkMigrations(): array
-    {
-        try {
-            $pending = DB::table('migrations')
-                ->where('batch', 0)
-                ->count();
-            
-            return [
-                'status' => $pending === 0 ? 'ok' : 'error',
-                'pending_migrations' => $pending,
-            ];
-        } catch (\Exception $e) {
-            return [
-                'status' => 'error',
-                'error' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Kiểm tra các service bắt buộc
-     *
-     * @return array
-     */
-    private function checkRequiredServices(): array
-    {
-        $services = [
-            'queue' => $this->checkQueue(),
-            'cache' => $this->checkCache(),
-            'session' => $this->checkSession(),
-        ];
-        
-        $allOk = collect($services)->every(fn($status) => $status === 'ok');
-        
-        return [
-            'status' => $allOk ? 'ok' : 'error',
-            'services' => $services,
-        ];
-    }
-
-    /**
-     * Kiểm tra cấu hình
-     *
-     * @return array
-     */
-    private function checkConfiguration(): array
-    {
-        $required = [
-            'APP_KEY' => config('app.key'),
-            'DB_CONNECTION' => config('database.default'),
-            'JWT_SECRET' => config('jwt.secret'),
-        ];
-        
-        $missing = collect($required)
-            ->filter(fn($value) => empty($value))
-            ->keys()
-            ->toArray();
-        
-        return [
-            'status' => empty($missing) ? 'ok' : 'error',
-            'missing_config' => $missing,
-        ];
-    }
-
-    // Helper methods
-    private function checkQueue(): string
-    {
-        try {
-            // Simple check if queue connection is working
-            return 'ok';
-        } catch (\Exception $e) {
-            return 'error';
-        }
-    }
-
-    private function checkCache(): string
-    {
-        try {
-            cache()->put('health-check', 'ok', 60);
-            return cache()->get('health-check') === 'ok' ? 'ok' : 'error';
-        } catch (\Exception $e) {
-            return 'error';
-        }
-    }
-
-    private function checkSession(): string
-    {
-        try {
-            return config('session.driver') ? 'ok' : 'error';
-        } catch (\Exception $e) {
-            return 'error';
-        }
-    }
-
-    private function getDiskUsage(): array
-    {
-        $bytes = disk_free_space('/');
-        $total = disk_total_space('/');
-        
-        return [
-            'free_bytes' => $bytes,
-            'total_bytes' => $total,
-            'used_percent' => round((($total - $bytes) / $total) * 100, 2),
-        ];
-    }
-
-    private function getUptime(): int
-    {
-        // Simple uptime calculation (could be improved)
-        return time() - filemtime(base_path('bootstrap/app.php'));
-    }
-
-    private function getActiveUsers(): int
-    {
-        // Count active sessions or users online in last 15 minutes
-        return DB::table('users')
-            ->where('last_activity', '>', now()->subMinutes(15))
-            ->count();
-    }
-
-    private function getTotalProjects(): int
-    {
-        return DB::table('projects')->count();
-    }
-
-    private function getPendingTasks(): int
-    {
-        return DB::table('tasks')
-            ->where('status', 'pending')
-            ->count();
+                'host' => config('database.connections.mysql.host'),
+                'database' => config('database.connections.mysql.database'),
+            ],
+            'cache' => [
+                'driver' => config('cache.default'),
+                'prefix' => config('cache.prefix'),
+            ],
+            'session' => [
+                'driver' => config('session.driver'),
+                'lifetime' => config('session.lifetime'),
+                'secure' => config('session.secure'),
+            ],
+            'mail' => [
+                'driver' => config('mail.default'),
+                'host' => config('mail.mailers.smtp.host'),
+            ],
+            'php' => [
+                'version' => PHP_VERSION,
+                'extensions' => get_loaded_extensions(),
+            ],
+            'server' => [
+                'software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+                'protocol' => $_SERVER['SERVER_PROTOCOL'] ?? 'Unknown',
+            ],
+        ]);
     }
 }

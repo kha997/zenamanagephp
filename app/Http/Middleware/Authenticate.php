@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
-
 class Authenticate extends Middleware
 {
     /**
@@ -20,8 +19,7 @@ class Authenticate extends Middleware
             return null;
         }
         
-        // Đối với web requests, có thể redirect đến trang login
-        // Tuy nhiên, vì chưa có route 'login', tạm thời trả về null
-        return null;
+        // Đối với web requests, redirect đến trang login
+        return route('login');
     }
 }

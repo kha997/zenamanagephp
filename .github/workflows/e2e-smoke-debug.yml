@@ -1,0 +1,529 @@
+name: E2E Smoke Tests Debug
+
+on:
+  push:
+    branches: [ feature/repo-cleanup ]
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (self-hosted or ubuntu-latest)'
+        required: false
+        default: 'self-hosted'
+        type: choice
+        options:
+          - self-hosted
+          - ubuntu-latest
+
+jobs:
+  debug:
+    runs-on: ${{ github.event.inputs.runner || 'self-hosted' }}
+    
+    # Note: Docker services không work với self-hosted runners
+    # MySQL sẽ được setup trong steps cho cả self-hosted và GitHub-hosted
+    # Self-hosted: Use local MySQL hoặc SQLite fallback
+    # GitHub-hosted: Use Docker MySQL service (setup in steps)
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history to ensure fresh checkout
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        # Ensure setup-node Node.js is in PATH first
+        check-latest: true
+        
+    - name: Verify Node.js version (fail early)
+      run: |
+        echo "📋 Node.js version check:"
+        echo "PATH: $PATH"
+        echo "Node.js location: $(which node)"
+        echo "Node.js version: $(node --version)"
+        echo "npm location: $(which npm)"
+        echo "npm version: $(npm --version)"
+        
+        NODE_VERSION=$(node --version | sed 's/v//')
+        NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
+        NODE_MINOR=$(echo "$NODE_VERSION" | cut -d. -f2)
+        
+        # Check if Node.js is from setup-node (usually in /Users/runner or similar)
+        NODE_PATH=$(which node)
+        if [[ "$NODE_PATH" != *"setup-node"* ]] && [[ "$NODE_PATH" != *"/Users/runner"* ]] && [[ "$NODE_PATH" != *"/home/runner"* ]]; then
+          echo "⚠️  WARNING: Node.js may not be from setup-node action"
+          echo "Node.js path: $NODE_PATH"
+        fi
+        
+        if [ "$NODE_MAJOR" -lt 20 ]; then
+          echo "❌ ERROR: Node.js version $NODE_VERSION is too old for Vite 7"
+          echo "Required: Node.js 20.19+ or 22.12+"
+          echo "Current: Node.js $NODE_VERSION"
+          echo "Location: $NODE_PATH"
+          echo ""
+          echo "🔧 Solution: Install Node.js 22 on self-hosted runner"
+          echo "   brew install node@22  # macOS"
+          echo "   or: https://nodejs.org/"
+          exit 1
+        elif [ "$NODE_MAJOR" -eq 20 ] && [ "$NODE_MINOR" -lt 19 ]; then
+          echo "❌ ERROR: Node.js version $NODE_VERSION is too old"
+          echo "Required: Node.js 20.19+ or 22.12+"
+          exit 1
+        elif [ "$NODE_MAJOR" -eq 22 ] && [ "$NODE_MINOR" -lt 12 ]; then
+          echo "❌ ERROR: Node.js version $NODE_VERSION is too old"
+          echo "Required: Node.js 20.19+ or 22.12+"
+          exit 1
+        else
+          echo "✅ Node.js version $NODE_VERSION is compatible with Vite 7"
+        fi
+        
+    - name: Verify PostCSS config (fail early)
+      run: |
+        echo "📋 Checking PostCSS config..."
+        echo "Working directory: $(pwd)"
+        echo "Git commit: $(git rev-parse HEAD)"
+        echo "Git branch: $(git branch --show-current)"
+        
+        if [ -f "postcss.config.js" ]; then
+          echo "✅ postcss.config.js exists"
+          echo "File content:"
+          cat postcss.config.js
+          echo ""
+          
+          if grep -q "module.exports" postcss.config.js; then
+            echo "✅ PostCSS config uses CommonJS syntax (correct)"
+          elif grep -q "export default" postcss.config.js; then
+            echo "❌ ERROR: PostCSS config still uses ES module syntax"
+            echo "Expected: module.exports"
+            echo "Found: export default"
+            echo ""
+            echo "🔧 This indicates old code was checked out. Checking git status..."
+            git status
+            git log --oneline -5
+            echo ""
+            echo "⚠️  Workaround: Ensure latest code is pulled"
+            exit 1
+          else
+            echo "⚠️  WARNING: Unknown PostCSS config format"
+            cat postcss.config.js
+          fi
+        else
+          echo "❌ ERROR: postcss.config.js not found"
+          echo "Files in current directory:"
+          ls -la | head -20
+          exit 1
+        fi
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Build frontend assets
+      run: |
+        echo "🏗️  Building frontend assets for E2E tests..."
+        npm run build
+        echo "✅ Frontend assets built successfully"
+        # Verify manifest file exists
+        if [ -f "public/build/manifest.json" ]; then
+          echo "✅ Vite manifest found at public/build/manifest.json"
+        else
+          echo "⚠️  WARNING: Vite manifest not found, but continuing..."
+        fi
+      
+    - name: Check PHP installation (self-hosted)
+      if: github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == ''
+      id: check-php
+      run: |
+        if command -v php &> /dev/null; then
+          PHP_VERSION=$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')
+          echo "version=$PHP_VERSION" >> $GITHUB_OUTPUT
+          echo "installed=true" >> $GITHUB_OUTPUT
+          echo "✅ PHP $PHP_VERSION is already installed"
+          php -m | head -20
+        else
+          echo "installed=false" >> $GITHUB_OUTPUT
+          echo "⚠️  PHP not found, will need to install"
+        fi
+        
+    - name: Setup PHP (GitHub-hosted only)
+      if: github.event.inputs.runner == 'ubuntu-latest'
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3, pdo_sqlite, bcmath, soap, intl, readline, libxml, zip, curl, gd, iconv, imagick, redis, memcached, pcov
+        coverage: none
+        
+    - name: Verify PHP for self-hosted
+      if: (github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == '') && steps.check-php.outputs.installed == 'true'
+      run: |
+        echo "✅ Using existing PHP installation"
+        php -v
+        php -m | grep -E "mbstring|dom|fileinfo|mysql|sqlite3|pdo_sqlite|bcmath|soap|intl|zip|curl|gd"
+        
+    - name: Install PHP extensions for self-hosted (if needed)
+      if: (github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == '') && steps.check-php.outputs.installed == 'false'
+      run: |
+        echo "⚠️  PHP not found. Attempting to install..."
+        # For macOS, try Homebrew
+        if command -v brew &> /dev/null; then
+          echo "📦 Installing PHP via Homebrew..."
+          brew install php@8.2 || brew install php || echo "⚠️  Homebrew PHP installation failed"
+        else
+          echo "❌ Cannot install PHP automatically. Please install PHP 8.2+ on the runner."
+          exit 1
+        fi
+        
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Check for .env.example file
+      id: check-env
+      run: |
+        if [ ! -f .env.example ]; then
+          echo "⚠️  WARNING: .env.example not found! Creating default .env..."
+          cat > .env << 'EOF'
+        APP_NAME=ZenaManage
+        APP_ENV=local
+        APP_KEY=
+        APP_DEBUG=true
+        APP_URL=http://localhost
+        
+        LOG_CHANNEL=stack
+        LOG_DEPRECATIONS_CHANNEL=null
+        LOG_LEVEL=debug
+        
+        DB_CONNECTION=mysql
+        DB_HOST=127.0.0.1
+        DB_PORT=3306
+        DB_DATABASE=zenamanage_e2e
+        DB_USERNAME=e2e_user
+        DB_PASSWORD=e2e_password
+        
+        CACHE_DRIVER=array
+        SESSION_DRIVER=array
+        QUEUE_CONNECTION=sync
+        EOF
+          echo "env_created=true" >> $GITHUB_OUTPUT
+        else
+          cp .env.example .env
+          echo "env_created=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Configure database for CI
+      run: |
+        # Check if SQLite was configured in previous step (self-hosted without MySQL)
+        if grep -q "DB_CONNECTION=sqlite" .env; then
+          echo "✅ Already configured for SQLite (self-hosted)"
+        else
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=zenamanage_e2e" >> .env
+          echo "DB_USERNAME=e2e_user" >> .env
+          echo "DB_PASSWORD=e2e_password" >> .env
+          echo "CACHE_DRIVER=array" >> .env
+          echo "SESSION_DRIVER=array" >> .env
+          echo "QUEUE_CONNECTION=sync" >> .env
+        fi
+        
+    - name: Clear Laravel config cache
+      run: |
+        php artisan config:clear || true
+        php artisan cache:clear || true
+        
+    - name: Verify database configuration
+      run: |
+        echo "📊 Verifying database configuration..."
+        php artisan tinker --execute="
+          echo 'Default DB: ' . config('database.default') . PHP_EOL;
+          echo 'DB Connection: ' . config('database.connections.mysql.driver') . PHP_EOL;
+          echo 'DB Host: ' . config('database.connections.mysql.host') . PHP_EOL;
+          echo 'DB Database: ' . config('database.connections.mysql.database') . PHP_EOL;
+        " || {
+          echo "⚠️  Tinker failed, checking .env file directly:"
+          cat .env | grep "^DB_"
+        }
+        
+    - name: Setup MySQL for GitHub-hosted runner
+      if: github.event.inputs.runner == 'ubuntu-latest'
+      run: |
+        echo "🐳 Setting up MySQL via Docker for GitHub-hosted runner..."
+        docker run -d \
+          --name mysql-e2e \
+          -e MYSQL_ROOT_PASSWORD=root_password \
+          -e MYSQL_DATABASE=zenamanage_e2e \
+          -e MYSQL_USER=e2e_user \
+          -e MYSQL_PASSWORD=e2e_password \
+          -p 3306:3306 \
+          mysql:8.0 \
+          --health-cmd="mysqladmin ping" \
+          --health-interval=10s \
+          --health-timeout=5s \
+          --health-retries=3
+        
+        echo "⏳ Waiting for MySQL to be ready..."
+        for i in {1..30}; do
+          if mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1" 2>/dev/null; then
+            echo "✅ MySQL is ready!"
+            break
+          fi
+          echo "⏳ Waiting for MySQL... (attempt $i/30)"
+          sleep 2
+        done
+        
+    - name: Setup MySQL for self-hosted runner
+      if: github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == ''
+      run: |
+        echo "🔍 Detecting MySQL setup for self-hosted runner..."
+        
+        # Find MySQL binary (check multiple locations)
+        MYSQL_CMD=""
+        if command -v mysql &> /dev/null; then
+          MYSQL_CMD="mysql"
+        elif [ -f /Applications/XAMPP/xamppfiles/bin/mysql ]; then
+          MYSQL_CMD="/Applications/XAMPP/xamppfiles/bin/mysql"
+          export PATH="/Applications/XAMPP/xamppfiles/bin:$PATH"
+          echo "✅ Found MySQL at XAMPP location"
+        else
+          echo "⚠️  MySQL client not found. Using SQLite for self-hosted runner..."
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
+          touch database/database.sqlite
+          echo "✅ Configured to use SQLite"
+          exit 0
+        fi
+        
+        # Function to setup database and user (avoid heredoc issues)
+        setup_mysql_db() {
+          $MYSQL_CMD -h 127.0.0.1 -u root -e "CREATE DATABASE IF NOT EXISTS zenamanage_e2e;" 2>/dev/null || true
+          $MYSQL_CMD -h 127.0.0.1 -u root -e "CREATE USER IF NOT EXISTS 'e2e_user'@'localhost' IDENTIFIED BY 'e2e_password';" 2>/dev/null || true
+          $MYSQL_CMD -h 127.0.0.1 -u root -e "GRANT ALL PRIVILEGES ON zenamanage_e2e.* TO 'e2e_user'@'localhost';" 2>/dev/null || true
+          $MYSQL_CMD -h 127.0.0.1 -u root -e "FLUSH PRIVILEGES;" 2>/dev/null || true
+        }
+        
+        # Check if MySQL is already running
+        if $MYSQL_CMD -h 127.0.0.1 -u root -e "SELECT 1" 2>/dev/null; then
+          echo "✅ MySQL is already running locally"
+          setup_mysql_db
+          echo "✅ Database and user created/verified"
+        elif command -v brew &> /dev/null && brew services list 2>/dev/null | grep -q mysql; then
+          echo "📦 Starting MySQL via Homebrew..."
+          brew services start mysql || true
+          sleep 5
+          setup_mysql_db
+          echo "✅ MySQL started and configured"
+        else
+          echo "⚠️  MySQL server not found or not running. Using SQLite for self-hosted runner..."
+          echo "DB_CONNECTION=sqlite" >> .env
+          echo "DB_DATABASE=$(pwd)/database/database.sqlite" >> .env
+          touch database/database.sqlite
+          echo "✅ Configured to use SQLite"
+        fi
+        
+        # Wait for MySQL to be ready (self-hosted)
+        echo "⏳ Waiting for MySQL to be ready (self-hosted)..."
+        for i in {1..30}; do
+          if $MYSQL_CMD -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1" 2>/dev/null || $MYSQL_CMD -h 127.0.0.1 -u root -e "SELECT 1" 2>/dev/null; then
+            echo "✅ MySQL is ready!"
+            break
+          fi
+          echo "⏳ Waiting for MySQL... (attempt $i/30)"
+          sleep 2
+        done
+        
+    - name: Test MySQL connection
+      if: github.event.inputs.runner == 'self-hosted' || github.event.inputs.runner == ''
+      run: |
+        echo "Testing MySQL connection..."
+        # Find MySQL binary (same logic as setup step)
+        MYSQL_CMD=""
+        if command -v mysql &> /dev/null; then
+          MYSQL_CMD="mysql"
+        elif [ -f /Applications/XAMPP/xamppfiles/bin/mysql ]; then
+          MYSQL_CMD="/Applications/XAMPP/xamppfiles/bin/mysql"
+        else
+          echo "⚠️  MySQL client not found, skipping connection test (using SQLite)"
+          exit 0
+        fi
+        
+        $MYSQL_CMD -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1 as test;" || {
+          echo "❌ MySQL connection failed!"
+          exit 1
+        }
+        echo "✅ MySQL connection successful!"
+        
+    - name: Test MySQL connection (GitHub-hosted)
+      if: github.event.inputs.runner == 'ubuntu-latest'
+      run: |
+        echo "Testing MySQL connection..."
+        mysql -h 127.0.0.1 -u e2e_user -pe2e_password -e "SELECT 1 as test;" || {
+          echo "❌ MySQL connection failed!"
+          exit 1
+        }
+        echo "✅ MySQL connection successful!"
+        
+    - name: Create database
+      run: |
+        # Ensure we're using MySQL
+        php artisan config:clear
+        php artisan cache:clear
+        
+        # Verify DB connection one more time before migration
+        php artisan tinker --execute="
+          \$driver = config('database.default');
+          \$connection = config('database.connections.' . \$driver);
+          echo 'Using database driver: ' . \$driver . PHP_EOL;
+          if (\$driver === 'sqlite') {
+            echo '✅ Using SQLite (self-hosted runner without MySQL)' . PHP_EOL;
+          } elseif (\$driver === 'mysql') {
+            echo '✅ Database driver verified as MySQL' . PHP_EOL;
+          } else {
+            echo '⚠️  Using database driver: ' . \$driver . PHP_EOL;
+          }
+        "
+        
+        # Run migrations
+        php artisan migrate:fresh --force || {
+          echo "❌ Migration failed! Checking database configuration..."
+          php artisan tinker --execute="
+            echo 'DB Default: ' . config('database.default') . PHP_EOL;
+            echo 'MySQL Driver: ' . config('database.connections.mysql.driver') . PHP_EOL;
+            echo 'MySQL Host: ' . config('database.connections.mysql.host') . PHP_EOL;
+            echo 'MySQL Database: ' . config('database.connections.mysql.database') . PHP_EOL;
+          "
+          echo "📄 Current .env DB settings:"
+          grep "^DB_" .env || echo "No DB_* settings found in .env"
+          exit 1
+        }
+        
+    - name: Seed database
+      run: php artisan db:seed --class=E2EDatabaseSeeder --force
+      
+    - name: Verify database setup
+      run: |
+        echo "Database connection test:"
+        php artisan tinker --execute="echo 'DB Connection: ' . config('database.default'); echo 'DB Host: ' . config('database.connections.mysql.host'); echo 'DB Database: ' . config('database.connections.mysql.database');"
+        echo "User count:"
+        php artisan tinker --execute="echo 'Users: ' . App\Models\User::count();"
+        
+    - name: Test environment variables
+      run: |
+        if [ -z "${{ secrets.SMOKE_ADMIN_EMAIL }}" ]; then
+          echo "⚠️  WARNING: SMOKE_ADMIN_EMAIL secret is not set!"
+          echo "   → Using default: admin@zena.local"
+          echo "env_email=admin@zena.local" >> $GITHUB_ENV
+        else
+          echo "✅ SMOKE_ADMIN_EMAIL is set"
+          echo "env_email=${{ secrets.SMOKE_ADMIN_EMAIL }}" >> $GITHUB_ENV
+        fi
+        
+        if [ -z "${{ secrets.SMOKE_ADMIN_PASSWORD }}" ]; then
+          echo "⚠️  WARNING: SMOKE_ADMIN_PASSWORD secret is not set!"
+          echo "   → Using default: password"
+          echo "env_password=password" >> $GITHUB_ENV
+        else
+          echo "✅ SMOKE_ADMIN_PASSWORD is set"
+          echo "env_password=${{ secrets.SMOKE_ADMIN_PASSWORD }}" >> $GITHUB_ENV
+        fi
+        
+    - name: Verify Laravel server can respond
+      run: |
+        echo "🔍 Testing if Laravel server responds..."
+        # Start server in background for quick check
+        php artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel-server.log 2>&1 &
+        SERVER_PID=$!
+        echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+        echo "Laravel server started with PID: $SERVER_PID"
+        
+        # Wait for server to be ready (max 30 seconds)
+        echo "⏳ Waiting for server to start..."
+        for i in {1..30}; do
+          if curl -f http://127.0.0.1:8000/health 2>/dev/null || curl -f http://127.0.0.1:8000 2>/dev/null; then
+            echo "✅ Laravel server is responding!"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "❌ Laravel server failed to start after 30 seconds!"
+            echo "Server logs:"
+            tail -20 /tmp/laravel-server.log || true
+            kill $SERVER_PID 2>/dev/null || true
+            exit 1
+          fi
+          sleep 1
+        done
+        
+        # Verify login page specifically
+        echo "🔍 Verifying login page is accessible..."
+        LOGIN_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000/login)
+        if [ "$LOGIN_RESPONSE" = "200" ]; then
+          echo "✅ Login page returns 200 OK"
+          
+          # Check if page contains email input
+          LOGIN_CONTENT=$(curl -s http://127.0.0.1:8000/login)
+          if echo "$LOGIN_CONTENT" | grep -q 'id="email"\|name="email"\|#email'; then
+            echo "✅ Login page contains email input field"
+          else
+            echo "⚠️  WARNING: Login page might not have email input"
+            echo "Page snippet:"
+            echo "$LOGIN_CONTENT" | head -50
+          fi
+        else
+          echo "⚠️  WARNING: Login page returned status: $LOGIN_RESPONSE"
+        fi
+        
+        # Stop server - Playwright will start its own
+        echo "🛑 Stopping verification server (Playwright will start its own)..."
+        if [ -n "$SERVER_PID" ]; then
+          kill $SERVER_PID 2>/dev/null || true
+          sleep 2
+        fi
+        
+        # Ensure port 8000 is completely free
+        echo "🧹 Cleaning up port 8000..."
+        if command -v lsof &> /dev/null; then
+          lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+          sleep 1
+        fi
+        
+        # Final check - port should be free now
+        if command -v lsof &> /dev/null && lsof -ti:8000 &>/dev/null; then
+          echo "⚠️  WARNING: Port 8000 still in use"
+          lsof -i:8000 || true
+        else
+          echo "✅ Port 8000 is free - ready for Playwright"
+        fi
+        
+    - name: Run smoke tests
+      run: npm run test:e2e:smoke
+      env:
+        CI: true
+        SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL != '' && secrets.SMOKE_ADMIN_EMAIL || 'admin@zena.local' }}
+        SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD != '' && secrets.SMOKE_ADMIN_PASSWORD || 'password' }}
+      continue-on-error: false
+      
+    - name: Upload test artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-test-results
+        path: |
+          test-results/**/*.png
+          test-results/**/*.html
+          test-results/**/*.json
+          test-results/**/*.xml
+        retention-days: 7
+        
+    - name: Upload Playwright report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 7

@@ -1,0 +1,183 @@
+# ZENAMANAGE CURSOR RULES
+## AI Assistant Configuration for Cursor IDE
+
+### 🎯 **PROJECT CONTEXT**
+This is a Laravel-based multi-tenant project management system called ZenaManage. The system follows strict architectural principles with clear separation between UI and API layers.
+
+### 📋 **MANDATORY RULES**
+
+#### **1. ARCHITECTURE COMPLIANCE**
+- **UI renders only** — all business logic lives in the API
+- **Web routes**: session auth + tenant scope only
+- **API routes**: token auth:sanctum + ability (admin/tenant)
+- **No side-effects** in UI routes - all writes via API
+- **Clear separation**: `/admin/*` (system-wide) ≠ `/app/*` (tenant-scoped)
+
+#### **2. CODE QUALITY STANDARDS**
+- **Naming conventions**: 
+  - Routes: kebab-case (`/app/projects`)
+  - Controllers/Services: PascalCase (`ProjectService.updateBudget`)
+  - DB schema: snake_case with FK required
+- **Error handling**: Always use structured error envelopes with error.id
+- **Logging**: Include X-Request-Id correlation in all logs
+- **Security**: Validate all inputs, sanitize all outputs
+
+#### **3. MULTI-TENANT ISOLATION**
+- **Mandatory**: Every query must filter by `tenant_id`
+- **Enforcement**: At repository/service layer
+- **Testing**: Explicit tests to prove tenant A cannot read B
+- **Indexes**: Composite indexes on `(tenant_id, foreign_key)`
+
+#### **4. TESTING REQUIREMENTS**
+- **Unit tests**: Services, mappers, validators (fast, isolated)
+- **Integration tests**: Controllers + DB + auth + RBAC + multi-tenant
+- **E2E tests**: Critical user paths (login → dashboard → projects → tasks)
+- **Isolation tests**: Prove tenant separation
+- **CI gate**: All tests must pass, no flakiness allowed
+
+#### **5. PERFORMANCE STANDARDS**
+- **Page budgets**: p95 < 500ms (20–50 rows)
+- **API budgets**: p95 < 300ms
+- **Cache strategy**: KPI/insights 60s per tenant
+- **Optimization**: Avoid N+1 queries, use projections
+
+#### **6. SECURITY REQUIREMENTS**
+- **RBAC**: Explicit roles (super_admin, PM, Member, Client)
+- **Auth**: Admin API (auth:sanctum + ability:admin), App API (auth:sanctum + ability:tenant)
+- **Protection**: CSRF for web, tokens for API
+- **Headers**: CSP, CORS, HSTS, secure cookies
+- **Rate limiting**: Public endpoints only
+
+#### **7. UX/UI DESIGN REQUIREMENTS**
+- **Universal Page Frame**: Header → Global Nav → Page Nav → KPI Strip → Alert Bar → Main Content → Activity
+- **Mobile-first**: Responsive design with FAB, hamburger menu, card layouts
+- **Accessibility**: WCAG 2.1 AA compliance with keyboard navigation
+- **Performance**: Page p95 < 500ms, API p95 < 300ms
+- **Smart tools**: Intelligent search, smart filters, one-tap focus presets
+- **User customization**: Persist preferences for views, density, theme, KPI selection
+
+### 🚫 **ABSOLUTE PROHIBITIONS**
+
+#### **NEVER DO:**
+- Create routes without proper middleware
+- Write code without tenant isolation
+- Skip error handling or use generic errors
+- Commit code without tests
+- Use hardcoded values or magic numbers
+- Create duplicate functionality
+- Bypass security validations
+- Ignore performance budgets
+- Leave debug code in production
+- Create orphaned data
+
+#### **NEVER ACCEPT:**
+- PRs without proper tests
+- Code that violates architecture principles
+- Changes without documentation updates
+- Performance regressions
+- Security vulnerabilities
+- Data isolation violations
+
+### ✅ **MANDATORY ACTIONS**
+
+#### **ALWAYS DO:**
+- Validate all inputs against schemas
+- Include proper error handling with error.id
+- Add tenant_id to all queries
+- Write tests for new functionality
+- Update documentation for changes
+- Follow naming conventions strictly
+- Include logging with correlation IDs
+- Check performance impact
+- Verify security implications
+- Ensure multi-tenant isolation
+
+### 🔍 **CODE REVIEW CHECKLIST**
+
+#### **Before Any Change:**
+- [ ] Architecture compliance verified
+- [ ] Security implications assessed
+- [ ] Performance impact evaluated
+- [ ] Multi-tenant isolation confirmed
+- [ ] Error handling planned
+
+#### **During Development:**
+- [ ] Tests written and passing
+- [ ] Naming conventions followed
+- [ ] Error handling implemented
+- [ ] Logging added with correlation IDs
+- [ ] Documentation updated
+
+#### **Before Completion:**
+- [ ] All tests pass
+- [ ] Performance budgets met
+- [ ] Security review completed
+- [ ] Documentation complete
+- [ ] Architecture compliance verified
+
+### 📊 **SUCCESS METRICS**
+
+#### **Code Quality:**
+- 100% test coverage for new code
+- 0 security vulnerabilities
+- < 500ms p95 latency for pages
+- < 300ms p95 latency for APIs
+- 0 tenant isolation violations
+
+#### **Documentation:**
+- 100% API endpoints documented
+- All error codes with examples
+- Architecture decisions recorded
+- Performance benchmarks documented
+
+### 🚨 **ESCALATION RULES**
+
+#### **CRITICAL Issues (Block Everything):**
+- Security vulnerabilities
+- Data isolation violations
+- Performance regressions
+- Architecture violations
+
+#### **HIGH Priority (Block Merge):**
+- Missing tests
+- Documentation gaps
+- Error handling gaps
+- Performance issues
+
+#### **MEDIUM Priority (Fix in PR):**
+- Naming violations
+- Code style issues
+- Minor optimizations
+
+### 🔄 **CONTINUOUS IMPROVEMENT**
+
+#### **Weekly:**
+- Performance metrics analysis
+- Error pattern identification
+- Security assessment
+- Test coverage evaluation
+
+#### **Monthly:**
+- Architecture decision validation
+- Documentation completeness
+- Process improvement
+- Technology evaluation
+
+### 🎯 **AI ASSISTANT COMMITMENT**
+
+I commit to:
+- **Always follow** the architectural principles
+- **Never compromise** on security or performance
+- **Always validate** multi-tenant isolation
+- **Always include** proper error handling
+- **Always write** comprehensive tests
+- **Always update** documentation
+- **Always maintain** code quality standards
+- **Always prioritize** user experience
+- **Always ensure** system reliability
+
+---
+
+*This configuration is binding and non-negotiable*
+*Last Updated: September 24, 2025*
+*Version: 1.0*

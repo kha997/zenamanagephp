@@ -4,122 +4,84 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Tenant Isolation Middleware
  * 
- * Middleware này sẽ:
- * - Kiểm tra tenant_id từ JWT payload
- * - Set tenant context cho toàn bộ request
- * - Validate user có quyền truy cập tenant không
- * - Apply global scope cho Eloquent queries
+ * Ensures that all database queries are properly scoped to the authenticated user's tenant.
+ * This is critical for multi-tenant security.
  */
 class TenantIsolationMiddleware
 {
     /**
-     * Handle an incoming request
-     * 
-     * @param Request $request
-     * @param Closure $next
-     * @return mixed
+     * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
-        $tenantId = $request->get('auth_tenant_id');
-        $userId = $request->get('auth_user_id');
+        $user = Auth::user();
         
-        if (!$tenantId) {
-            return $this->forbiddenResponse('Missing tenant context');
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Unauthorized',
+                'message' => 'User not authenticated',
+                'code' => 'USER_NOT_AUTHENTICATED'
+            ], 401);
         }
         
-        // Validate user belongs to tenant
-        if (!$this->validateUserTenantAccess($userId, $tenantId)) {
-            Log::warning('Tenant Access Violation', [
-                'user_id' => $userId,
-                'attempted_tenant_id' => $tenantId,
-                'ip_address' => $request->ip(),
-                'endpoint' => $request->getPathInfo()
+        // Super admin users don't need tenant_id
+        if ((method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) || (isset($user->is_admin) && $user->is_admin)) {
+            Log::info('Super admin access - bypassing tenant isolation', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => $request->ip()
             ]);
             
-            return $this->forbiddenResponse('Access denied to tenant');
+            // Set global tenant context to null for super admin
+            app()->instance('current_tenant_id', null);
+            $request->attributes->set('tenant_id', null);
+            $request->attributes->set('tenant_user', $user);
+            
+            return $next($request);
         }
         
-        // Set tenant context for the request
-        $this->setTenantContext($tenantId);
-        
-        $response = $next($request);
-        
-        // Clear tenant context after request
-        $this->clearTenantContext();
-        
-        return $response;
-    }
-    
-    /**
-     * Validate user has access to tenant
-     * 
-     * @param string $userId
-     * @param string $tenantId
-     * @return bool
-     */
-    private function validateUserTenantAccess(string $userId, string $tenantId): bool
-    {
-        try {
-            // Check if user belongs to the tenant
-            $userExists = DB::table('users')
-                ->where('id', $userId)
-                ->where('tenant_id', $tenantId)
-                ->exists();
-                
-            return $userExists;
-        } catch (\Exception $e) {
-            Log::error('Tenant Validation Error', [
-                'user_id' => $userId,
-                'tenant_id' => $tenantId,
-                'error' => $e->getMessage()
+        // Ensure regular users have a tenant_id
+        if (!$user->tenant_id) {
+            Log::warning('User without tenant_id attempted to access API', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => $request->ip()
             ]);
             
-            return false;
+            return response()->json([
+                'success' => false,
+                'error' => 'No Tenant Access',
+                'message' => 'User is not assigned to any tenant',
+                'code' => 'NO_TENANT_ACCESS'
+            ], 403);
         }
-    }
-    
-    /**
-     * Set tenant context for current request
-     * 
-     * @param string $tenantId
-     */
-    private function setTenantContext(string $tenantId): void
-    {
-        // Store tenant ID in app container
-        app()->instance('current_tenant_id', $tenantId);
         
-        // Set session variable for Eloquent global scopes
-        config(['app.current_tenant_id' => $tenantId]);
-    }
-    
-    /**
-     * Clear tenant context after request
-     */
-    private function clearTenantContext(): void
-    {
-        app()->forgetInstance('current_tenant_id');
-        config(['app.current_tenant_id' => null]);
-    }
-    
-    /**
-     * Return forbidden response
-     * 
-     * @param string $message
-     * @return JsonResponse
-     */
-    private function forbiddenResponse(string $message): JsonResponse
-    {
-        return response()->json([
-            'status' => 'error',
-            'message' => $message
-        ], 403);
+        // Set tenant context globally
+        app()->instance('current_tenant_id', $user->tenant_id);
+        
+        // Add tenant context to request
+        $request->attributes->set('tenant_id', $user->tenant_id);
+        $request->attributes->set('tenant_user', $user);
+        
+        // Log tenant access
+        Log::info('Tenant isolation applied', [
+            'user_id' => $user->id,
+            'tenant_id' => $user->tenant_id,
+            'route' => $request->route()?->getName(),
+            'method' => $request->method(),
+            'ip' => $request->ip()
+        ]);
+        
+        return $next($request);
     }
 }

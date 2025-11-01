@@ -142,12 +142,84 @@ class Permission {
      * @return array Mảng chứa permissions và override rules
      */
     private static function getRolePermissions(string $roleId): array {
-        // TODO: Implement database query to get role permissions
-        // Tạm thời return mock data
-        return [
-            'permissions' => [],
-            'overrides' => []
-        ];
+        try {
+            // Define role permissions mapping
+            $rolePermissionsMap = [
+                'super_admin' => [
+                    'permissions' => [
+                        'projects.create', 'projects.read', 'projects.update', 'projects.delete',
+                        'tasks.create', 'tasks.read', 'tasks.update', 'tasks.delete',
+                        'documents.create', 'documents.read', 'documents.update', 'documents.delete',
+                        'users.create', 'users.read', 'users.update', 'users.delete',
+                        'teams.create', 'teams.read', 'teams.update', 'teams.delete',
+                        'settings.read', 'settings.update',
+                        'reports.read', 'reports.create',
+                        'admin.access'
+                    ],
+                    'overrides' => [
+                        'projects.delete' => true,
+                        'users.delete' => true,
+                        'admin.access' => true
+                    ]
+                ],
+                'admin' => [
+                    'permissions' => [
+                        'projects.create', 'projects.read', 'projects.update',
+                        'tasks.create', 'tasks.read', 'tasks.update', 'tasks.delete',
+                        'documents.create', 'documents.read', 'documents.update', 'documents.delete',
+                        'users.create', 'users.read', 'users.update',
+                        'teams.create', 'teams.read', 'teams.update',
+                        'settings.read', 'settings.update',
+                        'reports.read', 'reports.create'
+                    ],
+                    'overrides' => [
+                        'projects.update' => true,
+                        'users.update' => true
+                    ]
+                ],
+                'project_manager' => [
+                    'permissions' => [
+                        'projects.read', 'projects.update',
+                        'tasks.create', 'tasks.read', 'tasks.update', 'tasks.delete',
+                        'documents.create', 'documents.read', 'documents.update', 'documents.delete',
+                        'teams.read', 'teams.update',
+                        'reports.read'
+                    ],
+                    'overrides' => [
+                        'tasks.delete' => true,
+                        'documents.delete' => true
+                    ]
+                ],
+                'member' => [
+                    'permissions' => [
+                        'projects.read',
+                        'tasks.read', 'tasks.update',
+                        'documents.read', 'documents.create',
+                        'teams.read'
+                    ],
+                    'overrides' => []
+                ],
+                'client' => [
+                    'permissions' => [
+                        'projects.read',
+                        'documents.read'
+                    ],
+                    'overrides' => []
+                ]
+            ];
+
+            return $rolePermissionsMap[$roleId] ?? [
+                'permissions' => [],
+                'overrides' => []
+            ];
+        } catch (\Exception $e) {
+            // Log error and return empty permissions
+            error_log("Error getting role permissions for role {$roleId}: " . $e->getMessage());
+            return [
+                'permissions' => [],
+                'overrides' => []
+            ];
+        }
     }
     
     /**

@@ -3,12 +3,12 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Contracts\Validation\Validator;
+use App\Support\ApiResponse;
 
 /**
- * Base API Request với validation messages tiếng Việt
+ * Base API Request với standardized validation và error handling
  */
 abstract class BaseApiRequest extends FormRequest
 {
@@ -22,106 +22,120 @@ abstract class BaseApiRequest extends FormRequest
 
     /**
      * Handle a failed validation attempt.
-     *
-     * @param Validator $validator
-     * @throws HttpResponseException
      */
     protected function failedValidation(Validator $validator): void
     {
         throw new HttpResponseException(
-            response()->json([
-                'status' => 'fail',
-                'message' => 'Dữ liệu không hợp lệ',
-                'data' => [
-                    'validation_errors' => $validator->errors()->toArray()
-                ]
-            ], 422)
+            ApiResponse::error(
+                'Validation failed',
+                422,
+                $validator->errors()->toArray(),
+                'VALIDATION_ERROR'
+            )
         );
     }
 
     /**
-     * Get custom validation messages in Vietnamese
-     *
-     * @return array
+     * Get custom validation messages
      */
     public function messages(): array
     {
         return [
-            'required' => 'Trường :attribute là bắt buộc.',
-            'string' => 'Trường :attribute phải là chuỗi ký tự.',
-            'email' => 'Trường :attribute phải là địa chỉ email hợp lệ.',
-            'unique' => 'Giá trị :attribute đã tồn tại.',
-            'exists' => 'Giá trị :attribute không tồn tại.',
-            'min' => 'Trường :attribute phải có ít nhất :min ký tự.',
-            'max' => 'Trường :attribute không được vượt quá :max ký tự.',
-            'numeric' => 'Trường :attribute phải là số.',
-            'integer' => 'Trường :attribute phải là số nguyên.',
-            'boolean' => 'Trường :attribute phải là true hoặc false.',
-            'date' => 'Trường :attribute phải là ngày hợp lệ.',
-            'date_format' => 'Trường :attribute phải có định dạng :format.',
-            'in' => 'Giá trị được chọn cho :attribute không hợp lệ.',
-            'array' => 'Trường :attribute phải là mảng.',
-            'json' => 'Trường :attribute phải là JSON hợp lệ.',
-            'ulid' => 'Trường :attribute phải là ULID hợp lệ.',
-            'confirmed' => 'Xác nhận :attribute không khớp.',
-            'same' => 'Trường :attribute và :other phải giống nhau.',
-            'different' => 'Trường :attribute và :other phải khác nhau.',
-            'before' => 'Trường :attribute phải là ngày trước :date.',
-            'after' => 'Trường :attribute phải là ngày sau :date.',
-            'alpha' => 'Trường :attribute chỉ được chứa chữ cái.',
-            'alpha_num' => 'Trường :attribute chỉ được chứa chữ cái và số.',
-            'regex' => 'Định dạng trường :attribute không hợp lệ.',
-            'size' => 'Trường :attribute phải có kích thước :size.',
-            'between' => 'Trường :attribute phải nằm trong khoảng :min và :max.',
-            'digits' => 'Trường :attribute phải có :digits chữ số.',
-            'digits_between' => 'Trường :attribute phải có từ :min đến :max chữ số.',
-            'file' => 'Trường :attribute phải là file.',
-            'image' => 'Trường :attribute phải là hình ảnh.',
-            'mimes' => 'Trường :attribute phải là file có định dạng: :values.',
-            'mimetypes' => 'Trường :attribute phải là file có loại: :values.',
-            'uploaded' => 'Tải lên :attribute thất bại.',
+            'required' => 'The :attribute field is required.',
+            'string' => 'The :attribute field must be a string.',
+            'email' => 'The :attribute field must be a valid email address.',
+            'unique' => 'The :attribute has already been taken.',
+            'exists' => 'The selected :attribute is invalid.',
+            'min' => 'The :attribute field must be at least :min characters.',
+            'max' => 'The :attribute field may not be greater than :max characters.',
+            'numeric' => 'The :attribute field must be a number.',
+            'integer' => 'The :attribute field must be an integer.',
+            'boolean' => 'The :attribute field must be true or false.',
+            'date' => 'The :attribute field must be a valid date.',
+            'date_format' => 'The :attribute field must match the format :format.',
+            'in' => 'The selected :attribute is invalid.',
+            'array' => 'The :attribute field must be an array.',
+            'json' => 'The :attribute field must be valid JSON.',
+            'confirmed' => 'The :attribute confirmation does not match.',
+            'same' => 'The :attribute and :other must match.',
+            'different' => 'The :attribute and :other must be different.',
+            'before' => 'The :attribute field must be a date before :date.',
+            'after' => 'The :attribute field must be a date after :date.',
+            'alpha' => 'The :attribute field may only contain letters.',
+            'alpha_num' => 'The :attribute field may only contain letters and numbers.',
+            'regex' => 'The :attribute field format is invalid.',
+            'size' => 'The :attribute field must be :size.',
+            'between' => 'The :attribute field must be between :min and :max.',
+            'digits' => 'The :attribute field must be :digits digits.',
+            'digits_between' => 'The :attribute field must be between :min and :max digits.',
+            'file' => 'The :attribute field must be a file.',
+            'image' => 'The :attribute field must be an image.',
+            'mimes' => 'The :attribute field must be a file of type: :values.',
+            'mimetypes' => 'The :attribute field must be a file of type: :values.',
+            'uploaded' => 'The :attribute failed to upload.',
         ];
     }
 
     /**
-     * Get custom attribute names in Vietnamese
-     *
-     * @return array
+     * Get custom attribute names
      */
     public function attributes(): array
     {
         return [
-            'name' => 'tên',
+            'name' => 'name',
             'email' => 'email',
-            'password' => 'mật khẩu',
-            'password_confirmation' => 'xác nhận mật khẩu',
-            'description' => 'mô tả',
-            'start_date' => 'ngày bắt đầu',
-            'end_date' => 'ngày kết thúc',
-            'status' => 'trạng thái',
-            'priority' => 'độ ưu tiên',
-            'progress' => 'tiến độ',
-            'cost' => 'chi phí',
-            'planned_cost' => 'chi phí dự kiến',
-            'actual_cost' => 'chi phí thực tế',
-            'estimated_hours' => 'số giờ ước tính',
-            'actual_hours' => 'số giờ thực tế',
-            'project_id' => 'ID dự án',
-            'component_id' => 'ID thành phần',
-            'task_id' => 'ID công việc',
-            'user_id' => 'ID người dùng',
-            'tenant_id' => 'ID tenant',
-            'created_by' => 'người tạo',
-            'updated_by' => 'người cập nhật',
-            'visibility' => 'quyền xem',
-            'tags' => 'thẻ',
-            'category' => 'danh mục',
-            'version' => 'phiên bản',
-            'template_data' => 'dữ liệu template',
-            'conditional_tag' => 'thẻ điều kiện',
-            'dependencies' => 'phụ thuộc',
-            'split_percentage' => 'phần trăm phân chia',
-            'role' => 'vai trò',
+            'password' => 'password',
+            'password_confirmation' => 'password confirmation',
+            'description' => 'description',
+            'start_date' => 'start date',
+            'end_date' => 'end date',
+            'status' => 'status',
+            'priority' => 'priority',
+            'progress' => 'progress',
+            'budget_total' => 'total budget',
+            'budget_actual' => 'actual budget',
+            'project_id' => 'project ID',
+            'user_id' => 'user ID',
+            'tenant_id' => 'tenant ID',
+            'role' => 'role',
+            'is_active' => 'active status',
+        ];
+    }
+
+    /**
+     * Get validation rules for common fields
+     */
+    protected function getCommonRules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['sometimes', 'string', 'max:1000'],
+            'status' => ['sometimes', 'string'],
+            'priority' => ['sometimes', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /**
+     * Get validation rules for date fields
+     */
+    protected function getDateRules(): array
+    {
+        return [
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+        ];
+    }
+
+    /**
+     * Get validation rules for numeric fields
+     */
+    protected function getNumericRules(): array
+    {
+        return [
+            'progress' => ['sometimes', 'integer', 'min:0', 'max:100'],
+            'budget_total' => ['sometimes', 'numeric', 'min:0'],
+            'budget_actual' => ['sometimes', 'numeric', 'min:0'],
         ];
     }
 }

@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use Src\RBAC\Models\Role;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -25,7 +25,7 @@ class UserRoleSeeder extends Seeder
         
         if ($adminUser && $adminRole) {
             // Gán system admin role cho admin user bằng updateOrInsert()
-            DB::table('system_user_roles')->updateOrInsert(
+            DB::table('user_roles')->updateOrInsert(
                 [
                     'user_id' => $adminUser->id,
                     'role_id' => $adminRole->id
@@ -43,7 +43,7 @@ class UserRoleSeeder extends Seeder
         
         if ($memberRole) {
             foreach ($otherUsers as $user) {
-                DB::table('system_user_roles')->updateOrInsert(
+                DB::table('user_roles')->updateOrInsert(
                     [
                         'user_id' => $user->id,
                         'role_id' => $memberRole->id

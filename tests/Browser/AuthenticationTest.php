@@ -23,16 +23,17 @@ class AuthenticationTest extends DuskTestCase
         $tenant = Tenant::factory()->create();
         $user = User::factory()->create([
             'tenant_id' => $tenant->id,
-            'email' => 'test@example.com'
+            'email' => 'test@example.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('password')
         ]);
 
         $this->browse(function (Browser $browser) use ($user) {
             $browser->visit('/login')
                     ->type('email', $user->email)
                     ->type('password', 'password')
-                    ->press('Login')
-                    ->waitForLocation('/dashboard')
-                    ->assertPathIs('/dashboard')
+                    ->press('Sign in')
+                    ->waitForLocation('/app/dashboard')
+                    ->assertPathIs('/app/dashboard')
                     ->assertSee('Dashboard');
         });
     }
@@ -46,7 +47,7 @@ class AuthenticationTest extends DuskTestCase
             $browser->visit('/login')
                     ->type('email', 'invalid@example.com')
                     ->type('password', 'wrongpassword')
-                    ->press('Login')
+                    ->press('Sign in')
                     ->waitForText('These credentials do not match our records')
                     ->assertSee('These credentials do not match our records')
                     ->assertPathIs('/login');
@@ -83,7 +84,7 @@ class AuthenticationTest extends DuskTestCase
                     ->type('email', 'newuser@example.com')
                     ->type('password', 'password123')
                     ->type('password_confirmation', 'password123')
-                    ->press('Register')
+                    ->press('Create Account')
                     ->waitForLocation('/dashboard')
                     ->assertPathIs('/dashboard')
                     ->assertSee('Test User');

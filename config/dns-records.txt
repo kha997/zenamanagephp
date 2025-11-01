@@ -1,0 +1,33 @@
+# DNS Records for zenamanage.com
+# Server IP: 192.168.1.100
+
+# A Record (Root Domain)
+Type: A
+Name: @
+Value: 192.168.1.100
+TTL: 3600
+
+# CNAME Record (WWW Subdomain)
+Type: CNAME
+Name: www
+Value: zenamanage.com
+TTL: 3600
+
+# Optional: MX Record (Email)
+Type: MX
+Name: @
+Value: mail.zenamanage.com
+Priority: 10
+TTL: 3600
+
+# Optional: TXT Record (SPF)
+Type: TXT
+Name: @
+Value: "v=spf1 include:_spf.google.com ~all"
+TTL: 3600
+
+# Optional: TXT Record (DKIM)
+Type: TXT
+Name: default._domainkey
+Value: "v=DKIM1; k=rsa; p=YOUR_DKIM_PUBLIC_KEY"
+TTL: 3600

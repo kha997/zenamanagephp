@@ -1,0 +1,37 @@
+name: Auth Guard Lint
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  auth-lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, iconv, json, mbstring, pdo, pdo_mysql
+        
+    - name: Install Dependencies
+      run: composer install --no-dev --optimize-autoloader
+      
+    - name: Run Guard Lint
+      run: php guard-lint.php app/
+      
+    - name: Check for auth() usage
+      run: |
+        echo "Checking for remaining auth() usage..."
+        if grep -r "auth()" app/ --include="*.php" | grep -v "// auth()" | grep -v "auth()->"; then
+          echo "❌ Found auth() usage that needs manual review"
+          grep -r "auth()" app/ --include="*.php" | grep -v "// auth()" | grep -v "auth()->"
+          exit 1
+        else
+          echo "✅ No problematic auth() usage found"
+        fi

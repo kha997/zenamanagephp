@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTemplatesStore } from '../../../store/templates';
 import { CreateWorkTemplateForm, TemplateTask } from '../../../lib/types';
-import { cn } from '../../../lib/utils/format';
+import { cn } from '../../../lib/utils';
 
 export const CreateTemplate: React.FC = () => {
   const navigate = useNavigate();

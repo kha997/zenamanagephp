@@ -1,0 +1,203 @@
+@extends('layouts.app')
+
+@section('title', 'Dashboard')
+
+{{-- KPI Strip Section --}}
+@section('kpi-strip')
+@include('app.dashboard._kpis')
+@endsection
+
+{{-- Main Content --}}
+@section('content')
+<div x-data="dashboardData()" data-testid="dashboard">
+        <!-- Row 1: Recent Projects + Activity Feed -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Recent Projects -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200" data-testid="recent-projects-widget">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Recent Projects</h3>
+                </div>
+                <div class="p-6">
+                    @forelse($recentProjects as $project)
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-project-diagram text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-900">{{ $project->name }}</h4>
+                                    <p class="text-xs text-gray-500">{{ ucfirst($project->status) }}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-900">{{ $project->progress }}%</p>
+                                <div class="w-16 bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $project->progress }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-8">
+                            <i class="fas fa-project-diagram text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No projects yet</p>
+                            <a href="/frontend/app/projects/create" class="text-blue-600 hover:text-blue-800 font-medium">Create your first project</a>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Activity Feed -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200" data-testid="activity-feed-widget">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
+                </div>
+                <div class="p-6">
+                    @forelse($recentActivity as $activity)
+                        <div class="flex items-start space-x-3 mb-4 last:mb-0">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-bell text-blue-600 text-sm"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm text-gray-900 break-words">{{ $activity->message }}</p>
+                                <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($activity->created_at)->diffForHumans() }}</p>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-8">
+                            <i class="fas fa-bell text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No recent activity</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2: Project Progress Chart + Quick Actions -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Project Progress Chart -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Project Progress</h3>
+                </div>
+                <div class="p-6">
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="projectProgressChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            @include('app.dashboard._quick-actions')
+        </div>
+
+        <!-- Row 3: Team Status + Task Completion Chart -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Team Status -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Team Status</h3>
+                </div>
+                <div class="p-6">
+                    @forelse($teamMembers as $member)
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center space-x-3">
+                                <div class="flex-shrink-0">
+                                    <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                                        <span class="text-sm font-medium text-gray-600">{{ substr($member['name'], 0, 1) }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">{{ $member['name'] }}</p>
+                                    <p class="text-xs text-gray-500">{{ $member['role'] }}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 rounded-full {{ $member['status_color'] }}"></div>
+                                <span class="text-xs text-gray-500">{{ ucfirst($member['status']) }}</span>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-8">
+                            <i class="fas fa-users text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">No team members</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- Task Completion Chart -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900">Task Completion</h3>
+                </div>
+                <div class="p-6">
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="taskCompletionChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
+
+{{-- Activity Section (Optional) --}}
+@section('activity')
+<div class="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
+    </div>
+    <div class="p-6">
+        @forelse($recentActivity as $activity)
+            <div class="flex items-start space-x-3 mb-4 last:mb-0">
+                <div class="flex-shrink-0">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-bell text-blue-600 text-sm"></i>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-900">{{ $activity->message }}</p>
+                    <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($activity->created_at)->diffForHumans() }}</p>
+                </div>
+            </div>
+        @empty
+            <div class="text-center py-8">
+                <i class="fas fa-bell text-4xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500">No recent activity</p>
+            </div>
+        @endforelse
+    </div>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+// Bootstrap data from server
+window.dashboardBootstrap = {!! $dashboardBootstrap !!};
+
+// Initialize charts immediately with server data
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for Alpine to be initialized
+    document.addEventListener('alpine:initialized', () => {
+        // Project Progress Chart
+        const projectProgressCtx = document.getElementById('projectProgressChart');
+        if (projectProgressCtx && window.dashboardBootstrap?.charts?.projectProgress) {
+            if (window.projectProgressChartInstance) {
+                window.projectProgressChartInstance.destroy();
+            }
+            window.projectProgressChartInstance = new Chart(projectProgressCtx, window.dashboardBootstrap.charts.projectProgress);
+        }
+        
+        // Task Completion Chart
+        const taskCompletionCtx = document.getElementById('taskCompletionChart');
+        if (taskCompletionCtx && window.dashboardBootstrap?.charts?.taskCompletion) {
+            if (window.taskCompletionChartInstance) {
+                window.taskCompletionChartInstance.destroy();
+            }
+            window.taskCompletionChartInstance = new Chart(taskCompletionCtx, window.dashboardBootstrap.charts.taskCompletion);
+        }
+    });
+});
+</script>
+@endsection

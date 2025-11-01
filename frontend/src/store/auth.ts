@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { AuthService } from '../lib/api'
+import { AuthService } from '../lib/api/auth.service'
 import { User, LoginCredentials } from '../lib/types'
-import { setToken, removeToken, getStoredUser, setStoredUser, removeStoredUser } from '../lib/utils/auth'
+import { setToken, removeToken, getUserProfile, setUserProfile } from '../lib/utils/auth'
 
 interface AuthState {
   user: User | null
@@ -25,8 +25,8 @@ type AuthStore = AuthState & AuthActions
 export const useAuthStore = create<AuthStore>()(persist(
     (set, get) => ({
       // State
-      user: getStoredUser(),
-      isAuthenticated: !!getStoredUser(),
+      user: getUserProfile(),
+      isAuthenticated: !!getUserProfile(),
       isLoading: false,
       error: null,
 
@@ -38,8 +38,8 @@ export const useAuthStore = create<AuthStore>()(persist(
           const authResponse = await AuthService.login(credentials)
           
           // Lưu token và user info
-          setToken(authResponse.access_token)
-          setStoredUser(authResponse.user)
+          setToken(authResponse.token)
+          setUserProfile(authResponse.user)
           
           set({
             user: authResponse.user,
@@ -66,7 +66,6 @@ export const useAuthStore = create<AuthStore>()(persist(
         } finally {
           // Xóa token và user info
           removeToken()
-          removeStoredUser()
           
           set({
             user: null,
@@ -80,8 +79,8 @@ export const useAuthStore = create<AuthStore>()(persist(
         try {
           const authResponse = await AuthService.refreshToken()
           
-          setToken(authResponse.access_token)
-          setStoredUser(authResponse.user)
+          setToken(authResponse.token)
+          setUserProfile(authResponse.user)
           
           set({
             user: authResponse.user,
@@ -100,7 +99,7 @@ export const useAuthStore = create<AuthStore>()(persist(
           set({ isLoading: true, error: null })
           
           const updatedUser = await AuthService.updateProfile(userData)
-          setStoredUser(updatedUser)
+          setUserProfile(updatedUser)
           
           set({
             user: updatedUser,
@@ -121,7 +120,7 @@ export const useAuthStore = create<AuthStore>()(persist(
       },
 
       checkAuthStatus: async () => {
-        const storedUser = getStoredUser()
+        const storedUser = getUserProfile()
         if (!storedUser) {
           set({ isAuthenticated: false, user: null })
           return
@@ -129,7 +128,7 @@ export const useAuthStore = create<AuthStore>()(persist(
 
         try {
           const currentUser = await AuthService.getProfile()
-          setStoredUser(currentUser)
+          setUserProfile(currentUser)
           
           set({
             user: currentUser,

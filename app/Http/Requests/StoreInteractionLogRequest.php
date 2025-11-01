@@ -1,11 +1,12 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Requests;
+use Illuminate\Support\Facades\Auth;
 
+
+use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use App\Models\Project;
-use App\Models\Task;
 
 class StoreInteractionLogRequest extends FormRequest
 {
@@ -31,7 +32,7 @@ class StoreInteractionLogRequest extends FormRequest
                 'string',
                 'size:26', // ULID length
                 Rule::exists('projects', 'id')->where(function ($query) {
-                    $query->where('tenant_id', auth()->user()->tenant_id);
+                    $query->where('tenant_id', Auth::user()->tenant_id);
                 })
             ],
             'linked_task_id' => [

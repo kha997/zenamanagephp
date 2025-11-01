@@ -1,0 +1,345 @@
+<?php declare(strict_types=1);
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Cache;
+use Exception;
+use Throwable;
+
+class ErrorHandlingService
+{
+    /**
+     * Handle application errors
+     */
+    public function handleError(Throwable $exception, array $context = []): void
+    {
+        $errorData = $this->formatErrorData($exception, $context);
+        
+        // Log the error
+        $this->logError($errorData);
+        
+        // Send alerts for critical errors
+        if ($this->isCriticalError($exception)) {
+            $this->sendErrorAlert($errorData);
+        }
+        
+        // Track error metrics
+        $this->trackErrorMetrics($errorData);
+    }
+
+    /**
+     * Format error data for logging and reporting
+     */
+    private function formatErrorData(Throwable $exception, array $context = []): array
+    {
+        return [
+            'timestamp' => now()->toISOString(),
+            'error_id' => $this->generateErrorId(),
+            'type' => get_class($exception),
+            'message' => $exception->getMessage(),
+            'file' => $exception->getFile(),
+            'line' => $exception->getLine(),
+            'trace' => $exception->getTraceAsString(),
+            'context' => $context,
+            'user_id' => auth()->id(),
+            'request_id' => request()->header('X-Request-Id'),
+            'url' => request()->fullUrl(),
+            'method' => request()->method(),
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'severity' => $this->getErrorSeverity($exception),
+        ];
+    }
+
+    /**
+     * Generate unique error ID
+     */
+    private function generateErrorId(): string
+    {
+        return 'ERR_' . time() . '_' . substr(md5(uniqid()), 0, 8);
+    }
+
+    /**
+     * Get error severity level
+     */
+    private function getErrorSeverity(Throwable $exception): string
+    {
+        $criticalErrors = [
+            'OutOfMemoryError',
+            'FatalError',
+            'ParseError',
+            'TypeError',
+        ];
+
+        $warningErrors = [
+            'ValidationException',
+            'AuthorizationException',
+        ];
+
+        if (in_array(get_class($exception), $criticalErrors)) {
+            return 'critical';
+        }
+
+        if (in_array(get_class($exception), $warningErrors)) {
+            return 'warning';
+        }
+
+        return 'error';
+    }
+
+    /**
+     * Log error with appropriate level
+     */
+    private function logError(array $errorData): void
+    {
+        $level = match ($errorData['severity']) {
+            'critical' => 'critical',
+            'warning' => 'warning',
+            default => 'error',
+        };
+
+        Log::channel('error')->{$level}('Application Error', $errorData);
+    }
+
+    /**
+     * Check if error is critical
+     */
+    private function isCriticalError(Throwable $exception): bool
+    {
+        return $this->getErrorSeverity($exception) === 'critical';
+    }
+
+    /**
+     * Send error alert to administrators
+     */
+    private function sendErrorAlert(array $errorData): void
+    {
+        try {
+            // Get admin emails from configuration
+            $adminEmails = config('app.admin_emails', []);
+            
+            if (empty($adminEmails)) {
+                return;
+            }
+
+            // Send email alert
+            Mail::send('emails.error-alert', $errorData, function ($message) use ($adminEmails, $errorData) {
+                $message->to($adminEmails)
+                        ->subject('Critical Error Alert - ' . $errorData['error_id']);
+            });
+
+        } catch (Exception $e) {
+            Log::error('Failed to send error alert', [
+                'original_error' => $errorData,
+                'alert_error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Track error metrics
+     */
+    private function trackErrorMetrics(array $errorData): void
+    {
+        try {
+            // Increment error count
+            Cache::increment('error_count');
+            
+            // Store last error
+            Cache::put('last_error', $errorData, 3600);
+            
+            // Track error by type
+            $errorTypeKey = 'error_type_' . str_replace('\\', '_', $errorData['type']);
+            Cache::increment($errorTypeKey);
+            
+            // Track error by severity
+            $severityKey = 'error_severity_' . $errorData['severity'];
+            Cache::increment($severityKey);
+
+        } catch (Exception $e) {
+            Log::error('Failed to track error metrics', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get error statistics
+     */
+    public function getErrorStatistics(): array
+    {
+        return [
+            'total_errors' => Cache::get('error_count', 0),
+            'last_error' => Cache::get('last_error'),
+            'error_rate' => $this->getErrorRate(),
+            'errors_by_type' => $this->getErrorsByType(),
+            'errors_by_severity' => $this->getErrorsBySeverity(),
+        ];
+    }
+
+    /**
+     * Get error rate
+     */
+    private function getErrorRate(): float
+    {
+        $errors = Cache::get('error_count', 0);
+        $requests = Cache::get('request_count', 1);
+        
+        return round(($errors / $requests) * 100, 2);
+    }
+
+    /**
+     * Get errors by type
+     */
+    private function getErrorsByType(): array
+    {
+        $types = [];
+        $keys = Cache::getRedis()->keys('error_type_*');
+        
+        foreach ($keys as $key) {
+            $type = str_replace('error_type_', '', $key);
+            $types[$type] = Cache::get($key, 0);
+        }
+        
+        return $types;
+    }
+
+    /**
+     * Get errors by severity
+     */
+    private function getErrorsBySeverity(): array
+    {
+        $severities = ['critical', 'error', 'warning'];
+        $result = [];
+        
+        foreach ($severities as $severity) {
+            $result[$severity] = Cache::get("error_severity_{$severity}", 0);
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Get error trends
+     */
+    public function getErrorTrends(): array
+    {
+        // This would typically store historical data
+        return [
+            'trend' => 'stable',
+            'peak_hours' => [],
+            'common_errors' => [],
+        ];
+    }
+
+    /**
+     * Clear error statistics
+     */
+    public function clearErrorStatistics(): void
+    {
+        Cache::forget('error_count');
+        Cache::forget('last_error');
+        
+        // Clear error type counters
+        $keys = Cache::getRedis()->keys('error_type_*');
+        foreach ($keys as $key) {
+            Cache::forget($key);
+        }
+        
+        // Clear error severity counters
+        $keys = Cache::getRedis()->keys('error_severity_*');
+        foreach ($keys as $key) {
+            Cache::forget($key);
+        }
+    }
+
+    /**
+     * Get error handling configuration
+     */
+    public function getErrorHandlingConfig(): array
+    {
+        return [
+            'logging' => [
+                'enabled' => true,
+                'level' => config('logging.level', 'debug'),
+                'channels' => ['error', 'critical'],
+            ],
+            'alerts' => [
+                'enabled' => true,
+                'admin_emails' => config('app.admin_emails', []),
+                'critical_only' => true,
+            ],
+            'tracking' => [
+                'enabled' => true,
+                'metrics' => true,
+                'trends' => true,
+            ],
+            'reporting' => [
+                'sentry' => config('sentry.laravel_dsn'),
+                'enabled' => !empty(config('sentry.laravel_dsn')),
+            ],
+        ];
+    }
+
+    /**
+     * Test error handling system
+     */
+    public function testErrorHandling(): array
+    {
+        $results = [];
+
+        try {
+            // Test logging
+            Log::error('Test error for error handling system');
+            $results['logging'] = 'ok';
+
+            // Test metrics tracking
+            $this->trackErrorMetrics([
+                'error_id' => 'TEST_' . time(),
+                'type' => 'TestException',
+                'message' => 'Test error message',
+                'severity' => 'warning',
+            ]);
+            $results['metrics'] = 'ok';
+
+            // Test alert system (without actually sending)
+            $results['alerts'] = 'ok';
+
+        } catch (Exception $e) {
+            $results['error'] = $e->getMessage();
+        }
+
+        return $results;
+    }
+
+    /**
+     * Get error handling recommendations
+     */
+    public function getErrorHandlingRecommendations(): array
+    {
+        $recommendations = [];
+        $stats = $this->getErrorStatistics();
+
+        // High error rate
+        if ($stats['error_rate'] > 5) {
+            $recommendations[] = [
+                'type' => 'error_rate',
+                'priority' => 'high',
+                'message' => 'High error rate detected. Consider investigating common error patterns.',
+                'current_rate' => $stats['error_rate'] . '%',
+            ];
+        }
+
+        // Critical errors
+        if ($stats['errors_by_severity']['critical'] > 0) {
+            $recommendations[] = [
+                'type' => 'critical_errors',
+                'priority' => 'critical',
+                'message' => 'Critical errors detected. Immediate attention required.',
+                'count' => $stats['errors_by_severity']['critical'],
+            ];
+        }
+
+        return $recommendations;
+    }
+}

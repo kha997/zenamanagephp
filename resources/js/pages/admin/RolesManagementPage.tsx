@@ -41,7 +41,7 @@ interface PermissionGroup {
 
 export const RolesManagementPage: React.FC = () => {
   const [roles, setRoles] = useState<RoleWithPermissions[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [, setPermissions] = useState<Permission[]>([]);
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

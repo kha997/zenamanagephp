@@ -1,0 +1,50 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - link "Bỏ qua tới nội dung chính" [ref=e5] [cursor=pointer]:
+    - /url: "#main-content"
+  - complementary "Điều hướng ứng dụng" [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e8]: ZenaManage
+      - generic [ref=e9]: Tenant
+    - navigation [ref=e10]:
+      - link "Dashboard Widgets & KPIs" [ref=e11] [cursor=pointer]:
+        - /url: /app/dashboard
+        - generic [ref=e12]: Dashboard
+        - text: Widgets & KPIs
+      - link "Alerts Trung tâm cảnh báo" [ref=e13] [cursor=pointer]:
+        - /url: /app/alerts
+        - generic [ref=e14]: Alerts
+        - text: Trung tâm cảnh báo
+      - link "Preferences Giao diện & bố cục" [ref=e15] [cursor=pointer]:
+        - /url: /app/preferences
+        - generic [ref=e16]: Preferences
+        - text: Giao diện & bố cục
+    - generic [ref=e17]:
+      - generic [ref=e18]: Frontend v1 (draft)
+      - generic [ref=e19]: "Perf budget: API < 300ms, LCP < 2.5s"
+  - generic [ref=e20]:
+    - banner [ref=e21]:
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - generic [ref=e24]: Preview
+          - generic [ref=e25]:
+            - heading "Frontend v1" [level=1] [ref=e26]
+            - paragraph [ref=e27]: Chuẩn hoá AppShell, dashboard widgets, alerts center, preferences
+        - generic [ref=e28]:
+          - button "Toggle theme" [ref=e29] [cursor=pointer]:
+            - generic [ref=e30]: Dark mode
+          - button "Đồng bộ bố cục" [ref=e31] [cursor=pointer]:
+            - generic [ref=e32]: Đồng bộ bố cục
+    - main [ref=e33]:
+      - generic [ref=e35]:
+        - generic [ref=e37]:
+          - heading "Dashboard" [level=1] [ref=e38]
+          - paragraph [ref=e39]: Overview of your projects and tasks
+        - generic [ref=e42]:
+          - paragraph [ref=e43]: Failed to load dashboard
+          - paragraph [ref=e44]: Please try refreshing the page
+          - button "Retry" [ref=e45] [cursor=pointer]:
+            - generic [ref=e46]: Retry
+```

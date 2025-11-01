@@ -1,0 +1,97 @@
+# Prometheus Configuration for Dashboard System
+# Production Monitoring Setup
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'zenamanage-dashboard'
+    environment: 'production'
+
+rule_files:
+  - "/etc/prometheus/rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Nginx metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:9113']
+    scrape_interval: 10s
+    metrics_path: '/metrics'
+
+  # MySQL metrics
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['mysql:9104']
+    scrape_interval: 30s
+
+  # Redis metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # PHP-FPM metrics
+  - job_name: 'php-fpm'
+    static_configs:
+      - targets: ['app:9000']
+    scrape_interval: 30s
+
+  # Node Exporter (if available)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 30s
+
+  # Laravel Application metrics
+  - job_name: 'laravel-app'
+    static_configs:
+      - targets: ['app:8000']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # WebSocket metrics
+  - job_name: 'websocket'
+    static_configs:
+      - targets: ['websocket:6001']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # Queue Worker metrics
+  - job_name: 'queue-worker'
+    static_configs:
+      - targets: ['queue:8001']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # Grafana metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+  # Elasticsearch metrics
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    scrape_interval: 30s
+    metrics_path: '/_prometheus/metrics'
+
+  # Kibana metrics
+  - job_name: 'kibana'
+    static_configs:
+      - targets: ['kibana:5601']
+    scrape_interval: 30s
+    metrics_path: '/api/status'

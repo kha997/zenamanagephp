@@ -16,3 +16,8 @@ use Illuminate\Support\Facades\Broadcast;
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
+
+// Admin Security Channel - Only super admins or users with admin token ability
+Broadcast::channel('admin-security', function ($user) {
+    return $user && ($user->role === 'super_admin' || $user->tokenCan('admin'));
+});

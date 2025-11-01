@@ -3,175 +3,276 @@
 namespace App\Services;
 
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
- * Service tối ưu hóa các truy vấn database phức tạp
- * Cung cấp các method để optimize N+1 queries, eager loading, và chunking
+ * Query Optimization Service
+ * 
+ * Provides utilities for preventing N+1 queries and optimizing database performance
  */
 class QueryOptimizationService
 {
     /**
-     * Optimize project queries với eager loading
-     * 
-     * @param Builder $query
-     * @param array $relations
-     * @return Builder
+     * Common eager loading patterns for different models
      */
-    public function optimizeProjectQuery(Builder $query, array $relations = []): Builder
-    {
-        $defaultRelations = [
-            'components' => function ($q) {
-                $q->select(['id', 'project_id', 'parent_component_id', 'name', 'progress_percent'])
-                  ->where('is_active', true);
-            },
-            'tasks' => function ($q) {
-                $q->select(['id', 'project_id', 'component_id', 'name', 'status', 'start_date', 'end_date'])
-                  ->where('is_hidden', false);
-            },
-            'tenant:id,name'
-        ];
+    public const EAGER_LOADING_PATTERNS = [
+        'project' => ['owner:id,name,email', 'tasks:id,project_id,title,status,assignee_id,end_date'],
+        'project_with_tasks' => [
+            'owner:id,name,email',
+            'tasks:id,project_id,title,status,assignee_id,end_date',
+            'tasks.assignee:id,name,email'
+        ],
+        'task' => ['project:id,name', 'assignee:id,name,email', 'creator:id,name,email'],
+        'client' => ['quotes:id,client_id,title,status,total_amount', 'projects:id,client_id,name,status'],
+        'client_with_quotes' => [
+            'quotes:id,client_id,title,status,total_amount,final_amount',
+            'projects:id,client_id,name,status'
+        ],
+        'quote' => ['client:id,name,email,company', 'project:id,name'],
+        'user' => ['tenant:id,name'],
+    ];
 
-        $relations = array_merge($defaultRelations, $relations);
+    /**
+     * Apply eager loading to a query based on model type
+     */
+    public static function eagerLoad(Builder $query, string $modelType, array $additionalRelations = []): Builder
+    {
+        $patterns = self::EAGER_LOADING_PATTERNS[$modelType] ?? [];
+        $relations = array_merge($patterns, $additionalRelations);
         
-        return $query->with($relations)
-                    ->select(['id', 'tenant_id', 'name', 'description', 'status', 'progress', 'start_date', 'end_date']);
+        if (!empty($relations)) {
+            $query->with($relations);
+        }
+        
+        return $query;
     }
 
     /**
-     * Optimize interaction logs queries với filtering
-     * 
-     * @param Builder $query
-     * @param array $filters
-     * @return Builder
+     * Get aggregated statistics with a single query
      */
-    public function optimizeInteractionLogsQuery(Builder $query, array $filters = []): Builder
+    public static function getAggregatedStats(Builder $query, array $conditions): array
     {
-        // Apply indexes-friendly filters first
-        if (isset($filters['project_id'])) {
-            $query->where('project_id', $filters['project_id']);
+        $selectRaw = [];
+        
+        foreach ($conditions as $condition) {
+            if (is_string($condition)) {
+                $selectRaw[] = $condition;
+            } elseif (is_array($condition) && isset($condition['field'], $condition['value'])) {
+                $selectRaw[] = "SUM(CASE WHEN {$condition['field']} = '{$condition['value']}' THEN 1 ELSE 0 END) as {$condition['alias']}";
+            }
         }
-
-        if (isset($filters['type'])) {
-            $query->where('type', $filters['type']);
+        
+        if (empty($selectRaw)) {
+            return [];
         }
+        
+        return $query->selectRaw(implode(', ', $selectRaw))->first()->toArray();
+    }
 
-        if (isset($filters['visibility'])) {
-            $query->where('visibility', $filters['visibility']);
+    /**
+     * Cache query results with automatic cache key generation
+     */
+    public static function cacheQuery(string $cacheKey, callable $queryCallback, int $ttl = 300): mixed
+    {
+        return Cache::remember($cacheKey, $ttl, $queryCallback);
+    }
+
+    /**
+     * Generate cache key for tenant-specific data
+     */
+    public static function generateTenantCacheKey(string $prefix, string $tenantId, array $params = []): string
+    {
+        $key = "{$prefix}-{$tenantId}";
+        
+        if (!empty($params)) {
+            $key .= '-' . md5(serialize($params));
+        }
+        
+        return $key;
+    }
+
+    /**
+     * Clear cache for a specific tenant
+     */
+    public static function clearTenantCache(string $tenantId, array $prefixes = []): void
+    {
+        if (empty($prefixes)) {
+            // Clear all tenant-related cache by flushing and rebuilding
+            // Note: This is a simplified approach. In production, you might want to use
+            // a more sophisticated cache tagging system
+            Cache::flush();
+        } else {
+            // Clear specific prefixes
+            foreach ($prefixes as $prefix) {
+                Cache::forget("{$prefix}-{$tenantId}");
+            }
+        }
+    }
+
+    /**
+     * Optimize pagination queries
+     */
+    public static function optimizePagination(Builder $query, int $perPage = 15, array $eagerLoad = []): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    {
+        if (!empty($eagerLoad)) {
+            $query->with($eagerLoad);
+        }
+        
+        return $query->paginate($perPage);
+    }
+
+    /**
+     * Get count statistics for different statuses
+     */
+    public static function getStatusCounts(Builder $query, string $statusField, array $statuses): array
+    {
+        $selectRaw = [];
+        
+        foreach ($statuses as $status) {
+            $selectRaw[] = "SUM(CASE WHEN {$statusField} = '{$status}' THEN 1 ELSE 0 END) as {$status}_count";
+        }
+        
+        $selectRaw[] = "COUNT(*) as total_count";
+        
+        return $query->selectRaw(implode(', ', $selectRaw))->first()->toArray();
+    }
+
+    /**
+     * Optimize dashboard KPI queries
+     */
+    public static function getDashboardKpis(string $tenantId, array $kpiConfigs): array
+    {
+        $kpis = [];
+        
+        foreach ($kpiConfigs as $config) {
+            $cacheKey = self::generateTenantCacheKey($config['cache_key'], $tenantId);
             
-            if ($filters['visibility'] === 'client') {
-                $query->where('client_approved', true);
-            }
-        }
-
-        if (isset($filters['date_from'])) {
-            $query->where('created_at', '>=', $filters['date_from']);
-        }
-
-        if (isset($filters['date_to'])) {
-            $query->where('created_at', '<=', $filters['date_to']);
-        }
-
-        // Eager load creator information
-        $query->with('creator:id,name,email');
-
-        return $query->select([
-            'id', 'project_id', 'linked_task_id', 'type', 'description', 
-            'tag_path', 'visibility', 'client_approved', 'created_by', 'created_at'
-        ]);
-    }
-
-    /**
-     * Optimize user dashboard queries
-     * 
-     * @param int $userId
-     * @param int $tenantId
-     * @return array
-     */
-    public function getUserDashboardData(int $userId, int $tenantId): array
-    {
-        // Use single query với subqueries thay vì multiple queries
-        $stats = DB::select("
-            SELECT 
-                (SELECT COUNT(*) FROM projects WHERE tenant_id = ? AND status = 'active') as active_projects,
-                (SELECT COUNT(*) FROM tasks t 
-                 JOIN projects p ON t.project_id = p.id 
-                 WHERE p.tenant_id = ? AND t.status = 'pending' AND t.is_hidden = 0) as pending_tasks,
-                (SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL) as unread_notifications,
-                (SELECT COUNT(*) FROM change_requests cr
-                 JOIN projects p ON cr.project_id = p.id
-                 WHERE p.tenant_id = ? AND cr.status = 'awaiting_approval') as pending_change_requests
-        ", [$tenantId, $tenantId, $userId, $tenantId]);
-
-        return (array) $stats[0];
-    }
-
-    /**
-     * Optimize component hierarchy queries
-     * 
-     * @param int $projectId
-     * @return array
-     */
-    public function getComponentHierarchy(int $projectId): array
-    {
-        // Sử dụng recursive CTE cho MySQL 8.0+
-        $components = DB::select("
-            WITH RECURSIVE component_tree AS (
-                SELECT id, parent_component_id, name, progress_percent, planned_cost, actual_cost, 0 as level
-                FROM components 
-                WHERE project_id = ? AND parent_component_id IS NULL
+            $kpis[] = self::cacheQuery($cacheKey, function () use ($config) {
+                $query = $config['model']::where('tenant_id', $config['tenant_id']);
                 
-                UNION ALL
+                if (isset($config['conditions'])) {
+                    foreach ($config['conditions'] as $condition) {
+                        $query->where($condition['field'], $condition['operator'] ?? '=', $condition['value']);
+                    }
+                }
                 
-                SELECT c.id, c.parent_component_id, c.name, c.progress_percent, c.planned_cost, c.actual_cost, ct.level + 1
-                FROM components c
-                INNER JOIN component_tree ct ON c.parent_component_id = ct.id
-                WHERE c.project_id = ?
-            )
-            SELECT * FROM component_tree ORDER BY level, name
-        ", [$projectId, $projectId]);
-
-        return $components;
+                $result = $query->selectRaw($config['select_raw'])->first();
+                
+                return [
+                    'label' => $config['label'],
+                    'value' => $result->{$config['value_field']} ?? 0,
+                    'subtitle' => $config['subtitle'],
+                    'icon' => $config['icon'],
+                    'gradient' => $config['gradient'],
+                    'action' => $config['action'],
+                ];
+            }, $config['ttl'] ?? 300);
+        }
+        
+        return $kpis;
     }
 
     /**
-     * Batch process large datasets với chunking
-     * 
-     * @param Builder $query
-     * @param callable $callback
-     * @param int $chunkSize
-     * @return void
+     * Prevent N+1 queries in collection operations
      */
-    public function processInChunks(Builder $query, callable $callback, int $chunkSize = 1000): void
+    public static function optimizeCollection($collection, array $relations): void
     {
-        $query->chunk($chunkSize, function ($records) use ($callback) {
-            foreach ($records as $record) {
-                $callback($record);
-            }
-        });
+        if ($collection->isNotEmpty()) {
+            $collection->load($relations);
+        }
     }
 
     /**
-     * Analyze slow queries và suggest optimizations
-     * 
-     * @return array
+     * Log slow queries for monitoring
      */
-    public function analyzeSlowQueries(): array
+    public static function logSlowQuery(string $query, float $executionTime, array $context = []): void
     {
-        // Enable slow query log analysis
-        $slowQueries = DB::select("
-            SELECT 
-                sql_text,
-                exec_count,
-                avg_timer_wait/1000000000 as avg_time_seconds,
-                sum_timer_wait/1000000000 as total_time_seconds
-            FROM performance_schema.events_statements_summary_by_digest 
-            WHERE avg_timer_wait > 1000000000  -- queries taking more than 1 second
-            ORDER BY avg_timer_wait DESC 
-            LIMIT 10
-        ");
+        if ($executionTime > 1.0) { // Log queries taking more than 1 second
+            Log::warning('Slow query detected', [
+                'query' => $query,
+                'execution_time' => $executionTime,
+                'context' => $context,
+            ]);
+        }
+    }
 
-        return $slowQueries;
+    /**
+     * Get optimized project statistics
+     */
+    public static function getProjectStats(string $tenantId): array
+    {
+        $cacheKey = self::generateTenantCacheKey('project-stats', $tenantId);
+        
+        return self::cacheQuery($cacheKey, function () use ($tenantId) {
+            return \App\Models\Project::where('tenant_id', $tenantId)
+                ->selectRaw('
+                    COUNT(*) as total_projects,
+                    SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as active_projects,
+                    SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed_projects,
+                    SUM(CASE WHEN status = "archived" THEN 1 ELSE 0 END) as archived_projects,
+                    SUM(CASE WHEN status = "on_hold" THEN 1 ELSE 0 END) as on_hold_projects,
+                    AVG(CASE WHEN status = "active" THEN progress_pct ELSE NULL END) as avg_progress,
+                    SUM(budget_total) as total_budget,
+                    SUM(budget_actual) as actual_budget
+                ')
+                ->first()
+                ->toArray();
+        }, 300);
+    }
+
+    /**
+     * Get optimized task statistics
+     */
+    public static function getTaskStats(string $tenantId): array
+    {
+        $cacheKey = self::generateTenantCacheKey('task-stats', $tenantId);
+        
+        return self::cacheQuery($cacheKey, function () use ($tenantId) {
+            return \App\Models\Task::where('tenant_id', $tenantId)
+                ->selectRaw('
+                    COUNT(*) as total_tasks,
+                    SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending_tasks,
+                    SUM(CASE WHEN status = "in_progress" THEN 1 ELSE 0 END) as in_progress_tasks,
+                    SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed_tasks,
+                    SUM(CASE WHEN status = "cancelled" THEN 1 ELSE 0 END) as cancelled_tasks,
+                    SUM(CASE WHEN end_date < NOW() AND status NOT IN ("completed", "cancelled") THEN 1 ELSE 0 END) as overdue_tasks,
+                    AVG(estimated_hours) as avg_estimated_hours,
+                    SUM(actual_hours) as total_actual_hours
+                ')
+                ->first()
+                ->toArray();
+        }, 300);
+    }
+
+    /**
+     * Get optimized client statistics
+     */
+    public static function getClientStats(string $tenantId): array
+    {
+        $cacheKey = self::generateTenantCacheKey('client-stats', $tenantId);
+        
+        return self::cacheQuery($cacheKey, function () use ($tenantId) {
+            $clientStats = \App\Models\Client::where('tenant_id', $tenantId)
+                ->selectRaw('
+                    COUNT(*) as total_clients,
+                    SUM(CASE WHEN lifecycle_stage = "customer" THEN 1 ELSE 0 END) as customers,
+                    SUM(CASE WHEN lifecycle_stage = "prospect" THEN 1 ELSE 0 END) as prospects,
+                    SUM(CASE WHEN lifecycle_stage = "lead" THEN 1 ELSE 0 END) as leads,
+                    SUM(CASE WHEN lifecycle_stage = "inactive" THEN 1 ELSE 0 END) as inactive_clients
+                ')
+                ->first();
+
+            $quoteStats = \App\Models\Quote::where('tenant_id', $tenantId)
+                ->selectRaw('
+                    COUNT(*) as total_quotes,
+                    SUM(CASE WHEN status = "accepted" THEN 1 ELSE 0 END) as accepted_quotes,
+                    SUM(CASE WHEN status = "accepted" THEN final_amount ELSE 0 END) as total_value
+                ')
+                ->first();
+
+            return array_merge($clientStats->toArray(), $quoteStats->toArray());
+        }, 300);
     }
 }

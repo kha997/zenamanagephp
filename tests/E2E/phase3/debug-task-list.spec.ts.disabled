@@ -1,0 +1,36 @@
+import { test, expect } from '@playwright/test';
+import { AuthHelper } from '../helpers/auth-helper';
+
+test.describe('Debug Task List', () => {
+  test('should be able to access task list page', async ({ page }) => {
+    const authHelper = new AuthHelper(page);
+    
+    // Login
+    await authHelper.login('uat-pm@test.com', 'password');
+    
+    // Navigate to task list
+    await page.goto('/app/tasks');
+    await page.waitForLoadState('networkidle');
+    
+    // Check if we're on the task list page
+    console.log('Current URL:', page.url());
+    console.log('Page title:', await page.title());
+    
+    // Check if task items exist
+    const taskItems = page.locator('[data-testid="task-item"]');
+    const taskCount = await taskItems.count();
+    console.log('Task items found:', taskCount);
+    
+    if (taskCount > 0) {
+      console.log('First task text:', await taskItems.first().textContent());
+    } else {
+      console.log('No task items found. Page content:');
+      console.log(await page.content());
+    }
+    
+    // Take a screenshot for debugging
+    await page.screenshot({ path: 'test-results/phase3-artifacts/debug-task-list.png' });
+    
+    expect(page.url()).toContain('/app/tasks');
+  });
+});

@@ -1,0 +1,73 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // Clean up duplicate zena_* tables that are deprecated
+        $deprecatedTables = [
+            'zena_projects',
+            'zena_tasks', 
+            'zena_components',
+            'zena_documents',
+            'zena_task_assignments',
+            'zena_change_requests',
+            'zena_ncrs',
+            'zena_rfis',
+            'zena_qc_plans',
+            'zena_qc_inspections',
+            'zena_drawings',
+            'zena_invoices',
+            'zena_material_requests',
+            'zena_purchase_orders',
+            'zena_submittals',
+            'zena_project_users'
+        ];
+
+        foreach ($deprecatedTables as $table) {
+            if (Schema::hasTable($table)) {
+                // Check if table has deprecated_notice column
+                if (Schema::hasColumn($table, 'deprecated_notice')) {
+                    echo "Dropping deprecated table: {$table}\n";
+                    
+                    // Disable foreign key checks temporarily
+                    // SQLite doesn't support SET FOREIGN_KEY_CHECKS
+        // DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+                    Schema::dropIfExists($table);
+                    // SQLite doesn't support SET FOREIGN_KEY_CHECKS
+                    // DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+                }
+            }
+        }
+
+        // Clean up backup tables
+        $backupTables = [
+            'projects_backup'
+        ];
+
+        foreach ($backupTables as $table) {
+            if (Schema::hasTable($table)) {
+                echo "Dropping backup table: {$table}\n";
+                Schema::dropIfExists($table);
+            }
+        }
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        // Note: This migration cannot be reversed as we're dropping tables
+        // If you need to restore these tables, you'll need to recreate them
+        // from their original migration files
+    }
+};

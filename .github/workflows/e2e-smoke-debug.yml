@@ -34,10 +34,13 @@ jobs:
       with:
         node-version: '22'
         cache: 'npm'
+        # Ensure setup-node Node.js is in PATH first
+        check-latest: true
         
-    - name: Verify Node.js version
+    - name: Verify Node.js version (fail early)
       run: |
         echo "📋 Node.js version check:"
+        echo "PATH: $PATH"
         echo "Node.js location: $(which node)"
         echo "Node.js version: $(node --version)"
         echo "npm location: $(which npm)"
@@ -47,10 +50,22 @@ jobs:
         NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
         NODE_MINOR=$(echo "$NODE_VERSION" | cut -d. -f2)
         
+        # Check if Node.js is from setup-node (usually in /Users/runner or similar)
+        NODE_PATH=$(which node)
+        if [[ "$NODE_PATH" != *"setup-node"* ]] && [[ "$NODE_PATH" != *"/Users/runner"* ]] && [[ "$NODE_PATH" != *"/home/runner"* ]]; then
+          echo "⚠️  WARNING: Node.js may not be from setup-node action"
+          echo "Node.js path: $NODE_PATH"
+        fi
+        
         if [ "$NODE_MAJOR" -lt 20 ]; then
           echo "❌ ERROR: Node.js version $NODE_VERSION is too old for Vite 7"
           echo "Required: Node.js 20.19+ or 22.12+"
           echo "Current: Node.js $NODE_VERSION"
+          echo "Location: $NODE_PATH"
+          echo ""
+          echo "🔧 Solution: Install Node.js 22 on self-hosted runner"
+          echo "   brew install node@22  # macOS"
+          echo "   or: https://nodejs.org/"
           exit 1
         elif [ "$NODE_MAJOR" -eq 20 ] && [ "$NODE_MINOR" -lt 19 ]; then
           echo "❌ ERROR: Node.js version $NODE_VERSION is too old"
@@ -64,25 +79,41 @@ jobs:
           echo "✅ Node.js version $NODE_VERSION is compatible with Vite 7"
         fi
         
-    - name: Verify PostCSS config
+    - name: Verify PostCSS config (fail early)
       run: |
         echo "📋 Checking PostCSS config..."
+        echo "Working directory: $(pwd)"
+        echo "Git commit: $(git rev-parse HEAD)"
+        echo "Git branch: $(git branch --show-current)"
+        
         if [ -f "postcss.config.js" ]; then
           echo "✅ postcss.config.js exists"
+          echo "File content:"
+          cat postcss.config.js
+          echo ""
+          
           if grep -q "module.exports" postcss.config.js; then
             echo "✅ PostCSS config uses CommonJS syntax (correct)"
           elif grep -q "export default" postcss.config.js; then
             echo "❌ ERROR: PostCSS config still uses ES module syntax"
             echo "Expected: module.exports"
             echo "Found: export default"
-            cat postcss.config.js
+            echo ""
+            echo "🔧 This indicates old code was checked out. Checking git status..."
+            git status
+            git log --oneline -5
+            echo ""
+            echo "⚠️  Workaround: Ensure latest code is pulled"
             exit 1
           else
             echo "⚠️  WARNING: Unknown PostCSS config format"
             cat postcss.config.js
           fi
         else
-          echo "⚠️  WARNING: postcss.config.js not found"
+          echo "❌ ERROR: postcss.config.js not found"
+          echo "Files in current directory:"
+          ls -la | head -20
+          exit 1
         fi
         
     - name: Install dependencies

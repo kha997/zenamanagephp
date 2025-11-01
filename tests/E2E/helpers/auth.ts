@@ -81,11 +81,45 @@ export class MinimalAuthHelper {
       // Wait for login button to be ready
       await this.page.waitForSelector('#loginButton', { state: 'visible', timeout: 10000 });
       
-      // Click submit and wait for universal logged-in marker
-      await Promise.all([
-        this.page.waitForSelector('[data-testid="user-menu"]', { timeout: 20000 }),
-        this.page.click('#loginButton')
-      ]);
+      // Click submit and wait for navigation/redirect
+      await this.page.click('#loginButton');
+      
+      // Wait for redirect after login (should redirect to dashboard or app)
+      await this.page.waitForURL(/\/app\/|\/dashboard/, { timeout: 20000 }).catch(() => {
+        // If no redirect, check if we're still on login page
+        const currentUrl = this.page.url();
+        if (currentUrl.includes('/login')) {
+          throw new Error('Login failed - still on login page');
+        }
+      });
+      
+      // Wait for logged-in marker (user menu or header)
+      // Try multiple selectors as fallback
+      const loggedInSelectors = [
+        '[data-testid="user-menu"]',
+        '[data-testid="header-wrapper"]',
+        '.header-user-menu',
+        'header',
+      ];
+      
+      let loggedInFound = false;
+      for (const selector of loggedInSelectors) {
+        try {
+          await this.page.waitForSelector(selector, { timeout: 5000 });
+          loggedInFound = true;
+          console.log(`[Auth Helper] Found logged-in marker: ${selector}`);
+          break;
+        } catch (e) {
+          // Try next selector
+        }
+      }
+      
+      if (!loggedInFound) {
+        throw new Error('Login succeeded but logged-in marker not found');
+      }
+      
+      // Additional wait for React to mount (if using React header)
+      await this.page.waitForTimeout(1000);
     } catch (error) {
       // Take screenshot on error for debugging
       const timestamp = Date.now();

@@ -215,7 +215,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   }
 
   return (
-    <div className={`header-user-menu ${className}`}>
+    <div className={`header-user-menu ${className}`} data-testid="user-menu">
       <button
         ref={buttonRef}
         type="button"
@@ -224,6 +224,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label="User menu"
+        data-testid="user-menu-toggle"
       >
         {user.avatar ? (
           <img

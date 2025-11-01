@@ -75,7 +75,7 @@
                 </div>
 
                 {{-- User Menu --}}
-                <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-3" data-testid="user-menu">
                     <div class="flex items-center space-x-2">
                         <div class="flex flex-col text-right">
                             <span class="text-sm font-medium text-gray-900">{{ Auth::user()->name }}</span>

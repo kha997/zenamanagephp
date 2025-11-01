@@ -38,15 +38,30 @@ jobs:
     - name: Verify Node.js version
       run: |
         echo "📋 Node.js version check:"
-        node --version
+        echo "Node.js location: $(which node)"
+        echo "Node.js version: $(node --version)"
+        echo "npm location: $(which npm)"
+        echo "npm version: $(npm --version)"
+        
         NODE_VERSION=$(node --version | sed 's/v//')
         NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
+        NODE_MINOR=$(echo "$NODE_VERSION" | cut -d. -f2)
+        
         if [ "$NODE_MAJOR" -lt 20 ]; then
           echo "❌ ERROR: Node.js version $NODE_VERSION is too old for Vite 7"
           echo "Required: Node.js 20.19+ or 22.12+"
+          echo "Current: Node.js $NODE_VERSION"
+          exit 1
+        elif [ "$NODE_MAJOR" -eq 20 ] && [ "$NODE_MINOR" -lt 19 ]; then
+          echo "❌ ERROR: Node.js version $NODE_VERSION is too old"
+          echo "Required: Node.js 20.19+ or 22.12+"
+          exit 1
+        elif [ "$NODE_MAJOR" -eq 22 ] && [ "$NODE_MINOR" -lt 12 ]; then
+          echo "❌ ERROR: Node.js version $NODE_VERSION is too old"
+          echo "Required: Node.js 20.19+ or 22.12+"
           exit 1
         else
-          echo "✅ Node.js version $NODE_VERSION is compatible"
+          echo "✅ Node.js version $NODE_VERSION is compatible with Vite 7"
         fi
         
     - name: Verify PostCSS config

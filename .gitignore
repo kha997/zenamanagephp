@@ -100,6 +100,20 @@ frontend/.env.local
 
 frontend/.env.*.local
 
+# Frontend test artifacts
+
+frontend/ui-screenshots/**
+
+frontend/playwright-report/**
+
+frontend/test-results/**
+
+frontend/blob-report/**
+
+frontend/.turbo/**
+
+frontend/.eslintcache
+
 
 
 # Local dev / sandbox

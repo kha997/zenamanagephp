@@ -40,27 +40,27 @@ Thumbs.db
 *storybook.log
 storybook-static
 
-# --- STEP3: local artifacts / large reports (generated) ---
+# --- STEP5: local artifacts / large reports (generated) ---
 
-auth-report/
+auth-report/**
 
-playwright-auth-results/
+playwright-auth-results/**
 
-test-results/
+test-results/**
 
-playwright-report/
+playwright-report/**
 
-blob-report/
+blob-report/**
 
-reports/
+reports/**
 
-coverage/
+coverage/**
 
-.nyc_output/
+.nyc_output/**
 
 *.log
 
-logs/
+logs/**
 
 test_output.txt
 
@@ -68,23 +68,37 @@ test_output.txt
 
 # Laravel runtime/cache (local)
 
-storage/framework/sessions/
+storage/framework/sessions/**
 
-storage/framework/views/
+storage/framework/views/**
 
-storage/framework/cache/
+storage/framework/cache/**
 
 
 
-# Backups / zips / videos / screenshots
+# Backups (path-specific, not global ext)
 
-storage/backups/
+storage/backups/**
 
-*.zip
+storage/backups/**/*.zip
 
-*.webm
+storage/backups/**/*.webm
 
-*.png
+storage/backups/**/*.png
+
+
+
+# Frontend build artifacts
+
+frontend/dist/**
+
+frontend/.vite/**
+
+frontend/.cache/**
+
+frontend/.env.local
+
+frontend/.env.*.local
 
 
 

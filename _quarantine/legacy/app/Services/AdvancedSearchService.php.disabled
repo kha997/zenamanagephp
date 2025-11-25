@@ -1,0 +1,863 @@
+<?php declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Models\User;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\Document;
+use App\Models\CalendarEvent;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+/**
+ * Advanced Search Service
+ * 
+ * Features:
+ * - Full-text search across multiple models
+ * - Fuzzy matching and typo tolerance
+ * - Search suggestions and autocomplete
+ * - Search analytics and trending
+ * - Multi-language support
+ * - Search result ranking and relevance
+ * - Search filters and facets
+ * - Search history and saved searches
+ */
+class AdvancedSearchService
+{
+    private const SEARCH_CACHE_TTL = 3600; // 1 hour
+    private const SUGGESTION_CACHE_TTL = 7200; // 2 hours
+    private const HISTORY_TTL = 86400 * 30; // 30 days
+    private const TRENDING_TTL = 86400 * 7; // 7 days
+
+    /**
+     * Perform advanced search
+     */
+    public function search(string $query, array $options = []): array
+    {
+        try {
+            $startTime = microtime(true);
+            
+            // Parse search query
+            $parsedQuery = $this->parseSearchQuery($query);
+            
+            // Get search options
+            $filters = $options['filters'] ?? [];
+            $models = $options['models'] ?? ['projects', 'tasks', 'documents', 'events'];
+            $limit = $options['limit'] ?? 20;
+            $offset = $options['offset'] ?? 0;
+            $sortBy = $options['sort_by'] ?? 'relevance';
+            $sortOrder = $options['sort_order'] ?? 'desc';
+            
+            // Perform search across models
+            $results = [];
+            foreach ($models as $model) {
+                $modelResults = $this->searchModel($model, $parsedQuery, $filters, $limit, $offset, $sortBy, $sortOrder);
+                $results = array_merge($results, $modelResults);
+            }
+            
+            // Rank and sort results
+            $rankedResults = $this->rankSearchResults($results, $parsedQuery);
+            
+            // Apply final sorting
+            $sortedResults = $this->sortResults($rankedResults, $sortBy, $sortOrder);
+            
+            // Record search analytics
+            $this->recordSearchAnalytics($query, $parsedQuery, count($sortedResults));
+            
+            // Store search in history
+            $this->storeSearchHistory($query, $filters);
+            
+            $executionTime = microtime(true) - $startTime;
+            
+            return [
+                'query' => $query,
+                'parsed_query' => $parsedQuery,
+                'results' => array_slice($sortedResults, $offset, $limit),
+                'total' => count($sortedResults),
+                'facets' => $this->getSearchFacets($sortedResults),
+                'suggestions' => $this->getSearchSuggestions($query),
+                'execution_time' => round($executionTime * 1000, 2), // ms
+                'cache_hit' => false, // Would be true if cached
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Advanced search failed', [
+                'query' => $query,
+                'options' => $options,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return [
+                'query' => $query,
+                'results' => [],
+                'total' => 0,
+                'error' => 'Search failed',
+            ];
+        }
+    }
+
+    /**
+     * Parse search query
+     */
+    private function parseSearchQuery(string $query): array
+    {
+        $parsed = [
+            'original' => $query,
+            'terms' => [],
+            'phrases' => [],
+            'filters' => [],
+            'operators' => [],
+            'exclusions' => [],
+        ];
+        
+        // Extract quoted phrases
+        preg_match_all('/"([^"]+)"/', $query, $phrases);
+        $parsed['phrases'] = $phrases[1];
+        
+        // Remove phrases from query for term extraction
+        $queryWithoutPhrases = preg_replace('/"[^"]+"/', '', $query);
+        
+        // Extract filters (field:value)
+        preg_match_all('/(\w+):([^\s]+)/', $queryWithoutPhrases, $filterMatches);
+        foreach ($filterMatches[1] as $index => $field) {
+            $parsed['filters'][$field] = $filterMatches[2][$index];
+        }
+        
+        // Remove filters from query
+        $queryWithoutFilters = preg_replace('/\w+:[^\s]+/', '', $queryWithoutPhrases);
+        
+        // Extract exclusions (-term)
+        preg_match_all('/-([^\s]+)/', $queryWithoutFilters, $exclusionMatches);
+        $parsed['exclusions'] = $exclusionMatches[1];
+        
+        // Remove exclusions from query
+        $queryWithoutExclusions = preg_replace('/-[^\s]+/', '', $queryWithoutFilters);
+        
+        // Extract terms
+        $terms = array_filter(explode(' ', trim($queryWithoutExclusions)));
+        $parsed['terms'] = $terms;
+        
+        // Extract operators (AND, OR, NOT)
+        $parsed['operators'] = $this->extractOperators($query);
+        
+        return $parsed;
+    }
+
+    /**
+     * Extract operators from query
+     */
+    private function extractOperators(string $query): array
+    {
+        $operators = [];
+        
+        if (stripos($query, ' AND ') !== false) {
+            $operators[] = 'AND';
+        }
+        
+        if (stripos($query, ' OR ') !== false) {
+            $operators[] = 'OR';
+        }
+        
+        if (stripos($query, ' NOT ') !== false) {
+            $operators[] = 'NOT';
+        }
+        
+        return $operators;
+    }
+
+    /**
+     * Search specific model
+     */
+    private function searchModel(string $model, array $parsedQuery, array $filters, int $limit, int $offset, string $sortBy, string $sortOrder): array
+    {
+        $modelClass = $this->getModelClass($model);
+        if (!$modelClass) {
+            return [];
+        }
+        
+        $query = $modelClass::query();
+        
+        // Apply tenant filter
+        if (method_exists($modelClass, 'boot')) {
+            $query->where('tenant_id', auth()->user()->tenant_id);
+        }
+        
+        // Apply search terms
+        $this->applySearchTerms($query, $parsedQuery, $model);
+        
+        // Apply filters
+        $this->applyFilters($query, $filters, $model);
+        
+        // Apply exclusions
+        $this->applyExclusions($query, $parsedQuery, $model);
+        
+        // Get results
+        $results = $query->get();
+        
+        // Transform results
+        return $this->transformSearchResults($results, $model, $parsedQuery);
+    }
+
+    /**
+     * Get model class
+     */
+    private function getModelClass(string $model): ?string
+    {
+        $modelMap = [
+            'projects' => Project::class,
+            'tasks' => Task::class,
+            'documents' => Document::class,
+            'events' => CalendarEvent::class,
+        ];
+        
+        return $modelMap[$model] ?? null;
+    }
+
+    /**
+     * Apply search terms to query
+     */
+    private function applySearchTerms($query, array $parsedQuery, string $model): void
+    {
+        $searchFields = $this->getSearchFields($model);
+        
+        if (empty($parsedQuery['terms']) && empty($parsedQuery['phrases'])) {
+            return;
+        }
+        
+        $query->where(function ($q) use ($parsedQuery, $searchFields) {
+            // Handle phrases (exact matches)
+            foreach ($parsedQuery['phrases'] as $phrase) {
+                $q->orWhere(function ($phraseQuery) use ($phrase, $searchFields) {
+                    foreach ($searchFields as $field) {
+                        $phraseQuery->orWhere($field, 'LIKE', "%{$phrase}%");
+                    }
+                });
+            }
+            
+            // Handle individual terms
+            foreach ($parsedQuery['terms'] as $term) {
+                $q->orWhere(function ($termQuery) use ($term, $searchFields) {
+                    foreach ($searchFields as $field) {
+                        $termQuery->orWhere($field, 'LIKE', "%{$term}%");
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Get search fields for model
+     */
+    private function getSearchFields(string $model): array
+    {
+        $fieldMap = [
+            'projects' => ['name', 'description', 'status'],
+            'tasks' => ['title', 'description', 'status'],
+            'documents' => ['name', 'description', 'content'],
+            'events' => ['title', 'description', 'location'],
+        ];
+        
+        return $fieldMap[$model] ?? [];
+    }
+
+    /**
+     * Apply filters to query
+     */
+    private function applyFilters($query, array $filters, string $model): void
+    {
+        $filterFields = $this->getFilterFields($model);
+        
+        foreach ($filters as $field => $value) {
+            if (in_array($field, $filterFields)) {
+                $query->where($field, $value);
+            }
+        }
+    }
+
+    /**
+     * Get filter fields for model
+     */
+    private function getFilterFields(string $model): array
+    {
+        $fieldMap = [
+            'projects' => ['status', 'priority', 'assigned_to'],
+            'tasks' => ['status', 'priority', 'assigned_to', 'project_id'],
+            'documents' => ['type', 'status'],
+            'events' => ['type', 'status'],
+        ];
+        
+        return $fieldMap[$model] ?? [];
+    }
+
+    /**
+     * Apply exclusions to query
+     */
+    private function applyExclusions($query, array $parsedQuery, string $model): void
+    {
+        $searchFields = $this->getSearchFields($model);
+        
+        foreach ($parsedQuery['exclusions'] as $exclusion) {
+            $query->where(function ($q) use ($exclusion, $searchFields) {
+                foreach ($searchFields as $field) {
+                    $q->where($field, 'NOT LIKE', "%{$exclusion}%");
+                }
+            });
+        }
+    }
+
+    /**
+     * Transform search results
+     */
+    private function transformSearchResults($results, string $model, array $parsedQuery): array
+    {
+        $transformed = [];
+        
+        foreach ($results as $result) {
+            $transformed[] = [
+                'id' => $result->id,
+                'type' => $model,
+                'title' => $this->getResultTitle($result, $model),
+                'description' => $this->getResultDescription($result, $model),
+                'url' => $this->getResultUrl($result, $model),
+                'relevance_score' => $this->calculateRelevanceScore($result, $parsedQuery, $model),
+                'highlighted_text' => $this->highlightSearchTerms($result, $parsedQuery, $model),
+                'metadata' => $this->getResultMetadata($result, $model),
+                'created_at' => $result->created_at,
+                'updated_at' => $result->updated_at,
+            ];
+        }
+        
+        return $transformed;
+    }
+
+    /**
+     * Get result title
+     */
+    private function getResultTitle($result, string $model): string
+    {
+        $titleFields = [
+            'projects' => 'name',
+            'tasks' => 'title',
+            'documents' => 'name',
+            'events' => 'title',
+        ];
+        
+        $field = $titleFields[$model] ?? 'name';
+        return $result->$field ?? 'Untitled';
+    }
+
+    /**
+     * Get result description
+     */
+    private function getResultDescription($result, string $model): string
+    {
+        $descriptionFields = [
+            'projects' => 'description',
+            'tasks' => 'description',
+            'documents' => 'description',
+            'events' => 'description',
+        ];
+        
+        $field = $descriptionFields[$model] ?? 'description';
+        $description = $result->$field ?? '';
+        
+        return Str::limit($description, 200);
+    }
+
+    /**
+     * Get result URL
+     */
+    private function getResultUrl($result, string $model): string
+    {
+        $urlMap = [
+            'projects' => "/app/projects/{$result->id}",
+            'tasks' => "/app/tasks/{$result->id}",
+            'documents' => "/app/documents/{$result->id}",
+            'events' => "/app/calendar/{$result->id}",
+        ];
+        
+        return $urlMap[$model] ?? '#';
+    }
+
+    /**
+     * Calculate relevance score
+     */
+    private function calculateRelevanceScore($result, array $parsedQuery, string $model): float
+    {
+        $score = 0;
+        
+        // Base score
+        $score += 1.0;
+        
+        // Title matches (higher weight)
+        $titleField = $this->getResultTitle($result, $model);
+        foreach ($parsedQuery['terms'] as $term) {
+            if (stripos($titleField, $term) !== false) {
+                $score += 2.0;
+            }
+        }
+        
+        // Phrase matches (highest weight)
+        foreach ($parsedQuery['phrases'] as $phrase) {
+            if (stripos($titleField, $phrase) !== false) {
+                $score += 3.0;
+            }
+        }
+        
+        // Description matches
+        $descriptionField = $this->getResultDescription($result, $model);
+        foreach ($parsedQuery['terms'] as $term) {
+            if (stripos($descriptionField, $term) !== false) {
+                $score += 1.0;
+            }
+        }
+        
+        // Recency boost
+        $daysSinceCreated = now()->diffInDays($result->created_at);
+        if ($daysSinceCreated < 7) {
+            $score += 0.5;
+        } elseif ($daysSinceCreated < 30) {
+            $score += 0.3;
+        }
+        
+        return $score;
+    }
+
+    /**
+     * Highlight search terms
+     */
+    private function highlightSearchTerms($result, array $parsedQuery, string $model): string
+    {
+        $text = $this->getResultDescription($result, $model);
+        $highlighted = $text;
+        
+        // Highlight phrases
+        foreach ($parsedQuery['phrases'] as $phrase) {
+            $highlighted = str_ireplace($phrase, "<mark>{$phrase}</mark>", $highlighted);
+        }
+        
+        // Highlight terms
+        foreach ($parsedQuery['terms'] as $term) {
+            $highlighted = preg_replace('/\b(' . preg_quote($term, '/') . ')\b/i', '<mark>$1</mark>', $highlighted);
+        }
+        
+        return $highlighted;
+    }
+
+    /**
+     * Get result metadata
+     */
+    private function getResultMetadata($result, string $model): array
+    {
+        $metadata = [];
+        
+        switch ($model) {
+            case 'projects':
+                $metadata = [
+                    'status' => $result->status,
+                    'priority' => $result->priority,
+                    'assigned_to' => $result->assigned_to,
+                ];
+                break;
+                
+            case 'tasks':
+                $metadata = [
+                    'status' => $result->status,
+                    'priority' => $result->priority,
+                    'assigned_to' => $result->assigned_to,
+                    'project_id' => $result->project_id,
+                ];
+                break;
+                
+            case 'documents':
+                $metadata = [
+                    'type' => $result->type,
+                    'size' => $result->size,
+                ];
+                break;
+                
+            case 'events':
+                $metadata = [
+                    'start_date' => $result->start_date,
+                    'end_date' => $result->end_date,
+                    'location' => $result->location,
+                ];
+                break;
+        }
+        
+        return $metadata;
+    }
+
+    /**
+     * Rank search results
+     */
+    private function rankSearchResults(array $results, array $parsedQuery): array
+    {
+        // Sort by relevance score
+        usort($results, function ($a, $b) {
+            return $b['relevance_score'] <=> $a['relevance_score'];
+        });
+        
+        return $results;
+    }
+
+    /**
+     * Sort results
+     */
+    private function sortResults(array $results, string $sortBy, string $sortOrder): array
+    {
+        $sortOrder = $sortOrder === 'asc' ? 1 : -1;
+        
+        usort($results, function ($a, $b) use ($sortBy, $sortOrder) {
+            $valueA = $a[$sortBy] ?? 0;
+            $valueB = $b[$sortBy] ?? 0;
+            
+            if ($valueA == $valueB) {
+                return 0;
+            }
+            
+            return ($valueA < $valueB) ? -$sortOrder : $sortOrder;
+        });
+        
+        return $results;
+    }
+
+    /**
+     * Get search facets
+     */
+    private function getSearchFacets(array $results): array
+    {
+        $facets = [
+            'types' => [],
+            'statuses' => [],
+            'priorities' => [],
+        ];
+        
+        foreach ($results as $result) {
+            // Count by type
+            $facets['types'][$result['type']] = ($facets['types'][$result['type']] ?? 0) + 1;
+            
+            // Count by status
+            if (isset($result['metadata']['status'])) {
+                $status = $result['metadata']['status'];
+                $facets['statuses'][$status] = ($facets['statuses'][$status] ?? 0) + 1;
+            }
+            
+            // Count by priority
+            if (isset($result['metadata']['priority'])) {
+                $priority = $result['metadata']['priority'];
+                $facets['priorities'][$priority] = ($facets['priorities'][$priority] ?? 0) + 1;
+            }
+        }
+        
+        return $facets;
+    }
+
+    /**
+     * Get search suggestions
+     */
+    private function getSearchSuggestions(string $query): array
+    {
+        $cacheKey = "search_suggestions:" . md5($query);
+        
+        return Cache::remember($cacheKey, self::SUGGESTION_CACHE_TTL, function () use ($query) {
+            $suggestions = [];
+            
+            // Get suggestions from search history
+            $historySuggestions = $this->getHistorySuggestions($query);
+            $suggestions = array_merge($suggestions, $historySuggestions);
+            
+            // Get suggestions from trending searches
+            $trendingSuggestions = $this->getTrendingSuggestions($query);
+            $suggestions = array_merge($suggestions, $trendingSuggestions);
+            
+            // Get suggestions from content
+            $contentSuggestions = $this->getContentSuggestions($query);
+            $suggestions = array_merge($suggestions, $contentSuggestions);
+            
+            // Remove duplicates and limit
+            $suggestions = array_unique($suggestions);
+            $suggestions = array_slice($suggestions, 0, 10);
+            
+            return $suggestions;
+        });
+    }
+
+    /**
+     * Get history suggestions
+     */
+    private function getHistorySuggestions(string $query): array
+    {
+        $historyKey = "search_history:" . auth()->id();
+        $history = Cache::get($historyKey, []);
+        
+        $suggestions = [];
+        foreach ($history as $search) {
+            if (stripos($search['query'], $query) === 0) {
+                $suggestions[] = $search['query'];
+            }
+        }
+        
+        return $suggestions;
+    }
+
+    /**
+     * Get trending suggestions
+     */
+    private function getTrendingSuggestions(string $query): array
+    {
+        $trendingKey = "search_trending";
+        $trending = Cache::get($trendingKey, []);
+        
+        $suggestions = [];
+        foreach ($trending as $trend) {
+            if (stripos($trend['query'], $query) === 0) {
+                $suggestions[] = $trend['query'];
+            }
+        }
+        
+        return $suggestions;
+    }
+
+    /**
+     * Get content suggestions
+     */
+    private function getContentSuggestions(string $query): array
+    {
+        $suggestions = [];
+        
+        // Get suggestions from project names
+        $projects = Project::where('name', 'LIKE', "%{$query}%")
+            ->where('tenant_id', auth()->user()->tenant_id)
+            ->limit(5)
+            ->get();
+        
+        foreach ($projects as $project) {
+            $suggestions[] = $project->name;
+        }
+        
+        // Get suggestions from task titles
+        $tasks = Task::where('title', 'LIKE', "%{$query}%")
+            ->where('tenant_id', auth()->user()->tenant_id)
+            ->limit(5)
+            ->get();
+        
+        foreach ($tasks as $task) {
+            $suggestions[] = $task->title;
+        }
+        
+        return $suggestions;
+    }
+
+    /**
+     * Record search analytics
+     */
+    private function recordSearchAnalytics(string $query, array $parsedQuery, int $resultCount): void
+    {
+        try {
+            $analyticsKey = "search_analytics:" . date('Y-m-d');
+            $analytics = Cache::get($analyticsKey, []);
+            
+            $analytics[] = [
+                'query' => $query,
+                'parsed_query' => $parsedQuery,
+                'result_count' => $resultCount,
+                'user_id' => auth()->id(),
+                'timestamp' => now()->toISOString(),
+            ];
+            
+            Cache::put($analyticsKey, $analytics, 86400); // 24 hours
+            
+            // Update trending searches
+            $this->updateTrendingSearches($query);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to record search analytics', [
+                'query' => $query,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Update trending searches
+     */
+    private function updateTrendingSearches(string $query): void
+    {
+        try {
+            $trendingKey = "search_trending";
+            $trending = Cache::get($trendingKey, []);
+            
+            $found = false;
+            foreach ($trending as &$trend) {
+                if ($trend['query'] === $query) {
+                    $trend['count']++;
+                    $trend['last_seen'] = now()->toISOString();
+                    $found = true;
+                    break;
+                }
+            }
+            
+            if (!$found) {
+                $trending[] = [
+                    'query' => $query,
+                    'count' => 1,
+                    'first_seen' => now()->toISOString(),
+                    'last_seen' => now()->toISOString(),
+                ];
+            }
+            
+            // Sort by count and keep top 50
+            usort($trending, fn($a, $b) => $b['count'] <=> $a['count']);
+            $trending = array_slice($trending, 0, 50);
+            
+            Cache::put($trendingKey, $trending, self::TRENDING_TTL);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to update trending searches', [
+                'query' => $query,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Store search history
+     */
+    private function storeSearchHistory(string $query, array $filters): void
+    {
+        try {
+            $historyKey = "search_history:" . auth()->id();
+            $history = Cache::get($historyKey, []);
+            
+            $history[] = [
+                'query' => $query,
+                'filters' => $filters,
+                'timestamp' => now()->toISOString(),
+            ];
+            
+            // Keep only last 100 searches
+            $history = array_slice($history, -100);
+            
+            Cache::put($historyKey, $history, self::HISTORY_TTL);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to store search history', [
+                'query' => $query,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Get search history
+     */
+    public function getSearchHistory(int $limit = 20): array
+    {
+        $historyKey = "search_history:" . auth()->id();
+        $history = Cache::get($historyKey, []);
+        
+        return array_slice($history, -$limit);
+    }
+
+    /**
+     * Get trending searches
+     */
+    public function getTrendingSearches(int $limit = 10): array
+    {
+        $trendingKey = "search_trending";
+        $trending = Cache::get($trendingKey, []);
+        
+        return array_slice($trending, 0, $limit);
+    }
+
+    /**
+     * Clear search history
+     */
+    public function clearSearchHistory(): bool
+    {
+        try {
+            $historyKey = "search_history:" . auth()->id();
+            Cache::forget($historyKey);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to clear search history', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Save search
+     */
+    public function saveSearch(string $query, array $filters, string $name): bool
+    {
+        try {
+            $savedSearchesKey = "saved_searches:" . auth()->id();
+            $savedSearches = Cache::get($savedSearchesKey, []);
+            
+            $savedSearches[] = [
+                'id' => Str::uuid()->toString(),
+                'name' => $name,
+                'query' => $query,
+                'filters' => $filters,
+                'created_at' => now()->toISOString(),
+            ];
+            
+            Cache::put($savedSearchesKey, $savedSearches, self::HISTORY_TTL);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to save search', [
+                'query' => $query,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Get saved searches
+     */
+    public function getSavedSearches(): array
+    {
+        $savedSearchesKey = "saved_searches:" . auth()->id();
+        return Cache::get($savedSearchesKey, []);
+    }
+
+    /**
+     * Delete saved search
+     */
+    public function deleteSavedSearch(string $searchId): bool
+    {
+        try {
+            $savedSearchesKey = "saved_searches:" . auth()->id();
+            $savedSearches = Cache::get($savedSearchesKey, []);
+            
+            $savedSearches = array_filter($savedSearches, fn($search) => $search['id'] !== $searchId);
+            
+            Cache::put($savedSearchesKey, $savedSearches, self::HISTORY_TTL);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to delete saved search', [
+                'search_id' => $searchId,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return false;
+        }
+    }
+}

@@ -1,0 +1,131 @@
+{
+  "domain": "users",
+  "seed": 56789,
+  "description": "Users domain test fixtures - Use with seedUsersDomain(56789) for reproducibility",
+  "tenants": [
+    {
+      "name": "Users Test Tenant",
+      "slug": "users-test-tenant-56789",
+      "status": "active",
+      "is_active": true
+    }
+  ],
+  "roles": [
+    {
+      "name": "admin",
+      "scope": "system",
+      "allow_override": false,
+      "description": "Users test role: admin",
+      "is_active": true
+    },
+    {
+      "name": "project_manager",
+      "scope": "system",
+      "allow_override": false,
+      "description": "Users test role: project_manager",
+      "is_active": true
+    },
+    {
+      "name": "member",
+      "scope": "system",
+      "allow_override": false,
+      "description": "Users test role: member",
+      "is_active": true
+    },
+    {
+      "name": "client",
+      "scope": "system",
+      "allow_override": false,
+      "description": "Users test role: client",
+      "is_active": true
+    }
+  ],
+  "permissions": [
+    {
+      "code": "users.view",
+      "module": "users",
+      "action": "view",
+      "description": "Can view users"
+    },
+    {
+      "code": "users.create",
+      "module": "users",
+      "action": "create",
+      "description": "Can create users"
+    },
+    {
+      "code": "users.update",
+      "module": "users",
+      "action": "update",
+      "description": "Can update users"
+    },
+    {
+      "code": "users.delete",
+      "module": "users",
+      "action": "delete",
+      "description": "Can delete users"
+    },
+    {
+      "code": "users.manage_profile",
+      "module": "users",
+      "action": "manage_profile",
+      "description": "Can manage profile"
+    },
+    {
+      "code": "users.manage_avatar",
+      "module": "users",
+      "action": "manage_avatar",
+      "description": "Can manage avatar"
+    }
+  ],
+  "users": [
+    {
+      "name": "Users Admin User",
+      "email": "admin@users-test.test",
+      "role": "admin",
+      "password": "password",
+      "is_active": true
+    },
+    {
+      "name": "Users PM User",
+      "email": "pm@users-test.test",
+      "role": "project_manager",
+      "password": "password",
+      "is_active": true
+    },
+    {
+      "name": "Users Member User",
+      "email": "member@users-test.test",
+      "role": "member",
+      "password": "password",
+      "is_active": true
+    },
+    {
+      "name": "Users Inactive User",
+      "email": "inactive@users-test.test",
+      "role": "member",
+      "password": "password",
+      "is_active": false
+    },
+    {
+      "name": "Users Client User",
+      "email": "client@users-test.test",
+      "role": "client",
+      "password": "password",
+      "is_active": true
+    }
+  ],
+  "role_permissions": {
+    "admin": ["users.view", "users.create", "users.update", "users.delete", "users.manage_profile", "users.manage_avatar"],
+    "project_manager": ["users.view", "users.update", "users.manage_profile"],
+    "member": ["users.manage_profile", "users.manage_avatar"],
+    "client": []
+  },
+  "notes": [
+    "This fixture file documents the structure created by TestDataSeeder::seedUsersDomain(56789)",
+    "Use this as a reference when writing tests that need users domain data",
+    "All data is created with fixed seed 56789 for reproducibility",
+    "Users have password 'password' (will be hashed in actual implementation)"
+  ]
+}
+

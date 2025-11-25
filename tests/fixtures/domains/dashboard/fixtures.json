@@ -1,0 +1,140 @@
+{
+  "domain": "dashboard",
+  "seed": 67890,
+  "description": "Dashboard domain test fixtures - Use with seedDashboardDomain(67890) for reproducibility",
+  "tenants": [
+    {
+      "name": "Dashboard Test Tenant",
+      "slug": "dashboard-test-tenant-67890",
+      "status": "active",
+      "is_active": true
+    }
+  ],
+  "users": [
+    {
+      "name": "Dashboard Admin User",
+      "email": "admin@dashboard-test.test",
+      "role": "admin",
+      "password": "password"
+    },
+    {
+      "name": "Dashboard PM User",
+      "email": "pm@dashboard-test.test",
+      "role": "project_manager",
+      "password": "password"
+    },
+    {
+      "name": "Dashboard Member User",
+      "email": "member@dashboard-test.test",
+      "role": "member",
+      "password": "password"
+    }
+  ],
+  "projects": [
+    {
+      "code": "DASH-PROJ-67890",
+      "name": "Dashboard Test Project",
+      "description": "Project for dashboard domain testing",
+      "status": "active",
+      "budget_total": 100000.00
+    }
+  ],
+  "dashboard_widgets": [
+    {
+      "name": "Project Overview",
+      "type": "card",
+      "category": "overview",
+      "is_active": true,
+      "description": "Overview of project status"
+    },
+    {
+      "name": "Budget Chart",
+      "type": "chart",
+      "category": "budget",
+      "is_active": true,
+      "description": "Budget tracking chart"
+    },
+    {
+      "name": "Task Metrics",
+      "type": "metric",
+      "category": "progress",
+      "is_active": true,
+      "description": "Task completion metrics"
+    }
+  ],
+  "user_dashboards": [
+    {
+      "name": "Admin Dashboard",
+      "user": "Dashboard Admin User",
+      "layout_config": {
+        "columns": 3,
+        "rows": 2
+      },
+      "is_default": true,
+      "is_active": true
+    },
+    {
+      "name": "PM Dashboard",
+      "user": "Dashboard PM User",
+      "layout_config": {
+        "columns": 2,
+        "rows": 2
+      },
+      "is_default": true,
+      "is_active": true
+    }
+  ],
+  "dashboard_metrics": [
+    {
+      "metric_code": "project.progress",
+      "category": "project",
+      "name": "Project Progress",
+      "unit": "percent",
+      "is_active": true,
+      "description": "Overall project completion percentage"
+    },
+    {
+      "metric_code": "budget.utilization",
+      "category": "budget",
+      "name": "Budget Utilization",
+      "unit": "percent",
+      "is_active": true,
+      "description": "Budget utilization percentage"
+    }
+  ],
+  "dashboard_metric_values": [
+    {
+      "metric": "project.progress",
+      "values": [10, 15, 20, 25, 30],
+      "recorded_at": "last 5 days"
+    },
+    {
+      "metric": "budget.utilization",
+      "values": [20, 23, 26, 29, 32],
+      "recorded_at": "last 5 days"
+    }
+  ],
+  "dashboard_alerts": [
+    {
+      "type": "warning",
+      "category": "budget",
+      "title": "Budget Alert",
+      "message": "Budget utilization is approaching limit",
+      "is_read": false
+    },
+    {
+      "type": "info",
+      "category": "project",
+      "title": "Project Update",
+      "message": "Project status has been updated",
+      "is_read": false
+    }
+  ],
+  "notes": [
+    "This fixture file documents the structure created by TestDataSeeder::seedDashboardDomain(67890)",
+    "Use this as a reference when writing tests that need dashboard domain data",
+    "All data is created with fixed seed 67890 for reproducibility",
+    "Users have password 'password' (will be hashed in actual implementation)"
+  ]
+}
+

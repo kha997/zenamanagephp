@@ -119,3 +119,6 @@ frontend/.eslintcache
 # Local dev / sandbox
 
 _work/
+
+# Local env for frontend scripts
+frontend/scripts/.env.local

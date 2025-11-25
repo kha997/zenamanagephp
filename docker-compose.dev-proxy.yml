@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  nginx-dev-proxy:
+    image: nginx:alpine
+    container_name: zenamanage-dev-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/dev-proxy.docker.conf:/etc/nginx/conf.d/default.conf:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - zenamanage-dev
+    restart: unless-stopped
+    depends_on:
+      - laravel
+      - react
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  laravel:
+    # This service is just for reference - you should run Laravel separately
+    # php artisan serve --port=8000
+    image: php:8.2-fpm-alpine
+    container_name: zenamanage-laravel-dev
+    networks:
+      - zenamanage-dev
+    # Note: In practice, run Laravel with: php artisan serve --port=8000 --host=0.0.0.0
+
+  react:
+    # This service is just for reference - you should run React separately
+    # cd frontend && npm run dev
+    image: node:20-alpine
+    container_name: zenamanage-react-dev
+    networks:
+      - zenamanage-dev
+    # Note: In practice, run React with: cd frontend && npm run dev
+
+networks:
+  zenamanage-dev:
+    driver: bridge
+

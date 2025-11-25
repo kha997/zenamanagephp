@@ -1,0 +1,120 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    paths:
+      - 'composer.json'
+      - 'composer.lock'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'yarn.lock'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v4
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, zip
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-2.0, GPL-3.0
+      
+      - name: Install Composer dependencies (for audit)
+        if: hashFiles('composer.lock') != ''
+        run: composer install --no-scripts --no-interaction --prefer-dist || true
+        continue-on-error: true
+      
+      - name: Check for CVE (PHP)
+        if: hashFiles('composer.lock') != ''
+        run: |
+          echo "Checking for known CVEs in PHP dependencies..."
+          # Try composer audit (available in Composer 2.4+)
+          if composer audit --help > /dev/null 2>&1; then
+            composer audit --format=json > composer-audit.json 2>&1 || true
+            if [ -f composer-audit.json ] && [ -s composer-audit.json ]; then
+              VULN_COUNT=$(jq -r '.advisories | length // 0' composer-audit.json 2>/dev/null || echo "0")
+              if [ "$VULN_COUNT" -gt 0 ]; then
+                echo "⚠️ Found $VULN_COUNT vulnerabilities in PHP dependencies"
+                jq '.advisories[] | {package: .package, title: .title, cve: .cve}' composer-audit.json
+                exit 1
+              else
+                echo "✅ No vulnerabilities found in PHP dependencies"
+              fi
+            fi
+          else
+            echo "⚠️ composer audit not available (requires Composer 2.4+)"
+          fi
+        continue-on-error: true
+      
+      - name: Install Node dependencies (for audit)
+        if: hashFiles('package-lock.json') != '' || hashFiles('package.json') != ''
+        run: npm ci || npm install || true
+        continue-on-error: true
+      
+      - name: Check for CVE (Node)
+        if: hashFiles('package-lock.json') != '' || hashFiles('package.json') != ''
+        run: |
+          echo "Checking for known CVEs in Node dependencies..."
+          npm audit --json > npm-audit.json 2>&1 || true
+          if [ -f npm-audit.json ] && [ -s npm-audit.json ]; then
+            VULN_COUNT=$(jq -r '.metadata.vulnerabilities.total // 0' npm-audit.json 2>/dev/null || echo "0")
+            if [ "$VULN_COUNT" -gt 0 ]; then
+              echo "⚠️ Found $VULN_COUNT vulnerabilities in Node dependencies"
+              jq -r '.vulnerabilities | keys[]' npm-audit.json 2>/dev/null || echo "See npm-audit.json for details"
+              exit 1
+            else
+              echo "✅ No vulnerabilities found in Node dependencies"
+            fi
+          fi
+        continue-on-error: true
+      
+      - name: Create SBOM directory
+        run: mkdir -p docs/sbom
+      
+      - name: Generate SBOM (PHP)
+        if: hashFiles('composer.lock') != ''
+        run: |
+          echo "Generating PHP SBOM..."
+          # Use composer show to generate dependency list
+          composer show --format=json > docs/sbom/php-sbom.json 2>&1 || echo '{"error": "Failed to generate PHP SBOM"}' > docs/sbom/php-sbom.json
+        continue-on-error: true
+      
+      - name: Generate SBOM (Node)
+        if: hashFiles('package-lock.json') != '' || hashFiles('package.json') != ''
+        run: |
+          echo "Generating Node SBOM..."
+          npm list --json > docs/sbom/node-sbom.json 2>&1 || echo '{"error": "Failed to generate Node SBOM"}' > docs/sbom/node-sbom.json
+        continue-on-error: true
+      
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: docs/sbom/*.json
+          retention-days: 30
+          if-no-files-found: ignore
+

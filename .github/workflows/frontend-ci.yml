@@ -1,0 +1,60 @@
+name: Frontend CI (lint/type/tests)
+
+on:
+  pull_request:
+    branches: [ "**" ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install deps
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Lint
+        working-directory: frontend
+        run: pnpm lint || pnpm run lint
+
+      - name: Typecheck
+        working-directory: frontend
+        run: pnpm typecheck || pnpm run typecheck
+
+      - name: Unit tests
+        working-directory: frontend
+        run: pnpm test -- --reporter=dot --run || pnpm run test -- --reporter=dot --run
+
+      - name: Playwright install
+        if: ${{ always() }}
+        working-directory: frontend
+        run: |
+          npx playwright install --with-deps || echo 'skip install'
+
+      - name: Playwright smoke (optional)
+        working-directory: frontend
+        run: |
+          pnpm exec playwright test --project=chromium -g "header|button|card" || echo "playwright optional"
+

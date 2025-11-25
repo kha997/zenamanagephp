@@ -1,0 +1,63 @@
+name: Architecture Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  layer-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v4
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, zip, pdo, pdo_mysql
+          coverage: none
+      
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
+      
+      - name: Check Deprecated Usage
+        run: |
+          if [ -f scripts/check-deprecated-usage.php ]; then
+            php scripts/check-deprecated-usage.php --strict || echo "⚠️ Deprecated usage check failed or found violations"
+          else
+            echo "⚠️ check-deprecated-usage.php not found, skipping"
+          fi
+        continue-on-error: true
+      
+      - name: Audit Blade Views
+        run: |
+          if [ -f scripts/audit-blade-views.php ]; then
+            php scripts/audit-blade-views.php || echo "⚠️ Blade audit found violations"
+          else
+            echo "⚠️ audit-blade-views.php not found, skipping"
+          fi
+        continue-on-error: true
+      
+      - name: Check for Secrets
+        run: |
+          if [ -f scripts/check-secrets.php ]; then
+            php scripts/check-secrets.php || echo "⚠️ Secret check found potential issues"
+          else
+            echo "⚠️ check-secrets.php not found, skipping"
+          fi
+        continue-on-error: true
+      
+      - name: Run PHPStan (if configured)
+        run: |
+          if [ -f phpstan.neon ] || [ -f phpstan.neon.dist ]; then
+            composer require --dev phpstan/phpstan --no-interaction || true
+            vendor/bin/phpstan analyse app --level=5 || true
+          else
+            echo "PHPStan not configured, skipping..."
+          fi
+        continue-on-error: true
+

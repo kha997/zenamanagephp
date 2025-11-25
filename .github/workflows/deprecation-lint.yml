@@ -1,0 +1,75 @@
+name: Deprecation Lint Check
+
+on:
+  pull_request:
+    paths:
+      - 'app/**/*.php'
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  check-deprecated-usage:
+    name: Check Deprecated Service Usage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, fileinfo, pdo, pdo_mysql, bcmath
+      
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+      
+      - name: Check for deprecated service usage
+        run: |
+          echo "Checking for deprecated service usage..."
+          
+          # Check for KpiCacheService usage
+          if grep -r "KpiCacheService" app/ --exclude-dir=vendor; then
+            echo "⚠️  WARNING: KpiCacheService is deprecated. Use AdvancedCacheService instead."
+            echo "See: docs/adr/SERVICE_CONSOLIDATION_MAP.md"
+          fi
+          
+          # Check for ApiResponseCacheService usage
+          if grep -r "ApiResponseCacheService" app/ --exclude-dir=vendor; then
+            echo "⚠️  WARNING: ApiResponseCacheService is deprecated. Use AdvancedCacheService instead."
+            echo "See: docs/adr/SERVICE_CONSOLIDATION_MAP.md"
+          fi
+          
+          # Check for RateLimitService usage
+          if grep -r "RateLimitService" app/ --exclude-dir=vendor; then
+            echo "⚠️  WARNING: RateLimitService is deprecated. Use UnifiedRateLimitMiddleware instead."
+            echo "See: docs/adr/SERVICE_CONSOLIDATION_MAP.md"
+          fi
+          
+          echo "✅ Deprecation check complete"
+      
+      - name: Generate deprecation report
+        run: |
+          echo "## Deprecated Service Usage Report" > deprecation-report.md
+          echo "" >> deprecation-report.md
+          echo "### KpiCacheService" >> deprecation-report.md
+          grep -r "KpiCacheService" app/ --exclude-dir=vendor | wc -l | xargs echo "Usage count:" >> deprecation-report.md
+          echo "" >> deprecation-report.md
+          echo "### ApiResponseCacheService" >> deprecation-report.md
+          grep -r "ApiResponseCacheService" app/ --exclude-dir=vendor | wc -l | xargs echo "Usage count:" >> deprecation-report.md
+          echo "" >> deprecation-report.md
+          echo "### RateLimitService" >> deprecation-report.md
+          grep -r "RateLimitService" app/ --exclude-dir=vendor | wc -l | xargs echo "Usage count:" >> deprecation-report.md
+      
+      - name: Upload deprecation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deprecation-report
+          path: deprecation-report.md
+          retention-days: 7
+

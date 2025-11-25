@@ -39,3 +39,55 @@ Thumbs.db
 
 *storybook.log
 storybook-static
+
+# --- STEP3: local artifacts / large reports (generated) ---
+
+auth-report/
+
+playwright-auth-results/
+
+test-results/
+
+playwright-report/
+
+blob-report/
+
+reports/
+
+coverage/
+
+.nyc_output/
+
+*.log
+
+logs/
+
+test_output.txt
+
+
+
+# Laravel runtime/cache (local)
+
+storage/framework/sessions/
+
+storage/framework/views/
+
+storage/framework/cache/
+
+
+
+# Backups / zips / videos / screenshots
+
+storage/backups/
+
+*.zip
+
+*.webm
+
+*.png
+
+
+
+# Local dev / sandbox
+
+_work/

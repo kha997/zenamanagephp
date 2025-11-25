@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Template Set Schema",
+  "description": "Schema for WBS-style task template sets",
+  "required": ["set"],
+  "properties": {
+    "set": {
+      "type": "object",
+      "required": ["code", "name"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Unique code for the template set (e.g., 'WBS-AEC-INTL')",
+          "pattern": "^[A-Z0-9_-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Template set name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Template set description"
+        },
+        "version": {
+          "type": "string",
+          "description": "Version string (e.g., '2025.1')",
+          "default": "1.0"
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Whether the template set is active",
+          "default": true
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional metadata"
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "List of phases",
+      "items": {
+        "type": "object",
+        "required": ["code", "name"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Phase code (e.g., 'CONCEPT')",
+            "pattern": "^[A-Z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Phase name"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Order index",
+            "default": 0
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata"
+          }
+        }
+      }
+    },
+    "disciplines": {
+      "type": "array",
+      "description": "List of disciplines",
+      "items": {
+        "type": "object",
+        "required": ["code", "name"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Discipline code (e.g., 'ARC')",
+            "pattern": "^[A-Z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Discipline name"
+          },
+          "color": {
+            "type": "string",
+            "description": "Color hex code (e.g., '#1E88E5')",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Order index",
+            "default": 0
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata"
+          }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "description": "List of tasks",
+      "items": {
+        "type": "object",
+        "required": ["code", "name", "phase", "discipline"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Task code (e.g., 'ARC-C01')",
+            "pattern": "^[A-Z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Task name"
+          },
+          "phase": {
+            "type": "string",
+            "description": "Phase code this task belongs to"
+          },
+          "discipline": {
+            "type": "string",
+            "description": "Discipline code this task belongs to"
+          },
+          "description": {
+            "type": "string",
+            "description": "Task description"
+          },
+          "est_duration_days": {
+            "type": "integer",
+            "description": "Estimated duration in days",
+            "minimum": 0
+          },
+          "role_key": {
+            "type": "string",
+            "description": "Role key for assignment (e.g., 'lead_architect')"
+          },
+          "deliverable_type": {
+            "type": "string",
+            "description": "Deliverable type (e.g., 'layout_dwg')"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Order index",
+            "default": 0
+          },
+          "is_optional": {
+            "type": "boolean",
+            "description": "Whether this task is optional",
+            "default": false
+          },
+          "depends_on": {
+            "type": "array",
+            "description": "Array of task codes this task depends on",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata"
+          }
+        }
+      }
+    },
+    "presets": {
+      "type": "array",
+      "description": "List of presets",
+      "items": {
+        "type": "object",
+        "required": ["code", "name", "filters"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Preset code (e.g., 'HOUSE')",
+            "pattern": "^[A-Z0-9_-]+$"
+          },
+          "name": {
+            "type": "string",
+            "description": "Preset name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Preset description"
+          },
+          "filters": {
+            "type": "object",
+            "description": "Filter configuration",
+            "properties": {
+              "phases": {
+                "type": "array",
+                "description": "Array of phase codes to include",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "disciplines": {
+                "type": "array",
+                "description": "Array of discipline codes to include",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tasks": {
+                "type": "array",
+                "description": "Array of task codes to include",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "include": {
+                "type": "array",
+                "description": "Additional inclusion filters",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "exclude": {
+                "type": "array",
+                "description": "Array of task codes to exclude",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -122,3 +122,6 @@ _work/
 
 # Local env for frontend scripts
 frontend/scripts/.env.local
+
+# quarantine snapshots (do not version)
+_quarantine/**

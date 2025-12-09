@@ -6,6 +6,8 @@ export interface Toast {
   title: string;
   message?: string;
   duration?: number;
+  icon?: ReactNode;
+  onClick?: () => void;
 }
 
 interface ToastContextType {
@@ -13,6 +15,14 @@ interface ToastContextType {
   addToast: (toast: Omit<Toast, 'id'>) => void;
   removeToast: (id: string) => void;
   clearToasts: () => void;
+  showToast: (options: {
+    title: string;
+    message?: string;
+    variant?: Toast['type'];
+    icon?: ReactNode;
+    onClick?: () => void;
+    duration?: number;
+  }) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -58,8 +68,26 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     setToasts([]);
   }, []);
 
+  const showToast = useCallback((options: {
+    title: string;
+    message?: string;
+    variant?: Toast['type'];
+    icon?: ReactNode;
+    onClick?: () => void;
+    duration?: number;
+  }) => {
+    addToast({
+      type: options.variant || 'info',
+      title: options.title,
+      message: options.message,
+      icon: options.icon,
+      onClick: options.onClick,
+      duration: options.duration,
+    });
+  }, [addToast]);
+
   return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast, clearToasts }}>
+    <ToastContext.Provider value={{ toasts, addToast, removeToast, clearToasts, showToast }}>
       {children}
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </ToastContext.Provider>
@@ -92,19 +120,19 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
   const getToastStyles = (type: Toast['type']) => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 border-green-200 text-green-800';
+        return 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200';
       case 'error':
-        return 'bg-red-50 border-red-200 text-red-800';
+        return 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200';
       case 'warning':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+        return 'bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200';
       case 'info':
-        return 'bg-blue-50 border-blue-200 text-blue-800';
+        return 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-200';
       default:
-        return 'bg-gray-50 border-gray-200 text-gray-800';
+        return 'bg-gray-50 border-gray-200 text-gray-800 dark:bg-gray-900/20 dark:border-gray-800 dark:text-gray-200';
     }
   };
 
-  const getIcon = (type: Toast['type']) => {
+  const getDefaultIcon = (type: Toast['type']) => {
     switch (type) {
       case 'success':
         return '✅';
@@ -119,14 +147,33 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
     }
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't trigger onClick if clicking the close button
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    if (toast.onClick) {
+      toast.onClick();
+      // Auto-dismiss after click
+      onRemove(toast.id);
+    }
+  };
+
   return (
     <div
-      className={`max-w-sm w-full border rounded-lg shadow-lg p-4 ${getToastStyles(toast.type)}`}
+      className={`max-w-sm w-full border rounded-lg shadow-lg p-4 transition-all duration-200 ${
+        toast.onClick ? 'cursor-pointer hover:shadow-xl' : ''
+      } ${getToastStyles(toast.type)}`}
       role="alert"
+      onClick={handleClick}
     >
       <div className="flex items-start">
         <div className="flex-shrink-0">
-          <span className="text-lg">{getIcon(toast.type)}</span>
+          {toast.icon ? (
+            <div className="text-lg">{toast.icon}</div>
+          ) : (
+            <span className="text-lg">{getDefaultIcon(toast.type)}</span>
+          )}
         </div>
         <div className="ml-3 flex-1">
           <h4 className="text-sm font-medium">{toast.title}</h4>
@@ -136,8 +183,11 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onRemove }) => {
         </div>
         <div className="ml-4 flex-shrink-0">
           <button
-            onClick={() => onRemove(toast.id)}
-            className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(toast.id);
+            }}
+            className="inline-flex text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <span className="sr-only">Close</span>
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

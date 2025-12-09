@@ -23,6 +23,11 @@ class Kernel extends ConsoleKernel
             ->everyMinute()
             ->withoutOverlapping();
 
+        // Task Due Reminders - Round 254: Daily task due-date reminder notifications
+        $schedule->command('tasks:send-due-reminders')
+            ->dailyAt('07:00')
+            ->withoutOverlapping();
+
         // Temporarily commented out to avoid dependency issues
         /*
         // System Health Monitoring

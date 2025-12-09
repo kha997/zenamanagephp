@@ -29,8 +29,8 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             
-            // Indexes
-            $table->index(['tenant_id', 'project_id', 'snapshot_date']);
+            // Indexes - explicit short name to avoid MySQL 64-char limit
+            $table->index(['tenant_id', 'project_id', 'snapshot_date'], 'phs_tenant_project_date_idx');
             
             // Unique constraint: at most one snapshot per project per day
             $table->unique(['tenant_id', 'project_id', 'snapshot_date'], 'unique_project_snapshot_date');

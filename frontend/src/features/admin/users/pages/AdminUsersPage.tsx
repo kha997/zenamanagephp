@@ -9,10 +9,14 @@ import {
   useDeleteAdminUser, 
   useBulkUpdateUserStatus 
 } from '../hooks';
+import { useUsers, useUpdateUserRoles, useRoleProfiles, useAssignProfileToUser } from '../../hooks';
 import type { AdminUsersFilters } from '../types';
 import { LoadingSpinner } from '../../../../components/shared/LoadingSpinner';
 import { InviteUserModal } from '../components/InviteUserModal';
 import { InvitationList } from '../components/InvitationList';
+import { UserRoleEditor } from '../../components/UserRoleEditor';
+import type { RoleProfile } from '../../api';
+import toast from 'react-hot-toast';
 
 /**
  * AdminUsersPage - Admin users management page
@@ -26,7 +30,13 @@ export const AdminUsersPage: React.FC = () => {
   // Separate state for search input (for debouncing)
   const [searchInput, setSearchInput] = useState<string>('');
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [editingUserRoles, setEditingUserRoles] = useState<any>(null);
+  const [assigningProfileToUser, setAssigningProfileToUser] = useState<{ userId: number | string; userName: string } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: profiles } = useRoleProfiles();
+  const assignProfileMutation = useAssignProfileToUser();
 
   // Memoize filters to prevent unnecessary query key changes
   // Only update when actual filter values change, not object reference
@@ -140,6 +150,21 @@ export const AdminUsersPage: React.FC = () => {
       setSelectedUsers([]);
     } else {
       setSelectedUsers(users.map(user => user.id));
+    }
+  };
+
+  const handleAssignProfile = async (profileId: string) => {
+    if (!assigningProfileToUser) return;
+
+    try {
+      await assignProfileMutation.mutateAsync({
+        userId: assigningProfileToUser.userId,
+        profileId,
+      });
+      toast.success(`Profile assigned to ${assigningProfileToUser.userName} successfully`);
+      setAssigningProfileToUser(null);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to assign profile');
     }
   };
 
@@ -380,9 +405,32 @@ export const AdminUsersPage: React.FC = () => {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          aria-label={`Edit user ${user.name}`}
+                          onClick={() => {
+                            // Fetch user with roles from new API
+                            setEditingUserRoles({
+                              id: user.id,
+                              name: user.name,
+                              email: user.email,
+                              roles: user.roles || [],
+                            });
+                          }}
+                          aria-label={`Edit roles for user ${user.name}`}
                         >
                           ✏️
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setAssigningProfileToUser({
+                              userId: user.id,
+                              userName: user.name,
+                            });
+                          }}
+                          aria-label={`Assign profile to user ${user.name}`}
+                          title="Assign Profile"
+                        >
+                          📋
                         </Button>
                         <Button
                           variant="ghost"
@@ -456,6 +504,88 @@ export const AdminUsersPage: React.FC = () => {
           // Refresh users list - query will auto-refresh due to invalidation in hooks
         }}
       />
+
+      {/* User Role Editor Modal */}
+      {editingUserRoles && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Assign Roles</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <UserRoleEditor
+                user={editingUserRoles}
+                onClose={() => setEditingUserRoles(null)}
+                onSuccess={() => {
+                  toast.success('User roles updated successfully');
+                  // Refresh will happen automatically via query invalidation
+                }}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Assign Profile Modal */}
+      {assigningProfileToUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Assign Profile to {assigningProfileToUser.userName}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-sm text-[var(--color-text-secondary)]">
+                  Select a profile to assign. This will add the profile's roles to the user's existing roles.
+                </p>
+                {profiles && profiles.length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {profiles
+                      .filter((p: RoleProfile) => p.is_active)
+                      .map((profile: RoleProfile) => (
+                        <button
+                          key={profile.id}
+                          onClick={() => handleAssignProfile(profile.id)}
+                          disabled={assignProfileMutation.isPending}
+                          className="w-full text-left p-3 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-surface-muted)] transition-colors disabled:opacity-50"
+                        >
+                          <div className="font-medium text-[var(--color-text-primary)]">
+                            {profile.name}
+                          </div>
+                          {profile.description && (
+                            <div className="text-xs text-[var(--color-text-secondary)] mt-1">
+                              {profile.description}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1 mt-2 flex-wrap">
+                            {profile.roles.map((role) => (
+                              <Badge key={role.id} variant="outline" className="text-xs">
+                                {role.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--color-text-secondary)] text-center py-4">
+                    No active profiles available
+                  </p>
+                )}
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setAssigningProfileToUser(null)}
+                    disabled={assignProfileMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { TaskComments } from '../components/TaskComments';
 import { TaskAttachments } from '../components/TaskAttachments';
 import { useTask, useDeleteTask, useTasksActivity, useTaskDocuments, useTaskHistory } from '../hooks';
 import { useAuthStore } from '../../auth/store';
+import { useAutoReadNotificationsForEntity } from '../../../hooks/useAutoReadNotificationsForEntity';
 import type { Activity } from '../../../components/shared/ActivityFeed';
 
 type TabId = 'overview' | 'comments' | 'attachments' | 'documents' | 'history' | 'activity';
@@ -41,6 +42,14 @@ export const TaskDetailPage: React.FC = () => {
   const deleteTask = useDeleteTask();
   
   const task = taskData?.data;
+
+  // Round 260: Auto-read notifications for this task
+  useAutoReadNotificationsForEntity({
+    module: 'tasks',
+    entityType: 'task',
+    entityId: id || '',
+    delayMs: 5000,
+  });
 
   const handleEdit = useCallback(() => {
     if (id) {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Support\ApiResponse;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Log;
  */
 abstract class BaseApiV1Controller extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Return standardized success response
      * 
@@ -25,7 +27,13 @@ abstract class BaseApiV1Controller extends Controller
      */
     protected function successResponse($data = null, string $message = 'Success', int $status = 200): JsonResponse
     {
-        return ApiResponse::success($data, $message, $status);
+        $response = ApiResponse::success($data, $message, $status);
+        $payload = $response->getData(true);
+        $payload['ok'] = true;
+        $payload['traceId'] = $payload['traceId'] ?? $this->resolveTraceId();
+        $response->setData($payload);
+
+        return $response;
     }
 
     /**
@@ -37,9 +45,64 @@ abstract class BaseApiV1Controller extends Controller
      * @param string|null $code Error code
      * @return JsonResponse
      */
-    protected function errorResponse(string $message = 'Error', int $status = 400, ?array $errors = null, ?string $code = null): JsonResponse
+    protected function errorResponse(string $message = 'Error', int $status = 400, $errors = null, ?string $code = null): JsonResponse
     {
-        return ApiResponse::error($message, $status, $errors, $code);
+        $details = $this->resolveErrorDetails($errors, $status);
+        $payload = [
+            'status' => 'error',
+            'success' => false,
+            'ok' => false,
+            'code' => $code ?? $this->defaultErrorCode($status),
+            'message' => $message,
+            'traceId' => $this->resolveTraceId(),
+            'details' => $details,
+            'timestamp' => now()->toISOString(),
+            'error' => [
+                'id' => $code ?? $this->defaultErrorCode($status),
+            ],
+        ];
+
+        return response()->json($payload, $status);
+    }
+
+    private function resolveTraceId(): string
+    {
+        return request()->header('X-Request-Id') ??
+            request()->header('X-Correlation-Id') ??
+            'req_' . uniqid();
+    }
+
+    private function resolveErrorDetails($errors, int $status): array
+    {
+        if ($errors === null) {
+            return [];
+        }
+
+        if ($status === 422 && is_array($errors)) {
+            return ['validation' => $errors];
+        }
+
+        if (is_array($errors)) {
+            return $errors;
+        }
+
+        return ['data' => $errors];
+    }
+
+    private function defaultErrorCode(int $status): string
+    {
+        return match ($status) {
+            400 => 'BAD_REQUEST',
+            401 => 'UNAUTHORIZED',
+            403 => 'FORBIDDEN',
+            404 => 'NOT_FOUND',
+            409 => 'CONFLICT',
+            422 => 'VALIDATION_FAILED',
+            429 => 'RATE_LIMIT_EXCEEDED',
+            500 => 'SERVER_ERROR',
+            503 => 'SERVICE_UNAVAILABLE',
+            default => 'UNKNOWN_ERROR',
+        };
     }
 
     /**
@@ -118,4 +181,3 @@ abstract class BaseApiV1Controller extends Controller
         ], $context));
     }
 }
-

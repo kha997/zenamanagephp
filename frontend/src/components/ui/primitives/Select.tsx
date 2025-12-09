@@ -12,10 +12,11 @@ export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectE
   placeholder?: string;
   error?: string;
   children?: React.ReactNode;
+  'data-testid'?: string;
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ options, value, onChange, placeholder, error, className, style, disabled, children, ...props }, ref) => {
+  ({ options, value, onChange, placeholder, error, className, style, disabled, children, 'data-testid': testId, ...props }, ref) => {
     const [isOpen, setIsOpen] = useState(false);
     const [internalValue, setInternalValue] = useState(value || '');
     const selectRef = useRef<HTMLSelectElement>(null);
@@ -218,6 +219,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           disabled={disabled}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
+          data-testid={testId}
         >
           <span style={{ color: internalValue ? 'var(--text)' : 'var(--muted)' }}>
             {displayValue}

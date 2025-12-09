@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import { useAuthStore, type User } from '../shared/auth/store';
+import { useAuthStore, type User } from '../features/auth/store';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +12,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * AuthProvider - Thin adapter that wraps feature auth store
+ * This maintains backward compatibility for components using useAuthContext()
+ * while delegating all auth logic to the single source of truth: features/auth/store
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const {
     user,
@@ -20,26 +25,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login: storeLogin,
     logout: storeLogout,
     setUser: storeSetUser,
-    clearAuth,
   } = useAuthStore();
 
   // Provide login function that uses the store
   const login = async (email: string, password: string) => {
-    await storeLogin(email, password);
+    await storeLogin({ email, password });
   };
 
   // Provide logout function that uses the store
-  const logout = () => {
-    storeLogout();
+  const logout = async () => {
+    await storeLogout();
   };
 
   // Provide setUser function that uses the store
   const setUser = (user: User | null) => {
-    if (user) {
-      storeSetUser(user);
-    } else {
-      clearAuth();
-    }
+    storeSetUser(user);
   };
 
   const value: AuthContextType = {

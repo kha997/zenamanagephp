@@ -45,6 +45,10 @@ class AuthServiceProvider extends ServiceProvider
         'App\Models\ProjectActivity' => 'App\Policies\ProjectActivityPolicy',
         'App\Models\AuditLog' => 'App\Policies\AuditLogPolicy',
         'App\Models\DashboardWidget' => 'App\Policies\DashboardWidgetPolicy',
+        'App\Models\Contract' => 'App\Policies\ContractPolicy',
+        'App\Models\ChangeOrder' => 'App\Policies\ChangeOrderPolicy',
+        'App\Models\ContractPaymentCertificate' => 'App\Policies\ContractPaymentCertificatePolicy',
+        'App\Models\ContractActualPayment' => 'App\Policies\ContractActualPaymentPolicy',
     ];
 
     /**

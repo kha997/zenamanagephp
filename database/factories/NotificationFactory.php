@@ -22,45 +22,35 @@ class NotificationFactory extends Factory
      */
     public function definition(): array
     {
-        $priorities = ['critical', 'normal', 'low'];
-        $channels = ['inapp', 'email', 'webhook'];
-        $types = ['task_assigned', 'project_update', 'deadline_reminder', 'system_alert', 'comment_added'];
+        $modules = ['tasks', 'documents', 'cost', 'rbac', 'system'];
+        $types = [
+            'task.assigned',
+            'task.completed',
+            'document.uploaded',
+            'document.approved',
+            'co.needs_approval',
+            'co.approved',
+            'system.alert',
+            'rbac.permission_changed',
+        ];
+        $entityTypes = ['task', 'document', 'change_order', 'project', 'user'];
 
         return [
             'id' => \Illuminate\Support\Str::ulid(),
             'user_id' => User::factory(),
             'tenant_id' => Tenant::factory(),
+            'module' => $this->faker->randomElement($modules),
             'type' => $this->faker->randomElement($types),
-            'priority' => $this->faker->randomElement($priorities),
             'title' => $this->faker->sentence(4),
-            'body' => $this->faker->paragraph(2),
-            'link_url' => $this->faker->optional(0.7)->url(),
-            'channel' => $this->faker->randomElement($channels),
-            'read_at' => $this->faker->optional(0.3)->dateTimeBetween('-1 week', 'now'),
-            'data' => [
-                'action' => $this->faker->randomElement(['view', 'edit', 'approve', 'reject']),
-                'entity_type' => $this->faker->randomElement(['task', 'project', 'document', 'rfi']),
-                'entity_id' => $this->faker->uuid(),
-            ],
+            'message' => $this->faker->paragraph(2),
+            'entity_type' => $this->faker->optional(0.7)->randomElement($entityTypes),
+            'entity_id' => $this->faker->optional(0.7)->passthrough(\Illuminate\Support\Str::ulid()),
+            'is_read' => $this->faker->boolean(30), // 30% chance of being read
             'metadata' => [
                 'source' => $this->faker->randomElement(['system', 'user', 'api']),
                 'tags' => $this->faker->words(3),
-                'priority_score' => $this->faker->numberBetween(1, 10),
             ],
-            'event_key' => $this->faker->optional(0.8)->slug(3),
-            'project_id' => $this->faker->optional(0.6)->randomElement(Project::pluck('id')->toArray()),
         ];
-    }
-
-    /**
-     * Indicate that the notification is critical.
-     */
-    public function critical(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'priority' => 'critical',
-            'channel' => 'inapp',
-        ]);
     }
 
     /**
@@ -69,7 +59,7 @@ class NotificationFactory extends Factory
     public function unread(): static
     {
         return $this->state(fn (array $attributes) => [
-            'read_at' => null,
+            'is_read' => false,
         ]);
     }
 
@@ -79,48 +69,40 @@ class NotificationFactory extends Factory
     public function read(): static
     {
         return $this->state(fn (array $attributes) => [
-            'read_at' => $this->faker->dateTimeBetween('-1 week', 'now'),
+            'is_read' => true,
         ]);
     }
 
     /**
-     * Indicate that the notification is for email channel.
+     * Indicate that the notification is for tasks module.
      */
-    public function email(): static
+    public function tasks(): static
     {
         return $this->state(fn (array $attributes) => [
-            'channel' => 'email',
+            'module' => 'tasks',
+            'type' => $this->faker->randomElement(['task.assigned', 'task.completed', 'task.updated']),
         ]);
     }
 
     /**
-     * Indicate that the notification is for webhook channel.
+     * Indicate that the notification is for documents module.
      */
-    public function webhook(): static
+    public function documents(): static
     {
         return $this->state(fn (array $attributes) => [
-            'channel' => 'webhook',
+            'module' => 'documents',
+            'type' => $this->faker->randomElement(['document.uploaded', 'document.approved', 'document.rejected']),
         ]);
     }
 
     /**
-     * Indicate that the notification is for in-app channel.
+     * Indicate that the notification is for cost module.
      */
-    public function inapp(): static
+    public function cost(): static
     {
         return $this->state(fn (array $attributes) => [
-            'channel' => 'inapp',
-        ]);
-    }
-
-    /**
-     * Indicate that the notification is for a specific project.
-     */
-    public function forProject(Project $project): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'project_id' => $project->id,
-            'tenant_id' => $project->tenant_id,
+            'module' => 'cost',
+            'type' => $this->faker->randomElement(['co.needs_approval', 'co.approved', 'co.rejected']),
         ]);
     }
 

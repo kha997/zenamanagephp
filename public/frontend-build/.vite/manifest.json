@@ -1,0 +1,39 @@
+{
+  "_notification-vendor-yLDUkMiE.js": {
+    "file": "assets/js/notification-vendor-yLDUkMiE.js",
+    "name": "notification-vendor",
+    "imports": [
+      "_router-vendor-DOASx7Fd.js"
+    ]
+  },
+  "_react-vendor-BYA32aEE.js": {
+    "file": "assets/js/react-vendor-BYA32aEE.js",
+    "name": "react-vendor"
+  },
+  "_router-vendor-DOASx7Fd.js": {
+    "file": "assets/js/router-vendor-DOASx7Fd.js",
+    "name": "router-vendor",
+    "imports": [
+      "_react-vendor-BYA32aEE.js"
+    ]
+  },
+  "_utils-vendor-BkLtITBR.js": {
+    "file": "assets/js/utils-vendor-BkLtITBR.js",
+    "name": "utils-vendor"
+  },
+  "index.html": {
+    "file": "assets/js/index-Cr4f0Scq.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "imports": [
+      "_react-vendor-BYA32aEE.js",
+      "_router-vendor-DOASx7Fd.js",
+      "_notification-vendor-yLDUkMiE.js",
+      "_utils-vendor-BkLtITBR.js"
+    ],
+    "css": [
+      "assets/css/index-Bw5jLyPL.css"
+    ]
+  }
+}

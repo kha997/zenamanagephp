@@ -7,6 +7,7 @@ import { KpiStrip } from '../../../components/shared/KpiStrip';
 import { AlertBar } from '../../../components/shared/AlertBar';
 import { ActivityFeed } from '../../../components/shared/ActivityFeed';
 import { useDocument, useDeleteDocument, useDownloadDocument, useDocumentsActivity, useDocumentsAlerts } from '../hooks';
+import { useAutoReadNotificationsForEntity } from '../../../hooks/useAutoReadNotificationsForEntity';
 import type { KpiItem } from '../../../components/shared/KpiStrip';
 import type { Alert } from '../../../components/shared/AlertBar';
 import type { Activity } from '../../../components/shared/ActivityFeed';
@@ -37,6 +38,14 @@ export const DocumentDetailPage: React.FC = () => {
   const { data: alertsData, isLoading: alertsLoading } = useDocumentsAlerts();
   
   const document = documentData?.data;
+
+  // Round 260: Auto-read notifications for this document
+  useAutoReadNotificationsForEntity({
+    module: 'documents',
+    entityType: 'document',
+    entityId: id || '',
+    delayMs: 5000,
+  });
   
   // Transform KPIs data for KpiStrip component
   const kpiItems: KpiItem[] = useMemo(() => {

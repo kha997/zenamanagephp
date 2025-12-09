@@ -84,7 +84,10 @@ export const KpiStrip: React.FC<KpiStripProps> = memo(({
     );
   }
 
-  if (!kpis || kpis.length === 0) {
+  // Normalize kpis to always be an array
+  const safeKpis = Array.isArray(kpis) ? kpis : [];
+  
+  if (safeKpis.length === 0) {
     return null;
   }
 
@@ -172,7 +175,9 @@ export const KpiStrip: React.FC<KpiStripProps> = memo(({
         </div>
       )}
       <div className={`grid ${gridColsClass} gap-4`}>
-      {kpis.map((kpi, index) => (
+      {safeKpis.map((kpi, index) => {
+        if (!kpi) return null;
+        return (
         <Card
           key={index}
           style={{
@@ -251,7 +256,8 @@ export const KpiStrip: React.FC<KpiStripProps> = memo(({
             )}
           </div>
         </Card>
-      ))}
+        );
+      })}
       </div>
     </div>
   );

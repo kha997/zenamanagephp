@@ -6,6 +6,7 @@ import AdminRoute from '../routes/AdminRoute';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import AlertsPage from '../pages/alerts/AlertsPage';
 import PreferencesPage from '../pages/preferences/PreferencesPage';
+import { GlobalSearchPage } from '../features/search/pages/GlobalSearchPage';
 import LoginPage from '../pages/auth/LoginPage';
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
@@ -13,19 +14,40 @@ import AdminDashboardPage from '../pages/admin/DashboardPage';
 import AdminUsersPage from '../pages/admin/UsersPage';
 import AdminRolesPage from '../pages/admin/RolesPage';
 import AdminTenantsPage from '../pages/admin/TenantsPage';
+import { AdminRolesPermissionsPage } from '../features/admin/pages/AdminRolesPermissionsPage';
+import { AdminAuditLogsPage } from '../features/admin/pages/AdminAuditLogsPage';
+import { PermissionInspectorPage } from '../features/admin/pages/PermissionInspectorPage';
+import { CostGovernanceOverviewPage } from '../features/admin/pages/CostGovernanceOverviewPage';
+import { AdminRoleProfilesPage } from '../features/admin/pages/AdminRoleProfilesPage';
 import ProjectsListPage from '../pages/projects/ProjectsListPage';
-import ProjectDetailPage from '../pages/projects/ProjectDetailPage';
+import { ProjectDetailPage } from '../features/projects/pages/ProjectDetailPage';
+import { ProjectContractsPage } from '../features/projects/pages/ProjectContractsPage';
+import { ContractDetailPage } from '../features/projects/pages/ContractDetailPage';
+import { ChangeOrderDetailPage } from '../features/projects/pages/ChangeOrderDetailPage';
 import DocumentsPage from '../pages/documents/DocumentsPage';
 import { DocumentDetailPage } from '../pages/documents/DocumentDetailPage';
 import TeamPage from '../pages/TeamPage';
 import CalendarPage from '../pages/CalendarPage';
 import SettingsPage from '../pages/SettingsPage';
 import TasksPage from '../pages/TasksPage';
-import { useAuth } from '../shared/auth/hooks';
+import { MyTasksPage } from '../features/projects/pages/MyTasksPage';
+import { ActivityFeedPage } from '../features/app/pages/ActivityFeedPage';
+import { NotificationsPage } from '../features/app/notifications/NotificationsPage';
+import TenantsPage from '../pages/TenantsPage';
+import TemplatesPage from '../pages/TemplatesPage';
+import ChangeRequestsPage from '../pages/ChangeRequestsPage';
+import UsersPage from '../pages/UsersPage';
+import { useAuthStore } from '../features/auth/store';
 
 const RequireAuth: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
   const location = useLocation();
+
+  // Round 154: Call checkAuth on mount to ensure auth state is checked
+  // This is especially important after UI login when there's a session cookie but no token
+  React.useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   if (isLoading) {
     return (
@@ -61,6 +83,10 @@ export const router = createBrowserRouter(
         element: <DashboardPage />,
       },
       {
+        path: 'search',
+        element: <GlobalSearchPage />,
+      },
+      {
         path: 'alerts',
         element: <AlertsPage />,
       },
@@ -77,6 +103,18 @@ export const router = createBrowserRouter(
         element: <ProjectDetailPage />,
       },
       {
+        path: 'projects/:id/contracts',
+        element: <ProjectContractsPage />,
+      },
+      {
+        path: 'projects/:id/contracts/:contractId',
+        element: <ContractDetailPage />,
+      },
+      {
+        path: 'projects/:id/contracts/:contractId/change-orders/:coId',
+        element: <ChangeOrderDetailPage />,
+      },
+      {
         path: 'documents',
         element: <DocumentsPage />,
       },
@@ -89,6 +127,18 @@ export const router = createBrowserRouter(
         element: <TasksPage />,
       },
       {
+        path: 'my-tasks',
+        element: <MyTasksPage />,
+      },
+      {
+        path: 'activity',
+        element: <ActivityFeedPage />,
+      },
+      {
+        path: 'notifications',
+        element: <NotificationsPage />,
+      },
+      {
         path: 'team',
         element: <TeamPage />,
       },
@@ -99,6 +149,22 @@ export const router = createBrowserRouter(
       {
         path: 'settings',
         element: <SettingsPage />,
+      },
+      {
+        path: 'tenants',
+        element: <TenantsPage />,
+      },
+      {
+        path: 'templates',
+        element: <TemplatesPage />,
+      },
+      {
+        path: 'change-requests',
+        element: <ChangeRequestsPage />,
+      },
+      {
+        path: 'users',
+        element: <UsersPage />,
       },
     ],
   },
@@ -125,6 +191,26 @@ export const router = createBrowserRouter(
       {
         path: 'roles',
         element: <AdminRolesPage />,
+      },
+      {
+        path: 'roles-permissions',
+        element: <AdminRolesPermissionsPage />,
+      },
+      {
+        path: 'audit-logs',
+        element: <AdminAuditLogsPage />,
+      },
+      {
+        path: 'permission-inspector',
+        element: <PermissionInspectorPage />,
+      },
+      {
+        path: 'cost-governance',
+        element: <CostGovernanceOverviewPage />,
+      },
+      {
+        path: 'role-profiles',
+        element: <AdminRoleProfilesPage />,
       },
       {
         path: 'tenants',

@@ -19,7 +19,7 @@ import type {
   TaskBulkAssignRequest,
   TasksListQuery,
 } from '../../shared/api/types';
-import { generateIdempotencyKey } from '../../shared/types/api';
+import { generateIdempotencyKey } from '../../shared/utils/idempotency';
 
 const apiClient = createApiClient();
 

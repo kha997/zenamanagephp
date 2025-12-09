@@ -36,14 +36,20 @@ export const formatPercentage = (value: number, decimals = 1): string => {
  * Format ngày tháng
  */
 export const formatDate = (
-  date: string | Date,
+  date: string | Date | null | undefined,
   formatStr = DATE_FORMATS.DISPLAY,
   locale = 'vi'
 ): string => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date
-  const localeObj = locale === 'vi' ? vi : enUS
+  if (!date) return ''
   
-  return format(dateObj, formatStr, { locale: localeObj })
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date
+    const localeObj = locale === 'vi' ? vi : enUS
+    
+    return format(dateObj, formatStr, { locale: localeObj })
+  } catch (error) {
+    return ''
+  }
 }
 
 /**

@@ -1,10 +1,45 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
+ * Backend host/port configuration for Playwright webServer
+ * Round 168: Make host/port configurable via env vars for CI/Codex compatibility
+ * Default: 127.0.0.1:8000 (local dev)
+ * Override: PLAYWRIGHT_BACKEND_HOST and PLAYWRIGHT_BACKEND_PORT
+ */
+const backendHost = process.env.PLAYWRIGHT_BACKEND_HOST ?? '127.0.0.1';
+const rawBackendPort = Number(process.env.PLAYWRIGHT_BACKEND_PORT ?? '8000');
+const backendPort = Number.isNaN(rawBackendPort) ? 8000 : rawBackendPort;
+const backendBaseURL = process.env.PLAYWRIGHT_BASE_URL ?? `http://${backendHost}:${backendPort}`;
+
+/**
+ * Build webServer command with database configuration
+ * Round 158: Add MySQL support for testing
+ * Round 168: Use configurable backend host/port
+ */
+function buildWebServerCommand(): string {
+  // DB config: Use process.env if set, otherwise default to XAMPP MySQL defaults
+  // Round 161: Use zenamanage_e2e to match global-setup.ts default
+  const dbConnection = process.env.DB_CONNECTION || 'mysql';
+  const dbHost = process.env.DB_HOST || '127.0.0.1';
+  const dbPort = process.env.DB_PORT || '3306';
+  const dbDatabase = process.env.DB_DATABASE || 'zenamanage_e2e';
+  const dbUsername = process.env.DB_USERNAME || 'root';
+  const dbPassword = process.env.DB_PASSWORD || '';
+  
+  // Escape password for bash: replace single quotes with '\'' and wrap in single quotes
+  // This ensures password with special chars works correctly
+  const escapedPassword = dbPassword.replace(/'/g, "'\\''");
+  
+  // Round 161: Clear config cache before starting server to ensure DB_CONNECTION is respected
+  // Round 168: Use configurable backend host/port
+  return `bash -lc 'set -euo pipefail && cd frontend && npm run build && cd .. && php artisan config:clear && APP_ENV=testing SESSION_DRIVER=file DB_CONNECTION=${dbConnection} DB_HOST=${dbHost} DB_PORT=${dbPort} DB_DATABASE=${dbDatabase} DB_USERNAME=${dbUsername} DB_PASSWORD='${escapedPassword}' CORS_ALLOWED_ORIGINS=${backendBaseURL} APP_URL=${backendBaseURL} APP_KEY=base64:mIGiZouhlcX21Z+nN7cELAaY94Gi/Br0U6f72PJC1eg= php artisan serve --host=${backendHost} --port=${backendPort}'`;
+}
+
+/**
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './tests/E2E',
+  testDir: './tests/e2e',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -25,7 +60,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://127.0.0.1:8000',
+    baseURL: backendBaseURL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -44,7 +79,7 @@ export default defineConfig({
   },
 
   /* Global setup for all tests */
-  globalSetup: require.resolve('./tests/E2E/setup/global-setup.ts'),
+  globalSetup: require.resolve('./tests/e2e/setup/global-setup.ts'),
 
   /* Configure projects for major browsers */
   projects: [
@@ -79,6 +114,14 @@ export default defineConfig({
       name: 'core-chromium',
       testMatch: '**/core/**/*.spec.ts',
       use: { ...devices['Desktop Chrome'] },
+    },
+
+    {
+      name: 'projects-chromium',
+      testMatch: '**/projects/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+      // Round 169: Run projects tests with 1 worker to avoid session/DB conflicts
+      workers: 1,
     },
 
     {
@@ -128,6 +171,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
+    {
+      name: 'auth-chromium',
+      testMatch: '**/auth/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
+    },
+
     /* Test against branded browsers. */
     // {
     //   name: 'Microsoft Edge',
@@ -141,13 +190,20 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'php artisan serve --host=127.0.0.1 --port=8000',
-    url: 'http://127.0.0.1:8000',
-    // In CI, workflow may start server for verification, then stop it
-    // Playwright should start its own server
-    // For self-hosted runners, we can reuse if server is still running
-    reuseExistingServer: process.env.CI ? false : true,
-    timeout: 120 * 1000,
+    // Round 134: Force rebuild with pipefail - build MUST fail if npm run build fails
+    // Round 158: Add SESSION_DRIVER=file to ensure sessions persist across requests in testing
+    // Round 158: Add DB_CONNECTION=mysql to use MySQL instead of SQLite for testing
+    // DB config: Use process.env if set, otherwise default to XAMPP MySQL defaults
+    command: buildWebServerCommand(),
+    // Use /api/_e2e/ready endpoint - simple 200 OK response, no dependencies, no auth, no session
+    // This route is defined in routes/api.php to avoid session middleware that requires APP_KEY
+    // Round 168: Use configurable backend base URL
+    url: `${backendBaseURL}/api/_e2e/ready`,
+    // Always start fresh server to ensure correct env vars are used
+    // reuseExistingServer: true causes Playwright to reuse old server with wrong env
+    reuseExistingServer: false,
+    // Increased timeout to 240s (4 minutes) to handle slow bootstrap and config loading
+    timeout: 240 * 1000,
     stdout: 'pipe',
     stderr: 'pipe',
   },

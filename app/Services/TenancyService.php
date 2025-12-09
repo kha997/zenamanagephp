@@ -22,11 +22,14 @@ class TenancyService
     /**
      * Resolve active tenant for user based on session, default, or fallback
      * 
+     * Canonical tenant resolution rule (single source of truth):
      * Priority:
-     * 1. Session selected_tenant_id (if user is a member)
-     * 2. Default tenant from pivot (is_default = true)
-     * 3. Fallback to user->tenant_id (legacy)
+     * 1. Session selected_tenant_id (if user is a member of that tenant)
+     * 2. Default tenant from pivot (is_default = true) via user->defaultTenant()
+     * 3. Fallback to user->tenant_id (legacy) via user->defaultTenant()
      * 4. null if no tenant at all
+     * 
+     * This method ensures the tenants relationship is loaded so defaultTenant() can work correctly.
      * 
      * @param User $user
      * @param Request|null $request Optional request for session access
@@ -34,6 +37,11 @@ class TenancyService
      */
     public function resolveActiveTenant(User $user, ?Request $request = null): ?Tenant
     {
+        // Ensure tenants relationship is loaded so defaultTenant() can access pivot data
+        if (!$user->relationLoaded('tenants')) {
+            $user->load('tenants');
+        }
+
         // Check session for selected tenant
         $selectedTenantId = null;
         if ($request && $request->hasSession()) {
@@ -57,7 +65,10 @@ class TenancyService
         }
 
         // Use default tenant (from pivot or legacy)
-        return $user->defaultTenant();
+        // Method defaultTenant() is null-safe and returns null if no tenant found
+        // It checks: pivot is_default -> legacy tenant_id -> first tenant -> super_admin fallback
+        $defaultTenant = $user->defaultTenant();
+        return $defaultTenant;
     }
 
     /**

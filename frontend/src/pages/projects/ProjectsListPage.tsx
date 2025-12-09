@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,7 +61,7 @@ export default function ProjectsListPage() {
   const updateProjectMutation = useUpdateProject();
   const exportProjectsMutation = useExportProjects();
 
-  const projects = projectsResponse?.data || [];
+  const projects = Array.isArray(projectsResponse?.data) ? projectsResponse.data : [];
   const meta = projectsResponse?.meta;
 
   const handleSearch = (search: string) => {
@@ -528,8 +529,11 @@ export default function ProjectsListPage() {
 
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="grid" aria-label="Projects grid">
-        {projects.map(project => (
+        {Array.isArray(projects) && projects.map(project => {
+          if (!project) return null;
+          return (
           <Card key={project.id} className="hover:shadow-lg transition-shadow" role="gridcell">
+            <Link to={`/app/projects/${project.id}`} className="block">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -570,13 +574,19 @@ export default function ProjectsListPage() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <UserGroupIcon className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-600">{project.team_members.length} members</span>
+                    <span className="text-gray-600">{Array.isArray(project.team_members) ? project.team_members.length : 0} members</span>
                   </div>
                 </div>
 
                 {/* Actions */}
                 <div className="flex space-x-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1" aria-label={`View project ${project.name}`}>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1" 
+                      aria-label={`View project ${project.name}`}
+                      onClick={() => window.location.href = `/app/projects/${project.id}`}
+                    >
                       <EyeIcon className="h-4 w-4 mr-1" />
                       View
                     </Button>
@@ -601,8 +611,10 @@ export default function ProjectsListPage() {
                 </div>
               </div>
             </CardContent>
+            </Link>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Pagination */}
@@ -632,7 +644,7 @@ export default function ProjectsListPage() {
         </div>
       )}
 
-      {projects.length === 0 && !isLoading && (
+      {Array.isArray(projects) && projects.length === 0 && !isLoading && (
       <Card>
           <CardContent className="text-center py-12">
             <div className="text-gray-500">

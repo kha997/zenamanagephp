@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * ProjectTask Model
@@ -13,23 +15,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Được tạo từ template hoặc thêm thủ công
  * Hỗ trợ conditional tags để ẩn/hiện task
  * 
+ * Round 202: Added tenant_id, SoftDeletes, TenantScope for multi-tenant support
+ * 
  * @property string $id
+ * @property string $tenant_id
  * @property string $project_id
  * @property string|null $phase_id
+ * @property string|null $template_task_id Link to TaskTemplate source
  * @property string $name
  * @property string|null $description
+ * @property int $sort_order
+ * @property bool $is_milestone
+ * @property string|null $status
+ * @property \Carbon\Carbon|null $due_date
  * @property int $duration_days
  * @property float $progress_percent
- * @property string $status
  * @property string|null $conditional_tag
  * @property bool $is_hidden
  * @property string|null $template_id
- * @property string|null $template_task_id
+ * @property array|null $metadata
  * @property string|null $created_by
  * @property string|null $updated_by
  */
 class ProjectTask extends Model
 {
+    use HasUlids, SoftDeletes, TenantScope;
 
     protected $table = 'project_tasks';
     protected $keyType = 'string';
@@ -48,28 +58,45 @@ class ProjectTask extends Model
      * Các trường có thể mass assignment
      */
     protected $fillable = [
+        'tenant_id',
         'project_id',
         'phase_id',
+        'template_task_id',
+        'phase_code',
+        'phase_label',
+        'group_label',
         'name',
         'description',
+        'sort_order',
+        'is_milestone',
+        'status',
+        'due_date',
+        'is_completed',
+        'completed_at',
         'duration_days',
         'progress_percent',
-        'status',
         'conditional_tag',
         'is_hidden',
         'template_id',
-        'template_task_id',
+        'metadata',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'assignee_id', // Round 213: Task assignment
     ];
 
     /**
      * Các trường cần cast kiểu dữ liệu
      */
     protected $casts = [
+        'sort_order' => 'integer',
+        'is_milestone' => 'boolean',
+        'is_completed' => 'boolean',
+        'due_date' => 'date',
+        'completed_at' => 'datetime',
         'duration_days' => 'integer',
         'progress_percent' => 'float',
         'is_hidden' => 'boolean',
+        'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime'
@@ -97,6 +124,24 @@ class ProjectTask extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(Template::class, 'template_id');
+    }
+
+    /**
+     * Relationship với TaskTemplate (source template task)
+     * Round 202: Link to TaskTemplate that generated this ProjectTask
+     */
+    public function templateTask(): BelongsTo
+    {
+        return $this->belongsTo(TaskTemplate::class, 'template_task_id');
+    }
+
+    /**
+     * Relationship với assignee (user assigned to this task)
+     * Round 213: Task assignment
+     */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assignee_id');
     }
 
     /**
@@ -167,10 +212,12 @@ class ProjectTask extends Model
 
     /**
      * Kiểm tra xem task có đang hoàn thành không
+     * 
+     * Round 206: Updated to check is_completed flag
      */
     public function isCompleted(): bool
     {
-        return $this->status === self::STATUS_COMPLETED;
+        return $this->is_completed === true;
     }
 
     /**

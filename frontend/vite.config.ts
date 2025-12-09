@@ -13,8 +13,11 @@ export default defineConfig({
   
   // Build configuration
   build: {
-    // Output directory
-    outDir: 'dist',
+    // Output directory - build to public/frontend-build for Laravel integration
+    outDir: '../public/frontend-build',
+    
+    // Generate manifest.json for Laravel blade to load assets
+    manifest: true,
     
     // Generate source maps for production debugging
     sourcemap: process.env.NODE_ENV === 'production' ? 'hidden' : true,
@@ -68,7 +71,7 @@ export default defineConfig({
     // Report compressed size
     reportCompressedSize: true,
     
-    // Empty output directory
+    // Empty output directory before build
     emptyOutDir: true
   },
   

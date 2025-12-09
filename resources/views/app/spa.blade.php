@@ -18,25 +18,7 @@
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Laravel Vite assets -->
-    @php
-    // Load CSS from built manifest
-    // Laravel Vite will automatically use manifest.json if available
-    $rootManifestPath = public_path('build/manifest.json');
-    if (file_exists($rootManifestPath)) {
-        $manifest = json_decode(file_get_contents($rootManifestPath), true);
-        if (isset($manifest['resources/css/app.css']['file'])) {
-            echo '<link rel="stylesheet" href="' . asset('build/' . $manifest['resources/css/app.css']['file']) . '">';
-        }
-    } else {
-        // Fallback: try Laravel Vite directive (requires Vite dev server)
-        try {
-            @vite(['resources/css/app.css']);
-        } catch (\Exception $e) {
-            // Silent fail - CSS will be missing but page won't crash
-        }
-    }
-    @endphp
+    <!-- CSS will be loaded from frontend-build manifest in body section -->
     
     <!-- Set document lang attribute based on current locale -->
     <script>
@@ -60,103 +42,84 @@
 </head>
 <body>
     <!-- React SPA root -->
-    <div id="app"></div>
+    <div id="root"></div>
     
-    <!-- React app entry point -->
+    <!-- React app entry point - Load from frontend-build index.html -->
     @php
-    // Try to load from built manifest first (works in both dev and production)
-    // Fallback to Vite dev server only if manifest not found and in local env
-    $manifestPaths = [
-        public_path('build/.vite/manifest.json'),
-        public_path('build/manifest.json'),
-    ];
+    // Load frontend SPA build from public/frontend-build/index.html
+    $frontendIndexHtml = public_path('frontend-build/index.html');
     
-    $manifest = null;
-    $manifestPath = null;
-    
-    foreach ($manifestPaths as $path) {
-        if (file_exists($path)) {
-            $manifest = json_decode(file_get_contents($path), true);
-            $manifestPath = $path;
-            break;
-        }
-    }
-    
-    if ($manifest) {
-        // Found manifest - load from built assets
-        // Try different possible keys in manifest
-        $entryKeys = [
-            'frontend/src/main',
-            'src/main.tsx',
-            'src/main',
-            'frontend/src/main.tsx',
-            'main.tsx',
-        ];
-        
-        $entry = null;
-        $entryKey = null;
-        
-        foreach ($entryKeys as $key) {
-            if (isset($manifest[$key])) {
-                $entry = $manifest[$key];
-                $entryKey = $key;
-                break;
-            }
-        }
-        
-        // If not found by key, find first entry
-        if (!$entry) {
-            foreach ($manifest as $key => $value) {
-                if (isset($value['isEntry']) && $value['isEntry']) {
-                    $entry = $value;
-                    $entryKey = $key;
-                    break;
-                }
-            }
-        }
-        
-        if ($entry && isset($entry['file'])) {
-            // Load JS entry
-            echo '<script type="module" src="' . asset('build/' . $entry['file']) . '"></script>' . "\n";
-            
-            // Load CSS files
-            if (isset($entry['css']) && is_array($entry['css'])) {
-                foreach ($entry['css'] as $css) {
-                    echo '<link rel="stylesheet" href="' . asset('build/' . $css) . '">' . "\n";
-                }
-            }
-            
-            // Load imported chunks (if any) - only preload JS files, not CSS
-            if (isset($entry['imports']) && is_array($entry['imports'])) {
-                foreach ($entry['imports'] as $import) {
-                    if (isset($manifest[$import]['file'])) {
-                        $importFile = $manifest[$import]['file'];
-                        // Only preload JS files, skip CSS files
-                        if (strpos($importFile, '.js') !== false || strpos($importFile, '.mjs') !== false) {
-                            echo '<link rel="modulepreload" href="' . asset('build/' . $importFile) . '">' . "\n";
-                        }
-                    }
-                }
-            }
-        } else {
-            // Manifest found but no entry point - try dev server if in local env
-            if (app()->environment('local')) {
-                echo '<!-- Manifest found but no entry point. Trying Vite dev server... -->' . "\n";
-                echo '<script type="module" src="http://localhost:5173/src/main.tsx"></script>' . "\n";
-            } else {
-                echo '<!-- Manifest found but no entry point. Run: cd frontend && npm run build -->' . "\n";
-            }
-        }
-    } else {
-        // No manifest found
+    if (!file_exists($frontendIndexHtml)) {
+        // Frontend build not found - show error or try dev server
         if (app()->environment('local')) {
-            // Development: try Vite dev server
-            echo '<!-- No manifest found. Loading from Vite dev server... -->' . "\n";
+            echo '<!-- Frontend build not found. Loading from Vite dev server... -->' . "\n";
             echo '<script type="module" src="http://localhost:5173/src/main.tsx"></script>' . "\n";
         } else {
-            // Production: error
-            echo '<!-- Manifest not found. Run: cd frontend && npm run build -->' . "\n";
-            echo '<script type="module" src="' . asset('build/assets/js/main.js') . '"></script>' . "\n";
+            throw new \Exception('Missing frontend build. Run: cd frontend && npm run build');
+        }
+    } else {
+        // Parse index.html to extract script, link, and preload tags
+        $indexHtml = file_get_contents($frontendIndexHtml);
+        preg_match_all('/<script[^>]+src="([^"]+)"[^>]*>/i', $indexHtml, $scriptMatches);
+        preg_match_all('/<link[^>]+href="([^"]+)"[^>]*rel="stylesheet"[^>]*>/i', $indexHtml, $cssMatches);
+        preg_match_all('/<link[^>]+href="([^"]+)"[^>]*rel="modulepreload"[^>]*>/i', $indexHtml, $preloadMatches);
+        
+        // Extract paths (remove leading / if present)
+        $frontendScripts = !empty($scriptMatches[1]) ? array_map(function($path) {
+            return ltrim($path, '/');
+        }, $scriptMatches[1]) : [];
+        $frontendCss = !empty($cssMatches[1]) ? array_map(function($path) {
+            return ltrim($path, '/');
+        }, $cssMatches[1]) : [];
+        $frontendPreloads = !empty($preloadMatches[1]) ? array_map(function($path) {
+            return ltrim($path, '/');
+        }, $preloadMatches[1]) : [];
+        
+        if (empty($frontendScripts)) {
+            throw new \Exception('No scripts found in frontend index.html. Run: cd frontend && npm run build');
+        }
+        
+        // E2E Guard: In testing environment, verify bundle contains __e2e_logs instrumentation
+        if (app()->environment('testing') && !empty($frontendScripts)) {
+            $entryScriptSrc = $frontendScripts[0]; // First script is the entry point
+            $entryPath = public_path('frontend-build/' . $entryScriptSrc);
+            
+            if (!is_file($entryPath)) {
+                abort(500, 'Frontend bundle entry file not found: ' . $entryScriptSrc . '. Run `cd frontend && npm run build`.');
+            }
+            
+            $entryContents = @file_get_contents($entryPath);
+            if ($entryContents === false) {
+                abort(500, 'Failed to read frontend bundle: ' . $entryScriptSrc . '. Run `cd frontend && npm run build`.');
+            }
+            
+            if (!str_contains($entryContents, '__e2e_logs')) {
+                abort(500, 'Frontend bundle seems stale or missing E2E instrumentation. Run `cd frontend && npm run build`.');
+            }
+        }
+        
+        // Load preloads first (skip external URLs)
+        foreach ($frontendPreloads as $preload) {
+            if (strpos($preload, 'http') === 0 || strpos($preload, '//') === 0) {
+                continue;
+            }
+            echo '<link rel="modulepreload" href="' . asset('frontend-build/' . $preload) . '">' . "\n";
+        }
+        
+        // Load CSS files (skip external URLs)
+        foreach ($frontendCss as $css) {
+            if (strpos($css, 'http') === 0 || strpos($css, '//') === 0) {
+                continue;
+            }
+            echo '<link rel="stylesheet" href="' . asset('frontend-build/' . $css) . '">' . "\n";
+        }
+        
+        // Load main JS entry (skip external URLs)
+        foreach ($frontendScripts as $script) {
+            if (strpos($script, 'http') === 0 || strpos($script, '//') === 0) {
+                continue;
+            }
+            echo '<script type="module" src="' . asset('frontend-build/' . $script) . '"></script>' . "\n";
         }
     }
     @endphp

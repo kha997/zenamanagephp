@@ -36,14 +36,30 @@ class DocumentFactory extends Factory
             'mime_type' => 'application/pdf',
             'file_size' => $this->faker->numberBetween(1000, 10000000),
             'file_hash' => $this->faker->sha256(),
-            'category' => $this->faker->randomElement(['general', 'drawing', 'specification', 'contract']),
+            'category' => $this->faker->randomElement(['general', 'drawing', 'specification', 'contract', 'report']),
             'description' => $this->faker->sentence(),
             'metadata' => json_encode(['author' => $this->faker->name(), 'tags' => $this->faker->words(3)]),
             'status' => $this->faker->randomElement(['draft', 'review', 'approved', 'published']),
             'version' => $this->faker->numberBetween(1, 5),
             'is_current_version' => true,
             'parent_document_id' => null,
+            // uploaded_by is required (NOT NULL FK) - must be provided explicitly
+            // Use forProjectAndTenant() helper or pass uploaded_by in create() call
+            'uploaded_by' => null,
         ];
+    }
+
+    /**
+     * Set the document to belong to a specific project and tenant
+     * This ensures all foreign keys are properly set
+     */
+    public function forProjectAndTenant($project, $user): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tenant_id' => $project->tenant_id,
+            'project_id' => $project->id,
+            'uploaded_by' => $user->id,
+        ]);
     }
 
 }

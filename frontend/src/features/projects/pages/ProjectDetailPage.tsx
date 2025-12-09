@@ -10,16 +10,24 @@ import { KpiStrip, type KpiItem } from '../../../components/shared/KpiStrip';
 import { AlertBar } from '../../../components/shared/AlertBar';
 import { useAuthStore } from '../../../features/auth/store';
 import { useProject, useDeleteProject, useProjectsActivity, useProjectTasks, useProjectDocuments, useArchiveProject, useAddTeamMember, useRemoveTeamMember, useUploadProjectDocument, useProjectKpis, useProjectAlerts, useProjectOverview } from '../hooks';
+import { ProjectCostHealthHeader } from '../components/ProjectCostHealthHeader';
+import { ProjectCostFlowStatusHeader } from '../components/ProjectCostFlowStatusHeader';
+import { ProjectCostAlertsIcon } from '../components/ProjectCostAlertsIcon';
+import { ProjectDocumentsSection } from '../components/ProjectDocumentsSection';
+import { ProjectHistorySection } from '../components/ProjectHistorySection';
 import { ApplyTemplateToProjectModal } from '../components/ApplyTemplateToProjectModal';
 import { ProjectHealthHistoryCard } from '../components/ProjectHealthHistoryCard';
+import { ProjectTaskList } from '../components/ProjectTaskList';
+import { ProjectCostDashboardSection } from '../components/ProjectCostDashboardSection';
 import { useDeleteTask, useUpdateTask } from '../../tasks/hooks';
 import { useUsers } from '../../users/hooks';
 import { MoneyCell } from '../../reports/components/MoneyCell';
 import { getOverallStatusLabel, getScheduleStatusLabel, getCostStatusLabel } from '../healthStatus';
 import type { Activity } from '../../../components/shared/ActivityFeed';
 import type { Task } from '../../tasks/types';
+import { ToastProvider } from '../../../shared/ui/toast'; // Round 162: Add ToastProvider for ApplyTemplateToProjectModal
 
-type TabId = 'overview' | 'tasks' | 'documents' | 'team' | 'activity';
+type TabId = 'overview' | 'tasks' | 'documents' | 'team' | 'activity' | 'cost';
 
 interface Tab {
   id: TabId;
@@ -32,6 +40,7 @@ const tabs: Tab[] = [
   { id: 'tasks', label: 'Tasks', icon: '✅' },
   { id: 'documents', label: 'Documents', icon: '📄' },
   { id: 'team', label: 'Team', icon: '👥' },
+  { id: 'cost', label: 'Cost', icon: '💰' },
   { id: 'activity', label: 'Activity', icon: '📝' },
 ];
 
@@ -233,9 +242,27 @@ const KeyTaskItem: React.FC<KeyTaskItemProps> = ({
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasTenantPermission, user: currentUser } = useAuthStore();
-  const canManageTasks = hasTenantPermission('tenant.manage_tasks');
-  const canViewReports = hasTenantPermission('tenant.view_reports');
+  const { user: currentUser } = useAuthStore();
+  // Use reactive selector to ensure re-render when permissions change
+  const canManageTasks = useAuthStore(
+    (s) => {
+      const perms = s.currentTenantPermissions ?? [];
+      const hasPermission = perms.includes('tenant.manage_tasks');
+      console.log('[ProjectDetailPage] canManageTasks check:', { perms, hasPermission });
+      return hasPermission;
+    }
+  );
+  const canCreateTasks = useAuthStore(
+    (s) => (s.currentTenantPermissions ?? []).includes('tenant.create_tasks')
+  );
+  const canViewReports = useAuthStore(
+    (s) => (s.currentTenantPermissions ?? []).includes('tenant.view_reports')
+  );
+  
+  // Debug: Log canManageTasks value
+  React.useEffect(() => {
+    console.log('[ProjectDetailPage] canManageTasks:', canManageTasks, 'canCreateTasks:', canCreateTasks);
+  }, [canManageTasks, canCreateTasks]);
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
@@ -251,6 +278,9 @@ export const ProjectDetailPage: React.FC = () => {
   React.useEffect(() => {
     console.log('[ProjectDetailPage] Project ID from params:', id);
   }, [id]);
+  
+  // Note: Permissions should be loaded by App.tsx checkAuth on mount
+  // If permissions are missing, they will be loaded automatically
   
   const { data: projectData, isLoading, error, refetch: refetchProject } = useProject(id!);
   const { data: activityData, isLoading: activityLoading, error: activityError } = useProjectsActivity(20);
@@ -333,9 +363,10 @@ export const ProjectDetailPage: React.FC = () => {
   // Get users not already in team
   const availableUsers = React.useMemo(() => {
     // usersData is already the response object with { data: User[], meta?: {...} }
-    const users = usersData?.data || [];
-    if (!Array.isArray(users) || !project?.users) return users;
-    const teamMemberIds = new Set(project.users.map(u => String(u.id)));
+    const users = Array.isArray(usersData?.data) ? usersData.data : [];
+    const projectUsers = Array.isArray(project?.users) ? project.users : [];
+    if (!Array.isArray(users) || projectUsers.length === 0) return users;
+    const teamMemberIds = new Set(projectUsers.map(u => String(u.id)));
     return users.filter(u => !teamMemberIds.has(String(u.id)));
   }, [usersData, project?.users]);
 
@@ -521,12 +552,13 @@ export const ProjectDetailPage: React.FC = () => {
   }
 
   return (
-    <Container>
-      <div className="space-y-6">
+    <ToastProvider>
+      <Container>
+        <div className="space-y-6" data-testid="project-detail-page" data-can-manage-tasks={String(canManageTasks)} data-active-tab={activeTab}>
         {/* Page Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h1 className="text-[var(--font-heading-3-size)] font-semibold text-[var(--text)]">
                 {project.name}
               </h1>
@@ -543,6 +575,9 @@ export const ProjectDetailPage: React.FC = () => {
               }`}>
                 {project.status}
               </span>
+              {id && <ProjectCostHealthHeader projectId={id} />}
+              {id && <ProjectCostFlowStatusHeader projectId={id} />}
+              {id && <ProjectCostAlertsIcon projectId={id} className="ml-2" />}
             </div>
             {project.description && (
               <p className="text-[var(--font-body-size)] text-[var(--muted)]">
@@ -621,6 +656,7 @@ export const ProjectDetailPage: React.FC = () => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                data-testid={`project-tab-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap border-b-2 ${
                   activeTab === tab.id
@@ -1289,20 +1325,25 @@ export const ProjectDetailPage: React.FC = () => {
 
           {/* Tasks Tab */}
           {activeTab === 'tasks' && (
+            <div data-testid="project-tasks-panel">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>
                     Tasks
-                    {tasksData?.data && tasksData.data.length > 0 && (
-                      <span className="ml-2 text-sm font-normal text-[var(--muted)]">
-                        ({tasksData.data.length})
-                      </span>
-                    )}
+                    {(() => {
+                      const tasks = Array.isArray(tasksData?.data) ? tasksData.data : [];
+                      return tasks.length > 0 && (
+                        <span className="ml-2 text-sm font-normal text-[var(--muted)]">
+                          ({tasks.length})
+                        </span>
+                      );
+                    })()}
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     {canManageTasks && (
                       <Button
+                        data-testid="apply-template-button"
                         variant="secondary"
                         size="sm"
                         onClick={() => setShowApplyTemplateModal(true)}
@@ -1310,7 +1351,7 @@ export const ProjectDetailPage: React.FC = () => {
                         Áp dụng mẫu công việc
                       </Button>
                     )}
-                    {(hasTenantPermission('tenant.manage_tasks') || hasTenantPermission('tenant.create_tasks')) && (
+                    {(canManageTasks || canCreateTasks) && (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -1332,9 +1373,11 @@ export const ProjectDetailPage: React.FC = () => {
                       </div>
                     ))}
                   </div>
-                ) : tasksData?.data && tasksData.data.length > 0 ? (
-                  <div className="space-y-3">
-                    {tasksData.data.map((task: Task) => (
+                ) : (() => {
+                  const tasks = Array.isArray(tasksData?.data) ? tasksData.data : [];
+                  return tasks.length > 0 ? (
+                    <div className="space-y-3">
+                      {tasks.map((task: Task) => (
                       <div
                         key={task.id}
                         className="p-4 border border-[var(--border)] rounded-lg hover:bg-[var(--muted-surface)] transition-colors"
@@ -1382,11 +1425,15 @@ export const ProjectDetailPage: React.FC = () => {
                               {task.due_date && (
                                 <span>Due: {new Date(task.due_date).toLocaleDateString()}</span>
                               )}
-                              {task.assignee_id && usersData?.data && Array.isArray(usersData.data) && (
-                                <span>
-                                  Assigned to: {usersData.data.find(u => u.id === task.assignee_id)?.name || 'Unknown'}
-                                </span>
-                              )}
+                              {task.assignee_id && (() => {
+                                const users = Array.isArray(usersData?.data) ? usersData.data : [];
+                                const assignee = users.find(u => u.id === task.assignee_id);
+                                return assignee && (
+                                  <span>
+                                    Assigned to: {assignee.name || 'Unknown'}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           </div>
                           <div className="flex items-center gap-2 ml-4">
@@ -1431,107 +1478,41 @@ export const ProjectDetailPage: React.FC = () => {
                       Create First Task
                     </Button>
                   </div>
-                )}
+                );
+              })()}
               </CardContent>
             </Card>
+
+            {/* ProjectTasks Checklist (from templates) */}
+            <div className="mt-6">
+              <ProjectTaskList projectId={id!} />
+            </div>
+            </div>
           )}
 
           {/* Documents Tab */}
           {activeTab === 'documents' && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>
-                    Documents
-                    {documentsData?.data && documentsData.data.length > 0 && (
-                      <span className="ml-2 text-sm font-normal text-[var(--muted)]">
-                        ({documentsData.data.length})
-                      </span>
-                    )}
-                  </CardTitle>
-                  <Button 
-                    variant="secondary" 
-                    size="sm"
-                    onClick={() => setShowUploadDocumentModal(true)}
-                  >
-                    Upload Document
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {documentsLoading ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="animate-pulse">
-                        <div className="h-4 bg-[var(--muted-surface)] rounded w-3/4 mb-2"></div>
-                        <div className="h-3 bg-[var(--muted-surface)] rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                ) : documentsData?.data && documentsData.data.length > 0 ? (
-                  <div className="space-y-3">
-                    {documentsData.data.map((doc: any) => (
-                      <div
-                        key={doc.id}
-                        className="p-4 border border-[var(--border)] rounded-lg hover:bg-[var(--muted-surface)] transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="text-2xl">📄</div>
-                            <div className="flex-1">
-                              <h4 className="font-semibold text-[var(--text)]">{doc.name || doc.title || 'Untitled Document'}</h4>
-                              {doc.description && (
-                                <p className="text-sm text-[var(--muted)] mt-1 line-clamp-1">
-                                  {doc.description}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-4 text-xs text-[var(--muted)] mt-2">
-                                {doc.file_type && <span>Type: {doc.file_type}</span>}
-                                {doc.file_size && <span>Size: {doc.file_size}</span>}
-                                {doc.created_at && (
-                                  <span>Uploaded: {new Date(doc.created_at).toLocaleDateString()}</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 ml-4">
-                            {doc.url && (
-                              <Button
-                                variant="tertiary"
-                                size="sm"
-                                onClick={() => window.open(doc.url, '_blank')}
-                              >
-                                View
-                              </Button>
-                            )}
-                            {doc.download_url && (
-                              <Button
-                                variant="tertiary"
-                                size="sm"
-                                onClick={() => window.open(doc.download_url, '_blank')}
-                              >
-                                Download
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-[var(--muted)]">
-                    <p className="text-sm mb-2">No documents found for this project</p>
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
-                      onClick={() => setShowUploadDocumentModal(true)}
-                    >
-                      Upload First Document
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <ProjectDocumentsSection
+              projectId={id!}
+              onUploadClick={() => setShowUploadDocumentModal(true)}
+              showUploadButton={true}
+            />
+          )}
+
+          {/* Cost Tab */}
+          {activeTab === 'cost' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-[var(--text)]">Cost Dashboard</h2>
+                <Button
+                  variant="primary"
+                  onClick={() => navigate(`/app/projects/${id}/contracts`)}
+                >
+                  View Contracts
+                </Button>
+              </div>
+              <ProjectCostDashboardSection projectId={id!} />
+            </div>
           )}
 
           {/* Team Tab */}
@@ -1542,19 +1523,22 @@ export const ProjectDetailPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <CardTitle>
                       Team Members
-                      {project?.users && project.users.length > 0 && (
-                        <span className="ml-2 text-sm font-normal text-[var(--muted)]">
-                          ({project.users.length})
-                        </span>
-                      )}
+                      {(() => {
+                        const projectUsers = Array.isArray(project?.users) ? project.users : [];
+                        return projectUsers.length > 0 && (
+                          <span className="ml-2 text-sm font-normal text-[var(--muted)]">
+                            ({projectUsers.length})
+                          </span>
+                        );
+                      })()}
                     </CardTitle>
                     {/* Only show Add Member button if user has tenant.manage_projects permission */}
-                    {hasTenantPermission('tenant.manage_projects') && (
+                    {useAuthStore((s) => (s.currentTenantPermissions ?? []).includes('tenant.manage_projects')) && (
                       <Button 
                         variant="secondary" 
                         size="sm"
                         onClick={() => setShowAddMemberModal(true)}
-                        disabled={!availableUsers || availableUsers.length === 0}
+                        disabled={!Array.isArray(availableUsers) || availableUsers.length === 0}
                       >
                         Add Member
                       </Button>
@@ -1562,9 +1546,11 @@ export const ProjectDetailPage: React.FC = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {project?.users && project.users.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {project.users.map((user) => (
+                  {(() => {
+                    const projectUsers = Array.isArray(project?.users) ? project.users : [];
+                    return projectUsers.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {projectUsers.map((user) => (
                         <div
                           key={user.id}
                           className="p-4 border border-[var(--border)] rounded-lg hover:bg-[var(--muted-surface)] transition-colors"
@@ -1604,12 +1590,13 @@ export const ProjectDetailPage: React.FC = () => {
                         variant="secondary" 
                         size="sm"
                         onClick={() => setShowAddMemberModal(true)}
-                        disabled={!availableUsers || availableUsers.length === 0}
+                        disabled={!Array.isArray(availableUsers) || availableUsers.length === 0}
                       >
                         Add First Member
                       </Button>
                     </div>
-                  )}
+                  );
+                })()}
                 </CardContent>
               </Card>
 
@@ -1639,7 +1626,7 @@ export const ProjectDetailPage: React.FC = () => {
                         }}
                       >
                         <option value="">Select a user...</option>
-                        {availableUsers?.map((user) => (
+                        {Array.isArray(availableUsers) && availableUsers.map((user) => (
                           <option key={user.id} value={user.id}>
                             {user.name} ({user.email})
                           </option>
@@ -1791,14 +1778,11 @@ export const ProjectDetailPage: React.FC = () => {
             </Card>
           )}
 
-          {/* Activity Tab */}
+          {/* Activity Tab - Project History */}
           {activeTab === 'activity' && (
-            <ActivityFeed
-              activities={activities}
-              loading={activityLoading}
-              error={activityError as Error | null}
-              title="Project Activity"
-              limit={20}
+            <ProjectHistorySection
+              projectId={id!}
+              filters={{ limit: 50 }}
             />
           )}
         </div>
@@ -1817,7 +1801,8 @@ export const ProjectDetailPage: React.FC = () => {
           }}
         />
       )}
-    </Container>
+      </Container>
+    </ToastProvider>
   );
 };
 

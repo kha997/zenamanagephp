@@ -24,14 +24,20 @@ import {
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const projectId = id ? parseInt(id) : 0;
+  // Don't use parseInt for ULID - use id directly as string
+  const projectId = id || '';
 
   const { data: projectResponse, isLoading, error } = useProject(projectId);
-  const { data: documentsResponse } = useDocuments({ project_id: projectId, per_page: 5 });
+  // Convert to number if needed for documents query, otherwise use string
+  const documentsProjectId = typeof projectId === 'string' && /^\d+$/.test(projectId) ? parseInt(projectId) : projectId;
+  const { data: documentsResponse } = useDocuments({ project_id: documentsProjectId, per_page: 5 });
   const deleteProjectMutation = useDeleteProject();
 
   const project = projectResponse?.data;
-  const documents = documentsResponse?.data || [];
+  const documents = Array.isArray(documentsResponse?.data) ? documentsResponse.data : [];
+  
+  // Normalize team_members to always be an array
+  const teamMembers = Array.isArray(project?.team_members) ? project.team_members : [];
 
   const handleDeleteProject = async () => {
     if (window.confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
@@ -188,7 +194,7 @@ export default function ProjectDetailPage() {
             <UserGroupIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{project.team_members.length}</div>
+            <div className="text-2xl font-bold">{teamMembers.length}</div>
           </CardContent>
         </Card>
 
@@ -267,7 +273,7 @@ export default function ProjectDetailPage() {
                 <UserGroupIcon className="h-4 w-4 text-gray-400" />
                 <div>
                   <p className="text-sm font-medium">Team Size</p>
-                  <p className="text-sm text-gray-600">{project.team_members.length} members</p>
+                  <p className="text-sm text-gray-600">{teamMembers.length} members</p>
                 </div>
               </div>
             </CardContent>

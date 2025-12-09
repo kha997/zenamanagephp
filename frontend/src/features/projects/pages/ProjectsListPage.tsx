@@ -16,12 +16,50 @@ import { useAuthStore } from '../../../features/auth/store';
 import { useProjects, useProjectsKpis, useProjectsActivity, useProjectsAlerts, useUpdateProject } from '../hooks';
 import { useProjectHealthPortfolio } from '../../../features/reports/hooks';
 import { getOverallStatusLabel, getOverallStatusTone } from '../healthStatus';
+import { ProjectCostHealthCell } from '../components/ProjectCostHealthCell';
+import { ProjectCostFlowStatusCell } from '../components/ProjectCostFlowStatusCell';
+import { ProjectCostAlertsIcon } from '../components/ProjectCostAlertsIcon';
 import type { ProjectOverviewHealth } from '../api';
 import type { KpiItem } from '../../../components/shared/KpiStrip';
 import type { Alert } from '../../../components/shared/AlertBar';
 import type { Activity } from '../../../components/shared/ActivityFeed';
 import type { ProjectFilters } from '../types';
 import type { Project } from '../types';
+
+/**
+ * ErrorBoundary for E2E debugging - reveals component stack on crash
+ */
+class E2EErrorBoundary extends React.Component<
+  { label: string; children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, info: any) {
+    // Component stack is the gold - shows exact component causing crash
+    console.error(
+      `[E2EErrorBoundary:${this.props.label}]`,
+      error?.message ?? error,
+      "\nCOMPONENT_STACK:\n",
+      info?.componentStack ?? ""
+    );
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div data-testid={`e2e-eb-${this.props.label}`}>
+          Error in {this.props.label}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 type ViewMode = 'table' | 'card' | 'kanban';
 type OverallHealthFilter = 'all' | 'good' | 'warning' | 'critical';
@@ -96,10 +134,36 @@ export const ProjectsListPage: React.FC = () => {
   }, [searchInput, setSearchParams]);
   
   // Fetch data with filters and pagination
-  const { data: projectsData, isLoading: projectsLoading, error: projectsError, refetch: refetchProjects } = useProjects(
+  const { data: projectsDataRaw, isLoading: projectsLoading, error: projectsError, refetch: refetchProjects } = useProjects(
     filters,
     { page, per_page: perPage }
   );
+  
+  // Normalize projectsData to ensure data is always an array
+  const projectsData = useMemo(() => {
+    if (!projectsDataRaw) {
+      return {
+        data: [],
+        meta: { current_page: 1, last_page: 1, per_page: perPage, total: 0 }
+      };
+    }
+    
+    // Ensure data is always an array
+    let data: any[] = [];
+    if (Array.isArray(projectsDataRaw.data)) {
+      data = projectsDataRaw.data;
+    } else if (projectsDataRaw.data?.items && Array.isArray(projectsDataRaw.data.items)) {
+      data = projectsDataRaw.data.items;
+    } else if (projectsDataRaw.data?.data && Array.isArray(projectsDataRaw.data.data)) {
+      data = projectsDataRaw.data.data;
+    }
+    
+    return {
+      ...projectsDataRaw,
+      data: Array.isArray(data) ? data : [],
+      meta: projectsDataRaw.meta || { current_page: 1, last_page: 1, per_page: perPage, total: 0 }
+    };
+  }, [projectsDataRaw, perPage]);
   
   // Fetch health data (only if user has permission)
   const {
@@ -133,7 +197,8 @@ export const ProjectsListPage: React.FC = () => {
   // Filter out dismissed alerts
   const activeAlerts = useMemo(() => {
     if (!alertsData?.data) return [];
-    return alertsData.data.filter(alert => !dismissedAlerts.has(alert.id));
+    const alertsArray = Array.isArray(alertsData.data) ? alertsData.data : [];
+    return alertsArray.filter(alert => !dismissedAlerts.has(alert.id));
   }, [alertsData, dismissedAlerts]);
   
   // Handle dismiss single alert
@@ -150,7 +215,8 @@ export const ProjectsListPage: React.FC = () => {
   // Handle dismiss all alerts
   const handleDismissAllAlerts = useCallback(() => {
     if (!alertsData?.data) return;
-    const allIds = alertsData.data.map(alert => alert.id);
+    const alertsArray = Array.isArray(alertsData.data) ? alertsData.data : [];
+    const allIds = alertsArray.map(alert => alert.id);
     setDismissedAlerts(prev => new Set([...prev, ...allIds]));
   }, [alertsData]);
 
@@ -237,7 +303,7 @@ export const ProjectsListPage: React.FC = () => {
 
   // Transform alerts data to Alert format (only active alerts)
   const alerts: Alert[] = useMemo(() => {
-    if (!activeAlerts || activeAlerts.length === 0) return [];
+    if (!Array.isArray(activeAlerts) || activeAlerts.length === 0) return [];
     return activeAlerts.map((alert: any) => ({
       id: alert.id,
       message: alert.message || alert.title || 'Alert',
@@ -252,17 +318,16 @@ export const ProjectsListPage: React.FC = () => {
   // Transform activity data to Activity format
   const activities: Activity[] = useMemo(() => {
     if (!activityData?.data) return [];
-    return Array.isArray(activityData.data)
-      ? activityData.data.map((activity: any) => ({
-          id: activity.id,
-          type: activity.type || 'project',
-          action: activity.action,
-          description: activity.description || activity.message || 'Activity',
-          timestamp: activity.timestamp || activity.created_at || activity.createdAt,
-          user: activity.user,
-          metadata: activity.metadata,
-        }))
-      : [];
+    const activitiesArray = Array.isArray(activityData.data) ? activityData.data : [];
+    return activitiesArray.map((activity: any) => ({
+      id: activity.id,
+      type: activity.type || 'project',
+      action: activity.action,
+      description: activity.description || activity.message || 'Activity',
+      timestamp: activity.timestamp || activity.created_at || activity.createdAt,
+      user: activity.user,
+      metadata: activity.metadata,
+    }));
   }, [activityData]);
 
   // Helper function to check if a project is overdue
@@ -351,25 +416,35 @@ export const ProjectsListPage: React.FC = () => {
 
   // Apply health filter to projects (client-side)
   const filteredProjects = useMemo(() => {
-    if (!projectsData?.data) return [];
-    
-    let projects = projectsData.data;
-    
-    // Apply health filter if user has permission and filter is not 'all'
-    if (canViewReports && overallHealthFilter !== 'all') {
-      projects = projects.filter((project) => {
-        const health = healthByProjectId.get(project.id);
-        if (!health) return false; // If no health data, it doesn't match any specific status
-        return health.overall_status === overallHealthFilter;
-      });
+    try {
+      // Safely extract projects array from response
+      const projectsArray = Array.isArray(projectsData?.data) 
+        ? projectsData.data 
+        : (projectsData?.data?.items ?? projectsData?.data?.data ?? []);
+      
+      if (!Array.isArray(projectsArray) || projectsArray.length === 0) return [];
+      
+      let projects = projectsArray;
+      
+      // Apply health filter if user has permission and filter is not 'all'
+      if (canViewReports && overallHealthFilter !== 'all') {
+        projects = projects.filter((project) => {
+          const health = healthByProjectId.get(project.id);
+          if (!health) return false; // If no health data, it doesn't match any specific status
+          return health.overall_status === overallHealthFilter;
+        });
+      }
+      
+      return projects;
+    } catch (error) {
+      console.error('[filteredProjects useMemo error]', error);
+      return [];
     }
-    
-    return projects;
   }, [projectsData?.data, canViewReports, overallHealthFilter, healthByProjectId]);
   
   // Group projects by status for kanban view (using filtered projects)
   const groupedProjects = useMemo(() => {
-    if (!filteredProjects || filteredProjects.length === 0) return {};
+    if (!Array.isArray(filteredProjects) || filteredProjects.length === 0) return {};
     const grouped: Record<string, typeof filteredProjects> = {
       planning: [],
       active: [],
@@ -449,7 +524,8 @@ export const ProjectsListPage: React.FC = () => {
     const projectId = draggableId;
 
     // Find the project being moved
-    const project = projectsData?.data?.find(p => String(p.id) === projectId);
+    const projectsArray = Array.isArray(projectsData?.data) ? projectsData.data : [];
+    const project = projectsArray.find(p => String(p.id) === projectId);
     if (!project) {
       return;
     }
@@ -577,23 +653,27 @@ export const ProjectsListPage: React.FC = () => {
         </div>
 
         {/* KPI Strip */}
-        <KpiStrip
-          kpis={kpiItems}
-          loading={kpisLoading}
-          period={kpiPeriod}
-          onPeriodChange={setKpiPeriod}
-          showPeriodSelector={true}
-        />
+        <E2EErrorBoundary label="KpiStrip">
+          <KpiStrip
+            kpis={kpiItems}
+            loading={kpisLoading}
+            period={kpiPeriod}
+            onPeriodChange={setKpiPeriod}
+            showPeriodSelector={true}
+          />
+        </E2EErrorBoundary>
 
         {/* Alert Bar */}
-        <AlertBar
-          alerts={alerts}
-          loading={alertsLoading}
-          error={alertsError as Error | null}
-          onDismiss={handleDismissAlert}
-          onDismissAll={handleDismissAllAlerts}
-          onAlertClick={handleAlertClick}
-        />
+        <E2EErrorBoundary label="Alerts">
+          <AlertBar
+            alerts={alerts}
+            loading={alertsLoading}
+            error={alertsError as Error | null}
+            onDismiss={handleDismissAlert}
+            onDismissAll={handleDismissAllAlerts}
+            onAlertClick={handleAlertClick}
+          />
+        </E2EErrorBoundary>
 
         {/* Search and Filters */}
         <Card>
@@ -692,14 +772,19 @@ export const ProjectsListPage: React.FC = () => {
           <CardHeader>
             <CardTitle>
               All Projects
-              {filteredProjects.length > 0 && (
+              {Array.isArray(filteredProjects) && filteredProjects.length > 0 && (
                 <span className="ml-2 text-sm font-normal text-[var(--muted)]">
                   ({filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'})
-                  {canViewReports && overallHealthFilter !== 'all' && projectsData?.data && filteredProjects.length !== projectsData.data.length && (
-                    <span className="ml-1">
-                      {' '}(filtered from {projectsData.data.length} total)
-                    </span>
-                  )}
+                  {canViewReports && overallHealthFilter !== 'all' && (() => {
+                    const totalProjects = Array.isArray(projectsData?.data) 
+                      ? projectsData.data.length 
+                      : (projectsData?.data?.items?.length ?? projectsData?.data?.data?.length ?? 0);
+                    return totalProjects > 0 && Array.isArray(filteredProjects) && filteredProjects.length !== totalProjects && (
+                      <span className="ml-1">
+                        {' '}(filtered from {totalProjects} total)
+                      </span>
+                    );
+                  })()}
                 </span>
               )}
             </CardTitle>
@@ -725,10 +810,10 @@ export const ProjectsListPage: React.FC = () => {
                   Retry
                 </Button>
               </div>
-            ) : filteredProjects && filteredProjects.length > 0 ? (
+            ) : Array.isArray(filteredProjects) && filteredProjects.length > 0 ? (
               <>
                 {/* Table View */}
-                {viewMode === 'table' && filteredProjects.length > 0 && (
+                {viewMode === 'table' && Array.isArray(filteredProjects) && filteredProjects.length > 0 && (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
@@ -736,6 +821,8 @@ export const ProjectsListPage: React.FC = () => {
                           <th className="text-left py-3 px-4 font-semibold text-[var(--text)]">Project</th>
                           <th className="text-left py-3 px-4 font-semibold text-[var(--text)]">Status</th>
                           {canViewReports && <th className="text-left py-3 px-4 font-semibold text-[var(--text)]">Health</th>}
+                          <th className="text-left py-3 px-4 font-semibold text-[var(--text)]">Cost Health</th>
+                          <th className="text-left py-3 px-4 font-semibold text-[var(--text)]">Cost Flow</th>
                           <th className="text-left py-3 px-4 font-semibold text-[var(--text)]">Priority</th>
                           <th className="text-left py-3 px-4 font-semibold text-[var(--text)]">Start Date</th>
                           <th className="text-left py-3 px-4 font-semibold text-[var(--text)]">End Date</th>
@@ -743,7 +830,8 @@ export const ProjectsListPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredProjects.map((project) => {
+                        {Array.isArray(filteredProjects) && filteredProjects.map((project) => {
+                          if (!project) return null;
                           const health = canViewReports ? healthByProjectId.get(project.id) : null;
                           const healthLabel = health ? getOverallStatusLabel(health.overall_status) : null;
                           const healthTone = health ? getOverallStatusTone(health.overall_status) : 'neutral';
@@ -760,7 +848,10 @@ export const ProjectsListPage: React.FC = () => {
                           >
                             <td className="py-3 px-4">
                               <div className={`font-semibold ${isProjectOverdue(project) ? 'text-[var(--text)] dark:text-red-500' : 'text-[var(--text)]'}`}>
-                                {project.name}
+                                <div className="flex items-center gap-1">
+                                  {project.name}
+                                  <ProjectCostAlertsIcon projectId={project.id} />
+                                </div>
                               </div>
                               {project.description && (
                                 <div className={`text-xs mt-1 line-clamp-1 ${isProjectOverdue(project) ? 'text-[var(--muted)] dark:text-red-600/80' : 'text-[var(--muted)]'}`}>
@@ -794,6 +885,12 @@ export const ProjectsListPage: React.FC = () => {
                                 )}
                               </td>
                             )}
+                            <td className="py-3 px-4">
+                              <ProjectCostHealthCell projectId={project.id} showTooltip={true} />
+                            </td>
+                            <td className="py-3 px-4">
+                              <ProjectCostFlowStatusCell projectId={project.id} showTooltip={true} />
+                            </td>
                             <td className="py-3 px-4 text-[var(--muted)]">
                               {project.priority || '—'}
                             </td>
@@ -824,9 +921,10 @@ export const ProjectsListPage: React.FC = () => {
                 )}
 
                 {/* Card View */}
-                {viewMode === 'card' && filteredProjects.length > 0 && (
+                {viewMode === 'card' && Array.isArray(filteredProjects) && filteredProjects.length > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredProjects.map((project) => {
+                      if (!project) return null;
                       const health = canViewReports ? healthByProjectId.get(project.id) : null;
                       const healthLabel = health ? getOverallStatusLabel(health.overall_status) : null;
                       const healthTone = health ? getOverallStatusTone(health.overall_status) : 'neutral';
@@ -842,10 +940,11 @@ export const ProjectsListPage: React.FC = () => {
                         onClick={() => navigate(`/app/projects/${project.id}`)}
                       >
                         <div className="flex items-start justify-between mb-2">
-                          <h3 className={`font-semibold flex-1 ${isProjectOverdue(project) ? 'text-[var(--text)] dark:text-red-500' : 'text-[var(--text)]'}`}>
+                          <h3 className={`font-semibold flex-1 flex items-center gap-1 ${isProjectOverdue(project) ? 'text-[var(--text)] dark:text-red-500' : 'text-[var(--text)]'}`}>
                             {project.name}
+                            <ProjectCostAlertsIcon projectId={project.id} />
                           </h3>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className={`text-xs px-2 py-1 rounded ${getStatusBadgeClass(project.status || 'planning')}`}>
                               {project.status}
                             </span>
@@ -862,6 +961,8 @@ export const ProjectsListPage: React.FC = () => {
                                 {healthLabel}
                               </Badge>
                             )}
+                            <ProjectCostHealthCell projectId={project.id} showTooltip={true} />
+                            <ProjectCostFlowStatusCell projectId={project.id} showTooltip={true} />
                           </div>
                         </div>
                         {project.description && (
@@ -891,7 +992,7 @@ export const ProjectsListPage: React.FC = () => {
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                       {['planning', 'active', 'on_hold', 'completed', 'cancelled'].map((status) => {
-                        const projectsInStatus = groupedProjects[status] || [];
+                        const projectsInStatus = Array.isArray(groupedProjects[status]) ? groupedProjects[status] : [];
                         return (
                           <Droppable key={status} droppableId={status}>
                             {(provided, snapshot) => (
@@ -913,8 +1014,10 @@ export const ProjectsListPage: React.FC = () => {
                                   </span>
                                 </div>
                                 <div className="space-y-2">
-                                  {projectsInStatus.length > 0 ? (
-                                    projectsInStatus.map((project, index) => (
+                                  {Array.isArray(projectsInStatus) && projectsInStatus.length > 0 ? (
+                                    projectsInStatus.map((project, index) => {
+                                      if (!project) return null;
+                                      return (
                                       <Draggable
                                         key={String(project.id)}
                                         draggableId={String(project.id)}
@@ -937,8 +1040,9 @@ export const ProjectsListPage: React.FC = () => {
                                               }
                                             }}
                                           >
-                                            <div className="font-medium text-sm text-[var(--text)] mb-1">
+                                            <div className="font-medium text-sm text-[var(--text)] mb-1 flex items-center gap-1">
                                               {project.name}
+                                              <ProjectCostAlertsIcon projectId={project.id} />
                                             </div>
                                             {project.description && (
                                               <div className="text-xs text-[var(--muted)] line-clamp-2">
@@ -1005,17 +1109,21 @@ export const ProjectsListPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+        </E2EErrorBoundary>
 
         {/* Activity Feed */}
-        <ActivityFeed
-          activities={activities}
-          loading={activityLoading}
-          error={activityError as Error | null}
-          title="Recent Activity"
-          limit={10}
-        />
-      </div>
-    </Container>
+        <E2EErrorBoundary label="ActivityFeed">
+          <ActivityFeed
+            activities={activities}
+            loading={activityLoading}
+            error={activityError as Error | null}
+            title="Recent Activity"
+            limit={10}
+          />
+        </E2EErrorBoundary>
+        </div>
+      </Container>
+    </E2EErrorBoundary>
   );
 };
 

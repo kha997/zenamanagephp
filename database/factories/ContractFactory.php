@@ -27,7 +27,7 @@ class ContractFactory extends Factory
             'tenant_id' => Tenant::factory(),
             'code' => 'CT-' . strtoupper($this->faker->unique()->regexify('[A-Z0-9]{8}')),
             'name' => $this->faker->sentence(3),
-            'status' => $this->faker->randomElement(Contract::VALID_STATUSES),
+            'status' => $this->faker->randomElement(['draft', 'active', 'completed', 'terminated']),
             'client_id' => null,
             'project_id' => null,
             'signed_at' => $this->faker->optional()->dateTimeBetween('-1 year', 'now'),

@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from './stores/authStore'
-import { useEffect } from 'react'
+import { useAuthStore } from './features/auth/store'
+import { useEffect, useRef } from 'react'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/Layout'
 import LoginPage from './pages/LoginPage'
@@ -32,11 +32,10 @@ import pwaService from './services/pwaService'
 import FrontendIntegrationTestPage from './pages/FrontendIntegrationTestPage'
 
 function App() {
-  const { user, isLoading, checkAuth } = useAuthStore()
+  const { user, isLoading } = useAuthStore()
 
+  // PWA and service worker initialization (no auth boot here - AppShell handles it)
   useEffect(() => {
-    checkAuth()
-    
     // Initialize PWA service
     pwaService.requestNotificationPermission()
     
@@ -50,7 +49,7 @@ function App() {
           console.log('SW registration failed: ', registrationError)
         })
     }
-  }, [checkAuth])
+  }, [])
 
   if (isLoading) {
     return (

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Model Role - Quản lý vai trò trong hệ thống RBAC
@@ -59,6 +61,56 @@ class Role extends Model
         self::SCOPE_CUSTOM,
         self::SCOPE_PROJECT,
     ];
+
+    /**
+     * Ensure the legacy roles table mirrors the ZENA roles.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::saved(function (self $role) {
+            self::syncRolesTableEntry($role);
+        });
+
+        static::deleted(function (self $role) {
+            self::deleteRolesTableEntry($role);
+        });
+    }
+
+    protected static function syncRolesTableEntry(self $role): void
+    {
+        if (!Schema::hasTable('roles')) {
+            return;
+        }
+
+        $timestamp = $role->updated_at ?? now();
+
+        DB::table('roles')->updateOrInsert(
+            ['id' => $role->id],
+            [
+                'name' => $role->name,
+                'scope' => $role->scope ?? self::SCOPE_SYSTEM,
+                'allow_override' => $role->allow_override ?? false,
+                'description' => $role->description,
+                'is_active' => $role->is_active ?? true,
+                'tenant_id' => $role->tenant_id,
+                'created_by' => $role->created_by,
+                'updated_by' => $role->updated_by,
+                'created_at' => $role->created_at ?? $timestamp,
+                'updated_at' => $timestamp,
+            ]
+        );
+    }
+
+    protected static function deleteRolesTableEntry(self $role): void
+    {
+        if (!Schema::hasTable('roles')) {
+            return;
+        }
+
+        DB::table('roles')->where('id', $role->id)->delete();
+    }
 
     /**
      * Relationship: Role có nhiều permissions
@@ -141,3 +193,4 @@ class Role extends Model
         return $query->where('scope', self::SCOPE_PROJECT);
     }
 }
+

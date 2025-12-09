@@ -221,6 +221,7 @@ class AuthenticationController extends Controller
 
     /**
      * Get current user information
+     * Uses MeService to build standardized response with permissions and tenant context
      */
     public function me(Request $request)
     {
@@ -236,17 +237,37 @@ class AuthenticationController extends Controller
                 );
             }
 
-            return ApiResponse::success([
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'tenant_id' => $user->tenant_id,
-                    'email_verified_at' => $user->email_verified_at,
-                    'last_login_at' => $user->last_login_at,
-                    'created_at' => $user->created_at,
-                ]
-            ]);
+            // Use MeService to build standardized response
+            $meService = app(\App\Services\MeService::class);
+            $meData = $meService->buildMeResponse($user, $request);
+            
+            // Ensure current_tenant_permissions is always an array (never null/undefined)
+            if (!isset($meData['current_tenant_permissions']) || !is_array($meData['current_tenant_permissions'])) {
+                $meData['current_tenant_permissions'] = [];
+            }
+            
+            // For super_admin with active tenant, ensure they have full tenant permissions
+            // Super admin bypasses tenant middleware but FE still needs permissions to make API calls
+            $isSuperAdmin = ($user->role === 'super_admin') || (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin());
+            $hasActiveTenant = !empty($meData['user']['tenant_id']);
+            $hasNoTenantPermissions = empty($meData['current_tenant_permissions']);
+            
+            if ($isSuperAdmin && $hasActiveTenant && $hasNoTenantPermissions) {
+                // Super admin with active tenant but no tenant role membership
+                // Grant full tenant permissions for the active tenant so FE can make API calls
+                $meData['current_tenant_permissions'] = [
+                    'tenant.view_projects',
+                    'tenant.manage_projects',
+                    'tenant.view_tasks',
+                    'tenant.manage_tasks',
+                    'tenant.view_users',
+                    'tenant.manage_users',
+                    'tenant.view_reports',
+                    'tenant.manage_settings',
+                ];
+            }
+
+            return ApiResponse::success($meData);
 
         } catch (\Exception $e) {
             Log::error('Get user info failed', [

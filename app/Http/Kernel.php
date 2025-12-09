@@ -50,6 +50,18 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\PerformanceLoggingMiddleware::class,
         ],
+
+        // API stateful group - for SPA authentication with session support
+        'api.stateful' => [
+            \App\Http\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \App\Http\Middleware\DebugAuthMiddleware::class, // Round 157: Added for E2E debugging
+            'throttle:api',
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\PerformanceLoggingMiddleware::class,
+        ],
     ];
 
         /**
@@ -62,6 +74,7 @@ class Kernel extends HttpKernel
             // auth:sanctum will use Laravel's default Authenticate middleware with 'sanctum' guard
             // For SPA stateful auth, use: auth.sanctum.stateful
             'auth.sanctum.stateful' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            'debug.auth'            => \App\Http\Middleware\DebugAuthMiddleware::class,
             'throttle'             => \Illuminate\Routing\Middleware\ThrottleRequests::class,
 
             // ✳️ Authentication & Authorization
@@ -93,6 +106,9 @@ class Kernel extends HttpKernel
             // ✳️ Security & Session Management
             'brute.force.protection' => \App\Http\Middleware\BruteForceProtectionMiddleware::class,
             'session.management'     => \App\Http\Middleware\SessionManagementMiddleware::class,
+
+            // ✳️ Signed URLs
+            'signed'                 => \Illuminate\Routing\Middleware\ValidateSignature::class,
 
             // ⚠️ CORS: nếu dùng custom CorsMiddleware thì bỏ HandleCors ở global trên.
             // 'cors'               => \App\Http\Middleware\CorsMiddleware::class,

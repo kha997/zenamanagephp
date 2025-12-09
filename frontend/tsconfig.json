@@ -35,5 +35,13 @@
     "src/main.tsx",
     "src/index.css"
   ],
+  "exclude": [
+    "**/*.spec.*",
+    "**/*.test.*",
+    "**/__tests__/**",
+    "**/e2e/**",
+    "**/*.stories.*",
+    "node_modules"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

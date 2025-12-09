@@ -26,6 +26,10 @@ export const invalidateMap = {
   'project.addTeamMember': ['project', 'projects'],
   'project.removeTeamMember': ['project', 'projects'],
   'project.uploadDocument': ['projects', 'project'],
+  'project.updateDocument': ['projects', 'project'],
+  'project.deleteDocument': ['projects', 'project'],
+  'project.uploadDocumentVersion': ['projects', 'project'],
+  'project.restoreDocumentVersion': ['projects', 'project'],
   
   // Document mutations
   'document.create': ['documents', 'dashboard'],

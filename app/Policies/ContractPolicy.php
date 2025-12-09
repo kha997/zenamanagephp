@@ -4,24 +4,27 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Contract;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
 /**
  * ContractPolicy
  * 
- * Round 33: MVP Contract Backend
+ * Round 229: Cost Vertical Permissions
  * 
  * Authorization policy for Contract model operations.
  * Ensures multi-tenant isolation and proper access control.
- * Permission checks (tenant.view_contracts, tenant.manage_contracts) are handled by middleware.
  */
 class ContractPolicy
 {
+    use HandlesAuthorization;
+
     /**
      * Determine whether the user can view any contracts.
      */
     public function viewAny(User $user): bool
     {
-        return $user->tenant_id !== null;
+        // Must have cost view permission
+        return $user->tenant_id !== null && $user->hasPermission('projects.cost.view');
     }
 
     /**
@@ -30,8 +33,12 @@ class ContractPolicy
     public function view(User $user, Contract $contract): bool
     {
         // Multi-tenant isolation
-        // Convert both to string for comparison (tenant_id can be Ulid object or string)
-        return (string) $user->tenant_id === (string) $contract->tenant_id;
+        if ($user->tenant_id !== $contract->tenant_id) {
+            return false;
+        }
+
+        // Must have cost view permission
+        return $user->hasPermission('projects.cost.view');
     }
 
     /**
@@ -39,7 +46,13 @@ class ContractPolicy
      */
     public function create(User $user): bool
     {
-        return $user->tenant_id !== null;
+        // Multi-tenant check
+        if ($user->tenant_id === null) {
+            return false;
+        }
+
+        // Must have cost edit permission
+        return $user->hasPermission('projects.cost.edit');
     }
 
     /**
@@ -48,8 +61,12 @@ class ContractPolicy
     public function update(User $user, Contract $contract): bool
     {
         // Multi-tenant isolation
-        // Convert both to string for comparison (tenant_id can be Ulid object or string)
-        return (string) $user->tenant_id === (string) $contract->tenant_id;
+        if ($user->tenant_id !== $contract->tenant_id) {
+            return false;
+        }
+
+        // Must have cost edit permission
+        return $user->hasPermission('projects.cost.edit');
     }
 
     /**
@@ -58,7 +75,11 @@ class ContractPolicy
     public function delete(User $user, Contract $contract): bool
     {
         // Multi-tenant isolation
-        // Convert both to string for comparison (tenant_id can be Ulid object or string)
-        return (string) $user->tenant_id === (string) $contract->tenant_id;
+        if ($user->tenant_id !== $contract->tenant_id) {
+            return false;
+        }
+
+        // Must have cost edit permission
+        return $user->hasPermission('projects.cost.edit');
     }
 }

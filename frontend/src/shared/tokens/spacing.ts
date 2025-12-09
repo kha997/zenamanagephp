@@ -10,4 +10,6 @@ export const spacingTokens = {
   '3xl': '3rem',
 } as const;
 
+export const spacing = spacingTokens;
+
 export type SpacingToken = keyof typeof spacingTokens;

@@ -150,7 +150,7 @@ export const ApplyTemplateToProjectModal: React.FC<ApplyTemplateToProjectModalPr
         variant: 'outline',
       }}
     >
-      <div className="space-y-4">
+      <div className="space-y-4" data-testid="apply-template-modal">
         {/* Template Set Selector */}
         <div>
           <label className="block text-sm font-medium text-[var(--text)] mb-2">
@@ -159,7 +159,7 @@ export const ApplyTemplateToProjectModal: React.FC<ApplyTemplateToProjectModalPr
           {isLoadingSets ? (
             <div className="text-sm text-[var(--muted)]">Đang tải...</div>
           ) : templateSetOptions.length === 0 ? (
-            <div className="text-sm text-[var(--muted)] py-2">
+            <div className="text-sm text-[var(--muted)] py-2" data-testid="apply-template-no-templates">
               Không có mẫu công việc nào khả dụng
             </div>
           ) : (
@@ -169,6 +169,7 @@ export const ApplyTemplateToProjectModal: React.FC<ApplyTemplateToProjectModalPr
               onChange={setSelectedTemplateSetId}
               placeholder="Chọn mẫu công việc"
               disabled={applyMutation.isPending}
+              data-testid="apply-template-select-trigger"
             />
           )}
         </div>

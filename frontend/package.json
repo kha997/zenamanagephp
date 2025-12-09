@@ -83,6 +83,7 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
     "eslint-plugin-storybook": "^9.1.15",
+    "history": "^5.3.0",
     "jsdom": "^27.0.0",
     "postcss": "^8.4.31",
     "storybook": "^9.1.15",

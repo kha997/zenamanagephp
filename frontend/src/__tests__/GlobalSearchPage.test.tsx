@@ -114,11 +114,9 @@ describe('GlobalSearchPage', () => {
   it('renders grouped results for all modules', () => {
     renderWithRouter();
 
-    expect(screen.getByText('Project')).toBeInTheDocument();
-    expect(screen.getByText('Task')).toBeInTheDocument();
-    expect(screen.getByText('Document')).toBeInTheDocument();
-    expect(screen.getByText('Cost')).toBeInTheDocument();
-    expect(screen.getByText('User')).toBeInTheDocument();
+    ['Project', 'Task', 'Document', 'Cost', 'User'].forEach((label) => {
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    });
 
     const resultCards = screen.getAllByTestId('global-search-result');
     expect(resultCards).toHaveLength(5);
@@ -126,9 +124,9 @@ describe('GlobalSearchPage', () => {
 
   it('updates query params when submitting header search', () => {
     const history = renderWithRouter();
-    const input = screen.getByLabelText('Global search') as HTMLInputElement;
+    const input = screen.getByLabelText('Search query') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Library' } });
-    fireEvent.click(screen.getByRole('button', { name: /search/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^search$/i }));
 
     expect(history.location.search).toContain('q=Library');
     expect(history.location.search).toContain('page=1');

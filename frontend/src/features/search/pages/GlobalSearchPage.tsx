@@ -4,7 +4,7 @@ import { useGlobalSearch } from '../hooks/useGlobalSearch';
 import { GlobalSearchResultItem } from '../components/GlobalSearchResultItem';
 import { resolveSearchResultRoute } from '../lib/navigation';
 import { useProjects } from '@/features/projects/hooks';
-import type { GlobalSearchModule } from '@/api/searchApi';
+import type { GlobalSearchModule, GlobalSearchResult } from '@/api/searchApi';
 
 const PER_PAGE = 20;
 
@@ -99,7 +99,7 @@ export const GlobalSearchPage: React.FC = () => {
     setSearchParams(params);
   };
 
-  const handleResultClick = (result: typeof searchQuery.data?.results[number]) => {
+  const handleResultClick = (result: GlobalSearchResult) => {
     const route = resolveSearchResultRoute(result);
     if (!route) {
       return;

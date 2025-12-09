@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '../../shared/ui/button';
@@ -8,13 +8,16 @@ import { useAuthStore } from '../../features/auth/store';
 import { PrimaryNavigator } from '../../components/layout/PrimaryNavigator';
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications';
 import { useNotificationCrossTabSync } from '../../hooks/useNotificationCrossTabSync';
+import { CommandPaletteProvider, useCommandPalette } from '../../features/search/context/CommandPaletteContext';
+import { CommandPalette } from '../../features/search/components/CommandPalette';
 
-const MainLayout: React.FC = () => {
+const MainLayoutContent: React.FC = () => {
   const { mode, toggleMode } = useThemeMode();
   const { t } = useI18n();
   const { logout, user } = useAuthStore();
   const navigate = useNavigate();
   const [headerSearch, setHeaderSearch] = useState('');
+  const { toggle: toggleCommandPalette } = useCommandPalette();
 
   const handleHeaderSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -30,6 +33,41 @@ const MainLayout: React.FC = () => {
   
   // Round 259: Subscribe to cross-tab notification sync
   useNotificationCrossTabSync();
+
+  // Round 264: Keyboard shortcut handler for Command Palette (Cmd+K / Ctrl+K)
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isShortcut = isMac ? event.metaKey && event.key === 'k' : event.ctrlKey && event.key === 'k';
+
+      if (!isShortcut) {
+        return;
+      }
+
+      // Don't trigger if focus is in an input, textarea, or contentEditable element
+      const target = event.target as HTMLElement;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      toggleCommandPalette();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [toggleCommandPalette]);
 
   const handleLogout = async () => {
     await logout();
@@ -108,7 +146,16 @@ const MainLayout: React.FC = () => {
           </div>
         </main>
       </div>
+      <CommandPalette />
     </div>
+  );
+};
+
+const MainLayout: React.FC = () => {
+  return (
+    <CommandPaletteProvider>
+      <MainLayoutContent />
+    </CommandPaletteProvider>
   );
 };
 

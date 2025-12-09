@@ -12,9 +12,41 @@ const MODULE_LABELS: Record<GlobalSearchResult['module'], string> = {
 interface GlobalSearchResultItemProps {
   result: GlobalSearchResult;
   onClick?: () => void;
+  onSecondaryClick?: () => void;
+  highlightTerm?: string;
 }
 
-export function GlobalSearchResultItem({ result, onClick }: GlobalSearchResultItemProps) {
+/**
+ * Highlight matching text in a string
+ */
+function highlightText(text: string | null | undefined, term: string | undefined): React.ReactNode {
+  if (!text || !term || term.trim() === '') {
+    return text ?? '';
+  }
+
+  const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escapedTerm})`, 'gi');
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        // Check if this part matches the term (case-insensitive)
+        const isMatch = new RegExp(`^${escapedTerm}$`, 'i').test(part);
+        if (isMatch) {
+          return (
+            <mark key={index} className="bg-yellow-100 px-0.5 rounded">
+              {part}
+            </mark>
+          );
+        }
+        return <React.Fragment key={index}>{part}</React.Fragment>;
+      })}
+    </>
+  );
+}
+
+export function GlobalSearchResultItem({ result, onClick, onSecondaryClick, highlightTerm }: GlobalSearchResultItemProps) {
   const label = MODULE_LABELS[result.module];
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -23,6 +55,32 @@ export function GlobalSearchResultItem({ result, onClick }: GlobalSearchResultIt
       onClick?.();
     }
   };
+
+  const handleSecondaryClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    onSecondaryClick?.();
+  };
+
+  const getSecondaryActionLabel = (): string | null => {
+    if (!onSecondaryClick) {
+      return null;
+    }
+    switch (result.module) {
+      case 'tasks':
+        return 'Open in project';
+      case 'documents':
+        return 'Open in project';
+      case 'cost':
+        if (result.type === 'change_order') {
+          return 'Open contract';
+        }
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  const secondaryLabel = getSecondaryActionLabel();
 
   return (
     <div
@@ -44,16 +102,32 @@ export function GlobalSearchResultItem({ result, onClick }: GlobalSearchResultIt
         )}
       </div>
       <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-        {result.title}
+        {highlightText(result.title, highlightTerm)}
       </h3>
       {result.subtitle && (
-        <p className="text-xs text-[var(--color-text-secondary)]">{result.subtitle}</p>
+        <p className="text-xs text-[var(--color-text-secondary)]">
+          {highlightText(result.subtitle, highlightTerm)}
+        </p>
       )}
       {result.project_name && (
         <p className="text-[var(--color-text-tertiary)] text-xs">Project: {result.project_name}</p>
       )}
       {result.description && (
-        <p className="text-[var(--color-text-muted)] text-sm">{result.description}</p>
+        <p className="text-[var(--color-text-muted)] text-sm">
+          {highlightText(result.description, highlightTerm)}
+        </p>
+      )}
+      {secondaryLabel && (
+        <div className="mt-2 flex items-center justify-end border-t border-[var(--color-border-subtle)] pt-2">
+          <button
+            type="button"
+            onClick={handleSecondaryClick}
+            className="text-xs text-primary-600 hover:text-primary-700 hover:underline"
+            data-testid="secondary-action-button"
+          >
+            {secondaryLabel}
+          </button>
+        </div>
       )}
     </div>
   );

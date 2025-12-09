@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGlobalSearch } from '../hooks/useGlobalSearch';
 import { GlobalSearchResultItem } from '../components/GlobalSearchResultItem';
-import { resolveSearchResultRoute } from '../lib/navigation';
+import { resolveSearchResultRoute, resolveSearchResultSecondaryRoute } from '../lib/navigation';
 import { useProjects } from '@/features/projects/hooks';
 import type { GlobalSearchModule, GlobalSearchResult } from '@/api/searchApi';
 
@@ -21,12 +21,23 @@ export const GlobalSearchPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchInput, setSearchInput] = useState(searchParams.get('q') ?? '');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const rawModule = (searchParams.get('module') ?? 'all') as 'all' | GlobalSearchModule;
   const moduleFilter = MODULE_FILTERS.some((option) => option.id === rawModule) ? rawModule : 'all';
   const projectFilter = searchParams.get('project_id') ?? '';
   const pageParam = Math.max(1, Number(searchParams.get('page') ?? '1'));
   const projectOptions = useProjects(undefined, { page: 1, per_page: 50 });
+
+  // Auto-focus input on mount if q is empty
+  useEffect(() => {
+    if (typeof window !== 'undefined' && inputRef.current) {
+      const q = searchParams.get('q');
+      if (!q || q.trim() === '') {
+        inputRef.current.focus();
+      }
+    }
+  }, []); // Only on mount
 
   useEffect(() => {
     setSearchInput(searchParams.get('q') ?? '');
@@ -108,6 +119,22 @@ export const GlobalSearchPage: React.FC = () => {
     navigate(path);
   };
 
+  const handleSecondaryClick = (result: GlobalSearchResult) => {
+    const route = resolveSearchResultSecondaryRoute(result);
+    if (!route) {
+      return;
+    }
+    const path = route.search ? `${route.path}${route.search}` : route.path;
+    navigate(path);
+  };
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      setSearchInput('');
+      // Don't auto-submit, just clear the input
+    }
+  };
+
   const totalResults = searchQuery.data?.pagination.total ?? 0;
   const hasMore = pageParam * PER_PAGE < totalResults;
 
@@ -123,11 +150,13 @@ export const GlobalSearchPage: React.FC = () => {
             Search query
           </label>
           <input
+            ref={inputRef}
             id="global-search-input"
             className="flex-1 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Search projects, tasks, documents, cost, or users..."
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
+            onKeyDown={handleInputKeyDown}
           />
           <button
             type="submit"
@@ -213,13 +242,18 @@ export const GlobalSearchPage: React.FC = () => {
                     </span>
                   </header>
                   <div className="grid gap-4 md:grid-cols-2">
-                    {group.items.map((item) => (
-                      <GlobalSearchResultItem
-                        key={`${item.module}-${item.id}`}
-                        result={item}
-                        onClick={() => handleResultClick(item)}
-                      />
-                    ))}
+                    {group.items.map((item) => {
+                      const secondaryRoute = resolveSearchResultSecondaryRoute(item);
+                      return (
+                        <GlobalSearchResultItem
+                          key={`${item.module}-${item.id}`}
+                          result={item}
+                          highlightTerm={searchParams.get('q') ?? ''}
+                          onClick={() => handleResultClick(item)}
+                          onSecondaryClick={secondaryRoute ? () => handleSecondaryClick(item) : undefined}
+                        />
+                      );
+                    })}
                   </div>
                 </section>
               ))}

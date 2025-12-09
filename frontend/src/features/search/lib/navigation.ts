@@ -44,3 +44,52 @@ function resolveCostRoute(result: GlobalSearchResult): GlobalSearchRoute | null 
 
   return { path: `/app/projects/${projectId}` };
 }
+
+/**
+ * Resolve secondary route for a search result (e.g., "Open in project" for tasks/documents)
+ */
+export function resolveSearchResultSecondaryRoute(result: GlobalSearchResult): GlobalSearchRoute | null {
+  const projectId = result.project_id;
+
+  switch (result.module) {
+    case 'tasks':
+      if (projectId) {
+        return {
+          path: `/app/projects/${projectId}`,
+          search: `?tab=tasks&taskId=${result.id}`,
+        };
+      }
+      return null;
+
+    case 'documents':
+      if (projectId) {
+        return {
+          path: `/app/projects/${projectId}`,
+          search: `?tab=documents&docId=${result.id}`,
+        };
+      }
+      // Fallback to document detail if no project_id
+      return { path: `/app/documents/${result.id}` };
+
+    case 'cost':
+      // For change_order, secondary route is the contract detail
+      if (result.type === 'change_order' && projectId) {
+        const contractId = result.entity?.contract_id as string | undefined;
+        if (contractId) {
+          return {
+            path: `/app/projects/${projectId}/contracts/${contractId}`,
+          };
+        }
+      }
+      // For other cost types, no secondary route
+      return null;
+
+    case 'projects':
+    case 'users':
+      // No secondary routes for these
+      return null;
+
+    default:
+      return null;
+  }
+}

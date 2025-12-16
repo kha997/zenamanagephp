@@ -525,7 +525,7 @@ jobs:
     name: Rollback Production
     runs-on: ubuntu-latest
     if: failure() && github.ref == 'refs/heads/main'
-    needs: [code-quality, backend-tests, frontend-tests, e2e-tests]
+    needs: [deploy-production]
     
     steps:
       - name: Checkout code

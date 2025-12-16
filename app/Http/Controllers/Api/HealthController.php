@@ -16,7 +16,7 @@ class HealthController extends Controller
 {
     /**
      * @OA\Get(
-     *   path="/api/health",
+     *   path="/api/v1/health",
      *   tags={"System"},
      *   summary="Health check endpoint",
      *   description="Returns the health status of the API",

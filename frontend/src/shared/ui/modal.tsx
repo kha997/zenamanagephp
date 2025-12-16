@@ -20,6 +20,7 @@ export interface ModalProps {
   primaryAction?: ModalAction;
   secondaryAction?: ModalAction;
   closeLabel?: string;
+  'data-testid'?: string;
 }
 
 const focusableSelector =
@@ -57,6 +58,7 @@ export const Modal: React.FC<ModalProps> = ({
   primaryAction,
   secondaryAction,
   closeLabel = 'Đóng',
+  'data-testid': testId,
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -108,6 +110,7 @@ export const Modal: React.FC<ModalProps> = ({
         tabIndex={-1}
         role="document"
         className="relative z-10 w-full max-w-lg rounded-[var(--radius-xl)] border border-[var(--color-border-default)] bg-[var(--color-surface-card)] shadow-xl focus:outline-none"
+        data-testid={testId}
       >
         <header className="flex items-start justify-between gap-4 border-b border-[var(--color-border-subtle)] px-6 py-4">
           <div className="space-y-1">

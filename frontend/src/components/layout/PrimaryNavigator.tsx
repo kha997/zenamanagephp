@@ -14,7 +14,8 @@ import {
   ShoppingCartIcon,
   CurrencyDollarIcon,
   UserGroupIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -34,6 +35,7 @@ const getNavigationForRole = (userRoles: string[]): NavItem[] => {
     { name: 'Dashboard', href: '/app/dashboard', icon: HomeIcon, roles: ['*'] },
     { name: 'Projects', href: '/app/projects', icon: FolderIcon, roles: ['*'] },
     { name: 'Tasks', href: '/app/tasks', icon: ClipboardDocumentListIcon, roles: ['*'] },
+    { name: 'Activity', href: '/app/activity', icon: ClockIcon, roles: ['*'] },
   ];
 
   const roleSpecificNavigation: NavItem[] = [

@@ -24,6 +24,26 @@ vi.mock('../../shared/auth/store', () => ({
     setLoading: vi.fn(),
     clearAuth: vi.fn(),
     refreshUser: vi.fn(),
+    checkAuth: vi.fn(),
+  })),
+}));
+
+vi.mock('../../features/auth/store', () => ({
+  useAuthStore: vi.fn(() => ({
+    user: { id: '1', name: 'Test User', roles: [] },
+    isAuthenticated: true,
+    isLoading: false,
+    logout: vi.fn(),
+    token: 'test-token',
+    error: null,
+    login: vi.fn(),
+    setUser: vi.fn(),
+    setToken: vi.fn(),
+    setError: vi.fn(),
+    setLoading: vi.fn(),
+    clearAuth: vi.fn(),
+    refreshUser: vi.fn(),
+    checkAuth: vi.fn(),
   })),
 }));
 
@@ -202,6 +222,22 @@ vi.mock('../../pages/SettingsPage', () => ({
   default: () => <div data-testid="settings-page">Settings Page</div>,
 }));
 
+vi.mock('../../pages/TenantsPage', () => ({
+  default: () => <div data-testid="tenants-page">Tenants Page</div>,
+}));
+
+vi.mock('../../pages/TemplatesPage', () => ({
+  default: () => <div data-testid="templates-page">Templates Page</div>,
+}));
+
+vi.mock('../../pages/ChangeRequestsPage', () => ({
+  default: () => <div data-testid="change-requests-page">Change Requests Page</div>,
+}));
+
+vi.mock('../../pages/UsersPage', () => ({
+  default: () => <div data-testid="users-page">Users Page</div>,
+}));
+
 const mockUseAuth = vi.mocked(useAuth);
 
 describe('App Router', () => {
@@ -376,6 +412,66 @@ describe('App Router', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('settings-page')).toBeInTheDocument();
+      });
+    });
+
+    it('should render TenantsPage at /app/tenants', async () => {
+      const testRouter = createMemoryRouter(
+        router.routes as any[],
+        {
+          initialEntries: ['/app/tenants'],
+        }
+      );
+
+      render(<RouterProvider router={testRouter} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tenants-page')).toBeInTheDocument();
+      });
+    });
+
+    it('should render TemplatesPage at /app/templates', async () => {
+      const testRouter = createMemoryRouter(
+        router.routes as any[],
+        {
+          initialEntries: ['/app/templates'],
+        }
+      );
+
+      render(<RouterProvider router={testRouter} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('templates-page')).toBeInTheDocument();
+      });
+    });
+
+    it('should render ChangeRequestsPage at /app/change-requests', async () => {
+      const testRouter = createMemoryRouter(
+        router.routes as any[],
+        {
+          initialEntries: ['/app/change-requests'],
+        }
+      );
+
+      render(<RouterProvider router={testRouter} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('change-requests-page')).toBeInTheDocument();
+      });
+    });
+
+    it('should render UsersPage at /app/users', async () => {
+      const testRouter = createMemoryRouter(
+        router.routes as any[],
+        {
+          initialEntries: ['/app/users'],
+        }
+      );
+
+      render(<RouterProvider router={testRouter} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('users-page')).toBeInTheDocument();
       });
     });
   });

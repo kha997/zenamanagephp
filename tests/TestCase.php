@@ -52,6 +52,17 @@ abstract class TestCase extends BaseTestCase
      */
     protected function runMigrations(): void
     {
+        // Check if RefreshDatabase trait is being used - if so, let it handle migrations
+        $usesRefreshDatabase = in_array(
+            \Illuminate\Foundation\Testing\RefreshDatabase::class,
+            class_uses_recursive(static::class)
+        );
+        
+        if ($usesRefreshDatabase) {
+            // RefreshDatabase will handle migrations, so skip our custom logic
+            return;
+        }
+        
         if (DBDriver::isSqlite()) {
             // For SQLite, create tables manually to avoid migration issues
             $this->createTestTables();
@@ -160,6 +171,54 @@ abstract class TestCase extends BaseTestCase
     protected function getTestTenant(): object
     {
         return $this->app->make('test.tenant');
+    }
+
+    /**
+     * Create and authenticate a user for a tenant (canonical helper for multi-tenant tests)
+     * 
+     * This helper ensures proper tenant context setup according to the canonical tenant resolution rule:
+     * 1. Creates a tenant (or uses provided one)
+     * 2. Creates a user with tenant_id set (legacy fallback)
+     * 3. Attaches user to tenant via pivot table with is_default = true (primary resolution)
+     * 4. Loads tenants relationship on user (ensures defaultTenant() can access pivot)
+     * 5. Authenticates user via Sanctum
+     * 
+     * This ensures TenancyService.resolveActiveTenantId() returns the correct tenant via:
+     * - user->defaultTenant() which checks pivot is_default first
+     * - Falls back to user->tenant_id if no pivot
+     * 
+     * @param \App\Models\Tenant|null $tenant Optional tenant (creates one if not provided)
+     * @param array $userAttributes Optional user attributes
+     * @param string $role Optional role for pivot table (default: 'pm')
+     * @return array ['user' => User, 'tenant' => Tenant]
+     */
+    protected function actingAsTenantUser(?\App\Models\Tenant $tenant = null, array $userAttributes = [], string $role = 'pm'): array
+    {
+        // Create tenant if not provided
+        if (!$tenant) {
+            $tenant = \App\Models\Tenant::factory()->create();
+        }
+        
+        // Create user with tenant_id (legacy fallback)
+        $user = \App\Models\User::factory()->create(array_merge([
+            'tenant_id' => $tenant->id,
+        ], $userAttributes));
+        
+        // Attach user to tenant via pivot table with is_default = true
+        // This is the primary way defaultTenant() resolves the tenant
+        $user->tenants()->attach($tenant->id, [
+            'role' => $role,
+            'is_default' => true,
+        ]);
+        
+        // Refresh user and load tenants relationship to ensure defaultTenant() can access pivot
+        $user->refresh();
+        $user->load('tenants');
+        
+        // Authenticate user via Sanctum
+        \Laravel\Sanctum\Sanctum::actingAs($user, [], 'sanctum');
+        
+        return ['user' => $user, 'tenant' => $tenant];
     }
 
     /**

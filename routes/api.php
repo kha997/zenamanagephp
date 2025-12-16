@@ -15,6 +15,13 @@ use Illuminate\Support\Facades\DB;
 |
 */
 
+// E2E readiness endpoint - simple 200 OK response for Playwright webServer
+// Must be at the top to avoid session middleware that requires APP_KEY
+// Using plain response() to avoid any service dependencies
+Route::get('/_e2e/ready', function() {
+    return new \Illuminate\Http\Response('ok', 200, ['Content-Type' => 'text/plain']);
+});
+
 // Health check endpoints
 Route::get('/health', function () {
     return response()->json([
@@ -176,8 +183,9 @@ Route::prefix('auth')->group(function () {
     //     ->middleware(['web', 'throttle:5,1']);
     
     // Add compatibility route for login form
+    // Round 158: Add debug.auth middleware for E2E auth tracing
     Route::post('/login', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'login'])
-        ->middleware(['web', 'brute.force.protection', 'input.validation']);
+        ->middleware(['web', 'debug.auth', 'brute.force.protection', 'input.validation']);
     
     Route::post('/logout', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'logout'])
         ->middleware(['auth:sanctum', 'security', 'validation']);
@@ -205,9 +213,22 @@ Route::prefix('auth')->group(function () {
         ->middleware(['auth:sanctum', 'security', 'validation']);
     
     // User context
-    Route::get('/me', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'me'])
+    // Use api.stateful middleware group for session-based SPA authentication
+    Route::middleware('api.stateful')->group(function () {
+        Route::get('/me', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'me'])
+            ->middleware(['auth:sanctum', 'ability:tenant']);
+        Route::get('/permissions', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'permissions'])
+            ->middleware(['auth:sanctum', 'ability:tenant']);
+    });
+});
+
+// User context endpoints (canonical /api/v1/me for frontend compatibility)
+// Round 157: Moved OUTSIDE auth:sanctum group so api.stateful can set up session first
+// Use api.stateful middleware group for session-based SPA authentication
+Route::middleware(['api.stateful', 'debug.auth'])->group(function () {
+    Route::get('/v1/me', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'me'])
         ->middleware(['auth:sanctum', 'ability:tenant']);
-    Route::get('/permissions', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'permissions'])
+    Route::get('/v1/permissions', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'permissions'])
         ->middleware(['auth:sanctum', 'ability:tenant']);
 });
 

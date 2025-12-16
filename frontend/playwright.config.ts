@@ -3,6 +3,12 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
+
+// Use PLAYWRIGHT_PREVIEW_PORT to override the preview port if 4173 is blocked.
+// Example: PLAYWRIGHT_PREVIEW_PORT=5175 npm run test:e2e
+const previewPort = Number(process.env.PLAYWRIGHT_PREVIEW_PORT ?? '4173');
+const validPreviewPort = Number.isNaN(previewPort) ? 4173 : previewPort;
+
 export default defineConfig({
   testDir: './e2e',
   /* Run tests in files in parallel */
@@ -18,7 +24,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: `http://127.0.0.1:${validPreviewPort}`,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -55,8 +61,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run preview -- --host 127.0.0.1 --port 4173',
-    url: 'http://127.0.0.1:4173',
+    command: `npm run preview -- --host 127.0.0.1 --port ${validPreviewPort}`,
+    url: `http://127.0.0.1:${validPreviewPort}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000, // 2 minutes timeout
   },

@@ -31,12 +31,14 @@ class TaskAssignmentService
             ->with(['task.project', 'task.component']);
 
         if (!empty($filters['status'])) {
-            $query->whereHas('task', function ($q) 
+            $query->whereHas('task', function ($q) {
+                $q->where('status', $filters['status']);
             });
         }
 
         if (!empty($filters['project_id'])) {
-            $query->whereHas('task', function ($q) 
+            $query->whereHas('task', function ($q) {
+                $q->where('project_id', $filters['project_id']);
             });
         }
 

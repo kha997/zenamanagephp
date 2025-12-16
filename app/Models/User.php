@@ -164,7 +164,7 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         return $this->roles()->whereHas('permissions', function ($query) use ($permission) {
-            return $query->where('name', $permission);
+            return $query->where('code', $permission);
         })->exists();
     }
 
@@ -174,7 +174,7 @@ class User extends Authenticatable
     public function hasAnyPermission(array $permissions): bool
     {
         return $this->roles()->whereHas('permissions', function ($query) use ($permissions) {
-            return $query->whereIn('name', $permissions);
+            return $query->whereIn('code', $permissions);
         })->exists();
     }
 
@@ -330,6 +330,76 @@ class User extends Authenticatable
     public function widgets(): HasMany
     {
         return $this->hasMany(Widget::class, 'user_id');
+    }
+
+    /**
+     * Relationship: User belongs to many tenants (multi-tenant membership)
+     * Uses user_tenants pivot table with role and is_default columns
+     */
+    public function tenants(): BelongsToMany
+    {
+        return $this->belongsToMany(Tenant::class, 'user_tenants', 'user_id', 'tenant_id')
+            ->using(UserTenant::class)
+            ->withPivot(['role', 'is_default', 'created_at', 'updated_at'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get membership tenants for user (from pivot table)
+     * 
+     * @return \Illuminate\Support\Collection
+     */
+    public function getMembershipTenants(): \Illuminate\Support\Collection
+    {
+        return $this->tenants()->get();
+    }
+
+    /**
+     * Get default tenant for user
+     * 
+     * Priority:
+     * 1. Default tenant from pivot (is_default = true)
+     * 2. Legacy tenant_id (if exists)
+     * 3. First tenant from membership (fallback)
+     * 4. E2E/testing fallback for super_admin
+     * 5. null if no tenant at all
+     * 
+     * @return Tenant|null
+     */
+    public function defaultTenant(): ?Tenant
+    {
+        // 1) Default tenant from pivot (is_default = true)
+        $defaultTenant = $this->tenants()
+            ->wherePivot('is_default', true)
+            ->first();
+        
+        if ($defaultTenant) {
+            return $defaultTenant;
+        }
+
+        // 2) Legacy tenant_id (if exists and not already in pivot)
+        if (isset($this->tenant_id) && $this->tenant_id) {
+            $legacyTenant = Tenant::query()->whereKey($this->tenant_id)->first();
+            if ($legacyTenant) {
+                return $legacyTenant;
+            }
+        }
+
+        // 3) First tenant from membership (fallback)
+        $firstTenant = $this->tenants()->first();
+        if ($firstTenant) {
+            return $firstTenant;
+        }
+
+        // 4) E2E/local/testing fallback for super_admin to avoid blocking bootstrap
+        if (app()->environment(['local', 'testing', 'e2e']) && ($this->role ?? null) === 'super_admin') {
+            $fallbackTenant = Tenant::query()->orderBy('created_at')->first();
+            if ($fallbackTenant) {
+                return $fallbackTenant;
+            }
+        }
+
+        return null;
     }
 
 }

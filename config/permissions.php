@@ -25,6 +25,25 @@ return [
             'users.restore',
             'users.manage_roles',
             'users.manage_permissions',
+            
+            // System Management - Round 234
+            'system.roles.manage',
+            'system.users.manage_roles',
+            
+            // Role Profiles - Round 244
+            'system.role_profiles.manage',
+            
+            // Audit Logs - Round 235
+            'system.audit.view',
+            
+            // Permission Inspector - Round 236
+            'system.permissions.inspect',
+            
+            // Cost Approval Policies - Round 239
+            'system.cost_policies.manage',
+            
+            // Cost Governance Overview - Round 243
+            'system.cost_governance.view',
 
             // Tenant Management
             'tenants.view',
@@ -42,6 +61,11 @@ return [
             'projects.restore',
             'projects.manage_members',
             'projects.manage_settings',
+            'projects.cost.view',
+            'projects.cost.edit',
+            'projects.cost.approve',
+            'projects.cost.approve_unlimited',
+            'projects.cost.export',
 
             // Task Management
             'tasks.view',
@@ -115,6 +139,11 @@ return [
             'projects.update',
             'projects.manage_members',
             'projects.manage_settings',
+            'projects.cost.view',
+            'projects.cost.edit',
+            'projects.cost.approve',
+            'projects.cost.approve_unlimited',
+            'projects.cost.export',
 
             // Task Management
             'tasks.view',
@@ -167,6 +196,7 @@ return [
             // Project Management (limited)
             'projects.view',
             'projects.update', // Only assigned projects
+            'projects.cost.view', // Can view cost data
 
             // Task Management
             'tasks.view',
@@ -260,6 +290,19 @@ return [
             'projects.restore',
             'projects.manage_members',
             'projects.manage_settings',
+            'projects.cost.view',
+            'projects.cost.edit',
+            'projects.cost.approve',
+            'projects.cost.approve_unlimited',
+            'projects.cost.export',
+        ],
+
+        'cost_management' => [
+            'projects.cost.view',
+            'projects.cost.edit',
+            'projects.cost.approve',
+            'projects.cost.approve_unlimited',
+            'projects.cost.export',
         ],
 
         'task_management' => [
@@ -346,5 +389,55 @@ return [
         'dashboard.view', // Users can always view dashboard
         'notifications.view', // Users can always view notifications
         'settings.view', // Users can always view their own settings
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tenant Role Permissions
+    |--------------------------------------------------------------------------
+    |
+    | Permissions for tenant-level roles (used in tenant_user pivot table).
+    | These permissions are scoped to a specific tenant and control access
+    | to tenant-scoped resources.
+    |
+    */
+
+    'tenant_roles' => [
+        'owner' => [
+            'tenant.view_projects',
+            'tenant.manage_projects',
+            'tenant.view_tasks',
+            'tenant.manage_tasks',
+            'tenant.view_users',
+            'tenant.manage_users',
+            'tenant.view_reports',
+            'tenant.manage_settings',
+        ],
+        'admin' => [
+            'tenant.view_projects',
+            'tenant.manage_projects',
+            'tenant.view_tasks',
+            'tenant.manage_tasks',
+            'tenant.view_users',
+            'tenant.manage_users',
+            'tenant.view_reports',
+            'tenant.manage_settings',
+        ],
+        'pm' => [
+            'tenant.view_projects',
+            'tenant.manage_projects',
+            'tenant.view_tasks',
+            'tenant.manage_tasks',
+            'tenant.view_users',
+            'tenant.view_reports',
+        ],
+        'member' => [
+            'tenant.view_projects',
+            'tenant.view_tasks',
+        ],
+        'viewer' => [
+            'tenant.view_projects',
+            'tenant.view_tasks',
+        ],
     ],
 ];

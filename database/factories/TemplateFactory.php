@@ -198,6 +198,35 @@ class TemplateFactory extends Factory
         ]);
     }
 
+    /**
+     * Set tenant for template (explicit tenant binding)
+     * 
+     * @param \App\Models\Tenant|string $tenant Tenant model instance or tenant_id string
+     * @return Factory
+     */
+    public function forTenant($tenant): Factory
+    {
+        return $this->state(function (array $attributes) use ($tenant) {
+            $tenantId = $tenant instanceof Tenant ? (string) $tenant->id : (string) $tenant;
+            return [
+                'tenant_id' => $tenantId,
+            ];
+        });
+    }
+
+    /**
+     * Set tenant_id for template (explicit tenant binding by ID)
+     * 
+     * @param string $tenantId Tenant ID
+     * @return Factory
+     */
+    public function forTenantId(string $tenantId): Factory
+    {
+        return $this->state(fn (array $attributes) => [
+            'tenant_id' => (string) $tenantId,
+        ]);
+    }
+
     private function generateTemplateData(): array
     {
         return [

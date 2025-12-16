@@ -4,10 +4,19 @@ import { cn } from '@/lib/utils';
 interface CheckboxProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  indeterminate?: boolean;
 }
 
 export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
-  ({ className, label, error, ...props }, ref) => {
+  ({ className, label, error, indeterminate, ...props }, ref) => {
+    const checkboxRef = React.useRef<HTMLInputElement>(null);
+    
+    React.useEffect(() => {
+      if (checkboxRef.current) {
+        checkboxRef.current.indeterminate = indeterminate ?? false;
+      }
+    }, [indeterminate]);
+    
     return (
       <div className="flex items-center space-x-2">
         <input
@@ -17,7 +26,14 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
             error && "border-red-500",
             className
           )}
-          ref={ref}
+          ref={(node) => {
+            if (typeof ref === 'function') {
+              ref(node);
+            } else if (ref) {
+              ref.current = node;
+            }
+            checkboxRef.current = node;
+          }}
           {...props}
         />
         {label && (

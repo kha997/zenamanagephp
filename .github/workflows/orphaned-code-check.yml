@@ -1,0 +1,112 @@
+name: Orphaned Code Check
+
+on:
+  pull_request:
+    paths:
+      - 'resources/js/**'
+      - 'resources/views/**'
+      - 'routes/**'
+      - 'app/**/*.php'
+      - 'scripts/validate/**'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'resources/js/**'
+      - 'resources/views/**'
+      - 'routes/**'
+      - 'app/**/*.php'
+
+jobs:
+  orphaned-code-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run orphaned code validation
+        id: orphaned-check
+        env:
+          CI: 'true'
+          GITHUB_ACTIONS: 'true'
+        run: |
+          echo "🔍 Running orphaned code validation..."
+          npm run validate:orphaned || echo "orphaned_code_found=true" >> $GITHUB_OUTPUT
+          
+      - name: Detect unused files
+        id: unused-files
+        env:
+          CI: 'true'
+          GITHUB_ACTIONS: 'true'
+        run: |
+          echo "🔍 Detecting unused files..."
+          npm run validate:files || echo "unused_files_found=true" >> $GITHUB_OUTPUT
+          
+      - name: Detect unused routes
+        id: unused-routes
+        env:
+          CI: 'true'
+          GITHUB_ACTIONS: 'true'
+        run: |
+          echo "🔍 Detecting unused routes..."
+          npm run validate:routes || echo "unused_routes_found=true" >> $GITHUB_OUTPUT
+          
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Try to read results (if any)
+            let comment = '## 🔍 Orphaned Code Check Results\n\n';
+            
+            if ('${{ steps.orphaned-check.outputs.orphaned_code_found }}' === 'true') {
+              comment += '⚠️ **Orphaned code detected**\n';
+              comment += 'Please review unused imports, functions, or classes.\n\n';
+            } else {
+              comment += '✅ **No orphaned code detected**\n\n';
+            }
+            
+            if ('${{ steps.unused-files.outputs.unused_files_found }}' === 'true') {
+              comment += '⚠️ **Unused files detected**\n';
+              comment += 'Please review and remove unused files.\n\n';
+            } else {
+              comment += '✅ **No unused files detected**\n\n';
+            }
+            
+            if ('${{ steps.unused-routes.outputs.unused_routes_found }}' === 'true') {
+              comment += '⚠️ **Unused routes detected**\n';
+              comment += 'Please review routes - some may be API endpoints used externally.\n\n';
+            } else {
+              comment += '✅ **No unused routes detected**\n\n';
+            }
+            
+            comment += '---\n';
+            comment += '💡 **Tip**: Run `npm run validate:orphaned` locally to check for orphaned code.\n';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+            
+      - name: Upload results as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orphaned-code-report
+          retention-days: 7
+          path: |
+            reports/
+

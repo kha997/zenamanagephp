@@ -30,6 +30,36 @@ const AdminLayout: React.FC = () => {
                 </a>
               </li>
               <li>
+                <a href="/admin/roles-permissions" className="block px-3 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] rounded">
+                  Roles & Permissions
+                </a>
+              </li>
+              <li>
+                <a href="/admin/audit-logs" className="block px-3 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] rounded">
+                  Audit Logs
+                </a>
+              </li>
+              <li>
+                <a href="/admin/permission-inspector" className="block px-3 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] rounded">
+                  Permission Inspector
+                </a>
+              </li>
+              <li>
+                <a href="/admin/cost-approval-policy" className="block px-3 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] rounded">
+                  Cost Policies
+                </a>
+              </li>
+              <li>
+                <a href="/admin/cost-governance" className="block px-3 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] rounded">
+                  Cost Governance
+                </a>
+              </li>
+              <li>
+                <a href="/admin/role-profiles" className="block px-3 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] rounded">
+                  Role Profiles
+                </a>
+              </li>
+              <li>
                 <a href="/admin/tenants" className="block px-3 py-2 text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] rounded">
                   Tenants
                 </a>

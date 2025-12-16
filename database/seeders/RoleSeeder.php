@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class RoleSeeder extends Seeder
 {
@@ -98,10 +99,34 @@ class RoleSeeder extends Seeder
 
         // Insert roles
         foreach ($roles as $role) {
+            $createdAt = $role['created_at'] ?? now();
+            $updatedAt = $role['updated_at'] ?? now();
+
             DB::table('zena_roles')->updateOrInsert(
                 ['id' => $role['id']],
-                $role
+                array_merge($role, [
+                    'created_at' => $createdAt,
+                    'updated_at' => $updatedAt,
+                ])
             );
+
+            if (Schema::hasTable('roles')) {
+                DB::table('roles')->updateOrInsert(
+                    ['id' => $role['id']],
+                    [
+                        'name' => $role['name'],
+                        'scope' => $role['scope'],
+                        'allow_override' => $role['allow_override'] ?? false,
+                        'description' => $role['description'],
+                        'is_active' => $role['is_active'] ?? true,
+                        'tenant_id' => $role['tenant_id'] ?? null,
+                        'created_by' => $role['created_by'] ?? null,
+                        'updated_by' => $role['updated_by'] ?? null,
+                        'created_at' => $createdAt,
+                        'updated_at' => $updatedAt,
+                    ]
+                );
+            }
         }
 
         $this->command->info('Roles seeded successfully!');

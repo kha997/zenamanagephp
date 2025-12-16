@@ -39,7 +39,9 @@ class PermissionController
         // Search theo code hoặc description
         if ($request->has('search')) {
             $search = $request->get('search');
-            $query->where(function ($q) 
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
             });
         }
 

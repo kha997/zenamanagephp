@@ -145,7 +145,7 @@ jobs:
         php artisan test tests/Performance --junit --log-junit=performance-results.xml
 
     - name: Upload performance results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-results
         path: performance-results.xml
@@ -222,7 +222,7 @@ jobs:
         lhci autorun --upload.target=temporary-public-storage --collect.url=http://localhost:8000/app/dashboard
 
     - name: Upload Lighthouse results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: lighthouse-results
         path: .lighthouseci/
@@ -289,7 +289,7 @@ jobs:
         php artisan test tests/E2E --junit --log-junit=e2e-results.xml
 
     - name: Upload E2E results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: e2e-results
         path: e2e-results.xml
@@ -302,7 +302,7 @@ jobs:
 
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Generate test summary
       run: |

@@ -292,7 +292,7 @@ jobs:
         # Add performance metrics here
 
     - name: Upload Performance Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-report
         path: performance-report.txt
@@ -331,7 +331,7 @@ jobs:
         ./vendor/bin/phpstan analyse --level=8 --error-format=json > phpstan-report.json
 
     - name: Upload PHPStan Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: phpstan-report
         path: phpstan-report.json
@@ -342,7 +342,7 @@ jobs:
         ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-report.json
 
     - name: Upload CS Fixer Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: cs-fixer-report
         path: cs-fixer-report.json
@@ -357,19 +357,19 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Download Unit Test Coverage
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: unit-test-coverage
         path: coverage/
 
     - name: Download Feature Test Coverage
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: feature-test-coverage
         path: coverage/
 
     - name: Download Integration Test Coverage
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: integration-test-coverage
         path: coverage/
@@ -383,7 +383,7 @@ jobs:
         echo "Integration Tests: $(cat coverage/integration-coverage.txt)" >> coverage-summary.txt
 
     - name: Upload Combined Coverage Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: combined-coverage-report
         path: coverage-summary.txt

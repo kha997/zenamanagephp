@@ -1,0 +1,115 @@
+name: OpenAPI Contract Test & Breaking Change Detection
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'app/Http/Controllers/Api/**'
+      - 'routes/api*.php'
+      - 'docs/api/openapi.yaml'
+      - 'docs/api/**/*.yaml'
+
+jobs:
+  detect-breaking-changes:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Need full history for comparison
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install OpenAPI tools
+        run: |
+          npm install -g @stoplight/spectral-cli
+          npm install -g swagger-cli
+          npm install -g @apidevtools/swagger-diff
+      
+      - name: Generate OpenAPI spec from code
+        run: |
+          php artisan l5-swagger:generate
+      
+      - name: Get base OpenAPI spec
+        run: |
+          git checkout ${{ github.base_ref }} || git checkout main
+          php artisan l5-swagger:generate || echo "No base spec found"
+          mv storage/api-docs/api-docs.json base-spec.json || echo "{}" > base-spec.json
+          git checkout ${{ github.head_ref }}
+      
+      - name: Generate current OpenAPI spec
+        run: |
+          php artisan l5-swagger:generate
+          cp storage/api-docs/api-docs.json current-spec.json
+      
+      - name: Detect breaking changes
+        id: breaking-changes
+        run: |
+          if [ -f "base-spec.json" ] && [ -f "current-spec.json" ]; then
+            # Use swagger-diff to detect breaking changes
+            swagger-diff base-spec.json current-spec.json > diff-output.txt 2>&1 || true
+            
+            # Check for breaking changes (removed endpoints, changed response schemas, etc.)
+            if grep -qi "BREAKING\|removed\|deleted\|changed.*response" diff-output.txt; then
+              echo "BREAKING_CHANGES=true" >> $GITHUB_OUTPUT
+              echo "::error::Breaking changes detected in API. Please bump API version or revert changes."
+              cat diff-output.txt
+              exit 1
+            else
+              echo "BREAKING_CHANGES=false" >> $GITHUB_OUTPUT
+              echo "No breaking changes detected"
+              cat diff-output.txt
+            fi
+          else
+            echo "BREAKING_CHANGES=false" >> $GITHUB_OUTPUT
+            echo "Skipping breaking change detection (first PR or no base spec)"
+          fi
+      
+      - name: Validate OpenAPI spec
+        run: |
+          # Validate structure
+          swagger-cli validate storage/api-docs/api-docs.json
+          
+          # Lint with Spectral
+          spectral lint storage/api-docs/api-docs.json
+      
+      - name: Check API version bump
+        if: steps.breaking-changes.outputs.BREAKING_CHANGES == 'true'
+        run: |
+          # Check if version was bumped in openapi.yaml
+          if grep -q "version.*2.0" docs/api/openapi.yaml || grep -q "version.*v2" docs/api/openapi.yaml; then
+            echo "API version was bumped - breaking changes allowed"
+            exit 0
+          else
+            echo "::error::Breaking changes detected but API version was not bumped. Please update version in docs/api/openapi.yaml"
+            exit 1
+          fi
+
+  contract-test:
+    runs-on: ubuntu-latest
+    needs: detect-breaking-changes
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, pdo, pdo_mysql
+      
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist
+      
+      - name: Generate OpenAPI spec
+        run: |
+          php artisan l5-swagger:generate
+      
+      - name: Run contract tests
+        run: |
+          php artisan test --filter=Contract
+

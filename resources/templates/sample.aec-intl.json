@@ -1,0 +1,167 @@
+{
+  "set": {
+    "code": "WBS-AEC-INTL",
+    "name": "WBS AEC International",
+    "description": "Standard WBS template for international AEC projects",
+    "version": "2025.1",
+    "is_active": true
+  },
+  "phases": [
+    {
+      "code": "CONCEPT",
+      "name": "Concept Design",
+      "order": 1
+    },
+    {
+      "code": "DESIGN",
+      "name": "Design Development",
+      "order": 2
+    },
+    {
+      "code": "CONSTRUCTION",
+      "name": "Construction",
+      "order": 3
+    },
+    {
+      "code": "QC",
+      "name": "Quality Control",
+      "order": 4
+    }
+  ],
+  "disciplines": [
+    {
+      "code": "ARC",
+      "name": "Architecture",
+      "color": "#1E88E5",
+      "order": 1
+    },
+    {
+      "code": "MEP",
+      "name": "MEP Engineering",
+      "color": "#43A047",
+      "order": 2
+    },
+    {
+      "code": "STR",
+      "name": "Structural Engineering",
+      "color": "#E53935",
+      "order": 3
+    },
+    {
+      "code": "LND",
+      "name": "Landscape",
+      "color": "#8BC34A",
+      "order": 4
+    }
+  ],
+  "tasks": [
+    {
+      "code": "ARC-C01",
+      "name": "Master Layout",
+      "phase": "CONCEPT",
+      "discipline": "ARC",
+      "description": "Zoning, flow, program analysis",
+      "est_duration_days": 3,
+      "role_key": "lead_architect",
+      "deliverable_type": "layout_dwg",
+      "order": 1,
+      "is_optional": false,
+      "depends_on": []
+    },
+    {
+      "code": "ARC-C02",
+      "name": "Concept Sketches",
+      "phase": "CONCEPT",
+      "discipline": "ARC",
+      "description": "Initial design sketches and concepts",
+      "est_duration_days": 5,
+      "role_key": "architect",
+      "deliverable_type": "sketch",
+      "order": 2,
+      "is_optional": false,
+      "depends_on": ["ARC-C01"]
+    },
+    {
+      "code": "MEP-C01",
+      "name": "MEP Concept",
+      "phase": "CONCEPT",
+      "discipline": "MEP",
+      "description": "Initial MEP system concepts",
+      "est_duration_days": 2,
+      "role_key": "mep_engineer",
+      "deliverable_type": "concept_doc",
+      "order": 1,
+      "is_optional": false,
+      "depends_on": ["ARC-C01"]
+    },
+    {
+      "code": "STR-C01",
+      "name": "Structural Concept",
+      "phase": "CONCEPT",
+      "discipline": "STR",
+      "description": "Initial structural system concepts",
+      "est_duration_days": 2,
+      "role_key": "structural_engineer",
+      "deliverable_type": "concept_doc",
+      "order": 1,
+      "is_optional": false,
+      "depends_on": ["ARC-C01"]
+    },
+    {
+      "code": "ARC-D01",
+      "name": "Design Development",
+      "phase": "DESIGN",
+      "discipline": "ARC",
+      "description": "Detailed design development",
+      "est_duration_days": 10,
+      "role_key": "lead_architect",
+      "deliverable_type": "design_dwg",
+      "order": 1,
+      "is_optional": false,
+      "depends_on": ["ARC-C02"]
+    },
+    {
+      "code": "LND-PANO",
+      "name": "Landscape Panorama",
+      "phase": "DESIGN",
+      "discipline": "LND",
+      "description": "Landscape panorama design",
+      "est_duration_days": 3,
+      "role_key": "landscape_architect",
+      "deliverable_type": "design_dwg",
+      "order": 1,
+      "is_optional": true,
+      "depends_on": ["ARC-D01"]
+    }
+  ],
+  "presets": [
+    {
+      "code": "HOUSE",
+      "name": "Townhouse",
+      "description": "Template preset for townhouse projects",
+      "filters": {
+        "disciplines": ["ARC", "MEP"],
+        "exclude": ["LND-PANO"]
+      }
+    },
+    {
+      "code": "HIGH_RISE",
+      "name": "High-rise Building",
+      "description": "Template preset for high-rise building projects",
+      "filters": {
+        "phases": ["CONCEPT", "DESIGN"],
+        "disciplines": ["ARC", "MEP", "STR"]
+      }
+    },
+    {
+      "code": "COMMERCIAL",
+      "name": "Commercial",
+      "description": "Template preset for commercial projects",
+      "filters": {
+        "phases": ["CONCEPT", "DESIGN", "CONSTRUCTION"],
+        "disciplines": ["ARC", "MEP", "STR", "LND"]
+      }
+    }
+  ]
+}
+

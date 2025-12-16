@@ -109,10 +109,15 @@ class AbilityMiddleware
             ], 403);
         }
 
+        // Super admin has access to all tenant endpoints
+        $userRole = strtolower($user->role ?? '');
+        if ($userRole === 'super_admin') {
+            return null; // Grant access
+        }
+        
         // Check if user has appropriate role within tenant
         $allowedRoles = ['admin', 'pm', 'member', 'project_manager', 'site_engineer', 'design_lead', 'client_rep', 'qc_inspector'];
         // Normalize role to lowercase for case-insensitive comparison
-        $userRole = strtolower($user->role ?? '');
         if (!in_array($userRole, array_map('strtolower', $allowedRoles))) {
             Log::warning('User with invalid role accessing tenant endpoint', [
                 'user_id' => $user->id,

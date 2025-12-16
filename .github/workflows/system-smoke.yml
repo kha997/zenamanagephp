@@ -1,0 +1,78 @@
+name: System Smoke Suite
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke-suite:
+    name: System Smoke Suite
+    runs-on: ubuntu-latest
+    env:
+      COMPOSER_ALLOW_SUPERUSER: 1
+      TEST_SEED_KEY: finance-ops-smoke
+      PLAYWRIGHT_PREVIEW_HOST: 0.0.0.0
+      PLAYWRIGHT_PREVIEW_PORT: 4174
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, sqlite3
+          ini-values: memory_limit=512M
+
+      - name: Setup Composer cache
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Prepare environment
+        run: |
+          cp env.example .env
+          php artisan key:generate --env=testing --no-interaction
+
+      - name: Run backend smoke suite
+        run: composer test:smoke
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run frontend smoke specs
+        run: npm run test:smoke:payments
+        working-directory: frontend
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+        working-directory: frontend
+
+      - name: Run Playwright finance smoke
+        env:
+          API_BASE_URL: http://127.0.0.1:8000
+        run: |
+          set -euo pipefail
+          php artisan serve --host=127.0.0.1 --port=8000 --env=testing >/tmp/php.log 2>&1 &
+          PHP_PID=$!
+          trap 'kill $PHP_PID || true' EXIT
+          cd frontend
+          npm run test:e2e:smoke:finance

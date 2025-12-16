@@ -7,4 +7,6 @@ export const radiusTokens = {
   pill: '9999px',
 } as const;
 
+export const radius = radiusTokens;
+
 export type RadiusToken = keyof typeof radiusTokens;

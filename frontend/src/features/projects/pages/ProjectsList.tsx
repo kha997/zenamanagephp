@@ -16,12 +16,12 @@ export const ProjectsList: React.FC = () => {
     fetchProjects();
   }, [fetchProjects]);
 
-  const filteredProjects = projects.filter(project => {
+  const filteredProjects = Array.isArray(projects) ? projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -127,7 +127,7 @@ export const ProjectsList: React.FC = () => {
         ))}
       </div>
 
-      {filteredProjects.length === 0 && (
+      {Array.isArray(filteredProjects) && filteredProjects.length === 0 && (
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <Filter className="w-12 h-12 mx-auto" />

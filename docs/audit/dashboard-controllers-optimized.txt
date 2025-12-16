@@ -1,0 +1,1 @@
+app/Http/Controllers/Web/OptimizedDashboardController.php:class OptimizedDashboardController extends Controller

@@ -1,6 +1,17 @@
+/**
+ * Legacy auth store adapter - wraps canonical store from features/auth/store.ts
+ * 
+ * This file maintains backward compatibility for components importing from shared/auth/store
+ * All auth state is now managed by the canonical store in features/auth/store.ts
+ * which persists to localStorage['zena-auth-storage']
+ * 
+ * Round 135: Unified auth store - no more duplicate auth-storage persistence
+ * Round 136: Deferred initialization - no module-level side effects, init via initSharedAuthAdapter()
+ */
+import { useAuthStore as useCanonicalAuthStore } from '@/features/auth/store';
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { apiClient } from '../api/client';
+import type { User } from './types';
 
 export interface RoleInfo {
   id: string;
@@ -11,45 +22,6 @@ export interface RoleInfo {
   created_at?: string;
   updated_at?: string;
 }
-
-export interface User {
-  id: string;
-  name: string;
-  display_name?: string;
-  email: string;
-  avatar?: string | null;
-  roles: RoleInfo[];
-  permissions: string[];
-  tenant_id?: string;
-  tenant_name?: string;
-}
-
-type RawRole = Partial<RoleInfo> & {
-  role?: string;
-  role_id?: string;
-};
-
-type RawTenant = {
-  id?: string;
-  name?: string;
-};
-
-type RawUser = {
-  id?: string;
-  name?: string;
-  display_name?: string;
-  email?: string;
-  avatar?: string | null;
-  tenant_id?: string;
-  tenant_name?: string;
-  tenant?: RawTenant;
-  roles?: Array<RawRole | string>;
-  role?: RawRole | string;
-  role_id?: string;
-  permissions?: string[];
-  role_permissions?: string[];
-  [key: string]: unknown;
-};
 
 export interface AuthState {
   user: User | null;
@@ -72,209 +44,244 @@ export interface AuthActions {
 
 export interface AuthStore extends AuthState, AuthActions {}
 
-const fallbackTimestamp = () => new Date().toISOString();
-
-const normalizeRole = (role: RawRole | string): RoleInfo => {
-  if (typeof role === 'string') {
-    const timestamp = fallbackTimestamp();
-    return {
-      id: `role-${role}`,
-      name: role,
-      scope: 'custom',
-      permissions: [],
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-  }
-
-  const timestamp = role.created_at ?? fallbackTimestamp();
-  const name = role.name ?? role.role ?? 'member';
+/**
+ * Adapter store that wraps canonical store and provides legacy API
+ * This maintains backward compatibility for components expecting token, setToken, clearAuth, etc.
+ * 
+ * Round 136: Store creation is now side-effect free. Subscription is set up via initSharedAuthAdapter()
+ */
+export const useAuthStore = create<AuthStore>()((set, get) => {
+  // Sync function to update adapter state from canonical store
+  // This is called from initSharedAuthAdapter() and actions, not at module init
+  const syncFromCanonical = () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const canonical = useCanonicalAuthStore.getState();
+      const token = localStorage.getItem('auth_token');
+      set({
+        user: canonical.user,
+        token,
+        isAuthenticated: canonical.isAuthenticated,
+        isLoading: canonical.isLoading,
+        error: canonical.error,
+      });
+    } catch (error) {
+      if (typeof window !== 'undefined') {
+        if (!(window as any).__e2e_logs) {
+          (window as any).__e2e_logs = [];
+        }
+        (window as any).__e2e_logs.push({
+          scope: 'shared-auth-adapter',
+          event: 'sync-error',
+          error: String(error),
+        });
+      }
+    }
+  };
 
   return {
-    id: role.id ?? role.role_id ?? `role-${name}`,
-    name,
-    scope: role.scope ?? 'custom',
-    description: role.description,
-    permissions: Array.isArray(role.permissions) ? role.permissions : [],
-    created_at: timestamp,
-    updated_at: role.updated_at ?? timestamp,
-  };
-};
+    // Initial state (will be synced from canonical store via initSharedAuthAdapter)
+    user: null,
+    token: typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
 
-const normalizePermissions = (payload: RawUser): string[] => {
-  if (Array.isArray(payload.permissions) && payload.permissions.length) {
-    return payload.permissions;
-  }
-  if (Array.isArray(payload.role_permissions) && payload.role_permissions.length) {
-    return payload.role_permissions;
-  }
-  return [];
-};
+    // Actions - delegate to canonical store or provide wrappers
+    login: async (email: string, password: string) => {
+      const canonical = useCanonicalAuthStore.getState();
+      await canonical.login({ email, password });
+      syncFromCanonical();
+    },
 
-const toUser = (payload: RawUser): User => {
-  const normalizedRoles = Array.isArray(payload.roles) && payload.roles.length > 0
-    ? payload.roles.map(normalizeRole)
-    : payload.role
-      ? [normalizeRole(payload.role)]
-      : [];
+    logout: async () => {
+      const canonical = useCanonicalAuthStore.getState();
+      await canonical.logout();
+      syncFromCanonical();
+    },
 
-  const fallbackName = payload.display_name ?? payload.name ?? 'User';
+    setUser: (user: User) => {
+      const canonical = useCanonicalAuthStore.getState();
+      canonical.setUser(user);
+      syncFromCanonical();
+    },
 
-  return {
-    id: payload.id ?? 'user',
-    name: payload.name ?? fallbackName,
-    display_name: payload.display_name ?? payload.name,
-    email: payload.email ?? '',
-    avatar: payload.avatar ?? null,
-    tenant_id: payload.tenant_id ?? payload.tenant?.id,
-    tenant_name: payload.tenant_name ?? payload.tenant?.name,
-    roles: normalizedRoles,
-    permissions: normalizePermissions(payload),
-  };
-};
-
-export const useAuthStore = create<AuthStore>()(
-  persist(
-    (set, get) => ({
-      // State
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
-      error: null,
-
-      // Actions
-      login: async (email: string, password: string) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Login via API and request Laravel to start a web session
-          const response = await apiClient.post(
-            '/auth/login',
-            {
-              email,
-              password,
-            },
-            {
-              headers: {
-                'X-Web-Login': 'spa-client',
-              },
-              withCredentials: true,
-            }
-          );
-
-          // API returns: { status, success, message, data: { token, user, ... } }
-          const responseData = response.data;
-          const token = responseData.data?.token || responseData.token;
-          const userData = responseData.data?.user || responseData.user;
-
-          if (!token || !userData) {
-            throw new Error('Invalid response from server');
-          }
-
-          // Set token in localStorage and axios headers
+    setToken: (token: string) => {
+      try {
+        if (typeof window !== 'undefined') {
           localStorage.setItem('auth_token', token);
           apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-          set({
-            user: toUser(userData),
-            token,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-          });
-        } catch (error: unknown) {
-          const responseMessage =
-            typeof error === 'object' &&
-            error !== null &&
-            'response' in error &&
-            typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message === 'string'
-              ? (error as { response?: { data?: { message?: string } } }).response!.data!.message
-              : undefined;
-          const errorMessage = responseMessage ?? (error instanceof Error ? error.message : 'Login failed');
-          set({
-            isLoading: false,
-            error: errorMessage,
-            isAuthenticated: false,
-            user: null,
-            token: null,
-          });
-          throw error;
         }
-      },
-
-      logout: () => {
-        // Clear token from localStorage and axios headers
-        localStorage.removeItem('auth_token');
-        delete apiClient.defaults.headers.common['Authorization'];
-
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          error: null,
-        });
-      },
-
-      setUser: (user: User) => {
-        set({ user });
-      },
-
-      setToken: (token: string) => {
-        localStorage.setItem('auth_token', token);
-        apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        set({ token, isAuthenticated: true });
-      },
-
-      setError: (error: string | null) => {
-        set({ error });
-      },
-
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading });
-      },
-
-      clearAuth: () => {
-        localStorage.removeItem('auth_token');
-        delete apiClient.defaults.headers.common['Authorization'];
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          error: null,
-          isLoading: false,
-        });
-      },
-
-      refreshUser: async () => {
-        const { token } = get();
-        if (!token) return;
-
-        try {
-          const response = await apiClient.get('/api/v1/auth/me');
-          set({ user: toUser(response.data.user) });
-        } catch (error: unknown) {
-          console.error('Failed to refresh user:', error);
-          get().logout();
+        // Trigger checkAuth to sync state
+        const canonical = useCanonicalAuthStore.getState();
+        canonical.checkAuth().then(() => syncFromCanonical());
+      } catch (error) {
+        if (typeof window !== 'undefined') {
+          if (!(window as any).__e2e_logs) {
+            (window as any).__e2e_logs = [];
+          }
+          (window as any).__e2e_logs.push({
+            scope: 'shared-auth-adapter',
+            event: 'setToken-error',
+            error: String(error),
+          });
         }
-      },
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        isAuthenticated: state.isAuthenticated,
-      }),
+      }
+    },
+
+    setError: (error: string | null) => {
+      const canonical = useCanonicalAuthStore.getState();
+      canonical.clearError();
+      // Note: canonical store doesn't have setError, only clearError
+      // This is a limitation but shouldn't break existing code
+      syncFromCanonical();
+    },
+
+    setLoading: (loading: boolean) => {
+      // Canonical store manages loading internally, so this is a no-op
+      // But we keep it for API compatibility
+    },
+
+    clearAuth: () => {
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token');
+          delete apiClient.defaults.headers.common['Authorization'];
+        }
+        const canonical = useCanonicalAuthStore.getState();
+        canonical.logout().then(() => syncFromCanonical());
+      } catch (error) {
+        if (typeof window !== 'undefined') {
+          if (!(window as any).__e2e_logs) {
+            (window as any).__e2e_logs = [];
+          }
+          (window as any).__e2e_logs.push({
+            scope: 'shared-auth-adapter',
+            event: 'clearAuth-error',
+            error: String(error),
+          });
+        }
+      }
+    },
+
+    refreshUser: async () => {
+      const canonical = useCanonicalAuthStore.getState();
+      await canonical.checkAuth();
+      syncFromCanonical();
+    },
+  };
+});
+
+// Round 136: Deferred initialization - no module-level side effects
+let sharedAdapterInitialized = false;
+let unsubscribeFromCanonical: (() => void) | null = null;
+
+/**
+ * Sync function that can be called from initSharedAuthAdapter
+ * Accesses the store's internal sync function
+ */
+function syncFromCanonicalState() {
+  try {
+    if (typeof window === 'undefined') return;
+    const store = useAuthStore.getState();
+    const canonical = useCanonicalAuthStore.getState();
+    const token = localStorage.getItem('auth_token');
+    useAuthStore.setState({
+      user: canonical.user,
+      token,
+      isAuthenticated: canonical.isAuthenticated,
+      isLoading: canonical.isLoading,
+      error: canonical.error,
+    });
+  } catch (error) {
+    if (typeof window !== 'undefined') {
+      if (!(window as any).__e2e_logs) {
+        (window as any).__e2e_logs = [];
+      }
+      (window as any).__e2e_logs.push({
+        scope: 'shared-auth-adapter',
+        event: 'sync-error',
+        error: String(error),
+      });
     }
-  )
-);
+  }
+}
+
+/**
+ * Initialize the shared auth adapter
+ * Sets up subscription to canonical store and performs initial sync
+ * Must be called from React lifecycle (e.g., AppShell useEffect)
+ * 
+ * Round 136: Fail-soft - never throws, logs errors to window.__e2e_logs
+ */
+export function initSharedAuthAdapter() {
+  if (sharedAdapterInitialized) return;
+  
+  try {
+    sharedAdapterInitialized = true;
+    
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Sync initial state
+    syncFromCanonicalState();
+
+    // Subscribe to canonical store changes
+    unsubscribeFromCanonical = useCanonicalAuthStore.subscribe((state) => {
+      syncFromCanonicalState();
+    });
+
+    // Log successful initialization
+    if (!(window as any).__e2e_logs) {
+      (window as any).__e2e_logs = [];
+    }
+    (window as any).__e2e_logs.push({
+      scope: 'shared-auth-adapter',
+      event: 'init-ok',
+    });
+  } catch (error) {
+    // Fail-soft: log error but don't throw
+    if (typeof window !== 'undefined') {
+      if (!(window as any).__e2e_logs) {
+        (window as any).__e2e_logs = [];
+      }
+      (window as any).__e2e_logs.push({
+        scope: 'shared-auth-adapter',
+        event: 'init-error',
+        error: String(error),
+      });
+    }
+    // Reset flag so retry is possible
+    sharedAdapterInitialized = false;
+  }
+}
+
+/**
+ * Teardown the shared auth adapter
+ * Unsubscribes from canonical store
+ */
+export function teardownSharedAuthAdapter() {
+  if (unsubscribeFromCanonical) {
+    unsubscribeFromCanonical();
+    unsubscribeFromCanonical = null;
+  }
+  sharedAdapterInitialized = false;
+}
 
 // Initialize auth state from localStorage on app start
+// Round 136: Now also initializes shared auth adapter for backward compatibility
 export const initializeAuth = () => {
+  if (typeof window === 'undefined') return;
+  
+  // Round 136: Initialize shared adapter (idempotent)
+  initSharedAuthAdapter();
+  
   const token = localStorage.getItem('auth_token');
   if (token) {
     apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    useAuthStore.setState({ token, isAuthenticated: true });
+    // Trigger checkAuth to sync canonical store
+    const canonical = useCanonicalAuthStore.getState();
+    canonical.checkAuth();
   }
 };

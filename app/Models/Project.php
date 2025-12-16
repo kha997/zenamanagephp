@@ -166,6 +166,14 @@ class Project extends Model
     }
 
     /**
+     * Relationship: Project created from template
+     */
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Template::class, 'template_id');
+    }
+
+    /**
      * Relationship: Project có nhiều components
      */
     public function components(): HasMany

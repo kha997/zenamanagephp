@@ -217,8 +217,10 @@ Route::get('/password/reset/{token}', [PasswordResetController::class, 'showRese
     ->middleware(['web', 'guest']);
 
 // Login API route (web middleware for session)
+// Round 158: Add debug.auth middleware for E2E auth tracing
 Route::post('/api/auth/login', [\App\Http\Controllers\Api\Auth\AuthenticationController::class, 'login'])
-    ->middleware(['web', 'throttle:5,1']);
+    ->middleware(['web', 'debug.auth', 'throttle:5,1']);
+
 
 // Logout route
 Route::post('/logout', [LoginController::class, 'logout'])
@@ -336,6 +338,7 @@ Route::middleware(['web', 'auth:web'])->group(function () {
     Route::get('/app/users/{user}', [UserController::class, 'show'])
         ->name('app.users.show')
         ->middleware('can:users.view');
+    
 });
 
 // Admin routes (system-wide)
@@ -417,6 +420,21 @@ Route::middleware(['web', 'auth:web', \App\Http\Middleware\AdminOnlyMiddleware::
         return view('admin.settings.index');
     })->name('admin.settings.index');
 });
+
+// ========================================
+// SPA ROUTES (Public Shell - Auth handled client-side)
+// ========================================
+// SPA shell is public - client-side JavaScript handles auth checks and redirects
+// API endpoints remain protected with Sanctum tokens
+Route::get('/app/dashboard', function () {
+    return view('app.spa');
+})->name('app.dashboard');
+
+// SPA catch-all route - must be last to not override specific routes
+// This ensures /app/* always serves the SPA shell (no Ignition errors)
+Route::get('/app/{any}', function () {
+    return view('app.spa');
+})->where('any', '.*')->name('app.spa');
 
 // ========================================
 // DEVELOPMENT DEBUG ROUTES (GUARDED)

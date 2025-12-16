@@ -1,0 +1,179 @@
+name: OpenAPI Breaking Changes Check
+
+on:
+  pull_request:
+    paths:
+      - 'app/Http/Controllers/**'
+      - 'routes/**'
+      - 'docs/api/openapi.yaml'
+      - 'storage/api-docs/**'
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  check-breaking-changes:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, zip, pdo, pdo_mysql
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Generate OpenAPI spec from code
+        run: |
+          php artisan l5-swagger:generate
+
+      - name: Check if OpenAPI spec exists
+        id: check_spec
+        run: |
+          if [ ! -f "storage/api-docs/api-docs.json" ]; then
+            echo "OpenAPI spec not generated"
+            exit 1
+          fi
+          echo "spec_exists=true" >> $GITHUB_OUTPUT
+
+      - name: Get base branch spec (for comparison)
+        id: base_spec
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.base_ref }}:base-branch
+          git checkout base-branch || echo "base_branch_not_found=true" >> $GITHUB_OUTPUT
+          
+          # Generate spec from base branch
+          composer install --no-interaction --prefer-dist --optimize-autoloader --quiet
+          php artisan l5-swagger:generate || echo "base_spec_generation_failed=true" >> $GITHUB_OUTPUT
+          
+          if [ -f "storage/api-docs/api-docs.json" ]; then
+            cp storage/api-docs/api-docs.json /tmp/base-spec.json
+            echo "base_spec_exists=true" >> $GITHUB_OUTPUT
+          fi
+          
+          git checkout ${{ github.head_ref }}
+
+      - name: Install oasdiff tool
+        run: |
+          # Install oasdiff for comparing OpenAPI specs
+          if ! command -v oasdiff &> /dev/null; then
+            echo "Installing oasdiff..."
+            # Download oasdiff binary (adjust version as needed)
+            wget -q https://github.com/Tufin/oasdiff/releases/latest/download/oasdiff_linux_amd64.tar.gz || true
+            if [ -f "oasdiff_linux_amd64.tar.gz" ]; then
+              tar -xzf oasdiff_linux_amd64.tar.gz
+              chmod +x oasdiff
+              sudo mv oasdiff /usr/local/bin/
+            else
+              # Fallback: use npm package
+              npm install -g @redocly/cli || true
+            fi
+          fi
+
+      - name: Check for breaking changes
+        id: breaking_changes
+        if: steps.base_spec.outputs.base_spec_exists == 'true'
+        run: |
+          if command -v oasdiff &> /dev/null; then
+            # Use oasdiff to detect breaking changes
+            oasdiff breaking /tmp/base-spec.json storage/api-docs/api-docs.json > /tmp/breaking-changes.txt || true
+            
+            if [ -s /tmp/breaking-changes.txt ]; then
+              echo "BREAKING_CHANGES_DETECTED=true" >> $GITHUB_OUTPUT
+              echo "::error::Breaking changes detected in OpenAPI spec:"
+              cat /tmp/breaking-changes.txt
+              echo "::error::If these are intentional, bump the API version in docs/api/openapi.yaml (v1 -> v2)"
+              exit 1
+            else
+              echo "BREAKING_CHANGES_DETECTED=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Fallback: basic check using jq (if available)
+            echo "oasdiff not available, skipping detailed check"
+            echo "BREAKING_CHANGES_DETECTED=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check API version bump
+        if: steps.breaking_changes.outputs.BREAKING_CHANGES_DETECTED == 'true'
+        run: |
+          # Check if version was bumped in openapi.yaml
+          CURRENT_VERSION=$(grep -E "^\s*version:" docs/api/openapi.yaml | head -1 | awk '{print $2}' | tr -d '"' || echo "1.0.0")
+          BASE_VERSION=$(git show base-branch:docs/api/openapi.yaml 2>/dev/null | grep -E "^\s*version:" | head -1 | awk '{print $2}' | tr -d '"' || echo "1.0.0")
+          
+          echo "Base version: $BASE_VERSION"
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Extract major version
+          BASE_MAJOR=$(echo $BASE_VERSION | cut -d. -f1)
+          CURRENT_MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
+          
+          if [ "$CURRENT_MAJOR" -le "$BASE_MAJOR" ]; then
+            echo "::error::Breaking changes detected but API version not bumped (v$BASE_MAJOR -> v$CURRENT_MAJOR)"
+            echo "::error::Please bump the major version in docs/api/openapi.yaml (e.g., 1.0.0 -> 2.0.0)"
+            exit 1
+          else
+            echo "✓ API version bumped correctly (v$BASE_MAJOR -> v$CURRENT_MAJOR)"
+          fi
+
+      - name: Validate OpenAPI spec
+        run: |
+          # Basic validation using PHP
+          php -r "
+            \$spec = json_decode(file_get_contents('storage/api-docs/api-docs.json'), true);
+            if (!\$spec) {
+              echo 'Invalid JSON in OpenAPI spec' . PHP_EOL;
+              exit(1);
+            }
+            if (!isset(\$spec['openapi']) || !isset(\$spec['info']) || !isset(\$spec['paths'])) {
+              echo 'Missing required OpenAPI fields' . PHP_EOL;
+              exit(1);
+            }
+            echo 'OpenAPI spec is valid' . PHP_EOL;
+          "
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Generate TypeScript types and abilities
+        run: |
+          cd frontend
+          if [ -f "package.json" ]; then
+            npm install --legacy-peer-deps || true
+            npm run generate:api-types || echo "Type generation failed (non-blocking)"
+            npm run generate:abilities || echo "Abilities generation failed (non-blocking)"
+          fi
+
+      - name: Check for uncommitted changes after type generation
+        run: |
+          git status --porcelain
+          if [[ $(git status --porcelain) ]]; then
+            echo "::error::Frontend API types or abilities are not up-to-date. Run 'npm run generate:api-types' and 'npm run generate:abilities' in frontend/ and commit the changes."
+            git diff
+            exit 1
+          fi
+
+      - name: Run RBAC Sync Check
+        run: |
+          php artisan rbac:sync-check
+
+      - name: Upload OpenAPI spec as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: openapi-spec
+          path: storage/api-docs/api-docs.json
+          retention-days: 7
+

@@ -66,6 +66,15 @@ export const usePermissions = () => {
   const canEditTask = (projectId?: number) => checkPermission('task.edit', projectId);
   const canDeleteTask = (projectId?: number) => checkPermission('task.delete', projectId);
   
+  // Cost permissions - Round 229
+  const canViewCost = (projectId?: number) => checkPermission('projects.cost.view', projectId);
+  const canEditCost = (projectId?: number) => checkPermission('projects.cost.edit', projectId);
+  const canApproveCost = (projectId?: number) => checkPermission('projects.cost.approve', projectId);
+  const canExportCost = (projectId?: number) => {
+    // Export permission can be separate or same as view
+    return checkPermission('projects.cost.export', projectId) || checkPermission('projects.cost.view', projectId);
+  };
+  
   const canManageUsers = () => checkPermission('user.manage');
   const canManageRoles = () => checkPermission('role.manage');
   
@@ -92,6 +101,10 @@ export const usePermissions = () => {
     canCreateTask,
     canEditTask,
     canDeleteTask,
+    canViewCost,
+    canEditCost,
+    canApproveCost,
+    canExportCost,
     canManageUsers,
     canManageRoles,
     

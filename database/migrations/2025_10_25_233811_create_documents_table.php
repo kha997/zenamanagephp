@@ -30,9 +30,9 @@ return new class extends Migration
             $table->integer('version')->default(1);
             $table->boolean('is_current_version')->default(true);
             $table->ulid('parent_document_id')->nullable();
-            $table->string('uploaded_by');
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
+            $table->ulid('uploaded_by');
+            $table->ulid('created_by')->nullable();
+            $table->ulid('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
             

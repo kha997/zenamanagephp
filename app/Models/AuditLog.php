@@ -2,32 +2,56 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * AuditLog Model - Lưu trữ audit trail
+ * AuditLog Model - System-wide audit trail
+ * 
+ * Round 235: Audit Log Framework
+ * 
+ * @property string $id ULID primary key
+ * @property string|null $tenant_id Tenant ID (nullable for system-wide actions)
+ * @property string|null $user_id User ID (nullable for system actions)
+ * @property string $action Action name (e.g., 'role.created', 'co.approved')
+ * @property string|null $entity_type Entity type (e.g., 'Role', 'User', 'Contract')
+ * @property string|null $entity_id Entity ID (ULID)
+ * @property string|null $project_id Project ID (ULID, for project-related actions)
+ * @property array|null $payload_before State before change
+ * @property array|null $payload_after State after change
+ * @property string|null $ip_address IP address
+ * @property string|null $user_agent User agent
+ * @property \Carbon\Carbon $created_at
+ * @property \Carbon\Carbon $updated_at
  */
 class AuditLog extends Model
 {
+    use HasUlids, HasFactory;
+
+    /**
+     * Cấu hình ULID primary key
+     */
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
+        'tenant_id',
         'user_id',
         'action',
         'entity_type',
         'entity_id',
         'project_id',
-        'tenant_id',
-        'old_data',
-        'new_data',
+        'payload_before',
+        'payload_after',
         'ip_address',
         'user_agent',
     ];
 
     protected $casts = [
-        'old_data' => 'array',
-        'new_data' => 'array',
+        'payload_before' => 'array',
+        'payload_after' => 'array',
     ];
 
     /**
@@ -113,8 +137,11 @@ class AuditLog extends Model
     /**
      * Get entity name
      */
-    public function getEntityNameAttribute(): string
+    public function getEntityNameAttribute(): ?string
     {
+        if (!$this->entity_type) {
+            return null;
+        }
         return ucfirst(str_replace('_', ' ', $this->entity_type));
     }
 }

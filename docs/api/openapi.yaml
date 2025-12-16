@@ -267,24 +267,28 @@ paths:
         - name: project_id
           in: query
           schema:
-            type: string
-            nullable: true
+            oneOf:
+              - type: string
+              - type: "null"
         - name: priority
           in: query
           schema:
-            type: string
-            enum: [low, medium, high, urgent]
-            nullable: true
+            oneOf:
+              - type: string
+                enum: [low, medium, high, urgent]
+              - type: "null"
         - name: assignee_id
           in: query
           schema:
-            type: string
-            nullable: true
+            oneOf:
+              - type: string
+              - type: "null"
         - name: search
           in: query
           schema:
-            type: string
-            nullable: true
+            oneOf:
+              - type: string
+              - type: "null"
       responses:
         '200':
           description: List of tasks
@@ -521,21 +525,25 @@ paths:
                   enum: [backlog, todo, in_progress, review, done, cancelled]
                   description: Target status for the task
                 before_id:
-                  type: string
-                  nullable: true
-                  description: Task ID to place this task before (for ordering)
+                  oneOf:
+                    - type: string
+                      description: Task ID to place this task before (for ordering)
+                    - type: "null"
                 after_id:
-                  type: string
-                  nullable: true
-                  description: Task ID to place this task after (for ordering)
+                  oneOf:
+                    - type: string
+                      description: Task ID to place this task after (for ordering)
+                    - type: "null"
                 reason:
-                  type: string
-                  nullable: true
-                  description: Optional reason for the status change
+                  oneOf:
+                    - type: string
+                      description: Optional reason for the status change
+                    - type: "null"
                 version:
-                  type: integer
-                  nullable: true
-                  description: Task version for optimistic concurrency control
+                  oneOf:
+                    - type: integer
+                      description: Task version for optimistic concurrency control
+                    - type: "null"
       responses:
         '200':
           description: Task moved successfully
@@ -549,9 +557,10 @@ paths:
                   data:
                     $ref: '#/components/schemas/Task'
                   warning:
-                    type: string
-                    nullable: true
-                    description: Optional warning message (e.g., if version mismatch was resolved)
+                    oneOf:
+                      - type: string
+                        description: Optional warning message (e.g., if version mismatch was resolved)
+                      - type: "null"
         '409':
           description: Conflict - version mismatch or concurrent modification
           content:
@@ -793,10 +802,11 @@ components:
           format: email
           example: 'john@example.com'
         tenant_id:
-          type: string
-          nullable: true
-          description: Tenant ID for tenant-scoped users, null for super admins
-          example: '01K83FPK5XGPXF3V7ANJQRGX5Y'
+          oneOf:
+            - type: string
+              description: Tenant ID for tenant-scoped users, null for super admins
+              example: '01K83FPK5XGPXF3V7ANJQRGX5Y'
+            - type: "null"
         role:
           type: string
           enum: [super_admin, org_admin, admin, pm, member, client]
@@ -847,8 +857,9 @@ components:
         name:
           type: string
         description:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         status:
           type: string
           enum: [planning, active, on_hold, completed, cancelled]
@@ -887,8 +898,9 @@ components:
         name:
           type: string
         description:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         status:
           type: string
           enum: [backlog, todo, in_progress, review, done, cancelled]
@@ -896,11 +908,13 @@ components:
           type: string
           enum: [low, medium, high, urgent]
         project_id:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         assignee_id:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         tenant_id:
           type: string
         created_at:
@@ -918,8 +932,9 @@ components:
         name:
           type: string
         description:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         status:
           type: string
           enum: [backlog, todo, in_progress, review, done, cancelled]
@@ -929,15 +944,18 @@ components:
           enum: [low, medium, high, urgent]
           default: medium
         project_id:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         assignee_id:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         due_date:
-          type: string
-          format: date-time
-          nullable: true
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
 
     TaskUpdate:
       type: object
@@ -945,8 +963,9 @@ components:
         name:
           type: string
         description:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         status:
           type: string
           enum: [backlog, todo, in_progress, review, done, cancelled]
@@ -954,15 +973,18 @@ components:
           type: string
           enum: [low, medium, high, urgent]
         project_id:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         assignee_id:
-          type: string
-          nullable: true
+          oneOf:
+            - type: string
+            - type: "null"
         due_date:
-          type: string
-          format: date-time
-          nullable: true
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
 
     ErrorResponse:
       type: object
@@ -1002,11 +1024,13 @@ components:
         last_page:
           type: integer
         from:
-          type: integer
-          nullable: true
+          oneOf:
+            - type: integer
+            - type: "null"
         to:
-          type: integer
-          nullable: true
+          oneOf:
+            - type: integer
+            - type: "null"
 
     ErrorEnvelope:
       type: object

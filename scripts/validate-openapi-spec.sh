@@ -28,7 +28,7 @@ fi
 # Check if openapi-cli is installed (from @redocly/cli or swagger-cli)
 if command -v openapi &> /dev/null; then
     echo "✅ Using openapi-cli for validation..."
-    openapi validate "$SPEC_FILE"
+    openapi lint "$SPEC_FILE"
 elif command -v swagger-cli &> /dev/null; then
     echo "✅ Using swagger-cli for validation..."
     swagger-cli validate "$SPEC_FILE"

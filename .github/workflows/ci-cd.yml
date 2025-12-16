@@ -48,7 +48,7 @@ jobs:
           ./scripts/security-audit.sh
           
       - name: Upload security report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-report-${{ github.run_number }}
@@ -161,7 +161,7 @@ jobs:
         run: php -d memory_limit=512M artisan test --testsuite=Unit --env=testing
         
       - name: Upload test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results-${{ github.run_number }}
@@ -217,7 +217,7 @@ jobs:
         run: npm run check:performance
         
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-assets-${{ github.run_number }}
           path: public/build/
@@ -281,7 +281,7 @@ jobs:
         
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-smoke-report-${{ github.run_number }}
           path: playwright-report/
@@ -344,7 +344,7 @@ jobs:
         
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-core-report-${{ github.run_number }}
           path: playwright-report/
@@ -407,7 +407,7 @@ jobs:
         
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-regression-report-${{ github.run_number }}
           path: playwright-report/
@@ -457,7 +457,7 @@ jobs:
         run: php -d memory_limit=512M artisan test tests/Performance/ --env=testing
         
       - name: Upload performance results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: performance-results-${{ github.run_number }}

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -59,6 +60,9 @@ class SecurityTest extends TestCase
      */
     public function test_rate_limiting_works(): void
     {
+        $user = User::factory()->create(['role' => 'super_admin']);
+        $this->actingAs($user);
+
         // Make multiple requests quickly
         for ($i = 0; $i < 65; $i++) {
             $response = $this->get('/api/v1/health');
@@ -69,6 +73,15 @@ class SecurityTest extends TestCase
                 break;
             }
         }
+    }
+
+    public function test_health_endpoint_requires_admin_permission(): void
+    {
+        $user = User::factory()->create(['role' => 'member']);
+        $this->actingAs($user);
+
+        $response = $this->get('/api/v1/health');
+        $this->assertEquals(403, $response->getStatusCode());
     }
 
     /**
@@ -324,6 +337,9 @@ class SecurityTest extends TestCase
      */
     private function checkRateLimiting(): bool
     {
+        $user = User::factory()->create(['role' => 'super_admin']);
+        $this->actingAs($user);
+
         // Make multiple requests
         for ($i = 0; $i < 65; $i++) {
             $response = $this->get('/api/v1/health');

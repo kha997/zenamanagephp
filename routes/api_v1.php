@@ -46,7 +46,8 @@ use App\Http\Controllers\Api\HealthController;
 Route::prefix('v1')->group(function () {
     
     // Health check endpoint (for OpenAPI spec generation)
-    Route::get('/health', [HealthController::class, 'index']);
+    Route::get('/health', [HealthController::class, 'index'])
+        ->middleware(['auth:sanctum', 'ability:admin', 'throttle:10,1']);
     
     // Admin API Routes - System-wide admin functions
     Route::prefix('admin')->middleware(['api.stateful', 'auth:sanctum', 'ability:admin'])->group(function () {

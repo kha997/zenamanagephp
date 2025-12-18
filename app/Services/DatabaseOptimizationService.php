@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class DatabaseOptimizationService
 {
@@ -325,6 +326,10 @@ class DatabaseOptimizationService
      */
     public function analyzeQueryPerformance(string $query): array
     {
+        if (!$this->canAnalyzeQueries()) {
+            throw new \RuntimeException('Query analysis is restricted to CLI or system administrators');
+        }
+
         $startTime = microtime(true);
         $result = DB::select($query);
         $executionTime = (microtime(true) - $startTime) * 1000; // ms
@@ -357,5 +362,19 @@ class DatabaseOptimizationService
                 'long_query_time' => 1,
             ],
         ];
+    }
+
+    private function canAnalyzeQueries(): bool
+    {
+        if (app()->runningInConsole()) {
+            return true;
+        }
+
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        return $user->isSuperAdmin() || $user->can('users.manage');
     }
 }

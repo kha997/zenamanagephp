@@ -125,3 +125,18 @@ frontend/scripts/.env.local
 
 # quarantine snapshots (do not version)
 _quarantine/**
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# env artifacts (never commit)
+.env
+.env.*
+!.env.example
+
+# frontend env artifacts
+frontend/.env.local
+frontend/.env.*
+!frontend/.env.example
+!frontend/scripts/.env.example

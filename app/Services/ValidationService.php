@@ -32,7 +32,9 @@ class ValidationService
         $validator = Validator::make($data, $rules);
         
         // Custom validation: kiểm tra overlap projects
-        $validator->after(function ($validator) 
+        $validator->after(function ($validator) use ($data, $projectId) {
+            if ($this->hasProjectOverlap($data, $projectId)) {
+                $validator->errors()->add('start_date', 'Project overlaps with existing project');
             }
         });
         

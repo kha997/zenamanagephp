@@ -64,7 +64,15 @@ class DocumentService
      */
     public function createDocument(array $documentData, UploadedFile $file, int $userId): Document
     {
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($documentData, $file, $userId) {
+            // Tạo document
+            $document = Document::create([
+                'name' => $documentData['name'],
+                'description' => $documentData['description'] ?? null,
+                'project_id' => $documentData['project_id'],
+                'category' => $documentData['category'] ?? 'general',
+                'created_by' => $userId,
+            ]);
 
             // Tạo version đầu tiên
             $version = $this->createDocumentVersion(
@@ -106,7 +114,8 @@ class DocumentService
      */
     public function createNewVersion(int $documentId, UploadedFile $file, string $comment, int $userId): DocumentVersion
     {
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($documentId, $file, $comment, $userId) {
+            $document = Document::findOrFail($documentId);
             
             // Tạo version mới
             $version = $this->createDocumentVersion($document, $file, $comment, $userId);
@@ -129,7 +138,8 @@ class DocumentService
      */
     public function revertToVersion(int $documentId, int $targetVersionNumber, string $comment, int $userId): DocumentVersion
     {
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($documentId, $targetVersionNumber, $comment, $userId) {
+            $document = Document::findOrFail($documentId);
             $targetVersion = DocumentVersion::forDocument($documentId)
                                           ->where('version_number', $targetVersionNumber)
                                           ->firstOrFail();
@@ -184,7 +194,8 @@ class DocumentService
      */
     public function deleteDocument(int $documentId, int $userId): bool
     {
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($documentId, $userId) {
+            $document = Document::with('versions')->findOrFail($documentId);
             
             // Xóa tất cả files của document
             foreach ($document->versions as $version) {

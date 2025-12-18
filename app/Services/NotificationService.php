@@ -50,10 +50,14 @@ class NotificationService
         if (!$tenantId) {
             $tenantId = $this->resolveTenantId();
         }
-        
-        // If still no tenant_id, try to get it from the entity
-        if (!$tenantId && $entityType && $entityId) {
-            $tenantId = $this->resolveTenantIdFromEntity($entityType, $entityId);
+
+        $entityTenantId = null;
+        if ($entityType && $entityId) {
+            $entityTenantId = $this->resolveTenantIdFromEntity($entityType, $entityId, $tenantId);
+        }
+
+        if (!$tenantId) {
+            $tenantId = $entityTenantId;
         }
         
         // If still no tenant_id, try to get it from the user
@@ -156,42 +160,44 @@ class NotificationService
      * 
      * @param string $entityType Entity type
      * @param string $entityId Entity ID
+     * @param string|null $activeTenantId Expected tenant context (if available)
      * @return string|null
      */
-    private function resolveTenantIdFromEntity(string $entityType, string $entityId): ?string
+    private function resolveTenantIdFromEntity(string $entityType, string $entityId, ?string $activeTenantId = null): ?string
     {
         try {
+            $model = null;
             switch ($entityType) {
                 case 'task':
-                    $task = \App\Models\ProjectTask::withoutGlobalScope('tenant')->find($entityId);
-                    if ($task && $task->tenant_id) {
-                        return (string) $task->tenant_id;
-                    }
+                    $model = \App\Models\ProjectTask::withoutGlobalScope('tenant')->find($entityId);
                     break;
                 case 'change_order':
-                    $co = \App\Models\ChangeOrder::withoutGlobalScope('tenant')->find($entityId);
-                    if ($co && $co->tenant_id) {
-                        return (string) $co->tenant_id;
-                    }
+                    $model = \App\Models\ChangeOrder::withoutGlobalScope('tenant')->find($entityId);
                     break;
                 case 'payment_certificate':
-                    $cert = \App\Models\ContractPaymentCertificate::withoutGlobalScope('tenant')->find($entityId);
-                    if ($cert && $cert->tenant_id) {
-                        return (string) $cert->tenant_id;
-                    }
+                    $model = \App\Models\ContractPaymentCertificate::withoutGlobalScope('tenant')->find($entityId);
                     break;
                 case 'payment':
-                    $payment = \App\Models\ContractActualPayment::withoutGlobalScope('tenant')->find($entityId);
-                    if ($payment && $payment->tenant_id) {
-                        return (string) $payment->tenant_id;
-                    }
+                    $model = \App\Models\ContractActualPayment::withoutGlobalScope('tenant')->find($entityId);
                     break;
                 case 'role_profile':
-                    $profile = \App\Models\RoleProfile::withoutGlobalScope('tenant')->find($entityId);
-                    if ($profile && $profile->tenant_id) {
-                        return (string) $profile->tenant_id;
-                    }
+                    $model = \App\Models\RoleProfile::withoutGlobalScope('tenant')->find($entityId);
                     break;
+            }
+
+            if ($model && $model->tenant_id) {
+                $entityTenantId = (string) $model->tenant_id;
+                if ($activeTenantId && $entityTenantId !== (string) $activeTenantId) {
+                    Log::warning('NotificationService::resolveTenantIdFromEntity: Cross-tenant entity detected', [
+                        'entity_type' => $entityType,
+                        'entity_id' => $entityId,
+                        'active_tenant_id' => $activeTenantId,
+                        'entity_tenant_id' => $entityTenantId,
+                    ]);
+                    return null;
+                }
+
+                return $entityTenantId;
             }
         } catch (\Exception $e) {
             Log::warning('NotificationService::resolveTenantIdFromEntity: Failed to resolve tenant_id', [
@@ -200,10 +206,10 @@ class NotificationService
                 'error' => $e->getMessage(),
             ]);
         }
-        
+
         return null;
     }
-    
+
     /**
      * Get notifications for a user with filters
      * 

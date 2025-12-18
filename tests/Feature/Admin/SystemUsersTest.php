@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\Role;
 use App\Models\Permission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class SystemUsersTest extends TestCase
@@ -159,5 +160,44 @@ class SystemUsersTest extends TestCase
         $tenantIds = collect($users)->pluck('tenant_id')->unique()->filter()->toArray();
         $this->assertGreaterThanOrEqual(1, count($tenantIds));
     }
-}
 
+    public function test_admin_without_users_manage_permission_cannot_modify_users(): void
+    {
+        Gate::define('users.manage', fn ($user) => $user->id === $this->superAdmin->id);
+
+        $targetUser = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'role' => 'member',
+        ]);
+
+        $this->actingAs($this->orgAdmin);
+
+        $updateResponse = $this->putJson("/api/admin/users/{$targetUser->id}", [
+            'name' => 'Blocked Change',
+        ]);
+        $updateResponse->assertStatus(403);
+
+        $deleteResponse = $this->deleteJson("/api/admin/users/{$targetUser->id}");
+        $deleteResponse->assertStatus(403);
+    }
+
+    public function test_super_admin_with_users_manage_permission_can_modify_users(): void
+    {
+        Gate::define('users.manage', fn ($user) => $user->id === $this->superAdmin->id);
+
+        $targetUser = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'role' => 'member',
+        ]);
+
+        $this->actingAs($this->superAdmin);
+
+        $updateResponse = $this->putJson("/api/admin/users/{$targetUser->id}", [
+            'name' => 'Trusted Update',
+        ]);
+        $updateResponse->assertStatus(200);
+
+        $deleteResponse = $this->deleteJson("/api/admin/users/{$targetUser->id}");
+        $deleteResponse->assertStatus(200);
+    }
+}

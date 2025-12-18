@@ -637,7 +637,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ========================================
     // ADMIN USER MANAGEMENT API ENDPOINTS (CROSS-TENANT)
     // ========================================
-    Route::prefix('admin/users')->middleware(['ability:admin'])->group(function () {
+    Route::prefix('admin/users')->middleware(['ability:admin', 'can:users.manage'])->group(function () {
         // Admin user management routes - using existing UserController
         Route::get('/', [\App\Http\Controllers\UserController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\UserController::class, 'store']);

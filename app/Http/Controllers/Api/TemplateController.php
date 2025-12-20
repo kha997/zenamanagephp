@@ -53,7 +53,7 @@ class TemplateController extends Controller
             }
             
             // Get template sets accessible to user (tenant-specific + global)
-            $templateSets = TemplateSet::forTenantOrGlobal($tenantId)
+            $templateSets = $this->templateSetQuery($tenantId)
                 ->active()
                 ->with(['phases', 'disciplines', 'presets'])
                 ->get()
@@ -108,7 +108,7 @@ class TemplateController extends Controller
         try {
             $validated = $request->validated();
             
-            $set = TemplateSet::findOrFail($validated['set_id']);
+            $set = $this->findTemplateSet($tenantId, $validated['set_id']);
             $project = Project::findOrFail($validated['project_id']);
 
             // Check authorization
@@ -144,7 +144,7 @@ class TemplateController extends Controller
         try {
             $validated = $request->validated();
             
-            $set = TemplateSet::findOrFail($validated['set_id']);
+            $set = $this->findTemplateSet($tenantId, $validated['set_id']);
 
             // Check authorization
             $this->authorize('apply', $set);
@@ -217,5 +217,17 @@ class TemplateController extends Controller
             return ApiResponse::error('Failed to retrieve history', 500);
         }
     }
-}
 
+    private function templateSetQuery(string $tenantId)
+    {
+        return TemplateSet::withoutTenantScope()->forTenantOrGlobal($tenantId);
+    }
+
+    private function findTemplateSet(string $tenantId, string $setId): TemplateSet
+    {
+        return $this->templateSetQuery($tenantId)
+            ->where('id', $setId)
+            ->active()
+            ->firstOrFail();
+    }
+}

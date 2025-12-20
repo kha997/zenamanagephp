@@ -33,7 +33,7 @@ class TemplateSetController extends Controller
     {
         // Check feature flag
         if (!Config::get('features.tasks.enable_wbs_templates', false)) {
-            abort(404, 'Task Templates feature is not enabled');
+            abort(403, 'Task Templates feature is not enabled');
         }
 
         $this->authorize('viewAny', TemplateSet::class);
@@ -227,8 +227,8 @@ class TemplateSetController extends Controller
     {
         $this->authorize('import', TemplateSet::class);
 
-        if (!config('features.enable_wbs_templates')) {
-            abort(404, 'Task Templates feature is not enabled');
+        if (!Config::get('features.tasks.enable_wbs_templates', false)) {
+            abort(403, 'Task Templates feature is not enabled');
         }
 
         return view('admin.templates.import');
@@ -240,6 +240,10 @@ class TemplateSetController extends Controller
     public function import(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorize('import', TemplateSet::class);
+
+        if (!Config::get('features.tasks.enable_wbs_templates', false)) {
+            abort(403, 'Task Templates feature is not enabled');
+        }
 
         $request->validate([
             'file' => 'required|file|mimes:csv,xlsx,json|max:10240',
@@ -281,4 +285,3 @@ class TemplateSetController extends Controller
         }
     }
 }
-

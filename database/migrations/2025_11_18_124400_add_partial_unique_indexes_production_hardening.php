@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use App\Support\MigrationDriver;
 
 return new class extends Migration
 {
@@ -22,6 +23,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         $mysqlVersion = $this->getMysqlVersion();
         $supportsFunctionalIndexes = version_compare($mysqlVersion, '8.0.13', '>=');
 
@@ -44,6 +48,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         $this->dropPartialUniqueIndex('projects', 'projects_tenant_code_unique');
     }
 
@@ -130,6 +137,10 @@ return new class extends Migration
      */
     private function hasColumn(string $table, string $column): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         if (!Schema::hasTable($table)) {
             return false;
         }
@@ -161,6 +172,10 @@ return new class extends Migration
      */
     private function hasIndex(string $table, string $indexName): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         if (!Schema::hasTable($table)) {
             return false;
         }
@@ -183,5 +198,5 @@ return new class extends Migration
             return false;
         }
     }
-};
 
+};

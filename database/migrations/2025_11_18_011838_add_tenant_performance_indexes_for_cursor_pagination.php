@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use App\Support\MigrationDriver;
 
 return new class extends Migration
 {
@@ -15,6 +16,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Projects: (tenant_id, created_at DESC) for cursor pagination
         if (Schema::hasTable('projects')) {
             if (!$this->hasIndex('projects', 'projects_tenant_created_at_index')) {
@@ -146,6 +150,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         $tables = [
             'projects' => ['projects_tenant_created_at_index', 'projects_tenant_id_index'],
             'tasks' => ['tasks_tenant_created_at_index', 'tasks_tenant_id_index'],
@@ -176,6 +183,10 @@ return new class extends Migration
      */
     private function hasIndex(string $table, string $indexName): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         if (!Schema::hasTable($table)) {
             return false;
         }
@@ -198,4 +209,5 @@ return new class extends Migration
             return false;
         }
     }
+
 };

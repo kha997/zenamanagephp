@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\MigrationDriver;
 
 /**
  * Round 221: Payment Certificates & Payments (Actual Cost)
@@ -134,13 +135,12 @@ return new class extends Migration
      */
     private function foreignKeyExists(string $table, string $keyName): bool
     {
-        $connection = Schema::getConnection();
-        $database = $connection->getDatabaseName();
-        
-        if ($connection->getDriverName() === 'sqlite') {
-            // SQLite doesn't support foreign key constraints in the same way
+        if (MigrationDriver::isSqlite()) {
             return false;
         }
+
+        $connection = Schema::getConnection();
+        $database = $connection->getDatabaseName();
         
         $result = $connection->select(
             "SELECT CONSTRAINT_NAME 

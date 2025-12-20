@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use App\Support\MigrationDriver;
 
 return new class extends Migration
 {
@@ -15,6 +16,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Main tables that require tenant_id NOT NULL
         $tables = [
             'projects',
@@ -111,6 +115,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         $tables = [
             'projects',
             'tasks',
@@ -151,6 +158,9 @@ return new class extends Migration
      */
     private function dropForeignKeyConstraints(string $tableName): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         $connection = Schema::getConnection();
         $databaseName = $connection->getDatabaseName();
         
@@ -180,6 +190,10 @@ return new class extends Migration
      */
     private function addForeignKeyConstraints(string $tableName): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
+
         if (!Schema::hasTable('tenants')) {
             return;
         }
@@ -213,6 +227,10 @@ return new class extends Migration
      */
     private function hasIndex(string $table, string $indexName): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         $connection = Schema::getConnection();
         $databaseName = $connection->getDatabaseName();
         
@@ -231,4 +249,5 @@ return new class extends Migration
             return false;
         }
     }
+
 };

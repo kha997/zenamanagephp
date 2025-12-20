@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use App\Support\MigrationDriver;
 
 return new class extends Migration
 {
@@ -23,6 +24,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Documents: Add composite unique (tenant_id, name) if name should be unique per tenant
         // Note: Documents typically don't need unique names, but we'll add it as an option
         // Uncomment if documents should have unique names per tenant:
@@ -141,6 +145,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Drop unique constraints
         if (Schema::hasTable('quotes')) {
             $indexName = 'quotes_tenant_quote_number_unique';
@@ -207,6 +214,10 @@ return new class extends Migration
      */
     private function hasIndex(string $table, string $indexName): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         if (!Schema::hasTable($table)) {
             return false;
         }
@@ -229,4 +240,8 @@ return new class extends Migration
             return false;
         }
     }
+
+    /**
+     * Determine if the current connection is SQLite.
+     */
 };

@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use App\Support\MigrationDriver;
 
 return new class extends Migration
 {
@@ -18,6 +19,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Projects: unique (tenant_id, code) where deleted_at IS NULL
         if (Schema::hasTable('projects') && Schema::hasColumn('projects', 'code')) {
             // Drop existing unique on code if exists
@@ -67,6 +71,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Drop composite unique indexes
         if (Schema::hasTable('projects')) {
             Schema::table('projects', function (Blueprint $table) {
@@ -155,6 +162,10 @@ return new class extends Migration
      */
     private function hasIndex(string $table, string $indexName): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         if (!Schema::hasTable($table)) {
             return false;
         }
@@ -177,4 +188,5 @@ return new class extends Migration
             return false;
         }
     }
+
 };

@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use App\Support\MigrationDriver;
 
 return new class extends Migration
 {
@@ -21,6 +22,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Projects indexes
         if (Schema::hasTable('projects')) {
             $this->addIndexIfNotExists('projects', 'projects_tenant_created_idx', ['tenant_id', 'created_at']);
@@ -58,6 +62,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Drop projects indexes
         $this->dropIndexIfExists('projects', 'projects_tenant_created_idx');
         $this->dropIndexIfExists('projects', 'projects_tenant_status_created_idx');
@@ -112,6 +119,10 @@ return new class extends Migration
      */
     private function hasIndex(string $table, string $indexName): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         if (!Schema::hasTable($table)) {
             return false;
         }
@@ -134,5 +145,5 @@ return new class extends Migration
             return false;
         }
     }
-};
 
+};

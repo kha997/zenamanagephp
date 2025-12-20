@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\MigrationDriver;
 
 return new class extends Migration
 {
@@ -14,6 +15,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Users table - for cursor pagination
         if (Schema::hasTable('users')) {
             Schema::table('users', function (Blueprint $table) {
@@ -68,6 +72,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         Schema::table('users', function (Blueprint $table) {
             $table->dropIndex('idx_users_tenant_created');
             $table->dropIndex('idx_users_tenant_updated');
@@ -95,6 +102,10 @@ return new class extends Migration
      */
     private function indexExists(string $table, string $index): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         $connection = Schema::getConnection();
         $databaseName = $connection->getDatabaseName();
         
@@ -109,5 +120,5 @@ return new class extends Migration
         
         return $result[0]->count > 0;
     }
-};
 
+};

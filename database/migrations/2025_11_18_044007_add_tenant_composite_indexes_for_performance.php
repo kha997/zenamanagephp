@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use App\Support\MigrationDriver;
 
 return new class extends Migration
 {
@@ -22,6 +23,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         // Projects: (tenant_id, status, created_at) for list filtering
         if (Schema::hasTable('projects') && Schema::hasColumn('projects', 'status')) {
             $this->addIndexIfNotExists('projects', 'idx_projects_tenant_status_created', ['tenant_id', 'status', 'created_at']);
@@ -68,6 +72,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (MigrationDriver::isSqlite()) {
+            return;
+        }
         $indexes = [
             'projects' => ['idx_projects_tenant_status_created'],
             'tasks' => [
@@ -113,6 +120,10 @@ return new class extends Migration
      */
     private function hasIndex(string $table, string $indexName): bool
     {
+        if (MigrationDriver::isSqlite()) {
+            return false;
+        }
+
         if (!Schema::hasTable($table)) {
             return false;
         }
@@ -135,4 +146,8 @@ return new class extends Migration
             return false;
         }
     }
+
+    /**
+     * Determine if the current connection is SQLite.
+     */
 };

@@ -10,6 +10,7 @@
 */
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\V1\App\CostOutstandingController;
 use App\Http\Controllers\Api\V1\App\CostSnapshotController;
 use App\Http\Controllers\Api\V1\App\DocumentSubscriptionController;
@@ -36,10 +37,13 @@ use App\Http\Controllers\Api\V1\App\MyRiskController;
 use App\Http\Controllers\Api\V1\App\ProjectActivityController;
 use App\Http\Controllers\Api\V1\App\ProjectSubscriptionController;
 use App\Http\Controllers\Api\V1\App\ProjectHealthController;
+use App\Http\Controllers\Api\V1\App\ProjectsController;
 use App\Http\Controllers\Api\V1\App\ProjectHealthSettingsController;
 use App\Http\Controllers\Api\V1\App\FinanceAlertsSettingsController;
 use App\Http\Controllers\Api\V1\App\TaskCommentController;
 use App\Http\Controllers\Api\V1\App\TaskSubscriptionController;
+use App\Http\Controllers\Api\V1\Admin\SystemUsersController;
+use App\Http\Controllers\Admin\TenantMembersController;
 use App\Http\Controllers\Api\HealthController;
 
 // API v1 Routes - Simplified
@@ -70,9 +74,10 @@ Route::prefix('v1')->group(function () {
             ->name('admin.roles.destroy')
             ->withoutMiddleware('bindings');
         
-        // User-Role Assignment - Round 234
-        Route::get('/users', [App\Http\Controllers\Api\V1\Admin\UserRoleController::class, 'index'])
-            ->name('admin.users.list');
+        // System users list (new contract)
+        Route::get('/users', [SystemUsersController::class, 'index'])
+            ->name('admin.users.list')
+            ->middleware(['can:users.manage']);
         // Round 246: Changed {user} to {usr} to avoid route-model-binding issues (consistent with assign-profile route)
         Route::put('/users/{usr}/roles', [App\Http\Controllers\Api\V1\Admin\UserRoleController::class, 'updateRoles'])
             ->name('admin.users.roles.update')
@@ -116,10 +121,24 @@ Route::prefix('v1')->group(function () {
         Route::get('/cost-governance-overview', [App\Http\Controllers\Api\V1\Admin\CostGovernanceOverviewController::class, 'index'])
             ->name('admin.cost-governance-overview.index');
     });
+
+    // Admin Tenant Members - Org Admin tenants
+    Route::prefix('admin')->middleware([
+        'api.stateful',
+        'auth:sanctum',
+        'ability:tenant',
+        'tenant.permission:admin.members.manage',
+        'tenant.scope',
+    ])->group(function () {
+        Route::get('/members', [TenantMembersController::class, 'index'])
+            ->name('admin.members.api.index');
+    });
     
     // App API Routes - Tenant-scoped
-    // Use api.stateful middleware group for session-based SPA authentication
-    Route::prefix('app')->middleware(['api.stateful', 'debug.auth', 'auth:sanctum', 'tenant.scope'])->group(function () {
+    $tenantAppMiddleware = ['api.stateful', 'debug.auth', 'auth:sanctum', 'tenant.scope'];
+
+    $tenantAppRoutes = function () {
+
         // Global search - Round 261
         Route::get('/search', [App\Http\Controllers\Api\V1\App\GlobalSearchController::class, 'index'])
             ->name('app.search.index');
@@ -127,11 +146,14 @@ Route::prefix('v1')->group(function () {
         // Projects API - using existing ProjectManagementController
         Route::get('/projects', [App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjects']);
         Route::post('/projects', [App\Http\Controllers\Unified\ProjectManagementController::class, 'createProject']);
-        Route::get('/projects/{project}', [App\Http\Controllers\Unified\ProjectManagementController::class, 'getProject']);
+        Route::get('/projects/{project}', [App\Http\Controllers\Unified\ProjectManagementController::class, 'getProject'])
+            ->withoutMiddleware('bindings');
         Route::post('/projects/{proj}/follow', [ProjectSubscriptionController::class, 'follow']);
         Route::delete('/projects/{proj}/follow', [ProjectSubscriptionController::class, 'unfollow']);
-        Route::put('/projects/{project}', [App\Http\Controllers\Unified\ProjectManagementController::class, 'updateProject']);
-        Route::delete('/projects/{project}', [App\Http\Controllers\Unified\ProjectManagementController::class, 'deleteProject']);
+        Route::put('/projects/{project}', [App\Http\Controllers\Unified\ProjectManagementController::class, 'updateProject'])
+            ->withoutMiddleware('bindings');
+        Route::delete('/projects/{project}', [App\Http\Controllers\Unified\ProjectManagementController::class, 'deleteProject'])
+            ->withoutMiddleware('bindings');
         Route::get('/projects/{project}/documents', [App\Http\Controllers\Unified\ProjectManagementController::class, 'documents']);
         Route::post('/projects/{project}/documents', [App\Http\Controllers\Unified\ProjectManagementController::class, 'storeDocument']);
         Route::patch('/projects/{proj}/documents/{doc}', [App\Http\Controllers\Unified\ProjectManagementController::class, 'updateDocument'])
@@ -224,11 +246,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/projects/{proj}/cost-dashboard', [App\Http\Controllers\Api\V1\App\ProjectCostDashboardController::class, 'show'])
             ->name('app.projects.cost-dashboard.show')
             ->withoutMiddleware('bindings');
-        Route::get('/project-health/summary', [ProjectHealthController::class, 'summary']);
-        Route::get('/project-health/risk-trends', [ProjectHealthController::class, 'riskTrends']);
-        Route::get('/project-health', [ProjectHealthController::class, 'index']);
-        Route::get('/projects/{proj}/health', [ProjectHealthController::class, 'show']);
-        Route::get('/projects/{proj}/health/history', [ProjectHealthController::class, 'history']);
+        Route::middleware(['tenant.permission:tenant.view_reports'])->group(function () {
+            Route::get('/project-health/summary', [ProjectHealthController::class, 'summary']);
+            Route::get('/project-health/risk-trends', [ProjectHealthController::class, 'riskTrends']);
+            Route::get('/project-health', [ProjectHealthController::class, 'index']);
+            Route::get('/projects/{proj}/health', [ProjectHealthController::class, 'show']);
+            Route::get('/projects/{proj}/health/history', [ProjectHealthController::class, 'history']);
+            Route::post('/projects/{proj}/health/snapshot', [ProjectsController::class, 'snapshotHealth']);
+        });
 
         Route::middleware(['tenant.permission:tenant.manage_settings'])->group(function () {
         Route::get('/settings/project-health', [ProjectHealthSettingsController::class, 'show']);
@@ -596,7 +621,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/documents/approvals', [App\Http\Controllers\Api\DocumentsController::class, 'approvals']);
         
         // Templates API - MVP (Round 192)
-        Route::prefix('templates')->group(function () {
+        Route::prefix('templates')->middleware([
+            'feature.flag:features.tasks.enable_wbs_templates,Task Templates feature is not enabled'
+        ])->group(function () {
             // Task Templates API - Round 200 (must come before /{tpl} routes to avoid route conflicts)
             Route::prefix('{tpl}/task-templates')->group(function () {
                 Route::get('/', [App\Http\Controllers\Api\V1\App\TaskTemplateController::class, 'index']);
@@ -614,10 +641,15 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{tpl}', [App\Http\Controllers\Api\V1\App\TemplateController::class, 'destroy']);
         });
         
-        // Legacy Templates API (WBS templates)
-        Route::apiResource('template-sets', App\Http\Controllers\Api\TemplatesController::class);
-        Route::get('/template-sets/library', [App\Http\Controllers\Api\TemplatesController::class, 'library']);
-        Route::get('/template-sets/builder', [App\Http\Controllers\Api\TemplatesController::class, 'builder']);
+        // Legacy Template Set API (WBS templates)
+        Route::prefix('template-sets')->middleware([
+            'feature.flag:features.tasks.enable_wbs_templates,Task Templates feature is not enabled'
+        ])->group(function () {
+            Route::get('/', [TemplateController::class, 'index']);
+            Route::post('/preview', [TemplateController::class, 'preview']);
+        });
+        Route::post('/projects/{project}/apply-template', [TemplateController::class, 'apply']);
+        Route::get('/projects/{project}/template-history', [TemplateController::class, 'history']);
         
         // Dashboard API - using proper middleware
         Route::middleware(['ability:tenant'])->prefix('dashboard')->group(function () {
@@ -641,7 +673,11 @@ Route::prefix('v1')->group(function () {
             Route::post('/preferences', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'saveUserPreferences']);
             Route::post('/reset', [App\Http\Controllers\Api\V1\App\DashboardController::class, 'resetToDefault']);
         });
-    });
+    };
+
+    Route::middleware($tenantAppMiddleware)->group($tenantAppRoutes);
+    Route::prefix('app')->middleware($tenantAppMiddleware)->group($tenantAppRoutes);
+
     
     // Signed download route (outside auth middleware, protected by signed URL)
     Route::get('/app/projects/documents/{doc}/file', [App\Http\Controllers\Unified\ProjectManagementController::class, 'downloadDocumentSigned'])

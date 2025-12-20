@@ -49,6 +49,7 @@ class Kernel extends HttpKernel
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\PerformanceLoggingMiddleware::class,
+            \App\Http\Middleware\AdminUserApiOverride::class,
         ],
 
         // API stateful group - for SPA authentication with session support
@@ -80,11 +81,13 @@ class Kernel extends HttpKernel
             // ✳️ Authentication & Authorization
             'auth.api'             => \App\Http\Middleware\ApiAuthenticationMiddleware::class,
             'ability'               => \App\Http\Middleware\AbilityMiddleware::class,
+            'can'                   => \Illuminate\Auth\Middleware\Authorize::class,
             'test.auth.bypass'      => \App\Http\Middleware\TestAuthBypassMiddleware::class,
             'auth.web.test'         => \App\Http\Middleware\AuthenticateWithTestBypass::class,
 
             // ✳️ Tenancy
             'tenant.scope'         => \App\Http\Middleware\TenantScopeMiddleware::class,
+            'tenant.permission'    => \App\Http\Middleware\EnsureTenantPermission::class,
             // 'tenant.isolation'     => \App\Http\Middleware\TenantIsolationMiddleware::class,
 
             // ✳️ Rate limit (unified)
@@ -101,6 +104,7 @@ class Kernel extends HttpKernel
             'validation'            => \App\Http\Middleware\Unified\UnifiedValidationMiddleware::class,
             'input.validation'       => \App\Http\Middleware\InputValidationMiddleware::class,
             'feature.flags'        => \App\Http\Middleware\EnsureFeatureFlags::class,
+            'feature.flag'         => \App\Http\Middleware\EnsureFeatureFlagEnabled::class,
             'demo.user'            => \App\Http\Middleware\DemoUserMiddleware::class,
             
             // ✳️ Security & Session Management

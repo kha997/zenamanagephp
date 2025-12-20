@@ -19,6 +19,10 @@ class TenantMembersController extends Controller
     {
         $user = Auth::user();
         
+        if ($user->isSuperAdmin()) {
+            abort(403, 'Super admin must use admin/users for system-wide management.');
+        }
+        
         // Use TenancyService to resolve active tenant (consistent with /api/v1/me)
         $tenancyService = app(\App\Services\TenancyService::class);
         $tenantId = $tenancyService->resolveActiveTenantId($user, $request);
@@ -144,4 +148,3 @@ class TenantMembersController extends Controller
         ], 501);
     }
 }
-

@@ -60,9 +60,26 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
         
+        Gate::before(function ($user, $ability) {
+            if ($user && $user->isSuperAdmin()) {
+                return true;
+            }
+
+            return null;
+        });
+
         // Define super-admin gate
         Gate::define('super-admin', function ($user) {
             return $user->isSuperAdmin();
+        });
+        
+        Gate::define('users.manage', function ($user) {
+            if (!$user) {
+                return false;
+            }
+
+            return $user->hasPermission('users.manage_roles')
+                || $user->hasPermission('users.manage_permissions');
         });
         
         // Temporarily disable Spatie Permission until package is properly installed

@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Api\V1\App\ProjectsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -477,16 +478,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // PROJECTS API ENDPOINTS (Unified)
     // ========================================
     Route::prefix('projects')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjects']);
-        Route::post('/', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'createProject']);
+        Route::get('/', [ProjectsController::class, 'index']);
+        Route::post('/', [ProjectsController::class, 'store']);
         Route::get('/stats', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjectStats']);
         Route::get('/timeline/{id}', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjectTimeline']);
         Route::get('/search', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'searchProjects']);
         Route::get('/recent', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getRecentProjects']);
         Route::get('/dashboard', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProjectDashboardData']);
-        Route::get('/{id}', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'getProject']);
-        Route::put('/{id}', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'updateProject']);
-        Route::delete('/{id}', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'deleteProject']);
+        Route::get('/{id}', [ProjectsController::class, 'show']);
+        Route::put('/{id}', [ProjectsController::class, 'update']);
+        Route::delete('/{id}', [ProjectsController::class, 'destroy']);
         Route::post('/bulk-delete', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'bulkDeleteProjects']);
         Route::post('/bulk-archive', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'bulkArchiveProjects']);
         Route::post('/bulk-export', [\App\Http\Controllers\Unified\ProjectManagementController::class, 'bulkExportProjects']);
@@ -642,8 +643,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [\App\Http\Controllers\UserController::class, 'index']);
         Route::post('/', [\App\Http\Controllers\UserController::class, 'store']);
         Route::get('/{user}', [\App\Http\Controllers\UserController::class, 'show']);
-        Route::put('/{user}', [\App\Http\Controllers\UserController::class, 'update']);
-        Route::delete('/{user}', [\App\Http\Controllers\UserController::class, 'destroy']);
+
+        // PUT/DELETE should enforce users.manage ability even if middleware is bypassed elsewhere
+        Route::middleware(['can:users.manage'])->group(function () {
+            Route::put('/{user}', [\App\Http\Controllers\Admin\AdminUserManagementController::class, 'update']);
+            Route::delete('/{user}', [\App\Http\Controllers\Admin\AdminUserManagementController::class, 'destroy']);
+        });
     });
 
     // ========================================

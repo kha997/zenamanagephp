@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\Tenant;
+use App\Models\Role;
 use App\Traits\ServiceBaseTrait;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -70,7 +72,7 @@ class UserManagementService
     /**
      * Get user by ID with tenant isolation
      */
-    public function getUserById(int $id, string|int|null $tenantId = null): ?User
+    public function getUserById(string|int $id, string|int|null $tenantId = null): ?User
     {
         $this->validateTenantAccess($tenantId);
         
@@ -102,42 +104,58 @@ class UserManagementService
     /**
      * Update user
      */
-    public function updateUser(int $id, array $data, string|int|null $tenantId = null): User
+    public function updateUser(string|int $id, array $data, string|int|null $tenantId = null): User
     {
-        $this->validateTenantAccess($tenantId);
-        
-        $user = $this->findByIdOrFail($id, $tenantId);
-        $this->validateModelOwnership($user, $tenantId);
-        
-        $this->validateUserData($data, 'update', $user);
-        
-        // Handle password update
-        if (isset($data['password']) && $data['password']) {
-            $data['password'] = Hash::make($data['password']);
-        } else {
-            unset($data['password']);
-        }
-        
-        $user->update($data);
-        
-        $this->logCrudOperation('updated', $user);
-        
-        return $user->fresh()->load('tenant');
+        $user = $this->resolveUserForAction($id, $tenantId);
+
+        $updatedUser = $this->applyUserUpdate($user, $data);
+
+        return $updatedUser->fresh()->load('tenant');
+    }
+
+    /**
+     * Update user by flexible identifier (ULID or numeric)
+     */
+    public function updateUserByIdentifier(string|int $identifier, array $data, string|int|null $tenantId = null): User
+    {
+        $user = $this->resolveUserForAction($identifier, $tenantId);
+
+        $updatedUser = $this->applyUserUpdate($user, $data);
+
+        return $updatedUser->fresh()->load('tenant');
     }
 
     /**
      * Delete user
      */
-    public function deleteUser(int $id, string|int|null $tenantId = null): bool
+    public function deleteUser(string|int $id, string|int|null $tenantId = null): bool
     {
-        $this->validateTenantAccess($tenantId);
-        
-        $user = $this->findByIdOrFail($id, $tenantId);
-        $this->validateModelOwnership($user, $tenantId);
-        
+        $user = $this->resolveUserForAction($id, $tenantId);
+
         // Prevent self-deletion
         if ($user->id === Auth::id()) {
             $this->logError('Self-deletion attempt', null, ['user_id' => $id]);
+            abort(403, 'Cannot delete your own account');
+        }
+        
+        $deleted = $user->delete();
+        
+        if ($deleted) {
+            $this->logCrudOperation('deleted', $user);
+        }
+        
+        return $deleted;
+    }
+
+    /**
+     * Delete user by flexible identifier (ULID or numeric)
+     */
+    public function deleteUserByIdentifier(string|int $identifier, string|int|null $tenantId = null): bool
+    {
+        $user = $this->resolveUserForAction($identifier, $tenantId);
+
+        if ($user->id === Auth::id()) {
+            $this->logError('Self-deletion attempt', null, ['user_id' => $identifier]);
             abort(403, 'Cannot delete your own account');
         }
         
@@ -177,13 +195,10 @@ class UserManagementService
     /**
      * Toggle user active status
      */
-    public function toggleUserStatus(int $id, string|int|null $tenantId = null): User
+    public function toggleUserStatus(string|int $id, string|int|null $tenantId = null): User
     {
-        $this->validateTenantAccess($tenantId);
-        
-        $user = $this->findByIdOrFail($id, $tenantId);
-        $this->validateModelOwnership($user, $tenantId);
-        
+        $user = $this->resolveUserForAction($id, $tenantId);
+
         $user->update(['is_active' => !$user->is_active]);
         
         $this->logCrudOperation('status_toggled', $user, [
@@ -196,13 +211,10 @@ class UserManagementService
     /**
      * Update user role
      */
-    public function updateUserRole(int $id, string $role, string|int|null $tenantId = null): User
+    public function updateUserRole(string|int $id, string $role, string|int|null $tenantId = null): User
     {
-        $this->validateTenantAccess($tenantId);
-        
-        $user = $this->findByIdOrFail($id, $tenantId);
-        $this->validateModelOwnership($user, $tenantId);
-        
+        $user = $this->resolveUserForAction($id, $tenantId);
+
         $this->validateRole($role);
         
         $user->update(['role' => $role]);
@@ -273,10 +285,24 @@ class UserManagementService
                 'max:255',
                 Rule::unique('users')->ignore($user?->id)
             ],
-            'role' => ['required', 'string', 'in:admin,member,client'],
             'status' => ['sometimes', 'string', 'in:active,inactive'],
             'is_active' => ['sometimes', 'boolean']
         ];
+
+        if ($action === 'create') {
+            $rules['role'] = ['required', 'string', 'in:admin,member,client'];
+        } else {
+            $rules['role'] = ['sometimes', 'string', 'in:admin,member,client'];
+            $rules['name'] = ['sometimes', 'string', 'max:255'];
+            $rules['first_name'] = ['sometimes', 'string', 'max:255'];
+            $rules['last_name'] = ['sometimes', 'string', 'max:255'];
+            $rules['email'] = [
+                'sometimes',
+                'email',
+                'max:255',
+                Rule::unique('users')->ignore($user?->id)
+            ];
+        }
 
         if ($action === 'create') {
             $rules['password'] = ['required', 'string', 'min:8', 'confirmed'];
@@ -310,14 +336,155 @@ class UserManagementService
     }
 
     /**
-     * Get user preferences
+     * Apply sanitized updates to a user.
      */
-    public function getUserPreferences(int $userId, string|int|null $tenantId = null): array
+    private function applyUserUpdate(User $user, array $data): User
+    {
+        $this->guardDisallowedUpdateFields($data);
+        $this->validateUserData($data, 'update', $user);
+
+        $allowedPayload = $this->filterAllowedUserUpdateFields($data);
+        $roleIds = $this->resolveRoleIdsForSync($data);
+
+        if (!empty($allowedPayload)) {
+            $user->fill($allowedPayload);
+            $user->save();
+        }
+
+        if (!empty($roleIds)) {
+            $user->roles()->sync($roleIds);
+        }
+
+        $this->logCrudOperation('updated', $user);
+
+        return $user;
+    }
+
+    /**
+     * Prevent updates to sensitive fields.
+     */
+    private function guardDisallowedUpdateFields(array $data): void
+    {
+        $blocked = [
+            'tenant_id',
+            'id',
+            'created_at',
+            'updated_at',
+            'deleted_at',
+            'email_verified_at',
+            'remember_token',
+            'password',
+            'password_confirmation',
+            'current_password',
+            'role',
+        ];
+
+        foreach ($blocked as $field) {
+            if (array_key_exists($field, $data)) {
+                $this->logError('Blocked sensitive field update', null, [
+                    'field' => $field,
+                    'payload' => $data[$field] ?? null,
+                ]);
+
+                throw new \InvalidArgumentException(sprintf('Field "%s" is not updatable via this action.', $field));
+            }
+        }
+    }
+
+    /**
+     * Keep only the permitted user fields for updates.
+     */
+    private function filterAllowedUserUpdateFields(array $data): array
+    {
+        $allowed = [
+            'name',
+            'email',
+            'first_name',
+            'last_name',
+            'is_active',
+            'status',
+            'phone',
+            'avatar',
+            'timezone',
+            'language',
+            'preferences',
+            'department',
+            'job_title',
+            'manager',
+        ];
+
+        return array_intersect_key($data, array_flip($allowed));
+    }
+
+    /**
+     * Normalize role IDs based on role_ids (IDs) or roles (names).
+     */
+    private function resolveRoleIdsForSync(array $data): array
+    {
+        if (isset($data['role_ids']) && is_array($data['role_ids'])) {
+            $ids = array_values(array_filter($data['role_ids'], fn($value) => is_scalar($value)));
+            if (!empty($ids)) {
+                $uniqueIds = array_unique($ids);
+                $existing = Role::whereIn('id', $uniqueIds)->pluck('id')->toArray();
+
+                if (count($existing) !== count($uniqueIds)) {
+                    throw new \InvalidArgumentException('Some requested roles do not exist.');
+                }
+
+                return $existing;
+            }
+        }
+
+        if (isset($data['roles']) && is_array($data['roles'])) {
+            $names = array_values(array_filter($data['roles'], fn($value) => is_scalar($value)));
+            if (!empty($names)) {
+                $uniqueNames = array_unique($names);
+                $existing = Role::whereIn('name', $uniqueNames)->pluck('id')->toArray();
+
+                if (count($existing) !== count($uniqueNames)) {
+                    throw new \InvalidArgumentException('Some requested roles do not exist.');
+                }
+
+                return $existing;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Resolve a user for administrative actions while bypassing tenant scopes.
+     */
+    private function resolveUserForAction(string|int $identifier, string|int|null $tenantId = null): User
     {
         $this->validateTenantAccess($tenantId);
-        
-        $user = $this->findByIdOrFail($userId, $tenantId);
+
+        $user = $this->getModel()
+            ->newQueryWithoutScopes()
+            ->with(['tenant'])
+            ->where('id', $identifier)
+            ->first();
+
+        if (!$user) {
+            $this->logError('User not found for action', null, [
+                'identifier' => $identifier,
+                'tenant_id' => $tenantId,
+            ]);
+
+            abort(404, 'Resource not found');
+        }
+
         $this->validateModelOwnership($user, $tenantId);
+
+        return $user;
+    }
+
+    /**
+     * Get user preferences
+     */
+    public function getUserPreferences(string|int $userId, string|int|null $tenantId = null): array
+    {
+        $user = $this->resolveUserForAction($userId, $tenantId);
         
         return $user->preferences ?? [];
     }
@@ -325,12 +492,9 @@ class UserManagementService
     /**
      * Update user preferences
      */
-    public function updateUserPreferences(int $userId, array $preferences, string|int|null $tenantId = null): User
+    public function updateUserPreferences(string|int $userId, array $preferences, string|int|null $tenantId = null): User
     {
-        $this->validateTenantAccess($tenantId);
-        
-        $user = $this->findByIdOrFail($userId, $tenantId);
-        $this->validateModelOwnership($user, $tenantId);
+        $user = $this->resolveUserForAction($userId, $tenantId);
         
         $user->update(['preferences' => $preferences]);
         

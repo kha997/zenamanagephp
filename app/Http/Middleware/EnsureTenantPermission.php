@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\PermissionService;
 use App\Services\TenancyService;
 use App\Support\ApiResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -60,11 +61,22 @@ class EnsureTenantPermission
             );
         }
 
-        // Get current tenant permissions
-        $permissions = $tenancyService->getCurrentTenantPermissions($user, $request);
+        $permissionService = app(PermissionService::class);
 
-        // Check if required permission exists
-        if (!in_array($permission, $permissions, true)) {
+        $permissionGranted = $permissionService->userHasPermission($user, $permission, $activeTenantId);
+
+        if (!$permissionGranted) {
+            $tenantRoles = config('permissions.tenant_roles', []);
+            $membership = $user->tenants()
+                ->where('tenants.id', $activeTenantId)
+                ->first();
+            $tenantRole = $membership?->pivot->role;
+            $permissionGranted = $tenantRole
+                && isset($tenantRoles[$tenantRole])
+                && in_array($permission, $tenantRoles[$tenantRole], true);
+        }
+
+        if (!$permissionGranted) {
             return \App\Services\ErrorEnvelopeService::error(
                 'TENANT_PERMISSION_DENIED',
                 "Permission denied: {$permission}",
@@ -76,8 +88,9 @@ class EnsureTenantPermission
 
         // Attach active tenant ID to request for downstream convenience
         $request->attributes->set('active_tenant_id', $activeTenantId);
+        $request->attributes->set('tenant_id', $activeTenantId);
+        app()->instance('current_tenant_id', $activeTenantId);
 
         return $next($request);
     }
 }
-

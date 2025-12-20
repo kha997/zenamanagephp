@@ -17,6 +17,7 @@ class AdminUsersController extends Controller
     {
         $user = Auth::user();
         $tenantId = $user->tenant_id;
+        $tenantFilter = $request->input('tenant_id');
         
         // Log request for debugging
         Log::info('Admin users request', [
@@ -25,12 +26,20 @@ class AdminUsersController extends Controller
             'role' => $user->role,
             'request_id' => $request->header('X-Request-Id'),
             'url' => $request->url(),
-            'query_params' => $request->query()
+            'query_params' => $request->query(),
+            'tenant_filter' => $tenantFilter
         ]);
 
         // Build query with tenant isolation
-        $query = User::where('tenant_id', $tenantId)
-            ->select(['id', 'name', 'email', 'role', 'is_active', 'tenant_id', 'last_login_at', 'created_at', 'updated_at']);
+        $query = User::select(['id', 'name', 'email', 'role', 'is_active', 'tenant_id', 'last_login_at', 'created_at', 'updated_at']);
+
+        if (!$user->isSuperAdmin()) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        if ($tenantFilter && $user->isSuperAdmin()) {
+            $query->where('tenant_id', $tenantFilter);
+        }
 
         // Apply search filter
         if ($search = $request->input('search')) {
@@ -70,7 +79,7 @@ class AdminUsersController extends Controller
         }
 
         // Prepare filters for view
-        $filters = $request->only(['search', 'role', 'status', 'sort_by', 'sort_direction', 'per_page']);
+        $filters = $request->only(['search', 'role', 'status', 'sort_by', 'sort_direction', 'per_page', 'tenant_id']);
 
         // If request expects JSON (API call), return JSON response
         if ($request->expectsJson()) {

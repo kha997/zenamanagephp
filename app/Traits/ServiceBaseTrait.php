@@ -8,6 +8,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Support\AdminRouteContext;
 use App\Support\ApiResponse;
 
 /**
@@ -260,7 +261,15 @@ trait ServiceBaseTrait
      */
     protected function validateTenantAccess(string|int|null $tenantId = null): void
     {
-        $userTenantId = (string) (Auth::user()?->tenant_id ?? '');
+        $user = Auth::user();
+        if ($user && $user->isSuperAdmin()) {
+            return;
+        }
+        if ($user && $user->can('admin.access') && AdminRouteContext::matches()) {
+            return;
+        }
+
+        $userTenantId = (string) ($user?->tenant_id ?? '');
         $targetTenantId = $tenantId ? (string) $tenantId : $userTenantId;
         
         // For test environment without authentication, allow access to test tenant
@@ -283,6 +292,14 @@ trait ServiceBaseTrait
      */
     protected function validateModelOwnership(Model $model, string|int|null $tenantId = null): void
     {
+        $user = Auth::user();
+        if ($user && $user->isSuperAdmin()) {
+            return;
+        }
+        if ($user && $user->can('admin.access') && AdminRouteContext::matches()) {
+            return;
+        }
+
         $tenantId = $tenantId ?? (string) (Auth::user()?->tenant_id ?? '');
         
         if ($model->tenant_id !== $tenantId) {
@@ -360,7 +377,7 @@ trait ServiceBaseTrait
 
     /**
      * Get API response for error
-     */
+      */
     public function errorResponse(
         string $message = 'Operation failed',
         int $statusCode = 500,

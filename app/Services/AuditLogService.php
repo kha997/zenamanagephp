@@ -102,7 +102,7 @@ class AuditLogService
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Return a dummy model to avoid breaking callers
+            // Return a fallback model to avoid breaking callers
             return new AuditLog();
         }
     }

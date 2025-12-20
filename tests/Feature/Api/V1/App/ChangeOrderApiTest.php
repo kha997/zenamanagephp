@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Tests\Traits\DomainTestIsolation;
+use Tests\Traits\GrantsCostPermissionsTrait;
 use Laravel\Sanctum\Sanctum;
 
 /**
@@ -25,7 +26,7 @@ use Laravel\Sanctum\Sanctum;
  */
 class ChangeOrderApiTest extends TestCase
 {
-    use RefreshDatabase, DomainTestIsolation;
+    use RefreshDatabase, DomainTestIsolation, GrantsCostPermissionsTrait;
 
     protected Tenant $tenantA;
     protected Tenant $tenantB;
@@ -77,6 +78,12 @@ class ChangeOrderApiTest extends TestCase
             'role' => 'pm',
             'is_default' => true,
         ]);
+
+        $this->grantCostPermissions($this->userA);
+        $this->grantCostPermissions($this->userB);
+
+        $this->grantCostPermissions($this->userA, ['projects.cost.view', 'projects.cost.edit']);
+        $this->grantCostPermissions($this->userB, ['projects.cost.view', 'projects.cost.edit']);
 
         // Create projects
         $this->projectA = Project::factory()->create([
@@ -341,5 +348,59 @@ class ChangeOrderApiTest extends TestCase
         );
 
         $response->assertStatus(404);
+    }
+
+    public function test_cross_tenant_access_returns_project_not_found(): void
+    {
+        Sanctum::actingAs($this->userB);
+
+        $response = $this->getJson(
+            "/api/v1/app/projects/{$this->projectA->id}/contracts/{$this->contractA->id}/change-orders"
+        );
+
+        $response->assertStatus(404)
+            ->assertJsonPath('code', 'PROJECT_NOT_FOUND')
+            ->assertJsonPath('error.id', 'PROJECT_NOT_FOUND');
+    }
+
+    public function test_missing_change_order_returns_not_found(): void
+    {
+        Sanctum::actingAs($this->userA);
+
+        $response = $this->getJson(
+            "/api/v1/app/projects/{$this->projectA->id}/contracts/{$this->contractA->id}/change-orders/non-existent-id"
+        );
+
+        $response->assertStatus(404)
+            ->assertJsonPath('code', 'CHANGE_ORDER_NOT_FOUND')
+            ->assertJsonPath('error.id', 'CHANGE_ORDER_NOT_FOUND');
+    }
+
+    public function test_forbidden_when_missing_cost_permissions(): void
+    {
+        $restricted = User::factory()->create([
+            'tenant_id' => $this->tenantA->id,
+            'role' => 'viewer',
+        ]);
+        $restricted->tenants()->attach($this->tenantA->id, [
+            'role' => 'viewer',
+            'is_default' => true,
+        ]);
+        $restricted->roles()->detach();
+
+        $changeOrder = ChangeOrder::factory()->create([
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $this->projectA->id,
+            'contract_id' => $this->contractA->id,
+        ]);
+
+        Sanctum::actingAs($restricted);
+        $response = $this->getJson(
+            "/api/v1/app/projects/{$this->projectA->id}/contracts/{$this->contractA->id}/change-orders/{$changeOrder->id}"
+        );
+
+        $response->assertStatus(403)
+            ->assertJsonPath('code', 'FORBIDDEN')
+            ->assertJsonPath('error.id', 'FORBIDDEN');
     }
 }

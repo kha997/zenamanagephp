@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\ContractBudgetLine;
+use App\Models\ContractExpense;
 
 /**
  * Model Contract - Quản lý hợp đồng dự án
@@ -124,6 +126,22 @@ class Contract extends Model
     }
 
     /**
+     * Relationship: Contract có nhiều budget lines
+     */
+    public function budgetLines(): HasMany
+    {
+        return $this->hasMany(ContractBudgetLine::class, 'contract_id');
+    }
+
+    /**
+     * Relationship: Contract có nhiều expenses
+     */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(ContractExpense::class, 'contract_id');
+    }
+
+    /**
      * Relationship: Contract có nhiều payment certificates
      * 
      * Round 221: Payment Certificates & Payments (Actual Cost)
@@ -211,6 +229,8 @@ class Contract extends Model
     public function getCurrentAmountAttribute(): float
     {
         $approvedDelta = $this->changeOrders()
+            ->withoutGlobalScope('tenant')
+            ->where('tenant_id', $this->tenant_id)
             ->where('status', 'approved')
             ->sum('amount_delta');
 

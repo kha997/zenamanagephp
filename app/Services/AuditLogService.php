@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * AuditLogService
@@ -41,12 +42,12 @@ class AuditLogService
      * @return AuditLog
      */
     public function record(
-        ?string $tenantId,
-        ?string $userId,
+        string|Ulid|null $tenantId,
+        string|Ulid|null $userId,
         string $action,
         ?string $entityType = null,
-        ?string $entityId = null,
-        ?string $projectId = null,
+        string|Ulid|null $entityId = null,
+        string|Ulid|null $projectId = null,
         ?array $before = null,
         ?array $after = null,
         ?string $ipAddress = null,
@@ -78,12 +79,12 @@ class AuditLogService
             }
 
             $auditLog = AuditLog::create([
-                'tenant_id' => $tenantId,
-                'user_id' => $userId,
+                'tenant_id' => $this->normalizeId($tenantId),
+                'user_id' => $this->normalizeId($userId),
                 'action' => $action,
                 'entity_type' => $entityType,
-                'entity_id' => $entityId,
-                'project_id' => $projectId,
+                'entity_id' => $this->normalizeId($entityId),
+                'project_id' => $this->normalizeId($projectId),
                 'payload_before' => $before,
                 'payload_after' => $after,
                 'ip_address' => $ipAddress,
@@ -104,5 +105,10 @@ class AuditLogService
             // Return a dummy model to avoid breaking callers
             return new AuditLog();
         }
+    }
+
+    private function normalizeId(string|Ulid|null $value): ?string
+    {
+        return $value === null ? null : (string) $value;
     }
 }

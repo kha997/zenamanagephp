@@ -140,3 +140,11 @@ frontend/.env.local
 frontend/.env.*
 !frontend/.env.example
 !frontend/scripts/.env.example
+
+# --- ZenaManage: never commit runtime storage ---
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
+/storage/framework/testing/
+/storage/logs/
+/storage/backups/

@@ -23,12 +23,16 @@ trait GrantsCostPermissionsTrait
 
         $this->assertPermissionCodesExistInConfig($codes);
 
-        // Deterministic test role
+        // Make role identity deterministic but unique per tenant to avoid UNIQUE(name) collisions in sqlite
+        $tenantKey = (string) ($user->tenant_id ?? 'global');
+        $roleCode = 'test.cost.grants.' . $tenantKey;
+        $roleName = 'Test Cost Grants (' . $tenantKey . ')';
+
         /** @var Role $role */
         $role = Role::query()->updateOrCreate(
-            ['code' => 'test.cost.grants'],
+            ['code' => $roleCode],
             [
-                'name' => 'Test Cost Grants',
+                'name' => $roleName,
                 'description' => 'Test-only helper role for granting cost permissions',
             ]
         );
@@ -53,16 +57,11 @@ trait GrantsCostPermissionsTrait
         $role->permissions()->syncWithoutDetaching($permissionIds);
         $user->roles()->syncWithoutDetaching([$role->id]);
 
-        // Clear any cached RBAC results between assertions
         Cache::flush();
 
         return $user->fresh();
     }
 
-    /**
-     * Verify permission codes exist in config/permissions.php.
-     * This prevents helpers from silently inventing new permission strings.
-     */
     private function assertPermissionCodesExistInConfig(array $codes): void
     {
         $cfg = config('permissions');
@@ -77,15 +76,6 @@ trait GrantsCostPermissionsTrait
         }
     }
 
-    /**
-     * Recursively collect permission strings from config/permissions.php.
-     *
-     * Supports common shapes:
-     * - ['roles' => ['pm' => ['projects.cost.view', ...], ...]]
-     * - ['modules' => [ 'projects' => [ ['code'=>'...'], ... ]]]
-     * - ['permissions' => [ ['code'=>'...'], ... ]]
-     * - or any nested mixed arrays.
-     */
     private function flattenPermissionStrings(mixed $node): array
     {
         $out = [];
@@ -99,13 +89,11 @@ trait GrantsCostPermissionsTrait
             return $out;
         }
 
-        // If an item has ['code' => '...'] include it
         if (isset($node['code']) && is_string($node['code'])) {
             $out[] = $node['code'];
         }
 
-        foreach ($node as $k => $v) {
-            // Ignore comments / non-data keys if any
+        foreach ($node as $v) {
             $out = array_merge($out, $this->flattenPermissionStrings($v));
         }
 

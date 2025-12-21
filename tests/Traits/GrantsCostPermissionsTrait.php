@@ -66,33 +66,8 @@ trait GrantsCostPermissionsTrait
     private function assertPermissionCodesExistInConfig(array $codes): void
     {
         $cfg = config('permissions');
-        $flatCodes = [];
 
-        if (is_array($cfg)) {
-            $iter = [];
-
-            // common shapes:
-            // - ['permissions' => [ ['code' => '...'], ... ]]
-            // - ['modules' => [ 'projects' => [ ['code' => '...'], ... ]]]
-            if (isset($cfg['permissions']) && is_array($cfg['permissions'])) {
-                $iter = $cfg['permissions'];
-            } elseif (isset($cfg['modules']) && is_array($cfg['modules'])) {
-                foreach ($cfg['modules'] as $modulePerms) {
-                    if (is_array($modulePerms)) {
-                        $iter = array_merge($iter, $modulePerms);
-                    }
-                }
-            } else {
-                $iter = $cfg;
-            }
-
-            foreach ($iter as $item) {
-                if (is_array($item) && isset($item['code'])) {
-                    $flatCodes[] = (string) $item['code'];
-                }
-            }
-        }
-
+        $flatCodes = $this->flattenPermissionStrings($cfg);
         $flatCodes = array_values(array_unique(array_filter($flatCodes)));
 
         foreach ($codes as $code) {
@@ -101,5 +76,39 @@ trait GrantsCostPermissionsTrait
             }
         }
     }
-}
 
+    /**
+     * Recursively collect permission strings from config/permissions.php.
+     *
+     * Supports common shapes:
+     * - ['roles' => ['pm' => ['projects.cost.view', ...], ...]]
+     * - ['modules' => [ 'projects' => [ ['code'=>'...'], ... ]]]
+     * - ['permissions' => [ ['code'=>'...'], ... ]]
+     * - or any nested mixed arrays.
+     */
+    private function flattenPermissionStrings(mixed $node): array
+    {
+        $out = [];
+
+        if (is_string($node)) {
+            $out[] = $node;
+            return $out;
+        }
+
+        if (!is_array($node)) {
+            return $out;
+        }
+
+        // If an item has ['code' => '...'] include it
+        if (isset($node['code']) && is_string($node['code'])) {
+            $out[] = $node['code'];
+        }
+
+        foreach ($node as $k => $v) {
+            // Ignore comments / non-data keys if any
+            $out = array_merge($out, $this->flattenPermissionStrings($v));
+        }
+
+        return $out;
+    }
+}

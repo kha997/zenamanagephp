@@ -148,3 +148,8 @@ frontend/.env.*
 /storage/framework/testing/
 /storage/logs/
 /storage/backups/
+
+/storage/app/
+/storage/api-docs/
+/storage/ssl/
+/storage/

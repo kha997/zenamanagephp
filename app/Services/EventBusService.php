@@ -37,7 +37,9 @@ class EventBusService
     public function dispatchAsync(string $eventClass, ...$args): void
     {
         try {
-            Queue::push(function() 
+            $event = new $eventClass(...$args);
+
+            Queue::push(function () use ($event) {
                 Event::dispatch($event);
             });
             

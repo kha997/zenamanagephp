@@ -36,7 +36,8 @@ class TaskAssignmentController
     {
         try {
             $assignments = TaskAssignment::where('task_id', $taskId)
-                ->whereHas('task', function ($query) 
+                ->whereHas('task', function ($query) use ($projectId) {
+                    $query->where('project_id', $projectId);
                 })
                 ->with(['task', 'user'])
                 ->orderBy('split_percent', 'desc')
@@ -101,7 +102,8 @@ class TaskAssignmentController
         try {
             $assignment = TaskAssignment::where('id', $assignmentId)
                 ->where('task_id', $taskId)
-                ->whereHas('task', function ($query) 
+                ->whereHas('task', function ($query) use ($projectId) {
+                    $query->where('project_id', $projectId);
                 })
                 ->with(['task', 'user'])
                 ->firstOrFail();
@@ -130,7 +132,8 @@ class TaskAssignmentController
         try {
             $assignment = TaskAssignment::where('id', $assignmentId)
                 ->where('task_id', $taskId)
-                ->whereHas('task', function ($query) 
+                ->whereHas('task', function ($query) use ($projectId) {
+                    $query->where('project_id', $projectId);
                 })
                 ->firstOrFail();
 
@@ -180,7 +183,8 @@ class TaskAssignmentController
         try {
             $assignment = TaskAssignment::where('id', $assignmentId)
                 ->where('task_id', $taskId)
-                ->whereHas('task', function ($query) 
+                ->whereHas('task', function ($query) use ($projectId) {
+                    $query->where('project_id', $projectId);
                 })
                 ->firstOrFail();
 
@@ -209,7 +213,8 @@ class TaskAssignmentController
     public function userStats(string $projectId, string $userId): JsonResponse
     {
         try {
-            $assignments = TaskAssignment::whereHas('task', function ($query) 
+            $assignments = TaskAssignment::whereHas('task', function ($query) use ($projectId) {
+                    $query->where('project_id', $projectId);
                 })
                 ->where('user_id', $userId)
                 ->with(['task'])

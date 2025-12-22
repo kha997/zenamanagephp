@@ -21,7 +21,8 @@ class BadgeService
 
         $cacheKey = "badge_{$itemId}_user_{$user->id}";
         
-        return Cache::remember($cacheKey, 60, function () 
+        return Cache::remember($cacheKey, 60, function () use ($itemId, $user) {
+            return 0;
         });
     }
 

@@ -72,16 +72,19 @@ class MobileAPIService
 
         $cacheKey = 'mobile_paginated_' . md5(serialize(func_get_args()));
         
-        return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () 
-            
+        return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () use ($callback, $page, $perPage, $options) {
+            $result = $callback($page, $perPage, $options);
+
+            $total = $result['total'] ?? 0;
+
             return [
                 'data' => $this->optimizeForMobile($result['data'] ?? [], $options),
                 'pagination' => [
                     'current_page' => $page,
                     'per_page' => $perPage,
-                    'total' => $result['total'] ?? 0,
-                    'last_page' => ceil(($result['total'] ?? 0) / $perPage),
-                    'has_more' => $page < ceil(($result['total'] ?? 0) / $perPage)
+                    'total' => $total,
+                    'last_page' => $perPage > 0 ? ceil($total / $perPage) : 0,
+                    'has_more' => $perPage > 0 ? $page < ceil($total / $perPage) : false
                 ],
                 'mobile_optimized' => true,
                 'cached_at' => now()->toISOString()
@@ -96,7 +99,12 @@ class MobileAPIService
     {
         $cacheKey = "mobile_dashboard_{$userId}";
         
-        return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () 
+        return Cache::remember($cacheKey, $this->mobileConfig['cache_ttl'], function () use ($userId) {
+            return [
+                'widgets' => [],
+                'last_updated' => now()->toISOString(),
+                'user_id' => $userId
+            ];
         });
     }
 
@@ -173,7 +181,8 @@ class MobileAPIService
     {
         $cacheKey = "mobile_search_" . md5($query . $userId . serialize($filters));
         
-        return Cache::remember($cacheKey, 300, function () 
+        return Cache::remember($cacheKey, 300, function () use ($query, $filters) {
+            $results = $this->performMobileSearch($query, $filters);
 
             return [
                 'query' => $query,
@@ -192,8 +201,22 @@ class MobileAPIService
     {
         $cacheKey = "mobile_analytics_{$userId}_{$period}";
         
-        return Cache::remember($cacheKey, 3600, function () 
+        return Cache::remember($cacheKey, 3600, function () use ($userId, $period) {
+            return [
+                'user_id' => $userId,
+                'period' => $period,
+                'metrics' => [],
+                'generated_at' => now()->toISOString()
+            ];
         });
+    }
+
+    /**
+     * Perform mobile search (stubbed).
+     */
+    private function performMobileSearch(string $query, array $filters): array
+    {
+        return [];
     }
 
     /**
@@ -201,12 +224,13 @@ class MobileAPIService
      */
     private function excludeFields(array $data, array $fields): array
     {
-        if (isset($data['data']) && is_array($data['data'])) {
-            $data['data'] = array_map(function ($item) 
-            }, $data['data']);
-        } else {
-            $data = array_diff_key($data, array_flip($fields));
-        }
+            if (isset($data['data']) && is_array($data['data'])) {
+                $data['data'] = array_map(function ($item) use ($fields) {
+                    return array_diff_key($item, array_flip($fields));
+                }, $data['data']);
+            } else {
+                $data = array_diff_key($data, array_flip($fields));
+            }
         
         return $data;
     }

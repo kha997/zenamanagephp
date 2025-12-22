@@ -1,8 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
@@ -11,6 +9,8 @@ use App\Notifications\SupportTicketCreated;
 use App\Notifications\SupportTicketResolved;
 use App\Notifications\SupportTicketUpdated;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class SupportTicketController extends Controller
 {
@@ -39,7 +39,9 @@ class SupportTicketController extends Controller
         // Search
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) 
+            $query->where(function ($q) use ($search) {
+                $q->where('subject', 'LIKE', "%{$search}%")
+                  ->orWhere('description', 'LIKE', "%{$search}%");
             });
         }
 

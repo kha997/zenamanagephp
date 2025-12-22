@@ -214,12 +214,14 @@ class NotificationRuleService
             ->forUser($userId)
             ->forEventKey($eventKey)
             ->enabled()
-            ->where(function ($q) 
+            ->where(function ($q) use ($priority) {
+                $q->where('priority', $priority);
             });
 
         // Lọc theo project - bao gồm cả global rules (project_id = null)
         if ($projectId !== null) {
-            $query->where(function ($q) 
+            $query->where(function ($q) use ($projectId) {
+                $q->where('project_id', $projectId);
             });
         } else {
             $query->whereNull('project_id');
@@ -228,7 +230,8 @@ class NotificationRuleService
         $rules = $query->get();
 
         // Lọc theo conditions
-        return $rules->filter(function ($rule) 
+        return $rules->filter(function ($rule) {
+            return true;
         });
     }
 

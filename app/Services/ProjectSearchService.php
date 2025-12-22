@@ -35,11 +35,13 @@ class ProjectSearchService
         }
         
         // Full-text search
-        $query->where(function ($q) 
-              })
-              ->orWhereHas('projectManager', function ($pmQuery) 
-              });
-        });
+        $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('description', 'LIKE', "%{$searchTerm}%");
+            })
+            ->orWhereHas('projectManager', function ($pmQuery) use ($searchTerm) {
+                $pmQuery->where('name', 'LIKE', "%{$searchTerm}%");
+            });
         
         // Apply additional filters
         $query = $this->applyFilters($query, $filters);
@@ -146,7 +148,8 @@ class ProjectSearchService
         
         // Team member filters
         if (!empty($teamCriteria['team_member_ids'])) {
-            $query->whereHas('teamMembers', function ($q) 
+            $query->whereHas('teamMembers', function ($q) use ($teamCriteria) {
+                $q->whereIn('user_id', $teamCriteria['team_member_ids']);
             });
         }
         
@@ -235,7 +238,8 @@ class ProjectSearchService
         // Client name suggestions
         $clientNames = Project::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->whereHas('client', function ($q) 
+            ->whereHas('client', function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%");
             })
             ->with('client')
             ->limit(5)
@@ -249,7 +253,8 @@ class ProjectSearchService
         // Project manager suggestions
         $pmNames = Project::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->whereHas('projectManager', function ($q) 
+            ->whereHas('projectManager', function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%");
             })
             ->with('projectManager')
             ->limit(5)
@@ -395,7 +400,8 @@ class ProjectSearchService
         }
         
         if (!empty($criteria['team_member_id'])) {
-            $query->whereHas('teamMembers', function ($q) 
+            $query->whereHas('teamMembers', function ($q) use ($criteria) {
+                $q->where('user_id', $criteria['team_member_id']);
             });
         }
         

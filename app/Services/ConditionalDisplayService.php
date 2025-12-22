@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
 class ConditionalDisplayService
@@ -88,7 +89,8 @@ class ConditionalDisplayService
     {
         $cacheKey = "feature_flag_{$value}_user_{$user->id}";
         
-        return Cache::remember($cacheKey, 300, function () 
+        return Cache::remember($cacheKey, 300, function () use ($value) {
+            return config("feature_flags.{$value}", true);
         });
     }
 
@@ -204,7 +206,8 @@ class ConditionalDisplayService
     {
         $cacheKey = "module_enabled_{$value}_tenant_{$user->tenant_id}";
         
-        return Cache::remember($cacheKey, 600, function () 
+        return Cache::remember($cacheKey, 600, function () use ($value) {
+            return config("modules.{$value}.enabled", true);
         });
     }
 

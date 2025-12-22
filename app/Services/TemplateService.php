@@ -239,9 +239,11 @@ class TemplateService
      */
     private function calculateTaskStartDate(Carbon $baseStartDate, array $taskData, int $order): Carbon
     {
-        // If task has specific start offset, 
+        // If task has specific start offset, apply it explicitly
+        if (!empty($taskData['start_offset_days'])) {
+            return $baseStartDate->copy()->addDays((int) $taskData['start_offset_days']);
         }
-        
+
         // Otherwise, calculate based on order (each task starts 1 day after previous)
         return $baseStartDate->copy()->addDays($order);
     }
@@ -256,8 +258,7 @@ class TemplateService
     private function calculateTaskEndDate(Carbon $startDate, array $taskData): Carbon
     {
         $duration = $taskData['duration_days'] ?? 1;
-        return $startDate->copy()->addDays($duration - 1); // -1 beca
-        return $this->applyTemplate($templateId, $projectId, $options);
+        return $startDate->copy()->addDays(max(1, $duration) - 1);
     }
     
     /**

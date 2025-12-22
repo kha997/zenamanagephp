@@ -43,7 +43,8 @@ class SidebarService
 
         $cacheKey = "sidebar_user_{$user->id}_{$user->tenant_id}";
         
-        return Cache::remember($cacheKey, 300, function () 
+        return Cache::remember($cacheKey, 300, function () use ($user) {
+            return $this->buildSidebarConfig($user);
         });
     }
 
@@ -54,7 +55,8 @@ class SidebarService
     {
         $cacheKey = "sidebar_role_{$roleName}_{$tenantId}";
         
-        return Cache::remember($cacheKey, 600, function () 
+        return Cache::remember($cacheKey, 600, function () use ($roleName, $tenantId) {
+            return $this->buildRoleSidebarConfig($roleName, $tenantId);
         });
     }
 

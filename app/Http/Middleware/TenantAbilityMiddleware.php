@@ -1,12 +1,20 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Tenant Ability Middleware
+ * 
+ * Ensures users have tenant-scoped access permissions.
+ * This middleware validates that the user belongs to a tenant
+ * and has the appropriate role/permissions within that tenant.
+ */
 class TenantAbilityMiddleware
 {
     /**
@@ -16,28 +24,61 @@ class TenantAbilityMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Check if user is authenticated via Sanctum
-        if (!Auth::guard('sanctum')->check()) {
-            return response()->json(['error' => 'Unauthenticated'], 401);
+        $user = Auth::user();
+
+        if (!$user) {
+            Log::warning('Unauthenticated request to tenant-scoped endpoint', [
+                'ip' => $request->ip(),
+                'user_agent' => substr($request->userAgent(), 0, 50),
+                'url' => $request->url(),
+                'request_id' => $request->header('X-Request-Id')
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Authentication required',
+                'code' => 'AUTH_REQUIRED'
+            ], 401);
         }
 
-        $user = Auth::guard('sanctum')->user();
-
-        // For admin users, allow access to all tenants
-        if ($user->isSuperAdmin()) {
-            return $next($request);
-        }
-
-        // For regular users, ensure they have a tenant scope
+        // Check if user has tenant access
         if (!$user->tenant_id) {
-            return response()->json(['error' => 'No tenant scope assigned to user'], 403);
+            Log::warning('User without tenant access attempted to access tenant-scoped endpoint', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => $request->ip(),
+                'url' => $request->url(),
+                'request_id' => $request->header('X-Request-Id')
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'No tenant access',
+                'code' => 'NO_TENANT_ACCESS'
+            ], 403);
         }
 
-        // Set tenant context for the request
+        // Check if user is active
+        if (!$user->is_active) {
+            Log::warning('Inactive user attempted to access tenant-scoped endpoint', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'tenant_id' => $user->tenant_id,
+                'ip' => $request->ip(),
+                'url' => $request->url(),
+                'request_id' => $request->header('X-Request-Id')
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Account is inactive',
+                'code' => 'ACCOUNT_INACTIVE'
+            ], 403);
+        }
+
+        // Add tenant context to request
         $request->attributes->set('tenant_id', $user->tenant_id);
-        
-        // Add tenant scope to the request for easy access
-        app()->instance('current_tenant_id', $user->tenant_id);
+        $request->attributes->set('user_role', $user->role ?? 'member');
 
         return $next($request);
     }

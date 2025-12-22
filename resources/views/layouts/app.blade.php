@@ -1,88 +1,135 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name', 'ZenaManage') }}</title>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
-    
-    <!-- Font Awesome -->
+    <meta name="user-id" content="{{ auth()->id() }}">
+    <meta name="tenant-id" content="{{ auth()->user()->tenant_id ?? '' }}">
+    <title>@yield('title', 'Dashboard') - ZenaManage</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    
-    <!-- Tailwind CSS -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
-    <!-- Alpine.js -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine.js CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <script>
+        // Suppress Tailwind CDN warning only if Tailwind CDN is present
+        if (typeof tailwind !== 'undefined') {
+            tailwind.config = { suppressWarnings: true };
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+    @yield('head')
+    
+    <!-- App Layout Alpine.js Component -->
+    <script>
+        // Use Alpine.data to define global components
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('appLayout', () => ({
+                // Notifications
+                showNotifications: false,
+                unreadNotifications: 0,
+                notifications: [],
+                
+                // Alerts - Load from real API
+                alerts: [],
+                
+                // Methods
+                dismissAlert(alertId) {
+                    this.alerts = this.alerts.filter(alert => alert.id !== alertId);
+                },
+                
+                toggleNotifications() {
+                    this.showNotifications = !this.showNotifications;
+                }
+            }));
+        });
+    </script>
     
     <style>
-        [x-cloak] { display: none !important; }
-        
-        /* Custom CSS Variables */
-        :root {
-            --primary-50: #eff6ff;
-            --primary-500: #3b82f6;
-            --primary-600: #2563eb;
-            --primary-700: #1d4ed8;
-            --success-500: #10b981;
-            --warning-500: #f59e0b;
-            --danger-500: #ef4444;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-900: #111827;
-        }
-        
-        /* Dashboard specific styles */
-        .dashboard-card {
-            @apply bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-gray-200 transition-all duration-200;
-        }
-        
-        .metric-card {
-            @apply min-h-[120px] p-6;
-        }
-        
-        .metric-card.green {
-            @apply bg-gradient-to-br from-emerald-500 to-teal-600 text-white;
-        }
-        
-        .metric-card.blue {
-            @apply bg-gradient-to-br from-blue-500 to-indigo-600 text-white;
-        }
-        
-        .metric-card.orange {
-            @apply bg-gradient-to-br from-orange-500 to-red-500 text-white;
-        }
-        
-        .metric-card.purple {
-            @apply bg-gradient-to-br from-purple-500 to-pink-600 text-white;
-        }
-        
-        /* Chart containers */
-        .chart-container {
-            @apply relative h-64 w-full;
-        }
-        
-        /* Loading states */
-        .skeleton {
-            @apply animate-pulse bg-gray-200 rounded;
-        }
-        
-        /* Dark mode support */
-        .dark .dashboard-card {
-            @apply bg-gray-800 border-gray-700 text-white;
+        body.loading {
+            opacity: 0.5;
         }
     </style>
 </head>
-<body class="font-sans antialiased bg-gray-50">
-    <div class="min-h-screen">
-        @yield('content')
+<body class="bg-gray-50" x-data="appLayout()">
+    {{-- Fixed Header Only --}}
+    <div class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+        {{-- Simple Header (Blade-only) --}}
+        <x-shared.header
+            variant="app"
+            :user="Auth::user()"
+            :tenant="Auth::user()?->tenant"
+            :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
+            :notifications="app(App\Services\HeaderService::class)->getNotifications(Auth::user())"
+            :unread-count="app(App\Services\HeaderService::class)->getUnreadCount(Auth::user())"
+            :theme="app(App\Services\HeaderService::class)->getUserTheme(Auth::user())"
+            :breadcrumbs="app(App\Services\HeaderService::class)->getBreadcrumbs(request()->route()->getName(), request()->route()->parameters())"
+        />
     </div>
+    
+    {{-- Theme initialization script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load saved theme
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        });
+    </script>
+    
+    {{-- Navigator bên ngoài fixed container --}}
+    <div style="padding-top: 64px;">
+        <x-shared.navigation.primary-navigator
+            variant="app"
+            :navigation="app(App\Services\HeaderService::class)->getNavigation(Auth::user(), 'app')"
+        />
+    </div>
+    
+    <!-- Main Content - Không cần padding vì Navigator đã có padding-top -->
+    <main class="pt-[20rem]">
+        <!-- KPI Strip (if provided by page) -->
+        @yield('kpi-strip')
+        
+        <!-- Alert Bar (if provided by page) -->
+        @yield('alert-bar')
+        
+        <!-- Page Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            @yield('content')
+        </div>
+        
+        <!-- Activity/History (if provided by page) -->
+        @yield('activity')
+    </main>
+
+    <!-- Alpine.js Data -->
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('appLayout', () => ({
+                // Notifications
+                showNotifications: false,
+                unreadNotifications: 0,
+                notifications: [],
+                
+                // Alerts - Load from real API
+                alerts: [],
+                
+                // Methods
+                dismissAlert(alertId) {
+                    this.alerts = this.alerts.filter(alert => alert.id !== alertId);
+                },
+                
+                toggleNotifications() {
+                    this.showNotifications = !this.showNotifications;
+                }
+            }));
+        });
+    </script>
+    
+    @stack('scripts')
 </body>
 </html>

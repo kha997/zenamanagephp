@@ -1,4 +1,5 @@
 /node_modules
+/frontend/node_modules
 /public/build
 /public/hot
 /public/storage
@@ -16,3 +17,139 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Build artifacts
+/dist
+/build
+/coverage
+/test-results
+/playwright-report
+/frontend/playwright-report
+/frontend/test-results
+/frontend/coverage
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+*storybook.log
+storybook-static
+
+# --- STEP5: local artifacts / large reports (generated) ---
+
+auth-report/**
+
+playwright-auth-results/**
+
+test-results/**
+
+playwright-report/**
+
+blob-report/**
+
+reports/**
+
+coverage/**
+
+.nyc_output/**
+
+*.log
+
+logs/**
+
+test_output.txt
+
+
+
+# Laravel runtime/cache (local)
+
+storage/framework/sessions/**
+
+storage/framework/views/**
+
+storage/framework/cache/**
+
+
+
+# Backups (path-specific, not global ext)
+
+storage/backups/**
+
+storage/backups/**/*.zip
+
+storage/backups/**/*.webm
+
+storage/backups/**/*.png
+
+
+
+# Frontend build artifacts
+
+frontend/dist/**
+
+frontend/.vite/**
+
+frontend/.cache/**
+
+frontend/.env.local
+
+frontend/.env.*.local
+
+# Frontend test artifacts
+
+frontend/ui-screenshots/**
+
+frontend/playwright-report/**
+
+frontend/test-results/**
+
+frontend/blob-report/**
+
+frontend/.turbo/**
+
+frontend/.eslintcache
+
+
+
+# Local dev / sandbox
+
+_work/
+
+# Local env for frontend scripts
+frontend/scripts/.env.local
+
+# quarantine snapshots (do not version)
+_quarantine/**
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# env artifacts (never commit)
+.env
+.env.*
+!.env.example
+
+# frontend env artifacts
+frontend/.env.local
+frontend/.env.*
+!frontend/.env.example
+!frontend/scripts/.env.example
+
+# --- ZenaManage: never commit runtime storage ---
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
+/storage/framework/testing/
+/storage/logs/
+/storage/backups/
+
+/storage/app/
+/storage/api-docs/
+/storage/ssl/
+/storage/

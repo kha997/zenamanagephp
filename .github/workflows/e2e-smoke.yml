@@ -1,0 +1,184 @@
+name: E2E Smoke Tests
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  smoke-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_password
+          MYSQL_DATABASE: zenamanage_e2e
+          MYSQL_USER: e2e_user
+          MYSQL_PASSWORD: e2e_password
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3, pdo_sqlite, bcmath, soap, intl, readline, libxml, zip, curl, gd, iconv, imagick, redis, memcached, pcov
+        coverage: none
+        cache: false
+        tools: composer:v2
+        
+    - name: Verify PHP version
+      run: |
+        php --version
+        composer --version
+        which php
+        echo "PHP_PATH: $(which php)"
+        
+    - name: Force PHP 8.2 path
+      run: |
+        echo "Current PHP version:"
+        php --version
+        echo "Setting PHP path..."
+        echo "/opt/hostedtoolcache/php/8.2.*/x64/bin" >> $GITHUB_PATH
+        echo "Updated PATH:"
+        echo $PATH
+        
+    - name: Verify PHP 8.2 is active
+      run: |
+        echo "Final PHP version check:"
+        php --version
+        echo "PHP location:"
+        which php
+        echo "Composer version:"
+        composer --version
+        
+    - name: Install Composer dependencies
+      run: composer install --no-progress --prefer-dist --optimize-autoloader
+      
+    - name: Copy environment file
+      run: cp .env.example .env
+      
+    - name: Generate application key
+      run: php artisan key:generate
+      
+    - name: Configure database for CI
+      run: |
+        echo "DB_CONNECTION=mysql" >> .env
+        echo "DB_HOST=127.0.0.1" >> .env
+        echo "DB_PORT=3306" >> .env
+        echo "DB_DATABASE=zenamanage_e2e" >> .env
+        echo "DB_USERNAME=e2e_user" >> .env
+        echo "DB_PASSWORD=e2e_password" >> .env
+        echo "CACHE_DRIVER=array" >> .env
+        echo "SESSION_DRIVER=array" >> .env
+        echo "QUEUE_CONNECTION=sync" >> .env
+        
+    - name: Wait for MySQL service
+      run: |
+        echo "Waiting for MySQL service to be ready..."
+        for i in {1..30}; do
+          if mysql --host=127.0.0.1 --port=3306 --user=e2e_user --password=e2e_password -e "SELECT 1;" > /dev/null 2>&1; then
+            echo "MySQL service is ready!"
+            break
+          fi
+          echo "Attempt $i: MySQL not ready yet, waiting..."
+          sleep 2
+        done
+        
+    - name: Create database
+      run: |
+        mysql --host=127.0.0.1 --port=3306 --user=e2e_user --password=e2e_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_e2e;"
+        
+    - name: Run migrations
+      run: |
+        php artisan migrate:fresh --force
+        
+    - name: Seed database
+      run: php artisan db:seed --class=E2EDatabaseSeeder --force
+      
+    - name: Verify database setup
+      run: |
+        echo "Database connection test:"
+        php artisan tinker --execute="echo 'DB Connection: ' . config('database.default'); echo 'DB Host: ' . config('database.connections.mysql.host'); echo 'DB Database: ' . config('database.connections.mysql.database');"
+        echo "User count:"
+        php artisan tinker --execute="echo 'Users: ' . App\Models\User::count();"
+      
+    - name: Start Laravel server
+      run: php artisan serve --host=127.0.0.1 --port=8000 &
+      
+    - name: Wait for server
+      run: sleep 10
+      
+    - name: Run smoke tests
+      run: npm run test:e2e:smoke
+      env:
+        SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+        SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+        
+    - name: Generate smoke test summary
+      run: |
+        # Check jq availability
+        if ! command -v jq &> /dev/null; then
+          echo "jq not found, installing..."
+          sudo apt-get update && sudo apt-get install -y jq
+        fi
+        
+        # Parse Playwright JSON output for real metrics
+        if [ -f test-results/results.json ]; then
+          TOTAL_TESTS=$(jq '.stats.expected + .stats.unexpected' test-results/results.json 2>/dev/null || echo "unknown")
+          PASSED_TESTS=$(jq '.stats.expected' test-results/results.json 2>/dev/null || echo "unknown")
+          FAILED_TESTS=$(jq '.stats.unexpected' test-results/results.json 2>/dev/null || echo "unknown")
+          DURATION=$(jq '.stats.duration' test-results/results.json 2>/dev/null || echo "unknown")
+        else
+          TOTAL_TESTS="unknown"
+          PASSED_TESTS="unknown"
+          FAILED_TESTS="unknown"
+          DURATION="unknown"
+        fi
+        
+        echo "## Smoke Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Scope**: Minimal smoke tests only (*-minimal.spec.ts)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Execution Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Duration**: ${DURATION}ms" >> $GITHUB_STEP_SUMMARY
+        echo "- **Test Results**: ${PASSED_TESTS} passed, ${FAILED_TESTS} failed (${TOTAL_TESTS} total)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Browser Coverage**: Chromium (default project)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Artifacts**: Traces, videos, and screenshots uploaded on completion" >> $GITHUB_STEP_SUMMARY
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: smoke-test-results
+        path: |
+          test-results/
+          playwright-report/
+        retention-days: 30
+        
+    - name: Upload trace artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: smoke-trace-artifacts
+        path: test-results/
+        retention-days: 7

@@ -3,8 +3,8 @@
 namespace Tests\Unit\Models;
 
 use Tests\TestCase;
-use Src\CoreProject\Models\Task;
-use Src\CoreProject\Models\Project;
+use App\Models\Task;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -190,10 +190,11 @@ class TaskTest extends TestCase
     public function it_has_fillable_attributes()
     {
         $fillable = [
-            'project_id', 'component_id', 'phase_id', 'name', 'description',
-            'start_date', 'end_date', 'status', 'priority', 'dependencies',
+            'tenant_id', 'project_id', 'component_id', 'phase_id', 'name', 'title',
+            'description', 'start_date', 'end_date', 'status', 'priority', 'dependencies',
             'conditional_tag', 'is_hidden', 'estimated_hours', 'actual_hours',
-            'progress_percent', 'tags', 'visibility', 'client_approved'
+            'estimated_cost', 'actual_cost', 'progress_percent', 'tags', 'visibility',
+            'client_approved', 'assignee_id', 'assigned_to', 'created_by'
         ];
 
         $this->assertEquals($fillable, $this->task->getFillable());
@@ -301,7 +302,8 @@ class TaskTest extends TestCase
     /** @test */
     public function it_can_check_if_has_dependencies()
     {
-        $this->assertFalse(!empty($this->task->dependencies));
+        // Dependencies should be empty initially (either empty array or empty string)
+        $this->assertTrue(empty(json_decode($this->task->dependencies, true)));
 
         $dependentTask = Task::factory()->create([
             'project_id' => $this->project->id,

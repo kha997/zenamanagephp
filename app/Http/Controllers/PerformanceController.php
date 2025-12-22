@@ -1,340 +1,382 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Services\PerformanceMonitoringService;
+use App\Services\MemoryMonitoringService;
+use App\Services\NetworkMonitoringService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 
 class PerformanceController extends Controller
 {
-    /**
-     * Get system performance metrics
-     */
-    public function metrics()
-    {
-        $metrics = [
-            'timestamp' => now()->toISOString(),
-            'system' => [
-                'php_version' => PHP_VERSION,
-                'laravel_version' => app()->version(),
-                'environment' => app()->environment(),
-                'debug_mode' => config('app.debug'),
-            ],
-            'database' => [
-                'connection_count' => $this->getDatabaseConnectionCount(),
-                'query_time' => $this->getAverageQueryTime(),
-                'slow_queries' => $this->getSlowQueries(),
-            ],
-            'cache' => [
-                'driver' => config('cache.default'),
-                'hit_rate' => $this->getCacheHitRate(),
-                'memory_usage' => $this->getCacheMemoryUsage(),
-            ],
-            'routes' => [
-                'total_routes' => $this->getTotalRoutes(),
-                'admin_routes' => $this->getAdminRoutes(),
-                'app_routes' => $this->getAppRoutes(),
-                'legacy_routes' => $this->getLegacyRoutes(),
-            ],
-            'users' => [
-                'total_users' => $this->getTotalUsers(),
-                'active_users' => $this->getActiveUsers(),
-                'super_admins' => $this->getSuperAdmins(),
-                'tenant_users' => $this->getTenantUsers(),
-            ],
-            'performance' => [
-                'memory_usage' => memory_get_usage(true),
-                'peak_memory' => memory_get_peak_usage(true),
-                'execution_time' => microtime(true) - LARAVEL_START,
-                'load_time' => $this->getAverageLoadTime(),
-            ]
-        ];
+    protected PerformanceMonitoringService $performanceService;
+    protected MemoryMonitoringService $memoryService;
+    protected NetworkMonitoringService $networkService;
 
-        return response()->json($metrics);
+    public function __construct(
+        PerformanceMonitoringService $performanceService,
+        MemoryMonitoringService $memoryService,
+        NetworkMonitoringService $networkService
+    ) {
+        $this->performanceService = $performanceService;
+        $this->memoryService = $memoryService;
+        $this->networkService = $networkService;
     }
 
     /**
-     * Get database connection count
+     * Get performance dashboard data
      */
-    private function getDatabaseConnectionCount()
+    public function getDashboard(): JsonResponse
     {
         try {
-            return DB::select('SELECT COUNT(*) as count FROM information_schema.processlist')[0]->count ?? 0;
+            $data = [
+                'performance' => $this->performanceService->getPerformanceStats(),
+                'memory' => $this->memoryService->getMemoryStats(),
+                'network' => $this->networkService->getNetworkStats(),
+                'recommendations' => [
+                    'performance' => $this->performanceService->getPerformanceRecommendations(),
+                    'memory' => $this->memoryService->getMemoryRecommendations(),
+                    'network' => $this->networkService->getNetworkRecommendations(),
+                ],
+                'thresholds' => [
+                    'performance' => $this->performanceService->getPerformanceThresholds(),
+                    'memory' => $this->memoryService->getMemoryThresholds(),
+                    'network' => $this->networkService->getNetworkThresholds(),
+                ],
+                'timestamp' => now(),
+            ];
+
+            return response()->json(['success' => true, 'data' => $data]);
         } catch (\Exception $e) {
-            return 0;
+            Log::error('Failed to get performance dashboard', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to get performance dashboard'], 500);
         }
     }
 
     /**
-     * Get average query time
+     * Get performance statistics
      */
-    private function getAverageQueryTime()
+    public function getPerformanceStats(): JsonResponse
     {
         try {
-            $result = DB::select('SHOW STATUS LIKE "Slow_queries"');
-            return $result[0]->Value ?? 0;
+            $stats = $this->performanceService->getPerformanceStats();
+            return response()->json(['success' => true, 'data' => $stats]);
         } catch (\Exception $e) {
-            return 0;
+            Log::error('Failed to get performance stats', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to get performance stats'], 500);
         }
     }
 
     /**
-     * Get slow queries
+     * Get memory statistics
      */
-    private function getSlowQueries()
+    public function getMemoryStats(): JsonResponse
     {
         try {
-            $result = DB::select('SHOW STATUS LIKE "Slow_queries"');
-            return $result[0]->Value ?? 0;
+            $stats = $this->memoryService->getMemoryStats();
+            return response()->json(['success' => true, 'data' => $stats]);
         } catch (\Exception $e) {
-            return 0;
+            Log::error('Failed to get memory stats', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to get memory stats'], 500);
         }
     }
 
     /**
-     * Get cache hit rate
+     * Get network statistics
      */
-    private function getCacheHitRate()
-    {
-        // This would need to be implemented based on your cache driver
-        return 'N/A';
-    }
-
-    /**
-     * Get cache memory usage
-     */
-    private function getCacheMemoryUsage()
-    {
-        if (config('cache.default') === 'redis') {
-            try {
-                $redis = app('redis');
-                $info = $redis->info('memory');
-                return $info['used_memory_human'] ?? 'N/A';
-            } catch (\Exception $e) {
-                return 'N/A';
-            }
-        }
-        return 'N/A';
-    }
-
-    /**
-     * Get total routes
-     */
-    private function getTotalRoutes()
-    {
-        return count(app('router')->getRoutes());
-    }
-
-    /**
-     * Get admin routes count
-     */
-    private function getAdminRoutes()
-    {
-        $routes = app('router')->getRoutes();
-        $adminRoutes = 0;
-        
-        foreach ($routes as $route) {
-            if (str_starts_with($route->uri(), 'admin')) {
-                $adminRoutes++;
-            }
-        }
-        
-        return $adminRoutes;
-    }
-
-    /**
-     * Get app routes count
-     */
-    private function getAppRoutes()
-    {
-        $routes = app('router')->getRoutes();
-        $appRoutes = 0;
-        
-        foreach ($routes as $route) {
-            if (str_starts_with($route->uri(), 'app')) {
-                $appRoutes++;
-            }
-        }
-        
-        return $appRoutes;
-    }
-
-    /**
-     * Get legacy routes count
-     */
-    private function getLegacyRoutes()
-    {
-        $routes = app('router')->getRoutes();
-        $legacyRoutes = 0;
-        
-        foreach ($routes as $route) {
-            if (str_starts_with($route->getName(), 'legacy.')) {
-                $legacyRoutes++;
-            }
-        }
-        
-        return $legacyRoutes;
-    }
-
-    /**
-     * Get total users
-     */
-    private function getTotalUsers()
-    {
-        return \App\Models\User::count();
-    }
-
-    /**
-     * Get active users
-     */
-    private function getActiveUsers()
-    {
-        return \App\Models\User::where('is_active', true)->count();
-    }
-
-    /**
-     * Get super admins
-     */
-    private function getSuperAdmins()
-    {
-        return \App\Models\User::whereHas('roles', function($query) {
-            $query->where('name', 'super_admin');
-        })->count();
-    }
-
-    /**
-     * Get tenant users
-     */
-    private function getTenantUsers()
-    {
-        return \App\Models\User::whereNotNull('tenant_id')->count();
-    }
-
-    /**
-     * Get average load time
-     */
-    private function getAverageLoadTime()
-    {
-        // This would need to be implemented with actual load time tracking
-        return 'N/A';
-    }
-
-    /**
-     * Clear system caches
-     */
-    public function clearCaches()
+    public function getNetworkStats(): JsonResponse
     {
         try {
-            Artisan::call('config:clear');
-            Artisan::call('route:clear');
-            Artisan::call('view:clear');
-            Artisan::call('cache:clear');
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'All caches cleared successfully',
-                'timestamp' => now()->toISOString()
+            $stats = $this->networkService->getNetworkStats();
+            return response()->json(['success' => true, 'data' => $stats]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get network stats', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to get network stats'], 500);
+        }
+    }
+
+    /**
+     * Get performance recommendations
+     */
+    public function getRecommendations(): JsonResponse
+    {
+        try {
+            $recommendations = [
+                'performance' => $this->performanceService->getPerformanceRecommendations(),
+                'memory' => $this->memoryService->getMemoryRecommendations(),
+                'network' => $this->networkService->getNetworkRecommendations(),
+            ];
+
+            return response()->json(['success' => true, 'data' => $recommendations]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get performance recommendations', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to get performance recommendations'], 500);
+        }
+    }
+
+    /**
+     * Get performance thresholds
+     */
+    public function getThresholds(): JsonResponse
+    {
+        try {
+            $thresholds = [
+                'performance' => $this->performanceService->getPerformanceThresholds(),
+                'memory' => $this->memoryService->getMemoryThresholds(),
+                'network' => $this->networkService->getNetworkThresholds(),
+            ];
+
+            return response()->json(['success' => true, 'data' => $thresholds]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get performance thresholds', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to get performance thresholds'], 500);
+        }
+    }
+
+    /**
+     * Set performance thresholds
+     */
+    public function setThresholds(Request $request): JsonResponse
+    {
+        try {
+        $request->validate([
+                'performance' => 'nullable|array',
+                'memory' => 'nullable|array',
+                'network' => 'nullable|array',
             ]);
-        } catch (\Exception $e) {
+
+            if ($request->has('performance')) {
+                $this->performanceService->setPerformanceThresholds($request->input('performance'));
+            }
+
+            if ($request->has('memory')) {
+                $this->memoryService->setMemoryThresholds($request->input('memory'));
+            }
+
+            if ($request->has('network')) {
+                $this->networkService->setNetworkThresholds($request->input('network'));
+            }
+
+            return response()->json(['success' => true, 'message' => 'Thresholds updated successfully']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to clear caches: ' . $e->getMessage(),
-                'timestamp' => now()->toISOString()
-            ], 500);
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Failed to set performance thresholds', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to set performance thresholds'], 500);
         }
     }
 
     /**
-     * Get system health status
+     * Record page load time
      */
-    public function health()
-    {
-        $health = [
-            'status' => 'healthy',
-            'timestamp' => now()->toISOString(),
-            'checks' => [
-                'database' => $this->checkDatabase(),
-                'cache' => $this->checkCache(),
-                'routes' => $this->checkRoutes(),
-                'permissions' => $this->checkPermissions(),
-            ]
-        ];
-
-        $allHealthy = collect($health['checks'])->every(fn($check) => $check['status'] === 'healthy');
-        
-        if (!$allHealthy) {
-            $health['status'] = 'degraded';
-        }
-
-        return response()->json($health);
-    }
-
-    /**
-     * Check database connectivity
-     */
-    private function checkDatabase()
+    public function recordPageLoadTime(Request $request): JsonResponse
     {
         try {
-            DB::connection()->getPdo();
-            return ['status' => 'healthy', 'message' => 'Database connection successful'];
+            $request->validate([
+                'route' => 'required|string',
+                'load_time' => 'required|numeric|min:0',
+            ]);
+
+            $this->performanceService->recordPageLoadTime(
+                $request->input('route'),
+                $request->input('load_time')
+            );
+
+            return response()->json(['success' => true, 'message' => 'Page load time recorded']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
-            return ['status' => 'unhealthy', 'message' => 'Database connection failed: ' . $e->getMessage()];
+            Log::error('Failed to record page load time', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to record page load time'], 500);
         }
     }
 
     /**
-     * Check cache functionality
+     * Record API response time
      */
-    private function checkCache()
+    public function recordApiResponseTime(Request $request): JsonResponse
     {
         try {
-            Cache::put('health_check', 'test', 60);
-            $value = Cache::get('health_check');
-            Cache::forget('health_check');
-            
-            if ($value === 'test') {
-                return ['status' => 'healthy', 'message' => 'Cache functionality working'];
-            } else {
-                return ['status' => 'unhealthy', 'message' => 'Cache read/write failed'];
-            }
+            $request->validate([
+                'endpoint' => 'required|string',
+                'response_time' => 'required|numeric|min:0',
+            ]);
+
+            $this->performanceService->recordApiResponseTime(
+                $request->input('endpoint'),
+                $request->input('response_time')
+            );
+
+            return response()->json(['success' => true, 'message' => 'API response time recorded']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
-            return ['status' => 'unhealthy', 'message' => 'Cache check failed: ' . $e->getMessage()];
+            Log::error('Failed to record API response time', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to record API response time'], 500);
         }
     }
 
     /**
-     * Check routes functionality
+     * Record memory usage
      */
-    private function checkRoutes()
+    public function recordMemoryUsage(): JsonResponse
     {
         try {
-            $routes = app('router')->getRoutes();
-            if (count($routes) > 0) {
-                return ['status' => 'healthy', 'message' => 'Routes loaded successfully'];
-            } else {
-                return ['status' => 'unhealthy', 'message' => 'No routes found'];
-            }
+            $this->memoryService->recordMemoryUsage();
+            return response()->json(['success' => true, 'message' => 'Memory usage recorded']);
         } catch (\Exception $e) {
-            return ['status' => 'unhealthy', 'message' => 'Route check failed: ' . $e->getMessage()];
+            Log::error('Failed to record memory usage', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to record memory usage'], 500);
         }
     }
 
     /**
-     * Check permissions system
+     * Monitor network endpoint
      */
-    private function checkPermissions()
+    public function monitorNetworkEndpoint(Request $request): JsonResponse
     {
         try {
-            $user = \App\Models\User::first();
-            if ($user && method_exists($user, 'hasRole')) {
-                return ['status' => 'healthy', 'message' => 'Permissions system working'];
-            } else {
-                return ['status' => 'unhealthy', 'message' => 'Permissions system not working'];
-            }
+            $request->validate([
+                'url' => 'required|url',
+                'options' => 'nullable|array',
+            ]);
+
+            $result = $this->networkService->monitorApiEndpoint(
+                $request->input('url'),
+                $request->input('options', [])
+            );
+
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
         } catch (\Exception $e) {
-            return ['status' => 'unhealthy', 'message' => 'Permission check failed: ' . $e->getMessage()];
+            Log::error('Failed to monitor network endpoint', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to monitor network endpoint'], 500);
+        }
+    }
+
+    /**
+     * Get real-time metrics
+     */
+    public function getRealTimeMetrics(): JsonResponse
+    {
+        try {
+            $metrics = [
+                'performance' => $this->performanceService->getRealTimeMetrics(),
+                'memory' => $this->memoryService->getRealTimeMetrics(),
+                'network' => $this->networkService->getRealTimeMetrics(),
+            ];
+
+            return response()->json(['success' => true, 'data' => $metrics]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get real-time metrics', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to get real-time metrics'], 500);
+        }
+    }
+
+    /**
+     * Clear performance data
+     */
+    public function clearData(): JsonResponse
+    {
+        try {
+            $this->performanceService->clearMetrics();
+            $this->memoryService->clearHistory();
+            $this->networkService->clearHistory();
+
+            return response()->json(['success' => true, 'message' => 'Performance data cleared']);
+        } catch (\Exception $e) {
+            Log::error('Failed to clear performance data', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to clear performance data'], 500);
+        }
+    }
+
+    /**
+     * Export performance data
+     */
+    public function exportData(): JsonResponse
+    {
+        try {
+            $data = [
+                'performance' => $this->performanceService->exportPerformanceData(),
+                'memory' => $this->memoryService->exportMemoryData(),
+                'network' => $this->networkService->exportNetworkData(),
+            ];
+
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (\Exception $e) {
+            Log::error('Failed to export performance data', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to export performance data'], 500);
+        }
+    }
+
+    /**
+     * Force garbage collection
+     */
+    public function forceGarbageCollection(): JsonResponse
+    {
+        try {
+            $result = $this->memoryService->forceGarbageCollection();
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\Exception $e) {
+            Log::error('Failed to force garbage collection', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to force garbage collection'], 500);
+        }
+    }
+
+    /**
+     * Test network connectivity
+     */
+    public function testConnectivity(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'url' => 'required|url',
+            ]);
+
+            $result = $this->networkService->testConnectivity($request->input('url'));
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'details' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Failed to test network connectivity', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to test network connectivity'], 500);
+        }
+    }
+
+    /**
+     * Get network health status
+     */
+    public function getNetworkHealthStatus(): JsonResponse
+    {
+        try {
+            $status = $this->networkService->getNetworkHealthStatus();
+            return response()->json(['success' => true, 'data' => $status]);
+        } catch (\Exception $e) {
+            Log::error('Failed to get network health status', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'error' => 'Failed to get network health status'], 500);
         }
     }
 }

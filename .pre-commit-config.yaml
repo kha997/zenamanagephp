@@ -1,0 +1,82 @@
+# Pre-commit hooks for ZenaManage
+# Install with: pre-commit install
+
+repos:
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  # PHP specific checks
+  - repo: https://github.com/php-coveralls/php-coveralls
+    rev: v2.5.2
+    hooks:
+      - id: php-cs-fixer
+        args: ['--rules=@PSR12']
+
+  # Custom conflict detection
+  - repo: local
+    hooks:
+      - id: check-conflicts
+        name: Check for duplicates and conflicts
+        entry: ./scripts/check-conflicts.sh
+        language: script
+        files: \.(php|js|blade\.php|css)$
+        pass_filenames: false
+
+      - id: check-alpine-js
+        name: Check Alpine.js conflicts
+        entry: bash -c 'find resources/views -name "*.blade.php" | xargs grep -l "x-data=" | wc -l | xargs -I {} bash -c "if [ {} -gt 1 ]; then echo \"Multiple x-data definitions found\"; exit 1; fi"'
+        language: script
+        files: \.blade\.php$
+
+      - id: check-chart-js
+        name: Check Chart.js conflicts
+        entry: bash -c 'chart_files=$(find resources/views public/js -name "*.blade.php" -o -name "*.js" | xargs grep -l "Chart\|chart" | wc -l); if [ $chart_files -gt 5 ]; then echo "Too many Chart.js files: $chart_files"; exit 1; fi'
+        language: script
+        files: \.(blade\.php|js)$
+
+      - id: check-es6-modules
+        name: Check ES6 module conflicts
+        entry: bash -c 'es6_files=$(find public/js -name "*.js" | xargs grep -l "import\|export" | wc -l); if [ $es6_files -gt 0 ]; then echo "ES6 modules found in $es6_files files - use window globals instead"; exit 1; fi'
+        language: script
+        files: \.js$
+
+      - id: check-duplicate-functions
+        name: Check for duplicate function definitions
+        entry: bash -c 'duplicates=$(find resources/views public/js -name "*.blade.php" -o -name "*.js" | xargs grep -h "function " | sort | uniq -d | wc -l); if [ $duplicates -gt 0 ]; then echo "Found $duplicates duplicate functions"; exit 1; fi'
+        language: script
+        files: \.(blade\.php|js)$
+
+      - id: check-archive-files
+        name: Check for conflicting archive files
+        entry: bash -c 'archives=$(find resources/views -path "*/_archive*" -name "*.blade.php" | wc -l); if [ $archives -gt 0 ]; then echo "Found $archives archive files - consider cleanup"; exit 1; fi'
+        language: script
+        files: \.blade\.php$
+
+  # Security checks
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+
+  # Performance checks
+  - repo: local
+    hooks:
+      - id: check-performance
+        name: Check for performance anti-patterns
+        entry: bash -c 'if grep -r "N+1\|eager\|lazy" app/ --include="*.php" | grep -v "// TODO\|// FIXME"; then echo "Potential N+1 queries detected"; exit 1; fi'
+        language: script
+        files: \.php$
+
+# Configuration
+default_stages: [commit]
+fail_fast: false

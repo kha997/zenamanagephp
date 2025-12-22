@@ -169,7 +169,11 @@ return new class extends Migration
      */
     private function addTableOptimizations(): void
     {
-        // Optimize table storage engines and settings
+        // Skip MySQL-specific statements on other drivers.
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
+
         $tables = ['users', 'projects', 'tasks'];
 
         foreach ($tables as $table) {
@@ -177,10 +181,10 @@ return new class extends Migration
                 // Set InnoDB settings for better performance
                 DB::statement("ALTER TABLE {$table} ENGINE=InnoDB");
                 DB::statement("ALTER TABLE {$table} ROW_FORMAT=DYNAMIC");
-                
+
                 // Optimize table
                 DB::statement("OPTIMIZE TABLE {$table}");
-                
+
             } catch (\Exception $e) {
                 // Log error but continue with other tables
                 \Log::warning("Failed to optimize table {$table}: " . $e->getMessage());

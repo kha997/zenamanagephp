@@ -1,0 +1,77 @@
+import { test, expect } from '@playwright/test';
+import { AuthHelper } from '../helpers/auth-helper';
+
+test.describe('Debug Attachment Delete Modal', () => {
+  test('should debug attachment delete modal visibility', async ({ page }) => {
+    const authHelper = new AuthHelper(page);
+    await authHelper.login('uat-pm@test.com', 'password');
+
+    // Navigate to task detail page
+    await page.goto('/app/tasks/01K83FPM28B0NSDKE77REAFQ4P');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for attachment manager to be visible
+    await page.waitForSelector('[data-testid="attachment-manager"]', { timeout: 10000 });
+
+    // Check Alpine.js state before clicking delete
+    const alpineState = await page.evaluate(() => {
+      const component = Alpine.$data(document.querySelector('[x-data*="taskDetail"]'));
+      return {
+        showConfirmModal: component?.showConfirmModal,
+        confirmMessage: component?.confirmMessage,
+        allAttachments: component?.allAttachments?.length || 0
+      };
+    });
+
+    console.log('Alpine state before delete:', alpineState);
+
+    // Click delete button
+    await page.click('[data-testid="delete-attachment-button"]');
+
+    // Wait a bit for the modal to appear
+    await page.waitForTimeout(1000);
+
+    // Check Alpine.js state after clicking delete
+    const alpineStateAfter = await page.evaluate(() => {
+      const component = Alpine.$data(document.querySelector('[x-data*="taskDetail"]'));
+      return {
+        showConfirmModal: component?.showConfirmModal,
+        confirmMessage: component?.confirmMessage,
+        allAttachments: component?.allAttachments?.length || 0
+      };
+    });
+
+    console.log('Alpine state after delete click:', alpineStateAfter);
+
+    // Check if modal is visible
+    const modalVisible = await page.locator('[data-testid="confirm-delete-attachment"]').isVisible();
+    console.log('Modal visible:', modalVisible);
+
+    // Check modal count
+    const modalCount = await page.locator('[data-testid="confirm-delete-attachment"]').count();
+    console.log('Modal count:', modalCount);
+
+    // Try to click the confirm button
+    if (modalVisible) {
+      console.log('Attempting to click confirm button');
+      await page.click('[data-testid="confirm-delete-attachment"]');
+      
+      // Wait a bit for the deletion to complete
+      await page.waitForTimeout(1000);
+      
+      // Check Alpine.js state after confirmation
+      const alpineStateAfterConfirm = await page.evaluate(() => {
+        const component = Alpine.$data(document.querySelector('[x-data*="taskDetail"]'));
+        return {
+          showConfirmModal: component?.showConfirmModal,
+          confirmMessage: component?.confirmMessage,
+          allAttachments: component?.allAttachments?.length || 0
+        };
+      });
+      
+      console.log('Alpine state after confirm click:', alpineStateAfterConfirm);
+    } else {
+      console.log('Modal not visible, cannot click confirm button');
+    }
+  });
+});

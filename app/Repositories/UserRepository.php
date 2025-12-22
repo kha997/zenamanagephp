@@ -53,7 +53,7 @@ class UserRepository
     /**
      * Get user by ID.
      */
-    public function getById(int $id): ?User
+    public function getById(string $id): ?User
     {
         return $this->model->with(['roles', 'tenant'])->find($id);
     }
@@ -69,7 +69,7 @@ class UserRepository
     /**
      * Get users by tenant ID.
      */
-    public function getByTenantId(int $tenantId): Collection
+    public function getByTenantId(string $tenantId): Collection
     {
         return $this->model->where('tenant_id', $tenantId)
                           ->with(['roles', 'tenant'])
@@ -115,7 +115,7 @@ class UserRepository
     /**
      * Update user.
      */
-    public function update(int $id, array $data): ?User
+    public function update(string $id, array $data): ?User
     {
         $user = $this->model->find($id);
 
@@ -147,7 +147,7 @@ class UserRepository
     /**
      * Delete user.
      */
-    public function delete(int $id): bool
+    public function delete(string $id): bool
     {
         $user = $this->model->find($id);
 
@@ -169,7 +169,7 @@ class UserRepository
     /**
      * Soft delete user.
      */
-    public function softDelete(int $id): bool
+    public function softDelete(string $id): bool
     {
         $user = $this->model->find($id);
 
@@ -191,7 +191,7 @@ class UserRepository
     /**
      * Restore soft deleted user.
      */
-    public function restore(int $id): bool
+    public function restore(string $id): bool
     {
         $user = $this->model->withTrashed()->find($id);
 
@@ -257,7 +257,7 @@ class UserRepository
     /**
      * Update last login.
      */
-    public function updateLastLogin(int $id, string $ip = null): bool
+    public function updateLastLogin($id, string $ip = null): bool
     {
         $user = $this->model->find($id);
 
@@ -276,7 +276,7 @@ class UserRepository
     /**
      * Change user password.
      */
-    public function changePassword(int $id, string $newPassword): bool
+    public function changePassword($id, string $newPassword): bool
     {
         $user = $this->model->find($id);
 
@@ -300,7 +300,7 @@ class UserRepository
     /**
      * Verify user password.
      */
-    public function verifyPassword(int $id, string $password): bool
+    public function verifyPassword($id, string $password): bool
     {
         $user = $this->model->find($id);
 
@@ -314,7 +314,7 @@ class UserRepository
     /**
      * Get user statistics.
      */
-    public function getStatistics(int $tenantId = null): array
+    public function getStatistics($tenantId = null): array
     {
         $query = $this->model->query();
 
@@ -388,7 +388,7 @@ class UserRepository
     /**
      * Get user permissions.
      */
-    public function getPermissions(int $id): array
+    public function getPermissions($id): array
     {
         $user = $this->model->with('roles.permissions')->find($id);
 
@@ -410,7 +410,7 @@ class UserRepository
     /**
      * Check if user has permission.
      */
-    public function hasPermission(int $id, string $permission): bool
+    public function hasPermission($id, string $permission): bool
     {
         $permissions = $this->getPermissions($id);
         return in_array($permission, $permissions);
@@ -419,7 +419,7 @@ class UserRepository
     /**
      * Get user roles.
      */
-    public function getRoles(int $id): array
+    public function getRoles($id): array
     {
         $user = $this->model->with('roles')->find($id);
 
@@ -433,7 +433,7 @@ class UserRepository
     /**
      * Check if user has role.
      */
-    public function hasRole(int $id, string $role): bool
+    public function hasRole($id, string $role): bool
     {
         $roles = $this->getRoles($id);
         return in_array($role, $roles);

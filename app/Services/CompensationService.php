@@ -1,21 +1,22 @@
 <?php declare(strict_types=1);
 
 namespace App\Services;
-use Illuminate\Support\Facades\Auth;
 
+use Src\Foundation\Helpers\AuthHelper;
 
-use Carbon\Carbon;
+use Src\Compensation\Models\TaskCompensation;
+use Src\Compensation\Models\Contract;
+use Src\CoreProject\Models\Task;
+use Src\CoreProject\Models\TaskAssignment;
+use Src\CoreProject\Models\Project;
+use Src\Compensation\Events\CompensationPreviewed;
+use Src\Compensation\Events\CompensationApplied;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use Src\Compensation\Events\CompensationApplied;
-use Src\Compensation\Events\CompensationPreviewed;
-use Src\Compensation\Models\Contract;
-use Src\Compensation\Models\TaskCompensation;
-use Src\CoreProject\Models\Project;
-use Src\Foundation\Helpers\AuthHelper;
+use Carbon\Carbon;
 
 /**
  * Service xử lý business logic cho Compensation module
@@ -57,7 +58,11 @@ class CompensationService
             throw new \Exception('User not authenticated');
         }
 
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($projectId, $actorId) {
+            // Lấy tất cả tasks của project
+            $tasks = Task::where('project_id', $projectId)
+                        ->with(['assignments'])
+                        ->get();
             
             $syncedCount = 0;
             $skippedCount = 0;
@@ -128,7 +133,8 @@ class CompensationService
         
         // Build query cho task compensations
         $query = TaskCompensation::with(['task', 'assignment.user'])
-                                ->whereHas('task', function ($q) 
+                                ->whereHas('task', function ($q) use ($projectId) {
+                                    $q->where('project_id', $projectId);
                                 })
                                 ->where('status', TaskCompensation::STATUS_PENDING);
         
@@ -199,7 +205,11 @@ class CompensationService
     {
         $actorId = $this->resolveActorId();
     
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($projectId, $contractId, $compensationIds, $actorId) {
+            // Validate contract
+            $contract = Contract::where('id', $contractId)
+                               ->where('project_id', $projectId)
+                               ->firstOrFail();
             
             if (!$contract->canApplyCompensation()) {
                 throw new ValidationException('Contract không thể áp dụng compensation');
@@ -207,7 +217,8 @@ class CompensationService
             
             // Lấy compensations cần apply
             $compensations = TaskCompensation::whereIn('id', $compensationIds)
-                                            ->whereHas('task', function ($q) 
+                                            ->whereHas('task', function ($q) use ($projectId) {
+                                                $q->where('project_id', $projectId);
                                             })
                                             ->where('status', TaskCompensation::STATUS_PENDING)
                                             ->get();
@@ -220,7 +231,7 @@ class CompensationService
             $totalValue = 0;
             
             foreach ($compensations as $compensation) {
-                // Lock compensation với contract - sử dụng actorId thay vì Auth::id()
+                // Lock compensation với contract - sử dụng actorId thay vì auth()->id()
                 $compensation->lockWithContract($contract, $actorId);
                 $appliedCount++;
                 
@@ -268,7 +279,8 @@ class CompensationService
             throw new \Exception('User not authenticated');
         }
 
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($compensationId, $newPercent, $notes, $actorId) {
+            $compensation = TaskCompensation::findOrFail($compensationId);
             
             if (!$compensation->canBeUpdated()) {
                 throw new ValidationException('Compensation đã được lock, không thể cập nhật');
@@ -308,7 +320,8 @@ class CompensationService
         
         // Lấy tất cả compensations của project
         $compensations = TaskCompensation::with(['task', 'assignment.user', 'contract'])
-                                        ->whereHas('task', function ($q) 
+                                        ->whereHas('task', function ($q) use ($projectId) {
+                                            $q->where('project_id', $projectId);
                                         })
                                         ->get();
         
@@ -388,7 +401,8 @@ class CompensationService
         
         // Apply filters
         if (!empty($filters['project_id'])) {
-            $query->whereHas('task', function ($q) 
+            $query->whereHas('task', function ($q) use ($filters) {
+                $q->where('project_id', $filters['project_id']);
             });
         }
         
@@ -397,7 +411,8 @@ class CompensationService
         }
         
         if (!empty($filters['user_id'])) {
-            $query->whereHas('assignment', function ($q) 
+            $query->whereHas('assignment', function ($q) use ($filters) {
+                $q->where('user_id', $filters['user_id']);
             });
         }
         

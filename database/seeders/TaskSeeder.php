@@ -3,13 +3,13 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Component;
-use Src\CoreProject\Models\Task;
+use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
+use App\Models\Tenant;
 
 /**
- * Seeder cho Task model
+ * Task Seeder
  * 
  * Tạo dữ liệu mẫu cho tasks với assignments
  */
@@ -20,150 +20,166 @@ class TaskSeeder extends Seeder
      */
     public function run(): void
     {
-        // Lấy tất cả components để tạo tasks
-        $components = Component::with('project')->get();
+        $this->command->info('📋 Seeding tasks...');
+
+        // Lấy tất cả tenants để tạo tasks cho mỗi tenant
+        $tenants = Tenant::all();
         
-        foreach ($components as $component) {
-            $this->createTasksForComponent($component);
+        if ($tenants->isEmpty()) {
+            $this->command->warn('No tenants found. Skipping tasks seeding.');
+            return;
         }
-        
-        // Tạo một số tasks không thuộc component nào (project-level tasks)
-        $projects = Project::all();
-        foreach ($projects as $project) {
-            $this->createProjectLevelTasks($project);
+
+        foreach ($tenants as $tenant) {
+            $this->createTasksForTenant($tenant);
         }
+
+        $this->command->info('✅ Tasks seeded successfully!');
     }
 
     /**
-     * Tạo tasks cho một component
+     * Tạo tasks cho một tenant
      */
-    private function createTasksForComponent(Component $component): void
+    private function createTasksForTenant(Tenant $tenant): void
     {
-        $tasksCount = fake()->numberBetween(2, 6);
+        // Lấy projects của tenant này
+        $projects = Project::where('tenant_id', $tenant->id)->withoutGlobalScopes()->get();
         
-        for ($i = 1; $i <= $tasksCount; $i++) {
-            $task = Task::factory()
-                ->forComponent($component)
-                ->create([
-                    'name' => $this->getTaskName($component->name, $i),
+        if ($projects->isEmpty()) {
+            $this->command->warn("No projects found for tenant: {$tenant->name}. Skipping tasks.");
+            return;
+        }
+
+        // Lấy users của tenant này
+        $users = User::where('tenant_id', $tenant->id)->withoutGlobalScopes()->get();
+        
+        if ($users->isEmpty()) {
+            $this->command->warn("No users found for tenant: {$tenant->name}. Skipping tasks.");
+            return;
+        }
+
+        $taskTemplates = [
+            'Website Redesign' => [
+                'Phân tích yêu cầu thiết kế',
+                'Tạo wireframe và mockup',
+                'Thiết kế UI/UX',
+                'Code frontend',
+                'Test và debug',
+                'Deploy lên production'
+            ],
+            'Mobile App Development' => [
+                'Phân tích requirements',
+                'Thiết kế database',
+                'Code backend API',
+                'Code mobile app',
+                'Test trên các thiết bị',
+                'Submit lên app store'
+            ],
+            'Marketing Campaign' => [
+                'Nghiên cứu thị trường',
+                'Tạo content marketing',
+                'Thiết kế banner quảng cáo',
+                'Chạy campaign trên social media',
+                'Theo dõi và phân tích kết quả',
+                'Báo cáo ROI'
+            ],
+            'Database Migration' => [
+                'Backup database hiện tại',
+                'Thiết kế schema mới',
+                'Viết script migration',
+                'Test migration trên staging',
+                'Chạy migration production',
+                'Verify dữ liệu sau migration'
+            ],
+            'E-commerce Platform' => [
+                'Thiết kế hệ thống',
+                'Code backend',
+                'Code frontend',
+                'Tích hợp payment gateway',
+                'Test toàn bộ flow',
+                'Deploy và monitor'
+            ],
+            'API Development' => [
+                'Thiết kế API endpoints',
+                'Code authentication',
+                'Code business logic',
+                'Viết documentation',
+                'Test API với Postman',
+                'Deploy và monitor'
+            ]
+        ];
+
+        foreach ($projects as $project) {
+            $projectTasks = $taskTemplates[$project->name] ?? [
+                'Phân tích yêu cầu',
+                'Thiết kế giải pháp',
+                'Triển khai',
+                'Test',
+                'Deploy',
+                'Bảo trì'
+            ];
+
+            foreach ($projectTasks as $index => $taskName) {
+                $task = Task::create([
+                    'tenant_id' => $tenant->id,
+                    'project_id' => $project->id,
+                    'name' => $taskName,
+                    'title' => $taskName,
+                    'description' => "Chi tiết công việc: {$taskName} cho dự án {$project->name}",
+                    'status' => $this->getRandomStatus(),
+                    'priority' => $this->getRandomPriority(),
+                    'progress_percent' => rand(0, 100),
+                    'assigned_to' => $users->random()->id,
+                    'start_date' => now()->subDays(rand(1, 10)),
+                    'end_date' => now()->addDays(rand(1, 30)),
+                    'estimated_hours' => rand(4, 40),
+                    'actual_hours' => rand(0, 40),
                 ]);
-            
-            // Assign task cho users (70% chance)
-            if (fake()->boolean(70)) {
-                $this->assignTaskToUsers($task);
+
+                // Assign task cho users (70% chance)
+                if (fake()->boolean(70)) {
+                    $this->assignTaskToUsers($task, $users);
+                }
             }
         }
-    }
 
-    /**
-     * Tạo project-level tasks
-     */
-    private function createProjectLevelTasks(Project $project): void
-    {
-        $tasksCount = fake()->numberBetween(1, 3);
-        
-        for ($i = 1; $i <= $tasksCount; $i++) {
-            $task = Task::factory()
-                ->forProject($project)
-                ->create([
-                    'name' => $this->getProjectLevelTaskName($i),
-                    'priority' => Task::PRIORITY_HIGH,
-                ]);
-            
-            $this->assignTaskToUsers($task);
-        }
+        $this->command->info("Created tasks for tenant: {$tenant->name}");
     }
 
     /**
      * Assign task cho users
      */
-    private function assignTaskToUsers(Task $task): void
+    private function assignTaskToUsers(Task $task, $users): void
     {
-        // Lấy users trong cùng tenant với project
-        $users = User::where('tenant_id', $task->project->tenant_id)
-                    ->inRandomOrder()
-                    ->limit(fake()->numberBetween(1, 3))
-                    ->get();
+        $assignedUsers = $users->random(rand(1, min(3, $users->count())));
         
-        if ($users->isEmpty()) {
-            return;
-        }
-        
-        $totalPercentage = 100;
-        $assignedUsers = $users->count();
-        
-        foreach ($users as $index => $user) {
-            $percentage = ($index === $assignedUsers - 1) 
-                ? $totalPercentage // Assign remaining percentage to last user
-                : fake()->numberBetween(20, 60);
-            
+        foreach ($assignedUsers as $user) {
             $task->assignments()->create([
                 'user_id' => $user->id,
-                'split_percent' => $percentage,
-                'role' => fake()->randomElement(['assignee', 'reviewer', 'observer']), // Sửa từ ['lead', 'member', 'reviewer']
+                'role' => fake()->randomElement(['assignee', 'reviewer', 'observer']),
             ]);
-            
-            $totalPercentage -= $percentage;
-            
-            if ($totalPercentage <= 0) {
-                break;
-            }
         }
     }
 
     /**
-     * Lấy tên task dựa trên component
+     * Lấy status ngẫu nhiên
      */
-    private function getTaskName(string $componentName, int $index): string
+    private function getRandomStatus(): string
     {
-        $taskTemplates = [
-            'Khảo sát địa hình' => [
-                'Đo đạc địa hình',
-                'Phân tích đất đá',
-                'Lập báo cáo khảo sát',
-                'Đánh giá rủi ro địa chất'
-            ],
-            'Thiết kế kiến trúc' => [
-                'Phác thảo ý tưởng',
-                'Vẽ bản thiết kế sơ bộ',
-                'Hoàn thiện bản vẽ',
-                'Thuyết trình với khách hàng'
-            ],
-            'Đào móng' => [
-                'Đánh dấu vị trí móng',
-                'Đào hố móng',
-                'Kiểm tra độ sâu',
-                'Vệ sinh hố móng'
-            ],
-            'Sơn tường' => [
-                'Chuẩn bị bề mặt',
-                'Sơn lót',
-                'Sơn hoàn thiện',
-                'Kiểm tra chất lượng'
-            ]
-        ];
-        
-        foreach ($taskTemplates as $component => $tasks) {
-            if (str_contains($componentName, $component) && isset($tasks[$index - 1])) {
-                return $tasks[$index - 1];
-            }
-        }
-        
-        return "{$componentName} - Công việc {$index}";
+        $statuses = ['pending', 'in_progress', 'completed', 'on_hold', 'cancelled'];
+        return fake()->randomElement($statuses);
     }
 
     /**
-     * Lấy tên cho project-level tasks
+     * Lấy priority ngẫu nhiên
      */
-    private function getProjectLevelTaskName(int $index): string
+    private function getRandomPriority(): string
     {
-        $names = [
-            'Họp kick-off dự án',
-            'Báo cáo tiến độ hàng tuần',
-            'Đánh giá rủi ro dự án',
-            'Họp tổng kết giai đoạn'
-        ];
-        
-        return $names[$index - 1] ?? "Công việc dự án #{$index}";
+        $priorities = ['low', 'medium', 'high', 'urgent'];
+        return fake()->randomElement($priorities);
     }
 }
+
+
+
+

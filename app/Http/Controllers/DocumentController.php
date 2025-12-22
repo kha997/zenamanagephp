@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Src\DocumentManagement\Resources\DocumentCollection;
 use Src\DocumentManagement\Resources\DocumentResource;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 
 /**
  * Controller xử lý các hoạt động CRUD cho Document
@@ -48,7 +48,7 @@ class DocumentController
         try {
             $projectId = $request->get('project_id');
             if (!$projectId) {
-                return JSendResponse::error('Project ID is required', 400);
+                return ApiResponse::error('Project ID is required', 400);
             }
 
             $filters = [
@@ -60,11 +60,11 @@ class DocumentController
 
             $documents = $this->documentService->getDocumentsByProject($projectId, $filters);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'documents' => new DocumentCollection($documents)
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to retrieve documents: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to retrieve documents: ' . $e->getMessage(), 500);
         }
     }
 
@@ -80,14 +80,14 @@ class DocumentController
             $document = $this->documentService->getDocumentById($id);
             
             if (!$document) {
-                return JSendResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 404);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'document' => new DocumentResource($document)
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to retrieve document: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to retrieve document: ' . $e->getMessage(), 500);
         }
     }
 
@@ -106,11 +106,11 @@ class DocumentController
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
     
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'document' => new DocumentResource($document)
             ], 'Document created successfully', 201);
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to create document: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to create document: ' . $e->getMessage(), 500);
         }
     }
 
@@ -131,14 +131,14 @@ class DocumentController
             );
     
             if (!$document) {
-                return JSendResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 404);
             }
     
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'document' => new DocumentResource($document)
             ], 'Document updated successfully');
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to update document: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to update document: ' . $e->getMessage(), 500);
         }
     }
 
@@ -155,12 +155,12 @@ class DocumentController
             $result = $this->documentService->deleteDocument($id, $this->getUserId($request));
             
             if (!$result) {
-                return JSendResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 404);
             }
 
-            return JSendResponse::success(null, 'Document deleted successfully');
+            return ApiResponse::success(null, 'Document deleted successfully');
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to delete document: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to delete document: ' . $e->getMessage(), 500);
         }
     }
 
@@ -187,14 +187,14 @@ class DocumentController
             );
 
             if (!$version) {
-                return JSendResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 404);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'version' => $version
             ], 'New version created successfully', 201);
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to create version: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to create version: ' . $e->getMessage(), 500);
         }
     }
 
@@ -221,14 +221,14 @@ class DocumentController
             );
 
             if (!$version) {
-                return JSendResponse::error('Document or version not found', 404);
+                return ApiResponse::error('Document or version not found', 404);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'version' => $version
             ], 'Document reverted successfully');
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to revert document: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to revert document: ' . $e->getMessage(), 500);
         }
     }
 
@@ -245,14 +245,14 @@ class DocumentController
             $document = $this->documentService->approveForClient($id, $this->getUserId($request));
             
             if (!$document) {
-                return JSendResponse::error('Document not found', 404);
+                return ApiResponse::error('Document not found', 404);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'document' => new DocumentResource($document)
             ], 'Document approved for client successfully');
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to approve document: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to approve document: ' . $e->getMessage(), 500);
         }
     }
 
@@ -268,7 +268,7 @@ class DocumentController
         try {
             return $this->documentService->downloadVersion($documentId, $versionNumber);
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to download file: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to download file: ' . $e->getMessage(), 500);
         }
     }
 
@@ -283,11 +283,11 @@ class DocumentController
         try {
             $stats = $this->documentService->getDocumentStatistics($projectId);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'statistics' => $stats
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Failed to get statistics: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Failed to get statistics: ' . $e->getMessage(), 500);
         }
     }
 }

@@ -1,0 +1,172 @@
+---
+alwaysApply: true
+---
+🎯 PROJECT CONTEXT
+Laravel-based multi-tenant project management system với strict architectural principles và clear separation giữa UI và API layers.  
+⚠️ Mọi phát triển đều phải tham chiếu `DOCUMENTATION_INDEX.md` để đảm bảo đọc đúng tài liệu và tuân thủ hệ thống doc hiện tại.
+
+📋 MANDATORY RULES
+1. ARCHITECTURE COMPLIANCE
+- UI renders only — all business logic lives in the API
+- Web routes: session auth + tenant scope only
+- API routes: token auth:sanctum + ability (admin/tenant)
+- No side-effects in UI routes - all writes via API
+- Clear separation: /admin/* (system-wide) ≠ /app/* (tenant-scoped)
+
+2. NAMING CONVENTIONS
+- Routes: kebab-case (/app/projects), plural for lists, singular+id for detail
+- Controllers/Services: PascalCase with verbs (ProjectService.updateBudget)
+- DB schema: snake_case with FK required, soft delete (deleted_at)
+- Enums: Fixed sets only (status ∈ {planning, active, on_hold, completed, cancelled})
+
+3. ERROR HANDLING & API CONTRACTS
+- Standard error envelope (i18n-ready)
+- Always include error.id (correlates with logs / X-Request-Id)
+- HTTP mapping: 400 validation, 401 auth, 403 authz, 404 not found, 409 conflict, 422 domain validation, 429 rate limit, 500 internal, 503 maintenance
+- Include Retry-After for 429/503
+
+4. MULTI-TENANT ISOLATION
+- Mandatory: Every query must filter by tenant_id
+- Enforcement: At repository/service layer
+- Testing: Explicit tests to prove tenant A cannot read B
+- Indexes: Composite indexes on (tenant_id, foreign_key)
+
+5. TESTING REQUIREMENTS
+- Unit tests: Services, mappers, validators (fast, isolated)
+- Integration tests: Controllers + DB + auth + RBAC + multi-tenant
+- E2E tests: Critical user paths (login → dashboard → projects → tasks)
+- Isolation tests: Prove tenant separation
+- Playwright: All UI/E2E tests must use Playwright MCP (browser_navigate, browser_fill_form, browser_take_screenshot, …)
+- Deterministic Tests: Views for all endpoints must be deterministic (SmokeTest/DeterministicViewTest)
+- CI gate: All tests must pass, no flakiness allowed
+
+6. PERFORMANCE STANDARDS
+- Page budgets: p95 < 500ms (20–50 rows)
+- API budgets: p95 < 300ms
+- Cache strategy: KPI/insights 60s per tenant
+- Optimization: Avoid N+1 queries, use projections
+
+7. SECURITY REQUIREMENTS
+- RBAC: Explicit roles (super_admin, PM, Member, Client)
+- Auth: Admin API (auth:sanctum + ability:admin), App API (auth:sanctum + ability:tenant)
+- Protection: CSRF for web, tokens for API
+- Headers: CSP, CORS, HSTS, secure cookies
+- Rate limiting: Public endpoints only
+
+8. LOGGING & MONITORING
+- Structured logs (JSON) with: timestamp, level, tenant_id, user_id, X-Request-Id, route, latency, result (success/error), redacted PII
+- Severity: DEBUG (dev only), INFO (normal ops), WARN (degraded), ERROR (4xx actionable), CRITICAL (5xx)
+- Tracing: propagate X-Request-Id; log it in every layer
+- Redaction policy: mask secrets/PII in logs and errors
+
+9. VIEW & COMPONENT STRUCTURE
+- One view per endpoint — deterministic content, no duplicates
+- Shared components must live under `resources/views/components/shared/`
+- KPI: only one `components/kpi/strip.blade.php` as global source of truth
+- HEADER COMPONENTS RULE:
+  • Only 1 header component is used: `shared/header-wrapper.blade.php`
+  • Different contexts (admin/app) are handled via `variant` prop (variant="admin" | variant="app")
+  • Navigation differences are managed by `HeaderService` based on context
+  • Must always include greeting and notifications for all variants
+  • Do not create separate header components for admin vs app
+  • If new requirements arise, extend via props, not new header components.
+
+🚫 ABSOLUTE PROHIBITIONS
+NEVER DO:
+- Create routes without proper middleware
+- Write code without tenant isolation
+- Skip error handling or use generic errors
+- Commit code without tests
+- Use hardcoded values or magic numbers
+- Create duplicate functionality
+- Bypass security validations
+- Ignore performance budgets
+- Leave debug code in production
+- Create orphaned data
+
+NEVER ACCEPT:
+- PRs without proper tests
+- Code that violates architecture principles
+- Changes without documentation updates
+- Performance regressions
+- Security vulnerabilities
+- Data isolation violations
+
+✅ MANDATORY ACTIONS
+ALWAYS DO:
+- Validate all inputs against schemas
+- Include proper error handling with error.id
+- Add tenant_id to all queries
+- Write tests for new functionality
+- Update documentation for changes (check DOCUMENTATION_INDEX.md for references)
+- Follow naming conventions strictly
+- Include logging with correlation IDs
+- Check performance impact
+- Verify security implications
+- Ensure multi-tenant isolation
+
+🔍 CODE REVIEW CHECKLIST
+Before Any Change:
+[ ] Architecture compliance verified
+[ ] Security implications assessed
+[ ] Performance impact evaluated
+[ ] Multi-tenant isolation confirmed
+[ ] Error handling planned
+
+During Development:
+[ ] Tests written and passing
+[ ] Naming conventions followed
+[ ] Error handling implemented
+[ ] Logging added with correlation IDs
+[ ] Documentation updated (check DOCUMENTATION_INDEX.md)
+
+Before Completion:
+[ ] All tests pass
+[ ] Performance budgets met
+[ ] Security review completed
+[ ] Documentation complete
+[ ] Architecture compliance verified
+
+📊 SUCCESS METRICS
+Code Quality:
+- 100% test coverage for new code
+- 0 security vulnerabilities
+- < 500ms p95 latency for pages
+- < 300ms p95 latency for APIs
+- 0 tenant isolation violations
+
+Documentation:
+- 100% API endpoints documented
+- All error codes with examples
+- Architecture decisions recorded
+- Performance benchmarks documented
+
+🚨 ESCALATION RULES
+CRITICAL Issues (Block Everything):
+- Security vulnerabilities
+- Data isolation violations
+- Performance regressions
+- Architecture violations
+
+HIGH Priority (Block Merge):
+- Missing tests
+- Documentation gaps
+- Error handling gaps
+- Performance issues
+
+MEDIUM Priority (Fix in PR):
+- Naming violations
+- Code style issues
+- Minor optimizations
+
+🎯 AI ASSISTANT COMMITMENT
+I commit to:
+- Always follow the architectural principles
+- Never compromise on security or performance
+- Always validate multi-tenant isolation
+- Always include proper error handling
+- Always write comprehensive tests
+- Always update documentation
+- Always maintain code quality standards
+- Always prioritize user experience
+- Always ensure system reliability

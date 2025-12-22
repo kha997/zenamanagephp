@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Password;
 
 class PasswordResetRequest extends FormRequest
 {
@@ -16,23 +17,45 @@ class PasswordResetRequest extends FormRequest
 
     /**
      * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email', 'exists:users,email']
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                'exists:users,email'
+            ]
         ];
     }
 
     /**
      * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
      */
     public function messages(): array
     {
         return [
             'email.required' => 'Email address is required.',
             'email.email' => 'Please provide a valid email address.',
+            'email.max' => 'Email address must not exceed 255 characters.',
             'email.exists' => 'No account found with this email address.'
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'email' => 'email address'
         ];
     }
 }

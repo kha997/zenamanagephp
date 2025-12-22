@@ -12,7 +12,6 @@ import {
   ArrowRightOnRectangleIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
-  ChatBubbleLeftRightIcon,
   BuildingOfficeIcon,
   WrenchScrewdriverIcon,
   CheckCircleIcon,

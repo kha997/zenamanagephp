@@ -47,6 +47,36 @@ class CacheService
     }
 
     /**
+     * Cache dashboard data với tenant isolation
+     * 
+     * @param string $tenantId
+     * @param callable $callback
+     * @param int $ttl
+     * @return mixed
+     */
+    public function cacheDashboardData(string $tenantId, callable $callback, int $ttl = self::TTL_MEDIUM)
+    {
+        $key = "dashboard:{$tenantId}";
+        
+        return Cache::remember($key, $ttl, $callback);
+    }
+
+    /**
+     * Cache KPI data với tenant isolation
+     * 
+     * @param string $tenantId
+     * @param callable $callback
+     * @param int $ttl
+     * @return mixed
+     */
+    public function cacheKPIs(string $tenantId, callable $callback, int $ttl = self::TTL_SHORT)
+    {
+        $key = "kpis:{$tenantId}";
+        
+        return Cache::remember($key, $ttl, $callback);
+    }
+
+    /**
      * Cache user permissions cho RBAC system
      * 
      * @param int $userId
@@ -151,11 +181,15 @@ class CacheService
     public function warmUpUserCaches(int $userId): void
     {
         // Warm up user permissions
-        $this->cacheUserPermissions($userId, null, function () 
+        $this->cacheUserPermissions($userId, null, function () {
+            // TODO: Implement user permissions retrieval logic
+            return [];
         });
 
         // Warm up dashboard stats
-        $this->cacheDashboardStats($userId, function () 
+        $this->cacheDashboardStats($userId, function () {
+            // TODO: Implement dashboard stats retrieval logic
+            return [];
         });
     }
 

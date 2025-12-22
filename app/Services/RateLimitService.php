@@ -2,165 +2,127 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\Request;
+use App\Services\ComprehensiveLoggingService;
 
 /**
  * Rate Limiting Service
  * 
- * Provides advanced rate limiting capabilities:
- * - Dynamic rate limit adjustments based on system load
- * - User-specific rate limits based on subscription tiers
- * - Endpoint-specific rate limiting
- * - Rate limit analytics and monitoring
+ * Provides comprehensive rate limiting functionality with:
+ * - Multiple rate limit strategies (sliding window, token bucket, fixed window)
+ * - Dynamic configuration based on user roles and endpoints
+ * - Advanced analytics and monitoring
+ * - Automatic scaling and adjustment
  */
 class RateLimitService
 {
-    private array $userTierLimits = [
-        'free' => [
-            'requests_per_minute' => 60,
-            'burst_limit' => 100,
-            'daily_limit' => 1000,
-        ],
-        'premium' => [
-            'requests_per_minute' => 300,
-            'burst_limit' => 500,
-            'daily_limit' => 10000,
-        ],
-        'enterprise' => [
-            'requests_per_minute' => 1000,
-            'burst_limit' => 2000,
-            'daily_limit' => 100000,
-        ],
-        'admin' => [
-            'requests_per_minute' => 5000,
-            'burst_limit' => 10000,
-            'daily_limit' => 1000000,
-        ],
-    ];
-
-    private array $endpointLimits = [
-        'auth/login' => ['requests_per_minute' => 5, 'burst_limit' => 10],
-        'auth/register' => ['requests_per_minute' => 3, 'burst_limit' => 5],
-        'upload' => ['requests_per_minute' => 10, 'burst_limit' => 20],
-        'export' => ['requests_per_minute' => 2, 'burst_limit' => 5],
-        'bulk' => ['requests_per_minute' => 5, 'burst_limit' => 10],
-    ];
-
+    private ComprehensiveLoggingService $loggingService;
+    private RateLimitConfigurationService $configService;
+    
+    public function __construct(
+        ComprehensiveLoggingService $loggingService,
+        RateLimitConfigurationService $configService
+    ) {
+        $this->loggingService = $loggingService;
+        $this->configService = $configService;
+    }
+    
     /**
-     * Get rate limit configuration for user and endpoint
+     * Check if request is allowed based on rate limits
      */
-    public function getRateLimitConfig(Request $request, string $endpoint = null): array
+    public function checkRateLimit(Request $request, string $endpoint = 'default'): array
+    {
+        $identifier = $this->getIdentifier($request);
+        $config = $this->getRateLimitConfig($request, $endpoint);
+        
+        $result = $this->applyRateLimit($identifier, $config, $request, $endpoint);
+        
+        // Log rate limit check
+        $this->logRateLimitCheck($request, $result);
+        
+        return $result;
+    }
+    
+    /**
+     * Get unique identifier for rate limiting
+     */
+    private function getIdentifier(Request $request): string
     {
         $user = $request->user();
-        $userTier = $user ? $this->getUserTier($user) : 'free';
-        $baseConfig = $this->userTierLimits[$userTier];
+        $ip = $request->ip();
         
-        // Apply endpoint-specific limits if available
-        if ($endpoint && isset($this->endpointLimits[$endpoint])) {
-            $endpointConfig = $this->endpointLimits[$endpoint];
-            $baseConfig = array_merge($baseConfig, $endpointConfig);
+        if ($user) {
+            return "user:{$user->id}:{$ip}";
         }
         
-        // Adjust based on system load
-        $baseConfig = $this->adjustForSystemLoad($baseConfig);
-        
-        return $baseConfig;
+        return "ip:{$ip}";
     }
-
+    
     /**
-     * Check if request is allowed based on multiple criteria
+     * Get rate limit configuration based on request context
      */
-    public function isRequestAllowed(Request $request, string $endpoint = null): array
+    private function getRateLimitConfig(Request $request, string $endpoint): array
     {
-        $config = $this->getRateLimitConfig($request, $endpoint);
-        $identifier = $this->getIdentifier($request);
-        
-        // Check minute-based rate limit
-        $minuteResult = $this->checkMinuteRateLimit($identifier, $config);
-        
-        // Check daily rate limit
-        $dailyResult = $this->checkDailyRateLimit($identifier, $config);
-        
-        // Check burst limit
-        $burstResult = $this->checkBurstLimit($identifier, $config);
-        
-        $allowed = $minuteResult['allowed'] && $dailyResult['allowed'] && $burstResult['allowed'];
-        
-        return [
-            'allowed' => $allowed,
-            'minute_limit' => $minuteResult,
-            'daily_limit' => $dailyResult,
-            'burst_limit' => $burstResult,
-            'config' => $config,
+        $user = $request->user();
+        $context = [
+            'user_role' => $user?->role ?? 'guest',
+            'is_authenticated' => $user !== null,
+            'system_load' => $this->getSystemLoad(),
         ];
+        
+        return $this->configService->getConfig($endpoint, $context);
     }
-
+    
     /**
-     * Get user tier based on user properties
-     */
-    private function getUserTier($user): string
-    {
-        // Check if user is admin
-        if ($user->hasRole('admin') || $user->hasRole('super_admin')) {
-            return 'admin';
-        }
-        
-        // Check subscription tier (you might have a subscription system)
-        if (method_exists($user, 'subscription') && $user->subscription) {
-            return $user->subscription->tier ?? 'free';
-        }
-        
-        // Default to free tier
-        return 'free';
-    }
-
-    /**
-     * Adjust rate limits based on system load
-     */
-    private function adjustForSystemLoad(array $config): array
-    {
-        // Get system load metrics
-        $systemLoad = $this->getSystemLoad();
-        
-        // Reduce limits if system is under high load
-        if ($systemLoad > 0.8) {
-            $config['requests_per_minute'] = (int)($config['requests_per_minute'] * 0.5);
-            $config['burst_limit'] = (int)($config['burst_limit'] * 0.5);
-        } elseif ($systemLoad > 0.6) {
-            $config['requests_per_minute'] = (int)($config['requests_per_minute'] * 0.8);
-            $config['burst_limit'] = (int)($config['burst_limit'] * 0.8);
-        }
-        
-        return $config;
-    }
-
-    /**
-     * Get system load (simplified implementation)
+     * Get current system load (simplified implementation)
      */
     private function getSystemLoad(): float
     {
-        // In a real implementation, you might check:
-        // - CPU usage
-        // - Memory usage
-        // - Database connection count
-        // - Queue length
+        // In production, you'd want to get actual system metrics
+        // For now, return a simulated load based on time
+        $hour = (int) date('H');
         
-        // For now, return a mock value
-        return 0.3; // 30% load
+        if ($hour >= 9 && $hour <= 17) {
+            return 1.2; // Higher load during business hours
+        } elseif ($hour >= 18 && $hour <= 22) {
+            return 0.8; // Moderate load in evening
+        } else {
+            return 0.5; // Lower load at night
+        }
     }
-
+    
     /**
-     * Check minute-based rate limit
+     * Apply rate limiting strategy
      */
-    private function checkMinuteRateLimit(string $identifier, array $config): array
+    private function applyRateLimit(string $identifier, array $config, Request $request, string $endpoint): array
+    {
+        $strategy = $config['strategy'] ?? 'sliding_window';
+        
+        switch ($strategy) {
+            case 'sliding_window':
+                return $this->slidingWindowStrategy($identifier, $config, $request, $endpoint);
+            case 'token_bucket':
+                return $this->tokenBucketStrategy($identifier, $config, $request, $endpoint);
+            case 'fixed_window':
+                return $this->fixedWindowStrategy($identifier, $config, $request, $endpoint);
+            default:
+                return $this->slidingWindowStrategy($identifier, $config, $request, $endpoint);
+        }
+    }
+    
+    /**
+     * Sliding window rate limiting strategy
+     */
+    private function slidingWindowStrategy(string $identifier, array $config, Request $request, string $endpoint): array
     {
         $now = time();
-        $windowSize = 60; // 1 minute
+        $windowSize = $config['window_size'];
         $maxRequests = $config['requests_per_minute'];
+        $burstLimit = $config['burst_limit'];
         
-        $windowKey = "rate_limit:minute:{$identifier}";
+        $windowKey = "rate_limit:sliding:{$identifier}:{$endpoint}";
         $currentWindow = Cache::get($windowKey, []);
         
         // Clean old entries
@@ -170,138 +132,240 @@ class RateLimitService
         
         $currentRequests = count($currentWindow);
         $allowed = $currentRequests < $maxRequests;
+        $burstAllowed = $currentRequests < $burstLimit;
         
-        if ($allowed) {
+        if ($allowed || $burstAllowed) {
             $currentWindow[] = $now;
             Cache::put($windowKey, $currentWindow, $windowSize + 10);
+            
+            return [
+                'allowed' => true,
+                'strategy' => 'sliding_window',
+                'current_requests' => $currentRequests + 1,
+                'max_requests' => $maxRequests,
+                'burst_limit' => $burstLimit,
+                'window_size' => $windowSize,
+                'reset_time' => $now + $windowSize,
+                'remaining' => max(0, $maxRequests - ($currentRequests + 1)),
+                'is_burst' => !$allowed && $burstAllowed,
+                'retry_after' => null,
+            ];
         }
         
-        return [
-            'allowed' => $allowed,
-            'current_requests' => $currentRequests,
-            'max_requests' => $maxRequests,
-            'remaining' => max(0, $maxRequests - $currentRequests),
-            'reset_time' => $now + $windowSize,
-        ];
-    }
-
-    /**
-     * Check daily rate limit
-     */
-    private function checkDailyRateLimit(string $identifier, array $config): array
-    {
-        $today = date('Y-m-d');
-        $maxRequests = $config['daily_limit'];
-        
-        $dailyKey = "rate_limit:daily:{$identifier}:{$today}";
-        $currentRequests = Cache::get($dailyKey, 0);
-        
-        $allowed = $currentRequests < $maxRequests;
-        
-        if ($allowed) {
-            Cache::increment($dailyKey);
-            Cache::expire($dailyKey, 86400); // 24 hours
-        }
+        $oldestRequest = min($currentWindow);
+        $resetTime = $oldestRequest + $windowSize;
         
         return [
-            'allowed' => $allowed,
+            'allowed' => false,
+            'strategy' => 'sliding_window',
             'current_requests' => $currentRequests,
             'max_requests' => $maxRequests,
-            'remaining' => max(0, $maxRequests - $currentRequests),
-            'reset_time' => strtotime('tomorrow'),
+            'burst_limit' => $burstLimit,
+            'window_size' => $windowSize,
+            'reset_time' => $resetTime,
+            'remaining' => 0,
+            'is_burst' => false,
+            'retry_after' => $resetTime - $now,
         ];
     }
-
+    
     /**
-     * Check burst limit (short-term spike allowance)
+     * Token bucket rate limiting strategy
      */
-    private function checkBurstLimit(string $identifier, array $config): array
+    private function tokenBucketStrategy(string $identifier, array $config, Request $request, string $endpoint): array
     {
         $now = time();
-        $windowSize = 10; // 10 seconds
-        $maxRequests = $config['burst_limit'];
+        $maxTokens = $config['burst_limit'];
+        $refillRate = $config['requests_per_minute'] / 60; // tokens per second
+        $windowSize = $config['window_size'];
         
-        $burstKey = "rate_limit:burst:{$identifier}";
-        $currentWindow = Cache::get($burstKey, []);
+        $bucketKey = "rate_limit:bucket:{$identifier}:{$endpoint}";
+        $bucket = Cache::get($bucketKey, [
+            'tokens' => $maxTokens,
+            'last_refill' => $now,
+        ]);
         
-        // Clean old entries
-        $currentWindow = array_filter($currentWindow, function($timestamp) use ($now, $windowSize) {
-            return ($now - $timestamp) < $windowSize;
-        });
+        // Calculate tokens to add based on time passed
+        $timePassed = $now - $bucket['last_refill'];
+        $tokensToAdd = $timePassed * $refillRate;
+        $bucket['tokens'] = min($maxTokens, $bucket['tokens'] + $tokensToAdd);
+        $bucket['last_refill'] = $now;
         
-        $currentRequests = count($currentWindow);
+        $allowed = $bucket['tokens'] >= 1;
+        
+        if ($allowed) {
+            $bucket['tokens'] -= 1;
+            Cache::put($bucketKey, $bucket, $windowSize + 10);
+            
+            return [
+                'allowed' => true,
+                'strategy' => 'token_bucket',
+                'current_requests' => $maxTokens - $bucket['tokens'],
+                'max_requests' => $maxTokens,
+                'burst_limit' => $maxTokens,
+                'window_size' => $windowSize,
+                'reset_time' => $now + $windowSize,
+                'remaining' => (int) $bucket['tokens'],
+                'is_burst' => false,
+                'retry_after' => null,
+            ];
+        }
+        
+        $timeToNextToken = (1 - $bucket['tokens']) / $refillRate;
+        
+        return [
+            'allowed' => false,
+            'strategy' => 'token_bucket',
+            'current_requests' => $maxTokens - $bucket['tokens'],
+            'max_requests' => $maxTokens,
+            'burst_limit' => $maxTokens,
+            'window_size' => $windowSize,
+            'reset_time' => $now + $timeToNextToken,
+            'remaining' => (int) $bucket['tokens'],
+            'is_burst' => false,
+            'retry_after' => (int) ceil($timeToNextToken),
+        ];
+    }
+    
+    /**
+     * Fixed window rate limiting strategy
+     */
+    private function fixedWindowStrategy(string $identifier, array $config, Request $request, string $endpoint): array
+    {
+        $now = time();
+        $windowSize = $config['window_size'];
+        $maxRequests = $config['requests_per_minute'];
+        
+        // Create fixed window boundaries
+        $windowStart = floor($now / $windowSize) * $windowSize;
+        $windowKey = "rate_limit:fixed:{$identifier}:{$endpoint}:{$windowStart}";
+        
+        $currentRequests = Cache::get($windowKey, 0);
         $allowed = $currentRequests < $maxRequests;
         
         if ($allowed) {
-            $currentWindow[] = $now;
-            Cache::put($burstKey, $currentWindow, $windowSize + 5);
+            Cache::put($windowKey, $currentRequests + 1, $windowSize + 10);
+            
+            return [
+                'allowed' => true,
+                'strategy' => 'fixed_window',
+                'current_requests' => $currentRequests + 1,
+                'max_requests' => $maxRequests,
+                'burst_limit' => $maxRequests,
+                'window_size' => $windowSize,
+                'reset_time' => $windowStart + $windowSize,
+                'remaining' => $maxRequests - ($currentRequests + 1),
+                'is_burst' => false,
+                'retry_after' => null,
+            ];
         }
         
         return [
-            'allowed' => $allowed,
+            'allowed' => false,
+            'strategy' => 'fixed_window',
             'current_requests' => $currentRequests,
             'max_requests' => $maxRequests,
-            'remaining' => max(0, $maxRequests - $currentRequests),
-            'reset_time' => $now + $windowSize,
+            'burst_limit' => $maxRequests,
+            'window_size' => $windowSize,
+            'reset_time' => $windowStart + $windowSize,
+            'remaining' => 0,
+            'is_burst' => false,
+            'retry_after' => $windowStart + $windowSize - $now,
         ];
     }
-
+    
     /**
-     * Get unique identifier for rate limiting
+     * Log rate limit check for monitoring
      */
-    private function getIdentifier(Request $request): string
+    private function logRateLimitCheck(Request $request, array $result): void
     {
-        if ($request->user()) {
-            return 'user:' . $request->user()->id;
-        }
+        $logData = [
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'endpoint' => $request->path(),
+            'method' => $request->method(),
+            'user_id' => $request->user()?->id,
+            'strategy' => $result['strategy'],
+            'allowed' => $result['allowed'],
+            'current_requests' => $result['current_requests'],
+            'max_requests' => $result['max_requests'],
+            'remaining' => $result['remaining'],
+            'is_burst' => $result['is_burst'] ?? false,
+        ];
         
-        return 'ip:' . $request->ip();
+        if (!$result['allowed']) {
+            $this->loggingService->logSecurity('rate_limit_exceeded', $logData);
+        } elseif ($result['remaining'] < 10) {
+            $this->loggingService->logAudit('rate_limit_warning', 'Rate Limiting', null, $logData);
+        }
     }
-
+    
     /**
      * Get rate limit statistics for monitoring
      */
-    public function getRateLimitStats(string $identifier): array
+    public function getRateLimitStats(string $identifier = null, string $endpoint = null): array
     {
-        $now = time();
+        $stats = [];
         
-        return [
-            'minute' => $this->getCurrentWindowStats("rate_limit:minute:{$identifier}"),
-            'daily' => $this->getDailyStats($identifier),
-            'burst' => $this->getCurrentWindowStats("rate_limit:burst:{$identifier}"),
-        ];
+        // Get all rate limit keys
+        $pattern = $identifier ? "rate_limit:*:{$identifier}*" : "rate_limit:*";
+        if ($endpoint) {
+            $pattern .= ":{$endpoint}";
+        }
+        
+        // This is a simplified version - in production you'd want to use Redis SCAN
+        $keys = Cache::get('rate_limit_keys', []);
+        
+        foreach ($keys as $key) {
+            $data = Cache::get($key);
+            if ($data) {
+                $stats[$key] = $data;
+            }
+        }
+        
+        return $stats;
     }
-
+    
     /**
-     * Get current window statistics
+     * Clear rate limits for specific identifier
      */
-    private function getCurrentWindowStats(string $key): array
+    public function clearRateLimit(string $identifier, string $endpoint = null): bool
     {
-        $window = Cache::get($key, []);
-        $now = time();
+        $pattern = $endpoint ? "rate_limit:*:{$identifier}:{$endpoint}" : "rate_limit:*:{$identifier}*";
         
-        // Clean old entries
-        $window = array_filter($window, function($timestamp) use ($now) {
-            return ($now - $timestamp) < 60;
-        });
+        // In production, you'd want to use Redis DEL with pattern matching
+        $keys = Cache::get('rate_limit_keys', []);
+        $cleared = 0;
         
-        return [
-            'current_requests' => count($window),
-            'window_size' => 60,
-        ];
+        foreach ($keys as $key) {
+            if (str_contains($key, $identifier)) {
+                Cache::forget($key);
+                $cleared++;
+            }
+        }
+        
+        $this->loggingService->logAudit('rate_limit_cleared', 'Rate Limiting', null, [
+            'identifier' => $identifier,
+            'endpoint' => $endpoint,
+            'keys_cleared' => $cleared,
+        ]);
+        
+        return $cleared > 0;
     }
-
+    
     /**
-     * Get daily statistics
+     * Update rate limit configuration dynamically
      */
-    private function getDailyStats(string $identifier): array
+    public function updateConfig(string $endpoint, array $config): bool
     {
-        $today = date('Y-m-d');
-        $dailyKey = "rate_limit:daily:{$identifier}:{$today}";
+        $configKey = "rate_limit_config:{$endpoint}";
+        Cache::put($configKey, $config, 3600); // Cache for 1 hour
         
-        return [
-            'current_requests' => Cache::get($dailyKey, 0),
-            'date' => $today,
-        ];
+        $this->loggingService->logAudit('rate_limit_config_updated', 'Rate Limiting', null, [
+            'endpoint' => $endpoint,
+            'config' => $config,
+        ]);
+        
+        return true;
     }
 }

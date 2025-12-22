@@ -2,205 +2,270 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 /**
- * Template Model
+ * Template Model - Unified Template Management
  * 
- * Quản lý các mẫu công việc với versioning và categorization
- * Hỗ trợ JSON structure cho phases và tasks
+ * Quản lý các mẫu dự án với versioning, categorization và tenant isolation
+ * Hỗ trợ JSON structure cho phases, tasks và workflows
  * 
- * @property string $template_name
- * @property string $category
- * @property array $json_body
- * @property int $version
- * @property bool $is_active
- * @property string|null $created_by
- * @property string|null $updated_by
+ * @property string $id ULID primary key
+ * @property string $tenant_id Tenant ID
+ * @property string $name Template name
+ * @property string $description Template description
+ * @property string $category Template category
+ * @property array $template_data Template structure (phases, tasks, etc.)
+ * @property array $settings Template settings
+ * @property string $status Template status
+ * @property int $version Template version
+ * @property boolean $is_public Public template flag
+ * @property boolean $is_active Active template flag
+ * @property string $created_by Creator user ID
+ * @property string $updated_by Last updater user ID
+ * @property int $usage_count Usage counter
+ * @property array $tags Template tags
+ * @property array $metadata Additional metadata
  */
 class Template extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids, HasFactory, SoftDeletes, TenantScope;
 
     protected $table = 'templates';
+    
     protected $keyType = 'string';
     public $incrementing = false;
-
-    /**
-     * Các trường có thể mass assignment
-     */
+    
     protected $fillable = [
-        'template_name',
+        'tenant_id',
+        'name',
+        'description',
         'category',
-        'json_body',
+        'template_data',
+        'settings',
+        'status',
         'version',
+        'is_public',
         'is_active',
         'created_by',
-        'updated_by'
+        'updated_by',
+        'usage_count',
+        'tags',
+        'metadata'
     ];
 
-    /**
-     * Các trường cần cast kiểu dữ liệu
-     */
     protected $casts = [
-        'json_body' => 'array',
+        'template_data' => 'array',
+        'settings' => 'array',
+        'is_public' => 'boolean',
         'is_active' => 'boolean',
         'version' => 'integer',
+        'usage_count' => 'integer',
+        'tags' => 'array',
+        'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime'
     ];
 
-    /**
-     * Các category được phép
-     */
-    public const CATEGORIES = [
-        'Design',
-        'Construction', 
-        'QC',
-        'Inspection'
+    protected $attributes = [
+        'status' => 'draft',
+        'version' => 1,
+        'is_public' => false,
+        'is_active' => true,
+        'usage_count' => 0,
+        'tags' => '[]',
+        'metadata' => '[]'
     ];
 
     /**
-     * Relationship với template versions
-     * Một template có nhiều versions để theo dõi lịch sử thay đổi
+     * Template status constants
      */
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_ACTIVE = 'active';
+    public const STATUS_ARCHIVED = 'archived';
+    public const STATUS_DEPRECATED = 'deprecated';
+
+    public const VALID_STATUSES = [
+        self::STATUS_DRAFT,
+        self::STATUS_ACTIVE,
+        self::STATUS_ARCHIVED,
+        self::STATUS_DEPRECATED,
+    ];
+
+    /**
+     * Template category constants
+     */
+    public const CATEGORY_PROJECT = 'project';
+    public const CATEGORY_TASK = 'task';
+    public const CATEGORY_WORKFLOW = 'workflow';
+    public const CATEGORY_DOCUMENT = 'document';
+    public const CATEGORY_REPORT = 'report';
+
+    public const VALID_CATEGORIES = [
+        self::CATEGORY_PROJECT,
+        self::CATEGORY_TASK,
+        self::CATEGORY_WORKFLOW,
+        self::CATEGORY_DOCUMENT,
+        self::CATEGORY_REPORT,
+    ];
+
+    /**
+     * Relationships
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function versions(): HasMany
     {
-        return $this->hasMany(TemplateVersion::class, 'template_id')
-                    ->orderBy('version', 'desc');
+        return $this->hasMany(TemplateVersion::class)->orderBy('version', 'desc');
     }
 
-    /**
-     * Relationship với project phases được tạo từ template này
-     */
-    public function projectPhases(): HasMany
+    public function projects(): HasMany
     {
-        return $this->hasMany(ProjectPhase::class, 'template_id');
+        return $this->hasMany(Project::class, 'template_id');
     }
 
     /**
-     * Relationship với project tasks được tạo từ template này
+     * Scopes
      */
-    public function projectTasks(): HasMany
+    public function scopeByTenant($query, string $tenantId)
     {
-        return $this->hasMany(ProjectTask::class, 'template_id');
+        return $query->where('tenant_id', $tenantId);
     }
 
-    /**
-     * Scope để lấy các template đang active
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Scope để lọc theo category
-     */
     public function scopeByCategory($query, string $category)
     {
         return $query->where('category', $category);
     }
 
-    /**
-     * Tạo version mới khi update template
-     * Đảm bảo không mất dữ liệu lịch sử
-     */
-    public function createNewVersion(array $jsonBody, string $note = null, string $createdBy = null): TemplateVersion
+    public function scopeActive($query)
     {
-        $newVersion = $this->version + 1;
-        
-        // Tạo version mới
-        $templateVersion = $this->versions()->create([
-            'version' => $newVersion,
-            'json_body' => $jsonBody,
-            'note' => $note,
-            'created_by' => $createdBy
-        ]);
-        
-        // Cập nhật template với version và json_body mới
-        $this->update([
-            'version' => $newVersion,
-            'json_body' => $jsonBody,
-            'updated_by' => $createdBy
-        ]);
-        
-        return $templateVersion;
+        return $query->where('is_active', true);
+    }
+
+    public function scopePublic($query)
+    {
+        return $query->where('is_public', true);
+    }
+
+    public function scopePublished($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    public function scopeByUser($query, string $userId)
+    {
+        return $query->where('created_by', $userId);
+    }
+
+    public function scopePopular($query, int $limit = 10)
+    {
+        return $query->orderBy('usage_count', 'desc')->limit($limit);
     }
 
     /**
-     * Validate JSON structure của template
-     * Đảm bảo có đúng format phases và tasks
+     * Template operations
      */
-    public function validateJsonStructure(array $jsonBody): bool
+    public function incrementUsage(): void
     {
-        // Kiểm tra có template_name
-        if (!isset($jsonBody['template_name'])) {
-            return false;
-        }
-        
-        // Kiểm tra có phases array
-        if (!isset($jsonBody['phases']) || !is_array($jsonBody['phases'])) {
-            return false;
-        }
-        
-        // Kiểm tra structure của từng phase
-        foreach ($jsonBody['phases'] as $phase) {
-            if (!isset($phase['name']) || !isset($phase['tasks']) || !is_array($phase['tasks'])) {
-                return false;
-            }
-            
-            // Kiểm tra structure của từng task
-            foreach ($phase['tasks'] as $task) {
-                $requiredFields = ['name', 'duration_days', 'role', 'contract_value_percent'];
-                foreach ($requiredFields as $field) {
-                    if (!isset($task[$field])) {
-                        return false;
-                    }
-                }
-            }
-        }
-        
-        return true;
+        $this->increment('usage_count');
+    }
+
+    public function publish(): bool
+    {
+        $this->status = self::STATUS_ACTIVE;
+        return $this->save();
+    }
+
+    public function archive(): bool
+    {
+        $this->status = self::STATUS_ARCHIVED;
+        return $this->save();
+    }
+
+    public function duplicate(string $newName, string $userId): self
+    {
+        $duplicate = $this->replicate();
+        $duplicate->id = Str::ulid();
+        $duplicate->name = $newName;
+        $duplicate->version = 1;
+        $duplicate->status = self::STATUS_DRAFT;
+        $duplicate->usage_count = 0;
+        $duplicate->created_by = $userId;
+        $duplicate->updated_by = $userId;
+        $duplicate->created_at = now();
+        $duplicate->updated_at = now();
+        $duplicate->save();
+
+        return $duplicate;
     }
 
     /**
-     * Lấy tổng số tasks trong template
+     * Template data helpers
      */
-    public function getTotalTasksAttribute(): int
+    public function getPhases(): array
     {
-        $total = 0;
-        if (isset($this->json_body['phases'])) {
-            foreach ($this->json_body['phases'] as $phase) {
-                if (isset($phase['tasks'])) {
-                    $total += count($phase['tasks']);
-                }
-            }
-        }
-        return $total;
+        return $this->template_data['phases'] ?? [];
+    }
+
+    public function getTasks(): array
+    {
+        return $this->template_data['tasks'] ?? [];
+    }
+
+    public function getMilestones(): array
+    {
+        return $this->template_data['milestones'] ?? [];
+    }
+
+    public function getEstimatedDuration(): int
+    {
+        $tasks = $this->getTasks();
+        return array_sum(array_column($tasks, 'duration_days'));
+    }
+
+    public function getEstimatedCost(): float
+    {
+        $tasks = $this->getTasks();
+        return array_sum(array_column($tasks, 'estimated_cost'));
     }
 
     /**
-     * Lấy tổng duration của template (tính theo critical path)
+     * Validation helpers
      */
-    public function getEstimatedDurationAttribute(): int
+    public function isValid(): bool
     {
-        $totalDuration = 0;
-        if (isset($this->json_body['phases'])) {
-            foreach ($this->json_body['phases'] as $phase) {
-                $phaseDuration = 0;
-                if (isset($phase['tasks'])) {
-                    foreach ($phase['tasks'] as $task) {
-                        $phaseDuration = max($phaseDuration, $task['duration_days'] ?? 0);
-                    }
-                }
-                $totalDuration += $phaseDuration;
-            }
-        }
-        return $totalDuration;
+        return !empty($this->name) && 
+               !empty($this->category) && 
+               !empty($this->template_data) &&
+               in_array($this->category, self::VALID_CATEGORIES) &&
+               in_array($this->status, self::VALID_STATUSES);
+    }
+
+    public function canBeUsed(): bool
+    {
+        return $this->is_active && 
+               $this->status === self::STATUS_ACTIVE &&
+               $this->isValid();
     }
 }

@@ -1,114 +1,37 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { User } from '../services/authService'
-import { authService } from '../services/authService'
-import { ApiError } from '../services/api'
-import toast from 'react-hot-toast'
+/**
+ * Legacy auth store adapter - wraps canonical store from features/auth/store.ts
+ * 
+ * This file maintains backward compatibility for components importing from stores/authStore
+ * All auth state is now managed by the canonical store in features/auth/store.ts
+ * which persists to localStorage['zena-auth-storage']
+ * 
+ * Round 135: Unified auth store - no more duplicate auth-storage persistence
+ */
+import { useAuthStore as useCanonicalAuthStore } from '@/features/auth/store'
+import type { User } from '../lib/types'
 
-interface AuthState {
+// Re-export canonical store as the default export
+export const useAuthStore = useCanonicalAuthStore
+export default useAuthStore
+
+// Export types for backward compatibility
+export type AuthState = {
   user: User | null
-  isLoading: boolean
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (data: any) => Promise<void>
-  logout: () => void
-  checkAuth: () => Promise<void>
-  updateUser: (user: User) => void
+  isLoading: boolean
+  error: string | null
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      isLoading: false,
-      isAuthenticated: false,
+export type AuthActions = {
+  login: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
+  refreshToken: () => Promise<void>
+  updateProfile: (userData: Partial<User>) => Promise<void>
+  clearError: () => void
+  checkAuthStatus: () => Promise<void>
+}
 
-      login: async (email: string, password: string) => {
-        set({ isLoading: true })
-        try {
-          const response = await authService.login({ email, password })
-          set({
-            user: response.user,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-          toast.success('Login successful!')
-        } catch (error) {
-          set({ isLoading: false })
-          const errorMessage = error instanceof ApiError ? error.message : 'Login failed'
-          toast.error(errorMessage)
-          throw error
-        }
-      },
+export type AuthStore = AuthState & AuthActions
 
-      register: async (data: any) => {
-        set({ isLoading: true })
-        try {
-          const response = await authService.register(data)
-          set({
-            user: response.user,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-          toast.success('Registration successful!')
-        } catch (error) {
-          set({ isLoading: false })
-          const errorMessage = error instanceof ApiError ? error.message : 'Registration failed'
-          toast.error(errorMessage)
-          throw error
-        }
-      },
-
-      logout: async () => {
-        try {
-          await authService.logout()
-        } catch (error) {
-          console.error('Logout error:', error)
-        } finally {
-          set({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          })
-          toast.success('Logged out successfully!')
-        }
-      },
-
-      checkAuth: async () => {
-        if (!authService.isAuthenticated()) {
-          set({ isLoading: false })
-          return
-        }
-
-        set({ isLoading: true })
-        try {
-          const user = await authService.getCurrentUser()
-          set({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          })
-        } catch (error) {
-          console.error('Auth check error:', error)
-          authService.clearStoredData()
-          set({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          })
-        }
-      },
-
-      updateUser: (user: User) => {
-        set({ user })
-      },
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-      }),
-    }
-  )
-)
+// Legacy storage key (for reference only - not used for persistence)
+export const authStorageKey = 'auth-storage'

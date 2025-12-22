@@ -96,4 +96,13 @@ class Permission extends Model
             }
         });
     }
+
+    /**
+     * Accessor: name maps to code for compatibility
+     * Round 230: Support hasPermission() checks that use 'name'
+     */
+    public function getNameAttribute(): string
+    {
+        return $this->code;
+    }
 }

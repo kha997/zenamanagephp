@@ -1,0 +1,37 @@
+# Code owners for ZenaManage
+
+# Documentation
+docs/** @backend-lead @frontend-lead
+
+# Frontend - UI Team
+frontend/src/shared/tokens/** @ui-team @frontend-lead
+frontend/src/components/layout/HeaderShell.tsx @ui-team @frontend-lead
+frontend/src/components/ui/** @ui-team @frontend-lead
+frontend/src/pages/** @ui-team @frontend-lead
+
+# Backend - Core Architecture
+app/Domains/** @backend-lead @architecture-team
+app/Services/** @backend-lead @architecture-team
+app/Http/Controllers/** @backend-lead
+app/Http/Middleware/** @backend-lead @security-team
+
+# Security & Configuration
+config/security.php @security-team @backend-lead
+config/permissions.php @security-team @backend-lead
+app/WebSocket/** @backend-lead @security-team
+
+# Database
+database/migrations/** @backend-lead @database-team
+database/seeders/** @backend-lead
+
+# Tests
+tests/** @backend-lead @qa-team
+
+# Routes
+routes/** @backend-lead
+
+# Infrastructure
+docker-compose*.yml @devops-team
+Dockerfile @devops-team
+.github/** @devops-team @backend-lead
+

@@ -20,16 +20,18 @@ class DocumentFactory extends Factory
     {
         return [
             'project_id' => Project::factory(),
-            'title' => $this->faker->sentence(3),
+            'name' => $this->faker->sentence(3),
+            'original_name' => $this->faker->word() . '.pdf',
             'description' => $this->faker->paragraph(2),
-            'linked_entity_type' => $this->faker->randomElement(Document::VALID_ENTITY_TYPES),
-            'linked_entity_id' => $this->faker->uuid(),
-            'current_version_id' => null, // Will be set after DocumentVersion is created
-            'tags' => $this->faker->randomElements(['contract', 'design', 'specification', 'report'], $this->faker->numberBetween(0, 2)),
-            'visibility' => $this->faker->randomElement(Document::VALID_VISIBILITY),
-            'client_approved' => $this->faker->boolean(30),
-            'created_by' => User::factory(),
-            'updated_by' => User::factory(),
+            'file_path' => 'documents/test/' . $this->faker->uuid() . '.pdf',
+            'file_size' => $this->faker->numberBetween(1000, 10000000),
+            'file_type' => 'application/pdf',
+            'mime_type' => 'application/pdf',
+            'file_hash' => $this->faker->sha256(),
+            'category' => $this->faker->randomElement(['technical', 'business', 'legal', 'other']),
+            'status' => 'active',
+            'tenant_id' => 1, // Will be set by test
+            'uploaded_by' => User::factory(),
         ];
     }
 

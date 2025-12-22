@@ -147,6 +147,14 @@ class ChangeRequest extends Model
     }
 
     /**
+     * Quan hệ với User (người tạo)
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
      * Quan hệ với User (người được assign)
      */
     public function assignee(): BelongsTo
@@ -361,6 +369,22 @@ class ChangeRequest extends Model
     public function links(): HasMany
     {
         return $this->hasMany(CrLink::class);
+    }
+
+    /**
+     * Quan hệ với ChangeRequestComment (các comment)
+     */
+    public function comments(): HasMany
+    {
+        return $this->hasMany(ChangeRequestComment::class);
+    }
+
+    /**
+     * Quan hệ với ChangeRequestApproval (các approval)
+     */
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(ChangeRequestApproval::class);
     }
 
     /**

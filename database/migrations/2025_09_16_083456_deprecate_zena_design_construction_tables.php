@@ -55,9 +55,13 @@ return new class extends Migration
             });
             
             // Add deprecation notice to all existing records
-            DB::table('zena_drawings')->update([
-                'deprecated_notice' => 'This table is deprecated. Use documents table with type=drawing instead.'
-            ]);
+            try {
+                DB::table('zena_drawings')->update([
+                    'deprecated_notice' => 'This table is deprecated. Use documents table with type=drawing instead.'
+                ]);
+            } catch (\Exception $e) {
+                // Table might not exist or have no records, continue
+            }
         }
 
         // Add deprecation notice to zena_rfis table

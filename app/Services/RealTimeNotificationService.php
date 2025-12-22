@@ -2,394 +2,76 @@
 
 namespace App\Services;
 
-use App\Models\ProjectActivity;
 use App\Models\User;
+use App\Models\Tenant;
 use Illuminate\Support\Facades\Log;
-use Pusher\Pusher;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 /**
- * RealTimeNotificationService - Service cho real-time notifications
+ * Real-time Notification Service
+ * 
+ * Features:
+ * - WebSocket connections management
+ * - Real-time notifications
+ * - User presence tracking
+ * - Channel subscriptions
+ * - Message broadcasting
+ * - Notification persistence
+ * - Delivery status tracking
  */
 class RealTimeNotificationService
 {
-    private Pusher $pusher;
-
-    public function __construct()
-    {
-        $this->pusher = new Pusher(
-            config('broadcasting.connections.pusher.key'),
-            config('broadcasting.connections.pusher.secret'),
-            config('broadcasting.connections.pusher.app_id'),
-            [
-                'cluster' => config('broadcasting.connections.pusher.options.cluster'),
-                'useTLS' => true
-            ]
-        );
-    }
+    private const PRESENCE_TTL = 300; // 5 minutes
+    private const NOTIFICATION_TTL = 86400; // 24 hours
+    private const CHANNEL_TTL = 3600; // 1 hour
 
     /**
-     * Send project update notification
+     * Send real-time notification to user
      */
-    public function sendProjectUpdate(Project $project, string $updatedBy, array $changes): void
+    public function sendToUser(User $user, array $notification, array $options = []): bool
     {
         try {
-            $data = [
-                'type' => 'project_update',
-                'project' => [
-                    'id' => $project->id,
-                    'name' => $project->name,
-                    'code' => $project->code,
-                    'progress' => $project->progress,
-                    'status' => $project->status
-                ],
-                'updated_by' => $updatedBy,
-                'changes' => $changes,
-                'timestamp' => now()->toISOString()
+            $notificationId = Str::uuid()->toString();
+            $channel = "user:{$user->id}";
+            
+            $message = [
+                'id' => $notificationId,
+                'type' => $notification['type'] ?? 'info',
+                'title' => $notification['title'] ?? 'Notification',
+                'message' => $notification['message'] ?? '',
+                'data' => $notification['data'] ?? [],
+                'timestamp' => now()->toISOString(),
+                'persistent' => $options['persistent'] ?? false,
+                'priority' => $options['priority'] ?? 'normal',
+                'actions' => $options['actions'] ?? [],
             ];
-
-            $this->broadcastToProject($project->id, 'project.updated', $data);
             
-            // Log activity
-            ProjectActivity::logProjectUpdated($project, $updatedBy, $changes);
+            // Broadcast to WebSocket channel
+            $this->broadcastToChannel($channel, $message);
             
-        } catch (\Exception $e) {
-            Log::error('Failed to send project update notification', [
-                'error' => $e->getMessage(),
-                'project_id' => $project->id,
-                'updated_by' => $updatedBy
-            ]);
-        }
-    }
-
-    /**
-     * Send milestone completion notification
-     */
-    public function sendMilestoneCompleted(\App\Models\ProjectMilestone $milestone, string $completedBy): void
-    {
-        try {
-            $data = [
-                'type' => 'milestone_completed',
-                'milestone' => [
-                    'id' => $milestone->id,
-                    'name' => $milestone->name,
-                    'description' => $milestone->description,
-                    'target_date' => $milestone->target_date?->toISOString(),
-                    'completed_date' => $milestone->completed_date?->toISOString()
-                ],
-                'project' => [
-                    'id' => $milestone->project->id,
-                    'name' => $milestone->project->name,
-                    'code' => $milestone->project->code
-                ],
-                'completed_by' => $completedBy,
-                'timestamp' => now()->toISOString()
-            ];
-
-            $this->broadcastToProject($milestone->project_id, 'milestone.completed', $data);
+            // Store notification if persistent
+            if ($message['persistent']) {
+                $this->storeNotification($user, $message);
+            }
             
-            // Log activity
-            ProjectActivity::logMilestoneCompleted($milestone, $completedBy);
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to send milestone completion notification', [
-                'error' => $e->getMessage(),
-                'milestone_id' => $milestone->id,
-                'completed_by' => $completedBy
-            ]);
-        }
-    }
-
-    /**
-     * Send task update notification
-     */
-    public function sendTaskUpdate(\App\Models\Task $task, string $updatedBy, array $changes): void
-    {
-        try {
-            $data = [
-                'type' => 'task_update',
-                'task' => [
-                    'id' => $task->id,
-                    'name' => $task->name,
-                    'description' => $task->description,
-                    'status' => $task->status,
-                    'priority' => $task->priority,
-                    'due_date' => $task->due_date?->toISOString(),
-                    'assigned_to' => $task->assigned_to
-                ],
-                'project' => [
-                    'id' => $task->project->id,
-                    'name' => $task->project->name,
-                    'code' => $task->project->code
-                ],
-                'updated_by' => $updatedBy,
-                'changes' => $changes,
-                'timestamp' => now()->toISOString()
-            ];
-
-            $this->broadcastToProject($task->project_id, 'task.updated', $data);
-            
-            // Log activity
-            ProjectActivity::logTaskUpdated($task, $updatedBy, $changes);
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to send task update notification', [
-                'error' => $e->getMessage(),
-                'task_id' => $task->id,
-                'updated_by' => $updatedBy
-            ]);
-        }
-    }
-
-    /**
-     * Send team member joined notification
-     */
-    public function sendTeamMemberJoined(Project $project, User $user, string $role, string $addedBy): void
-    {
-        try {
-            $data = [
-                'type' => 'team_member_joined',
-                'project' => [
-                    'id' => $project->id,
-                    'name' => $project->name,
-                    'code' => $project->code
-                ],
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'avatar' => $user->avatar
-                ],
-                'role' => $role,
-                'added_by' => $addedBy,
-                'timestamp' => now()->toISOString()
-            ];
-
-            $this->broadcastToProject($project->id, 'team.member_joined', $data);
-            
-            // Log activity
-            ProjectActivity::logTeamMemberJoined($project, $user, $role, $addedBy);
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to send team member joined notification', [
-                'error' => $e->getMessage(),
-                'project_id' => $project->id,
+            // Log notification
+            Log::info('Real-time notification sent', [
                 'user_id' => $user->id,
-                'added_by' => $addedBy
+                'notification_id' => $notificationId,
+                'type' => $message['type'],
+                'channel' => $channel,
             ]);
-        }
-    }
-
-    /**
-     * Send document upload notification
-     */
-    public function sendDocumentUploaded(\App\Models\Document $document, string $uploadedBy): void
-    {
-        try {
-            $data = [
-                'type' => 'document_uploaded',
-                'document' => [
-                    'id' => $document->id,
-                    'title' => $document->title,
-                    'description' => $document->description,
-                    'document_type' => $document->document_type,
-                    'file_size' => $document->file_size,
-                    'file_name' => $document->file_name
-                ],
-                'project' => [
-                    'id' => $document->project->id,
-                    'name' => $document->project->name,
-                    'code' => $document->project->code
-                ],
-                'uploaded_by' => $uploadedBy,
-                'timestamp' => now()->toISOString()
-            ];
-
-            $this->broadcastToProject($document->project_id, 'document.uploaded', $data);
-            
-            // Log activity
-            ProjectActivity::logDocumentUploaded($document, $uploadedBy);
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to send document upload notification', [
-                'error' => $e->getMessage(),
-                'document_id' => $document->id,
-                'uploaded_by' => $uploadedBy
-            ]);
-        }
-    }
-
-    /**
-     * Send project status change notification
-     */
-    public function sendProjectStatusChange(Project $project, string $oldStatus, string $newStatus, string $changedBy): void
-    {
-        try {
-            $data = [
-                'type' => 'project_status_change',
-                'project' => [
-                    'id' => $project->id,
-                    'name' => $project->name,
-                    'code' => $project->code,
-                    'status' => $newStatus
-                ],
-                'old_status' => $oldStatus,
-                'new_status' => $newStatus,
-                'changed_by' => $changedBy,
-                'timestamp' => now()->toISOString()
-            ];
-
-            $this->broadcastToProject($project->id, 'project.status_changed', $data);
-            
-            // Log activity
-            ProjectActivity::logProjectUpdated($project, $changedBy, [
-                'status' => ['old' => $oldStatus, 'new' => $newStatus]
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to send project status change notification', [
-                'error' => $e->getMessage(),
-                'project_id' => $project->id,
-                'changed_by' => $changedBy
-            ]);
-        }
-    }
-
-    /**
-     * Send custom notification
-     */
-    public function sendCustomNotification(
-        string $projectId,
-        string $event,
-        array $data,
-        string $userId = null
-    ): void {
-        try {
-            $notificationData = array_merge($data, [
-                'timestamp' => now()->toISOString()
-            ]);
-
-            if ($userId) {
-                $this->broadcastToUser($userId, $event, $notificationData);
-            } else {
-                $this->broadcastToProject($projectId, $event, $notificationData);
-            }
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to send custom notification', [
-                'error' => $e->getMessage(),
-                'project_id' => $projectId,
-                'event' => $event,
-                'user_id' => $userId
-            ]);
-        }
-    }
-
-    /**
-     * Broadcast to project channel
-     */
-    private function broadcastToProject(string $projectId, string $event, array $data): void
-    {
-        $this->pusher->trigger("private-project.{$projectId}", $event, $data);
-    }
-
-    /**
-     * Broadcast to user channel
-     */
-    private function broadcastToUser(string $userId, string $event, array $data): void
-    {
-        $this->pusher->trigger("private-user.{$userId}", $event, $data);
-    }
-
-    /**
-     * Broadcast to tenant channel
-     */
-    private function broadcastToTenant(string $tenantId, string $event, array $data): void
-    {
-        $this->pusher->trigger("private-tenant.{$tenantId}", $event, $data);
-    }
-
-    /**
-     * Get notification history for project
-     */
-    public function getNotificationHistory(string $projectId, int $limit = 50): array
-    {
-        $activities = ProjectActivity::byProject($projectId)
-                                   ->with(['user:id,name,email,avatar'])
-                                   ->orderBy('created_at', 'desc')
-                                   ->limit($limit)
-                                   ->get();
-
-        return $activities->map(function ($activity) {
-            return [
-                'id' => $activity->id,
-                'type' => $activity->action,
-                'description' => $activity->description,
-                'user' => [
-                    'id' => $activity->user->id,
-                    'name' => $activity->user->name,
-                    'email' => $activity->user->email,
-                    'avatar' => $activity->user->avatar
-                ],
-                'metadata' => $activity->metadata,
-                'timestamp' => $activity->created_at->toISOString(),
-                'time_ago' => $activity->time_ago
-            ];
-        })->toArray();
-    }
-
-    /**
-     * Get user notification preferences
-     */
-    public function getUserNotificationPreferences(string $userId): array
-    {
-        $user = User::find($userId);
-        
-        if (!$user) {
-            return [];
-        }
-
-        $preferences = $user->preferences['notifications'] ?? [];
-
-        return array_merge([
-            'project_updates' => true,
-            'milestone_completions' => true,
-            'task_updates' => true,
-            'team_changes' => true,
-            'document_uploads' => true,
-            'status_changes' => true,
-            'email_notifications' => true,
-            'push_notifications' => true,
-            'real_time_updates' => true
-        ], $preferences);
-    }
-
-    /**
-     * Update user notification preferences
-     */
-    public function updateUserNotificationPreferences(string $userId, array $preferences): bool
-    {
-        try {
-            $user = User::find($userId);
-            
-            if (!$user) {
-                return false;
-            }
-
-            $currentPreferences = $user->preferences ?? [];
-            $currentPreferences['notifications'] = array_merge(
-                $currentPreferences['notifications'] ?? [],
-                $preferences
-            );
-
-            $user->update(['preferences' => $currentPreferences]);
             
             return true;
             
         } catch (\Exception $e) {
-            Log::error('Failed to update user notification preferences', [
+            Log::error('Failed to send real-time notification', [
+                'user_id' => $user->id,
                 'error' => $e->getMessage(),
-                'user_id' => $userId,
-                'preferences' => $preferences
+                'notification' => $notification,
             ]);
             
             return false;
@@ -397,29 +79,492 @@ class RealTimeNotificationService
     }
 
     /**
-     * Send bulk notification to project team
+     * Send notification to multiple users
      */
-    public function sendBulkNotificationToTeam(
-        Project $project,
-        string $event,
-        array $data,
-        array $excludeUserIds = []
-    ): void {
-        try {
-            $teamMembers = $project->teamMembers()
-                                 ->whereNotIn('user_id', $excludeUserIds)
-                                 ->get();
+    public function sendToUsers(array $users, array $notification, array $options = []): array
+    {
+        $results = [];
+        
+        foreach ($users as $user) {
+            $results[$user->id] = $this->sendToUser($user, $notification, $options);
+        }
+        
+        return $results;
+    }
 
-            foreach ($teamMembers as $member) {
-                $this->broadcastToUser($member->user_id, $event, $data);
-            }
+    /**
+     * Send notification to tenant
+     */
+    public function sendToTenant(Tenant $tenant, array $notification, array $options = []): array
+    {
+        try {
+            $users = User::where('tenant_id', $tenant->id)->get();
+            return $this->sendToUsers($users->toArray(), $notification, $options);
             
         } catch (\Exception $e) {
-            Log::error('Failed to send bulk notification to team', [
+            Log::error('Failed to send notification to tenant', [
+                'tenant_id' => $tenant->id,
                 'error' => $e->getMessage(),
-                'project_id' => $project->id,
-                'event' => $event
+                'notification' => $notification,
             ]);
+            
+            return [];
+        }
+    }
+
+    /**
+     * Send notification to role
+     */
+    public function sendToRole(string $role, array $notification, array $options = []): array
+    {
+        try {
+            $users = User::where('role', $role)->get();
+            return $this->sendToUsers($users->toArray(), $notification, $options);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send notification to role', [
+                'role' => $role,
+                'error' => $e->getMessage(),
+                'notification' => $notification,
+            ]);
+            
+            return [];
+        }
+    }
+
+    /**
+     * Broadcast to channel
+     */
+    public function broadcastToChannel(string $channel, array $message): bool
+    {
+        try {
+            // Use Redis pub/sub for WebSocket broadcasting
+            Redis::publish("notifications:{$channel}", json_encode($message));
+            
+            // Also store in channel history for late subscribers
+            $this->storeChannelMessage($channel, $message);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to broadcast to channel', [
+                'channel' => $channel,
+                'error' => $e->getMessage(),
+                'message' => $message,
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Subscribe user to channel
+     */
+    public function subscribeToChannel(User $user, string $channel, array $options = []): bool
+    {
+        try {
+            $subscriptionKey = "subscription:{$user->id}:{$channel}";
+            $subscriptionData = [
+                'user_id' => $user->id,
+                'channel' => $channel,
+                'subscribed_at' => now()->toISOString(),
+                'options' => $options,
+            ];
+            
+            Cache::put($subscriptionKey, $subscriptionData, self::CHANNEL_TTL);
+            
+            // Add to user's active subscriptions
+            $this->addUserSubscription($user, $channel);
+            
+            Log::info('User subscribed to channel', [
+                'user_id' => $user->id,
+                'channel' => $channel,
+                'options' => $options,
+            ]);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to subscribe user to channel', [
+                'user_id' => $user->id,
+                'channel' => $channel,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Unsubscribe user from channel
+     */
+    public function unsubscribeFromChannel(User $user, string $channel): bool
+    {
+        try {
+            $subscriptionKey = "subscription:{$user->id}:{$channel}";
+            Cache::forget($subscriptionKey);
+            
+            // Remove from user's active subscriptions
+            $this->removeUserSubscription($user, $channel);
+            
+            Log::info('User unsubscribed from channel', [
+                'user_id' => $user->id,
+                'channel' => $channel,
+            ]);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to unsubscribe user from channel', [
+                'user_id' => $user->id,
+                'channel' => $channel,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Update user presence
+     */
+    public function updatePresence(User $user, string $status = 'online', array $metadata = []): bool
+    {
+        try {
+            $presenceKey = "presence:{$user->id}";
+            $presenceData = [
+                'user_id' => $user->id,
+                'status' => $status,
+                'last_seen' => now()->toISOString(),
+                'metadata' => $metadata,
+            ];
+            
+            Cache::put($presenceKey, $presenceData, self::PRESENCE_TTL);
+            
+            // Broadcast presence update
+            $this->broadcastPresenceUpdate($user, $status, $metadata);
+            
+            return true;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to update user presence', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Get user presence
+     */
+    public function getUserPresence(User $user): ?array
+    {
+        $presenceKey = "presence:{$user->id}";
+        return Cache::get($presenceKey);
+    }
+
+    /**
+     * Get online users
+     */
+    public function getOnlineUsers(Tenant $tenant = null): array
+    {
+        try {
+            $onlineUsers = [];
+            
+            // This would typically use Redis SCAN in production
+            // For now, we'll use a simplified approach
+            $users = $tenant ? 
+                User::where('tenant_id', $tenant->id)->get() : 
+                User::all();
+            
+            foreach ($users as $user) {
+                $presence = $this->getUserPresence($user);
+                if ($presence && $presence['status'] === 'online') {
+                    $onlineUsers[] = [
+                        'user_id' => $user->id,
+                        'name' => $user->first_name . ' ' . $user->last_name,
+                        'email' => $user->email,
+                        'last_seen' => $presence['last_seen'],
+                        'metadata' => $presence['metadata'],
+                    ];
+                }
+            }
+            
+            return $onlineUsers;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to get online users', [
+                'tenant_id' => $tenant?->id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return [];
+        }
+    }
+
+    /**
+     * Store notification
+     */
+    private function storeNotification(User $user, array $notification): void
+    {
+        $notificationKey = "notification:{$user->id}:{$notification['id']}";
+        Cache::put($notificationKey, $notification, self::NOTIFICATION_TTL);
+        
+        // Add to user's notification list
+        $this->addUserNotification($user, $notification);
+    }
+
+    /**
+     * Store channel message
+     */
+    private function storeChannelMessage(string $channel, array $message): void
+    {
+        $channelKey = "channel:{$channel}:messages";
+        $messages = Cache::get($channelKey, []);
+        
+        $messages[] = $message;
+        
+        // Keep only last 100 messages
+        $messages = array_slice($messages, -100);
+        
+        Cache::put($channelKey, $messages, self::CHANNEL_TTL);
+    }
+
+    /**
+     * Add user subscription
+     */
+    private function addUserSubscription(User $user, string $channel): void
+    {
+        $subscriptionsKey = "user_subscriptions:{$user->id}";
+        $subscriptions = Cache::get($subscriptionsKey, []);
+        
+        if (!in_array($channel, $subscriptions)) {
+            $subscriptions[] = $channel;
+            Cache::put($subscriptionsKey, $subscriptions, self::CHANNEL_TTL);
+        }
+    }
+
+    /**
+     * Remove user subscription
+     */
+    private function removeUserSubscription(User $user, string $channel): void
+    {
+        $subscriptionsKey = "user_subscriptions:{$user->id}";
+        $subscriptions = Cache::get($subscriptionsKey, []);
+        
+        $subscriptions = array_filter($subscriptions, fn($sub) => $sub !== $channel);
+        Cache::put($subscriptionsKey, $subscriptions, self::CHANNEL_TTL);
+    }
+
+    /**
+     * Add user notification
+     */
+    private function addUserNotification(User $user, array $notification): void
+    {
+        $notificationsKey = "user_notifications:{$user->id}";
+        $notifications = Cache::get($notificationsKey, []);
+        
+        $notifications[] = $notification;
+        
+        // Keep only last 50 notifications
+        $notifications = array_slice($notifications, -50);
+        
+        Cache::put($notificationsKey, $notifications, self::NOTIFICATION_TTL);
+    }
+
+    /**
+     * Broadcast presence update
+     */
+    private function broadcastPresenceUpdate(User $user, string $status, array $metadata): void
+    {
+        $message = [
+            'type' => 'presence_update',
+            'user_id' => $user->id,
+            'status' => $status,
+            'metadata' => $metadata,
+            'timestamp' => now()->toISOString(),
+        ];
+        
+        // Broadcast to user's channel
+        $this->broadcastToChannel("user:{$user->id}", $message);
+        
+        // Broadcast to tenant channel if applicable
+        if ($user->tenant_id) {
+            $this->broadcastToChannel("tenant:{$user->tenant_id}", $message);
+        }
+    }
+
+    /**
+     * Get user notifications
+     */
+    public function getUserNotifications(User $user, int $limit = 20): array
+    {
+        $notificationsKey = "user_notifications:{$user->id}";
+        $notifications = Cache::get($notificationsKey, []);
+        
+        return array_slice($notifications, -$limit);
+    }
+
+    /**
+     * Mark notification as read
+     */
+    public function markNotificationAsRead(User $user, string $notificationId): bool
+    {
+        try {
+            $notificationKey = "notification:{$user->id}:{$notificationId}";
+            $notification = Cache::get($notificationKey);
+            
+            if ($notification) {
+                $notification['read_at'] = now()->toISOString();
+                Cache::put($notificationKey, $notification, self::NOTIFICATION_TTL);
+                
+                // Update in user's notification list
+                $this->updateUserNotification($user, $notificationId, ['read_at' => $notification['read_at']]);
+                
+                return true;
+            }
+            
+            return false;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to mark notification as read', [
+                'user_id' => $user->id,
+                'notification_id' => $notificationId,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return false;
+        }
+    }
+
+    /**
+     * Update user notification
+     */
+    private function updateUserNotification(User $user, string $notificationId, array $updates): void
+    {
+        $notificationsKey = "user_notifications:{$user->id}";
+        $notifications = Cache::get($notificationsKey, []);
+        
+        foreach ($notifications as &$notification) {
+            if ($notification['id'] === $notificationId) {
+                $notification = array_merge($notification, $updates);
+                break;
+            }
+        }
+        
+        Cache::put($notificationsKey, $notifications, self::NOTIFICATION_TTL);
+    }
+
+    /**
+     * Get channel history
+     */
+    public function getChannelHistory(string $channel, int $limit = 50): array
+    {
+        $channelKey = "channel:{$channel}:messages";
+        $messages = Cache::get($channelKey, []);
+        
+        return array_slice($messages, -$limit);
+    }
+
+    /**
+     * Get user subscriptions
+     */
+    public function getUserSubscriptions(User $user): array
+    {
+        $subscriptionsKey = "user_subscriptions:{$user->id}";
+        return Cache::get($subscriptionsKey, []);
+    }
+
+    /**
+     * Send system notification
+     */
+    public function sendSystemNotification(array $notification, array $options = []): array
+    {
+        try {
+            $users = User::all();
+            return $this->sendToUsers($users->toArray(), $notification, $options);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send system notification', [
+                'error' => $e->getMessage(),
+                'notification' => $notification,
+            ]);
+            
+            return [];
+        }
+    }
+
+    /**
+     * Send project notification
+     */
+    public function sendProjectNotification(int $projectId, array $notification, array $options = []): array
+    {
+        try {
+            // Get project members
+            $project = \App\Models\Project::find($projectId);
+            if (!$project) {
+                return [];
+            }
+            
+            $users = User::where('tenant_id', $project->tenant_id)->get();
+            return $this->sendToUsers($users->toArray(), $notification, $options);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send project notification', [
+                'project_id' => $projectId,
+                'error' => $e->getMessage(),
+                'notification' => $notification,
+            ]);
+            
+            return [];
+        }
+    }
+
+    /**
+     * Send task notification
+     */
+    public function sendTaskNotification(int $taskId, array $notification, array $options = []): array
+    {
+        try {
+            $task = \App\Models\Task::find($taskId);
+            if (!$task) {
+                return [];
+            }
+            
+            $users = [];
+            
+            // Add task assignee
+            if ($task->assigned_to) {
+                $assignee = User::find($task->assigned_to);
+                if ($assignee) {
+                    $users[] = $assignee;
+                }
+            }
+            
+            // Add project members
+            if ($task->project_id) {
+                $project = \App\Models\Project::find($task->project_id);
+                if ($project) {
+                    $projectUsers = User::where('tenant_id', $project->tenant_id)->get();
+                    $users = array_merge($users, $projectUsers->toArray());
+                }
+            }
+            
+            // Remove duplicates
+            $users = array_unique($users, SORT_REGULAR);
+            
+            return $this->sendToUsers($users, $notification, $options);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to send task notification', [
+                'task_id' => $taskId,
+                'error' => $e->getMessage(),
+                'notification' => $notification,
+            ]);
+            
+            return [];
         }
     }
 }

@@ -11,7 +11,7 @@ use Src\WorkTemplate\Requests\ToggleConditionalRequest;
 use Src\WorkTemplate\Resources\ProjectTaskResource;
 use Src\WorkTemplate\Resources\ProjectTaskCollection;
 use Src\WorkTemplate\Services\ProjectTaskService;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 
 /**
  * ProjectTaskController
@@ -81,7 +81,7 @@ class ProjectTaskController extends Controller
         $perPage = min($request->get('per_page', 20), 100);
         $tasks = $query->paginate($perPage);
         
-        return JSendResponse::success(
+        return ApiResponse::success(
             new ProjectTaskCollection($tasks)
         );
     }
@@ -100,10 +100,10 @@ class ProjectTaskController extends Controller
             ->find($taskId);
         
         if (!$task) {
-            return JSendResponse::error('Task not found', 404);
+            return ApiResponse::error('Task not found', 404);
         }
         
-        return JSendResponse::success(
+        return ApiResponse::success(
             new ProjectTaskResource($task)
         );
     }
@@ -121,7 +121,7 @@ class ProjectTaskController extends Controller
         $task = ProjectTask::byProject($projectId)->find($taskId);
         
         if (!$task) {
-            return JSendResponse::error('Task not found', 404);
+            return ApiResponse::error('Task not found', 404);
         }
         
         try {
@@ -131,11 +131,11 @@ class ProjectTaskController extends Controller
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new ProjectTaskResource($updatedTask->load(['phase', 'template']))
             );
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Failed to update task: ' . $e->getMessage(),
                 500
             );
@@ -155,11 +155,11 @@ class ProjectTaskController extends Controller
         $task = ProjectTask::byProject($projectId)->find($taskId);
         
         if (!$task) {
-            return JSendResponse::error('Task not found', 404);
+            return ApiResponse::error('Task not found', 404);
         }
         
         if (!$task->hasConditionalTag()) {
-            return JSendResponse::error('Task does not have conditional tag', 400);
+            return ApiResponse::error('Task does not have conditional tag', 400);
         }
         
         try {
@@ -169,9 +169,9 @@ class ProjectTaskController extends Controller
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
-            return JSendResponse::success($result);
+            return ApiResponse::success($result);
         } catch (\Exception $e) {
-            return JSendResponse::error(
+            return ApiResponse::error(
                 'Failed to toggle task visibility: ' . $e->getMessage(),
                 500
             );

@@ -1,0 +1,223 @@
+/* UI Loading States - Non-Blocking Local Dimmers */
+/* Base Alpine.js cloaking */
+[x-cloak] { display: none !important; }
+
+/* Soft dimming for panels/cards during data fetch */
+.soft-dim { 
+    opacity: 0.7; 
+    transition: opacity 0.18s ease; 
+    pointer-events: none;
+}
+
+/* Absolute spinner positioning */
+.abs-spinner { 
+    position: absolute; 
+    top: 0.75rem; 
+    right: 0.75rem; 
+    z-index: 10;
+}
+
+/* Spinner component */
+.panel-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Card loading states */
+.card-loading {
+    position: relative;
+    opacity: 0.8;
+}
+
+.card-loading::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 10;
+}
+
+/* Table loading states */
+.table-loading {
+    position: relative;
+}
+
+.table-loading::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 100;
+}
+
+/* Panel-level loading wrappers */
+.panel-wrapper {
+    position: relative;
+}
+
+.panel-wrapper.panel-loading {
+    opacity: 0.75;
+    pointer-events: none;
+}
+
+.panel-wrapper.panel-loading::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 20;
+}
+
+/* KPI loading states */
+.kpi-loading {
+    opacity: 0.6;
+    position: relative;
+}
+
+.kpi-loading::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Modal backdrop - ONLY for modals, not data loading */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 40;
+    transition: opacity 0.15s ease;
+}
+
+.modal-backdrop.show {
+    opacity: 1;
+}
+
+.modal-backdrop.hide {
+    opacity: 0;
+}
+
+/* Ensure modals are properly cloaked initially */
+.modal-wrapper[x-cloak] {
+    display: none !important;
+}
+
+/* Global busy state for cursor */
+html.busy { 
+    cursor: progress; 
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .soft-dim,
+    .card-loading,
+    .table-loading,
+    .panel-wrapper.panel-loading,
+    .modal-backdrop {
+        transition: none !important;
+    }
+    
+    .panel-spinner,
+    .card-loading::after,
+    .table-loading::before,
+    .panel-wrapper.panel-loading::after {
+        animation: none !important;
+    }
+}
+
+/* Accessibility improvements */
+[aria-busy="true"] {
+    opacity: 0.9;
+}
+
+[aria-busy="true"]::before {
+    content: 'Loading...';
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Loading indicators should not affect layout */
+.abs-spinner,
+.panel-spinner,
+.card-loading::after,
+.table-loading::before {
+    pointer-events: none;
+}
+
+/* Chart loading states - no overlay on charts */
+.chart-loading {
+    opacity: 0.8;
+    position: relative;
+}
+
+.chart-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #3B82F6;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 10;
+}
+
+/* Table skeleton improvements */
+.table-skeleton {
+    min-height: 300px;
+    position: relative;
+}
+
+.table-skeleton-row {
+    height: 72px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    margin-bottom: 8px;
+    border-radius: 8px;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

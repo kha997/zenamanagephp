@@ -3,468 +3,309 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\TaskFormRequest;
-use App\Http\Resources\TaskResource;
-use App\Services\TaskService;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
+use App\Models\Task;
+use App\Services\TaskManagementService;
+use App\Services\ProjectManagementService;
+use App\Services\UserManagementService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Task;
+use Illuminate\Http\RedirectResponse;
 
 /**
- * Web Task Controller for task management interface
+ * Web Task Controller
  * 
- * @package App\Http\Controllers\Web
+ * Handles task management in the web interface,
+ * providing views and handling form submissions.
  */
 class TaskController extends Controller
 {
+    public function __construct(
+        private TaskManagementService $taskService,
+        private ProjectManagementService $projectService,
+        private UserManagementService $userService
+    ) {}
+
+
     /**
-     * TaskController constructor.
-     *
-     * @param TaskService $taskService
+     * Display tasks Kanban board
      */
-    public function __construct(private readonly TaskService $taskService)
+    public function kanban(Request $request): View
     {
+        $filters = $request->only([
+            'project_id',
+            'status',
+            'priority',
+            'assignee_id',
+            'search',
+            'sort_by',
+            'sort_direction',
+            'page'
+        ]);
+
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        
+        // Fetch tasks data
+        $tasks = $this->taskService->getTasks($filters, 50, 'created_at', 'desc', $tenantId);
+        $projects = $this->projectService->getProjects([], 100, 'name', 'asc', $tenantId);
+        $users = $this->userService->getUsers([], 100, 'name', 'asc', $tenantId);
+
+        return view('app.tasks.kanban', [
+            'tasks' => $tasks,
+            'projects' => $projects,
+            'users' => $users,
+            'filters' => $filters
+        ]);
     }
 
     /**
-     * Display a listing of tasks.
+     * Display tasks list
      */
     public function index(Request $request): View
     {
-        try {
-            $filters = $request->only(['status', 'project_id', 'assignee_id', 'search']);
-            $perPage = (int) $request->get('per_page', 15);
-            
-            $tasks = $this->taskService->getTasks($filters, $perPage);
-            $projects = Project::select('id', 'name')->get();
-            
-            return view('tasks.index', compact('tasks', 'projects'));
-        } catch (\Exception $e) {
-            return view('tasks.index', [
-                'tasks' => collect(),
-                'projects' => collect(),
-                'error' => 'Không thể tải danh sách tasks: ' . $e->getMessage()
-            ]);
-        }
+        $filters = $request->only([
+            'project_id',
+            'status',
+            'priority',
+            'assignee_id',
+            'search',
+            'sort_by',
+            'sort_direction',
+            'page'
+        ]);
+
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        
+        // Fetch tasks data
+        $tasks = $this->taskService->getTasks($filters, 50, 'created_at', 'desc', $tenantId);
+        $projects = $this->projectService->getProjects([], 100, 'name', 'asc', $tenantId);
+        $users = $this->userService->getUsers([], 100, 'name', 'asc', $tenantId);
+
+        // Log for debugging
+        \Log::info('TaskController::index', [
+            'tenant_id' => $tenantId,
+            'tasks_count' => $tasks->count(),
+            'projects_count' => $projects->count(),
+            'users_count' => $users->count(),
+        ]);
+
+        return view('app.tasks.index', [
+            'tasks' => $tasks,
+            'projects' => $projects,
+            'users' => $users,
+            'filters' => $filters
+        ]);
     }
 
     /**
-     * API endpoint to get tasks for frontend
+     * Show React Kanban board
      */
-    public function apiIndex(Request $request): JsonResponse
+    public function kanbanReact(Request $request): View
     {
-        try {
-            $filters = $request->only(['status', 'project_id', 'assignee_id', 'search']);
-            $perPage = (int) $request->get('per_page', 50);
-            
-            $tasks = $this->taskService->getTasks($filters, $perPage);
-            
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'tasks' => $tasks->items(),
-                    'total' => $tasks->total(),
-                    'per_page' => $tasks->perPage(),
-                    'current_page' => $tasks->currentPage(),
-                    'last_page' => $tasks->lastPage()
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load tasks: ' . $e->getMessage()
-            ], 500);
-        }
+        $filters = $request->only([
+            'project_id',
+            'status',
+            'priority',
+            'assignee_id',
+            'search',
+            'sort_by',
+            'sort_direction'
+        ]);
+
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        
+        // Fetch tasks data for React Kanban
+        $tasks = $this->taskService->getTasksList([], auth()->id(), $tenantId);
+        $projects = \App\Models\Project::where('tenant_id', $tenantId)->get();
+        $users = \App\Models\User::where('tenant_id', $tenantId)->get();
+
+        return view('app.tasks.kanban-react', [
+            'tasks' => $tasks,
+            'projects' => $projects,
+            'users' => $users,
+            'filters' => $filters
+        ]);
     }
 
     /**
-     * Show the form for creating a new task.
+     * Show task details
      */
-    public function create(Request $request): View
+    public function show(Task $task): View
     {
-        try {
-            $projects = Project::select('id', 'name')->get();
-            $projectId = $request->get('project_id');
-            
-            return view('tasks.create', compact('projects', 'projectId'));
-        } catch (\Exception $e) {
-            return view('tasks.create', [
-                'projects' => collect(),
-                'projectId' => null,
-                'error' => 'Không thể tải form tạo task: ' . $e->getMessage()
-            ]);
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        
+        // Check if the task belongs to the user's tenant
+        if ($task->tenant_id !== $tenantId) {
+            abort(404, 'Task not found');
         }
+        
+        $projects = $this->projectService->getProjects([], 100, 'name', 'asc', $tenantId);
+        $users = $this->userService->getUsers([], 100, 'name', 'asc', $tenantId);
+
+        return view('app.tasks.show', [
+            'task' => $task,
+            'projects' => $projects,
+            'users' => $users
+        ]);
     }
 
     /**
-     * Store a newly created task.
+     * Show create task form
      */
-    public function store(TaskFormRequest $request): RedirectResponse
+    public function create(): View
     {
-        try {
-            $taskData = $request->validated();
-            $task = $this->taskService->createTask($taskData);
-            
-            return redirect()
-                ->route('tasks.index')
-                ->with('success', 'Task đã được tạo thành công!');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->withErrors(['error' => 'Không thể tạo task: ' . $e->getMessage()]);
-        }
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        
+        $projects = $this->projectService->getProjects([], 100, 'name', 'asc', $tenantId);
+        $users = $this->userService->getUsers([], 100, 'name', 'asc', $tenantId);
+
+        return view('app.tasks.create', [
+            'projects' => $projects,
+            'users' => $users
+        ]);
     }
 
     /**
-     * Display the specified task.
+     * Store new task
      */
-    public function show(string $taskId): View|RedirectResponse
-    {
-        try {
-            $task = Task::with(['project'])->findOrFail($taskId);
-            
-            return view('tasks.show', compact('task'));
-        } catch (\Exception $e) {
-            \Log::error('Task show error', [
-                'task_id' => $taskId,
-                'error' => $e->getMessage()
-            ]);
-            
-            return redirect()
-                ->route('tasks.index')
-                ->withErrors(['error' => 'Không thể tải task: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Show the form for editing the specified task.
-     */
-    public function edit(string $taskId): View
-    {
-        try {
-            $task = Task::findOrFail($taskId);
-            $projects = Project::select('id', 'name')->get();
-            
-            return view('tasks.edit', compact('task', 'projects'));
-        } catch (\Exception $e) {
-            return view('tasks.edit', [
-                'task' => null,
-                'projects' => collect(),
-                'error' => 'Không thể tải form chỉnh sửa task: ' . $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Show the form for editing a task (debug version).
-     */
-    public function editDebug(string $taskId): View
-    {
-        try {
-            $task = Task::findOrFail($taskId);
-            $projects = Project::select('id', 'name')->get();
-            
-            return view('tasks.edit-debug', compact('task', 'projects'));
-        } catch (\Exception $e) {
-            return view('tasks.edit-debug', [
-                'task' => null,
-                'projects' => collect(),
-                'error' => 'Không thể tải form chỉnh sửa task: ' . $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Show the form for editing a task (simple debug version).
-     */
-    public function editSimpleDebug(string $taskId): View
-    {
-        try {
-            $task = Task::findOrFail($taskId);
-            $projects = Project::select('id', 'name')->get();
-            
-            return view('tasks.edit-simple-debug', compact('task', 'projects'));
-        } catch (\Exception $e) {
-            return view('tasks.edit-simple-debug', [
-                'task' => null,
-                'projects' => collect(),
-                'error' => 'Không thể tải form chỉnh sửa task: ' . $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Update the specified task.
-     */
-    public function update(TaskFormRequest $request, string $taskId): RedirectResponse
-    {
-        try {
-            // Debug: Log request data
-            \Log::info('Task Update Request', [
-                'task_id' => $taskId,
-                'request_data' => $request->all()
-            ]);
-            
-            // Use all() instead of validated() to avoid null issues
-            $taskData = $request->all();
-            
-            // Debug: Log task data being passed to service
-            \Log::info('Task data being passed to service', [
-                'task_id' => $taskId,
-                'task_data' => $taskData
-            ]);
-            
-            $task = $this->taskService->updateTask($taskId, $taskData);
-            
-            if (!$task) {
-                \Log::error('Task not found for update', ['task_id' => $taskId]);
-                return redirect()
-                    ->back()
-                    ->withErrors(['error' => 'Task không tồn tại.']);
-            }
-            
-            \Log::info('Task updated successfully', ['task_id' => $taskId]);
-            return redirect()
-                ->route('tasks.index')
-                ->with('success', 'Task đã được cập nhật thành công!');
-        } catch (\Exception $e) {
-            \Log::error('Task update failed', [
-                'task_id' => $taskId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()
-                ->back()
-                ->withInput()
-                ->withErrors(['error' => 'Không thể cập nhật task: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Remove the specified task.
-     */
-    public function destroy(string $taskId): RedirectResponse
-    {
-        try {
-            $deleted = $this->taskService->deleteTask($taskId);
-            
-            if (!$deleted) {
-                return redirect()
-                    ->back()
-                    ->withErrors(['error' => 'Task không tồn tại hoặc không thể xóa.']);
-            }
-            
-            return redirect()
-                ->route('tasks.index')
-                ->with('success', 'Task đã được xóa thành công!');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withErrors(['error' => 'Không thể xóa task: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Update task status via AJAX
-     */
-    public function updateStatus(Request $request, string $taskId): JsonResponse
+    public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'status' => 'required|in:pending,in_progress,completed,cancelled'
+            'project_id' => 'required|string|ulid',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'status' => 'nullable|string|in:backlog,in_progress,blocked,done,canceled',
+            'priority' => 'nullable|string|in:low,normal,high,urgent',
+            'assignee_id' => 'nullable|string|ulid',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'estimated_hours' => 'nullable|numeric|min:0'
         ]);
+
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        $taskData = $request->all();
+        $taskData['created_by'] = auth()->user()->id;
         
-        try {
-            $task = $this->taskService->updateTaskStatus($taskId, $request->status);
-            
-            if (!$task) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Task không tồn tại.'
-                ], 404);
-            }
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'task' => new TaskResource($task)
-                ],
-                'message' => 'Trạng thái task đã được cập nhật.'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể cập nhật trạng thái task: ' . $e->getMessage()
-            ], 500);
+        $task = $this->taskService->createTask($taskData, $tenantId);
+
+        if ($task) {
+            return redirect()->route('app.tasks.show', $task->id)
+                            ->with('success', 'Task created successfully!');
         }
+
+        return back()->with('error', 'Failed to create task.');
     }
 
     /**
-     * Get tasks for a specific project
+     * Show edit task form
      */
-    public function getProjectTasks(string $projectId): JsonResponse
+    public function edit(string $id): View
     {
-        try {
-            $tasks = Task::where('project_id', $projectId)
-                ->with(['assignee'])
-                ->orderBy('created_at', 'desc')
-                ->get();
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'tasks' => TaskResource::collection($tasks)
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lấy danh sách tasks: ' . $e->getMessage()
-            ], 500);
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        
+        $task = $this->taskService->getTaskById($id, $tenantId);
+        if (!$task) {
+            abort(404, 'Task not found');
         }
+        
+        $projects = $this->projectService->getProjects([], 100, 'name', 'asc', $tenantId);
+        $users = $this->userService->getUsers([], 100, 'name', 'asc', $tenantId);
+
+        return view('app.tasks.edit', [
+            'task' => $task,
+            'projects' => $projects,
+            'users' => $users
+        ]);
     }
 
     /**
-     * Archive a task
+     * Update task
      */
-    public function archive(Request $request, string $taskId): JsonResponse
-    {
-        try {
-            $task = Task::findOrFail($taskId);
-            $task->update(['status' => 'archived']);
-            
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Task đã được lưu trữ thành công!',
-                'data' => [
-                    'task' => new TaskResource($task)
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lưu trữ task: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Move a task to another project
-     */
-    public function move(Request $request, string $taskId): JsonResponse
+    public function update(Request $request, string $id): RedirectResponse
     {
         $request->validate([
-            'project_id' => 'required|exists:projects,id'
+            'project_id' => 'required|string|ulid',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'status' => 'nullable|string|in:backlog,in_progress,blocked,done,canceled',
+            'priority' => 'nullable|string|in:low,normal,high,urgent',
+            'assignee_id' => 'nullable|string|ulid',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'estimated_hours' => 'nullable|numeric|min:0'
         ]);
+
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        $taskData = $request->all();
         
-        try {
-            $task = Task::findOrFail($taskId);
-            $task->update(['project_id' => $request->project_id]);
-            
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Task đã được di chuyển thành công!',
-                'data' => [
-                    'task' => new TaskResource($task)
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể di chuyển task: ' . $e->getMessage()
-            ], 500);
+        $task = $this->taskService->updateTask($id, $taskData, $tenantId);
+
+        if ($task) {
+            return redirect()->route('app.tasks.show', $id)
+                            ->with('success', 'Task updated successfully!');
         }
+
+        return back()->with('error', 'Failed to update task.');
     }
 
     /**
-     * Get task documents
+     * Delete task
      */
-    public function documents(string $taskId): JsonResponse
+    public function destroy(string $id): RedirectResponse
     {
-        try {
-            $task = Task::findOrFail($taskId);
-            
-            $documents = []; // Placeholder
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'task' => new TaskResource($task),
-                    'documents' => $documents
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lấy tài liệu task: ' . $e->getMessage()
-            ], 500);
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        
+        if ($this->taskService->deleteTask($id, $tenantId)) {
+            return redirect()->route('app.tasks.index')
+                            ->with('success', 'Task deleted successfully!');
         }
+
+        return back()->with('error', 'Failed to delete task.');
     }
 
     /**
-     * Store task document
+     * Handle bulk actions for tasks.
      */
-    public function storeDocument(Request $request, string $taskId): JsonResponse
+    public function bulkActions(Request $request): RedirectResponse
     {
         $request->validate([
-            'file' => 'required|file|max:10240', // 10MB max
-            'note' => 'nullable|string|max:1000'
+            'action' => 'required|string|in:delete,update_status,assign',
+            'task_ids' => 'required|array',
+            'task_ids.*' => 'string|ulid',
+            'status' => 'nullable|string|in:backlog,in_progress,blocked,done,canceled',
+            'assignee_id' => 'nullable|string|ulid',
         ]);
-        
-        try {
-            $task = Task::findOrFail($taskId);
-            
-            
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Tài liệu đã được lưu thành công!'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lưu tài liệu: ' . $e->getMessage()
-            ], 500);
+
+        $tenantId = auth()->check() ? (string) auth()->user()->tenant_id : '01K83FPK5XGPXF3V7ANJQRGX5X';
+        $taskIds = $request->input('task_ids');
+        $action = $request->input('action');
+        $success = false;
+
+        switch ($action) {
+            case 'delete':
+                $success = $this->taskService->bulkDeleteTasks($taskIds, $tenantId);
+                $message = $success ? 'Selected tasks deleted successfully!' : 'Failed to delete selected tasks.';
+                break;
+            case 'update_status':
+                $status = $request->input('status');
+                $success = $this->taskService->bulkUpdateTaskStatus($taskIds, $status, $tenantId);
+                $message = $success ? 'Selected tasks status updated successfully!' : 'Failed to update selected tasks status.';
+                break;
+            case 'assign':
+                $assigneeId = $request->input('assignee_id');
+                $success = $this->taskService->bulkAssignTasks($taskIds, $assigneeId, $tenantId);
+                $message = $success ? 'Selected tasks assigned successfully!' : 'Failed to assign selected tasks.';
+                break;
+            default:
+                $message = 'Invalid action.';
+                break;
         }
+
+        if ($success) {
+            return back()->with('success', $message);
+        }
+
+        return back()->with('error', $message);
     }
 
-    /**
-     * Get task history/log
-     */
-    public function history(string $taskId): JsonResponse
-    {
-        try {
-            $task = Task::findOrFail($taskId);
-            
-            $history = [
-                [
-                    'action' => 'Task Created',
-                    'description' => 'Task was created and assigned',
-                    'timestamp' => $task->created_at,
-                    'user' => 'System'
-                ],
-                [
-                    'action' => 'Status Changed',
-                    'description' => 'Status changed to ' . $task->status,
-                    'timestamp' => $task->updated_at,
-                    'user' => 'System'
-                ]
-            ];
-            
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'task' => new TaskResource($task),
-                    'history' => $history
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Không thể lấy lịch sử task: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 }

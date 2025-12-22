@@ -29,12 +29,14 @@ class UpdateTaskRequest extends BaseApiRequest
                 'nullable',
                 'integer',
                 'exists:components,id',
-                function ($attribute, $value, $fail) 
-                        if ($component && $component->project_id !== $task->project_id) {
+                function ($attribute, $value, $fail) use ($task) {
+                    if ($value) {
+                        $component = \Src\CoreProject\Models\Component::find($value);
+                        if ($component && $task && $component->project_id !== $task->project_id) {
                             $fail('Component phải thuộc cùng dự án với task.');
                         }
                     }
-                }
+                },
             ],
             'phase_id' => [
                 'nullable',
@@ -81,12 +83,12 @@ class UpdateTaskRequest extends BaseApiRequest
                 'integer',
                 'exists:tasks,id',
                 'not_in:' . $taskId, // Không thể phụ thuộc vào chính nó
-                function ($attribute, $value, $fail) 
-                        if ($dependentTask && $dependentTask->project_id !== $task->project_id) {
-                            $fail('Task phụ thuộc phải thuộc cùng dự án.');
-                        }
+                function ($attribute, $value, $fail) use ($task) {
+                    $dependentTask = Task::find($value);
+                    if ($dependentTask && $task && $dependentTask->project_id !== $task->project_id) {
+                        $fail('Task phụ thuộc phải thuộc cùng dự án.');
                     }
-                }
+                },
             ],
             'conditional_tag' => [
                 'nullable',
@@ -113,7 +115,8 @@ class UpdateTaskRequest extends BaseApiRequest
                     $estimatedHours = $this->input('estimated_hours') ?? ($this->task ? $this->task->estimated_hours : 0);
                     if ($value && $estimatedHours && $value > ($estimatedHours * 1.5)) {
                         // Chỉ warning, không fail validation
-                        session()->flash('warning', 'Số giờ thực tế vượt quá 50% so với ước tính.');
+                        // Warning: Actual hours exceed estimated hours by more than 50%
+                        // This should be handled by the controller, not in validation
                     }
                 }
             ],

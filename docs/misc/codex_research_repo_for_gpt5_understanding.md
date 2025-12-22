@@ -1,0 +1,392 @@
+# ZenaManage – Kiến trúc toàn hệ thống cho GPT‑5
+
+## 1. Tổng quan hệ thống
+
+- **Loại kiến trúc**
+  - Monolith Laravel: Backend PHP/Laravel 10 chạy như một ứng dụng đơn, tổ chức theo service layer, nhiều middleware, policies, multi‑tenant logic.
+  - SPA Frontend: React + Vite, chạy như SPA (port 5173), giao tiếp với Laravel qua API `/api/*` và `/api/v1/*`.
+  - Realtime: WebSocket server riêng (`simple_websocket_server.php`, `websocket_server.php`, `App\WebSocket\DashboardWebSocketHandler`) nhưng vẫn trong cùng codebase → monolith + realtime sidecar.
+- **Stack chính**
+  - Backend: PHP 8.2, Laravel 10, Sanctum cho API auth, Eloquent ORM, MySQL (CI dùng MySQL 8, local có SQLite option).
+  - Frontend: React 18, Vite, React Router, React Query, TypeScript, Tailwind, Storybook (build sẵn).
+  - Testing:
+    - PHP: PHPUnit (`tests/Unit`, `tests/Feature`, `tests/Integration`, `tests/Performance`, `tests/Browser`).
+    - JS/TS: Vitest (`frontend`), Jest legacy, Playwright E2E (cả root và `frontend`), MSW (`tests/msw`).
+  - CI/CD: GitHub Actions (`.github/workflows/*.yml`), Docker (`Dockerfile`, `Dockerfile.prod`, `Dockerfile.websocket`, `docker-compose.yml`), nhiều workflow chuyên biệt (frontend, e2e, security, openapi).
+- **Cấu trúc thư mục gốc (cấp 1–2, vai trò)**
+  - `app/`: Mã Laravel chính (Controllers, Models, Services, Policies, Middleware, WebSocket).
+  - `bootstrap/`, `config/`, `database/`, `resources/`, `routes/`, `storage/`, `public/`: chuẩn Laravel.
+  - `frontend/`: SPA React/Vite chính, kiến trúc feature‑based (`features`, `components`, `app`, `shared`).
+  - `tests/`: Toàn bộ test PHP + E2E orchestration (`tests/e2e`), helpers, fixtures, msw.
+  - `.github/workflows/`: CI/CD pipelines (lint, unit, integration, Playwright, security, openapi, deploy).
+  - `monitoring/`, `tools/`, `scripts/`, `manage-*.sh`, `monitor-*.sh`: DevOps, monitoring, tiện ích vận hành.
+  - `docs/`: Tài liệu chi tiết (API, DevOps, UI, testing, security, dashboard…).
+  - `Dockerfile*`, `docker-compose.yml`: Infra cho local dev, prod, websocket.
+  - `src/`: Một thư mục React phụ (`src/components/ui/header/HeaderShell.tsx`, lib khác) – likely legacy hoặc library UI tách riêng.
+
+---
+
+## 2. Kiến trúc Backend (Laravel)
+
+- **Mô hình kiến trúc**
+  - Layered/service‑repository:
+    - Controllers mỏng: định tuyến HTTP, validation, gọi service.
+    - Services dày: `app/Services/*` là lớp business logic, với rất nhiều service chuyên trách (TaskService, ProjectService, DashboardService, FeatureFlagService, PermissionService, RateLimitService…).
+    - Repositories: `app/Repositories/*` encapsulate truy vấn DB (ví dụ `TaskRepository` dùng trong `TaskService`).
+    - Models: `app/Models/*` ánh xạ bảng domain (Project, Task, Tenant, User, Role, Permission, Dashboard*, Template*, Document*, v.v.).
+  - Cross‑cutting concerns qua middleware: security, rate limiting, tenant scope, metrics, observability, error envelope, OpenAPI response validation.
+- **Service chính, controllers, middleware, policies**
+  - Services tiêu biểu (`app/Services`):
+    - `TaskService`: xử lý tạo/cập nhật/move/archive task, gọi `TaskStatusTransitionService`, `AuditService`, `PermissionService`, fire events (`task.created`, `task.moved`, `task.archived`).
+    - `ProjectService`: quản lý project, permissions, logic trạng thái (xem `ProjectService.php` + tests).
+    - `DashboardService`: tổng hợp KPI, recent projects/tasks/activity, alert, dùng cho API dashboard và WebSocket.
+    - `FeatureFlagService`: đọc config `features`, cache per tenant/user, override qua `Tenant` và `UserPreference`, hỗ trợ clear cache.
+    - `PermissionService`, `AbilityMatrixService`, `PermissionMatrixService`: xây RBAC/abilities, kết nối với policies/middleware.
+    - `SidebarService`, `NavigationService`: build cấu hình sidebar/navigation theo role/tenant/feature flags.
+    - `PerformanceMonitoringService`, `MetricsService`, `MonitoringService`: metrics, performance, logs.
+    - `RateLimitService` / `UnifiedRateLimitMiddleware`: điều phối rate limit đa chiến lược.
+    - `OutboxService`, `AuditService`, `EmailService`, `InvitationService`, `MFAService`, `OIDCService`… cung cấp tính năng nâng cao.
+  - Controllers quan trọng (`app/Http/Controllers`):
+    - `Api\V1\App\DashboardController`: cung cấp API `/api/v1/app/dashboard/*` (summary, KPIs, recent projects/tasks/activity).
+    - `Api\Auth\AuthenticationController`: login/logout, session token, response envelope chuẩn.
+    - `Api\DocumentController`, `Unified\ProjectManagementController`, `PerformanceController`, `Web\ClientController`, v.v.
+  - Middleware (`app/Http/Middleware`):
+    - Bảo mật & headers: `SecurityHeadersMiddleware`, `EnhancedSecurityHeadersMiddleware`, `ProductionSecurityMiddleware`, `CorsMiddleware`.
+    - Auth & RBAC: `ApiAuthenticationMiddleware`, `RBACMiddleware`, `RoleBasedAccessControlMiddleware`, `AbilityMiddleware`, `CheckPermission`, `RolePermission`, `AdminOnlyMiddleware`, `EnsureAdminAccess`, `EnsureSystemAdmin`.
+    - Tenancy: `TenantScopeMiddleware`, `TenantScope`, `TenantIsolationMiddleware`, `TenantAbilityMiddleware`.
+    - Observability: `RequestCorrelationMiddleware` (X‑Request‑Id), `MetricsMiddleware`, `PerformanceLoggingMiddleware`, `LogSamplingMiddleware`, `ObservabilityMiddleware`, `RequestLoggingMiddleware`, `DatabaseQueryMonitoringMiddleware`, `QueryBudgetMiddleware`, `QueryPerformanceMiddleware`.
+    - Security helpers: `BruteForceProtectionMiddleware`, `IdempotencyMiddleware`, `InputSanitizationMiddleware`, `EnhancedValidationMiddleware`, `ValidateApiResponseMiddleware`, `OpenApiResponseValidator`.
+    - Unified: `UnifiedRateLimitMiddleware`, `UnifiedSecurityMiddleware`, `UnifiedValidationMiddleware`.
+  - Policies (`app/Policies` + `ZenaRole/ZenaPermission` models): policies cho tasks/projects/documents, mapping qua Role/Permission và ability matrix.
+- **Cơ chế multi‑tenant, RBAC, security**
+  - Multi‑tenant:
+    - `Tenant` model với ULID, slug, domain, settings, status.
+    - `User` có `tenant_id` và quan hệ `tenant()`; hầu hết entity (Project, Task, Document…) có `tenant_id` + global scope (BelongsToTenant – mô tả trong docs và middleware).
+    - `TenantScopeMiddleware`:
+      - Lấy `Auth::user()`, nếu không có → bỏ qua.
+      - Nếu user là super admin (`isSuperAdmin`, `is_admin`, `can('admin.access')`) → tenant context = null (truy cập mọi tenant).
+      - Nếu có `tenant_id` → set `app()->instance('current_tenant_id', tenant_id)`, inject vào request (`tenant_id`), merge vào input, log trong local/testing.
+      - Tenant isolation còn được test bằng scripts/test và E2E (xem `test_tenant_isolation.php`, docs `TenantIsolationTest` references).
+  - RBAC:
+    - Models: `Role`, `Permission`, `RolePermission`, `ZenaRole`, `ZenaPermission`.
+    - `User->roles()` many‑to‑many qua `zena_user_roles` (fix trong model).
+    - `User->hasRole($role)`: check field `role` + quan hệ `roles`.
+    - Ability matrix: `AbilityMatrixService`, `PermissionMatrixService` đọc ma trận ability từ config/docs.
+    - Middleware `AbilityMiddleware`, `RolePermission`, `CheckPermission` map routes → abilities.
+  - Policies:
+    - Policies per domain (TaskPolicy, ProjectPolicy ...) (xem `app/Policies`), kết hợp với Gates và `can()` checks trong controllers/services.
+  - Security:
+    - Auth:
+      - Laravel Sanctum (`HasApiTokens` trong `User`) cho API token / SPA auth.
+      - `auth:sanctum` dùng guard chuẩn; `auth.sanctum.stateful` cho SPA stateful.
+      - Login API: `/api/auth/login` (`AuthenticationController`) trả `token`, `session_id`, `expires_in`, `user` data, `onboarding_state`.
+      - Logout API: `/api/auth/logout` (Bearer token).
+    - CSRF & CORS:
+      - `VerifyCsrfToken` trong `web` group, `EnsureFrontendRequestsAreStateful` trong `api` group để hỗ trợ SPA.
+      - `CorsMiddleware` + config CORS (kiểm tra `config/cors.php`) và custom `CorsService`.
+    - Rate limiting:
+      - `UnifiedRateLimitMiddleware` làm middleware chính (replaces nhiều middleware cũ).
+      - Strategy: `sliding`, `token_bucket`, `fixed` với key dựa trên `user.id` hoặc IP + route name/path.
+      - Điều chỉnh theo role (admin/member/client) và route (auth/login vs admin).
+    - Header hardening:
+      - `SecurityHeadersMiddleware`, `EnhancedSecurityHeadersMiddleware`, `ProductionSecurityMiddleware`, `SecureSessionMiddleware`, `SecurityHeaders` – thêm HSTS, X‑Frame‑Options, CSP, cookie flags, etc.
+    - MFA & OIDC/SAML:
+      - `User` có trường `mfa_enabled`, `oidc_*`, `saml_*`; services `MFAService`, `OIDCService`, `PasswordSecurityService` quản lý logic.
+    - Error envelope + OpenAPI:
+      - Error format chuẩn: `{ ok: false, error: { code, message, details?, traceId } }`.
+      - `ErrorEnvelopeMiddleware`, `ValidateApiResponseMiddleware`, `OpenApiResponseValidator` dùng `openapi-security.json` để validate responses (dev/staging).
+- **Luồng xử lý API (route → controller → service → model)**
+  - Ví dụ tasks:
+    - Route: `routes/api_v1.php` → prefix `/api/v1/app/tasks` với middleware `api`, `auth:sanctum`, `tenant.scope`, `rate.limit`.
+    - Controller: `App\Http\Controllers\Api\V1\App\TaskController` (pattern tương tự).
+    - Service: `TaskService` dùng `TaskRepository`, `TaskStatusTransitionService`, `AuditService`, `PermissionService`.
+    - Model: `Task` (có `tenant_id`, `project_id`…), global tenant scope, events, casts.
+  - Ví dụ dashboard:
+    - Route: `/api/v1/app/dashboard/*` (doc trong `docs/API_DOCUMENTATION.md`).
+    - Controller: `DashboardController` gọi `DashboardService` để aggregate kpis, recent projects/tasks/activity.
+    - WebSocket: `DashboardWebSocketHandler` cũng dùng `DashboardService` để fetch realtime data.
+- **Jobs/queue, event/outbox, realtime**
+  - Jobs/queue:
+    - `app/Jobs/*` (ví dụ `SendWelcomeEmailJob`, `SyncJob`), dùng queue connection config (`QUEUE_CONNECTION`).
+    - CI/E2E config đặt `QUEUE_CONNECTION=sync` cho test.
+  - Event/outbox:
+    - `Outbox` model + `OutboxService` xử lý outbox pattern (persist event rồi process async).
+    - `TaskService` dispatch string events (`task.created`, `task.moved`, `task.archived`, `task.updated`) để listeners/observers xử lý side effects/audit/logs.
+  - Realtime (WebSocket):
+    - Handler: `App\WebSocket\DashboardWebSocketHandler` implements `Ratchet\MessageComponentInterface`.
+      - Quản lý clients, userConnections (map user→connections), messageQueues, messageCounts (backpressure), slowConsumers.
+      - Message types: `authenticate` (validate token, map connection→user), `subscribe`/`unsubscribe` (channels: dashboard metrics, alerts, activity), `ping`.
+      - Rate limiting per connection: `getMaxMessagesPerSecond()` từ config, nếu vượt → send error.
+      - On user role change: `User::boot()` updated callback gọi `DashboardWebSocketHandler::revokeUserConnectionsOnRoleChange` để revoke connections theo role.
+    - WebSocket server scripts: `websocket_server.php`, `simple_websocket_server.php`, `websocket_test.php.disabled`.
+
+---
+
+## 3. Kiến trúc Frontend (React/Vite)
+
+- **Cấu trúc `frontend/src`**
+  - `app/`: shell và routing
+    - `router.tsx`: `createBrowserRouter`, lazy‑load routes theo feature.
+    - `layouts/MainLayout`, `layouts/AdminLayout`.
+    - `guards/AuthGuard`, `AdminGuard`.
+    - `providers` (Auth/Theme/Query) – xem thêm trong folder.
+  - `features/`: feature‑sliced architecture
+    - `auth/`: pages Login/Register/Forgot/Reset, hooks, api, forms.
+    - `dashboard/`: `DashboardPage`, widgets, hooks, api; `AdminDashboardPage`.
+    - `projects/`, `tasks/`, `documents/`, `change-requests/`, `clients/`, `quotes/`, `qc/`, `reports/`, `settings/`, `users/`… mỗi feature có `pages/`, `components/`, `hooks.ts`, `api.ts`, `types.ts`.
+    - `_archived/`: code cũ (templates v.v.) được giữ để reference.
+  - `components/`:
+    - `layout/HeaderShell.tsx`: Apple‑style header, dùng `ThemeProvider`, `SmartSearch`, fetch `/api/v1/app/search`, hiển thị search results (project/task/user/document).
+    - `dashboard/*`: AlertBanner, KPI strips, widgets.
+    - Shared UI primitives: buttons, tables, forms…
+  - `shared/`:
+    - `api/client.ts`: Axios client chuẩn với interceptors, error mapping, headers (tenant, auth, CSRF).
+    - `tokens/colors.ts`, theme system, utilities chung.
+  - `hooks/`: hooks generic.
+  - `pages/errors/`: `NotFoundPage`, `ServerErrorPage`.
+  - `index.css`, `main.tsx`: bootstrap React app.
+- **State management, routing, auth, i18n, UI**
+  - State:
+    - Server state: React Query (`@tanstack/react-query`) là trục chính cho data fetching & caching (ví dụ `features/tasks/hooks.ts`).
+    - Local UI state: React state + context; có thể có Zustand hoặc similar trong `stores` (auth store trong open tabs, path có thể thay đổi).
+  - Routing:
+    - `createBrowserRouter` với nested routes:
+      - `/login`, `/register`, `/forgot-password`, `/reset-password`, `/invite/:token` (auth routes).
+      - `/app/*` dưới `AuthGuard` + `MainLayout`:
+        - `/app/dashboard`
+        - `/app/projects`, `/app/projects/:id`, `/app/projects/create`, `/app/projects/:id/edit`
+        - `/app/tasks`, `/app/tasks/kanban`, `/app/tasks/:id`, `/app/tasks/create`, `/app/tasks/:id/edit`
+        - `/app/clients`, `/app/quotes`, `/app/documents`, `/app/reports`, etc.
+      - `/admin/*` dưới `AdminGuard` + `AdminLayout` (users, templates, admin dashboard…).
+  - Auth:
+    - Auth guard đọc trạng thái user (token/session) từ auth context/store.
+    - Login page gọi API `/api/auth/login` qua shared API client, lưu token (localStorage/cookie), router redirect `/app/dashboard`.
+    - Logout gọi `/api/auth/logout`, clear state, redirect `/login`.
+  - i18n:
+    - `Accept-Language` header set từ `readLocale()` (ở `shared/api/client.ts`), phía server dùng `SetLocaleMiddleware`.
+  - UI system:
+    - Apple‑style header (`HeaderShell`), KPI strip component, layout shell, responsive design.
+    - Design tokens (`colors.ts`), theme provider (`ThemeProvider`), `data-theme` trên document.
+    - Component library được catalog trong docs (`ComponentLibraryGuide.md`, `component-inventory.md`).
+- **Giao tiếp API, error/loading, caching, optimistic update**
+  - API client (`frontend/src/shared/api/client.ts`):
+    - `createApiClient()` tạo Axios instance với base URL `/api` (Vite proxy → Laravel).
+    - Request interceptor:
+      - Gắn `Authorization`:
+        - Nếu browser: đọc token từ `localStorage` theo key chuẩn (auth store).
+        - Nếu SSR/test: dùng `authToken` param nếu có.
+      - Gắn `X-Tenant-ID` từ `readTenantId()`.
+      - Gắn `X-CSRF-TOKEN` từ cookie/meta.
+      - Gắn `X-Request-ID`, `Accept-Language`, `X-Frontend-Theme`.
+    - Response error mapper (`mapAxiosError`):
+      - Ưu tiên error envelope chuẩn `{ ok: false, error: {...} }`.
+      - Hỗ trợ legacy `{ message, error: { message, code }, errors }`.
+      - Luôn ánh xạ thành `ApiError` với `status`, `code`, `details`, `traceId`.
+  - Feature API (ví dụ `features/tasks/api.ts` hoặc `frontend/src/entities/tasks/api.ts`):
+    - Định nghĩa types (`Task`, `TaskFilters`, `TasksResponse`).
+    - Endpoints: `getTasks`, `getTask`, `createTask`, `updateTask`, `moveTask`, `deleteTask`, `getKpis`, `getAlerts`, `getActivity`, bulk actions.
+    - Dùng `mapAxiosError` để normalize lỗi.
+  - Hooks (`features/tasks/hooks.ts` hoặc `frontend/src/entities/tasks/hooks.ts`):
+    - `useTasks`, `useTask`, `useTasksKpis`, `useTasksAlerts`, `useTasksActivity`: `useQuery` với `queryKey` chuẩn, `staleTime`/`cacheTime` tối ưu theo loại data.
+    - Mutations: `useCreateTask`, `useUpdateTask`, `useDeleteTask`, `useBulk*`:
+      - `onSuccess` → `invalidateQueries` cho các key liên quan (`['tasks']`, `['task', id]`, `['tasks','kpis']`).
+      - Optimistic update có thể được xử lý tại component level (hook note trong update).
+- **Patterns quan trọng**
+  - Feature‑sliced architecture: mỗi feature có `api.ts`, `hooks.ts`, `types.ts`, `pages/`, `components/`.
+  - Layout shell: `MainLayout`, `AdminLayout`, `HeaderShell` tạo skeletal layout chuẩn cho toàn app.
+  - Error envelope pattern (FE/BE cùng hiểu): mọi API error được chuẩn hóa để UI xử lý thống nhất.
+  - Strong typing: Typescript cho components/features, tránh any trong API layer.
+
+---
+
+## 4. Multi‑Tenancy & Security (end‑to‑end)
+
+- **Cách xác định tenant trong request**
+  - Server:
+    - `Auth::user()->tenant_id` là nguồn chính.
+    - `TenantScopeMiddleware` dùng `Auth::user()`:
+      - Nếu super admin: `current_tenant_id = null`.
+      - Ngược lại: set `current_tenant_id` + merge `tenant_id` vào request.
+    - Models áp dụng Global Scope `BelongsToTenant` (mô tả trong docs) để auto‑filter `tenant_id`.
+  - Client:
+    - `X-Tenant-ID` header từ `readTenantId()` (persisted trong client store hoặc derive từ user profile).
+- **Ràng buộc tenant trong DB, middleware, service, test**
+  - DB:
+    - Hầu hết bảng domain có `tenant_id` (Project, Task, Document, Template, SidebarConfig, Notification, etc.).
+    - Tests & migrations đặc biệt: `2025_10_25_100000_create_policy_test_tables.php` thiết lập bảng test policies; `test_tenant_isolation.php` script để verify DB isolation; `TenantIsolationTest.php` trong `tests/Feature`.
+  - Middleware:
+    - `TenantScopeMiddleware`, `TenantScope`, `TenantIsolationMiddleware` để enforce scoping trên queries.
+    - `TenantAbilityMiddleware` kết hợp RBAC + tenancy (user chỉ có ability trong tenant của mình).
+  - Services:
+    - Service method signature thường nhận `tenantId` explicit:
+      - Ví dụ `TaskService::createTask(array $data, string $userId, string $tenantId)`.
+      - Repositories nhận `tenantId` khi `getById` / `update`, etc.
+  - Tests:
+    - Feature/Auth: `AuthenticationModuleTest` seed tenant và user theo domain seed, đảm bảo login/logout gắn với tenant đúng.
+    - E2E helpers: `tests/e2e/setup/global-setup.ts` build env, migrate DB, seed test data domain, storage isolation; domain seeds drive deterministic tenants.
+- **Cấu trúc RBAC (Role, Permission, Policy, Ability)**
+  - Role models: `Role`, `ZenaRole`, `UserRole`, `UserRoleSystem`, `UserRoleProject`.
+  - Permission models: `Permission`, `RolePermission`, `ZenaPermission`.
+  - Ability & matrix:
+    - `AbilityMatrixService`, `PermissionMatrixService` đọc ma trận ability từ config/docs.
+    - Middleware `AbilityMiddleware`, `RolePermission`, `CheckPermission` map routes → abilities.
+  - Policies:
+    - Policies per domain (TaskPolicy, ProjectPolicy ...) (xem `app/Policies`), kết hợp với Gates và `can()` checks trong controllers/services.
+- **Cơ chế bảo mật**
+  - Auth:
+    - Sanctum tokens, session‑based login (web) + token‑based (API).
+    - `AuthenticationController` unify login/logout APIs, consistent response envelope.
+    - API login route: `/api/auth/login` (web middleware `throttle:login`).
+  - CORS & CSRF:
+    - `HandleCors` global, `CorsMiddleware` custom.
+    - `VerifyCsrfToken` trong `web` group, SPA CSRF cookie endpoint `/api/v1/auth/csrf-cookie`.
+  - Rate limit:
+    - `UnifiedRateLimitMiddleware` cho API routes, custom strategies & per‑role tuning; dedicated `ProjectsRateLimiter` etc. cho một số routes.
+  - MFA/OIDC/SAML:
+    - `User` có nhiều field security (MFA, OIDC, SAML), service tương ứng để tích hợp với IdP.
+  - Header hardening:
+    - `SecurityHeadersMiddleware`, `EnhancedSecurityHeadersMiddleware`, `ProductionSecurityMiddleware`, `SecureSessionMiddleware`, `SecurityHeaders` – thêm/siết headers, cookie flags, session protections.
+  - Additional:
+    - `BruteForceProtectionMiddleware` bảo vệ login endpoints.
+    - `IdempotencyMiddleware` chống double‑submit (idempotency key model).
+    - `AdvancedSecurityMiddleware`, `AdvancedSecurityService`, `SecurityRule`, `SecurityAlert` models.
+    - Security tests: `SecurityIntegrationTest.php`, `openapi-security.json`, `postman-security-collection.json`, workflows `security-audit.yml`, `openapi-*`.
+
+---
+
+## 5. Testing & Quality
+
+- **Nhóm test chính**
+  - PHP:
+    - `tests/Unit`: unit tests cho services, repositories, controllers (ví dụ `TaskServiceTest.php`, `ProjectServiceTest.php`, `FeatureFlagServiceTest.php`).
+    - `tests/Feature`: feature/API tests (ví dụ `ApiEndpointsTest.php`, `ProjectApiTest.php`, `DocumentApiTest.php`, `TasksContractTest.php`, `MoveTaskEndpointTest.php`, Auth tests).
+    - `tests/Integration`: integration tests (tenant isolation, sync jobs, security, rate limit, status sync…).
+    - `tests/Performance`: performance tests / budgets.
+    - `tests/Browser`: Dusk/Browser tests (legacy).
+  - JS/TS:
+    - Vitest: `frontend/vitest.config.ts` – chạy `src/**/*.{test,spec}.{ts,tsx}` và `__tests__/**`.
+      - Test UI & logic: `HeaderShell.test.tsx`, `LoginPage.test.tsx`, tasks hooks/utils tests (`errorExplanation.test.ts`, `useTaskTransitionValidation.test.ts`).
+    - Jest: `frontend/jest.config.js` (legacy compat).
+    - Playwright:
+      - Root `tests/E2E/*`: nhiều suites – `dashboard`, `auth`, `core`, `smoke`, `regression`, `header`, `phase3`, `template-apply`, v.v.
+      - `tests/E2E/dashboard/Dashboard.spec.ts`: kiểm tra dashboard layout, KPI strip, header, responsiveness, notifications API không 404, performance budget (<3s).
+      - `tests/E2E/smoke/*`: smoke flows (auth, project create, alerts, minimal flows).
+- **Coverage ước tính & test quan trọng**
+  - Backend:
+    - Bao phủ services chính (Task/Project/FeatureFlag/RateLimit/Auth), contract tests (TasksContractTest, ProjectApiTest, DocumentApiTest), policies (PolicyTest), tenant isolation (TenantIsolationTest), sync jobs (TaskStatusSyncTest).
+  - E2E:
+    - Flows chính (login, dashboard, projects, tasks, templates), header/navigation consistency, error handling, performance budgets (dashboard load time, layout shift).
+  - Security:
+    - `SecurityIntegrationTest`, openapi validation workflows, security audit (npm/composer) chạy định kỳ.
+- **Công cụ test FE/BE**
+  - Backend:
+    - PHPUnit (`phpunit.xml`, `phpunit.dusk.xml`).
+    - Laravel test helpers, domain seeder (`Tests\Helpers\TestDataSeeder`), traits (`DomainTestIsolation`, etc.).
+  - Frontend:
+    - Vitest (unit/component).
+    - Playwright (`frontend/playwright.config.ts`, root `playwright.config.ts`, `playwright.phase3.config.ts`).
+    - MSW (`tests/msw/handlers/tasks.ts`, `tests/msw/fixtures/tasks.json`) dùng cho contract tests/mocks.
+- **Fixtures, mocks, CI test pipeline**
+  - Fixtures:
+    - `tests/fixtures`, `tests/msw/fixtures`, E2E env `.env.e2e`, DB seeds (TestUsersSeeder, TestDataSeeder).
+  - E2E setup:
+    - `tests/e2e/setup/global-setup.ts`:
+      - Parse `.env` + `.env.e2e`.
+      - Chuẩn bị storage dirs, tạo symlink `public/storage`.
+      - Chạy `php artisan migrate` + seed data.
+      - Set `DB_CONNECTION`/`DB_DATABASE` tuỳ env (SQLite local, MySQL CI).
+      - Apply crypto polyfill cho Node `crypto.randomUUID/getRandomValues`.
+  - CI pipeline:
+    - `ci-cd.yml`:
+      - Jobs: `security-audit`, `code-quality`, `backend-tests`.
+      - `backend-tests`: spin MySQL service, run migrations/seeders, chạy Feature + Unit suites, upload test results.
+    - Các workflow khác:
+      - `frontend-ci.yml`: lint + build + tests (Vitest).
+      - `playwright-core.yml`, `playwright-regression.yml`, `e2e-smoke.yml`, `e2e-auth.yml`: orchestrate E2E với dependency chain (PHP unit tests trước).
+      - `openapi-check.yml`, `openapi-contract-test.yml`, `openapi-validation.yml` cho contract & schema compliance.
+      - `code-quality-security.yml`, `security-audit.yml` cho security/lint.
+
+---
+
+## 6. DevOps, CI/CD, Monitoring
+
+- **Quy trình build/deploy**
+  - Docker:
+    - `Dockerfile`: base dev image (PHP + Node + extensions).
+    - `Dockerfile.prod`: prod image build (optimized, no dev deps).
+    - `Dockerfile.websocket`: dedicated image cho WebSocket server.
+    - `docker-compose.yml`: orchestration Laravel + DB + WebSocket + frontend proxy.
+  - Deployment:
+    - Workflows: `deploy.yml`, `automated-deployment.yml`, `production.yml`, `release-management.yml`.
+    - Scripts: `setup-cicd.sh`, `setup_frontend.sh`, `quick-setup-domain.sh`, `setup-domain-manager.sh`, `setup-https-domain.sh`, `setup-ssl.sh`, `rollback-production.sh`.
+    - Domain/HTTPS: `Domain` instructions + `DEVOPS_PIPELINE_DOCUMENTATION.md`, `PRODUCTION_DEPLOYMENT_CHECKLIST.md`, `🚀_FINAL_STEPS_HTTPS.md`.
+- **Pipeline stages (theo docs/DEVOPS_PIPELINE_DOCUMENTATION.md)**
+  1. Code Quality: lint, formatting, static analysis.
+  2. Unit Testing: PHP Unit test suites.
+  3. Integration Testing: API/DB integration tests.
+  4. E2E Testing: Playwright core/regression/smoke.
+  5. Security Testing: Vulnerability scanning, security tests, openapi security.
+  6. Performance Testing: Load/performance validation và budgets (`performance-budgets.json`).
+  7. Deployment: staging/prod deploy jobs.
+  8. Monitoring: health checks và performance monitoring.
+- **Monitoring/logging**
+  - Metrics endpoints:
+    - `/api/health` + `/api/metrics/*` (xem `routes/api.php`, `MetricsController`).
+    - Detailed performance health: `/api/health/performance`.
+  - Services:
+    - `MetricsService`, `MetricsCollector`, `MetricsCollectionService`, `PerformanceMonitoringService`, `MonitoringService`, `PerformanceAlertingService`.
+    - `InteractionLogService/QueryLog/PerformanceMetric` models.
+  - Middleware:
+    - `MetricsMiddleware`, `PerformanceLoggingMiddleware`, `RequestCorrelationMiddleware`, `LogSamplingMiddleware`, `ObservabilityMiddleware`, `DatabaseQueryMonitoringMiddleware`, `QueryBudgetMiddleware`.
+  - Scripts & docs vận hành:
+    - `monitor-performance.sh`, `monitor-production.sh`, `monitoring/` configs.
+    - `CI_CD_MONITORING_GUIDE.md`, `DEVOPS_PIPELINE_DOCUMENTATION.md`, `PERFORMANCE_*`, `API_DOCUMENTATION.md`, `DASHBOARD_*` reports.
+    - `test-views.sh`, `test-api-endpoints.sh`, `test_csrf_cors_session.php`, `test_idempotency.php`, `test_tenant_isolation.php`.
+
+---
+
+## 7. Đánh giá tổng hợp
+
+- **Điểm mạnh / best practices**
+  - Rõ ràng phân tầng backend: routes → controllers → services → repositories → models; services chuyên biệt, dễ tái sử dụng.
+  - Multi‑tenancy được xử lý bài bản:
+    - Tenant ID được propagate qua middleware + global scope + headers từ frontend.
+    - Tests riêng cho tenant isolation + domain‑based seeds.
+  - RBAC & Ability matrix tương đối phong phú:
+    - Separation giữa Role/Permission và Policies; middleware ability‑based; matrix services.
+  - Bảo mật khá sâu:
+    - Sanctum, CSRF, CORS, rate limit đa chiến lược, brute‑force protection, idempotency, MFA/OIDC/SAML hooks.
+    - Security headers, OpenAPI response validation, security integration tests, npm/composer audit trong CI.
+  - Observability & Monitoring:
+    - Correlation ID, metrics middleware, query budget, performance metrics, dedicated monitoring scripts & docs.
+  - Frontend hiện đại:
+    - Feature‑sliced React, React Query, TypeScript, normalized error envelope, theme system, well‑structured routing.
+  - Testing & CI/CD đầy đủ:
+    - Unit + Feature + Integration + E2E (Playwright) + Performance + Security.
+    - Pipelines với dependency chain rõ ràng (PHP unit → Playwright), caching, scheduled runs.
+- **Rủi ro / nợ kỹ thuật tiềm ẩn**
+  - Số lượng service & middleware rất lớn:
+    - Nguy cơ trùng chức năng (nhiều `*Security*`, `*RateLimit*`, `*Logging*` services/middleware; một số file `.disabled`).
+    - Tăng độ phức tạp khi debug – cần chuẩn hóa “single source of truth” cho các concerns cross‑cutting.
+  - Hai “thế giới” frontend (Laravel Blade vs React SPA):
+    - Đã cố gắng chuẩn hóa “API only” trong `routes/api.php` và disable Blade auth routes, nhưng vẫn còn Blade views (layouts/app, admin, app dashboards) → nguy cơ divergence UI/behaviour.
+  - WebSocket security:
+    - Handler có rate limit và role revocation, nhưng token validation, tenant/rbac checks trong WebSocket còn phụ thuộc vào implementation của `authenticateUser()` (cần audit chi tiết).
+  - Cache invalidation:
+    - Feature flags, KPI cache, dashboard widgets, tasks kpis – nhiều nơi dùng cache; cần đảm bảo invalidation thống nhất để tránh stale data.
+  - OpenAPI & Error envelope:
+    - Hiện đã có `openapi-security.json` + `OpenApiResponseValidator`, nhưng cần đảm bảo tất cả endpoints mới tuân thủ spec và error envelope (tránh legacy format).
+- **Gợi ý điểm nên nghiên cứu sâu hơn cho GPT‑5**
+  - **OpenAPI & contracts**:
+    - Đào sâu `openapi-security.json`, các workflow `openapi-*.yml`, `API_DOCUMENTATION.md` để nắm toàn bộ surface API & error envelope chính xác.
+  - **Error envelope standard**:
+    - Chuẩn hóa cả phía backend (middleware, exception handler) & frontend (mapAxiosError, UI error components), đảm bảo mọi endpoint dùng 1 format duy nhất.
+  - **Outbox & async processing**:
+    - Xem `OutboxService`, `Outbox` model, jobs, event listeners để hiểu cơ chế cross‑system integration và idempotency.
+  - **Tenant isolation & RBAC enforcement**:
+    - Review chi tiết `TenantScope` global scope, `TenantIsolationMiddleware`, ability matrix docs, và tests liên quan (`PolicyTest`, tenant isolation scripts).
+  - **WebSocket auth & multi‑tenant security**:
+    - Audit `DashboardWebSocketHandler::authenticateUser`, subscription model, mapping user→tenant→channels; đảm bảo constraints giống REST API.
+  - **CI/CD & performance budgets**:
+    - Phân tích `performance-budgets.json`, `Dashboard Performance` tests, monitoring scripts để hiểu SLAs/SLOs hiện dùng và cách pipeline enforce.
+

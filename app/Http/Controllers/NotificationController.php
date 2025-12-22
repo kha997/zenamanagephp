@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Src\Foundation\Helpers\AuthHelper;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\Notification\Resources\NotificationCollection;
 use Src\Notification\Resources\NotificationResource;
 use Src\RBAC\Middleware\RBACMiddleware;
@@ -59,7 +59,7 @@ class NotificationController
         try {
             $userId = $this->getUserId();
             if (!$userId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
             
             $filters = [
@@ -71,11 +71,11 @@ class NotificationController
 
             $notifications = $this->notificationService->getUserNotifications($userId, $filters);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationCollection($notifications)
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy danh sách thông báo: ' . $e->getMessage());
         }
     }
 
@@ -92,13 +92,13 @@ class NotificationController
                 $request->validated()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationResource($notification),
                 'Thông báo đã được tạo thành công',
                 201
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể tạo thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể tạo thông báo: ' . $e->getMessage());
         }
     }
 
@@ -115,14 +115,14 @@ class NotificationController
             $currentUserId = $this->getUserId();
 
             if (!$notification || !$currentUserId || $notification->user_id !== $currentUserId) {
-                return JSendResponse::error('Thông báo không tồn tại', 404);
+                return ApiResponse::error('Thông báo không tồn tại', 404);
             }
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationResource($notification)
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy thông tin thông báo: ' . $e->getMessage());
         }
     }
 
@@ -141,12 +141,12 @@ class NotificationController
                 $request->validated()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationResource($notification),
                 'Thông báo đã được cập nhật thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể cập nhật thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể cập nhật thông báo: ' . $e->getMessage());
         }
     }
 
@@ -161,12 +161,12 @@ class NotificationController
         try {
             $this->notificationService->deleteNotification($ulid);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 null,
                 'Thông báo đã được xóa thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể xóa thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể xóa thông báo: ' . $e->getMessage());
         }
     }
 
@@ -181,17 +181,17 @@ class NotificationController
         try {
             $currentUserId = $this->getUserId();
             if (!$currentUserId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
 
             $notification = $this->notificationService->markAsRead($ulid, $currentUserId);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationResource($notification),
                 'Thông báo đã được đánh dấu đã đọc'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể đánh dấu thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể đánh dấu thông báo: ' . $e->getMessage());
         }
     }
 
@@ -206,17 +206,17 @@ class NotificationController
         try {
             $currentUserId = $this->getUserId();
             if (!$currentUserId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
 
             $notification = $this->notificationService->markAsUnread($ulid, $currentUserId);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationResource($notification),
                 'Thông báo đã được đánh dấu chưa đọc'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể đánh dấu thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể đánh dấu thông báo: ' . $e->getMessage());
         }
     }
 
@@ -230,17 +230,17 @@ class NotificationController
         try {
             $currentUserId = $this->getUserId();
             if (!$currentUserId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
 
             $count = $this->notificationService->markAllAsRead($currentUserId);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 ['marked_count' => $count],
                 'Tất cả thông báo đã được đánh dấu đã đọc'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể đánh dấu thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể đánh dấu thông báo: ' . $e->getMessage());
         }
     }
 
@@ -254,16 +254,16 @@ class NotificationController
         try {
             $currentUserId = $this->getUserId();
             if (!$currentUserId) {
-                return JSendResponse::error('Người dùng chưa được xác thực', 401);
+                return ApiResponse::error('Người dùng chưa được xác thực', 401);
             }
 
             $count = $this->notificationService->getUnreadCount($currentUserId);
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 ['unread_count' => $count]
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy số lượng thông báo: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy số lượng thông báo: ' . $e->getMessage());
         }
     }
 
@@ -295,12 +295,12 @@ class NotificationController
                 'test.notification' // event_key
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new NotificationResource($notification),
                 'Thông báo test đã được gửi thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể gửi thông báo test: ' . $e->getMessage());
+            return ApiResponse::error('Không thể gửi thông báo test: ' . $e->getMessage());
         }
     }
 }

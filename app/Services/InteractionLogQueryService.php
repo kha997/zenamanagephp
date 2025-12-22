@@ -148,7 +148,9 @@ class InteractionLogQueryService
     {
         $query = InteractionLog::query()
             ->with(['project', 'linkedTask', 'creator'])
-            ->where(function ($q) 
+            ->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', "%{$keyword}%")
+                  ->orWhere('description', 'like', "%{$keyword}%");
             })
             ->orderBy('created_at', 'desc');
         

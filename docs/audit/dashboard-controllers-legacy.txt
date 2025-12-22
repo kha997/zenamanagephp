@@ -1,0 +1,1 @@
+app/Http/Controllers/LegacyDashboardController.php:class LegacyDashboardController extends Controller

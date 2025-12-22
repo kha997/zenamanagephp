@@ -2,497 +2,450 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Redis;
+use Carbon\Carbon;
 
-/**
- * PerformanceMonitoringService - Service cho performance monitoring
- */
 class PerformanceMonitoringService
 {
-    private array $monitoringConfig;
+    protected array $performanceThresholds = [
+        'page_load_time' => 500, // ms
+        'api_response_time' => 300, // ms
+        'memory_usage' => 80, // percentage
+        'database_query_time' => 100, // ms
+        'cache_hit_ratio' => 90, // percentage
+    ];
+
+    protected array $performanceMetrics = [];
 
     public function __construct()
     {
-        $this->monitoringConfig = [
-            'enabled' => config('monitoring.enabled', true),
-            'slow_query_threshold' => config('monitoring.slow_query_threshold', 1000),
-            'memory_threshold' => config('monitoring.memory_threshold', 128 * 1024 * 1024), // 128MB
-            'response_time_threshold' => config('monitoring.response_time_threshold', 2000), // 2 seconds
-            'cache_hit_rate_threshold' => config('monitoring.cache_hit_rate_threshold', 80), // 80%
-            'enable_metrics_collection' => config('monitoring.enable_metrics_collection', true),
-            'metrics_retention_days' => config('monitoring.metrics_retention_days', 30)
+        $this->initializeMetrics();
+    }
+
+    /**
+     * Initialize performance metrics
+     */
+    protected function initializeMetrics(): void
+    {
+        $this->performanceMetrics = [
+            'page_load_times' => [],
+            'api_response_times' => [],
+            'memory_usage' => [],
+            'database_query_times' => [],
+            'cache_hit_ratios' => [],
+            'error_rates' => [],
+            'throughput' => [],
         ];
     }
 
     /**
-     * Monitor request performance
+     * Record page load time
      */
-    public function monitorRequest(Request $request, callable $callback): array
+    public function recordPageLoadTime(string $route, float $loadTime): void
     {
-        $startTime = microtime(true);
-        $startMemory = memory_get_usage(true);
-        $startPeakMemory = memory_get_peak_usage(true);
-        
-        $metrics = [
-            'request_id' => uniqid('req_'),
-            'method' => $request->method(),
-            'url' => $request->fullUrl(),
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'user_id' => $request->user()?->id,
-            'start_time' => $startTime,
-            'start_memory' => $startMemory,
-            'start_peak_memory' => $startPeakMemory
+        $this->performanceMetrics['page_load_times'][] = [
+            'route' => $route,
+            'load_time' => $loadTime,
+            'timestamp' => now(),
         ];
-        
-        try {
-            $result = $callback();
-            $success = true;
-            $error = null;
-        } catch (\Exception $e) {
-            $result = null;
-            $success = false;
-            $error = $e->getMessage();
+
+        // Log if exceeds threshold
+        if ($loadTime > $this->performanceThresholds['page_load_time']) {
+            Log::warning('Page load time exceeded threshold', [
+                'route' => $route,
+                'load_time' => $loadTime,
+                'threshold' => $this->performanceThresholds['page_load_time'],
+            ]);
         }
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('page_load_time', $route, $loadTime);
+    }
+
+    /**
+     * Record API response time
+     */
+    public function recordApiResponseTime(string $endpoint, float $responseTime): void
+    {
+        $this->performanceMetrics['api_response_times'][] = [
+            'endpoint' => $endpoint,
+                'response_time' => $responseTime,
+            'timestamp' => now(),
+        ];
+
+        // Log if exceeds threshold
+        if ($responseTime > $this->performanceThresholds['api_response_time']) {
+            Log::warning('API response time exceeded threshold', [
+                'endpoint' => $endpoint,
+                'response_time' => $responseTime,
+                'threshold' => $this->performanceThresholds['api_response_time'],
+            ]);
+        }
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('api_response_time', $endpoint, $responseTime);
+    }
+
+    /**
+     * Record memory usage
+     */
+    public function recordMemoryUsage(float $memoryUsage): void
+    {
+        $memoryPercentage = ($memoryUsage / memory_get_peak_usage(true)) * 100;
         
-        $endTime = microtime(true);
-        $endMemory = memory_get_usage(true);
-        $endPeakMemory = memory_get_peak_usage(true);
-        
-        $metrics = array_merge($metrics, [
-            'success' => $success,
-            'execution_time' => ($endTime - $startTime) * 1000,
-            'memory_used' => $endMemory - $startMemory,
-            'peak_memory' => $endPeakMemory,
-            'end_time' => $endTime,
+        $this->performanceMetrics['memory_usage'][] = [
+            'memory_usage' => $memoryUsage,
+            'memory_percentage' => $memoryPercentage,
+            'timestamp' => now(),
+        ];
+
+        // Log if exceeds threshold
+        if ($memoryPercentage > $this->performanceThresholds['memory_usage']) {
+            Log::warning('Memory usage exceeded threshold', [
+                'memory_usage' => $memoryUsage,
+                'memory_percentage' => $memoryPercentage,
+                'threshold' => $this->performanceThresholds['memory_usage'],
+            ]);
+        }
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('memory_usage', 'system', $memoryPercentage);
+    }
+
+    /**
+     * Record database query time
+     */
+    public function recordDatabaseQueryTime(string $query, float $queryTime): void
+    {
+        $this->performanceMetrics['database_query_times'][] = [
+            'query' => $query,
+                'query_time' => $queryTime,
+            'timestamp' => now(),
+        ];
+
+        // Log if exceeds threshold
+        if ($queryTime > $this->performanceThresholds['database_query_time']) {
+            Log::warning('Database query time exceeded threshold', [
+                'query' => $query,
+                'query_time' => $queryTime,
+                'threshold' => $this->performanceThresholds['database_query_time'],
+            ]);
+        }
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('database_query_time', $query, $queryTime);
+    }
+
+    /**
+     * Record cache hit ratio
+     */
+    public function recordCacheHitRatio(string $cacheKey, bool $hit): void
+    {
+        $this->performanceMetrics['cache_hit_ratios'][] = [
+            'cache_key' => $cacheKey,
+            'hit' => $hit,
+            'timestamp' => now(),
+        ];
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('cache_hit_ratio', $cacheKey, $hit ? 100 : 0);
+    }
+
+    /**
+     * Record error rate
+     */
+    public function recordError(string $error, string $context = ''): void
+    {
+        $this->performanceMetrics['error_rates'][] = [
             'error' => $error,
-            'response_size' => $result ? strlen(json_encode($result)) : 0
-        ]);
-        
-        // Store metrics
-        if ($this->monitoringConfig['enable_metrics_collection']) {
-            $this->storeMetrics($metrics);
-        }
-        
-        // Check for performance issues
-        $this->checkPerformanceIssues($metrics);
-        
-        return $metrics;
-    }
-
-    /**
-     * Monitor database queries
-     */
-    public function monitorQueries(callable $callback): array
-    {
-        $startTime = microtime(true);
-        $queryCount = 0;
-        $slowQueries = [];
-        
-        // Enable query logging
-        DB::enableQueryLog();
-        
-        try {
-            $result = $callback();
-            $success = true;
-            $error = null;
-        } catch (\Exception $e) {
-            $result = null;
-            $success = false;
-            $error = $e->getMessage();
-        }
-        
-        $endTime = microtime(true);
-        $queries = DB::getQueryLog();
-        DB::disableQueryLog();
-        
-        $totalExecutionTime = 0;
-        foreach ($queries as $query) {
-            $queryCount++;
-            $executionTime = $query['time'];
-            $totalExecutionTime += $executionTime;
-            
-            if ($executionTime > $this->monitoringConfig['slow_query_threshold']) {
-                $slowQueries[] = [
-                    'query' => $query['query'],
-                    'bindings' => $query['bindings'],
-                    'time' => $executionTime
-                ];
-            }
-        }
-        
-        $metrics = [
-            'success' => $success,
-            'query_count' => $queryCount,
-            'total_execution_time' => $totalExecutionTime,
-            'average_execution_time' => $queryCount > 0 ? $totalExecutionTime / $queryCount : 0,
-            'slow_queries' => $slowQueries,
-            'slow_query_count' => count($slowQueries),
-            'error' => $error
+            'context' => $context,
+            'timestamp' => now(),
         ];
-        
-        // Store query metrics
-        if ($this->monitoringConfig['enable_metrics_collection']) {
-            $this->storeQueryMetrics($metrics);
-        }
-        
-        return $metrics;
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('error_rate', $context, 1);
     }
 
     /**
-     * Monitor cache performance
+     * Record throughput
      */
-    public function monitorCache(callable $callback): array
+    public function recordThroughput(string $operation, int $count): void
     {
-        $startTime = microtime(true);
-        $cacheHits = 0;
-        $cacheMisses = 0;
-        
-        try {
-            $result = $callback();
-            $success = true;
-            $error = null;
-        } catch (\Exception $e) {
-            $result = null;
-            $success = false;
-            $error = $e->getMessage();
-        }
-        
-        $endTime = microtime(true);
-        
-        // Get cache statistics
-        $cacheStats = $this->getCacheStatistics();
-        
-        $metrics = [
-            'success' => $success,
-            'execution_time' => ($endTime - $startTime) * 1000,
-            'cache_hits' => $cacheHits,
-            'cache_misses' => $cacheMisses,
-            'cache_hit_rate' => $cacheStats['hit_rate'] ?? 0,
-            'cache_size' => $cacheStats['cache_size'] ?? 0,
-            'error' => $error
+        $this->performanceMetrics['throughput'][] = [
+            'operation' => $operation,
+            'count' => $count,
+            'timestamp' => now(),
         ];
-        
-        // Store cache metrics
-        if ($this->monitoringConfig['enable_metrics_collection']) {
-            $this->storeCacheMetrics($metrics);
-        }
-        
-        return $metrics;
+
+        // Store in cache for real-time monitoring
+        $this->storeMetric('throughput', $operation, $count);
     }
 
     /**
-     * Get system performance metrics
+     * Store metric in cache for real-time monitoring
      */
-    public function getSystemMetrics(): array
+    protected function storeMetric(string $type, string $key, mixed $value): void
+    {
+        $cacheKey = "performance_metric_{$type}_{$key}_" . now()->format('Y-m-d-H-i');
+        Cache::put($cacheKey, $value, 300); // 5 minutes
+    }
+
+    /**
+     * Get performance statistics
+     */
+    public function getPerformanceStats(): array
+    {
+        $stats = [];
+
+        // Page load times
+        $pageLoadTimes = collect($this->performanceMetrics['page_load_times'])
+            ->pluck('load_time')
+            ->toArray();
+        
+        if (!empty($pageLoadTimes)) {
+            $stats['page_load_time'] = [
+                'avg' => round(array_sum($pageLoadTimes) / count($pageLoadTimes), 2),
+                'min' => min($pageLoadTimes),
+                'max' => max($pageLoadTimes),
+                'p95' => $this->calculatePercentile($pageLoadTimes, 95),
+                'count' => count($pageLoadTimes),
+            ];
+        }
+
+        // API response times
+        $apiResponseTimes = collect($this->performanceMetrics['api_response_times'])
+            ->pluck('response_time')
+            ->toArray();
+        
+        if (!empty($apiResponseTimes)) {
+            $stats['api_response_time'] = [
+                'avg' => round(array_sum($apiResponseTimes) / count($apiResponseTimes), 2),
+                'min' => min($apiResponseTimes),
+                'max' => max($apiResponseTimes),
+                'p95' => $this->calculatePercentile($apiResponseTimes, 95),
+                'count' => count($apiResponseTimes),
+            ];
+        }
+
+        // Memory usage
+        $memoryUsage = collect($this->performanceMetrics['memory_usage'])
+            ->pluck('memory_percentage')
+            ->toArray();
+        
+        if (!empty($memoryUsage)) {
+            $stats['memory_usage'] = [
+                'avg' => round(array_sum($memoryUsage) / count($memoryUsage), 2),
+                'min' => min($memoryUsage),
+                'max' => max($memoryUsage),
+                'current' => memory_get_usage(true),
+                'peak' => memory_get_peak_usage(true),
+            ];
+        }
+
+        // Database query times
+        $queryTimes = collect($this->performanceMetrics['database_query_times'])
+            ->pluck('query_time')
+            ->toArray();
+        
+        if (!empty($queryTimes)) {
+            $stats['database_query_time'] = [
+                'avg' => round(array_sum($queryTimes) / count($queryTimes), 2),
+                'min' => min($queryTimes),
+                'max' => max($queryTimes),
+                'p95' => $this->calculatePercentile($queryTimes, 95),
+                'count' => count($queryTimes),
+            ];
+        }
+
+        // Cache hit ratios
+        $cacheHitRatios = collect($this->performanceMetrics['cache_hit_ratios'])
+            ->pluck('hit')
+            ->toArray();
+        
+        if (!empty($cacheHitRatios)) {
+            $hitCount = array_sum($cacheHitRatios);
+            $totalCount = count($cacheHitRatios);
+            $stats['cache_hit_ratio'] = [
+                'hit_ratio' => round(($hitCount / $totalCount) * 100, 2),
+                'hit_count' => $hitCount,
+                'miss_count' => $totalCount - $hitCount,
+                'total_count' => $totalCount,
+            ];
+        }
+
+        // Error rates
+        $errorCount = count($this->performanceMetrics['error_rates']);
+        $totalRequests = $errorCount + count($this->performanceMetrics['page_load_times']) + count($this->performanceMetrics['api_response_times']);
+        
+        if ($totalRequests > 0) {
+            $stats['error_rate'] = [
+                'error_count' => $errorCount,
+                'total_requests' => $totalRequests,
+                'error_percentage' => round(($errorCount / $totalRequests) * 100, 2),
+            ];
+        }
+
+        // Throughput
+        $throughput = collect($this->performanceMetrics['throughput'])
+            ->groupBy('operation')
+            ->map(function ($items) {
+                return $items->sum('count');
+            })
+            ->toArray();
+        
+        if (!empty($throughput)) {
+            $stats['throughput'] = $throughput;
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Get performance recommendations
+     */
+    public function getPerformanceRecommendations(): array
+    {
+        $recommendations = [];
+        $stats = $this->getPerformanceStats();
+
+        // Page load time recommendations
+        if (isset($stats['page_load_time']) && $stats['page_load_time']['avg'] > $this->performanceThresholds['page_load_time']) {
+            $recommendations[] = [
+                'type' => 'page_load_time',
+                'priority' => 'high',
+                'message' => 'Page load time is above threshold. Consider optimizing assets, enabling caching, or reducing database queries.',
+                'current_value' => $stats['page_load_time']['avg'],
+                'threshold' => $this->performanceThresholds['page_load_time'],
+            ];
+        }
+
+        // API response time recommendations
+        if (isset($stats['api_response_time']) && $stats['api_response_time']['avg'] > $this->performanceThresholds['api_response_time']) {
+            $recommendations[] = [
+                'type' => 'api_response_time',
+                'priority' => 'high',
+                'message' => 'API response time is above threshold. Consider optimizing queries, adding indexes, or implementing caching.',
+                'current_value' => $stats['api_response_time']['avg'],
+                'threshold' => $this->performanceThresholds['api_response_time'],
+            ];
+        }
+
+        // Memory usage recommendations
+        if (isset($stats['memory_usage']) && $stats['memory_usage']['avg'] > $this->performanceThresholds['memory_usage']) {
+            $recommendations[] = [
+                'type' => 'memory_usage',
+                'priority' => 'medium',
+                'message' => 'Memory usage is above threshold. Consider optimizing memory usage, reducing object creation, or implementing garbage collection.',
+                'current_value' => $stats['memory_usage']['avg'],
+                'threshold' => $this->performanceThresholds['memory_usage'],
+            ];
+        }
+
+        // Database query time recommendations
+        if (isset($stats['database_query_time']) && $stats['database_query_time']['avg'] > $this->performanceThresholds['database_query_time']) {
+            $recommendations[] = [
+                'type' => 'database_query_time',
+                'priority' => 'high',
+                'message' => 'Database query time is above threshold. Consider adding indexes, optimizing queries, or implementing query caching.',
+                'current_value' => $stats['database_query_time']['avg'],
+                'threshold' => $this->performanceThresholds['database_query_time'],
+            ];
+        }
+
+        // Cache hit ratio recommendations
+        if (isset($stats['cache_hit_ratio']) && $stats['cache_hit_ratio']['hit_ratio'] < $this->performanceThresholds['cache_hit_ratio']) {
+            $recommendations[] = [
+                'type' => 'cache_hit_ratio',
+                'priority' => 'medium',
+                'message' => 'Cache hit ratio is below threshold. Consider implementing more caching strategies or optimizing cache keys.',
+                'current_value' => $stats['cache_hit_ratio']['hit_ratio'],
+                'threshold' => $this->performanceThresholds['cache_hit_ratio'],
+            ];
+        }
+
+        return $recommendations;
+    }
+
+    /**
+     * Get performance thresholds
+     */
+    public function getPerformanceThresholds(): array
+    {
+        return $this->performanceThresholds;
+    }
+
+    /**
+     * Set performance thresholds
+     */
+    public function setPerformanceThresholds(array $thresholds): void
+    {
+        $this->performanceThresholds = array_merge($this->performanceThresholds, $thresholds);
+    }
+
+    /**
+     * Calculate percentile
+     */
+    protected function calculatePercentile(array $values, int $percentile): float
+    {
+        sort($values);
+        $index = ($percentile / 100) * (count($values) - 1);
+        $lower = floor($index);
+        $upper = ceil($index);
+        
+        if ($lower === $upper) {
+            return $values[$lower];
+        }
+        
+        $weight = $index - $lower;
+        return $values[$lower] * (1 - $weight) + $values[$upper] * $weight;
+    }
+
+    /**
+     * Get real-time performance metrics
+     */
+    public function getRealTimeMetrics(): array
     {
         $metrics = [];
         
-        try {
-            // Memory usage
-            $metrics['memory'] = [
-                'current_usage' => memory_get_usage(true),
-                'current_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
-                'peak_usage' => memory_get_peak_usage(true),
-                'peak_usage_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
-                'limit' => ini_get('memory_limit')
-            ];
-            
-            // CPU usage (if available)
-            if (function_exists('sys_getloadavg')) {
-                $load = sys_getloadavg();
-                $metrics['cpu'] = [
-                    'load_1min' => $load[0],
-                    'load_5min' => $load[1],
-                    'load_15min' => $load[2]
+        // Get cached metrics from last 5 minutes
+        $cacheKeys = Cache::get('performance_metrics_keys', []);
+        
+        foreach ($cacheKeys as $key) {
+            $value = Cache::get($key);
+            if ($value !== null) {
+                $metrics[] = [
+                    'key' => $key,
+                    'value' => $value,
+                    'timestamp' => now(),
                 ];
             }
-            
-            // Database connections
-            $dbStats = $this->getDatabaseStatistics();
-            $metrics['database'] = $dbStats;
-            
-            // Cache statistics
-            $cacheStats = $this->getCacheStatistics();
-            $metrics['cache'] = $cacheStats;
-            
-            // Disk usage
-            $diskStats = $this->getDiskStatistics();
-            $metrics['disk'] = $diskStats;
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to get system metrics', [
-                'error' => $e->getMessage()
-            ]);
-            $metrics['error'] = $e->getMessage();
         }
         
         return $metrics;
     }
 
     /**
-     * Get performance trends
+     * Clear performance metrics
      */
-    public function getPerformanceTrends(int $days = 7): array
+    public function clearMetrics(): void
     {
-        $trends = [];
-        
-        try {
-            // Get request metrics trends
-            $trends['requests'] = $this->getRequestTrends($days);
-            
-            // Get query metrics trends
-            $trends['queries'] = $this->getQueryTrends($days);
-            
-            // Get cache metrics trends
-            $trends['cache'] = $this->getCacheTrends($days);
-            
-            // Get error trends
-            $trends['errors'] = $this->getErrorTrends($days);
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to get performance trends', [
-                'error' => $e->getMessage()
-            ]);
-            $trends['error'] = $e->getMessage();
-        }
-        
-        return $trends;
+        $this->initializeMetrics();
+        Cache::forget('performance_metrics_keys');
     }
 
     /**
-     * Get performance alerts
+     * Export performance data
      */
-    public function getPerformanceAlerts(): array
+    public function exportPerformanceData(): array
     {
-        $alerts = [];
-        
-        try {
-            $systemMetrics = $this->getSystemMetrics();
-            
-            // Memory alerts
-            if ($systemMetrics['memory']['current_usage_mb'] > 100) {
-                $alerts[] = [
-                    'type' => 'memory',
-                    'level' => 'warning',
-                    'message' => 'High memory usage detected',
-                    'value' => $systemMetrics['memory']['current_usage_mb'] . 'MB'
-                ];
-            }
-            
-            // Database alerts
-            if ($systemMetrics['database']['slow_queries'] > 10) {
-                $alerts[] = [
-                    'type' => 'database',
-                    'level' => 'warning',
-                    'message' => 'High number of slow queries',
-                    'value' => $systemMetrics['database']['slow_queries']
-                ];
-            }
-            
-            // Cache alerts
-            if ($systemMetrics['cache']['hit_rate'] < $this->monitoringConfig['cache_hit_rate_threshold']) {
-                $alerts[] = [
-                    'type' => 'cache',
-                    'level' => 'warning',
-                    'message' => 'Low cache hit rate',
-                    'value' => $systemMetrics['cache']['hit_rate'] . '%'
-                ];
-            }
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to get performance alerts', [
-                'error' => $e->getMessage()
-            ]);
-            $alerts[] = [
-                'type' => 'system',
-                'level' => 'error',
-                'message' => 'Failed to get performance alerts',
-                'value' => $e->getMessage()
-            ];
-        }
-        
-        return $alerts;
-    }
-
-    /**
-     * Store metrics
-     */
-    private function storeMetrics(array $metrics): void
-    {
-        try {
-            $key = 'metrics:request:' . date('Y-m-d-H') . ':' . $metrics['request_id'];
-            Cache::put($key, $metrics, $this->monitoringConfig['metrics_retention_days'] * 24 * 3600);
-        } catch (\Exception $e) {
-            Log::error('Failed to store metrics', [
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Store query metrics
-     */
-    private function storeQueryMetrics(array $metrics): void
-    {
-        try {
-            $key = 'metrics:query:' . date('Y-m-d-H') . ':' . uniqid();
-            Cache::put($key, $metrics, $this->monitoringConfig['metrics_retention_days'] * 24 * 3600);
-        } catch (\Exception $e) {
-            Log::error('Failed to store query metrics', [
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Store cache metrics
-     */
-    private function storeCacheMetrics(array $metrics): void
-    {
-        try {
-            $key = 'metrics:cache:' . date('Y-m-d-H') . ':' . uniqid();
-            Cache::put($key, $metrics, $this->monitoringConfig['metrics_retention_days'] * 24 * 3600);
-        } catch (\Exception $e) {
-            Log::error('Failed to store cache metrics', [
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Check for performance issues
-     */
-    private function checkPerformanceIssues(array $metrics): void
-    {
-        $issues = [];
-        
-        // Check execution time
-        if ($metrics['execution_time'] > $this->monitoringConfig['response_time_threshold']) {
-            $issues[] = 'Slow response time: ' . $metrics['execution_time'] . 'ms';
-        }
-        
-        // Check memory usage
-        if ($metrics['memory_used'] > $this->monitoringConfig['memory_threshold']) {
-            $issues[] = 'High memory usage: ' . round($metrics['memory_used'] / 1024 / 1024, 2) . 'MB';
-        }
-        
-        // Log issues
-        if (!empty($issues)) {
-            Log::warning('Performance issues detected', [
-                'request_id' => $metrics['request_id'],
-                'issues' => $issues,
-                'metrics' => $metrics
-            ]);
-        }
-    }
-
-    /**
-     * Get database statistics
-     */
-    private function getDatabaseStatistics(): array
-    {
-        try {
-            $stats = DB::select("SHOW STATUS LIKE 'Slow_queries'");
-            $slowQueries = $stats[0]->Value ?? 0;
-            
-            $stats = DB::select("SHOW STATUS LIKE 'Queries'");
-            $totalQueries = $stats[0]->Value ?? 0;
-            
-            return [
-                'slow_queries' => $slowQueries,
-                'total_queries' => $totalQueries,
-                'slow_query_rate' => $totalQueries > 0 ? ($slowQueries / $totalQueries) * 100 : 0
-            ];
-        } catch (\Exception $e) {
-            return ['error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Get cache statistics
-     */
-    private function getCacheStatistics(): array
-    {
-        try {
-            if (config('cache.default') === 'redis') {
-                $redis = Redis::connection();
-                $info = $redis->info();
-                
-                $hits = $info['keyspace_hits'] ?? 0;
-                $misses = $info['keyspace_misses'] ?? 0;
-                $total = $hits + $misses;
-                
-                return [
-                    'hit_rate' => $total > 0 ? ($hits / $total) * 100 : 0,
-                    'cache_size' => $redis->dbsize(),
-                    'used_memory' => $info['used_memory'] ?? 0
-                ];
-            }
-            
-            return ['hit_rate' => 0, 'cache_size' => 0];
-        } catch (\Exception $e) {
-            return ['error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Get disk statistics
-     */
-    private function getDiskStatistics(): array
-    {
-        try {
-            $diskTotal = disk_total_space('/');
-            $diskFree = disk_free_space('/');
-            $diskUsed = $diskTotal - $diskFree;
-            
-            return [
-                'total' => $diskTotal,
-                'used' => $diskUsed,
-                'free' => $diskFree,
-                'usage_percent' => $diskTotal > 0 ? ($diskUsed / $diskTotal) * 100 : 0
-            ];
-        } catch (\Exception $e) {
-            return ['error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Get request trends
-     */
-    private function getRequestTrends(int $days): array
-    {
-        // Implementation for getting request trends from stored metrics
-        return [];
-    }
-
-    /**
-     * Get query trends
-     */
-    private function getQueryTrends(int $days): array
-    {
-        // Implementation for getting query trends from stored metrics
-        return [];
-    }
-
-    /**
-     * Get cache trends
-     */
-    private function getCacheTrends(int $days): array
-    {
-        // Implementation for getting cache trends from stored metrics
-        return [];
-    }
-
-    /**
-     * Get error trends
-     */
-    private function getErrorTrends(int $days): array
-    {
-        // Implementation for getting error trends from stored metrics
-        return [];
+        return [
+            'timestamp' => now(),
+            'metrics' => $this->performanceMetrics,
+            'stats' => $this->getPerformanceStats(),
+            'recommendations' => $this->getPerformanceRecommendations(),
+            'thresholds' => $this->getPerformanceThresholds(),
+        ];
     }
 }

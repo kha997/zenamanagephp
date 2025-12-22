@@ -1,0 +1,47 @@
+import { test, expect } from '@playwright/test';
+import { AuthHelper } from '../helpers/auth-helper';
+
+test.describe('Debug Task Navigation', () => {
+  test('should debug task list to detail navigation', async ({ page }) => {
+    const authHelper = new AuthHelper(page);
+    await authHelper.login('uat-pm@test.com', 'password');
+
+    // Navigate to task list
+    await page.goto('/app/tasks');
+    await page.waitForLoadState('networkidle');
+
+    // Check if task items are visible
+    const taskItems = await page.locator('[data-testid="task-item"]').count();
+    console.log('Task items count:', taskItems);
+
+    if (taskItems > 0) {
+      // Click first task
+      const firstTask = page.locator('[data-testid="task-item"]').first();
+      await firstTask.click();
+      
+      // Wait for navigation
+      await page.waitForLoadState('networkidle');
+      
+      // Check if we're on task detail page
+      const currentUrl = page.url();
+      console.log('Current URL:', currentUrl);
+      
+      // Check if attachment manager is visible
+      const attachmentManagerVisible = await page.locator('[data-testid="attachment-manager"]').isVisible();
+      console.log('Attachment manager visible:', attachmentManagerVisible);
+      
+      // Check Alpine.js state
+      const alpineState = await page.evaluate(() => {
+        const component = Alpine.$data(document.querySelector('[x-data*="taskDetail"]'));
+        return {
+          taskId: component?.taskId,
+          allAttachments: component?.allAttachments?.length || 0,
+          showUploadForm: component?.showUploadForm
+        };
+      });
+      console.log('Alpine state:', alpineState);
+    } else {
+      console.log('No task items found');
+    }
+  });
+});

@@ -2,19 +2,102 @@
 
 namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\User;
+use Carbon\Carbon;
 
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
-use App\Models\{Project, Task, User};
-use Carbon\Carbon;
+use App\Services\RealData\RealActivityService;
 
 class DashboardController extends Controller
 {
     public function index(): View
     {
-        return view('app.dashboard');
+        // Get user from Auth (proper Laravel authentication)
+        $user = Auth::user();
+        if (!$user) {
+            // Redirect to login if not authenticated
+            return redirect()->route('login');
+        }
+        
+        $tenantId = $user->tenant_id;
+        
+        // Get dashboard data for new standardized dashboard
+        $totalProjects = Project::where('tenant_id', $tenantId)->count();
+        $totalTasks = Task::where('tenant_id', $tenantId)->count();
+        $totalTeamMembers = User::where('tenant_id', $tenantId)->count();
+        $budgetUsed = Project::where('tenant_id', $tenantId)->sum('budget_total') ?? 0;
+        
+        // Calculate changes (mock data for now)
+        $projectsChange = $this->calculateChange('projects', (string)$tenantId, 30);
+        $tasksChange = $this->calculateChange('tasks', (string)$tenantId, 30);
+        $teamChange = $this->calculateChange('team', (string)$tenantId, 30);
+        $budgetChange = $this->calculateChange('budget', (string)$tenantId, 30);
+        
+        // Get recent data
+        $recentProjects = Project::where('tenant_id', $tenantId)
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get();
+            
+        $recentTasks = Task::where('tenant_id', $tenantId)
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get();
+            
+        $teamMembers = User::where('tenant_id', $tenantId)
+            ->orderBy('last_login_at', 'desc')
+            ->limit(10)
+            ->get();
+            
+        // Get recent activity
+        $recentActivity = $this->getRecentActivity($tenantId);
+        
+        // Get alerts
+        $alerts = $this->getAlerts($tenantId);
+        $systemAlerts = collect($alerts)->map(function($alert) {
+            return [
+                'type' => isset($alert['priority']) && $alert['priority'] === 'high' ? 'error' : 'warning',
+                'title' => isset($alert['type']) ? ucfirst($alert['type']) : 'Alert',
+                'message' => $alert['message'] ?? 'No message'
+            ];
+        });
+        
+        // Mock chart data
+        $projectProgressData = [
+            ['label' => 'Completed', 'value' => 60],
+            ['label' => 'In Progress', 'value' => 30],
+            ['label' => 'Not Started', 'value' => 10]
+        ];
+        
+        $taskCompletionData = [
+            ['date' => '2024-01-01', 'completed' => 5, 'total' => 10],
+            ['date' => '2024-01-02', 'completed' => 8, 'total' => 12],
+            ['date' => '2024-01-03', 'completed' => 12, 'total' => 15],
+            ['date' => '2024-01-04', 'completed' => 15, 'total' => 18],
+            ['date' => '2024-01-05', 'completed' => 18, 'total' => 20]
+        ];
+        
+        return view('app.dashboard.index', compact(
+            'totalProjects',
+            'totalTasks', 
+            'totalTeamMembers',
+            'budgetUsed',
+            'projectsChange',
+            'tasksChange',
+            'teamChange',
+            'budgetChange',
+            'recentProjects',
+            'recentTasks',
+            'teamMembers',
+            'recentActivity',
+            'systemAlerts',
+            'projectProgressData',
+            'taskCompletionData'
+        ));
     }
 
     public function metrics(Request $request): JsonResponse
@@ -38,7 +121,7 @@ class DashboardController extends Controller
             
             $overdueTasks = Task::whereHas('project', function($q) use ($tenantId) {
                 $q->where('tenant_id', $tenantId);
-            })->where('due_date', '<', now())
+            })->where('end_date', '<', now())
               ->whereNotIn('status', ['completed', 'cancelled'])
               ->count();
               
@@ -91,9 +174,16 @@ class DashboardController extends Controller
         $changes = [
             'projects' => ['+2', '+1', '+3', '-1'],
             'tasks' => ['+5', '+8', '+3', '+12'],
+            'team' => ['+1', '+2', '0', '+1'],
+            'budget' => ['+5%', '+2%', '+8%', '+3%'],
             'overdue' => ['-1', '+2', '-3', '0'],
             'schedule' => ['+3', '+1', '+2', '+4']
         ];
+        
+        // Guard against undefined keys
+        if (!isset($changes[$type])) {
+            return '0';
+        }
         
         return $changes[$type][array_rand($changes[$type])];
     }
@@ -105,7 +195,7 @@ class DashboardController extends Controller
         // Check for overdue tasks
         $overdueCount = Task::whereHas('project', function($q) use ($tenantId) {
             $q->where('tenant_id', $tenantId);
-        })->where('due_date', '<', now())
+        })->where('end_date', '<', now())
           ->whereNotIn('status', ['completed', 'cancelled'])
           ->count();
           
@@ -138,36 +228,7 @@ class DashboardController extends Controller
 
     private function getRecentActivity(string $tenantId): array
     {
-        // Mock activity data - implement real activity log later
-        return [
-            [
-                'id' => 1,
-                'description' => 'New task created in Project Alpha',
-                'time' => '5 minutes ago',
-                'user' => 'John Doe',
-                'type' => 'task_created'
-            ],
-            [
-                'id' => 2,
-                'description' => 'Project Beta status updated to In Progress',
-                'time' => '15 minutes ago',
-                'user' => 'Sarah Smith',
-                'type' => 'project_updated'
-            ],
-            [
-                'id' => 3,
-                'description' => 'Document uploaded to Project Gamma',
-                'time' => '1 hour ago',
-                'user' => 'Mike Johnson',
-                'type' => 'document_uploaded'
-            ],
-            [
-                'id' => 4,
-                'description' => 'Task completed in Project Delta',
-                'time' => '2 hours ago',
-                'user' => 'Lisa Brown',
-                'type' => 'task_completed'
-            ]
-        ];
+        $realActivityService = app(RealActivityService::class);
+        return $realActivityService->getRecentActivities($tenantId, 10);
     }
 }

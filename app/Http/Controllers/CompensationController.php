@@ -9,7 +9,7 @@ use Src\Compensation\Resources\CompensationPreviewResource;
 use Src\Compensation\Resources\TaskAssignmentResource;
 use Src\CoreProject\Models\Task;
 use Src\Foundation\Helpers\AuthHelper;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
@@ -54,7 +54,7 @@ class CompensationController extends Controller
                 ->first();
 
             if (!$task) {
-                return JSendResponse::error('Task không tồn tại trong project này', 404);
+                return ApiResponse::error('Task không tồn tại trong project này', 404);
             }
 
             // Đồng bộ assignments
@@ -64,12 +64,12 @@ class CompensationController extends Controller
                 $this->resolveActorId()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 TaskAssignmentResource::collection($assignments),
                 'Task assignments đã được đồng bộ thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể đồng bộ task assignments: ' . $e->getMessage());
+            return ApiResponse::error('Không thể đồng bộ task assignments: ' . $e->getMessage());
         }
     }
 
@@ -87,7 +87,7 @@ class CompensationController extends Controller
             $contractId = $request->get('contract_id');
             
             if (!$contractId) {
-                return JSendResponse::error('Contract ID là bắt buộc', 400);
+                return ApiResponse::error('Contract ID là bắt buộc', 400);
             }
 
             // Kiểm tra contract tồn tại và thuộc project
@@ -96,7 +96,7 @@ class CompensationController extends Controller
                 ->first();
 
             if (!$contract) {
-                return JSendResponse::error('Contract không tồn tại trong project này', 404);
+                return ApiResponse::error('Contract không tồn tại trong project này', 404);
             }
 
             // Tạo preview compensation
@@ -106,12 +106,12 @@ class CompensationController extends Controller
                 $this->resolveActorId()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 new CompensationPreviewResource($preview),
                 'Preview compensation đã được tạo thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể tạo preview compensation: ' . $e->getMessage());
+            return ApiResponse::error('Không thể tạo preview compensation: ' . $e->getMessage());
         }
     }
 
@@ -136,12 +136,12 @@ class CompensationController extends Controller
                 ->first();
 
             if (!$contract) {
-                return JSendResponse::error('Contract không tồn tại trong project này', 404);
+                return ApiResponse::error('Contract không tồn tại trong project này', 404);
             }
 
             // Kiểm tra contract có thể apply compensation không
             if (!$contract->canApplyCompensation()) {
-                return JSendResponse::error('Contract không thể áp dụng compensation ở trạng thái hiện tại', 403);
+                return ApiResponse::error('Contract không thể áp dụng compensation ở trạng thái hiện tại', 403);
             }
 
             // Áp dụng contract
@@ -151,12 +151,12 @@ class CompensationController extends Controller
                 $this->resolveActorId()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 $result,
                 'Contract đã được áp dụng thành công cho compensation'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể áp dụng contract: ' . $e->getMessage());
+            return ApiResponse::error('Không thể áp dụng contract: ' . $e->getMessage());
         }
     }
 
@@ -178,9 +178,9 @@ class CompensationController extends Controller
                 (int) $request->get('per_page', 15)
             );
 
-            return JSendResponse::success($compensations);
+            return ApiResponse::success($compensations);
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách compensation: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy danh sách compensation: ' . $e->getMessage());
         }
     }
 
@@ -202,16 +202,16 @@ class CompensationController extends Controller
                 ->first();
 
             if (!$task) {
-                return JSendResponse::error('Task không tồn tại trong project này', 404);
+                return ApiResponse::error('Task không tồn tại trong project này', 404);
             }
 
             $compensationData = $this->compensationService->getTaskCompensationDetails(
                 $taskId
             );
 
-            return JSendResponse::success($compensationData);
+            return ApiResponse::success($compensationData);
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin compensation: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy thông tin compensation: ' . $e->getMessage());
         }
     }
 
@@ -242,7 +242,7 @@ class CompensationController extends Controller
                 ->first();
 
             if (!$task) {
-                return JSendResponse::error('Task không tồn tại trong project này', 404);
+                return ApiResponse::error('Task không tồn tại trong project này', 404);
             }
 
             $compensation = $this->compensationService->updateTaskCompensation(
@@ -251,12 +251,12 @@ class CompensationController extends Controller
                 $this->resolveActorId()
             );
 
-            return JSendResponse::success(
+            return ApiResponse::success(
                 $compensation,
                 'Compensation đã được cập nhật thành công'
             );
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể cập nhật compensation: ' . $e->getMessage());
+            return ApiResponse::error('Không thể cập nhật compensation: ' . $e->getMessage());
         }
     }
 
@@ -272,9 +272,9 @@ class CompensationController extends Controller
         try {
             $stats = $this->compensationService->getCompensationStats($projectId);
 
-            return JSendResponse::success($stats);
+            return ApiResponse::success($stats);
         } catch (Exception $e) {
-            return JSendResponse::error('Không thể lấy thống kê compensation: ' . $e->getMessage());
+            return ApiResponse::error('Không thể lấy thống kê compensation: ' . $e->getMessage());
         }
     }
 

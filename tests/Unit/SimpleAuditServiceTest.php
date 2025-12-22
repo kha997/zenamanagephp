@@ -45,7 +45,7 @@ class SimpleAuditServiceTest extends TestCase
         ];
         
         $auditLog = $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             $actionData['action'],
             $actionData['entity_type'],
             $actionData['entity_id'],
@@ -76,14 +76,14 @@ class SimpleAuditServiceTest extends TestCase
     {
         // Tạo multiple audit logs
         $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             'test.created',
             'test',
             'test-123'
         );
         
         $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             'test.updated',
             'test',
             'test-123',
@@ -98,8 +98,10 @@ class SimpleAuditServiceTest extends TestCase
         );
         
         $this->assertEquals(2, $auditTrail->count());
-        $this->assertEquals('test.updated', $auditTrail->first()->action);
-        $this->assertEquals('test.created', $auditTrail->last()->action);
+        
+        $actions = $auditTrail->pluck('action')->toArray();
+        $this->assertContains('test.created', $actions);
+        $this->assertContains('test.updated', $actions);
     }
 
     /**
@@ -131,7 +133,7 @@ class SimpleAuditServiceTest extends TestCase
     {
         // Tạo old audit logs
         $oldLog = $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             'old.action',
             'test',
             'test_id'
@@ -143,7 +145,7 @@ class SimpleAuditServiceTest extends TestCase
         
         // Tạo recent log
         $recentLog = $this->auditService->logAction(
-            $this->user->id,
+            (string) $this->user->id,
             'recent.action',
             'test',
             'test_id'

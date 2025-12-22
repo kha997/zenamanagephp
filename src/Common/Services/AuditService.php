@@ -142,7 +142,7 @@ class AuditService
 
         $filtered = [];
         foreach ($data as $key => $value) {
-            if (in_array(strtolower($key), self::SENSITIVE_FIELDS)) {
+            if (in_array(strtolower((string) $key), self::SENSITIVE_FIELDS)) {
                 $filtered[$key] = '[FILTERED]';
             } elseif (is_array($value)) {
                 $filtered[$key] = $this->filterSensitiveData($value);

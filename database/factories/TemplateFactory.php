@@ -1,186 +1,257 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace Database\Factories;
 
+use App\Models\Template;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\WorkTemplate\Models\Template;
+use Illuminate\Support\Str;
 
-/**
- * Factory cho Template model
- * 
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\WorkTemplate\Models\Template>
- */
 class TemplateFactory extends Factory
 {
-    /**
-     * Model được tạo bởi factory này
-     *
-     * @var string
-     */
     protected $model = Template::class;
 
-    /**
-     * Định nghĩa trạng thái mặc định của model
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
+        $categories = Template::VALID_CATEGORIES;
+        $statuses = Template::VALID_STATUSES;
+        
         return [
-            'template_name' => $this->faker->words(3, true) . ' Template',
-            'category' => $this->faker->randomElement(Template::CATEGORIES),
-            'json_body' => $this->generateValidJsonBody(),
-            'version' => 1,
-            'is_active' => true,
-            'created_by' => null,
-            'updated_by' => null,
+            'id' => Str::ulid(),
+            'tenant_id' => Tenant::factory(),
+            'name' => $this->faker->words(3, true) . ' Template',
+            'description' => $this->faker->paragraph(),
+            'category' => $this->faker->randomElement($categories),
+            'template_data' => $this->generateTemplateData(),
+            'settings' => [
+                'auto_assign' => $this->faker->boolean(),
+                'notifications' => $this->faker->boolean(),
+                'deadline_buffer' => $this->faker->numberBetween(1, 7)
+            ],
+            'status' => $this->faker->randomElement($statuses),
+            'version' => $this->faker->numberBetween(1, 5),
+            'is_public' => $this->faker->boolean(30), // 30% chance of being public
+            'is_active' => $this->faker->boolean(90), // 90% chance of being active
+            'created_by' => User::factory(),
+            'updated_by' => User::factory(),
+            'usage_count' => $this->faker->numberBetween(0, 100),
+            'tags' => $this->faker->randomElements(['urgent', 'standard', 'complex', 'simple', 'review'], $this->faker->numberBetween(1, 3)),
+            'metadata' => [
+                'source' => $this->faker->randomElement(['manual', 'imported', 'generated']),
+                'complexity' => $this->faker->randomElement(['low', 'medium', 'high']),
+                'estimated_duration' => $this->faker->numberBetween(1, 30)
+            ]
         ];
     }
 
-    /**
-     * Tạo template không hoạt động
-     */
-    public function inactive(): static
+    public function project(): Factory
     {
         return $this->state(fn (array $attributes) => [
-            'is_active' => false,
+            'category' => Template::CATEGORY_PROJECT,
+            'template_data' => [
+                'phases' => [
+                    [
+                        'name' => 'Planning',
+                        'duration_days' => 5,
+                        'tasks' => [
+                            [
+                                'name' => 'Project Setup',
+                                'description' => 'Initialize project structure',
+                                'duration_days' => 2,
+                                'priority' => 'high',
+                                'estimated_hours' => 16
+                            ],
+                            [
+                                'name' => 'Requirements Gathering',
+                                'description' => 'Collect and document requirements',
+                                'duration_days' => 3,
+                                'priority' => 'high',
+                                'estimated_hours' => 24
+                            ]
+                        ]
+                    ],
+                    [
+                        'name' => 'Development',
+                        'duration_days' => 15,
+                        'tasks' => [
+                            [
+                                'name' => 'Core Development',
+                                'description' => 'Main development work',
+                                'duration_days' => 10,
+                                'priority' => 'high',
+                                'estimated_hours' => 80
+                            ],
+                            [
+                                'name' => 'Testing',
+                                'description' => 'Quality assurance testing',
+                                'duration_days' => 5,
+                                'priority' => 'medium',
+                                'estimated_hours' => 40
+                            ]
+                        ]
+                    ]
+                ],
+                'milestones' => [
+                    [
+                        'name' => 'Project Kickoff',
+                        'date_offset' => 0,
+                        'description' => 'Project initiation milestone'
+                    ],
+                    [
+                        'name' => 'Development Complete',
+                        'date_offset' => 20,
+                        'description' => 'All development work finished'
+                    ]
+                ]
+            ]
+        ]);
+    }
+
+    public function task(): Factory
+    {
+        return $this->state(fn (array $attributes) => [
+            'category' => Template::CATEGORY_TASK,
+            'template_data' => [
+                'tasks' => [
+                    [
+                        'name' => 'Task Template',
+                        'description' => 'Standard task template',
+                        'duration_days' => 3,
+                        'priority' => 'medium',
+                        'estimated_hours' => 24,
+                        'checklist' => [
+                            'Review requirements',
+                            'Implement solution',
+                            'Test functionality',
+                            'Document changes'
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+    }
+
+    public function workflow(): Factory
+    {
+        return $this->state(fn (array $attributes) => [
+            'category' => Template::CATEGORY_WORKFLOW,
+            'template_data' => [
+                'workflow' => [
+                    'steps' => [
+                        [
+                            'name' => 'Initiation',
+                            'type' => 'start',
+                            'assignee_role' => 'pm'
+                        ],
+                        [
+                            'name' => 'Review',
+                            'type' => 'approval',
+                            'assignee_role' => 'admin'
+                        ],
+                        [
+                            'name' => 'Execution',
+                            'type' => 'task',
+                            'assignee_role' => 'engineer'
+                        ],
+                        [
+                            'name' => 'Completion',
+                            'type' => 'end',
+                            'assignee_role' => 'pm'
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+    }
+
+    public function published(): Factory
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => Template::STATUS_ACTIVE,
+            'is_active' => true
+        ]);
+    }
+
+    public function draft(): Factory
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => Template::STATUS_DRAFT,
+            'is_active' => true
+        ]);
+    }
+
+    public function archived(): Factory
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => Template::STATUS_ARCHIVED,
+            'is_active' => false
+        ]);
+    }
+
+    public function popular(): Factory
+    {
+        return $this->state(fn (array $attributes) => [
+            'usage_count' => $this->faker->numberBetween(50, 500),
+            'is_public' => true,
+            'status' => Template::STATUS_ACTIVE
         ]);
     }
 
     /**
-     * Tạo template với category cụ thể
+     * Set tenant for template (explicit tenant binding)
+     * 
+     * @param \App\Models\Tenant|string $tenant Tenant model instance or tenant_id string
+     * @return Factory
      */
-    public function withCategory(string $category): static
+    public function forTenant($tenant): Factory
     {
-        return $this->state(fn (array $attributes) => [
-            'category' => $category,
-        ]);
+        return $this->state(function (array $attributes) use ($tenant) {
+            $tenantId = $tenant instanceof Tenant ? (string) $tenant->id : (string) $tenant;
+            return [
+                'tenant_id' => $tenantId,
+            ];
+        });
     }
 
     /**
-     * Tạo template với version cụ thể
+     * Set tenant_id for template (explicit tenant binding by ID)
+     * 
+     * @param string $tenantId Tenant ID
+     * @return Factory
      */
-    public function withVersion(int $version): static
+    public function forTenantId(string $tenantId): Factory
     {
         return $this->state(fn (array $attributes) => [
-            'version' => $version,
+            'tenant_id' => (string) $tenantId,
         ]);
     }
 
-    /**
-     * Tạo template với JSON body không hợp lệ
-     */
-    public function withInvalidJsonBody(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'json_body' => [
-                'template_name' => 'Invalid Template',
-                // Thiếu phases array
-            ],
-        ]);
-    }
-
-    /**
-     * Tạo template với nhiều phases và tasks
-     */
-    public function withComplexStructure(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'json_body' => $this->generateComplexJsonBody(),
-        ]);
-    }
-
-    /**
-     * Tạo JSON body hợp lệ cho template
-     */
-    private function generateValidJsonBody(): array
+    private function generateTemplateData(): array
     {
         return [
-            'template_name' => $this->faker->words(3, true) . ' Template',
-            'description' => $this->faker->sentence(),
             'phases' => [
                 [
-                    'name' => 'Phase 1: Planning',
-                    'order' => 1,
+                    'name' => 'Phase 1',
+                    'duration_days' => $this->faker->numberBetween(5, 15),
                     'tasks' => [
                         [
-                            'name' => 'Task 1.1: Requirements Analysis',
-                            'duration_days' => 5,
-                            'role' => 'Project Manager',
-                            'contract_value_percent' => 10.0,
-                            'dependencies' => [],
-                            'conditional_tag' => null,
-                        ],
-                        [
-                            'name' => 'Task 1.2: Design Review',
-                            'duration_days' => 3,
-                            'role' => 'Architect',
-                            'contract_value_percent' => 8.0,
-                            'dependencies' => ['1.1'],
-                            'conditional_tag' => 'design_required',
-                        ],
-                    ],
-                ],
-                [
-                    'name' => 'Phase 2: Implementation',
-                    'order' => 2,
-                    'tasks' => [
-                        [
-                            'name' => 'Task 2.1: Development',
-                            'duration_days' => 15,
-                            'role' => 'Developer',
-                            'contract_value_percent' => 50.0,
-                            'dependencies' => ['1.2'],
-                            'conditional_tag' => null,
-                        ],
-                        [
-                            'name' => 'Task 2.2: Testing',
-                            'duration_days' => 7,
-                            'role' => 'QA Engineer',
-                            'contract_value_percent' => 20.0,
-                            'dependencies' => ['2.1'],
-                            'conditional_tag' => 'testing_required',
-                        ],
-                    ],
-                ],
+                            'name' => 'Task 1',
+                            'description' => $this->faker->sentence(),
+                            'duration_days' => $this->faker->numberBetween(1, 5),
+                            'priority' => $this->faker->randomElement(['low', 'medium', 'high']),
+                            'estimated_hours' => $this->faker->numberBetween(8, 40)
+                        ]
+                    ]
+                ]
             ],
-        ];
-    }
-
-    /**
-     * Tạo JSON body phức tạp với nhiều phases và tasks
-     */
-    private function generateComplexJsonBody(): array
-    {
-        $phases = [];
-        $phaseCount = $this->faker->numberBetween(3, 5);
-        
-        for ($i = 1; $i <= $phaseCount; $i++) {
-            $tasks = [];
-            $taskCount = $this->faker->numberBetween(2, 6);
-            
-            for ($j = 1; $j <= $taskCount; $j++) {
-                $tasks[] = [
-                    'name' => "Task {$i}.{$j}: " . $this->faker->words(3, true),
-                    'duration_days' => $this->faker->numberBetween(1, 20),
-                    'role' => $this->faker->randomElement(['Project Manager', 'Developer', 'Designer', 'QA Engineer', 'Architect']),
-                    'contract_value_percent' => $this->faker->randomFloat(2, 1, 25),
-                    'dependencies' => $j > 1 ? ["{$i}." . ($j - 1)] : [],
-                    'conditional_tag' => $this->faker->optional(0.3)->randomElement(['design_required', 'testing_required', 'review_needed']),
-                ];
-            }
-            
-            $phases[] = [
-                'name' => "Phase {$i}: " . $this->faker->words(2, true),
-                'order' => $i,
-                'tasks' => $tasks,
-            ];
-        }
-        
-        return [
-            'template_name' => $this->faker->words(3, true) . ' Complex Template',
-            'description' => $this->faker->paragraph(),
-            'phases' => $phases,
+            'milestones' => [
+                [
+                    'name' => 'Milestone 1',
+                    'date_offset' => $this->faker->numberBetween(5, 20),
+                    'description' => $this->faker->sentence()
+                ]
+            ]
         ];
     }
 }

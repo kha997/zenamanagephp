@@ -1,0 +1,37 @@
+name: Lint Blade Views
+
+on:
+  pull_request:
+    paths:
+      - 'resources/views/**/*.blade.php'
+      - 'scripts/check-blade-service-calls.php'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'resources/views/**/*.blade.php'
+      - 'scripts/check-blade-service-calls.php'
+
+jobs:
+  check-blade-service-calls:
+    name: Check Blade Views for Service Calls
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, zip
+      
+      - name: Check Blade views for prohibited service calls
+        run: php scripts/check-blade-service-calls.php
+      
+      - name: Report results
+        if: failure()
+        run: |
+          echo "::error::Blade views contain prohibited service calls. See ADR-002 for details."
+          echo "::error::All business logic must be handled via API, not directly in Blade views."
+

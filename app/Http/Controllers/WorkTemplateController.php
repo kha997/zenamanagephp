@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Src\CoreProject\Models\WorkTemplate;
 use Src\CoreProject\Resources\WorkTemplateResource;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
 /**
@@ -54,7 +54,7 @@ class WorkTemplateController
                 $request->get('per_page', 15)
             );
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'templates' => WorkTemplateResource::collection($templates->items()),
                 'pagination' => [
                     'current_page' => $templates->currentPage(),
@@ -64,7 +64,7 @@ class WorkTemplateController
                 ]
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách templates: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy danh sách templates: ' . $e->getMessage(), 500);
         }
     }
 
@@ -89,12 +89,12 @@ class WorkTemplateController
             // Dispatch event
             event(new \Src\CoreProject\Events\WorkTemplateCreated($template));
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'template' => new WorkTemplateResource($template),
                 'message' => 'Work template đã được tạo thành công.'
             ], 201);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo work template: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể tạo work template: ' . $e->getMessage(), 500);
         }
     }
 
@@ -109,13 +109,13 @@ class WorkTemplateController
         try {
             $template = WorkTemplate::findOrFail($templateId);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'template' => new WorkTemplateResource($template)
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Work template không tồn tại.', 404);
+            return ApiResponse::error('Work template không tồn tại.', 404);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin work template: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy thông tin work template: ' . $e->getMessage(), 500);
         }
     }
 
@@ -143,14 +143,14 @@ class WorkTemplateController
             // Dispatch event
             event(new \Src\CoreProject\Events\WorkTemplateUpdated($template));
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'template' => new WorkTemplateResource($template),
                 'message' => 'Work template đã được cập nhật thành công.'
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Work template không tồn tại.', 404);
+            return ApiResponse::error('Work template không tồn tại.', 404);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể cập nhật work template: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể cập nhật work template: ' . $e->getMessage(), 500);
         }
     }
 
@@ -169,13 +169,13 @@ class WorkTemplateController
             // Dispatch event
             event(new \Src\CoreProject\Events\WorkTemplateDeleted($template));
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'message' => 'Work template đã được xóa thành công.'
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Work template không tồn tại.', 404);
+            return ApiResponse::error('Work template không tồn tại.', 404);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể xóa work template: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể xóa work template: ' . $e->getMessage(), 500);
         }
     }
 
@@ -195,14 +195,14 @@ class WorkTemplateController
             $newTemplate->version = $originalTemplate->version + 1;
             $newTemplate->save();
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'template' => new WorkTemplateResource($newTemplate),
                 'message' => 'Work template đã được sao chép thành công.'
             ], 201);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Work template không tồn tại.', 404);
+            return ApiResponse::error('Work template không tồn tại.', 404);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể sao chép work template: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể sao chép work template: ' . $e->getMessage(), 500);
         }
     }
 
@@ -221,11 +221,11 @@ class WorkTemplateController
                 'inspection' => 'Nghiệm thu'
             ];
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'categories' => $categories
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách categories: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy danh sách categories: ' . $e->getMessage(), 500);
         }
     }
 
@@ -262,7 +262,7 @@ class WorkTemplateController
                     $component
                 );
                 
-                return JSendResponse::success([
+                return ApiResponse::success([
                     'preview' => $preview,
                     'message' => 'Preview áp dụng template thành công.'
                 ]);
@@ -284,17 +284,17 @@ class WorkTemplateController
                 $options
             );
             
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'result' => $result,
                 'message' => 'Áp dụng work template thành công.'
             ]);
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return JSendResponse::error('Dữ liệu không hợp lệ: ' . implode(', ', $e->validator->errors()->all()), 422);
+            return ApiResponse::error('Dữ liệu không hợp lệ: ' . implode(', ', $e->validator->errors()->all()), 422);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Không tìm thấy resource.', 404);
+            return ApiResponse::error('Không tìm thấy resource.', 404);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể áp dụng work template: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể áp dụng work template: ' . $e->getMessage(), 500);
         }
     }
     
@@ -309,11 +309,11 @@ class WorkTemplateController
             $conditionalTagService = app(\Src\CoreProject\Services\ConditionalTagService::class);
             $tags = $conditionalTagService->getPredefinedTags();
             
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'conditional_tags' => $tags
             ]);
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách conditional tags: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy danh sách conditional tags: ' . $e->getMessage(), 500);
         }
     }
 }

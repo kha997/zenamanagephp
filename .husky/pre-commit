@@ -1,0 +1,22 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Check for duplication
+echo "Checking for code duplication..."
+npm run dedupe:check
+
+# Check PHP syntax
+echo "Checking PHP syntax..."
+npm run dedupe:php
+
+# ESLint check
+echo "Running ESLint..."
+npm run lint:sonar
+
+# Tailwind class sorting
+echo "Sorting Tailwind classes..."
+npm run css:sort
+
+echo "✅ Pre-commit checks completed successfully!"

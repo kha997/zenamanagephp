@@ -1,406 +1,474 @@
-<?php declare(strict_types=1);
+<?php
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
+use App\Models\DocumentVersion;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class DocumentController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Upload a document
+     */
+    public function upload(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            if (!$user || !$user->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'User not authenticated or tenant not found']
+                ], 401);
+            }
+
+            $validated = $request->validate([
+                'file' => 'required|file|max:10240', // 10MB max
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'category' => 'nullable|string|in:technical,business,legal,other',
+                'project_id' => 'nullable|string|exists:projects,id'
+            ]);
+
+            $file = $request->file('file');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('documents/' . $user->tenant_id, $fileName);
+
+            $document = Document::create([
+                'name' => $validated['name'],
+                'original_name' => $file->getClientOriginalName(),
+                'description' => $validated['description'] ?? null,
+                'file_path' => $filePath,
+                'file_name' => $fileName,
+                'file_size' => $file->getSize(),
+                'file_type' => $file->getMimeType(),
+                'mime_type' => $file->getMimeType(),
+                'file_hash' => hash_file('sha256', $file->getPathname()),
+                'category' => $validated['category'] ?? 'other',
+                'project_id' => $validated['project_id'] ?? null,
+                'tenant_id' => $user->tenant_id,
+                'uploaded_by' => $user->id,
+                'status' => 'active'
+            ]);
+
+            // Create initial version
+            DocumentVersion::create([
+                'document_id' => $document->id,
+                'version_number' => 1,
+                'file_path' => $filePath,
+                'comment' => 'Initial version',
+                'created_by' => $user->id
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'document' => [
+                        'id' => $document->id,
+                        'title' => $document->name, // Map name to title for test compatibility
+                        'project_id' => $document->project_id,
+                        'current_version_id' => null, // Will be set after version creation
+                        'created_at' => $document->created_at,
+                        'updated_at' => $document->updated_at
+                    ]
+                ]
+            ], 201);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Validation failed'],
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Document upload error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Failed to upload document']
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all documents
      */
     public function index(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            
-            if (!$user) {
-                return response()->json(['error' => 'Unauthorized'], 401);
+            if (!$user || !$user->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'User not authenticated or tenant not found']
+                ], 401);
             }
 
-            $query = Document::with([
-                'project:id,name,status',
-                'task:id,name,status',
-                'component:id,name,type',
-                'uploadedBy:id,name,email',
-                'approvedBy:id,name,email',
-                'tenant:id,name'
-            ]);
+            $projectId = $request->get('project_id');
+            $category = $request->get('category');
+            $status = $request->get('status', 'active');
 
-            // Apply tenant filter
-            if ($user->tenant_id) {
-                $query->where('tenant_id', $user->tenant_id);
-            }
-
-            // Apply filters
-            if ($request->filled('project_id')) {
-                $query->where('project_id', $request->input('project_id'));
-            }
-
-            if ($request->filled('task_id')) {
-                $query->where('task_id', $request->input('task_id'));
-            }
-
-            if ($request->filled('component_id')) {
-                $query->where('component_id', $request->input('component_id'));
-            }
-
-            if ($request->filled('type')) {
-                $query->where('type', $request->input('type'));
-            }
-
-            if ($request->filled('category')) {
-                $query->where('category', $request->input('category'));
-            }
-
-            if ($request->filled('status')) {
-                $query->where('status', $request->input('status'));
-            }
-
-            if ($request->filled('uploaded_by')) {
-                $query->where('uploaded_by', $request->input('uploaded_by'));
-            }
-
-            if ($request->filled('search')) {
-                $search = $request->input('search');
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('description', 'like', "%{$search}%");
-                });
-            }
-
-            // Pagination
-            $perPage = min($request->input('per_page', 15), 100);
-            $documents = $query->orderBy('created_at', 'desc')
-                ->paginate($perPage);
+            $documents = Document::where('tenant_id', $user->tenant_id)
+                ->when($projectId, function ($query) use ($projectId) {
+                    return $query->where('project_id', $projectId);
+                })
+                ->when($category, function ($query) use ($category) {
+                    return $query->where('category', $category);
+                })
+                ->when($status, function ($query) use ($status) {
+                    return $query->where('status', $status);
+                })
+                ->with(['uploader', 'project', 'currentVersion'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
 
             return response()->json([
-                'success' => true,
-                'data' => $documents,
-                'message' => 'Documents retrieved successfully'
+                'status' => 'success',
+                'data' => [
+                    'documents' => $documents->items(),
+                    'pagination' => [
+                        'current_page' => $documents->currentPage(),
+                        'last_page' => $documents->lastPage(),
+                        'per_page' => $documents->perPage(),
+                        'total' => $documents->total()
+                    ]
+                ]
             ]);
 
         } catch (\Exception $e) {
             Log::error('Document index error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve documents',
-                'error' => $e->getMessage()
+                'error' => ['message' => 'Failed to fetch documents']
             ], 500);
         }
     }
 
     /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request): JsonResponse
-    {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
-        
-        if (!$user) {
-            return $this->error('Unauthorized', 401);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'project_id' => 'required|exists:projects,id',
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'document_type' => 'required|in:drawing,specification,contract,report,photo,other',
-            'file' => 'required|file|max:10240',
-            'version' => 'nullable|string|max:50',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->error('Validation failed', 422, $validator->errors());
-        }
-
-        try {
-            $file = $request->file('file');
-            
-            // Use FileStorageService with enhanced validation
-            $fileStorageService = new \Src\Foundation\Services\FileStorageService();
-            $uploadResult = $fileStorageService->uploadFile(
-                $file,
-                'local',
-                'documents/' . $request->input('project_id')
-            );
-
-            if (!$uploadResult['success']) {
-                return $this->error('File upload failed: ' . $uploadResult['error'], 400);
-            }
-
-            $fileInfo = $uploadResult['file'];
-
-            $document = Document::create([
-                'project_id' => $request->input('project_id'),
-                'title' => $request->input('title'),
-                'description' => $request->input('description'),
-                'document_type' => $request->input('document_type'),
-                'file_path' => $fileInfo['path'],
-                'file_name' => $fileInfo['filename'],
-                'original_name' => $fileInfo['original_name'],
-                'file_size' => $fileInfo['size'],
-                'mime_type' => $fileInfo['mime_type'],
-                'version' => $request->input('version', '1.0'),
-                'tags' => $request->input('tags', []),
-                'uploaded_by' => $user->id,
-                'status' => 'active',
-            ]);
-
-            return $this->successResponse($document->load(['project', 'uploadedBy']), 'Document uploaded successfully', 201);
-
-        } catch (\Exception $e) {
-            return $this->error('Failed to upload document: ' . $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * Display the specified resource.
+     * Get document details
      */
     public function show(string $id): JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
-        
-        if (!$user) {
-            return $this->error('Unauthorized', 401);
-        }
-
-        $document = Document::with(['project', 'uploadedBy', 'versions'])
-            ->find($id);
-
-        if (!$document) {
-            return $this->error('Document not found', 404);
-        }
-
-        return $this->successResponse($document);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id): JsonResponse
-    {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
-        
-        if (!$user) {
-            return $this->error('Unauthorized', 401);
-        }
-
-        $document = Document::find($id);
-
-        if (!$document) {
-            return $this->error('Document not found', 404);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'title' => 'sometimes|required|string|max:255',
-            'description' => 'nullable|string',
-            'document_type' => 'sometimes|required|in:drawing,specification,contract,report,photo,other',
-            'version' => 'nullable|string|max:50',
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:100',
-            'status' => 'sometimes|required|in:active,archived,deleted',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->error('Validation failed', 422, $validator->errors());
-        }
-
         try {
-            $document->update($request->only([
-                'title', 'description', 'document_type', 'version', 'tags', 'status'
-            ]));
-
-            return $this->successResponse($document->load(['project', 'uploadedBy']), 'Document updated successfully');
-
-        } catch (\Exception $e) {
-            return $this->error('Failed to update document: ' . $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id): JsonResponse
-    {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
-        
-        if (!$user) {
-            return $this->error('Unauthorized', 401);
-        }
-
-        $document = Document::find($id);
-
-        if (!$document) {
-            return $this->error('Document not found', 404);
-        }
-
-        try {
-            // Delete file from storage
-            if (Storage::disk('local')->exists($document->file_path)) {
-                Storage::disk('local')->delete($document->file_path);
+            $user = Auth::user();
+            if (!$user || !$user->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'User not authenticated or tenant not found']
+                ], 401);
             }
 
-            $document->delete();
+            $document = Document::where('id', $id)
+                ->where('tenant_id', $user->tenant_id)
+                ->with(['uploader', 'project', 'versions'])
+                ->first();
 
-            return $this->successResponse(null, 'Document deleted successfully');
+            if (!$document) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'Document not found']
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $document
+            ]);
 
         } catch (\Exception $e) {
-            return $this->error('Failed to delete document: ' . $e->getMessage(), 500);
+            Log::error('Document show error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Failed to fetch document']
+            ], 500);
+        }
+    }
+
+    /**
+     * Upload new version
+     */
+    public function uploadVersion(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            if (!$user || !$user->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'User not authenticated or tenant not found']
+                ], 401);
+            }
+
+            $document = Document::where('id', $id)
+                ->where('tenant_id', $user->tenant_id)
+                ->first();
+
+            if (!$document) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'Document not found']
+                ], 404);
+            }
+
+            $validated = $request->validate([
+                'file' => 'required|file|max:10240',
+                'change_description' => 'required|string|max:500'
+            ]);
+
+            $file = $request->file('file');
+            $fileName = time() . '_' . $file->getClientOriginalName();
+            $filePath = $file->storeAs('documents/' . $user->tenant_id, $fileName);
+
+            // Get next version number
+            $lastVersion = DocumentVersion::where('document_id', $document->id)
+                ->orderBy('version_number', 'desc')
+                ->first();
+            
+            $versionNumber = $lastVersion ? 
+                $lastVersion->version_number + 1 : 1;
+
+            // Create new version
+            $version = DocumentVersion::create([
+                'document_id' => $document->id,
+                'version_number' => $versionNumber,
+                'file_path' => $filePath,
+                'comment' => $validated['change_description'],
+                'created_by' => $user->id
+            ]);
+
+            // Update document with new file info
+            $document->update([
+                'file_path' => $filePath,
+                'file_size' => $file->getSize(),
+                'file_type' => $file->getMimeType(),
+                'mime_type' => $file->getMimeType(),
+                'file_hash' => hash_file('sha256', $file->getPathname())
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'version' => [
+                        'id' => $version->id,
+                        'document_id' => $version->document_id,
+                        'version_number' => $version->version_number,
+                        'file_path' => $version->file_path,
+                        'comment' => $version->comment,
+                        'created_at' => $version->created_at
+                    ]
+                ]
+            ], 201);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Validation failed'],
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Document version upload error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Failed to upload new version']
+            ], 500);
+        }
+    }
+
+    /**
+     * Get document analytics
+     */
+    public function analytics(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            if (!$user || !$user->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'User not authenticated or tenant not found']
+                ], 401);
+            }
+
+            $projectId = $request->get('project_id');
+            $dateRange = $request->get('date_range', '30d');
+
+            $endDate = now();
+            $startDate = match($dateRange) {
+                '7d' => $endDate->copy()->subDays(7),
+                '30d' => $endDate->copy()->subDays(30),
+                '90d' => $endDate->copy()->subDays(90),
+                '1y' => $endDate->copy()->subYear(),
+                default => $endDate->copy()->subDays(30)
+            };
+
+            $analytics = [
+                'total_documents' => Document::where('tenant_id', $user->tenant_id)
+                    ->when($projectId, function ($query) use ($projectId) {
+                        return $query->where('project_id', $projectId);
+                    })
+                    ->count(),
+                'documents_by_category' => Document::where('tenant_id', $user->tenant_id)
+                    ->when($projectId, function ($query) use ($projectId) {
+                        return $query->where('project_id', $projectId);
+                    })
+                    ->selectRaw('category, COUNT(*) as count')
+                    ->groupBy('category')
+                    ->get(),
+                'upload_trend' => Document::where('tenant_id', $user->tenant_id)
+                    ->when($projectId, function ($query) use ($projectId) {
+                        return $query->where('project_id', $projectId);
+                    })
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                    ->groupBy('date')
+                    ->orderBy('date')
+                    ->get(),
+                'storage_usage' => Document::where('tenant_id', $user->tenant_id)
+                    ->when($projectId, function ($query) use ($projectId) {
+                        return $query->where('project_id', $projectId);
+                    })
+                    ->sum('file_size')
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $analytics
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Document analytics error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Failed to fetch analytics']
+            ], 500);
+        }
+    }
+
+    /**
+     * Revert document to previous version
+     */
+    public function revertVersion(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            if (!$user || !$user->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'User not authenticated or tenant not found']
+                ], 401);
+            }
+
+            $document = Document::where('id', $id)
+                ->where('tenant_id', $user->tenant_id)
+                ->first();
+
+            if (!$document) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'Document not found']
+                ], 404);
+            }
+
+            $validated = $request->validate([
+                'version_number' => 'required|integer|min:1'
+            ]);
+
+            $versionNumber = $validated['version_number'];
+            
+            // Check if version exists
+            $targetVersion = DocumentVersion::where('document_id', $document->id)
+                ->where('version_number', $versionNumber)
+                ->first();
+
+            if (!$targetVersion) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'Version not found']
+                ], 404);
+            }
+
+            // Create new version from target version
+            $newVersion = DocumentVersion::create([
+                'document_id' => $document->id,
+                'version_number' => $document->getNextVersionNumber(),
+                'file_path' => $targetVersion->file_path,
+                'comment' => "Reverted to version {$versionNumber}",
+                'created_by' => $user->id,
+                'reverted_from_version_number' => $versionNumber
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'message' => "Đã khôi phục về phiên bản {$versionNumber}"
+                ]
+            ]);
+
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Validation failed'],
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Document revert error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Failed to revert document']
+            ], 500);
         }
     }
 
     /**
      * Download document
      */
-    public function download(string $id): JsonResponse
+    public function download(string $id): \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
-        
-        if (!$user) {
-            return $this->error('Unauthorized', 401);
-        }
-
-        $document = Document::find($id);
-
-        if (!$document) {
-            return $this->error('Document not found', 404);
-        }
-
-        if (!Storage::disk('local')->exists($document->file_path)) {
-            return $this->error('File not found on storage', 404);
-        }
-
         try {
-            $filePath = Storage::disk('local')->path($document->file_path);
-            
-            return response()->download($filePath, $document->original_name);
-
-        } catch (\Exception $e) {
-            return $this->error('Failed to download document: ' . $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * Create new version of document
-     */
-    public function createVersion(Request $request, string $id): JsonResponse
-    {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
-        
-        if (!$user) {
-            return $this->error('Unauthorized', 401);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'file' => 'required|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,jpg,jpeg,png,gif,svg,zip,rar,7z',
-            'version' => 'required|string|max:50',
-            'change_notes' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->error('Validation failed', 422, $validator->errors());
-        }
-
-        $document = Document::find($id);
-
-        if (!$document) {
-            return $this->error('Document not found', 404);
-        }
-
-        try {
-            $file = $request->file('file');
-            
-            // Generate unique filename
-            $filename = $this->generateUniqueFilename($file);
-            $path = 'documents/' . $document->project_id . '/' . $filename;
-            
-            // Store file
-            $storedPath = Storage::disk('local')->putFileAs(
-                'documents/' . $document->project_id,
-                $file,
-                $filename
-            );
-
-            if (!$storedPath) {
-                return $this->error('Failed to store file', 500);
+            $user = Auth::user();
+            if (!$user || !$user->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'User not authenticated or tenant not found']
+                ], 401);
             }
 
-            // Create new version
-            $newVersion = Document::create([
-                'project_id' => $document->project_id,
-                'title' => $document->title,
-                'description' => $document->description,
-                'document_type' => $document->document_type,
-                'file_path' => $storedPath,
-                'file_name' => $filename,
-                'original_name' => $file->getClientOriginalName(),
-                'file_size' => $file->getSize(),
-                'mime_type' => $file->getMimeType(),
-                'version' => $request->input('version'),
-                'tags' => $document->tags,
-                'uploaded_by' => $user->id,
-                'status' => 'active',
-                'parent_document_id' => $document->id,
-                'change_notes' => $request->input('change_notes'),
+            $document = Document::where('id', $id)
+                ->where('tenant_id', $user->tenant_id)
+                ->with('currentVersion')
+                ->first();
+
+            if (!$document) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'Document not found']
+                ], 404);
+            }
+
+            // Get file path from current version or document
+            $filePath = $document->currentVersion?->file_path ?? $document->file_path;
+            $filePath = storage_path('app/' . $filePath);
+            
+            if (!file_exists($filePath)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['message' => 'File not found']
+                ], 404);
+            }
+
+            return response()->download($filePath, $document->original_name, [
+                'Content-Type' => $document->file_type
             ]);
 
-            return $this->successResponse($newVersion->load(['project', 'uploadedBy']), 'Document version created successfully', 201);
-
         } catch (\Exception $e) {
-            return $this->error('Failed to create document version: ' . $e->getMessage(), 500);
+            Log::error('Document download error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => ['message' => 'Failed to download document']
+            ], 500);
         }
-    }
-
-    /**
-     * Get document versions
-     */
-    public function getVersions(string $id): JsonResponse
-    {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
-        
-        if (!$user) {
-            return $this->error('Unauthorized', 401);
-        }
-
-        $document = Document::find($id);
-
-        if (!$document) {
-            return $this->error('Document not found', 404);
-        }
-
-        $versions = Document::where('parent_document_id', $id)
-            ->orWhere('id', $id)
-            ->with(['uploadedBy'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return $this->successResponse($versions);
-    }
-
-    /**
-     * Generate unique filename
-     */
-    private function generateUniqueFilename(UploadedFile $file): string
-    {
-        $extension = $file->getClientOriginalExtension();
-        $basename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $basename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $basename);
-        
-        return $basename . '_' . time() . '_' . str_random(8) . '.' . $extension;
     }
 }

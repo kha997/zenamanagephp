@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\InvitationEmail;
 use App\Models\EmailTracking;
+use App\Models\Invitation;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

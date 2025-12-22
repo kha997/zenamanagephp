@@ -1,0 +1,90 @@
+{
+  "domain": "documents",
+  "seed": 45678,
+  "description": "Documents domain test fixtures - Use with seedDocumentsDomain(45678) for reproducibility",
+  "tenants": [
+    {
+      "name": "Documents Test Tenant",
+      "slug": "documents-test-tenant-45678",
+      "status": "active",
+      "is_active": true
+    }
+  ],
+  "users": [
+    {
+      "name": "Documents PM User",
+      "email": "pm@documents-test.test",
+      "role": "project_manager",
+      "password": "password"
+    },
+    {
+      "name": "Documents Team Member",
+      "email": "member@documents-test.test",
+      "role": "member",
+      "password": "password"
+    }
+  ],
+  "projects": [
+    {
+      "code": "DOC-PROJ-45678",
+      "name": "Documents Test Project",
+      "description": "Project for documents domain testing",
+      "status": "active",
+      "budget_total": 30000.00
+    }
+  ],
+  "documents": [
+    {
+      "name": "Internal Test Document",
+      "original_name": "internal-doc.pdf",
+      "file_path": "documents/test/internal-doc.pdf",
+      "file_type": "pdf",
+      "mime_type": "application/pdf",
+      "file_size": 102400,
+      "category": "internal",
+      "status": "active"
+    },
+    {
+      "name": "Client Test Document",
+      "original_name": "client-doc.pdf",
+      "file_path": "documents/test/client-doc.pdf",
+      "file_type": "pdf",
+      "mime_type": "application/pdf",
+      "file_size": 204800,
+      "category": "client",
+      "status": "active"
+    },
+    {
+      "name": "Versioned Test Document",
+      "original_name": "versioned-doc.pdf",
+      "file_path": "documents/test/versioned-doc-v2.pdf",
+      "file_type": "pdf",
+      "mime_type": "application/pdf",
+      "file_size": 153600,
+      "category": "internal",
+      "status": "active",
+      "version": 2
+    }
+  ],
+  "document_versions": [
+    {
+      "document": "Versioned Test Document",
+      "version_number": 1,
+      "file_path": "documents/test/versioned-doc-v1.pdf",
+      "comment": "Initial version"
+    },
+    {
+      "document": "Versioned Test Document",
+      "version_number": 2,
+      "file_path": "documents/test/versioned-doc-v2.pdf",
+      "comment": "Updated version"
+    }
+  ],
+  "notes": [
+    "This fixture file documents the structure created by TestDataSeeder::seedDocumentsDomain(45678)",
+    "Use this as a reference when writing tests that need documents domain data",
+    "All data is created with fixed seed 45678 for reproducibility",
+    "Users have password 'password' (will be hashed in actual implementation)"
+  ]
+}
+

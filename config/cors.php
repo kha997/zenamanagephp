@@ -23,9 +23,11 @@ return [
         'http://localhost:5173',
         'http://localhost:5174', 
         'http://localhost:5175',
+        'http://localhost:8000', // Round 152: Added for Playwright E2E tests
         'http://127.0.0.1:5173',
         'http://127.0.0.1:5174',
         'http://127.0.0.1:5175',
+        'http://127.0.0.1:8000', // Round 152: Added for Playwright E2E tests
         'https://zenamanage.com',
         'https://www.zenamanage.com',
         'https://app.zenamanage.com',

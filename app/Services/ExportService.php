@@ -2,488 +2,390 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Writer\Csv;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class ExportService
 {
-    /**
-     * Export data to CSV format
-     */
-    public function exportToCSV(array $data, string $filename, array $columns = []): string
+    protected $storagePath = 'exports';
+    protected $maxFileSize = 50 * 1024 * 1024; // 50MB
+
+    public function __construct()
     {
-        $tenantId = Auth::user()->tenant_id ?? 'default';
-        $userId = Auth::id();
-        
-        $filePath = "exports/{$tenantId}/{$userId}/" . $filename . '_' . now()->format('Y-m-d_H-i-s') . '.csv';
-        
-        $csvData = [];
-        
-        // Add headers
-        if (!empty($columns)) {
-            $csvData[] = array_values($columns);
-        } elseif (!empty($data)) {
-            $csvData[] = array_keys($data[0]);
+        // Ensure exports directory exists
+        if (!Storage::exists($this->storagePath)) {
+            Storage::makeDirectory($this->storagePath);
         }
-        
-        // Add data rows
-        foreach ($data as $row) {
-            if (!empty($columns)) {
-                $csvRow = [];
-                foreach ($columns as $key => $label) {
-                    $csvRow[] = $row[$key] ?? '';
-                }
-                $csvData[] = $csvRow;
-            } else {
-                $csvData[] = array_values($row);
-            }
-        }
-        
-        // Create CSV content
-        $csvContent = '';
-        foreach ($csvData as $row) {
-            $csvContent .= $this->arrayToCsv($row) . "\n";
-        }
-        
-        // Store file
-        Storage::put($filePath, $csvContent);
-        
-        return $filePath;
     }
-    
+
     /**
-     * Export data to Excel format
+     * Export data in various formats
      */
-    public function exportToExcel(array $data, string $filename, array $columns = []): string
+    public function export(array $data, string $format, array $options = []): string
     {
-        $tenantId = Auth::user()->tenant_id ?? 'default';
-        $userId = Auth::id();
-        
-        $filePath = "exports/{$tenantId}/{$userId}/" . $filename . '_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-        
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        
-        $row = 1;
-        
-        // Add headers
-        if (!empty($columns)) {
-            $col = 1;
-            foreach ($columns as $key => $label) {
-                $sheet->setCellValueByColumnAndRow($col, $row, $label);
-                $col++;
-            }
-            $row++;
-        } elseif (!empty($data)) {
-            $col = 1;
-            foreach (array_keys($data[0]) as $header) {
-                $sheet->setCellValueByColumnAndRow($col, $row, $header);
-                $col++;
-            }
-            $row++;
+        $filename = $this->generateFilename($format, $options);
+        $filePath = $this->storagePath . '/' . $filename;
+
+        switch (strtolower($format)) {
+            case 'pdf':
+                return $this->exportToPDF($data, $filePath, $options);
+            case 'excel':
+            case 'xlsx':
+                return $this->exportToExcel($data, $filePath, $options);
+            case 'csv':
+                return $this->exportToCSV($data, $filePath, $options);
+            case 'json':
+                return $this->exportToJSON($data, $filePath, $options);
+            default:
+                throw new \InvalidArgumentException("Unsupported export format: {$format}");
         }
-        
-        // Add data rows
-        foreach ($data as $dataRow) {
-            $col = 1;
-            if (!empty($columns)) {
-                foreach ($columns as $key => $label) {
-                    $sheet->setCellValueByColumnAndRow($col, $row, $dataRow[$key] ?? '');
+    }
+
+    /**
+     * Export to PDF format
+     */
+    protected function exportToPDF(array $data, string $filePath, array $options = []): string
+    {
+        try {
+            $html = $this->generatePDFHTML($data, $options);
+            
+            $options_pdf = new Options();
+            $options_pdf->set('defaultFont', 'Arial');
+            $options_pdf->set('isRemoteEnabled', true);
+            $options_pdf->set('isHtml5ParserEnabled', true);
+            
+            $dompdf = new Dompdf($options_pdf);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            
+            $output = $dompdf->output();
+            Storage::put($filePath, $output);
+            
+            return $filePath;
+        } catch (\Exception $e) {
+            Log::error('PDF export error', [
+                'error' => $e->getMessage(),
+                'file_path' => $filePath
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Export to Excel format
+     */
+    protected function exportToExcel(array $data, string $filePath, array $options = []): string
+    {
+        try {
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            // Set title
+            if (isset($options['title'])) {
+                $sheet->setCellValue('A1', $options['title']);
+                $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
+                $sheet->mergeCells('A1:F1');
+                $row = 3;
+            } else {
+                $row = 1;
+            }
+            
+            // Add headers
+            if (!empty($data) && is_array($data[0] ?? null)) {
+                $headers = array_keys($data[0]);
+                $col = 'A';
+                foreach ($headers as $header) {
+                    $sheet->setCellValue($col . $row, ucfirst(str_replace('_', ' ', $header)));
+                    $sheet->getStyle($col . $row)->getFont()->setBold(true);
                     $col++;
                 }
-            } else {
-                foreach ($dataRow as $value) {
-                    $sheet->setCellValueByColumnAndRow($col, $row, $value);
+                $row++;
+            }
+            
+            // Add data
+            foreach ($data as $item) {
+                $col = 'A';
+                foreach ($item as $value) {
+                    $sheet->setCellValue($col . $row, $this->formatCellValue($value));
                     $col++;
                 }
+                $row++;
             }
-            $row++;
+            
+            // Auto-size columns
+            foreach (range('A', $col) as $column) {
+                $sheet->getColumnDimension($column)->setAutoSize(true);
+            }
+            
+            $writer = new Xlsx($spreadsheet);
+            $tempFile = tempnam(sys_get_temp_dir(), 'export_');
+            $writer->save($tempFile);
+            
+            Storage::put($filePath, file_get_contents($tempFile));
+            unlink($tempFile);
+            
+            return $filePath;
+        } catch (\Exception $e) {
+            Log::error('Excel export error', [
+                'error' => $e->getMessage(),
+                'file_path' => $filePath
+            ]);
+            throw $e;
         }
-        
-        // Auto-size columns
-        foreach (range('A', $sheet->getHighestColumn()) as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
+    }
+
+    /**
+     * Export to CSV format
+     */
+    protected function exportToCSV(array $data, string $filePath, array $options = []): string
+    {
+        try {
+            $csvContent = '';
+            
+            // Add title if provided
+            if (isset($options['title'])) {
+                $csvContent .= $options['title'] . "\n";
+                $csvContent .= "Generated on: " . now()->format('Y-m-d H:i:s') . "\n\n";
+            }
+            
+            // Add headers
+            if (!empty($data) && is_array($data[0] ?? null)) {
+                $headers = array_keys($data[0]);
+                $csvContent .= implode(',', array_map([$this, 'escapeCSV'], $headers)) . "\n";
+            }
+            
+            // Add data
+            foreach ($data as $item) {
+                $row = [];
+                foreach ($item as $value) {
+                    $row[] = $this->escapeCSV($this->formatCellValue($value));
+                }
+                $csvContent .= implode(',', $row) . "\n";
+            }
+            
+            Storage::put($filePath, $csvContent);
+            
+            return $filePath;
+        } catch (\Exception $e) {
+            Log::error('CSV export error', [
+                'error' => $e->getMessage(),
+                'file_path' => $filePath
+            ]);
+            throw $e;
         }
-        
-        // Save file
-        $writer = new Xlsx($spreadsheet);
-        $writer->save(storage_path('app/' . $filePath));
-        
-        return $filePath;
     }
-    
+
     /**
-     * Export data to PDF format
+     * Export to JSON format
      */
-    public function exportToPDF(array $data, string $filename, array $columns = [], string $title = ''): string
+    protected function exportToJSON(array $data, string $filePath, array $options = []): string
     {
-        $tenantId = Auth::user()->tenant_id ?? 'default';
-        $userId = Auth::id();
-        
-        $filePath = "exports/{$tenantId}/{$userId}/" . $filename . '_' . now()->format('Y-m-d_H-i-s') . '.pdf';
-        
-        $pdf = Pdf::loadView('exports.pdf-template', [
-            'data' => $data,
-            'columns' => $columns,
-            'title' => $title ?: $filename,
-            'exportedAt' => now()->format('Y-m-d H:i:s'),
-            'exportedBy' => Auth::user()->name ?? 'Unknown User'
-        ]);
-        
-        $pdf->save(storage_path('app/' . $filePath));
-        
-        return $filePath;
-    }
-    
-    /**
-     * Export projects data
-     */
-    public function exportProjects(array $filters = []): array
-    {
-        $projects = $this->getProjectsData($filters);
-        
-        $columns = [
-            'name' => 'Project Name',
-            'code' => 'Project Code',
-            'status' => 'Status',
-            'health' => 'Health',
-            'progress' => 'Progress (%)',
-            'budget' => 'Budget',
-            'start_date' => 'Start Date',
-            'due_date' => 'Due Date',
-            'project_manager' => 'Project Manager',
-            'team_size' => 'Team Size'
-        ];
-        
-        return [
-            'csv' => $this->exportToCSV($projects, 'projects', $columns),
-            'excel' => $this->exportToExcel($projects, 'projects', $columns),
-            'pdf' => $this->exportToPDF($projects, 'projects', $columns, 'Projects Report')
-        ];
-    }
-    
-    /**
-     * Export tasks data
-     */
-    public function exportTasks(array $filters = []): array
-    {
-        $tasks = $this->getTasksData($filters);
-        
-        $columns = [
-            'title' => 'Task Title',
-            'project' => 'Project',
-            'status' => 'Status',
-            'priority' => 'Priority',
-            'assigned_to' => 'Assigned To',
-            'due_date' => 'Due Date',
-            'estimated_hours' => 'Estimated Hours',
-            'actual_hours' => 'Actual Hours',
-            'progress' => 'Progress (%)',
-            'created_at' => 'Created Date'
-        ];
-        
-        return [
-            'csv' => $this->exportToCSV($tasks, 'tasks', $columns),
-            'excel' => $this->exportToExcel($tasks, 'tasks', $columns),
-            'pdf' => $this->exportToPDF($tasks, 'tasks', $columns, 'Tasks Report')
-        ];
-    }
-    
-    /**
-     * Export documents data
-     */
-    public function exportDocuments(array $filters = []): array
-    {
-        $documents = $this->getDocumentsData($filters);
-        
-        $columns = [
-            'title' => 'Document Title',
-            'filename' => 'Filename',
-            'type' => 'Type',
-            'size' => 'Size',
-            'status' => 'Status',
-            'project' => 'Project',
-            'uploaded_by' => 'Uploaded By',
-            'uploaded_at' => 'Upload Date',
-            'version' => 'Version',
-            'description' => 'Description'
-        ];
-        
-        return [
-            'csv' => $this->exportToCSV($documents, 'documents', $columns),
-            'excel' => $this->exportToExcel($documents, 'documents', $columns),
-            'pdf' => $this->exportToPDF($documents, 'documents', $columns, 'Documents Report')
-        ];
-    }
-    
-    /**
-     * Export users data (admin only)
-     */
-    public function exportUsers(array $filters = []): array
-    {
-        if (!Auth::user()->hasRole('super_admin')) {
-            throw new \Exception('Unauthorized to export users data');
-        }
-        
-        $users = $this->getUsersData($filters);
-        
-        $columns = [
-            'name' => 'Name',
-            'email' => 'Email',
-            'role' => 'Role',
-            'status' => 'Status',
-            'tenant' => 'Tenant',
-            'last_login' => 'Last Login',
-            'created_at' => 'Created Date',
-            'phone' => 'Phone',
-            'department' => 'Department'
-        ];
-        
-        return [
-            'csv' => $this->exportToCSV($users, 'users', $columns),
-            'excel' => $this->exportToExcel($users, 'users', $columns),
-            'pdf' => $this->exportToPDF($users, 'users', $columns, 'Users Report')
-        ];
-    }
-    
-    /**
-     * Export tenants data (admin only)
-     */
-    public function exportTenants(array $filters = []): array
-    {
-        if (!Auth::user()->hasRole('super_admin')) {
-            throw new \Exception('Unauthorized to export tenants data');
-        }
-        
-        $tenants = $this->getTenantsData($filters);
-        
-        $columns = [
-            'name' => 'Tenant Name',
-            'domain' => 'Domain',
-            'plan' => 'Plan',
-            'status' => 'Status',
-            'users_count' => 'Users Count',
-            'projects_count' => 'Projects Count',
-            'storage_used' => 'Storage Used',
-            'created_at' => 'Created Date',
-            'last_activity' => 'Last Activity'
-        ];
-        
-        return [
-            'csv' => $this->exportToCSV($tenants, 'tenants', $columns),
-            'excel' => $this->exportToExcel($tenants, 'columns', $columns),
-            'pdf' => $this->exportToPDF($tenants, 'tenants', $columns, 'Tenants Report')
-        ];
-    }
-    
-    /**
-     * Get export history for user
-     */
-    public function getExportHistory(): array
-    {
-        $tenantId = Auth::user()->tenant_id ?? 'default';
-        $userId = Auth::id();
-        
-        $exportPath = "exports/{$tenantId}/{$userId}/";
-        
-        if (!Storage::exists($exportPath)) {
-            return [];
-        }
-        
-        $files = Storage::files($exportPath);
-        $exports = [];
-        
-        foreach ($files as $file) {
-            $exports[] = [
-                'filename' => basename($file),
-                'path' => $file,
-                'size' => Storage::size($file),
-                'created_at' => Storage::lastModified($file),
-                'download_url' => route('exports.download', ['file' => basename($file)])
+        try {
+            $exportData = [
+                'metadata' => [
+                    'title' => $options['title'] ?? 'Export Data',
+                    'generated_at' => now()->toISOString(),
+                    'total_records' => count($data),
+                    'format' => 'json'
+                ],
+                'data' => $data
             ];
+            
+            $jsonContent = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            Storage::put($filePath, $jsonContent);
+            
+            return $filePath;
+        } catch (\Exception $e) {
+            Log::error('JSON export error', [
+                'error' => $e->getMessage(),
+                'file_path' => $filePath
+            ]);
+            throw $e;
         }
-        
-        // Sort by creation date (newest first)
-        usort($exports, fn($a, $b) => $b['created_at'] <=> $a['created_at']);
-        
-        return $exports;
     }
-    
+
     /**
-     * Delete export file
+     * Generate PDF HTML content
      */
-    public function deleteExport(string $filename): bool
+    protected function generatePDFHTML(array $data, array $options = []): string
     {
-        $tenantId = Auth::user()->tenant_id ?? 'default';
-        $userId = Auth::id();
+        $title = $options['title'] ?? 'Report';
+        $generatedAt = now()->format('Y-m-d H:i:s');
         
-        $filePath = "exports/{$tenantId}/{$userId}/{$filename}";
+        $html = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>{$title}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .title { font-size: 24px; font-weight: bold; color: #333; }
+                .subtitle { font-size: 12px; color: #666; margin-top: 5px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; font-weight: bold; }
+                tr:nth-child(even) { background-color: #f9f9f9; }
+                .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #666; }
+            </style>
+        </head>
+        <body>
+            <div class='header'>
+                <div class='title'>{$title}</div>
+                <div class='subtitle'>Generated on: {$generatedAt}</div>
+            </div>
+        ";
         
-        if (Storage::exists($filePath)) {
-            return Storage::delete($filePath);
+        if (!empty($data)) {
+            $html .= "<table>";
+            
+            // Headers
+            if (is_array($data[0] ?? null)) {
+                $headers = array_keys($data[0]);
+                $html .= "<tr>";
+                foreach ($headers as $header) {
+                    $html .= "<th>" . ucfirst(str_replace('_', ' ', $header)) . "</th>";
+                }
+                $html .= "</tr>";
+            }
+            
+            // Data rows
+            foreach ($data as $item) {
+                $html .= "<tr>";
+                foreach ($item as $value) {
+                    $html .= "<td>" . htmlspecialchars($this->formatCellValue($value)) . "</td>";
+                }
+                $html .= "</tr>";
+            }
+            
+            $html .= "</table>";
         }
         
-        return false;
+        $html .= "
+            <div class='footer'>
+                <p>This report was generated automatically by ZenaManage</p>
+            </div>
+        </body>
+        </html>
+        ";
+        
+        return $html;
     }
-    
+
     /**
-     * Clean old export files
+     * Format cell value for export
      */
-    public function cleanOldExports(int $daysOld = 7): int
+    protected function formatCellValue($value): string
     {
-        $tenantId = Auth::user()->tenant_id ?? 'default';
-        $userId = Auth::id();
-        
-        $exportPath = "exports/{$tenantId}/{$userId}/";
-        
-        if (!Storage::exists($exportPath)) {
-            return 0;
+        if (is_null($value)) {
+            return '';
         }
         
-        $files = Storage::files($exportPath);
+        if (is_bool($value)) {
+            return $value ? 'Yes' : 'No';
+        }
+        
+        if (is_array($value) || is_object($value)) {
+            return json_encode($value);
+        }
+        
+        if ($value instanceof Carbon) {
+            return $value->format('Y-m-d H:i:s');
+        }
+        
+        return (string) $value;
+    }
+
+    /**
+     * Escape CSV value
+     */
+    protected function escapeCSV($value): string
+    {
+        $value = (string) $value;
+        
+        // If value contains comma, newline, or double quote, wrap in quotes
+        if (strpos($value, ',') !== false || strpos($value, "\n") !== false || strpos($value, '"') !== false) {
+            $value = '"' . str_replace('"', '""', $value) . '"';
+        }
+        
+        return $value;
+    }
+
+    /**
+     * Generate filename for export
+     */
+    protected function generateFilename(string $format, array $options = []): string
+    {
+        $prefix = $options['prefix'] ?? 'export';
+        $timestamp = now()->format('Y-m-d_H-i-s');
+        $extension = $this->getFileExtension($format);
+        
+        return "{$prefix}_{$timestamp}.{$extension}";
+    }
+
+    /**
+     * Get file extension for format
+     */
+    protected function getFileExtension(string $format): string
+    {
+        return match (strtolower($format)) {
+            'pdf' => 'pdf',
+            'excel', 'xlsx' => 'xlsx',
+            'csv' => 'csv',
+            'json' => 'json',
+            default => 'txt'
+        };
+    }
+
+    /**
+     * Clean up old export files
+     */
+    public function cleanupOldFiles(int $daysOld = 7): int
+    {
+        $cutoffDate = now()->subDays($daysOld);
         $deletedCount = 0;
+        
+        $files = Storage::files($this->storagePath);
         
         foreach ($files as $file) {
             $lastModified = Storage::lastModified($file);
-            $daysSinceModified = (time() - $lastModified) / (24 * 60 * 60);
-            
-            if ($daysSinceModified > $daysOld) {
-                if (Storage::delete($file)) {
-                    $deletedCount++;
-                }
+            if ($lastModified < $cutoffDate->timestamp) {
+                Storage::delete($file);
+                $deletedCount++;
             }
         }
         
+        Log::info('Cleaned up old export files', [
+            'deleted_count' => $deletedCount,
+            'days_old' => $daysOld
+        ]);
+        
         return $deletedCount;
     }
-    
+
     /**
-     * Convert array to CSV string
+     * Get export file info
      */
-    private function arrayToCsv(array $data): string
+    public function getFileInfo(string $filePath): array
     {
-        $csv = '';
-        foreach ($data as $value) {
-            $csv .= '"' . str_replace('"', '""', $value) . '",';
+        if (!Storage::exists($filePath)) {
+            throw new \FileNotFoundException("Export file not found: {$filePath}");
         }
-        return rtrim($csv, ',');
-    }
-    
-    // Mock data methods - these would be replaced with actual database queries
-    
-    private function getProjectsData(array $filters): array
-    {
+        
         return [
-            [
-                'name' => 'Website Redesign',
-                'code' => 'WR-2024',
-                'status' => 'active',
-                'health' => 'good',
-                'progress' => 75,
-                'budget' => '$50,000',
-                'start_date' => '2024-01-15',
-                'due_date' => '2024-06-30',
-                'project_manager' => 'John Doe',
-                'team_size' => 5
-            ],
-            [
-                'name' => 'Mobile App Development',
-                'code' => 'MAD-2024',
-                'status' => 'planning',
-                'health' => 'at_risk',
-                'progress' => 25,
-                'budget' => '$75,000',
-                'start_date' => '2024-02-01',
-                'due_date' => '2024-08-31',
-                'project_manager' => 'Jane Smith',
-                'team_size' => 8
-            ]
-        ];
-    }
-    
-    private function getTasksData(array $filters): array
-    {
-        return [
-            [
-                'title' => 'Design Homepage',
-                'project' => 'Website Redesign',
-                'status' => 'in_progress',
-                'priority' => 'high',
-                'assigned_to' => 'Mike Johnson',
-                'due_date' => '2024-03-15',
-                'estimated_hours' => 40,
-                'actual_hours' => 25,
-                'progress' => 62,
-                'created_at' => '2024-01-20'
-            ],
-            [
-                'title' => 'Setup Development Environment',
-                'project' => 'Mobile App Development',
-                'status' => 'pending',
-                'priority' => 'medium',
-                'assigned_to' => 'Sarah Wilson',
-                'due_date' => '2024-02-28',
-                'estimated_hours' => 16,
-                'actual_hours' => 0,
-                'progress' => 0,
-                'created_at' => '2024-02-01'
-            ]
-        ];
-    }
-    
-    private function getDocumentsData(array $filters): array
-    {
-        return [
-            [
-                'title' => 'Project Requirements',
-                'filename' => 'requirements.pdf',
-                'type' => 'PDF',
-                'size' => '2.5 MB',
-                'status' => 'approved',
-                'project' => 'Website Redesign',
-                'uploaded_by' => 'John Doe',
-                'uploaded_at' => '2024-01-15',
-                'version' => '1.0',
-                'description' => 'Detailed project requirements'
-            ]
-        ];
-    }
-    
-    private function getUsersData(array $filters): array
-    {
-        return [
-            [
-                'name' => 'John Doe',
-                'email' => 'john@example.com',
-                'role' => 'Project Manager',
-                'status' => 'active',
-                'tenant' => 'Acme Corp',
-                'last_login' => '2024-03-10',
-                'created_at' => '2024-01-01',
-                'phone' => '+1-555-0123',
-                'department' => 'Engineering'
-            ]
-        ];
-    }
-    
-    private function getTenantsData(array $filters): array
-    {
-        return [
-            [
-                'name' => 'Acme Corporation',
-                'domain' => 'acme.com',
-                'plan' => 'Enterprise',
-                'status' => 'active',
-                'users_count' => 25,
-                'projects_count' => 8,
-                'storage_used' => '15.2 GB',
-                'created_at' => '2024-01-01',
-                'last_activity' => '2024-03-10'
-            ]
+            'path' => $filePath,
+            'size' => Storage::size($filePath),
+            'last_modified' => Storage::lastModified($filePath),
+            'url' => Storage::url($filePath),
+            'expires_at' => now()->addHours(24)->toISOString()
         ];
     }
 }

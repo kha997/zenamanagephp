@@ -16,19 +16,19 @@ use Src\DocumentManagement\Controllers\DocumentController;
 Route::prefix('api/v1/documents')
     ->group(function () {
         
-        // Simple Document CRUD routes (no middleware for testing)
-        Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])
+        // Document CRUD routes (no middleware for testing)
+        Route::get('/', [\App\Http\Controllers\Api\DocumentController::class, 'index'])
             ->name('documents.index');
             
-        Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])
+        Route::post('/', [\App\Http\Controllers\Api\DocumentController::class, 'store'])
             ->name('documents.store');
             
-        Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])
+        Route::get('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'show'])
             ->name('documents.show');
             
-        Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])
+        Route::put('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'update'])
             ->name('documents.update');
             
-        Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])
+        Route::delete('/{id}', [\App\Http\Controllers\Api\DocumentController::class, 'destroy'])
             ->name('documents.destroy');
     });

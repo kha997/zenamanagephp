@@ -4,11 +4,30 @@ import { LoadingState } from '../components/LoadingStates'
 import { motion } from 'framer-motion'
 import { Users, FolderOpen, CheckSquare, TrendingUp, AlertTriangle } from 'lucide-react'
 import { fadeInUp, staggerContainer, staggerItem } from '../utils/animations'
+import { AlertBanner } from '../components/dashboard/AlertBanner'
+import { RecentProjectsCard } from '../components/dashboard/RecentProjectsCard'
+import { RecentActivityCard } from '../components/dashboard/RecentActivityCard'
+import { TeamStatusCard } from '../components/dashboard/TeamStatusCard'
+import { DashboardChart } from '../components/dashboard/DashboardChart'
+import { 
+  useRecentProjects, 
+  useRecentActivity, 
+  useTeamStatus, 
+  useDashboardChart, 
+  useDashboardAlerts 
+} from '../entities/dashboard/hooks'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { data: dashboardData, loading, error, refetch } = useDashboardStats()
-  const { data: projectsData, loading: projectsLoading } = useProjects({}, 1, 5)
+  
+  // New hooks for dashboard components
+  const { data: alertData, isLoading: alertsLoading } = useDashboardAlerts()
+  const { data: recentProjects, isLoading: projectsLoading, error: projectsError } = useRecentProjects(5)
+  const { data: recentActivity, isLoading: activityLoading, error: activityError } = useRecentActivity(10)
+  const { data: teamStatus, isLoading: teamLoading, error: teamError } = useTeamStatus()
+  const { data: progressChart, isLoading: progressLoading, error: progressError } = useDashboardChart('project-progress', '30d')
+  const { data: completionChart, isLoading: completionLoading, error: completionError } = useDashboardChart('task-completion', '30d')
 
   // Mock stats fallback
   const mockStats = [
@@ -80,7 +99,16 @@ export default function DashboardPage() {
       initial="initial"
       animate="animate"
       variants={staggerContainer}
+      data-testid="dashboard"
     >
+      {/* Alert Banner */}
+      <AlertBanner
+        alerts={alertData?.data || []}
+        loading={alertsLoading}
+        onDismissAll={() => console.log('Dismiss all alerts')}
+        dataTestId="alert-banner"
+      />
+
       {/* Header */}
       <motion.div variants={fadeInUp}>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
@@ -143,87 +171,36 @@ export default function DashboardPage() {
         </motion.div>
       </LoadingState>
 
-      {/* Recent Activity */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Recent Projects</h3>
-            <p className="card-description">
-              Your latest project updates and milestones.
-            </p>
-          </div>
-          <div className="card-content">
-            <LoadingState 
-              loading={projectsLoading} 
-              error={null}
-              loadingText="Loading recent projects..."
-            >
-              <div className="space-y-4">
-                {projectsData?.data && projectsData.data.length > 0 ? (
-                  projectsData.data.slice(0, 3).map((project) => {
-                    const getStatusColor = (status: string) => {
-                      switch (status) {
-                        case 'completed': return 'bg-green-400'
-                        case 'active': return 'bg-yellow-400'
-                        case 'planning': return 'bg-blue-400'
-                        case 'on_hold': return 'bg-orange-400'
-                        case 'cancelled': return 'bg-red-400'
-                        default: return 'bg-gray-400'
-                      }
-                    }
-                    
-                    const getStatusText = (status: string) => {
-                      switch (status) {
-                        case 'completed': return 'Project completed successfully'
-                        case 'active': return `In progress - ${project.progress}% complete`
-                        case 'planning': return 'Planning phase started'
-                        case 'on_hold': return 'Project on hold'
-                        case 'cancelled': return 'Project cancelled'
-                        default: return 'Status unknown'
-                      }
-                    }
-                    
-                    const timeAgo = (date: string) => {
-                      const now = new Date()
-                      const projectDate = new Date(date)
-                      const diffInHours = Math.floor((now.getTime() - projectDate.getTime()) / (1000 * 60 * 60))
-                      
-                      if (diffInHours < 1) return 'Just now'
-                      if (diffInHours < 24) return `${diffInHours}h ago`
-                      const diffInDays = Math.floor(diffInHours / 24)
-                      return `${diffInDays}d ago`
-                    }
-                    
-                    return (
-                      <div key={project.id} className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
-                          <div className={`h-2 w-2 ${getStatusColor(project.status)} rounded-full`}></div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{project.name}</p>
-                          <p className="text-sm text-gray-500">{getStatusText(project.status)}</p>
-                        </div>
-                        <div className="text-sm text-gray-500">{timeAgo(project.updated_at)}</div>
-                      </div>
-                    )
-                  })
-                ) : (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500">No recent projects found</p>
-                    <button 
-                      onClick={() => window.location.href = '/projects/create'}
-                      className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      Create your first project
-                    </button>
-                  </div>
-                )}
-              </div>
-            </LoadingState>
-          </div>
-        </div>
+      {/* Row 1: Recent Projects + Recent Activity */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="dashboard-row-1">
+        <RecentProjectsCard
+          projects={recentProjects?.data}
+          loading={projectsLoading}
+          error={projectsError as Error | null}
+          dataTestId="recent-projects-widget"
+        />
+        <RecentActivityCard
+          activities={recentActivity?.data}
+          loading={activityLoading}
+          error={activityError as Error | null}
+          dataTestId="activity-feed-widget"
+          onViewAll={() => window.location.href = '/app/activity'}
+        />
+      </div>
 
-        <div className="card">
+      {/* Row 2: Project Progress Chart + Quick Actions */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="dashboard-row-2">
+        <DashboardChart
+          type="project-progress"
+          title="Project Progress"
+          data={progressChart?.data}
+          loading={progressLoading}
+          error={progressError as Error | null}
+          dataTestId="chart-project-progress"
+        />
+        
+        {/* Quick Actions */}
+        <div className="card" data-testid="quick-actions-widget">
           <div className="card-header">
             <h3 className="card-title">Quick Actions</h3>
             <p className="card-description">
@@ -233,32 +210,54 @@ export default function DashboardPage() {
           <div className="card-content">
             <div className="space-y-3">
               <button 
-                onClick={() => window.location.href = '/projects/create'}
+                onClick={() => window.location.href = '/app/projects/create'}
                 className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+                data-testid="quick-action-create-project"
               >
                 Create new project
               </button>
               <button 
-                onClick={() => window.location.href = '/users/create'}
+                onClick={() => window.location.href = '/app/users/create'}
                 className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+                data-testid="quick-action-add-member"
               >
                 Add team member
               </button>
               <button 
-                onClick={() => window.location.href = '/reports'}
+                onClick={() => window.location.href = '/app/reports'}
                 className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+                data-testid="quick-action-generate-report"
               >
                 Generate report
               </button>
               <button 
-                onClick={() => window.location.href = '/analytics'}
+                onClick={() => window.location.href = '/app/analytics'}
                 className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
+                data-testid="quick-action-view-analytics"
               >
                 View analytics
               </button>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Row 3: Team Status + Task Completion Chart */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="dashboard-row-3">
+        <TeamStatusCard
+          members={teamStatus?.data}
+          loading={teamLoading}
+          error={teamError as Error | null}
+          dataTestId="team-status-widget"
+        />
+        <DashboardChart
+          type="task-completion"
+          title="Task Completion"
+          data={completionChart?.data}
+          loading={completionLoading}
+          error={completionError as Error | null}
+          dataTestId="chart-task-completion"
+        />
       </div>
     </motion.div>
   )

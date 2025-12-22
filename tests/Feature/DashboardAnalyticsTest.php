@@ -33,8 +33,8 @@ class DashboardAnalyticsTest extends TestCase
     {
         parent::setUp();
         
-        // Disable foreign key constraints for testing
-        \DB::statement('PRAGMA foreign_keys=OFF;');
+        // Disable foreign key constraints for testing (MariaDB syntax)
+        \DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         
         // Tạo tenant
         $this->tenant = Tenant::create([
@@ -166,11 +166,12 @@ class DashboardAnalyticsTest extends TestCase
     {
         $metric = DashboardMetric::create([
             'name' => 'Total Projects',
-            'value' => 15,
             'unit' => 'projects',
             'category' => 'project',
             'tenant_id' => $this->tenant->id,
-            'metadata' => [
+            'description' => 'Total number of projects',
+            'config' => [
+                'type' => 'simple',
                 'trend' => 'up',
                 'change_percentage' => 12.5,
                 'last_updated' => now()->toISOString()
@@ -181,7 +182,6 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertDatabaseHas('dashboard_metrics', [
             'id' => $metric->id,
             'name' => 'Total Projects',
-            'value' => 15,
             'unit' => 'projects',
             'category' => 'project',
             'tenant_id' => $this->tenant->id,
@@ -189,9 +189,9 @@ class DashboardAnalyticsTest extends TestCase
         ]);
 
         $this->assertEquals('Total Projects', $metric->name);
-        $this->assertEquals(15, $metric->value);
-        $this->assertIsArray($metric->metadata);
-        $this->assertEquals('up', $metric->metadata['trend']);
+        $this->assertEquals('projects', $metric->unit);
+        $this->assertIsArray($metric->config);
+        $this->assertEquals('up', $metric->config['trend']);
     }
 
     /**
@@ -413,11 +413,11 @@ class DashboardAnalyticsTest extends TestCase
         for ($i = 1; $i <= 5; $i++) {
             $metrics[] = DashboardMetric::create([
                 'name' => "Metric {$i}",
-                'value' => rand(10, 100),
                 'unit' => 'units',
                 'category' => 'performance',
                 'tenant_id' => $this->tenant->id,
-                'metadata' => [
+                'description' => "Performance metric {$i}",
+                'config' => [
                     'last_updated' => now()->toISOString(),
                     'trend' => rand(0, 1) ? 'up' : 'down'
                 ],
@@ -434,10 +434,10 @@ class DashboardAnalyticsTest extends TestCase
 
         // Test metric updates
         $firstMetric = $activeMetrics->first();
-        $originalValue = $firstMetric->value;
-        $firstMetric->update(['value' => $originalValue + 10]);
+        $originalConfig = $firstMetric->config;
+        $firstMetric->update(['config' => array_merge($originalConfig, ['updated' => true])]);
 
-        $this->assertEquals($originalValue + 10, $firstMetric->fresh()->value);
+        $this->assertTrue($firstMetric->fresh()->config['updated']);
     }
 
     /**
@@ -456,16 +456,17 @@ class DashboardAnalyticsTest extends TestCase
         foreach ($performanceMetrics as $name => $value) {
             DashboardMetric::create([
                 'name' => ucfirst(str_replace('_', ' ', $name)),
-                'value' => $value,
                 'unit' => $name === 'uptime' || $name === 'error_rate' ? '%' : 
                          ($name === 'response_time' ? 'ms' : 'req/min'),
                 'category' => 'performance',
                 'tenant_id' => $this->tenant->id,
-                'metadata' => [
+                'description' => "Performance metric for {$name}",
+                'config' => [
                     'threshold' => $name === 'response_time' ? 200 : 
                                   ($name === 'uptime' ? 99.0 : 
                                    ($name === 'error_rate' ? 1.0 : 500)),
-                    'status' => $name === 'error_rate' ? 'warning' : 'good'
+                    'status' => $name === 'error_rate' ? 'warning' : 'good',
+                    'current_value' => $value
                 ],
                 'is_active' => true,
             ]);
@@ -480,7 +481,7 @@ class DashboardAnalyticsTest extends TestCase
 
         // Test threshold checking
         $responseTimeMetric = $perfMetrics->where('name', 'Response time')->first();
-        $this->assertLessThan($responseTimeMetric->metadata['threshold'], $responseTimeMetric->value);
+        $this->assertLessThan($responseTimeMetric->config['threshold'], $responseTimeMetric->config['current_value']);
     }
 
     /**
@@ -537,19 +538,21 @@ class DashboardAnalyticsTest extends TestCase
 
         $metric1 = DashboardMetric::create([
             'name' => 'Tenant 1 Metric',
-            'value' => 100,
             'unit' => 'units',
             'category' => 'general',
             'tenant_id' => $this->tenant->id,
+            'description' => 'Metric for tenant 1',
+            'config' => ['current_value' => 100],
             'is_active' => true,
         ]);
 
         $metric2 = DashboardMetric::create([
             'name' => 'Tenant 2 Metric',
-            'value' => 200,
             'unit' => 'units',
             'category' => 'general',
             'tenant_id' => $anotherTenant->id,
+            'description' => 'Metric for tenant 2',
+            'config' => ['current_value' => 200],
             'is_active' => true,
         ]);
 

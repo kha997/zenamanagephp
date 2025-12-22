@@ -1,0 +1,15 @@
+Cách Copy Code Projects Page:
+================================
+
+Option 1: Copy từ PROJECTS_PAGE_CODE.md (đang mở)
+- Select All (Cmd+A)
+- Copy (Cmd+C)
+- Paste vào file mới
+
+Option 2: Mở file gốc
+- File: resources/views/app/projects/index.blade.php
+- Đã mở trong Cursor
+- Select All → Copy
+
+Option 3: Terminal command
+- cat resources/views/app/projects/index.blade.php > projects_copy.txt

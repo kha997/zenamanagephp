@@ -1,0 +1,72 @@
+import { test, expect } from '@playwright/test';
+
+test('Debug taskDetail component', async ({ page }) => {
+  // Navigate directly to task detail page
+  await page.goto('/app/tasks/01K83FPM28B0NSDKE77REAFQ4P');
+  await page.waitForLoadState('networkidle');
+  
+  // Check console logs
+  const logs = await page.evaluate(() => {
+    return {
+      alpineExists: typeof window.Alpine !== 'undefined',
+      alpineStarted: window.Alpine?.started,
+      alpineVersion: window.Alpine?.version,
+      taskDetailFunction: typeof window.Alpine?.data('taskDetail'),
+      allAlpineFunctions: Object.keys(window.Alpine?.data || {}),
+      scripts: Array.from(document.querySelectorAll('script')).map(s => s.src || s.textContent?.substring(0, 100))
+    };
+  });
+  
+  console.log('Alpine.js status:', logs);
+  
+  // Capture console logs
+  const consoleLogs = [];
+  page.on('console', msg => {
+    consoleLogs.push(msg.text());
+  });
+  
+  // Wait a bit for scripts to load
+  await page.waitForTimeout(2000);
+  
+  // Check if task-comments script is loaded
+  const scriptLoaded = await page.evaluate(() => {
+    const scripts = Array.from(document.querySelectorAll('script'));
+    const taskCommentsScript = scripts.find(s => s.src && s.src.includes('task-comments'));
+    return {
+      scriptFound: !!taskCommentsScript,
+      scriptSrc: taskCommentsScript?.src,
+      allScripts: scripts.map(s => s.src || 'inline').filter(Boolean)
+    };
+  });
+  
+  console.log('Script loading status:', scriptLoaded);
+  
+  // Check if component is initialized
+  const componentStatus = await page.evaluate(() => {
+    const element = document.querySelector('[x-data*="taskDetail"]');
+    if (element && element._x_dataStack) {
+      const data = element._x_dataStack[0];
+      return {
+        componentExists: true,
+        commentsCount: data?.allComments?.length || 0,
+        visibleCommentsCount: data?.visibleComments?.length || 0,
+        loading: data?.loading,
+        currentPage: data?.currentPage
+      };
+    }
+    return { componentExists: false };
+  });
+  
+  console.log('Component status:', componentStatus);
+  
+  // Check if comments are visible
+  const commentsVisible = await page.isVisible('[data-testid="comments-container"]');
+  console.log('Comments container visible:', commentsVisible);
+  
+  // Check if comment items are visible
+  const commentItems = await page.locator('[data-testid="comment-item"]').count();
+  console.log('Comment items count:', commentItems);
+  
+  // Take screenshot for debugging
+  await page.screenshot({ path: 'test-results/phase3-artifacts/debug-taskdetail.png' });
+});

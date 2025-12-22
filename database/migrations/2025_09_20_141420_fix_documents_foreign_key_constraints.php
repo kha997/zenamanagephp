@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\DBDriver;
 
 return new class extends Migration
 {
@@ -18,7 +19,9 @@ return new class extends Migration
             // Drop existing foreign key constraints if they exist
             try {
                 Schema::table('documents', function (Blueprint $table) {
-                    $table->dropForeign(['project_id']);
+                    if (DBDriver::isMysql()) {
+                $table->dropForeign(['project_id']);
+            }
                 });
             } catch (\Exception $e) {
                 // Foreign key might not exist
@@ -26,7 +29,9 @@ return new class extends Migration
 
             try {
                 Schema::table('documents', function (Blueprint $table) {
-                    $table->dropForeign(['uploaded_by']);
+                    if (DBDriver::isMysql()) {
+                $table->dropForeign(['uploaded_by']);
+            }
                 });
             } catch (\Exception $e) {
                 // Foreign key might not exist
@@ -49,8 +54,12 @@ return new class extends Migration
     {
         if (Schema::hasTable('documents')) {
             Schema::table('documents', function (Blueprint $table) {
+                if (DBDriver::isMysql()) {
                 $table->dropForeign(['project_id']);
+            }
+                if (DBDriver::isMysql()) {
                 $table->dropForeign(['uploaded_by']);
+            }
             });
         }
     }

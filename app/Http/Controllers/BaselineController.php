@@ -6,7 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Src\CoreProject\Models\Baseline;
 use Src\CoreProject\Resources\BaselineResource;
-use Src\Foundation\Utils\JSendResponse;
+use App\Support\ApiResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 use Src\RBAC\Traits\HasRBACContext;
 
@@ -41,7 +41,7 @@ class BaselineController
         try {
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.view', $projectId)) {
-                return JSendResponse::error('Không có quyền xem baselines', 403);
+                return ApiResponse::error('Không có quyền xem baselines', 403);
             }
 
             $query = Baseline::where('project_id', $projectId)
@@ -59,12 +59,12 @@ class BaselineController
 
             $baselines = $query->get();
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'baselines' => BaselineResource::collection($baselines)
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy danh sách baselines: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy danh sách baselines: ' . $e->getMessage(), 500);
         }
     }
 
@@ -81,7 +81,7 @@ class BaselineController
         try {
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.create', $projectId)) {
-                return JSendResponse::error('Không có quyền tạo baseline', 403);
+                return ApiResponse::error('Không có quyền tạo baseline', 403);
             }
 
             $validator = Validator::make($request->all(), [
@@ -93,7 +93,7 @@ class BaselineController
             ]);
 
             if ($validator->fails()) {
-                return JSendResponse::fail($validator->errors(), 422);
+                return ApiResponse::fail($validator->errors(), 422);
             }
 
             // Tính version tiếp theo
@@ -112,13 +112,13 @@ class BaselineController
                 'created_by' => $this->getCurrentUserId($request)
             ]);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'baseline' => new BaselineResource($baseline->load('creator')),
                 'message' => 'Baseline đã được tạo thành công'
             ], 201);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo baseline: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể tạo baseline: ' . $e->getMessage(), 500);
         }
     }
 
@@ -137,15 +137,15 @@ class BaselineController
 
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.view', $baseline->project_id)) {
-                return JSendResponse::error('Không có quyền xem baseline này', 403);
+                return ApiResponse::error('Không có quyền xem baseline này', 403);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'baseline' => new BaselineResource($baseline)
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin baseline: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy thông tin baseline: ' . $e->getMessage(), 500);
         }
     }
 
@@ -164,7 +164,7 @@ class BaselineController
 
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.update', $baseline->project_id)) {
-                return JSendResponse::error('Không có quyền cập nhật baseline', 403);
+                return ApiResponse::error('Không có quyền cập nhật baseline', 403);
             }
 
             $validator = Validator::make($request->all(), [
@@ -175,19 +175,19 @@ class BaselineController
             ]);
 
             if ($validator->fails()) {
-                return JSendResponse::fail($validator->errors(), 422);
+                return ApiResponse::fail($validator->errors(), 422);
             }
 
             $updateData = $request->only(['start_date', 'end_date', 'cost', 'note']);
             $baseline->update($updateData);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'baseline' => new BaselineResource($baseline->fresh(['creator', 'project'])),
                 'message' => 'Baseline đã được cập nhật thành công'
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể cập nhật baseline: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể cập nhật baseline: ' . $e->getMessage(), 500);
         }
     }
 
@@ -206,17 +206,17 @@ class BaselineController
 
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.delete', $baseline->project_id)) {
-                return JSendResponse::error('Không có quyền xóa baseline', 403);
+                return ApiResponse::error('Không có quyền xóa baseline', 403);
             }
 
             $baseline->delete();
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'message' => 'Baseline đã được xóa thành công'
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể xóa baseline: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể xóa baseline: ' . $e->getMessage(), 500);
         }
     }
     
@@ -233,17 +233,17 @@ class BaselineController
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.view', $baseline1->project_id) ||
                 !$this->hasPermission($request, 'baseline.view', $baseline2->project_id)) {
-                return JSendResponse::error('Không có quyền so sánh baselines', 403);
+                return ApiResponse::error('Không có quyền so sánh baselines', 403);
             }
             
             $comparison = $this->baselineService->compareBaselines($baseline1, $baseline2);
             
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'comparison' => $comparison
             ]);
             
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể so sánh baselines: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể so sánh baselines: ' . $e->getMessage(), 500);
         }
     }
     
@@ -256,7 +256,7 @@ class BaselineController
         try {
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.create', $projectId)) {
-                return JSendResponse::error('Không có quyền tạo baseline', 403);
+                return ApiResponse::error('Không có quyền tạo baseline', 403);
             }
             
             $validator = Validator::make($request->all(), [
@@ -265,7 +265,7 @@ class BaselineController
             ]);
             
             if ($validator->fails()) {
-                return JSendResponse::fail($validator->errors(), 422);
+                return ApiResponse::fail($validator->errors(), 422);
             }
             
             $baseline = $this->baselineService->createBaselineFromProject(
@@ -275,13 +275,13 @@ class BaselineController
                 $request->input('note')
             );
             
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'baseline' => new BaselineResource($baseline->load('creator')),
                 'message' => 'Baseline đã được tạo từ dữ liệu project hiện tại'
             ], 201);
             
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo baseline: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể tạo baseline: ' . $e->getMessage(), 500);
         }
     }
     
@@ -294,17 +294,17 @@ class BaselineController
         try {
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.view', $projectId)) {
-                return JSendResponse::error('Không có quyền xem báo cáo baseline', 403);
+                return ApiResponse::error('Không có quyền xem báo cáo baseline', 403);
             }
             
             $report = $this->baselineService->getProjectBaselineReport($projectId);
             
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'report' => $report
             ]);
             
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo báo cáo baseline: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể tạo báo cáo baseline: ' . $e->getMessage(), 500);
         }
     }
     
@@ -323,7 +323,7 @@ class BaselineController
 
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.create', $baseline->project_id)) {
-                return JSendResponse::error('Không có quyền tạo re-baseline', 403);
+                return ApiResponse::error('Không có quyền tạo re-baseline', 403);
             }
 
             $validator = Validator::make($request->all(), [
@@ -332,7 +332,7 @@ class BaselineController
             ]);
 
             if ($validator->fails()) {
-                return JSendResponse::fail($validator->errors(), 422);
+                return ApiResponse::fail($validator->errors(), 422);
             }
 
             $newBaseline = $this->baselineService->rebaseline(
@@ -342,13 +342,13 @@ class BaselineController
                 $request->input('linked_contract_id')
             );
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'baseline' => new BaselineResource($newBaseline->load('creator')),
                 'message' => 'Re-baseline đã được tạo thành công'
             ], 201);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo re-baseline: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể tạo re-baseline: ' . $e->getMessage(), 500);
         }
     }
 
@@ -365,18 +365,18 @@ class BaselineController
         try {
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.view', $projectId)) {
-                return JSendResponse::error('Không có quyền xem variance analysis', 403);
+                return ApiResponse::error('Không có quyền xem variance analysis', 403);
             }
 
             $baselineType = $request->get('baseline_type', 'execution');
             $variance = $this->baselineService->calculateProjectVariance($projectId, $baselineType);
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'variance' => $variance
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tính toán variance: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể tính toán variance: ' . $e->getMessage(), 500);
         }
     }
 
@@ -395,17 +395,17 @@ class BaselineController
 
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.view', $baseline->project_id)) {
-                return JSendResponse::error('Không có quyền xem lịch sử baseline', 403);
+                return ApiResponse::error('Không có quyền xem lịch sử baseline', 403);
             }
 
             $history = $baseline->history()->with('creator')->orderBy('created_at', 'desc')->get();
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'history' => $history
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy lịch sử baseline: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy lịch sử baseline: ' . $e->getMessage(), 500);
         }
     }
 
@@ -422,22 +422,22 @@ class BaselineController
         try {
             // Kiểm tra quyền
             if (!$this->hasPermission($request, 'baseline.view', $projectId)) {
-                return JSendResponse::error('Không có quyền xem baseline hiện tại', 403);
+                return ApiResponse::error('Không có quyền xem baseline hiện tại', 403);
             }
 
             $type = $request->get('type', 'execution');
             $currentBaseline = Baseline::getCurrentBaseline($projectId, $type);
 
             if (!$currentBaseline) {
-                return JSendResponse::error('Không tìm thấy baseline hiện tại cho project', 404);
+                return ApiResponse::error('Không tìm thấy baseline hiện tại cho project', 404);
             }
 
-            return JSendResponse::success([
+            return ApiResponse::success([
                 'baseline' => new BaselineResource($currentBaseline->load('creator'))
             ]);
 
         } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy baseline hiện tại: ' . $e->getMessage(), 500);
+            return ApiResponse::error('Không thể lấy baseline hiện tại: ' . $e->getMessage(), 500);
         }
     }
 

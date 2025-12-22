@@ -1,0 +1,3 @@
+app/Http/Controllers/Admin/AdminDashboardController.php:class AdminDashboardController extends Controller
+app/Console/Commands/CleanupLegacyRoutes.php:            'app/Http/Controllers/AdminDashboardController.php',
+routes/web.php:    Route::get('/admin/dashboard', [\App\Http\Controllers\Admin\AdminDashboardController::class, 'index'])->name('admin.dashboard');

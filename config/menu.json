@@ -1,0 +1,114 @@
+[
+  {
+    "id": "dashboard",
+    "label": "Dashboard",
+    "icon": "tachometer-alt",
+    "to": "/app/dashboard",
+    "roles": ["*"],
+    "tenants": ["*"]
+  },
+  {
+    "id": "projects",
+    "label": "Projects",
+    "icon": "project-diagram",
+    "to": "/app/projects",
+    "roles": ["admin", "pm", "member"],
+    "tenants": ["*"],
+    "badge": {
+      "text": "3",
+      "variant": "warning"
+    }
+  },
+  {
+    "id": "tasks",
+    "label": "Tasks",
+    "icon": "tasks",
+    "to": "/app/tasks",
+    "roles": ["admin", "pm", "member"],
+    "tenants": ["*"]
+  },
+  {
+    "id": "team",
+    "label": "Team",
+    "icon": "users",
+    "to": "/app/team",
+    "roles": ["admin", "pm"],
+    "tenants": ["*"]
+  },
+  {
+    "id": "clients",
+    "label": "Clients",
+    "icon": "user-tie",
+    "to": "/app/clients",
+    "roles": ["admin", "pm"],
+    "tenants": ["*"]
+  },
+  {
+    "id": "reports",
+    "label": "Reports",
+    "icon": "chart-bar",
+    "to": "/app/reports",
+    "roles": ["admin", "pm"],
+    "tenants": ["*"],
+    "children": [
+      {
+        "id": "reports-overview",
+        "label": "Overview",
+        "icon": "chart-line",
+        "to": "/app/reports/overview",
+        "roles": ["admin", "pm"],
+        "tenants": ["*"]
+      },
+      {
+        "id": "reports-financial",
+        "label": "Financial",
+        "icon": "dollar-sign",
+        "to": "/app/reports/financial",
+        "roles": ["admin"],
+        "tenants": ["*"]
+      },
+      {
+        "id": "reports-productivity",
+        "label": "Productivity",
+        "icon": "clock",
+        "to": "/app/reports/productivity",
+        "roles": ["admin", "pm"],
+        "tenants": ["*"]
+      }
+    ]
+  },
+  {
+    "id": "settings",
+    "label": "Settings",
+    "icon": "cog",
+    "to": "/app/settings",
+    "roles": ["admin"],
+    "tenants": ["*"],
+    "children": [
+      {
+        "id": "settings-general",
+        "label": "General",
+        "icon": "cog",
+        "to": "/app/settings/general",
+        "roles": ["admin"],
+        "tenants": ["*"]
+      },
+      {
+        "id": "settings-users",
+        "label": "Users",
+        "icon": "users-cog",
+        "to": "/app/settings/users",
+        "roles": ["admin"],
+        "tenants": ["*"]
+      },
+      {
+        "id": "settings-billing",
+        "label": "Billing",
+        "icon": "credit-card",
+        "to": "/app/settings/billing",
+        "roles": ["admin"],
+        "tenants": ["*"]
+      }
+    ]
+  }
+]

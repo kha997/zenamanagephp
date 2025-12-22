@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
-    // use App\Traits\TenantScope; // Temporarily disabled for debugging
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
 
@@ -28,7 +30,7 @@ use Src\Foundation\Helpers\AuthHelper;
  */
 class Project extends Model
 {
-    use HasUlids, HasFactory; // Temporarily disabled TenantScope for debugging
+    use HasUlids, HasFactory, BelongsToTenant, SoftDeletes;
 
     protected $table = 'projects';
     
@@ -43,39 +45,100 @@ class Project extends Model
         'description',
         'start_date',
         'end_date',
+        'due_date',
         'status',
-        'progress',
-        'budget_total'
+        'progress_pct',
+        'budget_total',
+        'budget_planned',
+        'budget_actual',
+        'estimated_hours',
+        'actual_hours',
+        'risk_level',
+        'is_template',
+        'template_id',
+        'last_activity_at',
+        'completion_percentage',
+        'owner_id',
+        'tags',
+        'priority',
+        'settings'
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'progress' => 'float',
-        'budget_total' => 'float'
+        'due_date' => 'date',
+        'progress_pct' => 'integer',
+        'budget_total' => 'float',
+        'budget_planned' => 'float',
+        'budget_actual' => 'float',
+        'estimated_hours' => 'float',
+        'actual_hours' => 'float',
+        'completion_percentage' => 'float',
+        'last_activity_at' => 'datetime',
+        'tags' => 'array',
+        'settings' => 'array'
     ];
 
     protected $attributes = [
-        'status' => 'planning',
-        'progress' => 0.0,
-        'budget_total' => 0.0
+        'status' => 'active',
+        'progress_pct' => 0,
+        'budget_total' => 0.0,
+        'budget_planned' => 0.0,
+        'budget_actual' => 0.0,
+        'estimated_hours' => 0.0,
+        'actual_hours' => 0.0,
+        'risk_level' => 'low',
+        'is_template' => false,
+        'completion_percentage' => 0.0,
+        'priority' => 'normal'
     ];
 
     /**
      * Các trạng thái hợp lệ
      */
-    public const STATUS_PLANNING = 'planning';
     public const STATUS_ACTIVE = 'active';
-    public const STATUS_ON_HOLD = 'on_hold';
+    public const STATUS_ARCHIVED = 'archived';
     public const STATUS_COMPLETED = 'completed';
+    public const STATUS_ON_HOLD = 'on_hold';
     public const STATUS_CANCELLED = 'cancelled';
+    public const STATUS_PLANNING = 'planning';
+
+    /**
+     * Accessors for consistent field names
+     */
+    public function getProgressPercentAttribute(): int
+    {
+        return $this->progress_pct;
+    }
+
+    public function getBudgetAttribute(): float
+    {
+        return $this->budget_total;
+    }
 
     public const VALID_STATUSES = [
-        self::STATUS_PLANNING,
         self::STATUS_ACTIVE,
-        self::STATUS_ON_HOLD,
+        self::STATUS_ARCHIVED,
         self::STATUS_COMPLETED,
+        self::STATUS_ON_HOLD,
         self::STATUS_CANCELLED,
+        self::STATUS_PLANNING,
+    ];
+
+    /**
+     * Các mức độ ưu tiên
+     */
+    public const PRIORITY_LOW = 'low';
+    public const PRIORITY_NORMAL = 'normal';
+    public const PRIORITY_HIGH = 'high';
+    public const PRIORITY_URGENT = 'urgent';
+
+    public const VALID_PRIORITIES = [
+        self::PRIORITY_LOW,
+        self::PRIORITY_NORMAL,
+        self::PRIORITY_HIGH,
+        self::PRIORITY_URGENT,
     ];
 
     /**
@@ -87,11 +150,35 @@ class Project extends Model
     }
 
     /**
+     * Relationship: Project belongs to client
+     */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Client::class, 'client_id');
+    }
+
+    /**
+     * Relationship: Project owner
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'owner_id');
+    }
+
+    /**
+     * Relationship: Project created from template
+     */
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Template::class, 'template_id');
+    }
+
+    /**
      * Relationship: Project có nhiều components
      */
     public function components(): HasMany
     {
-        return $this->hasMany(\Src\CoreProject\Models\Component::class);
+        return $this->hasMany(Component::class);
     }
 
     /**
@@ -99,7 +186,7 @@ class Project extends Model
      */
     public function rootComponents(): HasMany
     {
-        return $this->hasMany(\Src\CoreProject\Models\Component::class)
+        return $this->hasMany(Component::class)
                     ->whereNull('parent_component_id');
     }
 
@@ -108,15 +195,7 @@ class Project extends Model
      */
     public function tasks(): HasMany
     {
-        return $this->hasMany(\Src\CoreProject\Models\Task::class);
-    }
-
-    /**
-     * Relationship: Project có nhiều user roles
-     */
-    public function userRoles(): HasMany
-    {
-        return $this->hasMany(\Src\RBAC\Models\UserRoleProject::class);
+        return $this->hasMany(Task::class);
     }
 
     /**
@@ -125,7 +204,7 @@ class Project extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(
-            \App\Models\User::class,
+            User::class,
             'project_user_roles',
             'project_id',
             'user_id'
@@ -134,19 +213,11 @@ class Project extends Model
     }
 
     /**
-     * Relationship: Project có nhiều baselines
-     */
-    public function baselines(): HasMany
-    {
-        return $this->hasMany(\Src\CoreProject\Models\Baseline::class);
-    }
-
-    /**
      * Relationship: Project có nhiều change requests
      */
     public function changeRequests(): HasMany
     {
-        return $this->hasMany(\Src\ChangeRequest\Models\ChangeRequest::class);
+        return $this->hasMany(ChangeRequest::class);
     }
 
     /**
@@ -154,7 +225,7 @@ class Project extends Model
      */
     public function documents(): HasMany
     {
-        return $this->hasMany(\Src\DocumentManagement\Models\Document::class);
+        return $this->hasMany(Document::class);
     }
 
     /**
@@ -263,7 +334,15 @@ class Project extends Model
      */
     public function scopeActive($query)
     {
-        return $query->whereIn('status', [self::STATUS_PLANNING, self::STATUS_ACTIVE]);
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    /**
+     * Scope: Chỉ lấy projects archived
+     */
+    public function scopeArchived($query)
+    {
+        return $query->where('status', self::STATUS_ARCHIVED);
     }
 
     /**
@@ -272,6 +351,37 @@ class Project extends Model
     protected static function newFactory()
     {
         return \Database\Factories\ProjectFactory::new();
+    }
+
+    /**
+     * Resolve route model binding with tenant isolation
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return null;
+        }
+
+        return $this->where($field ?? $this->getRouteKeyName(), $value)
+                   ->where('tenant_id', $user->tenant_id)
+                   ->first();
+    }
+
+    /**
+     * Accessor: Map actual_cost to budget_actual for backward compatibility
+     */
+    public function getActualCostAttribute()
+    {
+        return $this->budget_actual;
+    }
+
+    /**
+     * Mutator: Map actual_cost to budget_actual for backward compatibility
+     */
+    public function setActualCostAttribute($value)
+    {
+        $this->budget_actual = $value;
     }
 
     /**

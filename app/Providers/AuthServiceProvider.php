@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -27,6 +28,27 @@ class AuthServiceProvider extends ServiceProvider
         'App\Models\Template' => 'App\Policies\TemplatePolicy',
         'App\Models\Invitation' => 'App\Policies\InvitationPolicy',
         'App\Models\SidebarConfig' => 'App\Policies\SidebarConfigPolicy',
+        'App\Models\CalendarEvent' => 'App\Policies\CalendarEventPolicy',
+        'App\Models\EmailTracking' => 'App\Policies\EmailTrackingPolicy',
+        'App\Models\NotificationRule' => 'App\Policies\NotificationRulePolicy',
+        'App\Models\Organization' => 'App\Policies\OrganizationPolicy',
+        'App\Models\SupportTicket' => 'App\Policies\SupportTicketPolicy',
+        'App\Models\WorkTemplate' => 'App\Policies\WorkTemplatePolicy',
+        'App\Models\File' => 'App\Policies\FilePolicy',
+        'App\Models\Permission' => 'App\Policies\PermissionPolicy',
+        'App\Models\Role' => 'App\Policies\RolePolicy',
+        'App\Models\Tenant' => 'App\Policies\TenantPolicy',
+        'App\Models\OnboardingStep' => 'App\Policies\OnboardingStepPolicy',
+        'App\Models\ReportSchedule' => 'App\Policies\ReportSchedulePolicy',
+        'App\Models\ReportTemplate' => 'App\Policies\ReportTemplatePolicy',
+        'App\Models\SearchHistory' => 'App\Policies\SearchHistoryPolicy',
+        'App\Models\ProjectActivity' => 'App\Policies\ProjectActivityPolicy',
+        'App\Models\AuditLog' => 'App\Policies\AuditLogPolicy',
+        'App\Models\DashboardWidget' => 'App\Policies\DashboardWidgetPolicy',
+        'App\Models\Contract' => 'App\Policies\ContractPolicy',
+        'App\Models\ChangeOrder' => 'App\Policies\ChangeOrderPolicy',
+        'App\Models\ContractPaymentCertificate' => 'App\Policies\ContractPaymentCertificatePolicy',
+        'App\Models\ContractActualPayment' => 'App\Policies\ContractActualPaymentPolicy',
     ];
 
     /**
@@ -38,7 +60,29 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
         
-        // Temporarily disable Spatie Permission to fix cache issues
+        Gate::before(function ($user, $ability) {
+            if ($user && $user->isSuperAdmin()) {
+                return true;
+            }
+
+            return null;
+        });
+
+        // Define super-admin gate
+        Gate::define('super-admin', function ($user) {
+            return $user->isSuperAdmin();
+        });
+        
+        Gate::define('users.manage', function ($user) {
+            if (!$user) {
+                return false;
+            }
+
+            return $user->hasPermission('users.manage_roles')
+                || $user->hasPermission('users.manage_permissions');
+        });
+        
+        // Temporarily disable Spatie Permission until package is properly installed
         // $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->registerPermissions();
     }
 }

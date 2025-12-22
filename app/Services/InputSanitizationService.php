@@ -58,7 +58,8 @@ class InputSanitizationService
         $sanitized = [];
         
         foreach ($input as $key => $value) {
-            $sanitizedKey = $this->sanitizeString($key, false);
+            // Only sanitize string keys, leave numeric keys as-is
+            $sanitizedKey = is_string($key) ? $this->sanitizeString($key, false) : $key;
             
             if (is_array($value)) {
                 $sanitized[$sanitizedKey] = $this->sanitizeArray($value, $allowHtml);

@@ -20,6 +20,7 @@ return new class extends Migration
             $table->json('json_body');
             $table->text('note')->nullable();
             $table->string('created_by');
+            $table->boolean('is_active')->default(false);
             $table->timestamps();
             
             $table->index(['template_id', 'version']);

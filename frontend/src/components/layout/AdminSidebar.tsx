@@ -1,15 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/store/auth';
 import {
   HomeIcon,
   UsersIcon,
   FolderIcon,
   ShieldCheckIcon,
-  ChartBarIcon,
   Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline';
 
 interface AdminSidebarProps {
@@ -19,19 +16,13 @@ interface AdminSidebarProps {
 const adminNavigation = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: HomeIcon },
   { name: 'Users', href: '/admin/users', icon: UsersIcon },
-  { name: 'Projects', href: '/admin/projects', icon: FolderIcon },
-  { name: 'Roles & Permissions', href: '/admin/rbac', icon: ShieldCheckIcon },
-  { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
+  { name: 'Roles & Permissions', href: '/admin/roles', icon: ShieldCheckIcon },
+  { name: 'Tenants', href: '/admin/tenants', icon: FolderIcon },
   { name: 'System Settings', href: '/admin/settings', icon: Cog6ToothIcon },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ className }) => {
   const location = useLocation();
-  const { logout } = useAuthStore();
-
-  const handleLogout = () => {
-    logout();
-  };
 
   return (
     <div className={cn('flex h-full w-64 flex-col bg-red-900', className)}>

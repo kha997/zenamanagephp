@@ -45,10 +45,11 @@ class DashboardApiTest extends TestCase
         
         // Create test project
         $this->project = Project::create([
+            'code' => 'TEST-' . time(),
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
-            'budget' => 100000,
+            'budget_total' => 100000,
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
             'tenant_id' => $this->tenant->id
@@ -135,6 +136,7 @@ class DashboardApiTest extends TestCase
     {
         // Create test tasks
         Task::create([
+            'name' => 'Test Task 1',
             'title' => 'Test Task 1',
             'description' => 'Test task description',
             'status' => 'in_progress',
@@ -146,6 +148,7 @@ class DashboardApiTest extends TestCase
         ]);
 
         Task::create([
+            'name' => 'Test Task 2',
             'title' => 'Test Task 2',
             'description' => 'Test task description',
             'status' => 'completed',
@@ -158,12 +161,16 @@ class DashboardApiTest extends TestCase
 
         // Create test RFIs
         RFI::create([
+            'title' => 'Test RFI 1',
             'subject' => 'Test RFI 1',
+            'question' => 'Test RFI question',
             'description' => 'Test RFI description',
+            'rfi_number' => 'RFI-001',
             'status' => 'open',
             'priority' => 'high',
             'due_date' => now()->addDays(3),
-            'discipline' => 'construction',
+            'asked_by' => $this->user->id,
+            'created_by' => $this->user->id,
             'project_id' => $this->project->id,
             'tenant_id' => $this->tenant->id
         ]);
@@ -227,7 +234,7 @@ class DashboardApiTest extends TestCase
     /** @test */
     public function it_can_get_widget_data()
     {
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first(); // Use first widget instead of searching by code
         
         $response = $this->getJson("/api/v1/dashboard/widgets/{$widget->id}/data");
 
@@ -241,10 +248,15 @@ class DashboardApiTest extends TestCase
     /** @test */
     public function it_can_add_widget_to_dashboard()
     {
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first();
+        
+        // First create a dashboard for the user
+        $this->getJson('/api/v1/dashboard'); // This will create a default dashboard
         
         $response = $this->postJson('/api/v1/dashboard/widgets', [
             'widget_id' => $widget->id,
+            'position' => ['x' => 0, 'y' => 0],
+            'size' => ['width' => 2, 'height' => 1],
             'config' => [
                 'title' => 'Custom Project Overview',
                 'size' => 'large'
@@ -271,13 +283,18 @@ class DashboardApiTest extends TestCase
     /** @test */
     public function it_can_remove_widget_from_dashboard()
     {
-        // First add a widget
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        // First create a dashboard for the user
+        $this->getJson('/api/v1/dashboard'); // This will create a default dashboard
+        
+        // Then add a widget
+        $widget = DashboardWidget::first();
         $addResponse = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
+            'position' => ['x' => 0, 'y' => 0],
+            'size' => ['width' => 2, 'height' => 1]
         ]);
         
-        $widgetInstanceId = $addResponse->json('data.widget_instance.id');
+        $widgetInstanceId = $addResponse->json('widget_instance.id');
 
         // Then remove it
         $response = $this->deleteJson("/api/v1/dashboard/widgets/{$widgetInstanceId}");
@@ -292,16 +309,21 @@ class DashboardApiTest extends TestCase
     /** @test */
     public function it_can_update_widget_configuration()
     {
-        // First add a widget
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        // First create a dashboard for the user
+        $this->getJson('/api/v1/dashboard'); // This will create a default dashboard
+        
+        // Then add a widget
+        $widget = DashboardWidget::first();
         $addResponse = $this->postJson('/api/v1/dashboard/widgets', [
-            'widget_id' => $widget->id
+            'widget_id' => $widget->id,
+            'position' => ['x' => 0, 'y' => 0],
+            'size' => ['width' => 2, 'height' => 1]
         ]);
         
-        $widgetInstanceId = $addResponse->json('data.widget_instance.id');
+        $widgetInstanceId = $addResponse->json('widget_instance.id');
 
         // Update configuration
-        $response = $this->putJson("/api/v1/dashboard/widgets/{$widgetInstanceId}/config", [
+        $response = $this->putJson("/api/v1/dashboard/widgets/{$widgetInstanceId}", [
             'config' => [
                 'title' => 'Updated Title',
                 'size' => 'extra-large'
@@ -319,8 +341,8 @@ class DashboardApiTest extends TestCase
     public function it_can_update_dashboard_layout()
     {
         // Add multiple widgets first
-        $widget1 = DashboardWidget::where('code', 'project_overview')->first();
-        $widget2 = DashboardWidget::where('code', 'task_progress')->first();
+        $widget1 = DashboardWidget::first();
+        $widget2 = DashboardWidget::skip(1)->first();
         
         $this->postJson('/api/v1/dashboard/widgets', ['widget_id' => $widget1->id]);
         $this->postJson('/api/v1/dashboard/widgets', ['widget_id' => $widget2->id]);
@@ -334,7 +356,7 @@ class DashboardApiTest extends TestCase
         $layout[1]['position'] = ['x' => 6, 'y' => 0];
 
         $response = $this->putJson('/api/v1/dashboard/layout', [
-            'layout' => $layout
+            'layout_config' => $layout
         ]);
 
         $response->assertStatus(200)
@@ -440,7 +462,7 @@ class DashboardApiTest extends TestCase
     public function it_can_reset_dashboard_to_default()
     {
         // Add custom widgets first
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first();
         $this->postJson('/api/v1/dashboard/widgets', ['widget_id' => $widget->id]);
 
         $response = $this->postJson('/api/v1/dashboard/reset');
@@ -678,7 +700,7 @@ class DashboardApiTest extends TestCase
     /** @test */
     public function it_can_add_widget_via_customization()
     {
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first();
         
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id,
@@ -700,7 +722,7 @@ class DashboardApiTest extends TestCase
     public function it_can_remove_widget_via_customization()
     {
         // First add a widget
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first();
         $addResponse = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id
         ]);
@@ -721,7 +743,7 @@ class DashboardApiTest extends TestCase
     public function it_can_update_widget_config_via_customization()
     {
         // First add a widget
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first();
         $addResponse = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id
         ]);
@@ -747,8 +769,8 @@ class DashboardApiTest extends TestCase
     public function it_can_update_layout_via_customization()
     {
         // Add multiple widgets first
-        $widget1 = DashboardWidget::where('code', 'project_overview')->first();
-        $widget2 = DashboardWidget::where('code', 'task_progress')->first();
+        $widget1 = DashboardWidget::first();
+        $widget2 = DashboardWidget::skip(1)->first();
         
         $this->postJson('/api/v1/dashboard/customization/widgets', ['widget_id' => $widget1->id]);
         $this->postJson('/api/v1/dashboard/customization/widgets', ['widget_id' => $widget2->id]);
@@ -859,7 +881,7 @@ class DashboardApiTest extends TestCase
     public function it_can_reset_dashboard_via_customization()
     {
         // Add custom widgets first
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first();
         $this->postJson('/api/v1/dashboard/customization/widgets', ['widget_id' => $widget->id]);
 
         $response = $this->postJson('/api/v1/dashboard/customization/reset');
@@ -886,7 +908,7 @@ class DashboardApiTest extends TestCase
 
         Sanctum::actingAs($qcUser);
 
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first();
         
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id
@@ -988,9 +1010,10 @@ class DashboardApiTest extends TestCase
     /** @test */
     public function it_requires_authentication()
     {
-        // Clear authentication
-        Sanctum::actingAs(null);
-
+        // Clear authentication by not calling Sanctum::actingAs()
+        // Also clear any existing authentication
+        $this->app['auth']->forgetGuards();
+        
         $response = $this->getJson('/api/v1/dashboard');
 
         $response->assertStatus(401);
@@ -1002,7 +1025,7 @@ class DashboardApiTest extends TestCase
         // Mock database error
         \DB::shouldReceive('beginTransaction')->andThrow(new \Exception('Database error'));
 
-        $widget = DashboardWidget::where('code', 'project_overview')->first();
+        $widget = DashboardWidget::first();
         
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id

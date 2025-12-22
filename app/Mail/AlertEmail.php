@@ -3,56 +3,68 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
+use App\Models\User;
 
 class AlertEmail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable;
+
+    public $user;
+    public $alertType;
+    public $alertTitle;
+    public $alertMessage;
+    public $alertUrl;
+    public $priority;
 
     /**
      * Create a new message instance.
-     *
-     * @return void
      */
-    public function __construct()
+    public function __construct(User $user, string $alertType, string $alertTitle, string $alertMessage, string $alertUrl = null, string $priority = 'normal')
     {
-        //
+        $this->user = $user;
+        $this->alertType = $alertType;
+        $this->alertTitle = $alertTitle;
+        $this->alertMessage = $alertMessage;
+        $this->alertUrl = $alertUrl ?? config('app.url') . '/app/alerts';
+        $this->priority = $priority;
     }
 
     /**
      * Get the message envelope.
-     *
-     * @return \Illuminate\Mail\Mailables\Envelope
      */
-    public function envelope()
+    public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Alert Email',
+            subject: "[{$this->priority}] {$this->alertTitle}",
         );
     }
 
     /**
      * Get the message content definition.
-     *
-     * @return \Illuminate\Mail\Mailables\Content
      */
-    public function content()
+    public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'emails.alert',
+            with: [
+                'user' => $this->user,
+                'alertType' => $this->alertType,
+                'alertTitle' => $this->alertTitle,
+                'alertMessage' => $this->alertMessage,
+                'alertUrl' => $this->alertUrl,
+                'priority' => ucfirst($this->priority),
+                'alertedAt' => now()->format('F d, Y \a\t g:i A'),
+            ],
         );
     }
 
     /**
      * Get the attachments for the message.
-     *
-     * @return array
      */
-    public function attachments()
+    public function attachments(): array
     {
         return [];
     }

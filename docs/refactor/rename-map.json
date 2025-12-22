@@ -1,527 +1,317 @@
 {
-  "metadata": {
-    "version": "1.0",
-    "created": "2024-12-19",
-    "description": "Comprehensive rename map for ZenaManage refactoring",
-    "total_entries": 45,
-    "categories": {
-      "naming_convention": 20,
-      "module_boundary": 15,
-      "duplicate_removal": 10
-    }
-  },
+  "version": "1.0",
+  "created": "2025-01-24",
+  "description": "Comprehensive rename map for ZenaManage repository cleanup",
   "renames": [
-    {
-      "from": "resources/views/app/dashboard-content.blade.php",
-      "to": "resources/views/app/dashboard-content.blade.php",
-      "reason": "DuplicateRemoval",
-      "action": "DELETE",
-      "note": "Keep dashboard-clean.blade.php as the canonical version"
-    },
-    {
-      "from": "resources/views/app/dashboard-content-simple.blade.php",
-      "to": "resources/views/app/dashboard-content-simple.blade.php",
-      "reason": "DuplicateRemoval",
-      "action": "DELETE",
-      "note": "Keep dashboard-clean.blade.php as the canonical version"
-    },
-    {
-      "from": "resources/views/app/dashboard-clean.blade.php",
-      "to": "resources/views/app/dashboard-content.blade.php",
-      "reason": "NamingConvention",
-      "action": "RENAME",
-      "note": "Rename to standard naming convention"
-    },
-    {
-      "from": "resources/views/admin/dashboard.blade.php",
-      "to": "resources/views/admin/dashboard.blade.php",
-      "reason": "NamingConvention",
-      "action": "KEEP",
-      "note": "Already follows naming convention"
-    },
-    {
-      "from": "resources/views/admin/dashboard-enhanced.blade.php",
-      "to": "resources/views/admin/dashboard-enhanced.blade.php",
-      "reason": "DuplicateRemoval",
-      "action": "DELETE",
-      "note": "Consolidate with main admin dashboard"
-    },
-    {
-      "from": "resources/views/app/projects-enhanced.blade.php",
-      "to": "resources/views/app/projects-enhanced.blade.php",
-      "reason": "DuplicateRemoval",
-      "action": "DELETE",
-      "note": "Consolidate with main projects view"
-    },
-    {
-      "from": "app/Http/Controllers/ProjectController.php",
-      "to": "app/Http/Controllers/Web/ProjectController.php",
-      "reason": "ModuleBoundary",
-      "action": "MOVE",
-      "note": "Move to Web namespace for clarity"
-    },
-    {
-      "from": "app/Http/Controllers/Api/ProjectController.php",
-      "to": "app/Http/Controllers/Api/ProjectController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
-    },
-    {
-      "from": "app/Http/Controllers/Web/ProjectController.php",
-      "to": "app/Http/Controllers/Web/ProjectController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
-    },
-    {
-      "from": "app/Http/Controllers/App/ProjectController.php",
-      "to": "app/Http/Controllers/App/ProjectController.php",
-      "reason": "DuplicateRemoval",
-      "action": "DELETE",
-      "note": "Duplicate functionality, use Web/ProjectController"
-    },
-    {
-      "from": "app/Http/Controllers/SimpleUserController.php",
-      "to": "app/Http/Controllers/UserController.php",
-      "reason": "DuplicateRemoval",
-      "action": "DELETE",
-      "note": "Consolidate with main UserController"
-    },
     {
       "from": "app/Http/Controllers/SimpleUserControllerV2.php",
       "to": "app/Http/Controllers/UserControllerV2.php",
-      "reason": "NamingConvention",
-      "action": "RENAME",
-      "note": "Remove 'Simple' prefix for consistency"
+      "reason": "Naming",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/DashboardController.php",
-      "to": "app/Http/Controllers/Api/DashboardController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
-    },
-    {
-      "from": "app/Http/Controllers/Api/Admin/DashboardController.php",
-      "to": "app/Http/Controllers/Api/Admin/DashboardController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
-    },
-    {
-      "from": "app/Http/Controllers/Api/Admin/TenantDashboardController.php",
-      "to": "app/Http/Controllers/Api/Admin/TenantDashboardController.php",
+      "from": "app/Models/ZenaChangeRequest.php",
+      "to": "app/Models/ChangeRequest.php",
       "reason": "DuplicateRemoval",
-      "action": "DELETE",
-      "note": "Duplicate class issue, consolidate with Admin/DashboardController"
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/ProjectManagerDashboardController.php",
-      "to": "app/Http/Controllers/Api/ProjectManagerDashboardController.php",
-      "reason": "NamingConvention",
-      "action": "RENAME",
-      "note": "Rename to ProjectManagerController for consistency"
+      "from": "app/Models/ZenaDocument.php",
+      "to": "app/Models/Document.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/ProjectManagerDashboardController.php",
-      "to": "app/Http/Controllers/Api/ProjectManagerController.php",
-      "reason": "NamingConvention",
-      "action": "RENAME",
-      "note": "Remove 'Dashboard' suffix for consistency"
+      "from": "app/Models/ZenaProject.php",
+      "to": "app/Models/Project.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/ProjectAnalyticsController.php",
-      "to": "app/Http/Controllers/Api/ProjectAnalyticsController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Models/ZenaTask.php",
+      "to": "app/Models/Task.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/ProjectTemplateController.php",
-      "to": "app/Http/Controllers/Api/ProjectTemplateController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Models/ZenaUser.php",
+      "to": "app/Models/User.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/ProjectMilestoneController.php",
-      "to": "app/Http/Controllers/Api/ProjectMilestoneController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Models/ZenaRole.php",
+      "to": "app/Models/Role.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/RealTimeController.php",
-      "to": "app/Http/Controllers/Api/RealTimeController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Models/ZenaPermission.php",
+      "to": "app/Models/Permission.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/CalendarIntegrationController.php",
-      "to": "app/Http/Controllers/Api/CalendarIntegrationController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Models/ZenaNotification.php",
+      "to": "app/Models/Notification.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/CloudStorageController.php",
-      "to": "app/Http/Controllers/Api/CloudStorageController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Models/ZenaDrawing.php",
+      "to": "app/Models/Drawing.php",
+      "reason": "Naming",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/ThirdPartyController.php",
-      "to": "app/Http/Controllers/Api/ThirdPartyController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Models/ZenaMaterialRequest.php",
+      "to": "app/Models/MaterialRequest.php",
+      "reason": "Naming",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/PerformanceController.php",
-      "to": "app/Http/Controllers/Api/PerformanceController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Models/ZenaNcr.php",
+      "to": "app/Models/Ncr.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaQcInspection.php",
+      "to": "app/Models/QcInspection.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaRfi.php",
+      "to": "app/Models/Rfi.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaSubmittal.php",
+      "to": "app/Models/Submittal.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaRolePermission.php",
+      "to": "app/Models/RolePermission.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "app/Models/ZenaUserRole.php",
+      "to": "app/Models/UserRole.php",
+      "reason": "Naming",
+      "status": "completed"
     },
     {
       "from": "app/Http/Controllers/Api/SimpleDocumentController.php",
       "to": "app/Http/Controllers/Api/DocumentController.php",
       "reason": "DuplicateRemoval",
-      "action": "DELETE",
-      "note": "Consolidate with main DocumentController"
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/DocumentController.php",
-      "to": "app/Http/Controllers/Api/DocumentController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Http/Controllers/SimpleUserController.php",
+      "to": "app/Http/Controllers/UserController.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/DrawingController.php",
-      "to": "app/Http/Controllers/Api/DrawingController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Http/Controllers/Api/ProjectManagerDashboardController.php",
+      "to": "app/Http/Controllers/Api/DashboardController.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/TeamController.php",
-      "to": "app/Http/Controllers/Api/TeamController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "app/Http/Controllers/Api/ZenaDashboardController.php",
+      "to": "app/Http/Controllers/Api/DashboardController.php",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/TaskController.php",
-      "to": "app/Http/Controllers/Api/TaskController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/admin.blade.php",
+      "to": "resources/views/admin/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/TaskAssignmentController.php",
-      "to": "app/Http/Controllers/Api/TaskAssignmentController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/client.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/ComponentController.php",
-      "to": "app/Http/Controllers/Api/ComponentController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/pm.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/ExportController.php",
-      "to": "app/Http/Controllers/Api/ExportController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/site-engineer.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/AnalyticsController.php",
-      "to": "app/Http/Controllers/Api/AnalyticsController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/designer.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/SidebarConfigController.php",
-      "to": "app/Http/Controllers/Api/SidebarConfigController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/finance.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/BadgeController.php",
-      "to": "app/Http/Controllers/Api/BadgeController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/marketing.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/UserPreferenceController.php",
-      "to": "app/Http/Controllers/Api/UserPreferenceController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/performance.blade.php",
+      "to": "resources/views/admin/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/CacheController.php",
-      "to": "app/Http/Controllers/Api/CacheController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/projects.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/WebSocketController.php",
-      "to": "app/Http/Controllers/Api/WebSocketController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/qc-inspector.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/AuthenticationController.php",
-      "to": "app/Http/Controllers/Api/AuthenticationController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/sales.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/SSOController.php",
-      "to": "app/Http/Controllers/Api/SSOController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/subcontractor-lead.blade.php",
+      "to": "resources/views/app/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/BulkOperationsController.php",
-      "to": "app/Http/Controllers/Api/BulkOperationsController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "resources/views/dashboards/users.blade.php",
+      "to": "resources/views/admin/dashboard.blade.php",
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Api/SecurityDashboardController.php",
-      "to": "app/Http/Controllers/Api/SecurityDashboardController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "database/factories/ZenaChangeRequestFactory.php",
+      "to": "database/factories/ChangeRequestFactory.php",
+      "reason": "Naming",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Web/TaskController.php",
-      "to": "app/Http/Controllers/Web/TaskController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "database/factories/ZenaNotificationFactory.php",
+      "to": "database/factories/NotificationFactory.php",
+      "reason": "Naming",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/Web/DocumentController.php",
-      "to": "app/Http/Controllers/Web/DocumentController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "database/factories/ZenaPermissionFactory.php",
+      "to": "database/factories/PermissionFactory.php",
+      "reason": "Naming",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/App/TeamUsersController.php",
-      "to": "app/Http/Controllers/App/TeamUsersController.php",
-      "reason": "ModuleBoundary",
-      "action": "KEEP",
-      "note": "Already in correct namespace"
+      "from": "database/factories/ZenaProjectFactory.php",
+      "to": "database/factories/ProjectFactory.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "database/factories/ZenaRoleFactory.php",
+      "to": "database/factories/RoleFactory.php",
+      "reason": "Naming",
+      "status": "completed"
+    },
+    {
+      "from": "database/factories/ZenaTaskFactory.php",
+      "to": "database/factories/TaskFactory.php",
+      "reason": "Naming",
+      "status": "completed"
     },
     {
       "from": "app/Http/Controllers/InvitationController.php",
       "to": "app/Http/Controllers/Web/InvitationController.php",
-      "reason": "ModuleBoundary",
-      "action": "MOVE",
-      "note": "Move to Web namespace for consistency"
+      "reason": "Boundary",
+      "status": "completed"
     },
     {
-      "from": "app/Http/Controllers/AppController.php",
-      "to": "app/Http/Controllers/Web/AppController.php",
-      "reason": "ModuleBoundary",
-      "action": "MOVE",
-      "note": "Move to Web namespace for consistency"
+      "from": "app/Http/Controllers/ProjectController.php",
+      "to": "app/Http/Controllers/Web/ProjectController.php",
+      "reason": "Boundary",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/ExampleController.php",
+      "to": "app/Http/Controllers/Web/ExampleController.php",
+      "reason": "Boundary",
+      "status": "pending"
+    },
+    {
+      "from": "app/Http/Controllers/TestController.php",
+      "to": "app/Http/Controllers/Web/TestController.php",
+      "reason": "Boundary",
+      "status": "pending"
+    },
+    {
+      "from": "resources/views/test-*.blade.php",
+      "to": "resources/views/_debug/test-*.blade.php",
+      "reason": "Boundary",
+      "status": "pending"
+    },
+    {
+      "from": "resources/views/debug/*.blade.php",
+      "to": "resources/views/_debug/*.blade.php",
+      "reason": "Boundary",
+      "status": "pending"
+    },
+    {
+      "from": "routes/debug.php",
+      "to": "routes/_debug.php",
+      "reason": "Naming",
+      "status": "pending"
+    },
+    {
+      "from": "app/Http/Controllers/Api/SimpleDocumentController",
+      "to": "app/Http/Controllers/Api/DocumentController",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/Api/ProjectManagerDashboardController",
+      "to": "app/Http/Controllers/Api/DashboardController",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
+    },
+    {
+      "from": "app/Http/Controllers/Api/ZenaDashboardController",
+      "to": "app/Http/Controllers/Api/DashboardController",
+      "reason": "DuplicateRemoval",
+      "status": "completed"
     }
   ],
-  "route_renames": [
-    {
-      "from": "admin.dashboard.test",
-      "to": "admin-dashboard-test",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "projects.complete",
-      "to": "projects-complete",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "tasks.complete",
-      "to": "tasks-complete",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "calendar.complete",
-      "to": "calendar-complete",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "test.tailwind",
-      "to": "test-tailwind",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.dashboard.enhanced",
-      "to": "admin-dashboard-enhanced",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "projects.enhanced",
-      "to": "projects-enhanced",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "test.css.inline",
-      "to": "test-css-inline",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.layout.system",
-      "to": "admin-layout-system",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.users",
-      "to": "admin-users",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.tenants",
-      "to": "admin-tenants",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.security",
-      "to": "admin-security",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.alerts",
-      "to": "admin-alerts",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.activities",
-      "to": "admin-activities",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.analytics",
-      "to": "admin-analytics",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.projects",
-      "to": "admin-projects",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.tasks",
-      "to": "admin-tasks",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.settings",
-      "to": "admin-settings",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.maintenance",
-      "to": "admin-maintenance",
-      "reason": "NamingConvention",
-      "action": "RENAME"
-    },
-    {
-      "from": "admin.sidebar-builder",
-      "to": "admin-sidebar-builder",
-      "reason": "NamingConvention",
-      "action": "RENAME"
+  "summary": {
+    "total_renames": 45,
+    "completed": 35,
+    "pending": 10,
+    "by_reason": {
+      "DuplicateRemoval": 15,
+      "Naming": 12,
+      "Boundary": 18
     }
-  ],
-  "middleware_fixes": [
-    {
-      "route": "/app/projects",
-      "current_middleware": ["auth", "tenant.scope"],
-      "required_middleware": ["auth", "tenant.isolation", "rbac:tenant"],
-      "action": "UPDATE"
-    },
-    {
-      "route": "/app/tasks",
-      "current_middleware": ["auth", "tenant.scope"],
-      "required_middleware": ["auth", "tenant.isolation", "rbac:tenant"],
-      "action": "UPDATE"
-    },
-    {
-      "route": "/app/calendar",
-      "current_middleware": ["auth", "tenant.scope"],
-      "required_middleware": ["auth", "tenant.isolation", "rbac:tenant"],
-      "action": "UPDATE"
-    },
-    {
-      "route": "/admin/dashboard",
-      "current_middleware": ["auth"],
-      "required_middleware": ["auth", "rbac:admin"],
-      "action": "UPDATE"
-    },
-    {
-      "route": "/_debug/*",
-      "current_middleware": [],
-      "required_middleware": ["debug.gate"],
-      "action": "ADD"
-    }
-  ],
-  "notes": {
-    "execution_order": [
-      "1. Delete duplicate dashboard views",
-      "2. Rename dashboard-clean to dashboard-content",
-      "3. Move controllers to proper namespaces",
-      "4. Delete duplicate controllers",
-      "5. Update route names to kebab-case",
-      "6. Add missing middleware",
-      "7. Update all imports and references"
-    ],
-    "breaking_changes": [
-      "Route names will change (need to update frontend)",
-      "Controller namespaces will change (need to update imports)",
-      "Some duplicate functionality will be removed"
-    ],
-    "testing_required": [
-      "All renamed routes",
-      "All moved controllers",
-      "All middleware changes",
-      "Frontend route references"
-    ]
   }
 }

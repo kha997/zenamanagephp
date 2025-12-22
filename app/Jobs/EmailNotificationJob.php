@@ -25,9 +25,33 @@ class EmailNotificationJob implements ShouldQueue
     protected $emailData;
 
     /**
+     * Get notification ID for testing
+     */
+    public function getNotificationId(): string
+    {
+        return $this->notificationId;
+    }
+
+    /**
+     * Get user ID for testing
+     */
+    public function getUserId(): string
+    {
+        return $this->userId;
+    }
+
+    /**
+     * Get email data for testing
+     */
+    public function getEmailData(): array
+    {
+        return $this->emailData;
+    }
+
+    /**
      * Create a new job instance.
      */
-    public function __construct(int $notificationId, int $userId, array $emailData = [])
+    public function __construct(string $notificationId, string $userId, array $emailData = [])
     {
         $this->notificationId = $notificationId;
         $this->userId = $userId;

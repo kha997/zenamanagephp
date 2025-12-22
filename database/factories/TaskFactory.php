@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Task;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -23,25 +23,24 @@ class TaskFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
             'tenant_id' => Tenant::factory(),
-            'project_id' => ZenaProject::factory(),
+            'project_id' => Project::factory(),
             'parent_id' => null,
+            'name' => $this->faker->sentence(4),
             'title' => $this->faker->sentence(4),
             'description' => $this->faker->paragraph(),
             'status' => $this->faker->randomElement(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold']),
-            'priority' => $this->faker->randomElement(['low', 'medium', 'high', 'urgent']),
+            'priority' => $this->faker->randomElement(['low', 'normal', 'medium', 'high', 'urgent']),
             'assignee_id' => User::factory(),
             'created_by' => User::factory(),
             'start_date' => $this->faker->dateTimeBetween('-1 month', '+1 month'),
             'end_date' => $this->faker->dateTimeBetween('+1 month', '+3 months'),
-            'completed_at' => null,
             'estimated_hours' => $this->faker->randomFloat(2, 1, 40),
             'actual_hours' => $this->faker->randomFloat(2, 0, 40),
-            'progress' => $this->faker->numberBetween(0, 100),
-            'tags' => $this->faker->words(2),
-            'watchers' => [],
-            'dependencies' => [],
+            'progress_percent' => $this->faker->numberBetween(0, 100),
+            'tags' => json_encode($this->faker->words(2)),
+            'watchers' => json_encode([]),
+            'dependencies' => json_encode([]),
             'order' => $this->faker->numberBetween(1, 100),
             'visibility' => $this->faker->randomElement(['public', 'team', 'private']),
             'is_hidden' => false,

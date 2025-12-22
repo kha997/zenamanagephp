@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -10,84 +11,73 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Model Notification để quản lý thông báo
+ * Model Notification - Round 251: Notifications Center Phase 1
  * 
- * @property string $user_id
- * @property string $priority
- * @property string $title
- * @property string $body
- * @property string|null $link_url
- * @property string $channel
- * @property \Carbon\Carbon|null $read_at
+ * @property string $id ULID primary key
+ * @property string $tenant_id Tenant ID
+ * @property string $user_id User ID who receives the notification
+ * @property string|null $module Module: tasks / documents / cost / rbac / system
+ * @property string $type Type: e.g., task.assigned / co.needs_approval
+ * @property string $title Notification title
+ * @property string|null $message Notification message/body
+ * @property string|null $entity_type Entity type: "task", "change_order", etc.
+ * @property string|null $entity_id Entity ID (ULID)
+ * @property bool $is_read Whether notification is read
+ * @property array|null $metadata Additional metadata (JSON)
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
 class Notification extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids, HasFactory, BelongsToTenant;
 
     protected $table = 'notifications';
     protected $keyType = 'string';
     public $incrementing = false;
 
     /**
-     * Các mức độ ưu tiên
+     * Valid modules
      */
-    public const PRIORITY_CRITICAL = 'critical';
-    public const PRIORITY_NORMAL = 'normal';
-    public const PRIORITY_LOW = 'low';
+    public const MODULE_TASKS = 'tasks';
+    public const MODULE_DOCUMENTS = 'documents';
+    public const MODULE_COST = 'cost';
+    public const MODULE_RBAC = 'rbac';
+    public const MODULE_SYSTEM = 'system';
 
-    /**
-     * Các kênh thông báo
-     */
-    public const CHANNEL_INAPP = 'inapp';
-    public const CHANNEL_EMAIL = 'email';
-    public const CHANNEL_WEBHOOK = 'webhook';
-
-    /**
-     * Danh sách các mức độ ưu tiên hợp lệ
-     */
-    public const VALID_PRIORITIES = [
-        self::PRIORITY_CRITICAL,
-        self::PRIORITY_NORMAL,
-        self::PRIORITY_LOW,
-    ];
-
-    /**
-     * Danh sách các kênh hợp lệ
-     */
-    public const VALID_CHANNELS = [
-        self::CHANNEL_INAPP,
-        self::CHANNEL_EMAIL,
-        self::CHANNEL_WEBHOOK,
+    public const VALID_MODULES = [
+        self::MODULE_TASKS,
+        self::MODULE_DOCUMENTS,
+        self::MODULE_COST,
+        self::MODULE_RBAC,
+        self::MODULE_SYSTEM,
     ];
 
     protected $fillable = [
-        'user_id',
         'tenant_id',
+        'user_id',
+        'module',
         'type',
-        'priority',
         'title',
-        'body',
-        'link_url',
-        'channel',
-        'read_at',
-        'data',
+        'message',
+        'entity_type',
+        'entity_id',
+        'is_read',
         'metadata',
-        'event_key',
-        'project_id',
     ];
 
     protected $casts = [
-        'read_at' => 'datetime',
+        'is_read' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-        'data' => 'array',
         'metadata' => 'array',
     ];
 
+    protected $attributes = [
+        'is_read' => false,
+    ];
+
     /**
-     * Quan hệ với User
+     * Relationship: Notification belongs to User
      */
     public function user(): BelongsTo
     {
@@ -95,7 +85,7 @@ class Notification extends Model
     }
 
     /**
-     * Quan hệ với Tenant
+     * Relationship: Notification belongs to Tenant
      */
     public function tenant(): BelongsTo
     {
@@ -103,15 +93,7 @@ class Notification extends Model
     }
 
     /**
-     * Quan hệ với Project
-     */
-    public function project(): BelongsTo
-    {
-        return $this->belongsTo(Project::class);
-    }
-
-    /**
-     * Scope để lọc theo user
+     * Scope: Filter by user
      */
     public function scopeForUser(Builder $query, string $userId): Builder
     {
@@ -119,77 +101,58 @@ class Notification extends Model
     }
 
     /**
-     * Scope để lọc theo mức độ ưu tiên
+     * Scope: Filter by module
      */
-    public function scopeWithPriority(Builder $query, string $priority): Builder
+    public function scopeForModule(Builder $query, string $module): Builder
     {
-        return $query->where('priority', $priority);
+        return $query->where('module', $module);
     }
 
     /**
-     * Scope để lọc theo kênh
-     */
-    public function scopeWithChannel(Builder $query, string $channel): Builder
-    {
-        return $query->where('channel', $channel);
-    }
-
-    /**
-     * Scope để lấy thông báo chưa đọc
+     * Scope: Filter unread notifications
      */
     public function scopeUnread(Builder $query): Builder
     {
-        return $query->whereNull('read_at');
+        return $query->where('is_read', false);
     }
 
     /**
-     * Scope để lấy thông báo đã đọc
+     * Scope: Filter read notifications
      */
     public function scopeRead(Builder $query): Builder
     {
-        return $query->whereNotNull('read_at');
+        return $query->where('is_read', true);
     }
 
     /**
-     * Scope để lấy thông báo critical
+     * Scope: Order by created_at DESC (newest first)
      */
-    public function scopeCritical(Builder $query): Builder
+    public function scopeLatest(Builder $query): Builder
     {
-        return $query->where('priority', self::PRIORITY_CRITICAL);
+        return $query->orderBy('created_at', 'desc');
     }
 
     /**
-     * Scope để sắp xếp theo mức độ ưu tiên
+     * Scope: Search by title or message
      */
-    public function scopeOrderByPriority(Builder $query): Builder
+    public function scopeSearch(Builder $query, string $search): Builder
     {
-        // SQLite doesn't support FIELD() function, use CASE instead
-        return $query->orderByRaw("CASE 
-            WHEN priority = 'critical' THEN 1 
-            WHEN priority = 'normal' THEN 2 
-            WHEN priority = 'low' THEN 3 
-            ELSE 4 
-        END");
+        return $query->where(function ($q) use ($search) {
+            $q->where('title', 'like', "%{$search}%")
+              ->orWhere('message', 'like', "%{$search}%");
+        });
     }
 
     /**
-     * Kiểm tra xem thông báo đã được đọc chưa
+     * Check if notification is read
      */
     public function isRead(): bool
     {
-        return !is_null($this->read_at);
+        return $this->is_read === true;
     }
 
     /**
-     * Kiểm tra xem thông báo có phải critical không
-     */
-    public function isCritical(): bool
-    {
-        return $this->priority === self::PRIORITY_CRITICAL;
-    }
-
-    /**
-     * Đánh dấu thông báo là đã đọc
+     * Mark notification as read
      */
     public function markAsRead(): bool
     {
@@ -197,59 +160,44 @@ class Notification extends Model
             return true;
         }
 
-        $this->read_at = now();
+        $this->is_read = true;
         return $this->save();
     }
 
     /**
-     * Đánh dấu thông báo là chưa đọc
+     * Mark notification as unread
      */
     public function markAsUnread(): bool
     {
-        $this->read_at = null;
+        $this->is_read = false;
         return $this->save();
     }
 
     /**
-     * Tạo thông báo mới
+     * Get unread count for user
      */
-    public static function createNotification(array $data): self
+    public static function getUnreadCount(string $userId, ?string $tenantId = null): int
     {
-        return static::create([
-            'user_id' => $data['user_id'],
-            'priority' => $data['priority'] ?? self::PRIORITY_NORMAL,
-            'title' => $data['title'],
-            'body' => $data['body'],
-            'link_url' => $data['link_url'] ?? null,
-            'channel' => $data['channel'] ?? self::CHANNEL_INAPP,
-        ]);
+        $query = static::forUser($userId)->unread();
+        
+        if ($tenantId) {
+            $query->where('tenant_id', $tenantId);
+        }
+        
+        return $query->count();
     }
 
     /**
-     * Lấy số lượng thông báo chưa đọc của user
+     * Mark all notifications as read for user
      */
-    public static function getUnreadCount(string $userId): int
+    public static function markAllAsReadForUser(string $userId, ?string $tenantId = null): int
     {
-        return static::forUser($userId)->unread()->count();
-    }
-
-    /**
-     * Đánh dấu tất cả thông báo của user là đã đọc
-     */
-    public static function markAllAsReadForUser(string $userId): int
-    {
-        return static::forUser($userId)
-                    ->unread()
-                    ->update(['read_at' => now()]);
-    }
-
-    /**
-     * Xóa các thông báo cũ (đã đọc và quá 30 ngày)
-     */
-    public static function cleanupOldNotifications(): int
-    {
-        return static::read()
-                    ->where('read_at', '<', now()->subDays(30))
-                    ->delete();
+        $query = static::forUser($userId)->unread();
+        
+        if ($tenantId) {
+            $query->where('tenant_id', $tenantId);
+        }
+        
+        return $query->update(['is_read' => true]);
     }
 }

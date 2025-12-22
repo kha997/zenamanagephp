@@ -13,7 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('tenants', function (Blueprint $table) {
+        if (!Schema::hasTable('tenants')) {
+            Schema::create('tenants', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('name');
             $table->string('slug')->unique();
@@ -25,7 +26,8 @@ return new class extends Migration
             $table->timestamp('trial_ends_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
-        });
+            });
+        }
     }
 
     /**

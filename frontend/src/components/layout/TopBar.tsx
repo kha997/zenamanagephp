@@ -1,21 +1,34 @@
 import React from 'react';
 import { Bell, Search, User, Settings, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/hooks/useAuth';
+import { useNotificationsStore } from '@/store/notifications';
 
 /**
  * TopBar component - Header navigation bar cho admin layout
  * Hiển thị search, notifications, user menu và logout
+ * 
+ * Round 251: Added notifications bell icon with unread count
+ * Round 257: Updated to use notification store for real-time unread count
  */
 export function TopBar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  
+  // Get unread count from notification store (reactively updates with real-time notifications)
+  const unreadCount = useNotificationsStore((state) => state.unreadCount);
 
   const handleLogout = () => {
     logout();
   };
 
+  const handleNotificationsClick = () => {
+    navigate('/app/notifications');
+  };
+
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+    <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         {/* Left side - Search */}
         <div className="flex items-center flex-1 max-w-md">
@@ -31,12 +44,19 @@ export function TopBar() {
 
         {/* Right side - Notifications and User Menu */}
         <div className="flex items-center space-x-4">
-          {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative">
+          {/* Notifications - Round 251 */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="relative"
+            onClick={handleNotificationsClick}
+          >
             <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-              3
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </Button>
 
           {/* User Menu */}

@@ -1,0 +1,314 @@
+name: E2E Authentication Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'tests/E2E/auth/**'
+      - 'playwright.auth.config.ts'
+      - 'app/Http/Controllers/Test/**'
+      - 'routes/test.php'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'tests/E2E/auth/**'
+      - 'playwright.auth.config.ts'
+      - 'app/Http/Controllers/Test/**'
+      - 'routes/test.php'
+  workflow_dispatch:
+
+env:
+  BASE_URL: http://127.0.0.1:8000
+  DB_MODE: sqlite
+  FEATURES_TWO_FA: true
+  FEATURES_INVITE_ONLY: false
+  FEATURES_SSO: false
+
+jobs:
+  auth-tests:
+    name: Auth Tests on ${{ matrix.os }} - ${{ matrix.browser }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        browser: [chromium]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, zip
+          coverage: none
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install PHP dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-dev --optimize-autoloader
+      
+      - name: Install NPM dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: false
+      
+      - name: Generate application key
+        run: php artisan key:generate --ansi
+        if: runner.os != 'Windows'
+      
+      - name: Create SQLite database
+        run: |
+          touch database/database.sqlite
+        working-directory: ${{ github.workspace }}
+      
+      - name: Run migrations
+        run: php artisan migrate --force
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+      
+      - name: Seed test data
+        run: php artisan db:seed --class=AuthE2ESeeder --force
+        env:
+          APP_ENV: testing
+      
+      - name: Start Laravel server
+        run: php artisan serve --host=127.0.0.1 --port=8000 &
+      
+      - name: Wait for server
+        run: |
+          timeout 60 bash -c 'until curl -f http://127.0.0.1:8000/health; do sleep 2; done'
+        shell: bash
+      
+      - name: Run auth tests
+        run: npm run test:auth
+        env:
+          CI: true
+          BASE_URL: ${{ env.BASE_URL }}
+          DB_MODE: ${{ env.DB_MODE }}
+          FEATURES_TWO_FA: ${{ env.FEATURES_TWO_FA }}
+          FEATURES_INVITE_ONLY: ${{ env.FEATURES_INVITE_ONLY }}
+          FEATURES_SSO: ${{ env.FEATURES_SSO }}
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-test-results-${{ matrix.os }}-${{ matrix.browser }}
+          path: |
+            test-results/auth/**
+            playwright-report/
+          retention-days: 30
+      
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-screenshots-${{ matrix.os }}-${{ matrix.browser }}
+          path: test-results/auth/**/*.png
+          retention-days: 7
+      
+      - name: Upload traces
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: auth-traces-${{ matrix.os }}-${{ matrix.browser }}
+          path: test-results/auth/**/*.zip
+          retention-days: 7
+      
+      - name: Show test report
+        if: always()
+        run: npx playwright show-report test-results/auth/html-report
+        continue-on-error: true
+
+  auth-tests-firefox:
+    name: Auth Tests on Firefox
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, zip
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-dev --optimize-autoloader
+          npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install firefox
+      
+      - name: Generate application key
+        run: php artisan key:generate --ansi
+      
+      - name: Setup database
+        run: |
+          touch database/database.sqlite
+          php artisan migrate --force
+          php artisan db:seed --class=AuthE2ESeeder --force
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+      
+      - name: Start server and run tests
+        run: |
+          php artisan serve --host=127.0.0.1 --port=8000 &
+          timeout 60 bash -c 'until curl -f http://127.0.0.1:8000/health; do sleep 2; done'
+          npm run test:auth -- --project=auth-desktop-firefox
+        env:
+          CI: true
+          BASE_URL: ${{ env.BASE_URL }}
+      
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-test-results-firefox
+          path: test-results/auth/**
+          retention-days: 30
+
+  auth-tests-webkit:
+    name: Auth Tests on WebKit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, zip
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-dev --optimize-autoloader
+          npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install webkit
+      
+      - name: Generate application key
+        run: php artisan key:generate --ansi
+      
+      - name: Setup database
+        run: |
+          touch database/database.sqlite
+          php artisan migrate --force
+          php artisan db:seed --class=AuthE2ESeeder --force
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+      
+      - name: Start server and run tests
+        run: |
+          php artisan serve --host=127.0.0.1 --port=8000 &
+          timeout 60 bash -c 'until curl -f http://127.0.0.1:8000/health; do sleep 2; done'
+          npm run test:auth -- --project=auth-desktop-webkit
+        env:
+          CI: true
+          BASE_URL: ${{ env.BASE_URL }}
+      
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-test-results-webkit
+          path: test-results/auth/**
+          retention-days: 30
+
+  auth-tests-mobile:
+    name: Auth Tests on Mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, zip
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-dev --optimize-autoloader
+          npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+      
+      - name: Generate application key
+        run: php artisan key:generate --ansi
+      
+      - name: Setup database
+        run: |
+          touch database/database.sqlite
+          php artisan migrate --force
+          php artisan db:seed --class=AuthE2ESeeder --force
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+      
+      - name: Start server and run tests
+        run: |
+          php artisan serve --host=127.0.0.1 --port=8000 &
+          timeout 60 bash -c 'until curl -f http://127.0.0.1:8000/health; do sleep 2; done'
+          npm run test:auth -- --project=auth-mobile-chrome
+        env:
+          CI: true
+          BASE_URL: ${{ env.BASE_URL }}
+      
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-test-results-mobile
+          path: test-results/auth/**
+          retention-days: 30
+

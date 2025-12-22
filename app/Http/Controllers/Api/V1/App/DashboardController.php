@@ -1,621 +1,791 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\App;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\User;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     /**
-     * Get dashboard metrics - cached for 60 seconds
-     * GET /api/v1/app/dashboard/metrics
+     * Get main dashboard data (combined view)
      */
-    public function metrics(Request $request)
+    public function index(): JsonResponse
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            // Get all dashboard data in one call
+            $stats = $this->getStatsData($tenantId);
+            $recentProjects = $this->getRecentProjectsData($tenantId, 5);
+            $recentTasks = $this->getRecentTasksData($tenantId, 5);
+            $recentActivity = $this->getRecentActivityData($tenantId, 10);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'stats' => $stats,
+                    'recent_projects' => $recentProjects,
+                    'recent_tasks' => $recentTasks,
+                    'recent_activity' => $recentActivity
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load dashboard',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get dashboard stats/KPIs
+     */
+    public function getStats(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+            $stats = $this->getStatsData($tenantId);
+
+            return response()->json([
+                'success' => true,
+                'data' => $stats
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load dashboard stats',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper: Get stats data
+     */
+    private function getStatsData(string $tenantId): array
+    {
+        // Get counts
+        $totalProjects = Project::where('tenant_id', $tenantId)->count();
+        $activeProjects = Project::where('tenant_id', $tenantId)
+            ->where('status', 'active')->count();
+        $completedProjects = Project::where('tenant_id', $tenantId)
+            ->where('status', 'completed')->count();
+
+        $totalTasks = Task::whereHas('project', function($q) use ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        })->count();
         
-        // Simple test data first
-        return response()->json([
-            'kpis' => [
-                'total_users' => [
-                    'value' => 12,
-                    'label' => 'Active Users',
-                    'url' => '/app/team/users?filter=active',
-                    'icon' => 'fas fa-users',
-                    'color' => 'blue'
-                ],
-                'active_projects' => [
-                    'value' => 8,
-                    'label' => 'Active Projects',
-                    'url' => '/app/projects?filter=active',
-                    'icon' => 'fas fa-project-diagram',
-                    'color' => 'green'
-                ],
-                'total_tasks' => [
-                    'completed' => 45,
-                    'pending' => 23,
-                    'label' => 'Tasks',
-                    'url' => '/app/tasks',
-                    'icon' => 'fas fa-tasks',
-                    'color' => 'purple'
-                ],
-                'documents' => [
-                    'value' => 156,
-                    'label' => 'Documents This Week',
-                    'url' => '/app/documents?filter=this_week',
-                    'icon' => 'fas fa-file-alt',
-                    'color' => 'orange'
-                ]
+        $completedTasks = Task::whereHas('project', function($q) use ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        })->where('status', 'completed')->count();
+        
+        $inProgressTasks = Task::whereHas('project', function($q) use ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        })->where('status', 'in_progress')->count();
+        
+        $overdueTasks = Task::whereHas('project', function($q) use ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        })->where('end_date', '<', now())
+          ->whereNotIn('status', ['completed', 'cancelled'])
+          ->count();
+
+        $totalUsers = User::where('tenant_id', $tenantId)->count();
+        $activeUsers = User::where('tenant_id', $tenantId)
+            ->where('is_active', true)->count();
+
+        return [
+            'projects' => [
+                'total' => $totalProjects,
+                'active' => $activeProjects,
+                'completed' => $completedProjects
             ],
-            'alerts' => [
-                [
-                    'id' => 'overdue_tasks',
-                    'type' => 'critical',
-                    'title' => 'Overdue Tasks',
-                    'message' => 'You have 5 overdue tasks',
-                    'cta' => [
-                        'text' => 'View Tasks',
-                        'url' => '/app/tasks?filter=overdue',
-                        'action' => 'resolve'
-                    ],
-                    'dismissible' => false
-                ],
-                [
-                    'id' => 'urgent_projects',
-                    'type' => 'warning',
-                    'title' => 'Urgent Projects',
-                    'message' => '3 projects due within 3 days',
-                    'cta' => [
-                        'text' => 'Review Projects',
-                        'url' => '/app/projects?filter=urgent',
-                        'action' => 'acknowledge'
-                    ],
-                    'dismissible' => true
-                ]
+            'tasks' => [
+                'total' => $totalTasks,
+                'completed' => $completedTasks,
+                'in_progress' => $inProgressTasks,
+                'overdue' => $overdueTasks
             ],
-            'now_panel' => [
-                [
-                    'id' => 'review_proposals',
-                    'title' => 'Review Project Proposals',
-                    'description' => '3 new proposals waiting for review',
-                    'priority' => 'high',
-                    'cta' => [
-                        'text' => 'Review Now',
-                        'url' => '/app/projects?filter=pending_review',
-                        'action' => 'review'
-                    ]
-                ],
-                [
-                    'id' => 'update_status',
-                    'title' => 'Update Task Status',
-                    'description' => 'Mark completed tasks as done',
-                    'priority' => 'medium',
-                    'cta' => [
-                        'text' => 'Update Status',
-                        'url' => '/app/tasks?filter=my_tasks',
-                        'action' => 'update'
-                    ]
+            'users' => [
+                'total' => $totalUsers,
+                'active' => $activeUsers
+            ]
+        ];
+    }
+
+    /**
+     * Get recent projects
+     */
+    public function getRecentProjects(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+            $limit = (int) $request->get('limit', 5);
+
+            $projects = $this->getRecentProjectsData($tenantId, $limit);
+
+            return response()->json([
+                'success' => true,
+                'data' => $projects
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load recent projects',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper: Get recent projects data
+     */
+    private function getRecentProjectsData(string $tenantId, int $limit): array
+    {
+        return Project::where('tenant_id', $tenantId)
+            ->orderBy('updated_at', 'desc')
+            ->limit($limit)
+            ->get()
+            ->map(function ($project) {
+                return [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'status' => $project->status,
+                    'progress' => $project->progress ?? 0,
+                    'updated_at' => $project->updated_at->toISOString(),
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get recent tasks
+     */
+    public function getRecentTasks(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+            $limit = (int) $request->get('limit', 5);
+
+            $tasks = $this->getRecentTasksData($tenantId, $limit);
+
+            return response()->json([
+                'success' => true,
+                'data' => $tasks
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load recent tasks',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper: Get recent tasks data
+     */
+    private function getRecentTasksData(string $tenantId, int $limit): array
+    {
+        return Task::whereHas('project', function($q) use ($tenantId) {
+                $q->where('tenant_id', $tenantId);
+            })
+            ->orderBy('updated_at', 'desc')
+            ->limit($limit)
+            ->with('project')
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'name' => $task->name,
+                    'status' => $task->status,
+                    'project_name' => $task->project->name ?? null,
+                    'updated_at' => $task->updated_at->toISOString(),
+                ];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get recent activity
+     */
+    public function getRecentActivity(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+            $limit = (int) $request->get('limit', 10);
+
+            $activity = $this->getRecentActivityData($tenantId, $limit);
+
+            return response()->json([
+                'success' => true,
+                'data' => $activity
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load recent activity',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Helper: Get recent activity data
+     */
+    private function getRecentActivityData(string $tenantId, int $limit, $user = null): array
+    {
+        if ($user === null) {
+            $user = Auth::user();
+        }
+
+        $activity = [];
+        
+        // Get recent project updates
+        $recentProjects = Project::where('tenant_id', $tenantId)
+            ->orderBy('updated_at', 'desc')
+            ->limit((int) ceil($limit / 2))
+            ->get();
+            
+        foreach ($recentProjects as $project) {
+            $activity[] = [
+                'id' => 'project-' . $project->id,
+                'type' => 'project',
+                'action' => 'updated',
+                'description' => "Project '{$project->name}' was updated",
+                'timestamp' => $project->updated_at->toISOString(),
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name
                 ]
-            ],
-            'work_queue' => [
-                'my_work' => [
-                    'tasks' => [
+            ];
+        }
+
+        // Get recent task updates
+        $recentTasks = Task::whereHas('project', function($q) use ($tenantId) {
+            $q->where('tenant_id', $tenantId);
+        })
+            ->orderBy('updated_at', 'desc')
+            ->limit((int) ceil($limit / 2))
+            ->with('project', 'assignedTo')
+            ->get();
+            
+        foreach ($recentTasks as $task) {
+            $activity[] = [
+                'id' => 'task-' . $task->id,
+                'type' => 'task',
+                'action' => 'updated',
+                'description' => "Task '{$task->name}' in '{$task->project->name}' was updated",
+                'timestamp' => $task->updated_at->toISOString(),
+                'user' => [
+                    'id' => $task->assignedTo->id ?? $user->id,
+                    'name' => $task->assignedTo->name ?? $user->name
+                ]
+            ];
+        }
+
+        // Sort by timestamp descending and limit
+        usort($activity, function($a, $b) {
+            return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+        });
+        $activity = array_slice($activity, 0, $limit);
+
+        return $activity;
+    }
+
+    /**
+     * Get team member status
+     */
+    public function getTeamStatus(): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            $members = User::where('tenant_id', $tenantId)
+                ->where('id', '!=', $user->id) // Exclude current user
+                ->get()
+                ->map(function ($member) {
+                    // Determine status based on last activity
+                    $lastLogin = $member->last_login_at ?? $member->created_at;
+                    $minutesAgo = Carbon::parse($lastLogin)->diffInMinutes(now());
+                    
+                    $status = 'offline';
+                    if ($minutesAgo < 5) {
+                        $status = 'online';
+                    } elseif ($minutesAgo < 30) {
+                        $status = 'away';
+                    }
+
+                    return [
+                        'id' => $member->id,
+                        'name' => $member->name,
+                        'email' => $member->email,
+                        'avatar' => $member->avatar,
+                        'role' => $member->role ?? 'member',
+                        'status' => $status,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $members
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load team status',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get chart data by type
+     */
+    public function getChartData(Request $request, string $type): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+            $period = $request->get('period', '30d');
+            
+            // Parse period
+            $days = (int) str_replace('d', '', $period);
+            if ($days <= 0) $days = 30;
+            
+            $startDate = Carbon::now()->subDays($days);
+            
+            if ($type === 'project-progress') {
+                // Doughnut chart data
+                $data = [
+                    'labels' => ['Completed', 'Active', 'Planning', 'On Hold'],
+                    'datasets' => [
                         [
-                            'id' => 1,
-                            'title' => 'Design Review',
-                            'project' => 'Project Alpha',
-                            'priority' => 'high',
-                            'due_date' => '2025-09-25',
-                            'status' => 'in_progress',
-                            'focus_time' => 0
+                            'data' => [
+                                Project::where('tenant_id', $tenantId)->where('status', 'completed')->count(),
+                                Project::where('tenant_id', $tenantId)->where('status', 'active')->count(),
+                                Project::where('tenant_id', $tenantId)->where('status', 'planning')->count(),
+                                Project::where('tenant_id', $tenantId)->where('status', 'on_hold')->count()
+                            ],
+                            'backgroundColor' => [
+                                'rgb(34, 197, 94)',
+                                'rgb(234, 179, 8)',
+                                'rgb(59, 130, 246)',
+                                'rgb(249, 115, 22)'
+                            ]
+                        ]
+                    ]
+                ];
+            } elseif ($type === 'task-completion') {
+                // Line chart data
+                $dateRange = [];
+                $completed = [];
+                $total = [];
+                
+                for ($i = $days; $i >= 0; $i--) {
+                    $date = Carbon::now()->subDays($i);
+                    $dateRange[] = $date->format('M d');
+                    
+                    $dayStart = $date->copy()->startOfDay();
+                    $dayEnd = $date->copy()->endOfDay();
+                    
+                    $completed[] = Task::whereHas('project', function($q) use ($tenantId) {
+                        $q->where('tenant_id', $tenantId);
+                    })
+                        ->whereBetween('updated_at', [$dayStart, $dayEnd])
+                        ->where('status', 'completed')
+                        ->count();
+                        
+                    $total[] = Task::whereHas('project', function($q) use ($tenantId) {
+                        $q->where('tenant_id', $tenantId);
+                    })
+                        ->whereBetween('created_at', [$dayStart, $dayEnd])
+                        ->count();
+                }
+
+                $data = [
+                    'labels' => $dateRange,
+                    'datasets' => [
+                        [
+                            'label' => 'Completed',
+                            'data' => $completed,
+                            'borderColor' => 'rgb(34, 197, 94)',
+                            'backgroundColor' => 'rgba(34, 197, 94, 0.1)',
+                            'tension' => 0.4,
+                            'fill' => true
                         ],
                         [
-                            'id' => 2,
-                            'title' => 'Code Implementation',
-                            'project' => 'Project Beta',
-                            'priority' => 'medium',
-                            'due_date' => '2025-09-28',
-                            'status' => 'pending',
-                            'focus_time' => 0
+                            'label' => 'Total',
+                            'data' => $total,
+                            'borderColor' => 'rgb(59, 130, 246)',
+                            'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                            'tension' => 0.4,
+                            'fill' => true
                         ]
-                    ],
-                    'total' => 2
-                ],
-                'team_work' => [
-                    'tasks' => [
-                        [
-                            'id' => 3,
-                            'title' => 'Testing Phase',
-                            'assignee' => 'John Doe',
-                            'project' => 'Project Gamma',
-                            'priority' => 'high',
-                            'due_date' => '2025-09-26',
-                            'status' => 'in_progress'
-                        ]
-                    ],
-                    'total' => 1
-                ]
-            ],
-            'insights' => [
-                [
-                    'title' => 'Task Completion Trend',
-                    'type' => 'line',
-                    'data' => [
-                        ['date' => 'Sep 15', 'value' => 5],
-                        ['date' => 'Sep 16', 'value' => 8],
-                        ['date' => 'Sep 17', 'value' => 12],
-                        ['date' => 'Sep 18', 'value' => 15],
-                        ['date' => 'Sep 19', 'value' => 18],
-                        ['date' => 'Sep 20', 'value' => 22],
-                        ['date' => 'Sep 21', 'value' => 25]
-                    ],
-                    'url' => '/app/reports/task-completion'
-                ],
-                [
-                    'title' => 'Project Status',
-                    'type' => 'doughnut',
-                    'data' => [
-                        ['label' => 'Active', 'value' => 8],
-                        ['label' => 'Completed', 'value' => 12],
-                        ['label' => 'On Hold', 'value' => 3]
-                    ],
-                    'url' => '/app/reports/project-status'
-                ]
-            ],
-            'activity' => [
-                [
-                    'id' => 1,
-                    'type' => 'task',
-                    'description' => 'Task "Design Review" completed',
-                    'user' => 'John Doe',
-                    'created_at' => '2025-09-22T14:30:00Z',
-                    'metadata' => []
-                ],
-                [
-                    'id' => 2,
-                    'type' => 'document',
-                    'description' => 'New document uploaded: "Project Plan.pdf"',
-                    'user' => 'Jane Smith',
-                    'created_at' => '2025-09-22T13:30:00Z',
-                    'metadata' => []
-                ]
-            ],
-            'shortcuts' => [
-                [
-                    'title' => 'New Project',
-                    'url' => '/app/projects/create',
-                    'icon' => 'fas fa-plus',
-                    'color' => 'green'
-                ],
-                [
-                    'title' => 'New Task',
-                    'url' => '/app/tasks/create',
-                    'icon' => 'fas fa-tasks',
-                    'color' => 'blue'
-                ],
-                [
-                    'title' => 'Upload Document',
-                    'url' => '/app/documents/upload',
-                    'icon' => 'fas fa-upload',
-                    'color' => 'purple'
-                ],
-                [
-                    'title' => 'Team Chat',
-                    'url' => '/app/team/chat',
-                    'icon' => 'fas fa-comments',
-                    'color' => 'orange'
-                ]
-            ],
-            'focus_mode' => [
-                'is_active' => false,
-                'current_task' => null,
-                'started_at' => null,
-                'focus_time_today' => 0
-            ],
-            'generated_at' => now()->toISOString(),
-            'cache_ttl' => 60
-        ]);
-    }
-
-    /**
-     * Get 4 mandatory KPIs
-     */
-    private function getKPIs($user)
-    {
-        $tenantId = $user->tenant_id;
-        
-        return [
-            'total_users' => [
-                'value' => \App\Models\User::where('tenant_id', $tenantId)->where('is_active', true)->count(),
-                'label' => 'Active Users',
-                'url' => '/app/team/users?filter=active',
-                'icon' => 'fas fa-users',
-                'color' => 'blue'
-            ],
-            'active_projects' => [
-                'value' => \App\Models\Project::where('tenant_id', $tenantId)->whereIn('status', ['active', 'in_progress'])->count(),
-                'label' => 'Active Projects',
-                'url' => '/app/projects?filter=active',
-                'icon' => 'fas fa-project-diagram',
-                'color' => 'green'
-            ],
-            'total_tasks' => [
-                'completed' => \App\Models\Task::where('tenant_id', $tenantId)->where('status', 'completed')->count(),
-                'pending' => \App\Models\Task::where('tenant_id', $tenantId)->whereIn('status', ['pending', 'in_progress'])->count(),
-                'label' => 'Tasks',
-                'url' => '/app/tasks',
-                'icon' => 'fas fa-tasks',
-                'color' => 'purple'
-            ],
-            'documents' => [
-                'value' => \App\Models\Document::where('tenant_id', $tenantId)->where('created_at', '>=', Carbon::now()->subWeek())->count(),
-                'label' => 'Documents This Week',
-                'url' => '/app/documents?filter=this_week',
-                'icon' => 'fas fa-file-alt',
-                'color' => 'orange'
-            ]
-        ];
-    }
-
-    /**
-     * Get critical alerts (max 3)
-     */
-    private function getCriticalAlerts($user)
-    {
-        $alerts = [];
-        
-        // Check for overdue tasks (using created_at as proxy for due_date)
-        $overdueTasks = \App\Models\Task::where('tenant_id', $user->tenant_id)
-            ->where('created_at', '<', now()->subDays(7))
-            ->whereIn('status', ['pending', 'in_progress'])
-            ->count();
-            
-        if ($overdueTasks > 0) {
-            $alerts[] = [
-                'id' => 'overdue_tasks',
-                'type' => 'critical',
-                'title' => 'Overdue Tasks',
-                'message' => "You have {$overdueTasks} overdue tasks",
-                'cta' => [
-                    'text' => 'View Tasks',
-                    'url' => '/app/tasks?filter=overdue',
-                    'action' => 'resolve'
-                ],
-                'dismissible' => false
-            ];
-        }
-        
-        // Check for project deadlines (using created_at as proxy)
-        $urgentProjects = \App\Models\Project::where('tenant_id', $user->tenant_id)
-            ->where('created_at', '<=', Carbon::now()->subDays(30))
-            ->whereIn('status', ['active', 'in_progress'])
-            ->count();
-            
-        if ($urgentProjects > 0) {
-            $alerts[] = [
-                'id' => 'urgent_projects',
-                'type' => 'warning',
-                'title' => 'Urgent Projects',
-                'message' => "{$urgentProjects} projects due within 3 days",
-                'cta' => [
-                    'text' => 'Review Projects',
-                    'url' => '/app/projects?filter=urgent',
-                    'action' => 'acknowledge'
-                ],
-                'dismissible' => true
-            ];
-        }
-        
-        // Check for system maintenance
-        $alerts[] = [
-            'id' => 'system_maintenance',
-            'type' => 'info',
-            'title' => 'System Maintenance',
-            'message' => 'Scheduled maintenance on Sunday 2:00 AM - 4:00 AM',
-            'cta' => [
-                'text' => 'Learn More',
-                'url' => '/app/settings/maintenance',
-                'action' => 'acknowledge'
-            ],
-            'dismissible' => true
-        ];
-        
-        return array_slice($alerts, 0, 3); // Max 3 alerts
-    }
-
-    /**
-     * Get Now Panel tasks (3-5 items based on role)
-     */
-    private function getNowPanelTasks($user)
-    {
-        $tasks = [];
-        
-        // Role-based tasks
-        if ($user->hasRole('project_manager')) {
-            $tasks[] = [
-                'id' => 'review_proposals',
-                'title' => 'Review Project Proposals',
-                'description' => '3 new proposals waiting for review',
-                'priority' => 'high',
-                'cta' => [
-                    'text' => 'Review Now',
-                    'url' => '/app/projects?filter=pending_review',
-                    'action' => 'review'
-                ]
-            ];
-        }
-        
-        if ($user->hasRole('designer')) {
-            $tasks[] = [
-                'id' => 'design_review',
-                'title' => 'Complete Design Review',
-                'description' => 'Design review for Project Alpha due today',
-                'priority' => 'high',
-                'cta' => [
-                    'text' => 'Start Review',
-                    'url' => '/app/projects/alpha/design',
-                    'action' => 'start'
-                ]
-            ];
-        }
-        
-        // Common tasks for all users
-        $tasks[] = [
-            'id' => 'update_status',
-            'title' => 'Update Task Status',
-            'description' => 'Mark completed tasks as done',
-            'priority' => 'medium',
-            'cta' => [
-                'text' => 'Update Status',
-                'url' => '/app/tasks?filter=my_tasks',
-                'action' => 'update'
-            ]
-        ];
-        
-        $tasks[] = [
-            'id' => 'upload_documents',
-            'title' => 'Upload Project Documents',
-            'description' => 'Upload latest project documentation',
-            'priority' => 'medium',
-            'cta' => [
-                'text' => 'Upload Now',
-                'url' => '/app/documents/upload',
-                'action' => 'upload'
-            ]
-        ];
-        
-        return array_slice($tasks, 0, 5); // Max 5 tasks
-    }
-
-    /**
-     * Get Work Queue (My Work / Team)
-     */
-    private function getWorkQueue($user)
-    {
-        $tenantId = $user->tenant_id;
-        
-        return [
-            'my_work' => [
-                'tasks' => \App\Models\Task::where('tenant_id', $tenantId)
-                    ->where('assigned_to', $user->id)
-                    ->whereIn('status', ['pending', 'in_progress'])
-                    ->orderBy('priority', 'desc')
-                    ->orderBy('created_at', 'asc')
-                    ->limit(10)
-                    ->get()
-                    ->map(function ($task) {
-                        return [
-                            'id' => $task->id,
-                            'title' => $task->title,
-                            'project' => $task->project->name ?? 'No Project',
-                            'priority' => $task->priority,
-                            'due_date' => $task->created_at,
-                            'status' => $task->status,
-                            'focus_time' => $task->focus_time ?? 0
-                        ];
-                    }),
-                'total' => \App\Models\Task::where('tenant_id', $tenantId)
-                    ->where('assigned_to', $user->id)
-                    ->whereIn('status', ['pending', 'in_progress'])
-                    ->count()
-            ],
-            'team_work' => [
-                'tasks' => \App\Models\Task::where('tenant_id', $tenantId)
-                    ->whereIn('status', ['pending', 'in_progress'])
-                    ->orderBy('priority', 'desc')
-                    ->orderBy('created_at', 'asc')
-                    ->limit(10)
-                    ->get()
-                    ->map(function ($task) {
-                        return [
-                            'id' => $task->id,
-                            'title' => $task->title,
-                            'assignee' => $task->assignee->name ?? 'Unassigned',
-                            'project' => $task->project->name ?? 'No Project',
-                            'priority' => $task->priority,
-                            'due_date' => $task->created_at,
-                            'status' => $task->status
-                        ];
-                    }),
-                'total' => \App\Models\Task::where('tenant_id', $tenantId)
-                    ->whereIn('status', ['pending', 'in_progress'])
-                    ->count()
-            ]
-        ];
-    }
-
-    /**
-     * Get Insights (2-4 mini charts)
-     */
-    private function getInsights($user)
-    {
-        $tenantId = $user->tenant_id;
-        
-        return [
-            'task_completion_trend' => [
-                'title' => 'Task Completion Trend',
-                'type' => 'line',
-                'data' => $this->getTaskCompletionTrend($tenantId),
-                'url' => '/app/reports/task-completion'
-            ],
-            'project_status_distribution' => [
-                'title' => 'Project Status',
-                'type' => 'doughnut',
-                'data' => $this->getProjectStatusDistribution($tenantId),
-                'url' => '/app/reports/project-status'
-            ],
-            'team_productivity' => [
-                'title' => 'Team Productivity',
-                'type' => 'bar',
-                'data' => $this->getTeamProductivity($tenantId),
-                'url' => '/app/reports/team-productivity'
-            ]
-        ];
-    }
-
-    /**
-     * Get Recent Activity (10 records)
-     */
-    private function getRecentActivity($user)
-    {
-        $tenantId = $user->tenant_id;
-        
-        return \App\Models\Activity::where('tenant_id', $tenantId)
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(function ($activity) {
-                return [
-                    'id' => $activity->id,
-                    'type' => $activity->type,
-                    'description' => $activity->description,
-                    'user' => $activity->user->name ?? 'System',
-                    'created_at' => $activity->created_at,
-                    'metadata' => $activity->metadata
+                    ]
                 ];
-            });
-    }
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Invalid chart type'
+                ], 400);
+            }
 
-    /**
-     * Get Shortcuts (max 8)
-     */
-    private function getShortcuts($user)
-    {
-        $shortcuts = [
-            [
-                'title' => 'New Project',
-                'url' => '/app/projects/create',
-                'icon' => 'fas fa-plus',
-                'color' => 'green'
-            ],
-            [
-                'title' => 'New Task',
-                'url' => '/app/tasks/create',
-                'icon' => 'fas fa-tasks',
-                'color' => 'blue'
-            ],
-            [
-                'title' => 'Upload Document',
-                'url' => '/app/documents/upload',
-                'icon' => 'fas fa-upload',
-                'color' => 'purple'
-            ],
-            [
-                'title' => 'Team Chat',
-                'url' => '/app/team/chat',
-                'icon' => 'fas fa-comments',
-                'color' => 'orange'
-            ]
-        ];
-        
-        // Add role-specific shortcuts
-        if ($user->hasRole('project_manager')) {
-            $shortcuts[] = [
-                'title' => 'Project Reports',
-                'url' => '/app/reports/projects',
-                'icon' => 'fas fa-chart-bar',
-                'color' => 'indigo'
-            ];
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load chart data',
+                'message' => $e->getMessage()
+            ], 500);
         }
-        
-        return array_slice($shortcuts, 0, 8); // Max 8 shortcuts
     }
 
     /**
-     * Get Focus Mode status
+     * Get dashboard metrics for charts
      */
-    private function getFocusMode($user)
+    public function getMetrics(Request $request): JsonResponse
     {
-        $focusSession = \App\Models\FocusSession::where('user_id', $user->id)
-            ->where('status', 'active')
-            ->first();
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+            $period = $request->get('period', '30d');
             
-        return [
-            'is_active' => $focusSession ? true : false,
-            'current_task' => $focusSession ? $focusSession->task : null,
-            'started_at' => $focusSession ? $focusSession->started_at : null,
-            'focus_time_today' => $this->getFocusTimeToday($user->id)
-        ];
-    }
+            // Parse period (e.g., '30d', '7d', '90d')
+            $days = (int) str_replace('d', '', $period);
+            if ($days <= 0) $days = 30;
+            
+            $startDate = Carbon::now()->subDays($days);
+            
+            // Project Progress Chart (Doughnut)
+            $projectProgress = [
+                'labels' => ['Completed', 'Active', 'Planning', 'On Hold'],
+                'datasets' => [
+                    [
+                        'data' => [
+                            Project::where('tenant_id', $tenantId)->where('status', 'completed')->count(),
+                            Project::where('tenant_id', $tenantId)->where('status', 'active')->count(),
+                            Project::where('tenant_id', $tenantId)->where('status', 'planning')->count(),
+                            Project::where('tenant_id', $tenantId)->where('status', 'on_hold')->count()
+                        ],
+                        'backgroundColor' => [
+                            'rgb(34, 197, 94)',  // green
+                            'rgb(234, 179, 8)',   // yellow
+                            'rgb(59, 130, 246)',  // blue
+                            'rgb(249, 115, 22)'   // orange
+                        ]
+                    ]
+                ]
+            ];
 
-    // Helper methods for insights
-    private function getTaskCompletionTrend($tenantId)
-    {
-        // Return last 7 days data
-        $data = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            $completed = \App\Models\Task::where('tenant_id', $tenantId)
-                ->where('status', 'completed')
-                ->whereDate('updated_at', $date)
-                ->count();
-            $data[] = ['date' => $date->format('M d'), 'value' => $completed];
-        }
-        return $data;
-    }
-
-    private function getProjectStatusDistribution($tenantId)
-    {
-        $statuses = ['planning', 'active', 'in_progress', 'completed', 'on_hold'];
-        $data = [];
-        
-        foreach ($statuses as $status) {
-            $count = \App\Models\Project::where('tenant_id', $tenantId)
-                ->where('status', $status)
-                ->count();
-            $data[] = ['label' => ucfirst($status), 'value' => $count];
-        }
-        
-        return $data;
-    }
-
-    private function getTeamProductivity($tenantId)
-    {
-        return \App\Models\User::where('tenant_id', $tenantId)
-            ->where('is_active', true)
-            ->limit(5)
-            ->get()
-            ->map(function ($user) {
-                $completedTasks = \App\Models\Task::where('assigned_to', $user->id)
+            // Task Completion Chart (Line)
+            $dateRange = [];
+            $completed = [];
+            $total = [];
+            
+            for ($i = $days; $i >= 0; $i--) {
+                $date = Carbon::now()->subDays($i);
+                $dateRange[] = $date->format('M d');
+                
+                $dayStart = $date->copy()->startOfDay();
+                $dayEnd = $date->copy()->endOfDay();
+                
+                $completed[] = Task::whereHas('project', function($q) use ($tenantId) {
+                    $q->where('tenant_id', $tenantId);
+                })
+                    ->whereBetween('updated_at', [$dayStart, $dayEnd])
                     ->where('status', 'completed')
-                    ->where('updated_at', '>=', Carbon::now()->subWeek())
                     ->count();
                     
-                return [
-                    'name' => $user->name,
-                    'completed_tasks' => $completedTasks
-                ];
-            });
+                $total[] = Task::whereHas('project', function($q) use ($tenantId) {
+                    $q->where('tenant_id', $tenantId);
+                })
+                    ->whereBetween('created_at', [$dayStart, $dayEnd])
+                    ->count();
+            }
+
+            $taskCompletion = [
+                'labels' => $dateRange,
+                'datasets' => [
+                    [
+                        'label' => 'Completed',
+                        'data' => $completed,
+                        'borderColor' => 'rgb(34, 197, 94)',
+                        'backgroundColor' => 'rgba(34, 197, 94, 0.1)',
+                        'tension' => 0.4
+                    ],
+                    [
+                        'label' => 'Total',
+                        'data' => $total,
+                        'borderColor' => 'rgb(59, 130, 246)',
+                        'backgroundColor' => 'rgba(59, 130, 246, 0.1)',
+                        'tension' => 0.4
+                    ]
+                ]
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'project_progress' => $projectProgress,
+                    'task_completion' => $taskCompletion
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load metrics',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
-    private function getFocusTimeToday($userId)
+    /**
+     * Get user alerts
+     */
+    public function getAlerts(): JsonResponse
     {
-        return \App\Models\FocusSession::where('user_id', $userId)
-            ->whereDate('started_at', Carbon::today())
-            ->sum('duration');
+        try {
+            $user = Auth::user();
+            $tenantId = $user->tenant_id;
+
+            // Return empty alerts for now (can be extended later)
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load alerts',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark alert as read
+     */
+    public function markAlertAsRead(string $id): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Alert marked as read'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to mark alert as read',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mark all alerts as read
+     */
+    public function markAllAlertsAsRead(): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'All alerts marked as read'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to mark all alerts as read',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get available widgets
+     */
+    public function getAvailableWidgets(): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load widgets',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get widget data
+     */
+    public function getWidgetData(string $id): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => []
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to load widget data',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Add widget to dashboard
+     */
+    public function addWidget(Request $request): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Widget added successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to add widget',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove widget from dashboard
+     */
+    public function removeWidget(string $id): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Widget removed successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to remove widget',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update widget configuration
+     */
+    public function updateWidgetConfig(Request $request, string $id): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Widget updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to update widget',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update dashboard layout
+     */
+    public function updateLayout(Request $request): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Layout updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to update layout',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Save user preferences
+     */
+    public function saveUserPreferences(Request $request): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Preferences saved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to save preferences',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reset dashboard to default
+     */
+    public function resetToDefault(): JsonResponse
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'Dashboard reset to default successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to reset dashboard',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }
+

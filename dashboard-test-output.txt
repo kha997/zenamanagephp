@@ -1,0 +1,124 @@
+🧹 Clearing cached configuration before E2E run...
+PHP Deprecated:  explode(): Passing null to parameter #2 ($string) of type string is deprecated in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/config/security.php on line 108
+
+Deprecated: explode(): Passing null to parameter #2 ($string) of type string is deprecated in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/config/security.php on line 108
+
+   INFO  Configuration cache cleared successfully.  
+
+PHP Deprecated:  explode(): Passing null to parameter #2 ($string) of type string is deprecated in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/config/security.php on line 108
+
+Deprecated: explode(): Passing null to parameter #2 ($string) of type string is deprecated in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/config/security.php on line 108
+
+   INFO  Application cache cleared successfully.  
+
+PHP Deprecated:  explode(): Passing null to parameter #2 ($string) of type string is deprecated in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/config/security.php on line 108
+
+Deprecated: explode(): Passing null to parameter #2 ($string) of type string is deprecated in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/config/security.php on line 108
+
+   INFO  Compiled views cleared successfully.  
+
+🔄 Resetting database for E2E suite...
+PHP Deprecated:  explode(): Passing null to parameter #2 ($string) of type string is deprecated in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/config/security.php on line 108
+
+Deprecated: explode(): Passing null to parameter #2 ($string) of type string is deprecated in /Applications/XAMPP/xamppfiles/htdocs/zenamanage/config/security.php on line 108
+
+  Dropping all tables  819ms DONE
+
+   INFO  Preparing database.  
+
+  Creating migration table  30ms DONE
+
+   INFO  Running migrations.  
+
+  2019_12_14_000001_create_personal_access_tokens_table  95ms DONE
+  2024_09_27_000000_create_tenant_audit_logs_table  129ms DONE
+  2024_09_27_000001_add_tenants_performance_indexes  7ms DONE
+  2025_01_15_000001_create_clients_table  106ms DONE
+  2025_01_15_000002_create_quotes_table  261ms DONE
+  2025_09_14_100000_create_zena_users_table  81ms DONE
+  2025_09_14_110000_create_zena_system_tables  2,787ms DONE
+  2025_09_14_140000_create_zena_rbac_fixed  435ms DONE
+  2025_09_14_150000_modify_personal_access_tokens_for_ulid  149ms DONE
+  2025_09_14_160240_create_tenants_table  55ms DONE
+  2025_09_14_160300_create_zena_components_table  134ms DONE
+  2025_09_14_160316_create_zena_task_assignments_table  189ms DONE
+  2025_09_14_160324_create_zena_documents_table  221ms DONE
+  2025_09_14_160353_add_tenant_id_to_users_table  126ms DONE
+  2025_09_14_160418_add_tenant_id_to_zena_projects_table  142ms DONE
+  2025_09_14_160450_add_parent_foreign_key_to_zena_components_table  54ms DONE
+  2025_09_14_160538_add_parent_document_foreign_key_to_zena_documents_table  59ms DONE
+  2025_09_14_160630_add_profile_data_to_users_table  26ms DONE
+  2025_09_15_041906_create_projects_table  158ms DONE
+  2025_09_15_042450_create_tasks_table  224ms DONE
+  2025_09_15_094811_add_tenant_constraints_for_security  472ms DONE
+  2025_09_15_095740_add_email_verification_fields_to_users_table  96ms DONE
+  2025_09_15_100111_add_mfa_fields_to_users_table  52ms DONE
+  2025_09_15_100604_create_user_sessions_table  182ms DONE
+  2025_09_15_100956_add_password_policy_fields_to_users_table  77ms DONE
+  2025_09_15_103700_add_sso_fields_to_users_table  180ms DONE
+  2025_09_15_144442_unify_projects_table_schema  387ms DONE
+  2025_09_15_150122_create_project_activities_table  234ms DONE
+  2025_09_15_151311_create_calendar_integrations_table  136ms DONE
+  2025_09_15_162558_create_project_team_members_table  1ms DONE
+  2025_09_15_162930_create_project_milestones_table  1ms DONE
+  2025_09_15_163403_add_missing_columns_to_project_milestones_table  82ms DONE
+  2025_09_16_082322_create_task_watchers_table  219ms DONE
+  2025_09_16_082344_create_task_dependencies_table  230ms DONE
+  2025_09_16_082646_deprecate_zena_task_tables  55ms DONE
+  2025_09_16_082723_create_task_assignments_table  310ms DONE
+  2025_09_16_083456_deprecate_zena_design_construction_tables  191ms DONE
+  2025_09_16_084517_create_teams_table  425ms DONE
+  2025_09_16_084549_create_team_members_table  271ms DONE
+  2025_09_16_084621_create_project_teams_table  261ms DONE
+  2025_09_16_084654_add_team_support_to_task_assignments_table  141ms DONE
+  2025_09_17_043044_add_missing_fields_to_tasks_table  611ms DONE
+  2025_09_17_043146_add_tenant_id_to_task_assignments_table  236ms DONE
+  2025_09_17_043316_add_tenant_id_to_zena_notifications_table  106ms DONE
+  2025_09_17_043416_add_is_read_to_zena_notifications_table  51ms DONE
+  2025_09_17_043659_add_tenant_id_to_task_dependencies_table  109ms DONE
+  2025_09_17_044546_add_tenant_id_to_zena_documents_table  101ms DONE
+  2025_09_17_044822_make_project_id_nullable_in_zena_documents_table  66ms DONE
+  2025_09_17_162350_create_change_requests_table  704ms DONE
+  2025_09_17_162400_create_change_request_comments_table  273ms DONE
+  2025_09_17_162450_create_change_request_approvals_table  218ms DONE
+  2025_09_17_162520_add_created_by_to_projects_table  86ms DONE
+  2025_09_17_163151_add_role_to_users_table  30ms DONE
+  2025_09_17_164427_create_template_versions_table  108ms FAIL
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000]: General error: 1005 Can't create table `zenamanage_e2e`.`template_versions` (errno: 150 "Foreign key constraint is incorrectly formed") (Connection: mysql, SQL: alter table `template_versions` add constraint `template_versions_template_id_foreign` foreign key (`template_id`) references `templates` (`id`) on delete cascade)
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:829
+    825▕                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    826▕                 );
+    827▕             }
+    828▕ 
+  ➜ 829▕             throw new QueryException(
+    830▕                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    831▕             );
+    832▕         }
+    833▕     }
+
+      [2m+9 vendor frames [22m
+  10  database/migrations/2025_09_17_164427_create_template_versions_table.php:16
+      Illuminate\Support\Facades\Facade::__callStatic("create")
+
+      [2m+35 vendor frames [22m
+  46  artisan:35
+      Illuminate\Foundation\Console\Kernel::handle(Object(Symfony\Component\Console\Input\ArgvInput), Object(Symfony\Component\Console\Output\ConsoleOutput))
+Failed to run migrate:fresh for E2E setup.
+Error: Command failed: php artisan migrate:fresh --no-interaction
+
+   at ../E2E/setup/global-setup.ts:66
+
+  64 |
+  65 | function runArtisan(command: string, env: NodeJS.ProcessEnv) {
+> 66 |   execSync(`php artisan ${command} --no-interaction`, {
+     |           ^
+  67 |     cwd: PROJECT_ROOT,
+  68 |     env,
+  69 |     stdio: 'inherit',
+    at runArtisan (/Applications/XAMPP/xamppfiles/htdocs/zenamanage/tests/E2E/setup/global-setup.ts:66:11)
+    at globalSetup (/Applications/XAMPP/xamppfiles/htdocs/zenamanage/tests/E2E/setup/global-setup.ts:177:5)
+

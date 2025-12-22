@@ -1,0 +1,149 @@
+{
+  "domain": "projects",
+  "seed": 23456,
+  "description": "Projects domain test fixtures - Use with seedProjectsDomain(23456) for reproducibility",
+  "tenants": [
+    {
+      "name": "Projects Test Tenant",
+      "slug": "projects-test-tenant-23456",
+      "status": "active",
+      "is_active": true
+    }
+  ],
+  "users": [
+    {
+      "name": "Projects PM User",
+      "email": "pm@projects-test.test",
+      "role": "project_manager",
+      "password": "password"
+    },
+    {
+      "name": "Projects Team Member",
+      "email": "member@projects-test.test",
+      "role": "member",
+      "password": "password"
+    },
+    {
+      "name": "Projects Client Contact",
+      "email": "client@projects-test.test",
+      "role": "client",
+      "password": "password"
+    },
+    {
+      "name": "Projects Admin User",
+      "email": "admin@projects-test.test",
+      "role": "admin",
+      "password": "password"
+    }
+  ],
+  "clients": [
+    {
+      "name": "Active Test Client",
+      "email": "active@client.test",
+      "phone": "1234567890",
+      "company": "Active Client Company",
+      "lifecycle_stage": "customer"
+    },
+    {
+      "name": "Prospect Test Client",
+      "email": "prospect@client.test",
+      "phone": "1234567891",
+      "company": "Prospect Client Company",
+      "lifecycle_stage": "prospect"
+    }
+  ],
+  "projects": [
+    {
+      "code": "PROJ-23456-001",
+      "name": "Active Test Project",
+      "description": "An active project for testing",
+      "status": "active",
+      "priority": "high",
+      "budget_total": 100000.00,
+      "budget_planned": 80000.00,
+      "budget_actual": 0.00,
+      "progress_pct": 0,
+      "estimated_hours": 200.0,
+      "actual_hours": 0.0,
+      "risk_level": "low"
+    },
+    {
+      "code": "PROJ-23456-002",
+      "name": "Planning Test Project",
+      "description": "A project in planning phase",
+      "status": "planning",
+      "priority": "normal",
+      "budget_total": 50000.00,
+      "budget_planned": 50000.00,
+      "budget_actual": 0.00,
+      "progress_pct": 0,
+      "estimated_hours": 100.0,
+      "actual_hours": 0.0,
+      "risk_level": "medium"
+    },
+    {
+      "code": "PROJ-23456-003",
+      "name": "On Hold Test Project",
+      "description": "A project on hold",
+      "status": "on_hold",
+      "priority": "low",
+      "budget_total": 75000.00,
+      "budget_planned": 60000.00,
+      "budget_actual": 10000.00,
+      "progress_pct": 15,
+      "estimated_hours": 150.0,
+      "actual_hours": 20.0,
+      "risk_level": "high"
+    }
+  ],
+  "components": [
+    {
+      "name": "Design",
+      "description": "Component: Design",
+      "type": "phase",
+      "status": "active",
+      "priority": "normal",
+      "progress_percent": 25.0,
+      "planned_cost": 20000.00,
+      "actual_cost": 5000.00
+    },
+    {
+      "name": "Development",
+      "description": "Component: Development",
+      "type": "phase",
+      "status": "pending",
+      "priority": "normal",
+      "progress_percent": 0.0,
+      "planned_cost": 20000.00,
+      "actual_cost": 0.00
+    },
+    {
+      "name": "Testing",
+      "description": "Component: Testing",
+      "type": "phase",
+      "status": "pending",
+      "priority": "normal",
+      "progress_percent": 0.0,
+      "planned_cost": 20000.00,
+      "actual_cost": 0.00
+    },
+    {
+      "name": "Deployment",
+      "description": "Component: Deployment",
+      "type": "phase",
+      "status": "pending",
+      "priority": "normal",
+      "progress_percent": 0.0,
+      "planned_cost": 20000.00,
+      "actual_cost": 0.00
+    }
+  ],
+  "notes": [
+    "This fixture file documents the structure created by TestDataSeeder::seedProjectsDomain(23456)",
+    "Use this as a reference when writing tests that need projects domain data",
+    "All data is created with fixed seed 23456 for reproducibility",
+    "Users have password 'password' (will be hashed in actual implementation)",
+    "Project codes include seed value to ensure uniqueness across test runs"
+  ]
+}
+

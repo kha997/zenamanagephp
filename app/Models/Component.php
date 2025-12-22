@@ -10,8 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Event;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
+use Src\CoreProject\Events\ComponentProgressUpdated;
 
 /**
  * Model Component - Quản lý thành phần dự án
@@ -152,6 +154,71 @@ class Component extends Model
             'measured_date' => now()->toDateString(),
             'created_by' => $this->resolveActorId(),
         ]);
+    }
+
+    /**
+     * Override update method để dispatch events
+     */
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $oldValues = $this->getOriginal();
+        $result = parent::update($attributes, $options);
+        
+        if ($result) {
+            // Dispatch event nếu có thay đổi progress_percent
+            if (isset($attributes['progress_percent']) && $attributes['progress_percent'] != $oldValues['progress_percent']) {
+                // Dispatch Laravel Event
+                Event::dispatch(new ComponentProgressUpdated(
+                    componentId: (string)$this->id,
+                    projectId: (string)$this->project_id,
+                    actorId: (string)$this->resolveActorId(),
+                    tenantId: (string)$this->tenant_id,
+                    oldProgress: (float)$oldValues['progress_percent'],
+                    newProgress: (float)$attributes['progress_percent'],
+                    oldCost: null,
+                    newCost: null,
+                    changedFields: [
+                        'progress_percent' => [
+                            'old' => $oldValues['progress_percent'],
+                            'new' => $attributes['progress_percent']
+                        ]
+                    ],
+                    timestamp: new \DateTime()
+                ));
+                
+                // Also dispatch EventBus for backward compatibility
+                EventBus::dispatch('Project.Component.ProgressUpdated', [
+                    'entityId' => $this->id,
+                    'projectId' => $this->project_id,
+                    'actorId' => $this->resolveActorId(),
+                    'changedFields' => [
+                        'progress_percent' => [
+                            'old' => $oldValues['progress_percent'],
+                            'new' => $attributes['progress_percent']
+                        ]
+                    ],
+                    'componentId' => $this->id
+                ]);
+            }
+            
+            // Dispatch event nếu có thay đổi actual_cost
+            if (isset($attributes['actual_cost']) && $attributes['actual_cost'] != $oldValues['actual_cost']) {
+                EventBus::dispatch('Project.Component.CostUpdated', [
+                    'entityId' => $this->id,
+                    'projectId' => $this->project_id,
+                    'actorId' => $this->resolveActorId(),
+                    'changedFields' => [
+                        'actual_cost' => [
+                            'old' => $oldValues['actual_cost'],
+                            'new' => $attributes['actual_cost']
+                        ]
+                    ],
+                    'componentId' => $this->id
+                ]);
+            }
+        }
+        
+        return $result;
     }
 
     /**

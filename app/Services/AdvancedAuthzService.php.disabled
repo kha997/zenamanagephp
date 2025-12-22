@@ -1,0 +1,630 @@
+<?php declare(strict_types=1);
+
+namespace App\Services;
+
+use App\Models\User;
+use App\Models\Tenant;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+/**
+ * Advanced Authorization Service
+ * 
+ * Features:
+ * - Dynamic permission system
+ * - Resource-based access control (RBAC)
+ * - Attribute-based access control (ABAC)
+ * - Context-aware permissions
+ * - Permission inheritance
+ * - Temporary permissions
+ * - Audit trail for authorization decisions
+ */
+class AdvancedAuthzService
+{
+    private const PERMISSION_CACHE_TTL = 3600; // 1 hour
+    private const ROLE_CACHE_TTL = 7200; // 2 hours
+    private const CONTEXT_CACHE_TTL = 1800; // 30 minutes
+
+    /**
+     * Check if user has permission for specific action
+     */
+    public function can(User $user, string $permission, $resource = null, array $context = []): bool
+    {
+        $decision = $this->makeAuthorizationDecision($user, $permission, $resource, $context);
+        
+        // Log authorization decision
+        $this->logAuthorizationDecision($user, $permission, $resource, $context, $decision);
+        
+        return $decision['allowed'];
+    }
+
+    /**
+     * Make comprehensive authorization decision
+     */
+    public function makeAuthorizationDecision(User $user, string $permission, $resource = null, array $context = []): array
+    {
+        $startTime = microtime(true);
+        
+        // Get user roles and permissions
+        $userPermissions = $this->getUserPermissions($user);
+        $userRoles = $this->getUserRoles($user);
+        
+        // Check direct permission
+        if (in_array($permission, $userPermissions)) {
+            $decision = [
+                'allowed' => true,
+                'reason' => 'direct_permission',
+                'permission' => $permission,
+                'user_id' => $user->id,
+                'resource' => $resource,
+                'context' => $context,
+                'decision_time' => microtime(true) - $startTime,
+            ];
+            
+            return $decision;
+        }
+        
+        // Check role-based permissions
+        foreach ($userRoles as $role) {
+            $rolePermissions = $this->getRolePermissions($role);
+            if (in_array($permission, $rolePermissions)) {
+                $decision = [
+                    'allowed' => true,
+                    'reason' => 'role_permission',
+                    'permission' => $permission,
+                    'role' => $role,
+                    'user_id' => $user->id,
+                    'resource' => $resource,
+                    'context' => $context,
+                    'decision_time' => microtime(true) - $startTime,
+                ];
+                
+                return $decision;
+            }
+        }
+        
+        // Check resource-based permissions
+        if ($resource) {
+            $resourcePermission = $this->checkResourcePermission($user, $permission, $resource, $context);
+            if ($resourcePermission['allowed']) {
+                $decision = [
+                    'allowed' => true,
+                    'reason' => 'resource_permission',
+                    'permission' => $permission,
+                    'resource' => $resource,
+                    'user_id' => $user->id,
+                    'context' => $context,
+                    'decision_time' => microtime(true) - $startTime,
+                ];
+                
+                return $decision;
+            }
+        }
+        
+        // Check context-based permissions
+        $contextPermission = $this->checkContextPermission($user, $permission, $context);
+        if ($contextPermission['allowed']) {
+            $decision = [
+                'allowed' => true,
+                'reason' => 'context_permission',
+                'permission' => $permission,
+                'user_id' => $user->id,
+                'context' => $context,
+                'decision_time' => microtime(true) - $startTime,
+            ];
+            
+            return $decision;
+        }
+        
+        // Check temporary permissions
+        $tempPermission = $this->checkTemporaryPermission($user, $permission, $context);
+        if ($tempPermission['allowed']) {
+            $decision = [
+                'allowed' => true,
+                'reason' => 'temporary_permission',
+                'permission' => $permission,
+                'user_id' => $user->id,
+                'context' => $context,
+                'expires_at' => $tempPermission['expires_at'],
+                'decision_time' => microtime(true) - $startTime,
+            ];
+            
+            return $decision;
+        }
+        
+        // Default: deny
+        $decision = [
+            'allowed' => false,
+            'reason' => 'no_permission',
+            'permission' => $permission,
+            'user_id' => $user->id,
+            'resource' => $resource,
+            'context' => $context,
+            'decision_time' => microtime(true) - $startTime,
+        ];
+        
+        return $decision;
+    }
+
+    /**
+     * Get user permissions (cached)
+     */
+    private function getUserPermissions(User $user): array
+    {
+        $cacheKey = "user_permissions:{$user->id}";
+        
+        return Cache::remember($cacheKey, self::PERMISSION_CACHE_TTL, function () use ($user) {
+            $permissions = [];
+            
+            // Get direct permissions
+            $directPermissions = $this->getDirectUserPermissions($user);
+            $permissions = array_merge($permissions, $directPermissions);
+            
+            // Get role-based permissions
+            $roles = $this->getUserRoles($user);
+            foreach ($roles as $role) {
+                $rolePermissions = $this->getRolePermissions($role);
+                $permissions = array_merge($permissions, $rolePermissions);
+            }
+            
+            // Get inherited permissions
+            $inheritedPermissions = $this->getInheritedPermissions($user);
+            $permissions = array_merge($permissions, $inheritedPermissions);
+            
+            return array_unique($permissions);
+        });
+    }
+
+    /**
+     * Get direct user permissions
+     */
+    private function getDirectUserPermissions(User $user): array
+    {
+        // This would typically come from a user_permissions table
+        // For now, we'll use a simple implementation
+        return $user->permissions ?? [];
+    }
+
+    /**
+     * Get user roles (cached)
+     */
+    private function getUserRoles(User $user): array
+    {
+        $cacheKey = "user_roles:{$user->id}";
+        
+        return Cache::remember($cacheKey, self::ROLE_CACHE_TTL, function () use ($user) {
+            $roles = [$user->role];
+            
+            // Get inherited roles
+            $inheritedRoles = $this->getInheritedRoles($user->role);
+            $roles = array_merge($roles, $inheritedRoles);
+            
+            return array_unique($roles);
+        });
+    }
+
+    /**
+     * Get role permissions (cached)
+     */
+    private function getRolePermissions(string $role): array
+    {
+        $cacheKey = "role_permissions:{$role}";
+        
+        return Cache::remember($cacheKey, self::ROLE_CACHE_TTL, function () use ($role) {
+            $permissions = config("permissions.roles.{$role}.permissions", []);
+            
+            // Get inherited role permissions
+            $inheritedRoles = $this->getInheritedRoles($role);
+            foreach ($inheritedRoles as $inheritedRole) {
+                $inheritedPermissions = config("permissions.roles.{$inheritedRole}.permissions", []);
+                $permissions = array_merge($permissions, $inheritedPermissions);
+            }
+            
+            return array_unique($permissions);
+        });
+    }
+
+    /**
+     * Get inherited roles
+     */
+    private function getInheritedRoles(string $role): array
+    {
+        $inheritedRoles = config("permissions.roles.{$role}.inherits", []);
+        
+        $allInherited = [];
+        foreach ($inheritedRoles as $inheritedRole) {
+            $allInherited[] = $inheritedRole;
+            $subInherited = $this->getInheritedRoles($inheritedRole);
+            $allInherited = array_merge($allInherited, $subInherited);
+        }
+        
+        return array_unique($allInherited);
+    }
+
+    /**
+     * Get inherited permissions
+     */
+    private function getInheritedPermissions(User $user): array
+    {
+        $permissions = [];
+        
+        // Get permissions from user groups
+        if ($user->groups) {
+            foreach ($user->groups as $group) {
+                $groupPermissions = config("permissions.groups.{$group}.permissions", []);
+                $permissions = array_merge($permissions, $groupPermissions);
+            }
+        }
+        
+        // Get permissions from tenant settings
+        if ($user->tenant_id) {
+            $tenantPermissions = config("permissions.tenants.{$user->tenant_id}.permissions", []);
+            $permissions = array_merge($permissions, $tenantPermissions);
+        }
+        
+        return array_unique($permissions);
+    }
+
+    /**
+     * Check resource-based permission
+     */
+    private function checkResourcePermission(User $user, string $permission, $resource, array $context): array
+    {
+        // Check if user owns the resource
+        if (method_exists($resource, 'user_id') && $resource->user_id === $user->id) {
+            return [
+                'allowed' => true,
+                'reason' => 'resource_owner',
+            ];
+        }
+        
+        // Check if user is assigned to the resource
+        if (method_exists($resource, 'assigned_to') && $resource->assigned_to === $user->id) {
+            return [
+                'allowed' => true,
+                'reason' => 'resource_assigned',
+            ];
+        }
+        
+        // Check tenant-based access
+        if (method_exists($resource, 'tenant_id') && $resource->tenant_id === $user->tenant_id) {
+            // Additional checks based on resource type and permission
+            if ($this->checkTenantResourceAccess($user, $permission, $resource)) {
+                return [
+                    'allowed' => true,
+                    'reason' => 'tenant_resource_access',
+                ];
+            }
+        }
+        
+        return [
+            'allowed' => false,
+            'reason' => 'no_resource_access',
+        ];
+    }
+
+    /**
+     * Check tenant resource access
+     */
+    private function checkTenantResourceAccess(User $user, string $permission, $resource): bool
+    {
+        $resourceType = class_basename($resource);
+        
+        // Define resource-specific access rules
+        $accessRules = [
+            'Project' => [
+                'view' => ['PM', 'Member', 'Client'],
+                'edit' => ['PM', 'Member'],
+                'delete' => ['PM'],
+                'assign' => ['PM'],
+            ],
+            'Task' => [
+                'view' => ['PM', 'Member', 'Client'],
+                'edit' => ['PM', 'Member'],
+                'delete' => ['PM'],
+                'assign' => ['PM', 'Member'],
+            ],
+            'Document' => [
+                'view' => ['PM', 'Member', 'Client'],
+                'edit' => ['PM', 'Member'],
+                'delete' => ['PM'],
+                'upload' => ['PM', 'Member'],
+            ],
+        ];
+        
+        $rules = $accessRules[$resourceType] ?? [];
+        $allowedRoles = $rules[$permission] ?? [];
+        
+        return in_array($user->role, $allowedRoles);
+    }
+
+    /**
+     * Check context-based permission
+     */
+    private function checkContextPermission(User $user, string $permission, array $context): array
+    {
+        // Check time-based permissions
+        if (isset($context['time_restriction'])) {
+            $timeRestriction = $context['time_restriction'];
+            $currentTime = now();
+            
+            if (isset($timeRestriction['start']) && $currentTime->lt($timeRestriction['start'])) {
+                return [
+                    'allowed' => false,
+                    'reason' => 'time_restriction_start',
+                ];
+            }
+            
+            if (isset($timeRestriction['end']) && $currentTime->gt($timeRestriction['end'])) {
+                return [
+                    'allowed' => false,
+                    'reason' => 'time_restriction_end',
+                ];
+            }
+        }
+        
+        // Check location-based permissions
+        if (isset($context['location_restriction'])) {
+            $allowedLocations = $context['location_restriction']['allowed'];
+            $currentLocation = $context['location_restriction']['current'] ?? null;
+            
+            if ($currentLocation && !in_array($currentLocation, $allowedLocations)) {
+                return [
+                    'allowed' => false,
+                    'reason' => 'location_restriction',
+                ];
+            }
+        }
+        
+        // Check IP-based permissions
+        if (isset($context['ip_restriction'])) {
+            $allowedIPs = $context['ip_restriction']['allowed'];
+            $currentIP = request()->ip();
+            
+            if (!in_array($currentIP, $allowedIPs)) {
+                return [
+                    'allowed' => false,
+                    'reason' => 'ip_restriction',
+                ];
+            }
+        }
+        
+        // Check device-based permissions
+        if (isset($context['device_restriction'])) {
+            $allowedDevices = $context['device_restriction']['allowed'];
+            $currentDevice = $context['device_restriction']['current'] ?? null;
+            
+            if ($currentDevice && !in_array($currentDevice, $allowedDevices)) {
+                return [
+                    'allowed' => false,
+                    'reason' => 'device_restriction',
+                ];
+            }
+        }
+        
+        return [
+            'allowed' => true,
+            'reason' => 'context_allowed',
+        ];
+    }
+
+    /**
+     * Check temporary permission
+     */
+    private function checkTemporaryPermission(User $user, string $permission, array $context): array
+    {
+        $tempKey = "temp_permission:{$user->id}:{$permission}";
+        $tempData = Cache::get($tempKey);
+        
+        if (!$tempData) {
+            return [
+                'allowed' => false,
+                'reason' => 'no_temporary_permission',
+            ];
+        }
+        
+        $expiresAt = Carbon::parse($tempData['expires_at']);
+        if ($expiresAt->isPast()) {
+            Cache::forget($tempKey);
+            return [
+                'allowed' => false,
+                'reason' => 'temporary_permission_expired',
+            ];
+        }
+        
+        // Check if context matches
+        if (isset($tempData['context']) && $tempData['context'] !== $context) {
+            return [
+                'allowed' => false,
+                'reason' => 'context_mismatch',
+            ];
+        }
+        
+        return [
+            'allowed' => true,
+            'reason' => 'temporary_permission_valid',
+            'expires_at' => $expiresAt,
+        ];
+    }
+
+    /**
+     * Grant temporary permission
+     */
+    public function grantTemporaryPermission(User $user, string $permission, int $durationMinutes = 60, array $context = []): bool
+    {
+        $tempKey = "temp_permission:{$user->id}:{$permission}";
+        $expiresAt = now()->addMinutes($durationMinutes);
+        
+        $tempData = [
+            'permission' => $permission,
+            'user_id' => $user->id,
+            'granted_at' => now()->toISOString(),
+            'expires_at' => $expiresAt->toISOString(),
+            'context' => $context,
+            'granted_by' => auth()->id(),
+        ];
+        
+        Cache::put($tempKey, $tempData, $durationMinutes * 60);
+        
+        Log::info('Temporary permission granted', [
+            'user_id' => $user->id,
+            'permission' => $permission,
+            'duration_minutes' => $durationMinutes,
+            'expires_at' => $expiresAt,
+            'granted_by' => auth()->id(),
+        ]);
+        
+        return true;
+    }
+
+    /**
+     * Revoke temporary permission
+     */
+    public function revokeTemporaryPermission(User $user, string $permission): bool
+    {
+        $tempKey = "temp_permission:{$user->id}:{$permission}";
+        $result = Cache::forget($tempKey);
+        
+        Log::info('Temporary permission revoked', [
+            'user_id' => $user->id,
+            'permission' => $permission,
+            'revoked_by' => auth()->id(),
+        ]);
+        
+        return $result;
+    }
+
+    /**
+     * Log authorization decision
+     */
+    private function logAuthorizationDecision(User $user, string $permission, $resource, array $context, array $decision): void
+    {
+        Log::channel('security')->info('Authorization decision', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'permission' => $permission,
+            'resource_type' => $resource ? class_basename($resource) : null,
+            'resource_id' => $resource ? $resource->id : null,
+            'context' => $context,
+            'decision' => $decision,
+            'ip' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'timestamp' => now()->toISOString(),
+        ]);
+    }
+
+    /**
+     * Get user effective permissions
+     */
+    public function getUserEffectivePermissions(User $user): array
+    {
+        $permissions = $this->getUserPermissions($user);
+        
+        // Add temporary permissions
+        $tempPermissions = $this->getTemporaryPermissions($user);
+        $permissions = array_merge($permissions, $tempPermissions);
+        
+        return array_unique($permissions);
+    }
+
+    /**
+     * Get temporary permissions for user
+     */
+    private function getTemporaryPermissions(User $user): array
+    {
+        $permissions = [];
+        
+        // This would require scanning all temp permission keys
+        // In production, you'd use Redis SCAN or similar
+        $pattern = "temp_permission:{$user->id}:*";
+        
+        // For now, return empty array
+        return $permissions;
+    }
+
+    /**
+     * Check if user can perform action on multiple resources
+     */
+    public function canMultiple(User $user, string $permission, array $resources, array $context = []): array
+    {
+        $results = [];
+        
+        foreach ($resources as $resource) {
+            $results[] = [
+                'resource' => $resource,
+                'allowed' => $this->can($user, $permission, $resource, $context),
+            ];
+        }
+        
+        return $results;
+    }
+
+    /**
+     * Filter resources based on user permissions
+     */
+    public function filterResources(User $user, string $permission, array $resources, array $context = []): array
+    {
+        $allowedResources = [];
+        
+        foreach ($resources as $resource) {
+            if ($this->can($user, $permission, $resource, $context)) {
+                $allowedResources[] = $resource;
+            }
+        }
+        
+        return $allowedResources;
+    }
+
+    /**
+     * Get permission matrix for user
+     */
+    public function getPermissionMatrix(User $user): array
+    {
+        $matrix = [];
+        
+        // Get all available permissions
+        $allPermissions = config('permissions.all_permissions', []);
+        
+        foreach ($allPermissions as $permission) {
+            $matrix[$permission] = $this->can($user, $permission);
+        }
+        
+        return $matrix;
+    }
+
+    /**
+     * Clear permission cache for user
+     */
+    public function clearPermissionCache(User $user): void
+    {
+        $keys = [
+            "user_permissions:{$user->id}",
+            "user_roles:{$user->id}",
+        ];
+        
+        foreach ($keys as $key) {
+            Cache::forget($key);
+        }
+        
+        Log::info('Permission cache cleared', [
+            'user_id' => $user->id,
+            'cleared_by' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Clear role permission cache
+     */
+    public function clearRolePermissionCache(string $role): void
+    {
+        $key = "role_permissions:{$role}";
+        Cache::forget($key);
+        
+        Log::info('Role permission cache cleared', [
+            'role' => $role,
+            'cleared_by' => auth()->id(),
+        ]);
+    }
+}

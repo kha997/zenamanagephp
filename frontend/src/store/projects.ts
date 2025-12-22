@@ -56,24 +56,18 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         ...filters,
       }
       
-      const response = await apiClient.get<{
-        data: Project[]
-        meta: {
-          current_page: number
-          last_page: number
-          per_page: number
-          total: number
-        }
-      }>(API_ENDPOINTS.PROJECTS.LIST, { params })
+      const response = await apiClient.get(API_ENDPOINTS.PROJECTS.LIST, { params })
+      const isSuccess = response?.status === 'success' || response?.success === true
+      const payload = response?.data ?? response
       
-      if (response.status === 'success' && response.data) {
+      if (isSuccess && payload?.data) {
         set({
-          projects: response.data.data,
+          projects: payload.data,
           pagination: {
-            page: response.data.meta.current_page,
-            pageSize: response.data.meta.per_page,
-            total: response.data.meta.total,
-            totalPages: response.data.meta.last_page,
+            page: payload.meta?.current_page ?? page,
+            pageSize: payload.meta?.per_page ?? get().pagination.pageSize,
+            total: payload.meta?.total ?? payload.data.length,
+            totalPages: payload.meta?.last_page ?? 1,
           },
           filters,
           isLoading: false,
@@ -98,7 +92,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         API_ENDPOINTS.PROJECTS.DETAIL(id)
       )
       
-      if (response.status === 'success' && response.data) {
+      if ((response?.status === 'success' || response?.success === true) && response?.data) {
         set({
           currentProject: response.data,
           isLoading: false,
@@ -124,7 +118,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         data
       )
       
-      if (response.status === 'success' && response.data) {
+      if ((response?.status === 'success' || response?.success === true) && response?.data) {
         const newProject = response.data
         
         set((state) => ({
@@ -157,7 +151,7 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         data
       )
       
-      if (response.status === 'success' && response.data) {
+      if ((response?.status === 'success' || response?.success === true) && response?.data) {
         const updatedProject = response.data
         
         set((state) => ({

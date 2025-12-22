@@ -1,0 +1,14 @@
+name,path,type,status,props,used_by_count,used_by_paths,dependencies,issues,owner,deprecate_to,priority
+HeaderShell,src/components/ui/header/HeaderShell.tsx,React,standardized,theme:string,5,PageA,React.useState,None,John Doe,,P0
+PrimaryNav,src/components/ui/header/PrimaryNav.tsx,React,standardized,items:array,10,PageB,React.useEffect,None,Jane Smith,,P0
+LegacyHeader,frontend/src/components/LegacyHeader.jsx,React,legacy,logo:string,2,PageC,None,Replace with HeaderShell,John Doe,HeaderShell,P1
+OldTable,resources/views/components/old-table.blade.php,Blade,deprecate,data:array,3,PageD,None,Replace with x-shared.table-standardized,Jane Smith,x-shared.table-standardized,P1
+FilterBar,frontend/src/features/FilterBar.tsx,React,standardized,filters:array,7,PageE,React.useContext,None,Peter Pan,,P0
+Breadcrumb,frontend/src/components/Breadcrumb.tsx,React,standardized,paths:array,4,PageF,React.useRouter,None,Alice,,P0
+ThemeSwitcher,frontend/src/components/ThemeSwitcher.tsx,React,standardized,theme:string,1,PageG,React.useState,None,Bob,,P0
+SearchBar,frontend/src/components/SearchBar.tsx,React,standardized,searchTerm:string,6,PageH,React.useRef,None,Charlie,,P0
+LayoutWrapper,frontend/src/components/LayoutWrapper.tsx,React,standardized,children:node,12,PageI,None,None,Wendy,,P0
+x-shared.header-standardized,resources/views/components/shared/header-standardized.blade.php,Blade,standardized,title:string,8,PageJ,None,None,Hook,,P0
+x-shared.layout-wrapper,resources/views/components/shared/layout-wrapper.blade.php,Blade,standardized,content:string,15,PageK,None,None,Tinkerbell,,P0
+x-shared.table-standardized,resources/views/components/shared/table-standardized.blade.php,Blade,standardized,data:array,20,PageL,None,None,Smee,,P0
+x-shared.filter-bar,resources/views/components/shared/filter-bar.blade.php,Blade,standardized,filters:array,9,PageM,None,None,Tiger Lily,,P0

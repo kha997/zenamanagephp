@@ -34,6 +34,11 @@ class EventServiceProvider extends ServiceProvider
             // Add listeners as needed
         ],
         
+        // Core Project Events
+        \Src\CoreProject\Events\ComponentProgressUpdated::class => [
+            \App\Listeners\ComponentProgressUpdatedListener::class,
+        ],
+        
         // Change Request Events
         \App\Events\ChangeRequested::class => [
             // Add listeners as needed

@@ -1,0 +1,47 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Debug Comment Delete Modal', () => {
+  test('debug comment delete modal', async ({ page }) => {
+    // Navigate directly to task detail
+    await page.goto('/app/tasks/01K83FPM28B0NSDKE77REAFQ4P');
+    await page.waitForLoadState('networkidle');
+    
+    // Check if we're on the task detail page
+    await expect(page.locator('[data-testid="task-detail"]')).toBeVisible();
+    
+    // Create a comment first
+    await page.fill('[data-testid="comment-content"]', 'Test comment for deletion');
+    await page.click('[data-testid="submit-comment"]');
+    
+    // Wait for comment to appear
+    await expect(page.locator('[data-testid="comment-item"]').filter({ hasText: 'Test comment for deletion' })).toBeVisible();
+    
+    // Click delete button
+    const deleteButton = page.locator('[data-testid="delete-button"]').first();
+    await deleteButton.click();
+    
+    // Check Alpine.js state
+    const alpineState = await page.evaluate(() => {
+      const element = document.querySelector('[data-testid="task-detail"]');
+      const data = window.Alpine?.$data(element);
+      return {
+        showDeleteModal: data?.showDeleteModal,
+        pendingCommentId: data?.pendingCommentId,
+        showConfirmModal: data?.showConfirmModal
+      };
+    });
+    
+    console.log('Alpine state after delete click:', alpineState);
+    
+    // Check if modal is visible
+    const modal = page.locator('[data-testid="confirm-delete"]');
+    console.log('Modal visible:', await modal.isVisible());
+    console.log('Modal count:', await modal.count());
+    
+    // Wait a bit to see if modal appears
+    await page.waitForTimeout(2000);
+    
+    // Check again
+    console.log('Modal visible after wait:', await modal.isVisible());
+  });
+});

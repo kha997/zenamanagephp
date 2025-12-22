@@ -10,100 +10,99 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * TemplateVersion Model
  * 
- * Lưu trữ lịch sử versions của templates
- * Đảm bảo không mất dữ liệu khi template được cập nhật
+ * Quản lý các phiên bản của templates để theo dõi lịch sử thay đổi
  * 
- * @property string $id
- * @property string $template_id
- * @property int $version
- * @property array $json_body
- * @property string|null $note
- * @property string|null $created_by
+ * @property string $id ULID primary key
+ * @property string $template_id Template ID
+ * @property int $version Version number
+ * @property string $name Version name
+ * @property string $description Version description
+ * @property array $template_data Template data at this version
+ * @property array $changes Changes made in this version
+ * @property string $created_by Creator user ID
+ * @property boolean $is_active Active version flag
  */
 class TemplateVersion extends Model
 {
     use HasUlids, HasFactory;
 
     protected $table = 'template_versions';
+    
     protected $keyType = 'string';
     public $incrementing = false;
-
-    /**
-     * Các trường có thể mass assignment
-     */
+    
     protected $fillable = [
         'template_id',
         'version',
+        'name',
+        'description',
         'json_body',
-        'note',
-        'created_by'
+        'changes',
+        'created_by',
+        'is_active'
     ];
 
-    /**
-     * Các trường cần cast kiểu dữ liệu
-     */
     protected $casts = [
-        'json_body' => 'array',
         'version' => 'integer',
+        'json_body' => 'array',
+        'changes' => 'array',
+        'is_active' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
 
+    protected $attributes = [
+        'is_active' => false
+    ];
+
     /**
-     * Relationship với template chính
+     * Relationships
      */
     public function template(): BelongsTo
     {
-        return $this->belongsTo(Template::class, 'template_id');
+        return $this->belongsTo(Template::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**
-     * Scope để lấy version mới nhất
+     * Scopes
      */
+    public function scopeByTemplate($query, string $templateId)
+    {
+        return $query->where('template_id', $templateId);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
     public function scopeLatest($query)
     {
         return $query->orderBy('version', 'desc');
     }
 
     /**
-     * Scope để lấy version cụ thể
+     * Version operations
      */
-    public function scopeByVersion($query, int $version)
+    public function activate(): bool
     {
-        return $query->where('version', $version);
+        // Deactivate all other versions of this template
+        self::where('template_id', $this->template_id)
+            ->where('id', '!=', $this->id)
+            ->update(['is_active' => false]);
+
+        // Activate this version
+        $this->is_active = true;
+        return $this->save();
     }
 
-    /**
-     * Kiểm tra xem có phải version mới nhất không
-     */
-    public function isLatestVersion(): bool
+    public function getVersionName(): string
     {
-        return $this->version === $this->template->version;
-    }
-
-    /**
-     * So sánh với version khác để xem có thay đổi gì
-     */
-    public function compareWith(TemplateVersion $otherVersion): array
-    {
-        $changes = [];
-        
-        // So sánh json_body
-        if ($this->json_body !== $otherVersion->json_body) {
-            $changes['json_body'] = [
-                'from' => $otherVersion->json_body,
-                'to' => $this->json_body
-            ];
-        }
-        
-        return $changes;
-    }
-
-    /**
-     * Tạo factory instance mới cho model này
-     */
-    protected static function newFactory()
-    {
-        return \Database\Factories\Src\WorkTemplate\Models\TemplateVersionFactory::new();
+        return $this->name ?: "Version {$this->version}";
     }
 }

@@ -3,35 +3,76 @@
 namespace App\Services;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
-/**
- * Database Query Optimization Service
- * 
- * Provides methods to optimize database queries for better performance
- */
 class DatabaseOptimizationService
 {
     /**
-     * Optimize task queries with proper eager loading
+     * Optimize Eloquent queries with eager loading and column selection
      */
-    public function optimizeTaskQuery(Builder $query, array $filters = []): Builder
+    public function optimizeQuery(Builder $query, array $options = []): Builder
     {
-        // Eager load relationships to avoid N+1 queries
-        $query->with([
-            'project:id,name,status,client_id',
-            'assignee:id,name,email',
-            'creator:id,name,email',
-            'component:id,name,type',
-            'assignments.user:id,name,email'
-        ]);
-
-        // Apply filters with proper indexing
-        if (isset($filters['project_id'])) {
-            $query->where('project_id', $filters['project_id']);
+        // Apply eager loading if specified
+        if (isset($options['with'])) {
+            $query->with($options['with']);
+        }
+        
+        // Apply column selection if specified
+        if (isset($options['select'])) {
+            $query->select($options['select']);
+        }
+        
+        // Apply pagination if specified
+        if (isset($options['paginate'])) {
+            $query->limit($options['paginate']);
+        }
+        
+        // Apply caching if specified
+        if (isset($options['cache'])) {
+            $cacheKey = $this->generateCacheKey($query, $options['cache']);
+            $cacheTtl = $options['cache']['ttl'] ?? 300; // 5 minutes default
+            
+            return Cache::remember($cacheKey, $cacheTtl, function () use ($query) {
+                return $query->get();
+            });
         }
 
+        return $query;
+    }
+
+    /**
+     * Optimize project queries with common optimizations
+     */
+    public function optimizeProjectQuery(array $filters = []): Builder
+    {
+        $query = \App\Models\Project::query()
+            ->select([
+                'id',
+                'name',
+                'description',
+                'status',
+                'priority',
+                'budget',
+                'start_date',
+                'end_date',
+                'created_at',
+                'updated_at',
+            ])
+            ->with([
+                'tasks' => function ($query) {
+                    $query->select(['id', 'project_id', 'title', 'status', 'due_date'])
+                          ->where('status', '!=', 'completed')
+                          ->limit(5);
+                },
+                'team' => function ($query) {
+                    $query->select(['id', 'name', 'email', 'role']);
+                },
+        ]);
+
+        // Apply filters
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
         }
@@ -39,51 +80,39 @@ class DatabaseOptimizationService
         if (isset($filters['priority'])) {
             $query->where('priority', $filters['priority']);
         }
-
-        if (isset($filters['assignee_id'])) {
-            $query->where('assignee_id', $filters['assignee_id']);
+        
+        if (isset($filters['date_range'])) {
+            $query->whereBetween('created_at', $filters['date_range']);
         }
-
-        if (isset($filters['tenant_id'])) {
-            $query->where('tenant_id', $filters['tenant_id']);
-        }
-
-        // Optimize date range queries
-        if (isset($filters['start_date_from'])) {
-            $query->where('start_date', '>=', $filters['start_date_from']);
-        }
-
-        if (isset($filters['start_date_to'])) {
-            $query->where('start_date', '<=', $filters['start_date_to']);
-        }
-
-        // Optimize search queries
-        if (isset($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('description', 'LIKE', "%{$search}%");
-            });
-        }
-
-        // Add proper ordering
-        $query->orderBy('created_at', 'desc');
 
         return $query;
     }
 
     /**
-     * Optimize project queries with proper eager loading
+     * Optimize task queries with common optimizations
      */
-    public function optimizeProjectQuery(Builder $query, array $filters = []): Builder
+    public function optimizeTaskQuery(array $filters = []): Builder
     {
-        // Eager load relationships
-        $query->with([
-            'client:id,name,email',
-            'pm:id,name,email',
-            'tenant:id,name',
-            'tasks:id,project_id,name,status,priority',
-            'documents:id,project_id,name,type,status'
+        $query = \App\Models\Task::query()
+            ->select([
+                'id',
+                'title',
+                'description',
+                'status',
+                'priority',
+                'due_date',
+                'project_id',
+                'assigned_to',
+                'created_at',
+                'updated_at',
+            ])
+            ->with([
+                'project' => function ($query) {
+                    $query->select(['id', 'name', 'status']);
+                },
+                'assignee' => function ($query) {
+                    $query->select(['id', 'name', 'email']);
+                },
         ]);
 
         // Apply filters
@@ -91,218 +120,261 @@ class DatabaseOptimizationService
             $query->where('status', $filters['status']);
         }
 
-        if (isset($filters['client_id'])) {
-            $query->where('client_id', $filters['client_id']);
+        if (isset($filters['project_id'])) {
+            $query->where('project_id', $filters['project_id']);
         }
-
-        if (isset($filters['pm_id'])) {
-            $query->where('pm_id', $filters['pm_id']);
+        
+        if (isset($filters['assigned_to'])) {
+            $query->where('assigned_to', $filters['assigned_to']);
         }
-
-        if (isset($filters['tenant_id'])) {
-            $query->where('tenant_id', $filters['tenant_id']);
-        }
-
-        // Optimize date range queries
-        if (isset($filters['start_date_from'])) {
-            $query->where('start_date', '>=', $filters['start_date_from']);
-        }
-
-        if (isset($filters['start_date_to'])) {
-            $query->where('start_date', '<=', $filters['start_date_to']);
-        }
-
-        // Optimize search queries
-        if (isset($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('description', 'LIKE', "%{$search}%")
-                  ->orWhere('code', 'LIKE', "%{$search}%");
-            });
-        }
-
-        // Add proper ordering
-        $query->orderBy('created_at', 'desc');
 
         return $query;
     }
 
     /**
-     * Optimize user queries with proper eager loading
+     * Optimize user queries with common optimizations
      */
-    public function optimizeUserQuery(Builder $query, array $filters = []): Builder
+    public function optimizeUserQuery(array $filters = []): Builder
     {
-        // Eager load relationships
-        $query->with([
-            'tenant:id,name',
-            'organization:id,name'
+        $query = \App\Models\User::query()
+            ->select([
+                'id',
+                'name',
+                'email',
+                'role',
+                'status',
+                'last_login_at',
+                'created_at',
+            ])
+            ->withCount([
+                'projects',
+                'tasks',
+                'assignedTasks',
         ]);
 
         // Apply filters
-        if (isset($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
-
         if (isset($filters['role'])) {
             $query->where('role', $filters['role']);
         }
 
-        if (isset($filters['tenant_id'])) {
-            $query->where('tenant_id', $filters['tenant_id']);
-        }
-
-        if (isset($filters['organization_id'])) {
-            $query->where('organization_id', $filters['organization_id']);
-        }
-
-        // Optimize search queries
-        if (isset($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('email', 'LIKE', "%{$search}%");
-            });
-        }
-
-        // Add proper ordering
-        $query->orderBy('created_at', 'desc');
-
-        return $query;
-    }
-
-    /**
-     * Optimize document queries with proper eager loading
-     */
-    public function optimizeDocumentQuery(Builder $query, array $filters = []): Builder
-    {
-        // Eager load relationships
-        $query->with([
-            'project:id,name,status',
-            'task:id,name,status',
-            'component:id,name,type',
-            'uploadedBy:id,name,email',
-            'tenant:id,name'
-        ]);
-
-        // Apply filters
-        if (isset($filters['project_id'])) {
-            $query->where('project_id', $filters['project_id']);
-        }
-
-        if (isset($filters['type'])) {
-            $query->where('type', $filters['type']);
-        }
-
         if (isset($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-        if (isset($filters['tenant_id'])) {
-            $query->where('tenant_id', $filters['tenant_id']);
-        }
-
-        // Optimize search queries
-        if (isset($filters['search'])) {
-            $search = $filters['search'];
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('description', 'LIKE', "%{$search}%");
-            });
-        }
-
-        // Add proper ordering
-        $query->orderBy('created_at', 'desc');
-
         return $query;
     }
 
     /**
-     * Execute optimized query with performance monitoring
+     * Generate cache key for query
      */
-    public function executeOptimizedQuery(Builder $query, string $queryName = 'optimized_query'): mixed
+    private function generateCacheKey(Builder $query, array $cacheOptions): string
     {
-        $startTime = microtime(true);
+        $sql = $query->toSql();
+        $bindings = $query->getBindings();
+        $tenantId = app('tenant')?->id ?? 'global';
         
-        try {
-            $result = $query->get();
-            
-            $executionTime = microtime(true) - $startTime;
-            
-            // Log slow queries
-            if ($executionTime > 1.0) {
-                Log::warning("Slow query detected: {$queryName}", [
-                    'execution_time' => $executionTime,
-                    'query' => $query->toSql(),
-                    'bindings' => $query->getBindings()
-                ]);
-            }
-            
-            return $result;
-            
-        } catch (\Exception $e) {
-            Log::error("Query execution failed: {$queryName}", [
-                'error' => $e->getMessage(),
-                'query' => $query->toSql(),
-                'bindings' => $query->getBindings()
-            ]);
-            
-            throw $e;
-        }
+        $key = md5($sql . serialize($bindings) . $tenantId);
+        
+        return 'query_cache:' . ($cacheOptions['prefix'] ?? 'default') . ':' . $key;
     }
-
+    
     /**
-     * Get query execution plan for analysis
+     * Clear query cache
      */
-    public function getQueryExecutionPlan(Builder $query): array
+    public function clearQueryCache(string $pattern = '*'): void
     {
-        try {
-            $sql = $query->toSql();
-            $bindings = $query->getBindings();
-            
-            // Replace bindings in SQL for analysis
-            $fullSql = $sql;
-            foreach ($bindings as $binding) {
-                $fullSql = preg_replace('/\?/', "'{$binding}'", $fullSql, 1);
+        Cache::forget($pattern);
+    }
+    
+    /**
+     * Get query performance statistics
+     */
+    public function getQueryStats(): array
+    {
+        $queries = DB::getQueryLog();
+        
+        $stats = [
+            'total_queries' => count($queries),
+            'total_time' => array_sum(array_column($queries, 'time')),
+            'avg_time' => count($queries) > 0 ? array_sum(array_column($queries, 'time')) / count($queries) : 0,
+            'slow_queries' => array_filter($queries, fn($q) => $q['time'] > 100),
+            'duplicate_queries' => $this->findDuplicateQueries($queries),
+        ];
+        
+        return $stats;
+    }
+    
+    /**
+     * Find duplicate queries
+     */
+    private function findDuplicateQueries(array $queries): array
+    {
+        $queryCounts = [];
+        
+        foreach ($queries as $query) {
+            $hash = md5($query['query']);
+            if (!isset($queryCounts[$hash])) {
+                $queryCounts[$hash] = [
+                    'query' => $query['query'],
+                    'count' => 0,
+                    'total_time' => 0,
+                ];
             }
-            
-            $explainResult = DB::select("EXPLAIN {$fullSql}");
-            
-            return [
-                'sql' => $fullSql,
-                'execution_plan' => $explainResult,
-                'bindings' => $bindings
+            $queryCounts[$hash]['count']++;
+            $queryCounts[$hash]['total_time'] += $query['time'];
+        }
+        
+        return array_filter($queryCounts, fn($q) => $q['count'] > 1);
+    }
+    
+    /**
+     * Optimize N+1 queries by suggesting eager loading
+     */
+    public function suggestEagerLoading(string $model, array $queries): array
+    {
+        $suggestions = [];
+        
+        // Analyze queries to find potential N+1 patterns
+        $queryPatterns = [];
+        foreach ($queries as $query) {
+            if (str_contains($query['query'], $model)) {
+                $queryPatterns[] = $query['query'];
+            }
+        }
+        
+        // Look for foreign key patterns
+        $foreignKeys = $this->extractForeignKeys($queryPatterns);
+        
+        foreach ($foreignKeys as $foreignKey) {
+            $suggestions[] = [
+                'type' => 'eager_loading',
+                'suggestion' => "Add ->with('{$foreignKey}') to avoid N+1 queries",
+                'impact' => 'high',
             ];
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to get query execution plan', [
-                'error' => $e->getMessage(),
-                'query' => $query->toSql()
-            ]);
-            
-            return [];
-        }
-    }
-
-    /**
-     * Optimize pagination queries
-     */
-    public function optimizePaginationQuery(Builder $query, int $perPage = 15): Builder
-    {
-        // Use cursor pagination for large datasets
-        if ($perPage > 50) {
-            // Add proper ordering for cursor pagination
-            $query->orderBy('id', 'asc');
         }
         
-        return $query;
+        return $suggestions;
+    }
+    
+    /**
+     * Extract foreign keys from query patterns
+     */
+    private function extractForeignKeys(array $queryPatterns): array
+    {
+        $foreignKeys = [];
+        
+        foreach ($queryPatterns as $pattern) {
+            // Look for WHERE clauses with foreign key patterns
+            if (preg_match('/WHERE\s+(\w+_id)\s*=/', $pattern, $matches)) {
+                $foreignKeys[] = str_replace('_id', '', $matches[1]);
+            }
+        }
+        
+        return array_unique($foreignKeys);
     }
 
     /**
-     * Cache frequently accessed data
+     * Get database performance metrics for production
      */
-    public function cacheFrequentData(string $key, callable $callback, int $ttl = 3600): mixed
+    public function getProductionMetrics(): array
     {
-        return cache()->remember($key, $ttl, $callback);
+        $metrics = [];
+
+        // Get query execution time
+        $startTime = microtime(true);
+        DB::select('SELECT 1');
+        $metrics['connection_time'] = (microtime(true) - $startTime) * 1000; // ms
+
+        // Get table sizes
+        $tables = ['projects', 'tasks', 'users', 'calendar_events', 'templates'];
+        foreach ($tables as $table) {
+            try {
+                $result = DB::select("SELECT COUNT(*) as count FROM {$table}");
+                $metrics['table_counts'][$table] = $result[0]->count ?? 0;
+            } catch (\Exception $e) {
+                $metrics['table_counts'][$table] = 0;
+            }
+        }
+
+        return $metrics;
+    }
+
+    /**
+     * Create recommended indexes for production
+     */
+    public function getRecommendedIndexes(): array
+    {
+        $indexes = [];
+
+        // Multi-tenant indexes
+        $tables = ['projects', 'tasks', 'users', 'calendar_events', 'templates'];
+        foreach ($tables as $table) {
+            $indexes[] = "CREATE INDEX idx_{$table}_tenant_id ON {$table} (tenant_id)";
+        }
+
+        // Composite indexes for common queries
+        $indexes[] = "CREATE INDEX idx_projects_tenant_status ON projects (tenant_id, status)";
+        $indexes[] = "CREATE INDEX idx_tasks_tenant_project ON tasks (tenant_id, project_id)";
+        $indexes[] = "CREATE INDEX idx_tasks_tenant_assignee ON tasks (tenant_id, assigned_to)";
+        $indexes[] = "CREATE INDEX idx_calendar_events_tenant_date ON calendar_events (tenant_id, start_date)";
+
+        return $indexes;
+    }
+
+    /**
+     * Analyze query performance
+     */
+    public function analyzeQueryPerformance(string $query): array
+    {
+        if (!$this->canAnalyzeQueries()) {
+            throw new \RuntimeException('Query analysis is restricted to CLI or system administrators');
+        }
+
+        $startTime = microtime(true);
+        $result = DB::select($query);
+        $executionTime = (microtime(true) - $startTime) * 1000; // ms
+
+        return [
+            'execution_time' => $executionTime,
+            'result_count' => count($result),
+            'is_slow' => $executionTime > 100, // 100ms threshold
+        ];
+    }
+
+    /**
+     * Get production database configuration recommendations
+     */
+    public function getProductionConfig(): array
+    {
+        return [
+            'optimizations' => [
+                'query_cache' => true,
+                'connection_pooling' => true,
+                'prepared_statements' => true,
+                'binary_logging' => false, // Disable for performance
+            ],
+            'indexes' => $this->getRecommendedIndexes(),
+            'settings' => [
+                'innodb_buffer_pool_size' => '70% of RAM',
+                'query_cache_size' => '256M',
+                'max_connections' => 200,
+                'slow_query_log' => true,
+                'long_query_time' => 1,
+            ],
+        ];
+    }
+
+    private function canAnalyzeQueries(): bool
+    {
+        if (app()->runningInConsole()) {
+            return true;
+        }
+
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        return $user->isSuperAdmin() || $user->can('users.manage');
     }
 }

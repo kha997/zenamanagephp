@@ -1,0 +1,80 @@
+import { test, expect } from '@playwright/test';
+import { AuthHelper } from '../helpers/auth-helper';
+
+test.describe('Debug Attachment Upload', () => {
+  test('should debug attachment upload process', async ({ page }) => {
+    const authHelper = new AuthHelper(page);
+    await authHelper.login('uat-pm@test.com', 'password');
+
+    // Navigate to task detail page
+    await page.goto('/app/tasks/01K83FPM28B0NSDKE77REAFQ4P');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for attachment manager to be visible
+    await page.waitForSelector('[data-testid="attachment-manager"]', { timeout: 10000 });
+
+    // Check initial state
+    const initialState = await page.evaluate(() => {
+      const component = Alpine.$data(document.querySelector('[x-data*="taskDetail"]'));
+      return {
+        allAttachments: component?.allAttachments?.length || 0,
+        showUploadForm: component?.showUploadForm,
+        newAttachment: component?.newAttachment
+      };
+    });
+    console.log('Initial state:', initialState);
+
+    // Click upload button
+    await page.click('[data-testid="upload-button"]');
+    await page.waitForTimeout(500);
+
+    // Check state after clicking upload button
+    const stateAfterClick = await page.evaluate(() => {
+      const component = Alpine.$data(document.querySelector('[x-data*="taskDetail"]'));
+      return {
+        allAttachments: component?.allAttachments?.length || 0,
+        showUploadForm: component?.showUploadForm,
+        newAttachment: component?.newAttachment
+      };
+    });
+    console.log('State after upload button click:', stateAfterClick);
+
+    // Check if upload form is visible
+    const uploadFormVisible = await page.locator('[data-testid="attachment-name"]').isVisible();
+    console.log('Upload form visible:', uploadFormVisible);
+
+    if (uploadFormVisible) {
+      // Fill attachment name
+      await page.fill('[data-testid="attachment-name"]', 'Test debug file');
+      
+      // Select category
+      await page.selectOption('[data-testid="attachment-category"]', 'design');
+      
+      // Set input files
+      await page.setInputFiles('[data-testid="file-input"]', 'tests/fixtures/test-document.txt');
+      
+      // Click submit
+      await page.click('[data-testid="submit-upload"]');
+      
+      // Wait for upload to complete
+      await page.waitForTimeout(1000);
+      
+      // Check final state
+      const finalState = await page.evaluate(() => {
+        const component = Alpine.$data(document.querySelector('[x-data*="taskDetail"]'));
+        return {
+          allAttachments: component?.allAttachments?.length || 0,
+          showUploadForm: component?.showUploadForm,
+          newAttachment: component?.newAttachment
+        };
+      });
+      console.log('Final state:', finalState);
+      
+      // Check if attachment is visible
+      const attachmentVisible = await page.locator('[data-testid="attachment-item"]').filter({ hasText: 'Test debug file' }).isVisible();
+      console.log('Attachment visible:', attachmentVisible);
+    } else {
+      console.log('Upload form not visible, cannot proceed with upload');
+    }
+  });
+});

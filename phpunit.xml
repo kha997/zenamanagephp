@@ -2,7 +2,8 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
-         colors="true">
+         colors="true"
+         cacheResult="false">
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
@@ -13,32 +14,121 @@
         <testsuite name="Integration">
             <directory>tests/Integration</directory>
         </testsuite>
+        <testsuite name="E2E">
+            <directory>tests/e2e</directory>
+        </testsuite>
         <testsuite name="Final Testing">
             <file>tests/Feature/FinalSystemTest.php</file>
             <file>tests/Feature/PerformanceTest.php</file>
             <file>tests/Feature/SecurityTest.php</file>
             <file>tests/Feature/QualityAssuranceTest.php</file>
         </testsuite>
+        
+        <!-- Quick Test Suite: Fast tests for PR validation -->
+        <!-- Run with: php artisan test -testsuite=quick -->
+        <!-- Or: php artisan test -testsuite=quick -group=auth -->
+        <!-- Temporarily disabled due to missing directories -->
+        <!--
+        <testsuite name="quick">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        -->
+        
+        <!-- Full Test Suite: Complete test coverage -->
+        <testsuite name="full">
+            <!-- All test types -->
+            <directory>tests/Unit</directory>
+            <directory>tests/Feature</directory>
+            <directory>tests/Integration</directory>
+            <directory>tests/Performance</directory>
+            
+            <!-- Final testing suite -->
+            <file>tests/Feature/FinalSystemTest.php</file>
+            <file>tests/Feature/PerformanceTest.php</file>
+            <file>tests/Feature/SecurityTest.php</file>
+            <file>tests/Feature/QualityAssuranceTest.php</file>
+        </testsuite>
+        
+        <!-- Domain-specific test suites (organized by domain) -->
+        <!-- Auth Domain -->
+        <testsuite name="auth-unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="auth-feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="auth-integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        
+        <!-- Projects Domain -->
+        <testsuite name="projects-unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="projects-feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="projects-integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        
+        <!-- Tasks Domain -->
+        <testsuite name="tasks-unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="tasks-feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="tasks-integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        
+        <!-- Documents Domain -->
+        <testsuite name="documents-unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="documents-feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="documents-integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        
+        <!-- Users Domain -->
+        <testsuite name="users-unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="users-feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="users-integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+        
+        <!-- Dashboard Domain -->
+        <testsuite name="dashboard-unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="dashboard-feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="dashboard-integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
     </testsuites>
-    <source>
-        <include>
-            <directory>app</directory>
-        </include>
-    </source>
     <php>
+        <ini name="memory_limit" value="-1"/>
         <env name="APP_ENV" value="testing"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
-        <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_HOST" value="127.0.0.1"/>
-        <env name="DB_PORT" value="3306"/>
-        <env name="DB_DATABASE" value="zenamanage_test"/>
-        <env name="DB_USERNAME" value="root"/>
-        <env name="DB_PASSWORD" value=""/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+        <env name="SQLITE_FOREIGN_KEYS" value="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="SCOUT_DRIVER" value="null"/>
         <env name="REDIS_HOST" value="127.0.0.1"/>
         <env name="REDIS_PORT" value="6379"/>
         <env name="REDIS_DB" value="0"/>
@@ -59,7 +149,4 @@
             <clover outputFile="storage/app/coverage.xml"/>
         </report>
     </coverage>
-    <logging>
-        <junit outputFile="storage/app/junit.xml"/>
-    </logging>
 </phpunit>

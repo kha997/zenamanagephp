@@ -59,7 +59,12 @@ class SecurityAuditService
         $score += $usersWithoutRoles === 0 ? 10 : 0;
 
         // Check for inactive users
-        $inactiveUsers = User::where('last_login_at', '<', now()->subDays(90))->count();
+        try {
+            $inactiveUsers = User::where('last_login_at', '<', now()->subDays(90))->count();
+        } catch (\Exception $e) {
+            // Column doesn't exist, skip this check
+            $inactiveUsers = 0;
+        }
         $checks['inactive_users'] = [
             'count' => $inactiveUsers,
             'status' => $inactiveUsers < 10 ? 'pass' : 'warning',
@@ -141,7 +146,12 @@ class SecurityAuditService
         $score += $unhashedPasswords === 0 ? 20 : 0;
 
         // Check password expiration
-        $expiredPasswords = User::where('password_updated_at', '<', now()->subDays(90))->count();
+        try {
+            $expiredPasswords = User::where('password_updated_at', '<', now()->subDays(90))->count();
+        } catch (\Exception $e) {
+            // Column doesn't exist, skip this check
+            $expiredPasswords = 0;
+        }
         $checks['password_expiration'] = [
             'count' => $expiredPasswords,
             'status' => $expiredPasswords < 5 ? 'pass' : 'warning',

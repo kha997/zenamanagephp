@@ -1,108 +1,299 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Events\NotificationCreated;
+use App\Models\Notification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * NotificationService - Round 251: Notifications Center Phase 1
+ * 
+ * Service for creating and managing notifications.
+ * 
+ * Round 255: Integrated with NotificationPreferenceService to respect user preferences.
+ * 
+ * Note: Integration logic (calling from tasks/cost/doc) will be implemented in Phase 2.
+ */
 class NotificationService
 {
-    protected static array $notifications = [];
-
+    public function __construct(
+        private NotificationPreferenceService $notificationPreferenceService
+    ) {}
     /**
-     * Add a notification
+     * Create a notification for a user
+     * 
+     * @param string $userId User ID to notify
+     * @param string $module Module: tasks / documents / cost / rbac / system
+     * @param string $type Type: e.g., task.assigned / co.needs_approval
+     * @param string $title Notification title
+     * @param string $message Notification message
+     * @param string|null $entityType Entity type: "task", "change_order", etc.
+     * @param string|null $entityId Entity ID (ULID)
+     * @param array $metadata Additional metadata
+     * @param string|null $tenantId Optional tenant ID (if not provided, will be resolved)
+     * @return Notification|null Returns null if notification was skipped due to user preferences
      */
-    public static function add(string $type, string $title, string $message, bool $dismissible = true): void
-    {
-        static::$notifications[] = [
+    public function notifyUser(
+        string $userId,
+        string $module,
+        string $type,
+        string $title,
+        string $message,
+        ?string $entityType = null,
+        ?string $entityId = null,
+        array $metadata = [],
+        ?string $tenantId = null
+    ): ?Notification {
+        // Get tenant_id from parameter, or resolve from context
+        if (!$tenantId) {
+            $tenantId = $this->resolveTenantId();
+        }
+
+        $entityTenantId = null;
+        if ($entityType && $entityId) {
+            $entityTenantId = $this->resolveTenantIdFromEntity($entityType, $entityId, $tenantId);
+        }
+
+        if (!$tenantId) {
+            $tenantId = $entityTenantId;
+        }
+        
+        // If still no tenant_id, try to get it from the user
+        if (!$tenantId) {
+            $user = \App\Models\User::find($userId);
+            if ($user && $user->tenant_id) {
+                $tenantId = (string) $user->tenant_id;
+            }
+        }
+        
+        if (!$tenantId) {
+            Log::warning('NotificationService::notifyUser: No tenant_id found', [
+                'user_id' => $userId,
+                'module' => $module,
+                'type' => $type,
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+            ]);
+            throw new \RuntimeException('Tenant ID is required for notifications');
+        }
+
+        // Round 255: Check user preferences before creating notification
+        if (!$this->notificationPreferenceService->isTypeEnabledForUser($tenantId, $userId, $type)) {
+            Log::debug('NotificationService::notifyUser: Notification skipped due to user preference', [
+                'user_id' => $userId,
+                'tenant_id' => $tenantId,
+                'type' => $type,
+            ]);
+            return null;
+        }
+        
+        $notification = Notification::create([
+            'tenant_id' => $tenantId,
+            'user_id' => $userId,
+            'module' => $module,
             'type' => $type,
             'title' => $title,
             'message' => $message,
-            'dismissible' => $dismissible,
-            'id' => uniqid('notif_')
-        ];
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'is_read' => false,
+            'metadata' => $metadata,
+        ]);
+        
+        Log::info('Notification created', [
+            'notification_id' => $notification->id,
+            'user_id' => $userId,
+            'module' => $module,
+            'type' => $type,
+            'tenant_id' => $tenantId,
+        ]);
+        
+        // Round 256: Broadcast notification created event for realtime updates
+        // Channel name in backend: tenant.{tenantId}.user.{userId}.notifications
+        // Frontend subscribes with: Echo.private('tenant.{tenantId}.user.{userId}.notifications')
+        // Event name: notification.created
+        event(new NotificationCreated($notification));
+        
+        return $notification;
     }
-
+    
     /**
-     * Add info notification
+     * Resolve tenant ID from current context
+     * 
+     * @return string|null
      */
-    public static function info(string $title, string $message, bool $dismissible = true): void
+    private function resolveTenantId(): ?string
     {
-        static::add('info', $title, $message, $dismissible);
-    }
-
-    /**
-     * Add success notification
-     */
-    public static function success(string $title, string $message, bool $dismissible = true): void
-    {
-        static::add('success', $title, $message, $dismissible);
-    }
-
-    /**
-     * Add warning notification
-     */
-    public static function warning(string $title, string $message, bool $dismissible = true): void
-    {
-        static::add('warning', $title, $message, $dismissible);
-    }
-
-    /**
-     * Add error notification
-     */
-    public static function error(string $title, string $message, bool $dismissible = true): void
-    {
-        static::add('error', $title, $message, $dismissible);
-    }
-
-    /**
-     * Get all notifications
-     */
-    public static function getAll(): array
-    {
-        return static::$notifications;
-    }
-
-    /**
-     * Clear all notifications
-     */
-    public static function clear(): void
-    {
-        static::$notifications = [];
-    }
-
-    /**
-     * Get notifications for specific user context
-     */
-    public static function getUserNotifications($user = null): array
-    {
-        $notifications = static::$notifications;
-
-        // Add user-specific notifications
-        if ($user) {
-            // Example: Add notifications based on user role or status
-            if ($user->isSuperAdmin()) {
-                static::add('info', 'Admin Panel', 'You have access to all system features');
-            }
-
-            // Example: Add notifications based on user activity
-            if ($user->last_login_at && $user->last_login_at->diffInHours() > 24) {
-                static::add('success', 'Welcome back!', 'You have been away for ' . $user->last_login_at->diffInHours() . ' hours');
+        // Priority 1: Request attribute (set by middleware)
+        $request = request();
+        $activeTenantId = $request->attributes->get('active_tenant_id');
+        if ($activeTenantId) {
+            return (string) $activeTenantId;
+        }
+        
+        // Priority 2: Authenticated user's tenant_id
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user && $user->tenant_id) {
+                return (string) $user->tenant_id;
             }
         }
+        
+        // Priority 3: TenancyService
+        if (app()->bound(\App\Services\TenancyService::class)) {
+            $tenancyService = app(\App\Services\TenancyService::class);
+            if (Auth::check()) {
+                $resolvedTenantId = $tenancyService->resolveActiveTenantId(Auth::user(), $request);
+                if ($resolvedTenantId) {
+                    return (string) $resolvedTenantId;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Resolve tenant ID from entity
+     * 
+     * @param string $entityType Entity type
+     * @param string $entityId Entity ID
+     * @param string|null $activeTenantId Expected tenant context (if available)
+     * @return string|null
+     */
+    private function resolveTenantIdFromEntity(string $entityType, string $entityId, ?string $activeTenantId = null): ?string
+    {
+        try {
+            $model = null;
+            switch ($entityType) {
+                case 'task':
+                    $model = \App\Models\ProjectTask::withoutGlobalScope('tenant')->find($entityId);
+                    break;
+                case 'change_order':
+                    $model = \App\Models\ChangeOrder::withoutGlobalScope('tenant')->find($entityId);
+                    break;
+                case 'payment_certificate':
+                    $model = \App\Models\ContractPaymentCertificate::withoutGlobalScope('tenant')->find($entityId);
+                    break;
+                case 'payment':
+                    $model = \App\Models\ContractActualPayment::withoutGlobalScope('tenant')->find($entityId);
+                    break;
+                case 'role_profile':
+                    $model = \App\Models\RoleProfile::withoutGlobalScope('tenant')->find($entityId);
+                    break;
+            }
 
-        return $notifications;
+            if ($model && $model->tenant_id) {
+                $entityTenantId = (string) $model->tenant_id;
+                if ($activeTenantId && $entityTenantId !== (string) $activeTenantId) {
+                    Log::warning('NotificationService::resolveTenantIdFromEntity: Cross-tenant entity detected', [
+                        'entity_type' => $entityType,
+                        'entity_id' => $entityId,
+                        'active_tenant_id' => $activeTenantId,
+                        'entity_tenant_id' => $entityTenantId,
+                    ]);
+                    return null;
+                }
+
+                return $entityTenantId;
+            }
+        } catch (\Exception $e) {
+            Log::warning('NotificationService::resolveTenantIdFromEntity: Failed to resolve tenant_id', [
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
     }
 
     /**
-     * Add system-wide notifications
+     * Get notifications for a user with filters
+     * 
+     * @param string $userId User ID
+     * @param string $tenantId Tenant ID
+     * @param array $filters Filters: is_read, module, search
+     * @param int $perPage Items per page
+     * @param int $page Page number
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public static function addSystemNotifications(): void
+    public function getNotificationsForUser(
+        string $userId,
+        string $tenantId,
+        array $filters = [],
+        int $perPage = 20,
+        int $page = 1
+    ) {
+        $query = Notification::forUser($userId)
+            ->where('tenant_id', $tenantId)
+            ->latest();
+        
+        // Filter by is_read
+        if (isset($filters['is_read'])) {
+            $isRead = filter_var($filters['is_read'], FILTER_VALIDATE_BOOLEAN);
+            if ($isRead) {
+                $query->read();
+            } else {
+                $query->unread();
+            }
+        }
+        
+        // Filter by module
+        if (!empty($filters['module'])) {
+            $query->forModule($filters['module']);
+        }
+        
+        // Search by title or message
+        if (!empty($filters['search'])) {
+            $query->search($filters['search']);
+        }
+        
+        return $query->paginate($perPage, ['*'], 'page', $page);
+    }
+    
+    /**
+     * Mark notification as read
+     * 
+     * @param string $notificationId Notification ID
+     * @param string $userId User ID (for authorization check)
+     * @param string $tenantId Tenant ID (for authorization check)
+     * @return bool
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function markAsRead(string $notificationId, string $userId, string $tenantId): bool
     {
-        // System maintenance notifications
-        static::add('warning', 'System Maintenance', 'Scheduled maintenance on Sunday 2:00 AM - 4:00 AM');
+        $notification = Notification::where('id', $notificationId)
+            ->where('user_id', $userId)
+            ->where('tenant_id', $tenantId)
+            ->firstOrFail();
         
-        // Feature announcements
-        static::add('info', 'New Feature', 'Quick Actions has been updated with new project templates');
-        
-        // Tips and hints
-        static::add('info', 'Tip', 'Use keyboard shortcuts (Ctrl+N) to create new projects faster');
+        return $notification->markAsRead();
+    }
+    
+    /**
+     * Mark all notifications as read for a user
+     * 
+     * @param string $userId User ID
+     * @param string $tenantId Tenant ID
+     * @return int Number of notifications marked as read
+     */
+    public function markAllAsRead(string $userId, string $tenantId): int
+    {
+        return Notification::markAllAsReadForUser($userId, $tenantId);
+    }
+    
+    /**
+     * Get unread count for a user
+     * 
+     * @param string $userId User ID
+     * @param string $tenantId Tenant ID
+     * @return int
+     */
+    public function getUnreadCount(string $userId, string $tenantId): int
+    {
+        return Notification::getUnreadCount($userId, $tenantId);
     }
 }

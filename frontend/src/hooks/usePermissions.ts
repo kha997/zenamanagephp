@@ -7,6 +7,10 @@ import { useAuthStore } from '../store/auth';
 import { Permission, Role } from '../lib/types';
 import { hasPermission, hasRole } from '../lib/utils/auth';
 
+const abilityRoleFallback: Record<string, string[]> = {
+  'system.admin': ['super_admin', 'admin'],
+};
+
 export const usePermissions = () => {
   const { user } = useAuthStore();
 
@@ -44,6 +48,15 @@ export const usePermissions = () => {
     return checkPermission(permissionCode, projectId);
   };
 
+  const can = (ability: string, projectId?: number) => {
+    const fallbackRoles = abilityRoleFallback[ability];
+    if (fallbackRoles && fallbackRoles.some((role) => checkRole(role, projectId))) {
+      return true;
+    }
+
+    return checkPermission(ability, projectId);
+  };
+
   // Specific permission checks for common actions
   const canCreateProject = () => checkPermission('project.create');
   const canEditProject = (projectId?: number) => checkPermission('project.edit', projectId);
@@ -52,6 +65,15 @@ export const usePermissions = () => {
   const canCreateTask = (projectId?: number) => checkPermission('task.create', projectId);
   const canEditTask = (projectId?: number) => checkPermission('task.edit', projectId);
   const canDeleteTask = (projectId?: number) => checkPermission('task.delete', projectId);
+  
+  // Cost permissions - Round 229
+  const canViewCost = (projectId?: number) => checkPermission('projects.cost.view', projectId);
+  const canEditCost = (projectId?: number) => checkPermission('projects.cost.edit', projectId);
+  const canApproveCost = (projectId?: number) => checkPermission('projects.cost.approve', projectId);
+  const canExportCost = (projectId?: number) => {
+    // Export permission can be separate or same as view
+    return checkPermission('projects.cost.export', projectId) || checkPermission('projects.cost.view', projectId);
+  };
   
   const canManageUsers = () => checkPermission('user.manage');
   const canManageRoles = () => checkPermission('role.manage');
@@ -69,6 +91,8 @@ export const usePermissions = () => {
     checkPermission,
     checkRole,
     canAccess,
+    can,
+    isLoading: false,
     
     // Specific permission checks
     canCreateProject,
@@ -77,6 +101,10 @@ export const usePermissions = () => {
     canCreateTask,
     canEditTask,
     canDeleteTask,
+    canViewCost,
+    canEditCost,
+    canApproveCost,
+    canExportCost,
     canManageUsers,
     canManageRoles,
     

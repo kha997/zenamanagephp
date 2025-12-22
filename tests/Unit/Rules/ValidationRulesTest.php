@@ -43,11 +43,12 @@ class ValidationRulesTest extends TestCase
     /** @test */
     public function unique_rule_ignores_specified_id()
     {
-        $user = User::factory()->create(['email' => 'test@example.com']);
+        $email = 'unique-' . uniqid() . '@example.com';
+        $user = User::factory()->create(['email' => $email]);
         
         $rule = new UniqueRule('users', 'email', $user->id);
         
-        $this->assertTrue($rule->passes('email', 'test@example.com'));
+        $this->assertTrue($rule->passes('email', $email));
     }
 
     /** @test */

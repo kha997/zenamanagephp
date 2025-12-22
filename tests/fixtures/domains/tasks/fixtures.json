@@ -1,0 +1,116 @@
+{
+  "domain": "tasks",
+  "seed": 34567,
+  "description": "Tasks domain test fixtures - Use with seedTasksDomain(34567) for reproducibility",
+  "tenants": [
+    {
+      "name": "Tasks Test Tenant",
+      "slug": "tasks-test-tenant-34567",
+      "status": "active",
+      "is_active": true
+    }
+  ],
+  "users": [
+    {
+      "name": "Tasks PM User",
+      "email": "pm@tasks-test.test",
+      "role": "project_manager",
+      "password": "password"
+    },
+    {
+      "name": "Tasks Team Member 1",
+      "email": "member1@tasks-test.test",
+      "role": "member",
+      "password": "password"
+    },
+    {
+      "name": "Tasks Team Member 2",
+      "email": "member2@tasks-test.test",
+      "role": "member",
+      "password": "password"
+    }
+  ],
+  "projects": [
+    {
+      "code": "TASK-PROJ-34567",
+      "name": "Tasks Test Project",
+      "description": "Project for tasks domain testing",
+      "status": "active",
+      "budget_total": 50000.00
+    }
+  ],
+  "components": [
+    {
+      "name": "Tasks Test Component",
+      "type": "phase",
+      "status": "active"
+    }
+  ],
+  "tasks": [
+    {
+      "name": "Backlog Task",
+      "title": "Backlog Task",
+      "status": "backlog",
+      "priority": "normal",
+      "estimated_hours": 8.0,
+      "actual_hours": 0.0,
+      "progress_percent": 0.0
+    },
+    {
+      "name": "In Progress Task",
+      "title": "In Progress Task",
+      "status": "in_progress",
+      "priority": "high",
+      "estimated_hours": 16.0,
+      "actual_hours": 4.0,
+      "progress_percent": 25.0
+    },
+    {
+      "name": "Blocked Task",
+      "title": "Blocked Task",
+      "status": "blocked",
+      "priority": "urgent",
+      "estimated_hours": 12.0,
+      "actual_hours": 0.0,
+      "progress_percent": 0.0
+    },
+    {
+      "name": "Done Task",
+      "title": "Done Task",
+      "status": "done",
+      "priority": "normal",
+      "estimated_hours": 10.0,
+      "actual_hours": 10.0,
+      "progress_percent": 100.0
+    }
+  ],
+  "task_assignments": [
+    {
+      "task": "In Progress Task",
+      "user": "Tasks Team Member 1",
+      "role": "assignee"
+    },
+    {
+      "task": "Done Task",
+      "user": "Tasks Team Member 2",
+      "role": "assignee"
+    }
+  ],
+  "task_dependencies": [
+    {
+      "task": "In Progress Task",
+      "depends_on": "Backlog Task"
+    },
+    {
+      "task": "Blocked Task",
+      "depends_on": "In Progress Task"
+    }
+  ],
+  "notes": [
+    "This fixture file documents the structure created by TestDataSeeder::seedTasksDomain(34567)",
+    "Use this as a reference when writing tests that need tasks domain data",
+    "All data is created with fixed seed 34567 for reproducibility",
+    "Users have password 'password' (will be hashed in actual implementation)"
+  ]
+}
+

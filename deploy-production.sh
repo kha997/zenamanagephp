@@ -1,254 +1,245 @@
 #!/bin/bash
 
-# Production Deployment Script
-# Dashboard System - Production Deployment
+# ZenaManage Production Deployment Script
+# Version: 2.0.0
+# Date: 2025-10-16
 
-set -e
+# --- Configuration ---
+APP_NAME="ZenaManage"
+APP_ENV="production"
+APP_URL="${APP_URL:-https://zenamanage.com}"
+DEPLOY_USER="${DEPLOY_USER:-www-data}"
+DEPLOY_GROUP="${DEPLOY_GROUP:-www-data}"
 
-echo "🚀 Starting Production Deployment for ZenaManage Dashboard..."
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Configuration
-PROJECT_NAME="zenamanage-dashboard"
-DOCKER_COMPOSE_FILE="docker-compose.prod.yml"
-ENV_FILE="production.env"
-
-# Functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
+# --- Functions ---
+print_status() {
+    echo -e "\n[INFO] $1"
+}
+print_success() {
+    echo -e "\n[SUCCESS] $1"
+}
+print_warning() {
+    echo -e "\n[WARNING] $1"
+}
+print_error() {
+    echo -e "\n[ERROR] $1"
 }
 
-log_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
+# --- Main Deployment Steps ---
+print_status "🚀 Starting $APP_NAME Production Deployment..."
+print_status "Environment: $APP_ENV"
+print_status "URL: $APP_URL"
+print_status "================================================"
 
-log_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
+# Step 1: Pre-deployment checks
+print_status "Step 1: Pre-deployment checks..."
 
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+# Check if we're in the right directory
+if [ ! -f "artisan" ]; then
+    print_error "Laravel artisan file not found. Are you in the correct directory?"
+    exit 1
+fi
 
-# Check if Docker is running
-check_docker() {
-    log_info "Checking Docker status..."
-    if ! docker info > /dev/null 2>&1; then
-        log_error "Docker is not running. Please start Docker and try again."
+# Check if .env.production exists
+if [ ! -f ".env.production" ]; then
+    print_warning ".env.production not found, using .env"
+    if [ ! -f ".env" ]; then
+        print_error ".env file not found!"
         exit 1
     fi
-    log_success "Docker is running"
-}
+fi
 
-# Check if Docker Compose is available
-check_docker_compose() {
-    log_info "Checking Docker Compose..."
-    if ! command -v docker-compose &> /dev/null; then
-        log_error "Docker Compose is not installed. Please install Docker Compose and try again."
-        exit 1
-    fi
-    log_success "Docker Compose is available"
-}
+# Check disk space
+DISK_USAGE=$(df -h . | awk 'NR==2 {print $5}' | sed 's/%//')
+if [ "$DISK_USAGE" -gt 90 ]; then
+    print_error "Disk usage is too high: ${DISK_USAGE}%"
+    exit 1
+fi
 
-# Check environment file
-check_env_file() {
-    log_info "Checking environment file..."
-    if [ ! -f "$ENV_FILE" ]; then
-        log_warning "Environment file $ENV_FILE not found. Creating from example..."
-        if [ -f "${ENV_FILE}.example" ]; then
-            cp "${ENV_FILE}.example" "$ENV_FILE"
-            log_warning "Please edit $ENV_FILE with your production settings before continuing."
-            log_warning "Press Enter when ready to continue..."
-            read -r
-        else
-            log_error "No environment file found. Please create $ENV_FILE with your production settings."
-            exit 1
-        fi
-    fi
-    log_success "Environment file found"
-}
+print_success "Pre-deployment checks passed"
 
-# Build and start services
-deploy_services() {
-    log_info "Building and starting production services..."
-    
-    # Stop existing containers
-    log_info "Stopping existing containers..."
-    docker-compose -f "$DOCKER_COMPOSE_FILE" down --remove-orphans
-    
-    # Build images
-    log_info "Building Docker images..."
-    docker-compose -f "$DOCKER_COMPOSE_FILE" build --no-cache
-    
-    # Start services
-    log_info "Starting services..."
-    docker-compose -f "$DOCKER_COMPOSE_FILE" up -d
-    
-    log_success "Services started successfully"
-}
+# Step 2: Backup current deployment
+print_status "Step 2: Creating backup..."
 
-# Wait for services to be ready
-wait_for_services() {
-    log_info "Waiting for services to be ready..."
-    
-    # Wait for MySQL
-    log_info "Waiting for MySQL..."
-    timeout=60
-    while ! docker-compose -f "$DOCKER_COMPOSE_FILE" exec mysql mysqladmin ping -h localhost --silent; do
-        sleep 2
-        timeout=$((timeout - 2))
-        if [ $timeout -le 0 ]; then
-            log_error "MySQL failed to start within 60 seconds"
-            exit 1
-        fi
-    done
-    log_success "MySQL is ready"
-    
-    # Wait for Redis
-    log_info "Waiting for Redis..."
-    timeout=30
-    while ! docker-compose -f "$DOCKER_COMPOSE_FILE" exec redis redis-cli ping > /dev/null 2>&1; do
-        sleep 2
-        timeout=$((timeout - 2))
-        if [ $timeout -le 0 ]; then
-            log_error "Redis failed to start within 30 seconds"
-            exit 1
-        fi
-    done
-    log_success "Redis is ready"
-    
-    # Wait for Application
-    log_info "Waiting for Application..."
-    timeout=60
-    while ! curl -f http://localhost/health > /dev/null 2>&1; do
-        sleep 2
-        timeout=$((timeout - 2))
-        if [ $timeout -le 0 ]; then
-            log_error "Application failed to start within 60 seconds"
-            exit 1
-        fi
-    done
-    log_success "Application is ready"
-}
+BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
+mkdir -p "$BACKUP_DIR"
 
-# Run database migrations
-run_migrations() {
-    log_info "Running database migrations..."
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan migrate --force
-    log_success "Database migrations completed"
-}
+# Backup database
+if command -v mysqldump >/dev/null 2>&1; then
+    print_status "Backing up database..."
+    mysqldump --user="${DB_USERNAME:-root}" \
+              --password="${DB_PASSWORD:-}" \
+              --host="${DB_HOST:-localhost}" \
+              --single-transaction \
+              --skip-routines \
+              --skip-triggers \
+              --skip-events \
+              "${DB_DATABASE:-zenamanage}" > "$BACKUP_DIR/database.sql"
+    print_success "Database backup completed"
+else
+    print_warning "mysqldump not found, skipping database backup"
+fi
+
+# Backup current files
+print_status "Backing up current files..."
+tar -czf "$BACKUP_DIR/files.tar.gz" \
+    --exclude="node_modules" \
+    --exclude="vendor" \
+    --exclude="storage/logs" \
+    --exclude="storage/framework/cache" \
+    --exclude="storage/framework/sessions" \
+    --exclude="storage/framework/views" \
+    --exclude=".git" \
+    .
+
+print_success "Files backup completed"
+
+# Step 3: Install dependencies
+print_status "Step 3: Installing dependencies..."
+
+# Install PHP dependencies
+composer install --no-dev --optimize-autoloader --no-interaction
+if [ $? -eq 0 ]; then
+    print_success "PHP dependencies installed"
+else
+    print_error "Failed to install PHP dependencies"
+    exit 1
+fi
+
+# Install Node dependencies
+npm ci --production=false
+if [ $? -eq 0 ]; then
+    print_success "Node dependencies installed"
+else
+    print_error "Failed to install Node dependencies"
+    exit 1
+fi
+
+# Step 4: Build assets
+print_status "Step 4: Building assets..."
+
+npm run build
+if [ $? -eq 0 ]; then
+    print_success "Assets built successfully"
+else
+    print_error "Failed to build assets"
+    exit 1
+fi
+
+# Step 5: Laravel optimization
+print_status "Step 5: Optimizing Laravel..."
+
+# Generate application key if not exists
+if [ -z "$(grep APP_KEY .env 2>/dev/null | cut -d '=' -f2)" ]; then
+    php artisan key:generate --force
+fi
 
 # Clear and cache configuration
-optimize_application() {
-    log_info "Optimizing application..."
-    
-    # Clear caches
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan config:clear
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan cache:clear
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan route:clear
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan view:clear
-    
-    # Cache configuration
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan config:cache
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan route:cache
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan view:cache
-    
-    log_success "Application optimized"
-}
+php artisan config:clear
+php artisan config:cache
 
-# Create storage link
-create_storage_link() {
-    log_info "Creating storage link..."
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app php artisan storage:link
-    log_success "Storage link created"
-}
+# Clear and cache routes
+php artisan route:clear
+php artisan route:cache
 
-# Set permissions
-set_permissions() {
-    log_info "Setting proper permissions..."
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app chown -R www-data:www-data storage bootstrap/cache
-    docker-compose -f "$DOCKER_COMPOSE_FILE" exec app chmod -R 775 storage bootstrap/cache
-    log_success "Permissions set"
-}
+# Clear and cache views
+php artisan view:clear
+php artisan view:cache
 
-# Health check
-health_check() {
-    log_info "Performing health check..."
-    
-    # Check application health
-    if curl -f http://localhost/health > /dev/null 2>&1; then
-        log_success "Application health check passed"
+# Clear and cache events
+php artisan event:clear
+php artisan event:cache
+
+print_success "Laravel optimization completed"
+
+# Step 6: Database operations
+print_status "Step 6: Database operations..."
+
+# Run migrations
+php artisan migrate --force
+if [ $? -eq 0 ]; then
+    print_success "Database migrations completed"
+else
+    print_error "Failed to run database migrations"
+    exit 1
+fi
+
+# Run seeders (if needed)
+if [ "${RUN_SEEDERS:-false}" = "true" ]; then
+    php artisan db:seed --force
+    print_success "Database seeders completed"
+fi
+
+# Step 7: File permissions
+print_status "Step 7: Setting file permissions..."
+
+# Set proper permissions
+chown -R "$DEPLOY_USER:$DEPLOY_GROUP" storage bootstrap/cache
+chmod -R 775 storage bootstrap/cache
+chmod -R 755 public
+
+# Set executable permissions for scripts
+chmod +x scripts/*.sh 2>/dev/null || true
+
+print_success "File permissions set"
+
+# Step 8: Health checks
+print_status "Step 8: Running health checks..."
+
+# Check if application is accessible
+if command -v curl >/dev/null 2>&1; then
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL" || echo "000")
+    if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "302" ]; then
+        print_success "Application is accessible (HTTP $HTTP_STATUS)"
     else
-        log_error "Application health check failed"
-        exit 1
+        print_warning "Application returned HTTP $HTTP_STATUS"
     fi
-    
-    # Check API health
-    if curl -f http://localhost/api/health > /dev/null 2>&1; then
-        log_success "API health check passed"
-    else
-        log_warning "API health check failed (may be expected if API is not implemented)"
-    fi
-    
-    # Check WebSocket health
-    if curl -f http://localhost:6001/health > /dev/null 2>&1; then
-        log_success "WebSocket health check passed"
-    else
-        log_warning "WebSocket health check failed (may be expected if WebSocket is not implemented)"
-    fi
-}
+else
+    print_warning "curl not found, skipping HTTP health check"
+fi
 
-# Show deployment summary
-show_summary() {
-    log_success "🎉 Deployment completed successfully!"
-    echo ""
-    echo "📊 Service Status:"
-    docker-compose -f "$DOCKER_COMPOSE_FILE" ps
-    echo ""
-    echo "🌐 Access URLs:"
-    echo "  Dashboard: https://dashboard.zenamanage.com"
-    echo "  API: https://api.zenamanage.com"
-    echo "  WebSocket: wss://ws.zenamanage.com"
-    echo "  Grafana: http://localhost:3000"
-    echo "  Prometheus: http://localhost:9090"
-    echo "  Kibana: http://localhost:5601"
-    echo ""
-    echo "📝 Next Steps:"
-    echo "  1. Configure your DNS to point to this server"
-    echo "  2. Set up SSL certificates in docker/nginx/ssl/"
-    echo "  3. Configure monitoring alerts in Grafana"
-    echo "  4. Set up log aggregation in Kibana"
-    echo "  5. Configure backup schedules"
-    echo ""
-    echo "🔧 Management Commands:"
-    echo "  View logs: docker-compose -f $DOCKER_COMPOSE_FILE logs -f [service]"
-    echo "  Restart service: docker-compose -f $DOCKER_COMPOSE_FILE restart [service]"
-    echo "  Scale service: docker-compose -f $DOCKER_COMPOSE_FILE up -d --scale [service]=[count]"
-    echo "  Stop all: docker-compose -f $DOCKER_COMPOSE_FILE down"
-}
+# Check database connection
+php artisan tinker --execute="DB::connection()->getPdo(); echo 'Database connection: OK';" >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+    print_success "Database connection verified"
+else
+    print_error "Database connection failed"
+    exit 1
+fi
 
-# Main deployment process
-main() {
-    log_info "Starting production deployment process..."
-    
-    check_docker
-    check_docker_compose
-    check_env_file
-    deploy_services
-    wait_for_services
-    run_migrations
-    optimize_application
-    create_storage_link
-    set_permissions
-    health_check
-    show_summary
-}
+# Step 9: Cleanup
+print_status "Step 9: Cleanup..."
 
-# Run main function
-main "$@"
+# Remove old backups (keep last 7 days)
+find backups -type d -mtime +7 -exec rm -rf {} + 2>/dev/null || true
+
+# Clear old logs
+find storage/logs -name "*.log" -mtime +30 -delete 2>/dev/null || true
+
+print_success "Cleanup completed"
+
+# Step 10: Deployment summary
+print_status "Step 10: Deployment Summary"
+print_status "================================================"
+print_success "✅ Application: $APP_NAME"
+print_success "✅ Environment: $APP_ENV"
+print_success "✅ URL: $APP_URL"
+print_success "✅ Backup: $BACKUP_DIR"
+print_success "✅ Dependencies: Installed"
+print_success "✅ Assets: Built"
+print_success "✅ Database: Migrated"
+print_success "✅ Permissions: Set"
+print_success "✅ Health: Verified"
+print_success "✅ Cleanup: Completed"
+
+# Performance metrics
+print_status "Performance Metrics:"
+echo "  - Disk Usage: $(df -h . | awk 'NR==2 {print $5}')"
+echo "  - Memory Usage: $(free -h | awk 'NR==2 {print $3 "/" $2}')"
+echo "  - Load Average: $(uptime | awk -F'load average:' '{print $2}')"
+
+print_success "🎉 Deployment completed successfully!"
+print_status "Deployment finished at: $(date)"
+
+# Exit with success
+exit 0

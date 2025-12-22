@@ -3,13 +3,13 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\CoreProject\Models\Component;
-use Src\CoreProject\Models\Project;
+use App\Models\Component;
+use App\Models\Project;
 
 /**
  * Factory cho Component model
  * 
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\CoreProject\Models\Component>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Component>
  */
 class ComponentFactory extends Factory
 {
@@ -28,12 +28,24 @@ class ComponentFactory extends Factory
     public function definition(): array
     {
         return [
+            'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
+            'tenant_id' => \App\Models\Tenant::factory(),
             'project_id' => Project::factory(),
             'parent_component_id' => null,
             'name' => $this->faker->words(3, true),
+            'description' => $this->faker->paragraph(2),
+            'type' => $this->faker->randomElement(['general', 'design', 'development', 'testing', 'deployment']),
+            'status' => $this->faker->randomElement(['planning', 'active', 'on_hold', 'completed', 'cancelled']),
+            'priority' => $this->faker->randomElement(['low', 'medium', 'high', 'critical']),
             'progress_percent' => $this->faker->randomFloat(2, 0, 100),
             'planned_cost' => $this->faker->randomFloat(2, 10000, 500000),
             'actual_cost' => $this->faker->randomFloat(2, 0, 400000),
+            'budget' => $this->faker->randomFloat(2, 10000, 500000),
+            'start_date' => $this->faker->dateTimeBetween('-1 month', '+1 month'),
+            'end_date' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
+            'dependencies' => json_encode([]),
+            'metadata' => json_encode(['created_by_factory' => true]),
+            'created_by' => null,
         ];
     }
 

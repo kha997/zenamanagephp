@@ -42,7 +42,7 @@ jobs:
         fi
     
     - name: Upload Button Inventory
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: button-inventory
         path: docs/testing/button-inventory.csv
@@ -99,7 +99,7 @@ jobs:
       run: php artisan test tests/Feature/Buttons/ --env=testing --coverage
     
     - name: Upload Feature Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: feature-test-results
@@ -162,7 +162,7 @@ jobs:
       run: php artisan dusk tests/Browser/Buttons/ --env=testing
     
     - name: Upload Browser Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: browser-test-results
@@ -219,7 +219,7 @@ jobs:
       run: php artisan test tests/Feature/SecurityFeaturesSimpleTest.php --env=testing
     
     - name: Upload Security Test Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-test-results
@@ -233,7 +233,7 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     
     - name: Generate Coverage Report
       run: |
@@ -257,7 +257,7 @@ jobs:
         echo "3. Add accessibility tests" >> coverage-report.md
     
     - name: Upload Coverage Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: coverage-report.md
@@ -270,7 +270,7 @@ jobs:
     - uses: actions/checkout@v3
     
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     
     - name: Check Quality Gates
       run: |

@@ -1,0 +1,92 @@
+name: Performance Budgets Enforcement
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  performance-budgets:
+    name: Performance Budgets Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Collect performance metrics
+      run: |
+        mkdir -p test-results
+        node scripts/collect-performance-metrics.js test-results/performance-metrics.json
+      continue-on-error: true
+      
+    - name: Check performance budgets
+      run: |
+        ./scripts/check-performance-budgets.sh test-results/performance-metrics.json
+      continue-on-error: false
+      
+    - name: Upload performance report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-budget-report
+        path: test-results/performance-budget-report.json
+        retention-days: 30
+        
+    - name: Comment PR with performance report
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const reportPath = 'test-results/performance-budget-report.json';
+          
+          if (fs.existsSync(reportPath)) {
+            const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'));
+            
+            let comment = '## 📊 Performance Budget Report\n\n';
+            comment += `**Status**: ${report.summary.failed > 0 ? '❌ Failed' : report.summary.warned > 0 ? '⚠️ Warnings' : '✅ Passed'}\n\n`;
+            comment += `- ✅ Passed: ${report.summary.passed}\n`;
+            comment += `- ⚠️ Warnings: ${report.summary.warned}\n`;
+            comment += `- ❌ Failed: ${report.summary.failed}\n\n`;
+            
+            if (report.violations.length > 0) {
+              comment += '### ❌ Budget Violations\n\n';
+              report.violations.forEach(v => {
+                comment += `- **${v.category}.${v.metric}**: ${v.value}ms exceeds budget of ${v.budget}ms (${v.overagePercent}% over)\n`;
+              });
+              comment += '\n';
+            }
+            
+            if (report.warnings.length > 0) {
+              comment += '### ⚠️ Budget Warnings\n\n';
+              report.warnings.slice(0, 10).forEach(w => {
+                comment += `- **${w.category}.${w.metric}**: ${w.value}ms is ${w.usagePercent}% of budget (${w.budget}ms)\n`;
+              });
+              if (report.warnings.length > 10) {
+                comment += `\n*... and ${report.warnings.length - 10} more warnings*\n`;
+              }
+              comment += '\n';
+            }
+            
+            comment += `\n📄 Full report: [performance-budget-report.json](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          }
+

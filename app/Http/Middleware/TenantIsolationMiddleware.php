@@ -34,7 +34,23 @@ class TenantIsolationMiddleware
             ], 401);
         }
         
-        // Ensure user has a tenant_id
+        // Super admin users don't need tenant_id
+        if ((method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) || (isset($user->is_admin) && $user->is_admin)) {
+            Log::info('Super admin access - bypassing tenant isolation', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => $request->ip()
+            ]);
+            
+            // Set global tenant context to null for super admin
+            app()->instance('current_tenant_id', null);
+            $request->attributes->set('tenant_id', null);
+            $request->attributes->set('tenant_user', $user);
+            
+            return $next($request);
+        }
+        
+        // Ensure regular users have a tenant_id
         if (!$user->tenant_id) {
             Log::warning('User without tenant_id attempted to access API', [
                 'user_id' => $user->id,

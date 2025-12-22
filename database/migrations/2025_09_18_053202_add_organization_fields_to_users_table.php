@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use App\Support\DBDriver;
 
 return new class extends Migration
 {
@@ -93,8 +94,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['invitation_id']);
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['organization_id']);
+            }
+            if (DBDriver::isMysql()) {
+                $table->dropForeign(['invitation_id']);
+            }
             $table->dropColumn([
                 'organization_id',
                 'first_name',

@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * TenantScope Trait
@@ -18,13 +19,10 @@ trait TenantScope
     protected static function bootTenantScope()
     {
         static::addGlobalScope('tenant', function (Builder $builder) {
-            // Only apply scope if we have a tenant context
-            if (app()->has('tenant') || request()->has('tenant_id')) {
-                $tenantId = app('tenant')?->id ?? request('tenant_id');
-                
-                if ($tenantId) {
-                    $builder->where($builder->getModel()->getTable() . '.tenant_id', $tenantId);
-                }
+            // Only apply scope if we have an authenticated user with tenant_id
+            if (Auth::check() && Auth::user()->tenant_id) {
+                $tenantId = Auth::user()->tenant_id;
+                $builder->where($builder->getModel()->getTable() . '.tenant_id', $tenantId);
             }
         });
     }
@@ -58,12 +56,18 @@ trait TenantScope
      */
     public function scopeForCurrentTenant(Builder $query): Builder
     {
-        $tenantId = app('tenant')?->id ?? request('tenant_id');
-        
-        if ($tenantId) {
-            return $query->where('tenant_id', $tenantId);
+        if (Auth::check() && Auth::user()->tenant_id) {
+            return $query->where('tenant_id', Auth::user()->tenant_id);
         }
         
         return $query;
+    }
+
+    /**
+     * Scope to bypass tenant filtering (use with caution)
+     */
+    public function scopeWithoutTenantScope(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope('tenant');
     }
 }

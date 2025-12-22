@@ -6,18 +6,19 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use Laravel\Dusk\TestCase;
+use Laravel\Dusk\TestCase as DuskTestCase;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Hash;
+use Tests\CreatesApplication;
 
 /**
  * Button Navigation Test
  * 
  * Tests navigation flows and user interactions
  */
-class ButtonNavigationTest extends TestCase
+class ButtonNavigationTest extends DuskTestCase
 {
-    use DatabaseMigrations;
+    use DatabaseMigrations, CreatesApplication;
 
     protected $tenant;
     protected $user;

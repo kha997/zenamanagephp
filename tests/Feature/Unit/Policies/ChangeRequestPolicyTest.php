@@ -37,7 +37,8 @@ class ChangeRequestPolicyTest extends TestCase
         $this->changeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $this->tenant->id,
             'created_by' => $this->user->id,
-            'title' => 'Test Change Request'
+            'title' => 'Test Change Request',
+            'project_id' => \App\Models\Project::factory()->create(['tenant_id' => $this->tenant->id])->id
         ]);
     }
 
@@ -67,13 +68,47 @@ class ChangeRequestPolicyTest extends TestCase
 
     public function test_user_can_update_own_change_request()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
+        
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
         $this->assertTrue($this->policy->update($this->user, $this->changeRequest));
     }
 
     public function test_user_can_approve_change_request_with_management_role()
     {
-        $this->user->assignRole('pm');
+        // Create role if it doesn't exist
+        $role = \App\Models\Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => 'project',
+                'allow_override' => false,
+                'description' => 'Project Manager - Project management',
+            ]
+        );
+        
+        // Manually insert role assignment
+        \DB::table('user_roles')->insert([
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
         $this->assertTrue($this->policy->approve($this->user, $this->changeRequest));
     }
 

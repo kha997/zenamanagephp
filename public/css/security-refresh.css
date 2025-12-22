@@ -1,0 +1,110 @@
+/**
+ * Security Page Soft Refresh Styles
+ * Subtle loading states and smooth transitions
+ */
+
+/* Soft reloading state - subtle dimming */
+body.is-reloading .security-kpis .card,
+body.is-reloading .security-panels .chart,
+body.is-reloading .security-panels .table {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+/* Anti-CLS: fixed chart heights */
+.chart-box {
+    min-height: 280px;
+    position: relative;
+}
+
+/* Smooth chart transitions */
+.security-chart {
+    transition: opacity 0.15s ease;
+}
+
+/* Content visibility optimization for below-fold sections */
+.below-fold {
+    content-visibility: auto;
+    contain-intrinsic-size: 800px;
+}
+
+/* Subtle progress indicator (optional NProgress replacement) */
+.security-refresh-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+    transform-origin: left;
+    animation: progress-pulse 1s ease-in-out infinite;
+    z-index: 9999;
+}
+
+@keyframes progress-pulse {
+    0% { transform: scaleX(0); opacity: 0; }
+    50% { transform: scaleX(0.5); opacity: 1; }
+    100% { transform: scaleX(1); } opacity: 0; }
+}
+
+/* Cache indicator for debugging */
+.cache-indicator {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: monospace;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.cache-indicator.show {
+    opacity: 1;
+}
+
+.cache-indicator.from-cache {
+    background: rgba(34, 197, 94, 0.8);
+}
+
+.cache-indicator.from-network {
+    background: rgba(59, 130, 246, 0.8);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chart-box {
+        min-height: 200px;
+    }
+    
+    .below-fold {
+        contain-intrinsic-size: 400px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    body.is-reloading .security-kpis .card,
+    body.is-reloading .security-panels .chart,
+    body.is-reloading .security-panels .table {
+        opacity: 0.8;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    body.is-reloading .security-kpis .card,
+    body.is-reloading .security-reloading .chart,
+    body.is-reloading .security-panels .table {
+        transition: none;
+        opacity: 0.9;
+    }
+    
+    .security-chart {
+        transition: none;
+    }
+}

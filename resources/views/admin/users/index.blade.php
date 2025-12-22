@@ -1,512 +1,467 @@
-{{-- Admin User Management Page --}}
-@extends('layouts.universal-frame')
+{{-- Admin Users - Week 2 Implementation --}}
+{{-- Using standardized components with admin-specific RBAC management --}}
 
-@section('title', 'User Management - Admin Dashboard')
-
-@section('content')
-<div class="user-management">
-    <!-- Page Header -->
-    <div class="page-header bg-white border-b border-gray-200 px-6 py-4">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
-                <p class="text-gray-600 mt-1">Manage system users and permissions</p>
-            </div>
-            <div class="flex items-center space-x-3">
-                <button 
-                    @click="exportUsers()"
-                    class="btn-secondary flex items-center gap-2"
-                >
-                    <i class="fas fa-download"></i>
-                    <span>Export</span>
-                </button>
-                <a href="{{ route('admin.users.create') }}" class="btn-primary flex items-center gap-2">
-                    <i class="fas fa-plus"></i>
-                    <span>Add User</span>
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters and Search -->
-    <div class="filters-section bg-white border-b border-gray-200 px-6 py-4">
-        <div class="flex flex-col md:flex-row gap-4">
-            <!-- Search -->
-            <div class="flex-1">
-                <div class="relative">
-                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    <input 
-                        type="text" 
-                        x-model="searchQuery"
-                        @input.debounce.300ms="searchUsers()"
-                        placeholder="Search users by name, email, or role..."
-                        class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                </div>
-            </div>
-            
-            <!-- Filters -->
-            <div class="flex gap-3">
-                <select 
-                    x-model="statusFilter"
-                    @change="filterUsers()"
-                    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    <option value="">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="suspended">Suspended</option>
-                </select>
-                
-                <select 
-                    x-model="roleFilter"
-                    @change="filterUsers()"
-                    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    <option value="">All Roles</option>
-                    <option value="super_admin">Super Admin</option>
-                    <option value="admin">Admin</option>
-                    <option value="project_manager">Project Manager</option>
-                    <option value="member">Member</option>
-                    <option value="client">Client</option>
-                </select>
-                
-                <select 
-                    x-model="tenantFilter"
-                    @change="filterUsers()"
-                    class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                    <option value="">All Tenants</option>
-                    <option value="1">Tenant A</option>
-                    <option value="2">Tenant B</option>
-                    <option value="3">Tenant C</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <!-- Users Table -->
-    <div class="main-content p-6">
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <!-- Table Header -->
-            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <div class="flex items-center justify-between">
-                    <h2 class="text-lg font-semibold text-gray-900">
-                        Users <span class="text-gray-500">(<span x-text="filteredUsers.length"></span>)</span>
-                    </h2>
-                    <div class="flex items-center space-x-2">
-                        <button 
-                            @click="selectAll()"
-                            class="text-sm text-blue-600 hover:text-blue-800"
-                        >
-                            Select All
-                        </button>
-                        <button 
-                            @click="bulkAction()"
-                            :disabled="selectedUsers.length === 0"
-                            class="btn-secondary text-sm"
-                            :class="{ 'opacity-50 cursor-not-allowed': selectedUsers.length === 0 }"
-                        >
-                            Bulk Actions (<span x-text="selectedUsers.length"></span>)
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Table -->
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <input 
-                                    type="checkbox" 
-                                    x-model="selectAllUsers"
-                                    @change="toggleSelectAll()"
-                                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                >
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                User
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Role
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Tenant
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Last Login
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Created
-                            </th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <template x-for="user in filteredUsers" :key="user.id">
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <input 
-                                        type="checkbox" 
-                                        :value="user.id"
-                                        x-model="selectedUsers"
-                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                    >
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                                            <i class="fas fa-user text-gray-600"></i>
-                                        </div>
-                                        <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900" x-text="user.name"></div>
-                                            <div class="text-sm text-gray-500" x-text="user.email"></div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span 
-                                        class="px-2 py-1 text-xs font-medium rounded-full"
-                                        :class="getRoleColor(user.role)"
-                                        x-text="user.role"
-                                    ></span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="user.tenant_name"></td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span 
-                                        class="px-2 py-1 text-xs font-medium rounded-full"
-                                        :class="getStatusColor(user.status)"
-                                        x-text="user.status"
-                                    ></span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="formatDate(user.last_login)"></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="formatDate(user.created_at)"></td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end space-x-2">
-                                        <button 
-                                            @click="viewUser(user.id)"
-                                            class="text-blue-600 hover:text-blue-900"
-                                        >
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button 
-                                            @click="editUser(user.id)"
-                                            class="text-indigo-600 hover:text-indigo-900"
-                                        >
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button 
-                                            @click="suspendUser(user.id)"
-                                            :class="user.status === 'suspended' ? 'text-green-600 hover:text-green-900' : 'text-yellow-600 hover:text-yellow-900'"
-                                        >
-                                            <i :class="user.status === 'suspended' ? 'fas fa-unlock' : 'fas fa-lock'"></i>
-                                        </button>
-                                        <button 
-                                            @click="deleteUser(user.id)"
-                                            class="text-red-600 hover:text-red-900"
-                                        >
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                <div class="flex items-center justify-between">
-                    <div class="text-sm text-gray-700">
-                        Showing <span x-text="(currentPage - 1) * perPage + 1"></span> to 
-                        <span x-text="Math.min(currentPage * perPage, filteredUsers.length)"></span> of 
-                        <span x-text="filteredUsers.length"></span> results
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <button 
-                            @click="previousPage()"
-                            :disabled="currentPage === 1"
-                            class="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Previous
-                        </button>
-                        <span class="px-3 py-1 text-sm text-gray-700">
-                            Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span>
-                        </span>
-                        <button 
-                            @click="nextPage()"
-                            :disabled="currentPage === totalPages"
-                            class="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-document.addEventListener('alpine:init', () => {
-    Alpine.data('userManagement', () => ({
-        searchQuery: '',
-        statusFilter: '',
-        roleFilter: '',
-        tenantFilter: '',
-        selectedUsers: [],
-        selectAllUsers: false,
-        currentPage: 1,
-        perPage: 10,
-        
-        users: [
-            {
-                id: 1,
-                name: 'John Doe',
-                email: 'john@example.com',
-                role: 'super_admin',
-                tenant_name: 'System',
-                status: 'active',
-                last_login: '2025-09-24T10:30:00Z',
-                created_at: '2025-01-15T08:00:00Z'
-            },
-            {
-                id: 2,
-                name: 'Jane Smith',
-                email: 'jane@example.com',
-                role: 'admin',
-                tenant_name: 'Acme Corp',
-                status: 'active',
-                last_login: '2025-09-24T09:15:00Z',
-                created_at: '2025-02-20T10:30:00Z'
-            },
-            {
-                id: 3,
-                name: 'Bob Johnson',
-                email: 'bob@example.com',
-                role: 'project_manager',
-                tenant_name: 'Tech Solutions',
-                status: 'suspended',
-                last_login: '2025-09-20T14:45:00Z',
-                created_at: '2025-03-10T12:00:00Z'
-            },
-            {
-                id: 4,
-                name: 'Alice Brown',
-                email: 'alice@example.com',
-                role: 'member',
-                tenant_name: 'Design Studio',
-                status: 'active',
-                last_login: '2025-09-24T08:30:00Z',
-                created_at: '2025-04-05T15:20:00Z'
-            },
-            {
-                id: 5,
-                name: 'Charlie Wilson',
-                email: 'charlie@example.com',
-                role: 'client',
-                tenant_name: 'Marketing Agency',
-                status: 'inactive',
-                last_login: '2025-09-15T16:00:00Z',
-                created_at: '2025-05-12T09:45:00Z'
-            }
+@php
+    $user = Auth::user();
+    $tenant = $user->tenant ?? null;
+    
+    // Admin-specific filters for users
+    $statusOptions = [
+        ['value' => 'active', 'label' => 'Active'],
+        ['value' => 'inactive', 'label' => 'Inactive'],
+        ['value' => 'suspended', 'label' => 'Suspended'],
+        ['value' => 'pending', 'label' => 'Pending']
+    ];
+    
+    $roleOptions = [
+        ['value' => 'super_admin', 'label' => 'Super Admin'],
+        ['value' => 'admin', 'label' => 'Admin'],
+        ['value' => 'project_manager', 'label' => 'Project Manager'],
+        ['value' => 'member', 'label' => 'Member'],
+        ['value' => 'client', 'label' => 'Client'],
+        ['value' => 'client_rep', 'label' => 'Client Representative']
+    ];
+    
+    $tenantOptions = collect($tenants ?? [])->map(function($tenant) {
+        return ['value' => $tenant->id ?? '', 'label' => $tenant->name ?? 'Unknown'];
+    })->toArray();
+    
+    // Filter configuration
+    $filters = [
+        [
+            'key' => 'status',
+            'label' => 'Status',
+            'type' => 'select',
+            'options' => $statusOptions,
+            'placeholder' => 'All Statuses'
         ],
+        [
+            'key' => 'role',
+            'label' => 'Role',
+            'type' => 'select',
+            'options' => $roleOptions,
+            'placeholder' => 'All Roles'
+        ],
+        [
+            'key' => 'tenant_id',
+            'label' => 'Tenant',
+            'type' => 'select',
+            'options' => $tenantOptions,
+            'placeholder' => 'All Tenants'
+        ],
+        [
+            'key' => 'created_date',
+            'label' => 'Created Date',
+            'type' => 'date-range'
+        ],
+        [
+            'key' => 'last_login',
+            'label' => 'Last Login',
+            'type' => 'date-range'
+        ]
+    ];
+    
+    // Sort options
+    $sortOptions = [
+        ['value' => 'name', 'label' => 'Name'],
+        ['value' => 'email', 'label' => 'Email'],
+        ['value' => 'role', 'label' => 'Role'],
+        ['value' => 'status', 'label' => 'Status'],
+        ['value' => 'created_at', 'label' => 'Created Date'],
+        ['value' => 'last_login_at', 'label' => 'Last Login']
+    ];
+    
+    // Bulk actions
+    $bulkActions = [
+        [
+            'label' => 'Activate Users',
+            'icon' => 'fas fa-check',
+            'handler' => 'bulkActivate()'
+        ],
+        [
+            'label' => 'Suspend Users',
+            'icon' => 'fas fa-pause',
+            'handler' => 'bulkSuspend()'
+        ],
+        [
+            'label' => 'Change Role',
+            'icon' => 'fas fa-user-tag',
+            'handler' => 'bulkChangeRole()'
+        ],
+        [
+            'label' => 'Export Users',
+            'icon' => 'fas fa-download',
+            'handler' => 'bulkExport()'
+        ],
+        [
+            'label' => 'Delete Users',
+            'icon' => 'fas fa-trash',
+            'handler' => 'bulkDelete()'
+        ]
+    ];
+    
+    // Breadcrumbs
+    $breadcrumbs = [
+        ['label' => 'Admin Dashboard', 'url' => route('admin.dashboard')],
+        ['label' => 'Users', 'url' => null]
+    ];
+    
+    // Page actions
+    $actions = '
+        <div class="flex items-center space-x-3">
+            <button onclick="exportUsers()" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
+                <i class="fas fa-download mr-2"></i>Export
+            </button>
+            <button onclick="openModal(\'create-user-modal\')" class="btn bg-blue-600 text-white hover:bg-blue-700">
+                <i class="fas fa-user-plus mr-2"></i>Add User
+            </button>
+        </div>
+    ';
+    
+    // Prepare table data
+    $tableData = collect($users->items() ?? [])->map(function($user) {
+        return [
+            'id' => $user->id,
+            'name' => $user->name ?? 'Unknown',
+            'email' => $user->email ?? '',
+            'role' => $user->role ?? 'member',
+            'status' => $user->is_active ? 'active' : 'inactive',
+            'tenant' => $user->tenant->name ?? 'No Tenant',
+            'last_login' => $user->last_login_at ? $user->last_login_at->format('M d, Y') : 'Never',
+            'created_at' => $user->created_at->format('M d, Y'),
+            'updated_at' => $user->updated_at->format('M d, Y')
+        ];
+    });
+    
+    // Table columns configuration
+    $columns = [
+        ['key' => 'name', 'label' => 'Name', 'sortable' => true, 'primary' => true],
+        ['key' => 'email', 'label' => 'Email', 'sortable' => true],
+        ['key' => 'role', 'label' => 'Role', 'sortable' => true, 'format' => 'badge'],
+        ['key' => 'status', 'label' => 'Status', 'sortable' => true, 'format' => 'badge'],
+        ['key' => 'tenant', 'label' => 'Tenant', 'sortable' => true],
+        ['key' => 'last_login', 'label' => 'Last Login', 'sortable' => true, 'format' => 'text'],
+        ['key' => 'created_at', 'label' => 'Created', 'sortable' => true, 'format' => 'date']
+    ];
+@endphp
 
-        get filteredUsers() {
-            let filtered = this.users;
+<x-shared.layout-wrapper 
+    title="User Management"
+    subtitle="Manage system users and permissions"
+    :breadcrumbs="$breadcrumbs"
+    :actions="$actions"
+    variant="admin">
+    
+    {{-- Filter Bar --}}
+    <x-shared.filter-bar 
+        :search="true"
+        search-placeholder="Search users..."
+        :filters="$filters"
+        :sort-options="$sortOptions"
+        :view-modes="['table', 'grid', 'list']"
+        current-view-mode="table"
+        :bulk-actions="$bulkActions">
+        
+        {{-- Custom Actions Slot --}}
+        <x-slot name="actions">
+            <button onclick="refreshUsers()" class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
+                <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+        </x-slot>
+    </x-shared.filter-bar>
+    
+    {{-- Users Table --}}
+    <div class="mt-6">
+        @if($tableData->count() > 0)
+        <x-shared.table-standardized 
+            :items="$tableData"
+            :columns="$columns"
+            :sortable="true"
+            :show-bulk-actions="true"
+            :pagination="$users->links()"
+            :show-search="true"
+            :show-filters="true"
+            :loading="false"
+            :empty-state="[
+                'icon' => 'fas fa-users',
+                'title' => 'No users found',
+                'description' => 'Try adjusting your filters or add a new user.',
+                'action' => [
+                    'label' => 'Add User',
+                    'icon' => 'fas fa-user-plus',
+                    'handler' => 'openModal(\'create-user-modal\')'
+                ]
+            ]">
+            </x-shared.table-standardized>
+        @else
+            {{-- Empty State --}}
+            <x-shared.empty-state 
+                icon="fas fa-users"
+                title="No users found"
+                description="Create your first user to start managing the system."
+                action-text="Add User"
+                action-icon="fas fa-user-plus"
+                action-handler="openModal('create-user-modal')" />
+        @endif
+        
+        {{-- Pagination Links --}}
+        @if($users->hasPages())
+            <div class="mt-6">
+                {{ $users->appends(request()->query())->links() }}
+            </div>
+        @endif
+    </div>
+    
+    {{-- Create User Modal --}}
+    <x-shared.modal 
+        id="create-user-modal"
+        title="Create New User"
+        size="lg">
+        
+        <form id="create-user-form" @submit.prevent="createUser()">
+            <div class="space-y-6">
+                {{-- Basic Information --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-first-name" class="form-label">First Name *</label>
+                        <input type="text" 
+                               id="user-first-name" 
+                               name="first_name" 
+                               required
+                               class="form-input"
+                               placeholder="Enter first name">
+                    </div>
+                    
+                    <div>
+                        <label for="user-last-name" class="form-label">Last Name *</label>
+                        <input type="text" 
+                               id="user-last-name" 
+                               name="last_name" 
+                               required
+                               class="form-input"
+                               placeholder="Enter last name">
+                    </div>
+                </div>
+                
+                {{-- Email --}}
+                <div>
+                    <label for="user-email" class="form-label">Email Address *</label>
+                    <input type="email" 
+                           id="user-email" 
+                           name="email" 
+                           required
+                           class="form-input"
+                           placeholder="Enter email address">
+                </div>
+                
+                {{-- Role & Tenant --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-role" class="form-label">Role *</label>
+                        <select id="user-role" name="role" required class="form-select">
+                            <option value="">Select Role</option>
+                            <option value="super_admin">Super Admin</option>
+                            <option value="admin">Admin</option>
+                            <option value="project_manager">Project Manager</option>
+                            <option value="member">Member</option>
+                            <option value="client">Client</option>
+                            <option value="client_rep">Client Representative</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="user-tenant" class="form-label">Tenant *</label>
+                        <select id="user-tenant" name="tenant_id" required class="form-select">
+                            <option value="">Select Tenant</option>
+                            @foreach($tenants ?? [] as $tenant)
+                                <option value="{{ $tenant->id }}">{{ $tenant->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                
+                {{-- Password --}}
+                <div>
+                    <label for="user-password" class="form-label">Password *</label>
+                    <input type="password" 
+                           id="user-password" 
+                           name="password" 
+                           required
+                           class="form-input"
+                           placeholder="Enter password">
+                    <p class="text-sm text-gray-500 mt-1">Minimum 8 characters</p>
+                </div>
+                
+                {{-- Status & Permissions --}}
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="user-status" class="form-label">Status</label>
+                        <select id="user-status" name="is_active" class="form-select">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="user-permissions" class="form-label">Additional Permissions</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions[]" value="can_manage_users" class="form-checkbox">
+                                <span class="ml-2 text-sm text-gray-700">Manage Users</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions[]" value="can_manage_projects" class="form-checkbox">
+                                <span class="ml-2 text-sm text-gray-700">Manage Projects</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" name="permissions[]" value="can_view_analytics" class="form-checkbox">
+                                <span class="ml-2 text-sm text-gray-700">View Analytics</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
-            // Search filter
-            if (this.searchQuery) {
-                const query = this.searchQuery.toLowerCase();
-                filtered = filtered.filter(user => 
-                    user.name.toLowerCase().includes(query) ||
-                    user.email.toLowerCase().includes(query) ||
-                    user.role.toLowerCase().includes(query)
-                );
-            }
-            
-            // Status filter
-            if (this.statusFilter) {
-                filtered = filtered.filter(user => user.status === this.statusFilter);
-            }
-            
-            // Role filter
-            if (this.roleFilter) {
-                filtered = filtered.filter(user => user.role === this.roleFilter);
-            }
-            
-            // Tenant filter
-            if (this.tenantFilter) {
-                filtered = filtered.filter(user => user.tenant_name === this.tenantFilter);
-            }
-            
-            return filtered;
-        },
+            {{-- Form Actions --}}
+            <div class="flex items-center justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <button type="button" 
+                        onclick="closeModal('create-user-modal')"
+                        class="btn bg-gray-100 text-gray-700 hover:bg-gray-200">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="btn bg-blue-600 text-white hover:bg-blue-700">
+                    <i class="fas fa-user-plus mr-2"></i>Create User
+                </button>
+            </div>
+        </form>
+    </x-shared.modal>
+</x-shared.layout-wrapper>
 
-        get totalPages() {
-            return Math.ceil(this.filteredUsers.length / this.perPage);
-        },
+@push('scripts')
+<script>
+function refreshUsers() {
+    window.location.reload();
+}
 
-        searchUsers() {
-            this.currentPage = 1;
-        },
+function exportUsers() {
+    alert('Export users functionality would be implemented here');
+}
 
-        filterUsers() {
-            this.currentPage = 1;
+function createUser() {
+    const form = document.getElementById('create-user-form');
+    const formData = new FormData(form);
+    
+    fetch('/api/v1/admin/users', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Authorization': 'Bearer ' + getAuthToken()
         },
-
-        selectAll() {
-            this.selectAllUsers = !this.selectAllUsers;
-            if (this.selectAllUsers) {
-                this.selectedUsers = this.filteredUsers.map(user => user.id);
-            } else {
-                this.selectedUsers = [];
-            }
-        },
-
-        toggleSelectAll() {
-            if (this.selectAllUsers) {
-                this.selectedUsers = this.filteredUsers.map(user => user.id);
-            } else {
-                this.selectedUsers = [];
-            }
-        },
-
-        bulkAction() {
-            if (this.selectedUsers.length === 0) return;
-            
-            const action = prompt('Bulk action (suspend, activate, delete):');
-            if (action) {
-                console.log(`Performing ${action} on users:`, this.selectedUsers);
-                // Implement bulk action logic
-            }
-        },
-
-        previousPage() {
-            if (this.currentPage > 1) {
-                this.currentPage--;
-            }
-        },
-
-        nextPage() {
-            if (this.currentPage < this.totalPages) {
-                this.currentPage++;
-            }
-        },
-
-        getRoleColor(role) {
-            const colors = {
-                'super_admin': 'bg-red-100 text-red-800',
-                'admin': 'bg-blue-100 text-blue-800',
-                'project_manager': 'bg-green-100 text-green-800',
-                'member': 'bg-gray-100 text-gray-800',
-                'client': 'bg-purple-100 text-purple-800'
-            };
-            return colors[role] || 'bg-gray-100 text-gray-800';
-        },
-
-        getStatusColor(status) {
-            const colors = {
-                'active': 'bg-green-100 text-green-800',
-                'inactive': 'bg-gray-100 text-gray-800',
-                'suspended': 'bg-red-100 text-red-800'
-            };
-            return colors[status] || 'bg-gray-100 text-gray-800';
-        },
-
-        formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-        },
-
-        viewUser(userId) {
-            console.log('View user:', userId);
-            // Implement view user logic
-        },
-
-        editUser(userId) {
-            console.log('Edit user:', userId);
-            // Implement edit user logic
-        },
-
-        suspendUser(userId) {
-            const user = this.users.find(u => u.id === userId);
-            if (user) {
-                user.status = user.status === 'suspended' ? 'active' : 'suspended';
-            }
-        },
-
-        deleteUser(userId) {
-            if (confirm('Are you sure you want to delete this user?')) {
-                this.users = this.users.filter(u => u.id !== userId);
-            }
-        },
-
-        exportUsers() {
-            console.log('Exporting users...');
-            // Implement export logic
+        body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            closeModal('create-user-modal');
+            window.location.reload();
+        } else {
+            alert('Error creating user: ' + (result.message || 'Unknown error'));
         }
-    }));
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating user');
+    });
+}
+
+function viewUser(userId) {
+    window.location.href = '/admin/users/' + userId;
+}
+
+function editUser(userId) {
+    window.location.href = '/admin/users/' + userId + '/edit';
+}
+
+function resetPassword(userId) {
+    if (confirm('Are you sure you want to reset this user\'s password?')) {
+        alert('Reset password functionality would be implemented here');
+    }
+}
+
+function suspendUser(userId) {
+    if (confirm('Are you sure you want to suspend this user?')) {
+        alert('Suspend user functionality would be implemented here');
+    }
+}
+
+function deleteUser(userId) {
+    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+        fetch('/api/v1/admin/users/' + userId, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Authorization': 'Bearer ' + getAuthToken()
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert('Error deleting user: ' + (result.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting user');
+        });
+    }
+}
+
+function bulkActivate() {
+    alert('Bulk activate functionality would be implemented here');
+}
+
+function bulkSuspend() {
+    alert('Bulk suspend functionality would be implemented here');
+}
+
+function bulkChangeRole() {
+    alert('Bulk change role functionality would be implemented here');
+}
+
+function bulkExport() {
+    alert('Bulk export functionality would be implemented here');
+}
+
+function bulkDelete() {
+    alert('Bulk delete functionality would be implemented here');
+}
+
+function openModal(modalId) {
+    alert('Open modal: ' + modalId);
+}
+
+function closeModal(modalId) {
+    alert('Close modal: ' + modalId);
+}
+
+function getAuthToken() {
+    return localStorage.getItem('auth_token') || '';
+}
+
+// Listen for filter events
+document.addEventListener('filter-search', (e) => {
+    console.log('Search:', e.detail.query);
+});
+
+document.addEventListener('filter-apply', (e) => {
+    console.log('Filters:', e.detail.filters);
+});
+
+document.addEventListener('filter-sort', (e) => {
+    console.log('Sort:', e.detail.sortBy, e.detail.sortDirection);
 });
 </script>
-
-<style>
-.user-management {
-    min-height: 100vh;
-    background-color: #f9fafb;
-}
-
-.btn-primary {
-    background: #2563eb;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: background-color 0.2s;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-}
-
-.btn-primary:hover {
-    background: #1d4ed8;
-}
-
-.btn-secondary {
-    background: #f3f4f6;
-    color: #374151;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: background-color 0.2s;
-    border: 1px solid #d1d5db;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-}
-
-.btn-secondary:hover {
-    background: #e5e7eb;
-}
-
-/* Responsive table */
-@media (max-width: 768px) {
-    .user-management .overflow-x-auto {
-        font-size: 14px;
-    }
-    
-    .user-management .px-6 {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-}
-</style>
-@endsection
+@endpush

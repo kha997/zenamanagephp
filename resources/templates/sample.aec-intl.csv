@@ -1,0 +1,8 @@
+phase_code,phase_name,discipline_code,discipline_name,color_hex,task_code,task_name,description,est_duration_days,role_key,deliverable_type,order_index,is_optional,depends_on_codes
+CONCEPT,Concept Design,ARC,Architecture,#1E88E5,ARC-C01,Master Layout,Zoning flow program analysis,3,lead_architect,layout_dwg,1,false,
+CONCEPT,Concept Design,ARC,Architecture,#1E88E5,ARC-C02,Concept Sketches,Initial design sketches and concepts,5,architect,sketch,2,false,ARC-C01
+CONCEPT,Concept Design,MEP,MEP Engineering,#43A047,MEP-C01,MEP Concept,Initial MEP system concepts,2,mep_engineer,concept_doc,1,false,ARC-C01
+CONCEPT,Concept Design,STR,Structural Engineering,#E53935,STR-C01,Structural Concept,Initial structural system concepts,2,structural_engineer,concept_doc,1,false,ARC-C01
+DESIGN,Design Development,ARC,Architecture,#1E88E5,ARC-D01,Design Development,Detailed design development,10,lead_architect,design_dwg,1,false,ARC-C02
+DESIGN,Design Development,LND,Landscape,#8BC34A,LND-PANO,Landscape Panorama,Landscape panorama design,3,landscape_architect,design_dwg,1,true,ARC-D01
+

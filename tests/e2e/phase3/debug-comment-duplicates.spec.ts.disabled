@@ -1,0 +1,35 @@
+import { test, expect } from '@playwright/test';
+
+test('Debug comment duplicates', async ({ page }) => {
+  // Navigate to task list first, then to detail page (same as working test)
+  await page.goto('/app/tasks');
+  await page.waitForLoadState('networkidle');
+  
+  // Navigate to task detail
+  const firstTask = page.locator('[data-testid="task-item"]').first();
+  await firstTask.click();
+  await page.waitForLoadState('networkidle');
+  
+  // Check how many comment items exist
+  const commentItems = await page.locator('[data-testid="comment-item"]').count();
+  console.log('Total comment items:', commentItems);
+  
+  // Check the text content of each comment
+  for (let i = 0; i < commentItems; i++) {
+    const commentText = await page.locator('[data-testid="comment-item"]').nth(i).textContent();
+    console.log(`Comment ${i}:`, commentText?.substring(0, 100));
+  }
+  
+  // Create a new comment
+  await page.fill('[data-testid="comment-content"]', 'Parent comment for reply test');
+  await page.click('[data-testid="submit-comment"]');
+  await page.waitForTimeout(1000);
+  
+  // Check again after creating comment
+  const commentItemsAfter = await page.locator('[data-testid="comment-item"]').count();
+  console.log('Total comment items after creation:', commentItemsAfter);
+  
+  // Check how many have the specific text
+  const specificComments = await page.locator('[data-testid="comment-item"]').filter({ hasText: 'Parent comment for reply test' }).count();
+  console.log('Comments with "Parent comment for reply test":', specificComments);
+});

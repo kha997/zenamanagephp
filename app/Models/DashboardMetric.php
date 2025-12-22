@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -34,15 +35,15 @@ class DashboardMetric extends Model
         'category',
         'name',
         'unit',
-        'calculation_config',
-        'display_config',
+        'config',
         'is_active',
-        'description'
+        'description',
+        'tenant_id',
+        'project_id'
     ];
 
     protected $casts = [
-        'calculation_config' => 'array',
-        'display_config' => 'array',
+        'config' => 'array',
         'is_active' => 'boolean',
     ];
 
@@ -73,6 +74,22 @@ class DashboardMetric extends Model
     public function values(): HasMany
     {
         return $this->hasMany(DashboardMetricValue::class, 'metric_id');
+    }
+
+    /**
+     * Relationship: Metric belongs to project
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(\Src\CoreProject\Models\Project::class, 'project_id');
+    }
+
+    /**
+     * Relationship: Metric belongs to tenant
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class, 'tenant_id');
     }
 
     /**

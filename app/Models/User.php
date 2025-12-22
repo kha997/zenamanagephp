@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasRoles;
 
@@ -29,7 +30,7 @@ use App\Traits\HasRoles;
  */
 class User extends Authenticatable
 {
-    use HasUlids, HasFactory, HasApiTokens, HasRoles;
+    use HasUlids, HasFactory, HasApiTokens, Notifiable, HasRoles;
 
     /**
      * Cấu hình ULID primary key
@@ -47,6 +48,9 @@ class User extends Authenticatable
         'preferences',
         'last_login_at',
         'is_active',
+        'status',
+        'role',
+        'mfa_enabled',
         'oidc_provider',
         'oidc_subject_id',
         'oidc_data',
@@ -85,7 +89,6 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id')
             ->using(UserRole::class)
-            ->withPivot('id')
             ->withTimestamps();
     }
 
@@ -161,7 +164,7 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         return $this->roles()->whereHas('permissions', function ($query) use ($permission) {
-            return $query->where('name', $permission);
+            return $query->where('code', $permission);
         })->exists();
     }
 
@@ -171,7 +174,7 @@ class User extends Authenticatable
     public function hasAnyPermission(array $permissions): bool
     {
         return $this->roles()->whereHas('permissions', function ($query) use ($permissions) {
-            return $query->whereIn('name', $permissions);
+            return $query->whereIn('code', $permissions);
         })->exists();
     }
 
@@ -208,6 +211,54 @@ class User extends Authenticatable
     }
 
     /**
+     * Relationship: User has many change requests
+     */
+    public function changeRequests(): HasMany
+    {
+        return $this->hasMany(ChangeRequest::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User has many assigned change requests
+     */
+    public function assignedChangeRequests(): HasMany
+    {
+        return $this->hasMany(ChangeRequest::class, 'assigned_to');
+    }
+
+    /**
+     * Relationship: User has many projects as project manager
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'pm_id');
+    }
+
+    /**
+     * Relationship: User has many support tickets
+     */
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User has many assigned support tickets
+     */
+    public function assignedSupportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'assigned_to');
+    }
+
+    /**
+     * Relationship: User has many calendar events
+     */
+    public function calendarEvents(): HasMany
+    {
+        return $this->hasMany(CalendarEvent::class, 'created_by');
+    }
+
+    /**
      * Get invitations sent by this user.
      */
     public function sentInvitations(): HasMany
@@ -229,6 +280,126 @@ class User extends Authenticatable
     public function canManageInvitations(): bool
     {
         return $this->isAdmin();
+    }
+
+    /**
+     * Relationship: User has many system roles
+     */
+    public function systemRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(ZenaRole::class, 'user_roles', 'user_id', 'role_id');
+    }
+
+    /**
+     * Relationship: User has many role permissions through roles
+     */
+    public function rolePermissions(): BelongsToMany
+    {
+        return $this->belongsToMany(ZenaPermission::class, 'zena_role_permissions', 'role_id', 'permission_id')
+            ->join('user_roles', 'user_roles.role_id', '=', 'zena_role_permissions.role_id')
+            ->where('user_roles.user_id', $this->id);
+    }
+
+    /**
+     * Relationship: User has many dashboard metrics
+     */
+    public function dashboardMetrics(): HasMany
+    {
+        return $this->hasMany(DashboardMetric::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User has many documents uploaded
+     */
+    public function documentsUploaded(): HasMany
+    {
+        return $this->hasMany(Document::class, 'uploaded_by');
+    }
+
+    /**
+     * Relationship: User has many dashboards
+     */
+    public function dashboards(): HasMany
+    {
+        return $this->hasMany(Dashboard::class, 'user_id');
+    }
+
+    /**
+     * Relationship: User has many widgets
+     */
+    public function widgets(): HasMany
+    {
+        return $this->hasMany(Widget::class, 'user_id');
+    }
+
+    /**
+     * Relationship: User belongs to many tenants (multi-tenant membership)
+     * Uses user_tenants pivot table with role and is_default columns
+     */
+    public function tenants(): BelongsToMany
+    {
+        return $this->belongsToMany(Tenant::class, 'user_tenants', 'user_id', 'tenant_id')
+            ->using(UserTenant::class)
+            ->withPivot(['role', 'is_default', 'created_at', 'updated_at'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get membership tenants for user (from pivot table)
+     * 
+     * @return \Illuminate\Support\Collection
+     */
+    public function getMembershipTenants(): \Illuminate\Support\Collection
+    {
+        return $this->tenants()->get();
+    }
+
+    /**
+     * Get default tenant for user
+     * 
+     * Priority:
+     * 1. Default tenant from pivot (is_default = true)
+     * 2. Legacy tenant_id (if exists)
+     * 3. First tenant from membership (fallback)
+     * 4. E2E/testing fallback for super_admin
+     * 5. null if no tenant at all
+     * 
+     * @return Tenant|null
+     */
+    public function defaultTenant(): ?Tenant
+    {
+        // 1) Default tenant from pivot (is_default = true)
+        $defaultTenant = $this->tenants()
+            ->wherePivot('is_default', true)
+            ->first();
+        
+        if ($defaultTenant) {
+            return $defaultTenant;
+        }
+
+        // 2) Legacy tenant_id (if exists and not already in pivot)
+        if (isset($this->tenant_id) && $this->tenant_id) {
+            $legacyTenant = Tenant::query()->whereKey($this->tenant_id)->first();
+            if ($legacyTenant) {
+                return $legacyTenant;
+            }
+        }
+
+        // 3) First tenant from membership (fallback)
+        $firstTenant = $this->tenants()->first();
+        if ($firstTenant) {
+            return $firstTenant;
+        }
+
+        // 4) E2E/local/testing fallback for super_admin to avoid blocking bootstrap
+        if (app()->environment(['local', 'testing', 'e2e']) && ($this->role ?? null) === 'super_admin') {
+            $fallbackTenant = Tenant::query()->orderBy('created_at')->first();
+            if ($fallbackTenant) {
+                return $fallbackTenant;
+            }
+        }
+
+        return null;
     }
 
 }

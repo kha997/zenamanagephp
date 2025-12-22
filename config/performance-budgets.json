@@ -1,0 +1,52 @@
+{
+  "description": "Performance budgets for API endpoints (p95 and p99 latency in milliseconds)",
+  "version": "1.0.0",
+  "budgets": {
+    "/api/v1/app/projects": {
+      "p95": 300,
+      "p99": 500,
+      "description": "Projects list and detail endpoints"
+    },
+    "/api/v1/app/tasks": {
+      "p95": 300,
+      "p99": 500,
+      "description": "Tasks list and detail endpoints"
+    },
+    "/api/v1/app/documents": {
+      "p95": 300,
+      "p99": 500,
+      "description": "Documents list and detail endpoints"
+    },
+    "/api/v1/app/dashboard": {
+      "p95": 500,
+      "p99": 800,
+      "description": "Dashboard with KPIs and widgets"
+    },
+    "/api/v1/app/tasks/{id}/move": {
+      "p95": 200,
+      "p99": 400,
+      "description": "Task move/transition endpoint"
+    },
+    "/api/v1/app/projects/{id}/kpis": {
+      "p95": 400,
+      "p99": 600,
+      "description": "Project KPIs calculation"
+    },
+    "/api/v1/admin/*": {
+      "p95": 500,
+      "p99": 800,
+      "description": "Admin endpoints (system-wide operations)"
+    }
+  },
+  "default": {
+    "p95": 300,
+    "p99": 500,
+    "description": "Default budget for all other endpoints"
+  },
+  "alert_threshold": {
+    "duration_minutes": 10,
+    "consecutive_violations": 3,
+    "description": "Alert when p95 exceeds budget for 10 minutes with 3 consecutive violations"
+  }
+}
+

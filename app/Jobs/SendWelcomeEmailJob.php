@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\WelcomeEmail;
 use App\Models\EmailTracking;
+use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Support\Facades\Cache;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Mail;
 
 class SendWelcomeEmailJob implements ShouldQueue
 {
+    use Dispatchable;
 
     public $user;
     public $tries = 3;
@@ -24,7 +26,15 @@ class SendWelcomeEmailJob implements ShouldQueue
     public function __construct(User $user)
     {
         $this->user = $user;
-        $this->onQueue('emails-welcome');
+    }
+    
+    /**
+     * Get the queue the job should be sent to.
+     */
+    public function onQueue($queue)
+    {
+        $this->queue = $queue;
+        return $this;
     }
 
     /**
@@ -141,7 +151,7 @@ class SendWelcomeEmailJob implements ShouldQueue
             'recipient_name' => $this->user->name,
             'user_id' => $this->user->id,
             'organization_id' => $this->user->organization_id,
-            'subject' => "Welcome to {$this->user->organization->name ?? 'our platform'}!",
+            'subject' => "Welcome to " . ($this->user->organization->name ?? 'our platform') . "!",
             'content_hash' => $this->generateContentHash(),
             'metadata' => [
                 'role' => $this->user->role,

@@ -236,7 +236,11 @@ class SecureUploadServiceTest extends TestCase
         // Upload original file
         $originalResult = $this->service->uploadFile($originalFile, $this->user->id, $this->tenant->id);
         
-        $newFile = UploadedFile::fake()->create('document_v2.pdf', 150, 'application/pdf');
+        // Create new file with different content to avoid hash collision
+        $tempFile = tmpfile();
+        fwrite($tempFile, '%PDF-1.4' . PHP_EOL . 'Different content for version 2 - ' . uniqid());
+        $tempPath = stream_get_meta_data($tempFile)['uri'];
+        $newFile = new UploadedFile($tempPath, 'document_v2.pdf', 'application/pdf', null, true);
         
         // Create new version
         $versionResult = $this->service->createFileVersion(
@@ -247,7 +251,7 @@ class SecureUploadServiceTest extends TestCase
             'Updated document'
         );
 
-        $this->assertTrue($versionResult['success']);
+        $this->assertTrue($versionResult['success'], 'Version creation failed: ' . json_encode($versionResult));
         $this->assertArrayHasKey('version_id', $versionResult);
     }
 
@@ -259,15 +263,29 @@ class SecureUploadServiceTest extends TestCase
         // Upload file
         $uploadResult = $this->service->uploadFile($file, $this->user->id, $this->tenant->id);
         
-        // Create version
-        $newFile = UploadedFile::fake()->create('document_v2.pdf', 150, 'application/pdf');
-        $this->service->createFileVersion(
+        // Ensure the uploaded file exists in database
+        $this->assertTrue($uploadResult['success'], 'File upload should succeed');
+        $this->assertArrayHasKey('file_id', $uploadResult, 'Upload result should have file_id');
+        
+        // Verify the original document exists
+        $originalDocument = \App\Models\Document::find($uploadResult['file_id']);
+        $this->assertNotNull($originalDocument, 'Original document should exist in database');
+        
+        // Create version with different content
+        $tempFile = tmpfile();
+        fwrite($tempFile, '%PDF-1.4' . PHP_EOL . 'Different content for version 2 - ' . uniqid());
+        $tempPath = stream_get_meta_data($tempFile)['uri'];
+        $newFile = new UploadedFile($tempPath, 'document_v2.pdf', 'application/pdf', null, true);
+        
+        $versionResult = $this->service->createFileVersion(
             $uploadResult['file_id'],
             $newFile,
             $this->user->id,
             $this->tenant->id,
             'Updated document'
         );
+        
+        $this->assertTrue($versionResult['success'], 'Version creation should succeed');
 
         $versions = $this->service->getFileVersions($uploadResult['file_id'], $this->tenant->id);
 

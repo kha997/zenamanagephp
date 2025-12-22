@@ -3,56 +3,68 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Queue\SerializesModels;
+use App\Models\User;
 
 class SystemEmail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable;
+
+    public $user;
+    public $systemType;
+    public $systemTitle;
+    public $systemMessage;
+    public $systemUrl;
+    public $systemData;
 
     /**
      * Create a new message instance.
-     *
-     * @return void
      */
-    public function __construct()
+    public function __construct(User $user, string $systemType, string $systemTitle, string $systemMessage, string $systemUrl = null, array $systemData = [])
     {
-        //
+        $this->user = $user;
+        $this->systemType = $systemType;
+        $this->systemTitle = $systemTitle;
+        $this->systemMessage = $systemMessage;
+        $this->systemUrl = $systemUrl ?? config('app.url') . '/app/dashboard';
+        $this->systemData = $systemData;
     }
 
     /**
      * Get the message envelope.
-     *
-     * @return \Illuminate\Mail\Mailables\Envelope
      */
-    public function envelope()
+    public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'System Email',
+            subject: "[System] {$this->systemTitle}",
         );
     }
 
     /**
      * Get the message content definition.
-     *
-     * @return \Illuminate\Mail\Mailables\Content
      */
-    public function content()
+    public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            view: 'emails.system',
+            with: [
+                'user' => $this->user,
+                'systemType' => $this->systemType,
+                'systemTitle' => $this->systemTitle,
+                'systemMessage' => $this->systemMessage,
+                'systemUrl' => $this->systemUrl,
+                'systemData' => $this->systemData,
+                'sentAt' => now()->format('F d, Y \a\t g:i A'),
+            ],
         );
     }
 
     /**
      * Get the attachments for the message.
-     *
-     * @return array
      */
-    public function attachments()
+    public function attachments(): array
     {
         return [];
     }

@@ -1,0 +1,69 @@
+
+# ZenaManage Dashboard & Views Tree Structure
+
+## 🏗️ Cấu Trúc Chính
+
+ZenaManage System
+├── 🔐 Authentication (/login)
+│   └── auth/login.blade.php
+│
+├── 👑 Super Admin Dashboard (/admin)
+│   ├── admin/dashboard.blade.php ⭐ (HIỆN TẠI)
+│   ├── admin/simple-dashboard.blade.php
+│   ├── admin/users/users.blade.php
+│   ├── admin/tenants/tenants.blade.php
+│   ├── admin/projects/projects.blade.php
+│   ├── admin/security/security.blade.php
+│   ├── admin/alerts/alerts.blade.php
+│   ├── admin/activities/activities.blade.php
+│   ├── admin/settings/settings.blade.php
+│   ├── admin/maintenance/maintenance.blade.php
+│   └── admin/sidebar-builder/sidebar-builder.blade.php
+│
+├── 🏢 Tenant Dashboard (/app)
+│   ├── app/dashboard.blade.php ⭐ (CHÍNH)
+│   ├── app/projects/projects.blade.php
+│   ├── app/tasks/tasks.blade.php
+│   ├── app/calendar/calendar.blade.php
+│   ├── app/team/team-content.blade.php
+│   ├── app/documents/documents-content.blade.php
+│   ├── app/templates/templates-content.blade.php
+│   └── app/settings/settings-content.blade.php
+│
+├── 🎨 Layouts
+│   ├── layouts/admin-layout.blade.php (Admin)
+│   ├── layouts/app-layout.blade.php (App)
+│   └── layouts/auth.blade.php (Auth)
+│
+├── 🧩 Components
+│   ├── components/admin-header.blade.php
+│   ├── components/navigation.blade.php
+│   ├── components/sidebar.blade.php
+│   ├── components/dashboard-kpi-card.blade.php
+│   └── components/mobile-*.blade.php
+│
+└── 🧪 Testing Views
+    ├── test-*.blade.php
+    ├── debug/simple-dashboard.blade.php
+    └── demo.blade.php
+
+## 📊 Thống Kê
+- Tổng Views: ~169 files
+- Admin Views: ~25 files
+- App Views: ~42 files
+- Components: ~25 files
+- Layouts: ~12 files
+- Testing: ~15 files
+
+## ⚠️ Vấn Đề
+- Duplicate dashboard views
+- Unused advanced features
+- Inconsistent layouts
+- Too many backup files
+
+## 🎯 Khuyến Nghị
+- Cleanup duplicate views
+- Standardize layouts
+- Organize components
+- Remove unused files
+

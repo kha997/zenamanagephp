@@ -26,12 +26,11 @@ class SettingsController extends Controller
         // Get current tenant settings
         $settings = [
             'company_name' => 'Acme Construction',
-                'date_format' => 'MM/DD/YYYY',
-                'time_format' => '12h',
-                'currency' => 'USD',
-                'language' => 'en',
-                'logo' => null,
-            ],
+            'date_format' => 'MM/DD/YYYY',
+            'time_format' => '12h',
+            'currency' => 'USD',
+            'language' => 'en',
+            'logo' => null,
             'notifications' => [
                 'email_notifications' => true,
                 'push_notifications' => true,

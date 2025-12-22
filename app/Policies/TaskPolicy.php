@@ -28,13 +28,15 @@ class TaskPolicy
             return false;
         }
 
+        $userId = (string) $user->id;
+
         // Creator can view
-        if ($task->created_by === $user->id) {
+        if ((string) $task->created_by === $userId) {
             return true;
         }
 
         // Assignee can view
-        if ($task->assignee_id === $user->id) {
+        if ((string) $task->assignee_id === $userId) {
             return true;
         }
 
@@ -59,13 +61,19 @@ class TaskPolicy
             return false;
         }
 
+        $userId = (string) $user->id;
+
+        if (($user->role ?? null) === 'pm') {
+            return true;
+        }
+
         // Creator can update
-        if ($task->created_by === $user->id) {
+        if ((string) $task->created_by === $userId) {
             return true;
         }
 
         // Assignee can update
-        if ($task->assignee_id === $user->id) {
+        if ((string) $task->assignee_id === $userId) {
             return true;
         }
 

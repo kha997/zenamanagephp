@@ -6,6 +6,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 trait GrantsCostPermissionsTrait
@@ -23,19 +24,18 @@ trait GrantsCostPermissionsTrait
 
         $this->assertPermissionCodesExistInConfig($codes);
 
-        // Make role identity deterministic but unique per tenant to avoid UNIQUE(name) collisions in sqlite
+        // Always create a unique helper role so sqlite cannot hit UNIQUE(name) collisions within tests.
         $tenantKey = (string) ($user->tenant_id ?? 'global');
-        $roleCode = 'test.cost.grants.' . $tenantKey;
-        $roleName = 'Test Cost Grants (' . $tenantKey . ')';
+        $uniqueId = (string) Str::ulid();
+        $roleCode = 'test.cost.grants.' . $tenantKey . '.' . $uniqueId;
+        $roleName = 'Test Cost Grants (' . $tenantKey . ') ' . $uniqueId;
 
         /** @var Role $role */
-        $role = Role::query()->updateOrCreate(
-            ['code' => $roleCode],
-            [
-                'name' => $roleName,
-                'description' => 'Test-only helper role for granting cost permissions',
-            ]
-        );
+        $role = Role::query()->create([
+            'code' => $roleCode,
+            'name' => $roleName,
+            'description' => 'Test-only helper role for granting cost permissions',
+        ]);
 
         // Ensure permission rows exist (idempotent)
         $permissionIds = [];

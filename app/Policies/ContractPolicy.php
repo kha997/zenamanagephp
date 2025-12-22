@@ -33,7 +33,7 @@ class ContractPolicy
     public function view(User $user, Contract $contract): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $contract->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $contract->tenant_id) {
             return false;
         }
 
@@ -61,7 +61,7 @@ class ContractPolicy
     public function update(User $user, Contract $contract): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $contract->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $contract->tenant_id) {
             return false;
         }
 
@@ -75,7 +75,7 @@ class ContractPolicy
     public function delete(User $user, Contract $contract): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $contract->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $contract->tenant_id) {
             return false;
         }
 

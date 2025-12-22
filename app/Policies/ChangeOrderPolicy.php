@@ -33,7 +33,7 @@ class ChangeOrderPolicy
     public function view(User $user, ChangeOrder $changeOrder): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $changeOrder->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $changeOrder->tenant_id) {
             return false;
         }
 
@@ -61,7 +61,7 @@ class ChangeOrderPolicy
     public function update(User $user, ChangeOrder $changeOrder): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $changeOrder->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $changeOrder->tenant_id) {
             return false;
         }
 
@@ -75,7 +75,7 @@ class ChangeOrderPolicy
     public function delete(User $user, ChangeOrder $changeOrder): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $changeOrder->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $changeOrder->tenant_id) {
             return false;
         }
 
@@ -91,7 +91,7 @@ class ChangeOrderPolicy
     public function approve(User $user, ChangeOrder $changeOrder): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $changeOrder->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $changeOrder->tenant_id) {
             return false;
         }
 

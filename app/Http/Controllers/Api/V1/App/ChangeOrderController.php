@@ -113,6 +113,8 @@ class ChangeOrderController extends BaseApiV1Controller
                 new ChangeOrderResource($changeOrderModel),
                 'Change order retrieved successfully'
             );
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission to perform this action', 403, null, 'FORBIDDEN');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->errorResponse('Change order not found', 404, null, 'CHANGE_ORDER_NOT_FOUND');
         } catch (\Exception $e) {

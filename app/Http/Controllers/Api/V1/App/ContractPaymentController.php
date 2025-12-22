@@ -113,6 +113,8 @@ class ContractPaymentController extends BaseApiV1Controller
                 new ContractPaymentResource($paymentModel),
                 'Payment retrieved successfully'
             );
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission to perform this action', 403, null, 'FORBIDDEN');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->errorResponse('Payment not found', 404, null, 'PAYMENT_NOT_FOUND');
         } catch (\Exception $e) {
@@ -215,6 +217,8 @@ class ContractPaymentController extends BaseApiV1Controller
                 new ContractPaymentResource($paymentModel),
                 'Payment updated successfully'
             );
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission to perform this action', 403, null, 'FORBIDDEN');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return $this->errorResponse('Payment or certificate not found', 404, null, 'NOT_FOUND');
         } catch (\Exception $e) {

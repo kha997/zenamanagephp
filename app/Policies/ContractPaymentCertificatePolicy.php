@@ -33,7 +33,7 @@ class ContractPaymentCertificatePolicy
     public function view(User $user, ContractPaymentCertificate $certificate): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $certificate->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $certificate->tenant_id) {
             return false;
         }
 
@@ -61,7 +61,7 @@ class ContractPaymentCertificatePolicy
     public function update(User $user, ContractPaymentCertificate $certificate): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $certificate->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $certificate->tenant_id) {
             return false;
         }
 
@@ -75,7 +75,7 @@ class ContractPaymentCertificatePolicy
     public function delete(User $user, ContractPaymentCertificate $certificate): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $certificate->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $certificate->tenant_id) {
             return false;
         }
 
@@ -91,7 +91,7 @@ class ContractPaymentCertificatePolicy
     public function approve(User $user, ContractPaymentCertificate $certificate): bool
     {
         // Multi-tenant isolation
-        if ($user->tenant_id !== $certificate->tenant_id) {
+        if ((string) $user->tenant_id !== (string) $certificate->tenant_id) {
             return false;
         }
 

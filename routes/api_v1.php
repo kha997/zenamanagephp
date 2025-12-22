@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\App\ProjectHealthSettingsController;
 use App\Http\Controllers\Api\V1\App\FinanceAlertsSettingsController;
 use App\Http\Controllers\Api\V1\App\TaskCommentController;
 use App\Http\Controllers\Api\V1\App\TaskSubscriptionController;
+use App\Http\Controllers\Api\V1\App\TaskAssignmentsController;
 use App\Http\Controllers\Api\V1\Admin\SystemUsersController;
 use App\Http\Controllers\Admin\TenantMembersController;
 use App\Http\Controllers\Api\HealthController;
@@ -605,6 +606,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/tasks/{task}/assign', [App\Http\Controllers\Api\TasksController::class, 'assign']);
         Route::post('/tasks/{task}/unassign', [App\Http\Controllers\Api\TasksController::class, 'unassign']);
         Route::post('/tasks/{task}/progress', [App\Http\Controllers\Api\TasksController::class, 'updateProgress']);
+        Route::prefix('tasks/{task}/assignments')->group(function () {
+            Route::post('/users', [TaskAssignmentsController::class, 'assignUsers']);
+            Route::delete('/users/{user}', [TaskAssignmentsController::class, 'removeUser']);
+            Route::get('/users', [TaskAssignmentsController::class, 'getUsers']);
+            Route::post('/teams', [TaskAssignmentsController::class, 'assignTeams']);
+            Route::delete('/teams/{team}', [TaskAssignmentsController::class, 'removeTeam']);
+            Route::get('/teams', [TaskAssignmentsController::class, 'getTeams']);
+            Route::get('/', [TaskAssignmentsController::class, 'index']);
+        });
         
         // Clients API
         Route::apiResource('clients', App\Http\Controllers\Api\ClientsController::class);

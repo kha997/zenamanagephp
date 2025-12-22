@@ -19,6 +19,28 @@ class AssignUsersToTaskRequest extends FormRequest
     }
 
     /**
+     * Normalize incoming payload by converting plain ids into objects so validation rules remain consistent.
+     */
+    protected function prepareForValidation(): void
+    {
+        $users = $this->input('users');
+
+        if (!is_array($users)) {
+            return;
+        }
+
+        $normalized = array_map(function ($entry) {
+            if (is_string($entry)) {
+                return ['user_id' => $entry];
+            }
+
+            return $entry;
+        }, $users);
+
+        $this->merge(['users' => $normalized]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
@@ -67,4 +89,3 @@ class AssignUsersToTaskRequest extends FormRequest
         ];
     }
 }
-

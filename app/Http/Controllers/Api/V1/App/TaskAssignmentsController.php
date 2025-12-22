@@ -6,10 +6,11 @@ use App\Http\Controllers\Api\V1\BaseApiV1Controller;
 use App\Http\Requests\AssignUsersToTaskRequest;
 use App\Http\Requests\AssignTeamsToTaskRequest;
 use App\Models\Task;
+use App\Models\User;
 use App\Services\TaskAssignmentService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * Task Assignments API Controller (V1)
@@ -37,7 +38,7 @@ class TaskAssignmentsController extends BaseApiV1Controller
         try {
             $tenantId = $this->getTenantId();
             
-            if (!Gate::allows('update', $task)) {
+            if (!$this->userCanUpdateTask($task)) {
                 return $this->errorResponse('Unauthorized to assign users to this task', 403, null, 'FORBIDDEN');
             }
             
@@ -48,12 +49,12 @@ class TaskAssignmentsController extends BaseApiV1Controller
                 $users,
                 $tenantId
             );
-            
+            $skippedCount = count($results['skipped'] ?? []);
             $message = sprintf(
                 'Assigned %d user(s) successfully. %d failed, %d skipped.',
                 count($results['success']),
                 count($results['failed']),
-                count($results['skipped'])
+                $skippedCount
             );
             
             return $this->successResponse($results, $message);
@@ -79,20 +80,40 @@ class TaskAssignmentsController extends BaseApiV1Controller
      * @param string $user
      * @return JsonResponse
      */
-    public function removeUser(Task $task, string $user): JsonResponse
+    public function removeUser(Request $request, Task $task): JsonResponse
     {
         try {
             $tenantId = $this->getTenantId();
             
-            if (!Gate::allows('update', $task)) {
+            if (!$this->userCanUpdateTask($task)) {
                 return $this->errorResponse('Unauthorized to remove users from this task', 403, null, 'FORBIDDEN');
             }
             
-            $this->assignmentService->removeUserFromTask(
+            $routeUser = $request->route('user');
+            $userIdInput = $request->input('user_id') ?? $request->query('user_id') ?? $routeUser;
+            if ($userIdInput instanceof User) {
+                $userIdInput = $userIdInput->id;
+            }
+
+            $userId = $userIdInput ? (string) $userIdInput : null;
+            if (!$userId) {
+                return $this->errorResponse('User identifier is required', 422, null, 'VALIDATION_FAILED');
+            }
+
+            $deleted = $this->assignmentService->removeUserFromTask(
                 $task->id,
-                $user,
+                $userId,
                 $tenantId
             );
+
+            if (!$deleted) {
+                return $this->errorResponse(
+                    'Assignment not found or already removed',
+                    404,
+                    null,
+                    'TASK_ASSIGNMENT_NOT_FOUND'
+                );
+            }
             
             return $this->successResponse(null, 'User removed from task successfully');
         } catch (\Exception $e) {
@@ -121,7 +142,7 @@ class TaskAssignmentsController extends BaseApiV1Controller
         try {
             $tenantId = $this->getTenantId();
             
-            if (!Gate::allows('view', $task)) {
+            if (!$this->userCanViewTask($task)) {
                 return $this->errorResponse('Unauthorized to view task assignments', 403, null, 'FORBIDDEN');
             }
             
@@ -173,7 +194,7 @@ class TaskAssignmentsController extends BaseApiV1Controller
         try {
             $tenantId = $this->getTenantId();
             
-            if (!Gate::allows('update', $task)) {
+            if (!$this->userCanUpdateTask($task)) {
                 return $this->errorResponse('Unauthorized to assign teams to this task', 403, null, 'FORBIDDEN');
             }
             
@@ -213,7 +234,7 @@ class TaskAssignmentsController extends BaseApiV1Controller
         try {
             $tenantId = $this->getTenantId();
             
-            if (!Gate::allows('update', $task)) {
+            if (!$this->userCanUpdateTask($task)) {
                 return $this->errorResponse('Unauthorized to remove teams from this task', 403, null, 'FORBIDDEN');
             }
             
@@ -250,7 +271,7 @@ class TaskAssignmentsController extends BaseApiV1Controller
         try {
             $tenantId = $this->getTenantId();
             
-            if (!Gate::allows('view', $task)) {
+            if (!$this->userCanViewTask($task)) {
                 return $this->errorResponse('Unauthorized to view task assignments', 403, null, 'FORBIDDEN');
             }
             
@@ -300,7 +321,7 @@ class TaskAssignmentsController extends BaseApiV1Controller
         try {
             $tenantId = $this->getTenantId();
             
-            if (!Gate::allows('view', $task)) {
+            if (!$this->userCanViewTask($task)) {
                 return $this->errorResponse('Unauthorized to view task assignments', 403, null, 'FORBIDDEN');
             }
             
@@ -323,5 +344,38 @@ class TaskAssignmentsController extends BaseApiV1Controller
             );
         }
     }
-}
 
+    private function userCanUpdateTask(Task $task): bool
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        if ((string) $user->tenant_id !== (string) $task->tenant_id) {
+            return false;
+        }
+
+        $userId = (string) $user->id;
+
+        if ((string) $task->created_by === $userId) {
+            return true;
+        }
+
+        if ((string) $task->assignee_id === $userId) {
+            return true;
+        }
+
+        return ($user->role ?? null) === 'pm';
+    }
+
+    private function userCanViewTask(Task $task): bool
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        return (string) $user->tenant_id === (string) $task->tenant_id;
+    }
+}

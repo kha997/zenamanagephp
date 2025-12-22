@@ -59,6 +59,7 @@ abstract class BaseApiV1Controller extends Controller
             'timestamp' => now()->toISOString(),
             'error' => [
                 'id' => $code ?? $this->defaultErrorCode($status),
+                'code' => $code ?? $this->defaultErrorCode($status),
             ],
         ];
 

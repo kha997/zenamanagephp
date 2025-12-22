@@ -23,6 +23,16 @@ class TaskAssignmentServiceTest extends TestCase
         parent::setUp();
         $this->service = new TaskAssignmentService();
         $this->tenantId = '01K83FPK5XGPXF3V7ANJQRGX5X'; // Test tenant ID
+        \App\Models\Tenant::unguard();
+        \App\Models\Tenant::firstOrCreate([
+            'id' => $this->tenantId,
+        ], [
+            'name' => 'Task Assignment Test Tenant',
+            'slug' => 'task-assignment-test-tenant',
+            'status' => 'active',
+            'is_active' => true,
+        ]);
+        \App\Models\Tenant::reguard();
     }
 
     /**
@@ -110,7 +120,7 @@ class TaskAssignmentServiceTest extends TestCase
             'tenant_id' => $this->tenantId,
             'project_id' => $project->id
         ]);
-        $team = Team::factory()->create(['tenant_id' => $this->tenantId]);
+        $team = $this->createTeamWithLead($this->tenantId);
         
         $assignment = $this->service->assignTeamToTask(
             $task->id,
@@ -134,7 +144,7 @@ class TaskAssignmentServiceTest extends TestCase
             'tenant_id' => $this->tenantId,
             'project_id' => $project->id
         ]);
-        $teams = Team::factory()->count(2)->create(['tenant_id' => $this->tenantId]);
+        $teams = collect(range(1, 2))->map(fn () => $this->createTeamWithLead($this->tenantId));
         
         $assignments = $teams->map(function ($team) {
             return [
@@ -164,7 +174,7 @@ class TaskAssignmentServiceTest extends TestCase
             'project_id' => $project->id
         ]);
         $otherTenantId = '01K83FPK5XGPXF3V7ANJQRGX5Y';
-        $team = Team::factory()->create(['tenant_id' => $otherTenantId]);
+        $team = $this->createTeamWithLead($otherTenantId);
         
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Team not found or tenant mismatch');
@@ -218,7 +228,7 @@ class TaskAssignmentServiceTest extends TestCase
             'tenant_id' => $this->tenantId,
             'project_id' => $project->id
         ]);
-        $team = Team::factory()->create(['tenant_id' => $this->tenantId]);
+        $team = $this->createTeamWithLead($this->tenantId);
         
         $this->service->assignTeamToTask(
             $task->id,
@@ -251,7 +261,7 @@ class TaskAssignmentServiceTest extends TestCase
             'project_id' => $project->id
         ]);
         $user = User::factory()->create(['tenant_id' => $this->tenantId]);
-        $team = Team::factory()->create(['tenant_id' => $this->tenantId]);
+        $team = $this->createTeamWithLead($this->tenantId);
         
         $this->service->assignUserToTask($task->id, $user->id, $this->tenantId);
         $this->service->assignTeamToTask($task->id, $team->id, $this->tenantId);
@@ -305,7 +315,7 @@ class TaskAssignmentServiceTest extends TestCase
             'tenant_id' => $this->tenantId,
             'project_id' => $project->id
         ]);
-        $team = Team::factory()->create(['tenant_id' => $this->tenantId]);
+        $team = $this->createTeamWithLead($this->tenantId);
         
         $this->service->assignTeamToTask($task1->id, $team->id, $this->tenantId);
         $this->service->assignTeamToTask($task2->id, $team->id, $this->tenantId);
@@ -348,7 +358,7 @@ class TaskAssignmentServiceTest extends TestCase
             'tenant_id' => $this->tenantId,
             'project_id' => $project->id
         ]);
-        $team = Team::factory()->create(['tenant_id' => $this->tenantId]);
+        $team = $this->createTeamWithLead($this->tenantId);
         
         $this->assertFalse(
             $this->service->isTeamAssignedToTask($team->id, $task->id, $this->tenantId)
@@ -360,5 +370,28 @@ class TaskAssignmentServiceTest extends TestCase
             $this->service->isTeamAssignedToTask($team->id, $task->id, $this->tenantId)
         );
     }
-}
 
+    private function createTeamWithLead(string $tenantId): Team
+    {
+        \App\Models\Tenant::unguard();
+        \App\Models\Tenant::firstOrCreate(
+            ['id' => $tenantId],
+            [
+                'name' => 'Team Tenant',
+                'slug' => 'team-tenant-' . substr($tenantId, 0, 8),
+                'status' => 'active',
+                'is_active' => true,
+            ]
+        );
+        \App\Models\Tenant::reguard();
+
+        $lead = User::factory()->create(['tenant_id' => $tenantId]);
+
+        return Team::factory()->create([
+            'tenant_id' => $tenantId,
+            'team_lead_id' => $lead->id,
+            'created_by' => $lead->id,
+            'updated_by' => $lead->id,
+        ]);
+    }
+}

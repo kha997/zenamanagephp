@@ -133,14 +133,14 @@ class TaskAssignmentsControllerTest extends TestCase
             'role' => 'member',
         ]);
 
-        // First assign the user
-        TaskAssignment::create([
-            'tenant_id' => $this->tenant->id,
-            'task_id' => $this->task->id,
-            'user_id' => $userToRemove->id,
+        Sanctum::actingAs($this->user);
+
+        // First assign the user via the API to ensure assignment metadata matches production
+        $assignmentResponse = $this->postJson("/api/v1/app/tasks/{$this->task->id}/assignments/users", [
+            'users' => [$userToRemove->id],
         ]);
 
-        Sanctum::actingAs($this->user);
+        $assignmentResponse->assertStatus(200);
 
         $response = $this->deleteJson("/api/v1/app/tasks/{$this->task->id}/assignments/users/{$userToRemove->id}");
 
@@ -314,4 +314,3 @@ class TaskAssignmentsControllerTest extends TestCase
         ]);
     }
 }
-

@@ -3,6 +3,7 @@
 namespace Tests;
 
 use Carbon\Carbon;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
@@ -13,16 +14,38 @@ abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
 
+    private const DEFAULT_TEST_TENANT_ID = '01H9Q8ZKJ1F2J9ZV2FC6FQF0A6';
+    private const DEFAULT_TEST_TENANT_SLUG = 'test-tenant';
+
     protected function setUp(): void
     {
         parent::setUp();
-        
+
+        $this->runMigrations();
+        $this->bootstrapTestEnvironment();
+    }
+
+    protected function refreshApplication(): void
+    {
+        parent::refreshApplication();
+
+        if (method_exists($this, 'refreshDatabase')) {
+            $this->refreshDatabase();
+        } else {
+            $this->runMigrations();
+        }
+
+        $this->bootstrapTestEnvironment();
+    }
+
+    protected function bootstrapTestEnvironment(): void
+    {
         // Fix UrlGenerator issue in CLI context
         $this->fixUrlGeneratorForTesting();
-        
-        // Run migrations for SQLite testing
-        $this->runMigrations();
-        
+
+        $this->ensureTenantsTableExists();
+        $this->ensureZenaRolesTenantIdColumn();
+
         // Bootstrap RBAC and Tenancy
         $this->bootstrapRBACAndTenancy();
 
@@ -702,5 +725,126 @@ abstract class TestCase extends BaseTestCase
                 $table->timestamps();
             });
         }
+    }
+
+    /**
+     * Ensure the tenants table exists for SQLite testing and has a default tenant row.
+     */
+    protected function ensureTenantsTableExists(): void
+    {
+        if (!$this->shouldEnsureSqliteTenants()) {
+            return;
+        }
+
+        if (!Schema::hasTable('tenants')) {
+            Schema::create('tenants', function (Blueprint $table) {
+                $table->ulid('id')->primary();
+                $table->string('name');
+                $table->string('slug')->unique();
+                $table->string('domain')->nullable();
+                $table->string('database_name')->nullable();
+                $table->json('settings')->nullable();
+                $table->json('preferences')->nullable();
+                $table->string('status')->default('trial');
+                $table->boolean('is_active')->default(true);
+                $table->timestamp('trial_ends_at')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
+
+        $this->ensureDefaultTestTenantRecordExists();
+    }
+
+    protected function shouldEnsureSqliteTenants(): bool
+    {
+        if (!app()->environment('testing')) {
+            return false;
+        }
+
+        $defaultConnection = config('database.default');
+        if ($defaultConnection === 'sqlite') {
+            return true;
+        }
+
+        if (env('DB_CONNECTION') === 'sqlite') {
+            return true;
+        }
+
+        return DBDriver::isSqlite();
+    }
+
+    protected function ensureDefaultTestTenantRecordExists(): void
+    {
+        if (!Schema::hasTable('tenants')) {
+            return;
+        }
+
+        $slugColumnExists = Schema::hasColumn('tenants', 'slug');
+        $idColumnExists = Schema::hasColumn('tenants', 'id');
+
+        if ($slugColumnExists && DB::table('tenants')->where('slug', self::DEFAULT_TEST_TENANT_SLUG)->exists()) {
+            return;
+        }
+
+        if (
+            !$slugColumnExists &&
+            $idColumnExists &&
+            DB::table('tenants')->where('id', self::DEFAULT_TEST_TENANT_ID)->exists()
+        ) {
+            return;
+        }
+
+        if (!$slugColumnExists && !$idColumnExists && DB::table('tenants')->exists()) {
+            return;
+        }
+
+        $tenantData = [
+            'name' => 'Test Tenant',
+        ];
+
+        if ($idColumnExists) {
+            $tenantData['id'] = self::DEFAULT_TEST_TENANT_ID;
+        }
+
+        $optionalColumns = [
+            'slug' => self::DEFAULT_TEST_TENANT_SLUG,
+            'domain' => 'test.local',
+            'database_name' => null,
+            'settings' => null,
+            'preferences' => null,
+            'status' => 'active',
+            'is_active' => true,
+            'trial_ends_at' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+            'deleted_at' => null,
+        ];
+
+        foreach ($optionalColumns as $column => $value) {
+            if (Schema::hasColumn('tenants', $column)) {
+                $tenantData[$column] = $value;
+            }
+        }
+
+        DB::table('tenants')->insert($tenantData);
+    }
+
+    /**
+     * Ensure testing-only shim adds tenant_id to zena_roles when the column is missing.
+     */
+    protected function ensureZenaRolesTenantIdColumn(): void
+    {
+        if (
+            !app()->environment('testing') ||
+            !Schema::hasTable('zena_roles') ||
+            Schema::hasColumn('zena_roles', 'tenant_id')
+        ) {
+            return;
+        }
+
+        Schema::table('zena_roles', function (Blueprint $table) {
+            $table->ulid('tenant_id')->nullable()->index();
+        });
     }
 }

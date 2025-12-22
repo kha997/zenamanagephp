@@ -2,7 +2,8 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
          bootstrap="vendor/autoload.php"
-         colors="true">
+         colors="true"
+         cacheResult="false">
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
@@ -52,89 +53,71 @@
         <!-- Auth Domain -->
         <testsuite name="auth-unit">
             <directory>tests/Unit</directory>
-            <group>auth</group>
         </testsuite>
         <testsuite name="auth-feature">
             <directory>tests/Feature</directory>
-            <group>auth</group>
         </testsuite>
         <testsuite name="auth-integration">
             <directory>tests/Integration</directory>
-            <group>auth</group>
         </testsuite>
         
         <!-- Projects Domain -->
         <testsuite name="projects-unit">
             <directory>tests/Unit</directory>
-            <group>projects</group>
         </testsuite>
         <testsuite name="projects-feature">
             <directory>tests/Feature</directory>
-            <group>projects</group>
         </testsuite>
         <testsuite name="projects-integration">
             <directory>tests/Integration</directory>
-            <group>projects</group>
         </testsuite>
         
         <!-- Tasks Domain -->
         <testsuite name="tasks-unit">
             <directory>tests/Unit</directory>
-            <group>tasks</group>
         </testsuite>
         <testsuite name="tasks-feature">
             <directory>tests/Feature</directory>
-            <group>tasks</group>
         </testsuite>
         <testsuite name="tasks-integration">
             <directory>tests/Integration</directory>
-            <group>tasks</group>
         </testsuite>
         
         <!-- Documents Domain -->
         <testsuite name="documents-unit">
             <directory>tests/Unit</directory>
-            <group>documents</group>
         </testsuite>
         <testsuite name="documents-feature">
             <directory>tests/Feature</directory>
-            <group>documents</group>
         </testsuite>
         <testsuite name="documents-integration">
             <directory>tests/Integration</directory>
-            <group>documents</group>
         </testsuite>
         
         <!-- Users Domain -->
         <testsuite name="users-unit">
             <directory>tests/Unit</directory>
-            <group>users</group>
         </testsuite>
         <testsuite name="users-feature">
             <directory>tests/Feature</directory>
-            <group>users</group>
         </testsuite>
         <testsuite name="users-integration">
             <directory>tests/Integration</directory>
-            <group>users</group>
         </testsuite>
         
         <!-- Dashboard Domain -->
         <testsuite name="dashboard-unit">
             <directory>tests/Unit</directory>
-            <group>dashboard</group>
         </testsuite>
         <testsuite name="dashboard-feature">
             <directory>tests/Feature</directory>
-            <group>dashboard</group>
         </testsuite>
         <testsuite name="dashboard-integration">
             <directory>tests/Integration</directory>
-            <group>dashboard</group>
         </testsuite>
     </testsuites>
     <php>
-        <ini name="memory_limit" value="512M"/>
+        <ini name="memory_limit" value="-1"/>
         <env name="APP_ENV" value="testing"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
@@ -166,7 +149,4 @@
             <clover outputFile="storage/app/coverage.xml"/>
         </report>
     </coverage>
-    <logging>
-        <junit outputFile="storage/app/junit.xml"/>
-    </logging>
 </phpunit>

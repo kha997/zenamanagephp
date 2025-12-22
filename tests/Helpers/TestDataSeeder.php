@@ -5,6 +5,7 @@ namespace Tests\Helpers;
 use App\Models\User;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * TestDataSeeder - Standardize test data creation
@@ -52,12 +53,73 @@ class TestDataSeeder
     {
         $tenantAttributes = array_merge(self::$defaultTenantAttributes, $attributes);
         
+        if (
+            isset($attributes['slug']) &&
+            Schema::hasTable('tenants') &&
+            Schema::hasColumn('tenants', 'slug')
+        ) {
+            $existingTenant = Tenant::where('slug', $attributes['slug'])->first();
+            if ($existingTenant) {
+                return $existingTenant;
+            }
+        }
+        
         // Ensure unique slug
         if (!isset($attributes['slug'])) {
             $tenantAttributes['slug'] = $tenantAttributes['slug'] . '-' . uniqid();
         }
 
         return Tenant::factory()->create($tenantAttributes);
+    }
+
+    /**
+     * Determine the active roles table name for reuse.
+     */
+    private static function getRoleTableName(): string
+    {
+        return Schema::hasTable('zena_roles') ? 'zena_roles' : 'roles';
+    }
+
+    /**
+     * Determine if the current roles table has a tenant_id column.
+     */
+    private static function rolesTableSupportsTenant(): bool
+    {
+        $table = self::getRoleTableName();
+        return Schema::hasTable($table) && Schema::hasColumn($table, 'tenant_id');
+    }
+
+    /**
+     * Build the lookup attributes used to seed or reuse a role.
+     */
+    private static function buildRoleLookup(string $roleName, Tenant $tenant): array
+    {
+        $lookup = ['name' => $roleName];
+
+        if (self::rolesTableSupportsTenant()) {
+            $lookup['tenant_id'] = $tenant->id;
+        }
+
+        return $lookup;
+    }
+
+    /**
+     * Create or reuse a role entry for seed data.
+     */
+    private static function createOrGetRole(string $roleName, string $description, Tenant $tenant): \App\Models\Role
+    {
+        $lookup = self::buildRoleLookup($roleName, $tenant);
+        $defaults = [
+            'scope' => 'system',
+            'description' => $description,
+            'is_active' => true,
+        ];
+
+        if (isset($lookup['tenant_id'])) {
+            $defaults['tenant_id'] = $lookup['tenant_id'];
+        }
+
+        return \App\Models\Role::firstOrCreate($lookup, $defaults);
     }
 
     /**
@@ -93,6 +155,23 @@ class TestDataSeeder
         $userAttributes['tenant_id'] = $tenant->id;
 
         return User::factory()->create($userAttributes);
+    }
+
+    /**
+     * Create a user only if one does not already exist with the same email and tenant.
+     */
+    private static function createOrGetUser(Tenant $tenant, array $attributes = []): User
+    {
+        if (!empty($attributes['email'])) {
+            $existing = User::where('email', $attributes['email'])
+                ->where('tenant_id', $tenant->id)
+                ->first();
+            if ($existing) {
+                return $existing;
+            }
+        }
+
+        return self::createUser($tenant, $attributes);
     }
 
     /**
@@ -239,14 +318,11 @@ class TestDataSeeder
         $roleNames = ['admin', 'member', 'client', 'project_manager'];
         
         foreach ($roleNames as $roleName) {
-            $roles[$roleName] = \App\Models\Role::create([
-                'name' => $roleName,
-                'scope' => 'system',
-                // Note: allow_override column does not exist in zena_roles table
-                'description' => "Auth test role: {$roleName}",
-                'is_active' => true,
-                'tenant_id' => $tenant->id,
-            ]);
+            $roles[$roleName] = self::createOrGetRole(
+                $roleName,
+                "Auth test role: {$roleName}",
+                $tenant
+            );
         }
         
         // Create permissions (auth-related)
@@ -261,17 +337,20 @@ class TestDataSeeder
         ];
         
         foreach ($permissionData as $permData) {
-            $permissions[] = \App\Models\Permission::create([
-                'code' => \App\Models\Permission::generateCode($permData['module'], $permData['action']),
-                'module' => $permData['module'],
-                'action' => $permData['action'],
-                'description' => $permData['description'],
-            ]);
+            $code = \App\Models\Permission::generateCode($permData['module'], $permData['action']);
+            $permissions[] = \App\Models\Permission::firstOrCreate(
+                ['code' => $code],
+                [
+                    'module' => $permData['module'],
+                    'action' => $permData['action'],
+                    'description' => $permData['description'],
+                ]
+            );
         }
         
         // Attach permissions to roles
         // Admin gets all permissions
-        $roles['admin']->permissions()->attach(
+        $roles['admin']->permissions()->syncWithoutDetaching(
             collect($permissions)->pluck('id')->toArray()
         );
         
@@ -280,60 +359,60 @@ class TestDataSeeder
             ->whereIn('action', ['login', 'logout', 'change_password', 'verify_email'])
             ->pluck('id')
             ->toArray();
-        $roles['member']->permissions()->attach($memberPerms);
+        $roles['member']->permissions()->syncWithoutDetaching($memberPerms);
         
         // Client gets limited permissions
         $clientPerms = collect($permissions)
             ->whereIn('action', ['login', 'logout', 'change_password'])
             ->pluck('id')
             ->toArray();
-        $roles['client']->permissions()->attach($clientPerms);
+        $roles['client']->permissions()->syncWithoutDetaching($clientPerms);
         
         // Project manager gets most permissions
         $pmPerms = collect($permissions)
             ->whereIn('action', ['login', 'logout', 'change_password', 'verify_email', 'register'])
             ->pluck('id')
             ->toArray();
-        $roles['project_manager']->permissions()->attach($pmPerms);
+        $roles['project_manager']->permissions()->syncWithoutDetaching($pmPerms);
         
         // Create users with different roles
         $users = [];
         
         // Admin user
-        $users['admin'] = self::createUser($tenant, [
+        $users['admin'] = self::createOrGetUser($tenant, [
             'name' => 'Auth Admin User',
             'email' => 'admin@auth-test.test',
             'password' => 'password',
             'role' => 'admin',
         ]);
-        $users['admin']->roles()->attach($roles['admin']->id);
+        $users['admin']->roles()->syncWithoutDetaching($roles['admin']->id);
         
         // Member user
-        $users['member'] = self::createUser($tenant, [
+        $users['member'] = self::createOrGetUser($tenant, [
             'name' => 'Auth Member User',
             'email' => 'member@auth-test.test',
             'password' => 'password',
             'role' => 'member',
         ]);
-        $users['member']->roles()->attach($roles['member']->id);
+        $users['member']->roles()->syncWithoutDetaching($roles['member']->id);
         
         // Client user
-        $users['client'] = self::createUser($tenant, [
+        $users['client'] = self::createOrGetUser($tenant, [
             'name' => 'Auth Client User',
             'email' => 'client@auth-test.test',
             'password' => 'password',
             'role' => 'client',
         ]);
-        $users['client']->roles()->attach($roles['client']->id);
+        $users['client']->roles()->syncWithoutDetaching($roles['client']->id);
         
         // Project manager user
-        $users['project_manager'] = self::createUser($tenant, [
+        $users['project_manager'] = self::createOrGetUser($tenant, [
             'name' => 'Auth PM User',
             'email' => 'pm@auth-test.test',
             'password' => 'password',
             'role' => 'project_manager',
         ]);
-        $users['project_manager']->roles()->attach($roles['project_manager']->id);
+        $users['project_manager']->roles()->syncWithoutDetaching($roles['project_manager']->id);
         
         return [
             'tenant' => $tenant,
@@ -923,14 +1002,11 @@ class TestDataSeeder
         $roleNames = ['admin', 'project_manager', 'member', 'client'];
         
         foreach ($roleNames as $roleName) {
-            $roles[$roleName] = \App\Models\Role::create([
-                'name' => $roleName,
-                'scope' => 'system',
-                // Note: allow_override column does not exist in zena_roles table
-                'description' => "Users test role: {$roleName}",
-                'is_active' => true,
-                'tenant_id' => $tenant->id,
-            ]);
+            $roles[$roleName] = self::createOrGetRole(
+                $roleName,
+                "Users test role: {$roleName}",
+                $tenant
+            );
         }
         
         // Create permissions (user-related)
@@ -945,17 +1021,20 @@ class TestDataSeeder
         ];
         
         foreach ($permissionData as $permData) {
-            $permissions[] = \App\Models\Permission::create([
-                'code' => \App\Models\Permission::generateCode($permData['module'], $permData['action']),
-                'module' => $permData['module'],
-                'action' => $permData['action'],
-                'description' => $permData['description'],
-            ]);
+            $code = \App\Models\Permission::generateCode($permData['module'], $permData['action']);
+            $permissions[] = \App\Models\Permission::firstOrCreate(
+                ['code' => $code],
+                [
+                    'module' => $permData['module'],
+                    'action' => $permData['action'],
+                    'description' => $permData['description'],
+                ]
+            );
         }
         
         // Attach permissions to roles
         // Admin gets all permissions
-        $roles['admin']->permissions()->attach(
+        $roles['admin']->permissions()->syncWithoutDetaching(
             collect($permissions)->pluck('id')->toArray()
         );
         
@@ -964,67 +1043,67 @@ class TestDataSeeder
             ->whereIn('action', ['view', 'update', 'manage_profile'])
             ->pluck('id')
             ->toArray();
-        $roles['project_manager']->permissions()->attach($pmPerms);
+        $roles['project_manager']->permissions()->syncWithoutDetaching($pmPerms);
         
         // Member gets manage_profile, manage_avatar
         $memberPerms = collect($permissions)
             ->whereIn('action', ['manage_profile', 'manage_avatar'])
             ->pluck('id')
             ->toArray();
-        $roles['member']->permissions()->attach($memberPerms);
+        $roles['member']->permissions()->syncWithoutDetaching($memberPerms);
         
         // Create users with different roles and statuses
         $users = [];
         
         // Admin user
-        $users['admin'] = self::createUser($tenant, [
+        $users['admin'] = self::createOrGetUser($tenant, [
             'name' => 'Users Admin User',
             'email' => 'admin@users-test.test',
             'password' => 'password',
             'role' => 'admin',
             'is_active' => true,
         ]);
-        $users['admin']->roles()->attach($roles['admin']->id);
+        $users['admin']->roles()->syncWithoutDetaching($roles['admin']->id);
         
         // Project manager user
-        $users['project_manager'] = self::createUser($tenant, [
+        $users['project_manager'] = self::createOrGetUser($tenant, [
             'name' => 'Users PM User',
             'email' => 'pm@users-test.test',
             'password' => 'password',
             'role' => 'project_manager',
             'is_active' => true,
         ]);
-        $users['project_manager']->roles()->attach($roles['project_manager']->id);
+        $users['project_manager']->roles()->syncWithoutDetaching($roles['project_manager']->id);
         
         // Member user
-        $users['member'] = self::createUser($tenant, [
+        $users['member'] = self::createOrGetUser($tenant, [
             'name' => 'Users Member User',
             'email' => 'member@users-test.test',
             'password' => 'password',
             'role' => 'member',
             'is_active' => true,
         ]);
-        $users['member']->roles()->attach($roles['member']->id);
+        $users['member']->roles()->syncWithoutDetaching($roles['member']->id);
         
         // Inactive user
-        $users['inactive'] = self::createUser($tenant, [
+        $users['inactive'] = self::createOrGetUser($tenant, [
             'name' => 'Users Inactive User',
             'email' => 'inactive@users-test.test',
             'password' => 'password',
             'role' => 'member',
             'is_active' => false,
         ]);
-        $users['inactive']->roles()->attach($roles['member']->id);
+        $users['inactive']->roles()->syncWithoutDetaching($roles['member']->id);
         
         // Client user
-        $users['client'] = self::createUser($tenant, [
+        $users['client'] = self::createOrGetUser($tenant, [
             'name' => 'Users Client User',
             'email' => 'client@users-test.test',
             'password' => 'password',
             'role' => 'client',
             'is_active' => true,
         ]);
-        $users['client']->roles()->attach($roles['client']->id);
+        $users['client']->roles()->syncWithoutDetaching($roles['client']->id);
         
         return [
             'tenant' => $tenant,
@@ -1076,21 +1155,21 @@ class TestDataSeeder
         
         // Create users with different roles
         $users = [];
-        $users['admin'] = self::createUser($tenant, [
+        $users['admin'] = self::createOrGetUser($tenant, [
             'name' => 'Dashboard Admin User',
             'email' => 'admin@dashboard-test.test',
             'password' => 'password',
             'role' => 'admin',
         ]);
         
-        $users['project_manager'] = self::createUser($tenant, [
+        $users['project_manager'] = self::createOrGetUser($tenant, [
             'name' => 'Dashboard PM User',
             'email' => 'pm@dashboard-test.test',
             'password' => 'password',
             'role' => 'project_manager',
         ]);
         
-        $users['member'] = self::createUser($tenant, [
+        $users['member'] = self::createOrGetUser($tenant, [
             'name' => 'Dashboard Member User',
             'email' => 'member@dashboard-test.test',
             'password' => 'password',
@@ -1098,17 +1177,21 @@ class TestDataSeeder
         ]);
         
         // Create a project for dashboard data
-        $project = \App\Models\Project::create([
-            'tenant_id' => $tenant->id,
-            'code' => 'DASH-PROJ-' . $seed,
-            'name' => 'Dashboard Test Project',
-            'description' => 'Project for dashboard domain testing',
-            'status' => 'active',
-            'owner_id' => $users['project_manager']->id,
-            'budget_total' => 100000.00,
-            'start_date' => now(),
-            'end_date' => now()->addMonths(6),
-        ]);
+        $project = \App\Models\Project::firstOrCreate(
+            [
+                'tenant_id' => $tenant->id,
+                'code' => 'DASH-PROJ-' . $seed,
+            ],
+            [
+                'name' => 'Dashboard Test Project',
+                'description' => 'Project for dashboard domain testing',
+                'status' => 'active',
+                'owner_id' => $users['project_manager']->id,
+                'budget_total' => 100000.00,
+                'start_date' => now(),
+                'end_date' => now()->addMonths(6),
+            ]
+        );
         
         // Create dashboard widgets
         $dashboardWidgets = [];
@@ -1275,4 +1358,3 @@ class TestDataSeeder
         ];
     }
 }
-

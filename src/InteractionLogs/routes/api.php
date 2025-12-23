@@ -7,7 +7,7 @@ use Src\InteractionLogs\Controllers\InteractionLogController;
  * API Routes cho module InteractionLogs
  * Prefix: /api/v1/interaction-logs
  */
-Route::prefix('api/v1')->middleware(['auth:api', 'rbac'])->group(function () {
+Route::prefix('api/v1')->middleware(['auth:api', 'rbac'])->as('v1.')->group(function () {
     
     // Interaction Logs routes - Global
     Route::prefix('interaction-logs')->group(function () {

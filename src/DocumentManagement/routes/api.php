@@ -14,6 +14,7 @@ use Src\DocumentManagement\Controllers\DocumentController;
 */
 
 Route::prefix('api/v1/documents')
+    ->as('v1.')
     ->group(function () {
         
         // Simple Document CRUD routes (no middleware for testing)

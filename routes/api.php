@@ -983,7 +983,7 @@ Route::prefix('dashboard')->group(function () {
     | Simple User Management Routes (With Authentication)
     |--------------------------------------------------------------------------
     */
-    Route::prefix('simple')->middleware(['production.security'])->group(function () {
+    Route::prefix('simple')->middleware(['production.security'])->as('dashboard.simple.')->group(function () {
         Route::apiResource('users', UserController::class);
     });
 

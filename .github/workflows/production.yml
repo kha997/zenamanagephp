@@ -6,7 +6,7 @@ on:
     tags: [ 'v*' ]
 
 env:
-  PHP_VERSION: '8.0'
+  PHP_VERSION: '8.2'
   NODE_VERSION: '16'
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        php-version: ['8.0', '8.1']
+        php-version: ['8.2']
     
     services:
       mysql:

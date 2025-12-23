@@ -30,7 +30,7 @@ jobs:
 
       - name: Setup Composer cache
         id: composer-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.composer/cache
           key: composer-${{ hashFiles('composer.lock') }}

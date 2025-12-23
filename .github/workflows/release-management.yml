@@ -221,7 +221,7 @@ jobs:
         output: 'trivy-release-results.json'
 
     - name: Upload Trivy JSON results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: trivy-release-results
         path: trivy-release-results.json

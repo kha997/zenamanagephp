@@ -98,3 +98,5 @@ class CompensationPreviewResource extends JsonResource
     }
     
     /**
+    */
+}

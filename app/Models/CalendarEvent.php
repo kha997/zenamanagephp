@@ -292,8 +292,7 @@ class CalendarEvent extends Model
         $startDate = now();
         $endDate = now()->addDays($days);
         
-        $events = self::whereHas('calendarIntegration', function ($query) 
-        })
+        $events = self::whereHas('calendarIntegration')
         ->whereBetween('start_time', [$startDate, $endDate])
         ->with(['project', 'task', 'milestone', 'calendarIntegration'])
         ->orderBy('start_time')

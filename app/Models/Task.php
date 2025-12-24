@@ -67,19 +67,21 @@ class Task extends Model
         'client_approved',
         'assignee_id',
         'assigned_to',
+        'watchers',
         'created_by'
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
         'dependencies' => 'array',
+        'watchers' => 'array',
         'is_hidden' => 'boolean',
         'estimated_hours' => 'float',
         'actual_hours' => 'float',
         'estimated_cost' => 'float',
         'actual_cost' => 'float',
-        'progress_percent' => 'float',
+        'progress_percent' => 'integer',
         'tags' => 'array',
         'client_approved' => 'boolean'
     ];

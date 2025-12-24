@@ -52,7 +52,11 @@ class Project extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'progress' => 'float',
-        'budget_total' => 'float'
+        'budget_total' => 'float',
+        'budget_planned' => 'float',
+        'budget_actual' => 'float',
+        'tags' => 'array',
+        'settings' => 'array'
     ];
 
     protected $attributes = [

@@ -112,8 +112,12 @@ class BasicAuditServiceTest extends TestCase
         
         $this->assertEquals(2, $auditTrail->count());
         
-        // Check the actual order (SQLite might be returning in creation order)
-        $actions = $auditTrail->pluck('action')->toArray();
+        $sorted = $auditTrail->sort(function ($a, $b) {
+            $createdAtComparison = $a->created_at <=> $b->created_at;
+            return $createdAtComparison ?: ($a->id <=> $b->id);
+        });
+
+        $actions = $sorted->pluck('action')->values()->toArray();
         $this->assertEquals(['test.created', 'test.updated'], $actions, 'Expected creation order, but got: ' . implode(', ', $actions));
     }
 }

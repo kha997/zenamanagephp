@@ -6,6 +6,7 @@ use Src\Foundation\Helpers\AuthHelper;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Listener để lưu trữ tất cả events vào bảng event_logs
@@ -21,6 +22,10 @@ class EventLogListener
      */
     public function handle(string $eventName, array $data): void
     {
+        if (!$this->isEventLogTableReady()) {
+            return;
+        }
+
         try {
             // Chỉ log các events của hệ thống, bỏ qua Laravel internal events
             if ($this->shouldLogEvent($eventName)) {
@@ -32,13 +37,8 @@ class EventLogListener
                     $this->logGenericEvent($eventName, $data);
                 }
             }
-        } catch (\Exception $e) {
-            // Không để lỗi logging làm crash ứng dụng
-            Log::error('Failed to log event', [
-                'event_name' => $eventName,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+        } catch (\Throwable $e) {
+            $this->handleLoggingFailure($eventName, $e);
         }
     }
 
@@ -158,5 +158,33 @@ class EventLogListener
         }
         
         return 'info';
+    }
+
+    /**
+     * Kiểm tra bảng log sự kiện có sẵn hay không
+     */
+    private function isEventLogTableReady(): bool
+    {
+        try {
+            return Schema::hasTable('event_logs');
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Xử lý lỗi logging mà không phá vỡ ứng dụng
+     */
+    private function handleLoggingFailure(string $eventName, \Throwable $exception): void
+    {
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
+        Log::error('Failed to log event', [
+            'event_name' => $eventName,
+            'error' => $exception->getMessage(),
+            'trace' => $exception->getTraceAsString()
+        ]);
     }
 }

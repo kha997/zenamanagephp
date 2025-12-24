@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Task;
 use App\Services\ErrorEnvelopeService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -103,7 +104,8 @@ class ProjectManagerController extends Controller
             $completedTasks = Task::whereIn('project_id', $projectIds)->where('status', 'done')->count();
             $pendingTasks = Task::whereIn('project_id', $projectIds)->whereIn('status', ['todo', 'in_progress'])->count();
             $overdueTasks = Task::whereIn('project_id', $projectIds)
-                ->where('due_date', '<', now())
+                ->whereNotNull('end_date')
+                ->whereDate('end_date', '<', Carbon::today())
                 ->whereNotIn('status', ['done', 'cancelled'])
                 ->count();
 

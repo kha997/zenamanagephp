@@ -1,29 +1,48 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Models\Permission;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Schema;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Permission>
- */
 class PermissionFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
-    public function definition()
+    protected $model = Permission::class;
+
+    public function definition(): array
     {
-        return [
-            'name' => $this->faker->words(2, true),
-            'code' => $this->faker->word() . '.' . $this->faker->randomElement(['create', 'read', 'update', 'delete']),
-            'description' => $this->faker->sentence(),
-            'module' => $this->faker->randomElement(['task', 'project', 'user', 'document']),
-            'action' => $this->faker->randomElement(['create', 'read', 'update', 'delete']),
-            'is_active' => true,
-            'tenant_id' => null,
-        ];
+        $base = [];
+
+        if (Schema::hasColumn('permissions', 'code')) {
+            $base['code'] = 'perm.' . $this->faker->unique()->slug(2);
+        }
+
+        if (Schema::hasColumn('permissions', 'description')) {
+            $base['description'] = $this->faker->sentence();
+        }
+
+        if (Schema::hasColumn('permissions', 'module')) {
+            $base['module'] = $this->faker->randomElement(['task', 'project', 'document', 'contract', 'finance']);
+        }
+
+        if (Schema::hasColumn('permissions', 'action')) {
+            $base['action'] = $this->faker->randomElement(['view', 'create', 'update', 'delete', 'approve']);
+        }
+
+        if (Schema::hasColumn('permissions', 'is_active')) {
+            $base['is_active'] = true;
+        }
+
+        // Optional naming columns (vary by schema)
+        if (Schema::hasColumn('permissions', 'name')) {
+            $base['name'] = $this->faker->words(2, true);
+        } elseif (Schema::hasColumn('permissions', 'label')) {
+            $base['label'] = $this->faker->words(2, true);
+        } elseif (Schema::hasColumn('permissions', 'display_name')) {
+            $base['display_name'] = $this->faker->words(2, true);
+        }
+
+        return $base;
     }
 }

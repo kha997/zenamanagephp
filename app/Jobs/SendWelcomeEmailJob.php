@@ -141,7 +141,7 @@ class SendWelcomeEmailJob implements ShouldQueue
             'recipient_name' => $this->user->name,
             'user_id' => $this->user->id,
             'organization_id' => $this->user->organization_id,
-            'subject' => "Welcome to {$this->user->organization->name ?? 'our platform'}!",
+'subject' => 'Welcome to ' . ($this->user->organization?->name ?? 'our platform') . '!',
             'content_hash' => $this->generateContentHash(),
             'metadata' => [
                 'role' => $this->user->role,

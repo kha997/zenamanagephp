@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Src\CoreProject\Models\TaskAssignment;
-use Src\CoreProject\Resources\TaskAssignmentResource;
+use App\Http\Resources\TaskAssignmentResource;
 use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 

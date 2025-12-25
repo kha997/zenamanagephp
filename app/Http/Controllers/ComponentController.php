@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Src\CoreProject\Models\Component;
-use Src\CoreProject\Resources\ComponentResource;
+use App\Http\Resources\ComponentResource;
 use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 

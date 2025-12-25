@@ -228,7 +228,7 @@ class ExportController extends Controller
     /**
      * Generate Excel file (simplified - just CSV with .xlsx extension)
      */
-    private function generateExcel($tasks, $filename): string
+    private function generateExcel($tasks, $filename)
     {
         // For now, just generate CSV with .xlsx extension
         // In production, you'd 

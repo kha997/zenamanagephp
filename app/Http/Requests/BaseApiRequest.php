@@ -24,8 +24,7 @@ abstract class BaseApiRequest extends FormRequest
      * @param Validator $validator
      * @throws HttpResponseException
      */
-    protected function failedValidation(Validator $validator): void
-    {
+    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator): void {
         throw new HttpResponseException(
             response()->json([
                 'status' => 'fail',

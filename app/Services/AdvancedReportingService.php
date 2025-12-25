@@ -360,13 +360,13 @@ class AdvancedReportingService
         }
     }
 
-    private function generatePDF(array $data, array $options = []): string
+    private function generatePDF(array $data, array $options = [])
     {
         // Implementation for PDF generation
         // This would  // Placeholder
     }
 
-    private function generateExcel(array $data, array $options = []): string
+    private function generateExcel(array $data, array $options = [])
     {
         // Implementation for Excel generation
         // This would  // Placeholder

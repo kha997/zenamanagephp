@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Src\CoreProject\Models\Baseline;
-use Src\CoreProject\Resources\BaselineResource;
+use App\Http\Resources\BaselineResource;
 use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 use Src\RBAC\Traits\HasRBACContext;

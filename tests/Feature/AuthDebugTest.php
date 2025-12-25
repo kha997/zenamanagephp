@@ -20,24 +20,16 @@ class AuthDebugTest extends TestCase
         
         // Test 1: Sử dụng Auth facade thay vì auth() helper
         try {
-            dump('Auth facade default guard:', get_class(Auth::guard()));
-            dump('Auth facade api guard:', get_class(Auth::guard('api')));
-        } catch (\Exception $e) {
-            dump('Auth facade error:', $e->getMessage());
-        }
+            } catch (\Exception $e) {
+            }
         
         // Test 2: Kiểm tra Auth facade
         try {
-            dump('Auth facade guard:', get_class(Auth::guard()));
-            dump('Auth facade api guard:', get_class(Auth::guard('api')));
-        } catch (\Exception $e) {
-            dump('Auth facade error:', $e->getMessage());
-        }
+            } catch (\Exception $e) {
+            }
         
         // Test 3: Kiểm tra middleware auth:api
         $response = $this->getJson('/api/v1/templates');
-        dump('Response status:', $response->getStatusCode());
-        
         $this->assertTrue(true); // Placeholder assertion
     }
     
@@ -61,13 +53,10 @@ class AuthDebugTest extends TestCase
                 'Authorization' => 'Bearer ' . $token
             ])->getJson('/api/v1/templates');
             
-            dump('Authenticated request status:', $response->getStatusCode());
             if ($response->getStatusCode() !== 200) {
-                dump('Response body:', $response->getContent());
-            }
+                }
         } else {
-            dump('Login failed:', $loginResponse->getContent());
-        }
+            }
         
         $this->assertTrue(true); // Placeholder assertion
     }

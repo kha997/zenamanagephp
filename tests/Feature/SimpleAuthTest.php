@@ -1,11 +1,14 @@
-public function test_simple_auth_api_route()
+<?php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+
+class SimpleAuthTest extends TestCase
 {
-    $tenant = Tenant::factory()->create();
-    $user = User::factory()->create(['tenant_id' => $tenant->id]);
-    
-    // Test route chỉ có auth:api middleware
-    $response = $this->getJson('/api/user');
-    $response->assertUnauthorized();
-    
-    $this->assertTrue(true);
+    public function test_auth_me_requires_authentication(): void
+    {
+        // This endpoint exists in our API and is protected by auth:sanctum
+        $this->getJson('/api/auth/me')->assertUnauthorized();
+    }
 }

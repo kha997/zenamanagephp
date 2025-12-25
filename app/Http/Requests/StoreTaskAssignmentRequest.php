@@ -70,18 +70,7 @@ class StoreTaskAssignmentRequest extends BaseApiRequest
             }
             
             // Kiểm tra tổng phần trăm không vượt quá 100%
-            if ($condition) { return $this->handleCondition(); } private function handleCondition() { 
-                $currentTotal = TaskAssignment::where('task_id', $taskId)
-                    ->sum('split_percent');
-                    
-                if (($currentTotal + $splitPercentage) > 100) {
-                    $validator->errors()->add(
-                        'split_percent',
-                        'Tổng phần trăm phân chia cho task này sẽ vượt quá 100%. ' .
-                        'Hiện tại: ' . $currentTotal . '%, thêm: ' . $splitPercentage . '%'
-                    );
-                }
-            }
+            $this->validateSplitPercentage($validator, $taskId, $splitPercentage);
             
             // Kiểm tra user có quyền truy cập project của task không
             if ($taskId && $userId) {
@@ -92,5 +81,26 @@ class StoreTaskAssignmentRequest extends BaseApiRequest
                 }
             }
         });
+    }
+
+    /**
+     * Ensure split percentage does not exceed 100%.
+     */
+    private function validateSplitPercentage($validator, ?string $taskId, float $splitPercentage): void
+    {
+        if (!$taskId) {
+            return;
+        }
+
+        $currentTotal = TaskAssignment::where('task_id', $taskId)
+            ->sum('split_percent');
+
+        if (($currentTotal + $splitPercentage) > 100) {
+            $validator->errors()->add(
+                'split_percent',
+                'Tổng phần trăm phân chia cho task này sẽ vượt quá 100%. ' .
+                'Hiện tại: ' . $currentTotal . '%, thêm: ' . $splitPercentage . '%'
+            );
+        }
     }
 }

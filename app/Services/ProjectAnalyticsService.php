@@ -377,10 +377,8 @@ class ProjectAnalyticsService
      */
     private function identifyCriticalPath(Collection $tasks): array
     {
-        // Simplified critical path calculation
-        // In a real implementation, this would 
-                    })
-                    ->toArray();
+        // Simplified critical path calculation placeholder.
+        return [];
     }
 
     /**
@@ -437,7 +435,8 @@ class ProjectAnalyticsService
         
         $total = array_sum($distribution);
         
-        return array_map(function ($count) 
+        return array_map(function ($count) use ($total) {
+            return $total > 0 ? round(($count / $total) * 100, 2) : 0;
         }, $distribution);
     }
 

@@ -28,6 +28,7 @@ class AuthServiceTest extends TestCase
     private AuthService $authService;
     private Tenant $tenant;
     private User $user;
+    private string $userEmail;
 
     /**
      * Thiết lập dữ liệu test cho mỗi test case
@@ -42,10 +43,12 @@ class AuthServiceTest extends TestCase
             'domain' => 'test.example.com'
         ]);
         
+        $this->userEmail = fake()->unique()->safeEmail();
+        
         // Tạo user test
         $this->user = User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => $this->userEmail,
             'password' => Hash::make('password123'),
             'tenant_id' => $this->tenant->id
         ]);
@@ -65,7 +68,7 @@ class AuthServiceTest extends TestCase
      */
     public function test_login_success_with_valid_credentials(): void
     {
-        $credentials = ['email' => 'test@example.com', 'password' => 'password123'];
+        $credentials = ['email' => $this->userEmail, 'password' => 'password123'];
         $result = $this->authService->login($credentials);
         
         $this->assertIsArray($result);
@@ -95,7 +98,7 @@ class AuthServiceTest extends TestCase
      */
     public function test_login_fails_with_wrong_password(): void
     {
-        $credentials = ['email' => 'test@example.com', 'password' => 'wrongpassword'];
+        $credentials = ['email' => $this->userEmail, 'password' => 'wrongpassword'];
         $result = $this->authService->login($credentials);
         
         $this->assertIsArray($result);
@@ -142,7 +145,7 @@ class AuthServiceTest extends TestCase
     {
         $userData = [
             'name' => 'Another User',
-            'email' => 'test@example.com', // Email đã tồn tại
+            'email' => $this->userEmail, // Email đã tồn tại
             'password' => 'password123',
             'tenant_id' => $this->tenant->id
         ];
@@ -216,7 +219,7 @@ class AuthServiceTest extends TestCase
         
         $expiredToken = JWT::encode($payload, config('jwt.secret'), config('jwt.algo'));
         
-        $isValid = $this->authService->validateToken($expiredToken);
+        $isValid = $this->authService->isValidToken($expiredToken);
         
         $this->assertFalse($isValid);
     }

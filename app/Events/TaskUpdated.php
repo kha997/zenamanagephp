@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\PrivateChannel;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
 class TaskUpdated implements ShouldBroadcast
 {
@@ -27,6 +28,9 @@ class TaskUpdated implements ShouldBroadcast
 
     /**
      * Get the channels the event should broadcast on.
+     */
+    /**
+     * @return array<\Illuminate\Broadcasting\PrivateChannel>
      */
     public function broadcastOn(): array
     {

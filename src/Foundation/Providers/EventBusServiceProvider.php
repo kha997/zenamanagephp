@@ -59,7 +59,9 @@ class EventBusServiceProvider extends ServiceProvider
         
         // Đăng ký EventLogListener cho tất cả events (*)
         // ✅ ĐÚNG - Truyền array [class, method]
-        $eventBus->subscribe('*', [EventLogListener::class, 'handle'], 1000);
+        if (!app()->runningInConsole() && !app()->runningUnitTests()) {
+            $eventBus->subscribe('*', [EventLogListener::class, 'handle'], 1000);
+        }
         
         // Đăng ký các event listeners cụ thể
         foreach ($this->eventListeners as $eventClass => $listeners) {

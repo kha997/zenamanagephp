@@ -16,3 +16,27 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+/storage/backups/
+/storage/framework/
+
+# block accidental machine-local folders
+Users/
+
+# macOS noise
+.DS_Store
+
+# runtime / generated
+storage/framework/sessions/
+storage/framework/views/
+
+# local backups (must never be committed)
+storage/backups/
+
+# local ssl material (private keys must never be committed)
+storage/ssl/
+
+# env files (keep only *.example in repo)
+.env
+.env.*
+production.env

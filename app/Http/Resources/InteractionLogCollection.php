@@ -15,7 +15,7 @@ class InteractionLogCollection extends ResourceCollection
      * @param Request $request
      * @return array<string, mixed>
      */
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
             'data' => $this->collection,

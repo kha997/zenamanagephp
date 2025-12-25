@@ -77,7 +77,9 @@ class EventServiceProvider extends ServiceProvider
         parent::boot();
         
         // Đăng ký EventLogListener để listen tất cả events cho auditing
-        Event::listen('*', [EventLogListener::class, 'handle']);
+        if (!app()->runningInConsole() && !app()->runningUnitTests()) {
+            Event::listen('*', [EventLogListener::class, 'handle']);
+        }
     }
 
     /**

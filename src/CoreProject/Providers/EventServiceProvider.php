@@ -25,6 +25,8 @@ class EventServiceProvider extends ServiceProvider
         parent::boot();
         
         // Đăng ký EventLogListener cho tất cả events
-        $this->app['events']->listen('*', EventLogListener::class);
+        if (!app()->runningInConsole() && !app()->runningUnitTests()) {
+            $this->app['events']->listen('*', EventLogListener::class);
+        }
     }
 }

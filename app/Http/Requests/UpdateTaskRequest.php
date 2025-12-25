@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Validation\Rule;
+use Src\CoreProject\Models\Component;
 use Src\CoreProject\Models\Task;
 use Src\Shared\Requests\BaseApiRequest;
 
@@ -29,10 +30,10 @@ class UpdateTaskRequest extends BaseApiRequest
                 'nullable',
                 'integer',
                 'exists:components,id',
-                function ($attribute, $value, $fail) 
-                        if ($component && $component->project_id !== $task->project_id) {
-                            $fail('Component phải thuộc cùng dự án với task.');
-                        }
+                function ($attribute, $value, $fail) use ($task) {
+                    $component = Component::find($value);
+                    if ($component && $task && $component->project_id !== $task->project_id) {
+                        $fail('Component phải thuộc cùng dự án với task.');
                     }
                 }
             ],
@@ -81,10 +82,10 @@ class UpdateTaskRequest extends BaseApiRequest
                 'integer',
                 'exists:tasks,id',
                 'not_in:' . $taskId, // Không thể phụ thuộc vào chính nó
-                function ($attribute, $value, $fail) 
-                        if ($dependentTask && $dependentTask->project_id !== $task->project_id) {
-                            $fail('Task phụ thuộc phải thuộc cùng dự án.');
-                        }
+                function ($attribute, $value, $fail) use ($task) {
+                    $dependentTask = Task::find($value);
+                    if ($dependentTask && $task && $dependentTask->project_id !== $task->project_id) {
+                        $fail('Task phụ thuộc phải thuộc cùng dự án.');
                     }
                 }
             ],

@@ -28,7 +28,8 @@ class PerformanceMonitoringMiddleware
         }
 
         // Monitor request performance
-        $metrics = $this->monitoringService->monitorRequest($request, function () 
+        $metrics = $this->monitoringService->monitorRequest($request, function () use ($next, $request) {
+            return $next($request);
         });
 
         // Add performance headers

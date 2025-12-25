@@ -149,3 +149,7 @@ class TaskConditionalToggled
      */
     public function wasHidden(): bool
     {
+        return !$this->newVisibility;
+    }
+
+}

@@ -26,6 +26,7 @@ class UpdateComponentRequest extends BaseApiRequest
     public function rules(): array
     {
         $componentId = $this->route('component');
+        $component = \zenamanage\CoreProject\Models\Component::find($componentId);
         
         return [
             'parent_component_id' => [
@@ -33,16 +34,15 @@ class UpdateComponentRequest extends BaseApiRequest
                 'integer',
                 'exists:components,id',
                 'not_in:' . $componentId, // Không thể set chính nó làm parent
-                function ($attribute, $value, $fail) 
-                        if ($component && $this->wouldCreateCycle($component, $value)) {
-                            $fail('Không thể tạo vòng lặp trong cấu trúc component.');
-                        }
-                        
-                        // Kiểm tra parent component phải thuộc cùng project
-                        $parentComponent = \zenamanage\CoreProject\Models\Component::find($value);
-                        if ($parentComponent && $component && $parentComponent->project_id !== $component->project_id) {
-                            $fail('Parent component phải thuộc cùng dự án.');
-                        }
+                function ($attribute, $value, $fail) use ($component) {
+                    if ($component && $this->wouldCreateCycle($component, $value)) {
+                        $fail('Không thể tạo vòng lặp trong cấu trúc component.');
+                    }
+
+                    // Kiểm tra parent component phải thuộc cùng project
+                    $parentComponent = \zenamanage\CoreProject\Models\Component::find($value);
+                    if ($parentComponent && $component && $parentComponent->project_id !== $component->project_id) {
+                        $fail('Parent component phải thuộc cùng dự án.');
                     }
                 }
             ],

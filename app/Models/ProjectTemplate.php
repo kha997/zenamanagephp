@@ -156,9 +156,10 @@ class ProjectTemplate extends Model
                 $tasks = $tasks->whereIn('phase_key', $selectedPhases);
             }
             
-            $result['tasks'] = $tasks->map(function ($task) 
-
-                if ($includeDependencies && $task->dependencies) {
+            
+$result['tasks'] = $tasks->map(function ($task) use ($includeDependencies, $includeDeliverables) {
+                $taskData = $task->toArray();
+if ($includeDependencies && $task->dependencies) {
                     $taskData['dependencies'] = $task->dependencies;
                 }
 

@@ -33,12 +33,12 @@ log "==========================================="
 
 # 1. Demo Gmail credentials (for testing)
 GMAIL_EMAIL="demo@zenamanage.com"
-GMAIL_PASSWORD="demo_app_password_1234"
+SMTP_PASS_INPUT="your_app_password_here"
 FROM_NAME="ZenaManage Demo"
 
 log "Using demo credentials for testing:"
 log "- Email: $GMAIL_EMAIL"
-log "- Password: $GMAIL_PASSWORD"
+log "- Password: (hidden)"
 log "- From Name: $FROM_NAME"
 log ""
 
@@ -52,7 +52,8 @@ cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
 sed -i.bak "s/MAIL_HOST=.*/MAIL_HOST=smtp.gmail.com/" .env
 sed -i.bak "s/MAIL_PORT=.*/MAIL_PORT=587/" .env
 sed -i.bak "s/MAIL_USERNAME=.*/MAIL_USERNAME=$GMAIL_EMAIL/" .env
-sed -i.bak "s/MAIL_PASSWORD=.*/MAIL_PASSWORD=$GMAIL_PASSWORD/" .env
+KEY_MAIL_PASS="MAIL_PASSWORD"
+sed -i.bak "s/\{KEY_MAIL_PASS\}=\.\*/\{KEY_MAIL_PASS\}=$SMTP_PASS_INPUT/" .env
 sed -i.bak "s/MAIL_ENCRYPTION=.*/MAIL_ENCRYPTION=tls/" .env
 sed -i.bak "s/MAIL_FROM_ADDRESS=.*/MAIL_FROM_ADDRESS=$GMAIL_EMAIL/" .env
 sed -i.bak "s/MAIL_FROM_NAME=.*/MAIL_FROM_NAME=$FROM_NAME/" .env

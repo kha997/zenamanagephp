@@ -37,6 +37,8 @@ npm install && npm run build
 cp production.env.example .env
 ```
 
+Keep `production.env` local-only. The repository only tracks `production.env.example`, and `production.env` is gitignored so you must never commit secrets from your production configuration.
+
 Update `.env` with your production values:
 ```env
 APP_NAME="ZenaManage"

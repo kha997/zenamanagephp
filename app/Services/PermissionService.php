@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
 class PermissionService
@@ -13,7 +14,8 @@ class PermissionService
     {
         $cacheKey = "user_permissions_{$user->id}";
         
-        $permissions = Cache::remember($cacheKey, 300, function () 
+        $permissions = Cache::remember($cacheKey, 300, function () use ($user) {
+            return $this->getUserPermissions($user);
         });
         
         return in_array($permission, $permissions);

@@ -1,0 +1,18 @@
+includes:
+  - phpstan-baseline.neon
+
+parameters:
+  parallel:
+    maximumNumberOfProcesses: 1
+
+  level: 6
+  paths:
+    - app
+    - routes
+    - database
+
+  tmpDir: storage/app/phpstan
+  reportUnmatchedIgnoredErrors: false
+
+  excludePaths:
+    - app/WebSocket

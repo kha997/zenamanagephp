@@ -38,6 +38,7 @@ git clone <repository-url>
 cd zenamanage
 cp production.env.example production.env
 # Edit production.env with your settings
+# `production.env` is gitignored; keep the working copy local and never commit it.
 ```
 
 ### 2. Deploy
@@ -59,7 +60,7 @@ chmod +x docker-manage.sh
 
 ### Environment Variables
 
-Edit `production.env` with your production settings:
+Edit `production.env` with your production settings (the file is gitignored; use `production.env.example` as the tracked template and keep your copy local):
 
 ```bash
 # Application

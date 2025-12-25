@@ -31,9 +31,9 @@ class ValidationService
         
         $validator = Validator::make($data, $rules);
         
-        // Custom validation: kiểm tra overlap projects
-        $validator->after(function ($validator) 
-            }
+        // Custom validation: placeholder (no additional logic yet)
+        $validator->after(function ($validator) {
+            // TODO: add overlap checks when needed
         });
         
         if ($validator->fails()) {

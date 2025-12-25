@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\User;
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,7 +34,7 @@ use App\Models\Project;
  */
 class Document extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids, HasFactory, TenantScope;
 
     protected $table = 'documents';
 

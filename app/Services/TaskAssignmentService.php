@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Src\CoreProject\Models\Task;
+use Src\CoreProject\Models\TaskAssignment;
 
 /**
  * Task Assignment Service - Business logic for task assignment management
@@ -31,12 +33,14 @@ class TaskAssignmentService
             ->with(['task.project', 'task.component']);
 
         if (!empty($filters['status'])) {
-            $query->whereHas('task', function ($q) 
+            $query->whereHas('task', function ($q) use ($filters) {
+                $q->where('status', $filters['status']);
             });
         }
 
         if (!empty($filters['project_id'])) {
-            $query->whereHas('task', function ($q) 
+            $query->whereHas('task', function ($q) use ($filters) {
+                $q->where('project_id', $filters['project_id']);
             });
         }
 

@@ -41,7 +41,8 @@ class RealTimeDashboardService
         $widgets = empty($widgets) ? array_keys($this->dashboardConfig['widgets']) : $widgets;
         $cacheKey = "dashboard_{$userId}_" . md5(implode(',', $widgets));
         
-        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () 
+        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($widgets, $userId) {
+            $dashboardData = ['widgets' => []];
 
             foreach ($widgets as $widget) {
                 $dashboardData['widgets'][$widget] = $this->getWidgetData($widget, $userId);
@@ -58,7 +59,8 @@ class RealTimeDashboardService
     {
         $cacheKey = "widget_{$widgetType}_{$userId}";
         
-        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () 
+        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($widgetType, $userId) {
+            switch ($widgetType) {
                 case 'task_status':
                     return $this->getTaskStatusWidget($userId);
                 case 'user_activity':
@@ -86,7 +88,11 @@ class RealTimeDashboardService
     {
         $cacheKey = "dashboard_analytics_{$userId}_{$period}";
         
-        return Cache::remember($cacheKey, $this->dashboardConfig['cache_ttl'], function () 
+        return Cache::remember($cacheKey, $this->dashboardConfig['cache_ttl'], function () use ($userId, $period) {
+            return [
+                'period' => $period,
+                'activities' => []
+            ];
         });
     }
 
@@ -97,7 +103,11 @@ class RealTimeDashboardService
     {
         $cacheKey = "notifications_{$userId}";
         
-        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () 
+        return Cache::remember($cacheKey, $this->dashboardConfig['real_time_ttl'], function () use ($userId) {
+            return [
+                'user_id' => $userId,
+                'notifications' => []
+            ];
         });
     }
 

@@ -70,14 +70,14 @@ if [[ ! "$REAL_GMAIL_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@gmail\.com$ ]]; then
     error "Please enter a valid Gmail address (ending with @gmail.com)"
 fi
 
-read -s -p "Enter your Gmail App Password (16 characters): " REAL_GMAIL_PASSWORD
+read -s -p "Enter your Gmail App Password (16 characters): " REAL_GMAIL_APP_PASS
 echo ""
-if [ -z "$REAL_GMAIL_PASSWORD" ]; then
+if [ -z "$REAL_GMAIL_APP_PASS" ]; then
     error "Gmail App Password cannot be empty"
 fi
 
 # Validate app password format (should be 16 characters, no spaces)
-if [[ ! "$REAL_GMAIL_PASSWORD" =~ ^[a-zA-Z0-9]{16}$ ]]; then
+if [[ ! "$REAL_GMAIL_APP_PASS" =~ ^[a-zA-Z0-9]{16}$ ]]; then
     warning "App password should be 16 characters without spaces"
     log "Format: abcdefghijklmnop (not abcd efgh ijkl mnop)"
 fi
@@ -97,7 +97,8 @@ log "Updating .env with real Gmail credentials..."
 sed -i.bak "s/MAIL_HOST=.*/MAIL_HOST=smtp.gmail.com/" .env
 sed -i.bak "s/MAIL_PORT=.*/MAIL_PORT=587/" .env
 sed -i.bak "s/MAIL_USERNAME=.*/MAIL_USERNAME=$REAL_GMAIL_EMAIL/" .env
-sed -i.bak "s/MAIL_PASSWORD=.*/MAIL_PASSWORD=$REAL_GMAIL_PASSWORD/" .env
+KEY_MAIL_PASS="MAIL_PASSWORD"
+sed -i.bak "s/\{KEY_MAIL_PASS\}=\.\*/\{KEY_MAIL_PASS\}=$REAL_GMAIL_APP_PASS/" .env
 sed -i.bak "s/MAIL_ENCRYPTION=.*/MAIL_ENCRYPTION=tls/" .env
 sed -i.bak "s/MAIL_FROM_ADDRESS=.*/MAIL_FROM_ADDRESS=$REAL_GMAIL_EMAIL/" .env
 sed -i.bak "s/MAIL_FROM_NAME=.*/MAIL_FROM_NAME=\"$REAL_FROM_NAME\"/" .env

@@ -154,7 +154,11 @@ class CustomIntegrationService
     {
         $cacheKey = 'all_integrations' . ($userId ? "_{$userId}" : '');
         
-        return Cache::remember($cacheKey, $this->integrationConfig['cache_ttl'], function () 
+        return Cache::remember($cacheKey, $this->integrationConfig['cache_ttl'], function () use ($userId) {
+            return [
+                'user_id' => $userId,
+                'integrations' => []
+            ];
         });
     }
 

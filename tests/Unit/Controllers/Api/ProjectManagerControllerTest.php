@@ -8,12 +8,11 @@ use App\Models\User;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
-use App\Services\ErrorEnvelopeService;
+use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Laravel\Sanctum\Sanctum;
-use Mockery;
+use Illuminate\Support\Facades\DB;
 
 class ProjectManagerControllerTest extends TestCase
 {
@@ -27,22 +26,24 @@ class ProjectManagerControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+        Auth::logout();
+
         // Create tenant
         $this->tenant = Tenant::factory()->create();
-        
+
         // Create user with project manager role
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'role' => 'project_manager'
         ]);
-        
+        $this->assignRole($this->user, 'project_manager');
+        Auth::loginUsingId($this->user->id);
+
         // Create project
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'pm_id' => $this->user->id
         ]);
-        
+
         $this->controller = new ProjectManagerController();
     }
 
@@ -74,9 +75,7 @@ class ProjectManagerControllerTest extends TestCase
             'status' => 'completed'
         ]);
 
-        // Mock authentication
-        Auth::shouldReceive('user')->andReturn($this->user);
-        $this->user->shouldReceive('hasRole')->with('project_manager')->andReturn(true);
+        Auth::loginUsingId($this->user->id);
 
         $response = $this->controller->getStats();
 
@@ -101,7 +100,7 @@ class ProjectManagerControllerTest extends TestCase
      */
     public function test_get_stats_without_authentication()
     {
-        Auth::shouldReceive('user')->andReturn(null);
+        Auth::logout();
 
         $response = $this->controller->getStats();
 
@@ -118,10 +117,13 @@ class ProjectManagerControllerTest extends TestCase
      */
     public function test_get_stats_without_project_manager_role()
     {
-        $user = User::factory()->create(['role' => 'member']);
-        
-        Auth::shouldReceive('user')->andReturn($user);
-        $user->shouldReceive('hasRole')->with('project_manager')->andReturn(false);
+        Auth::logout();
+
+        $user = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+        ]);
+        $this->assignRole($user, 'staff');
+        Auth::loginUsingId($user->id);
 
         $response = $this->controller->getStats();
 
@@ -148,8 +150,7 @@ class ProjectManagerControllerTest extends TestCase
             'progress' => 50
         ]);
 
-        Auth::shouldReceive('user')->andReturn($this->user);
-        $this->user->shouldReceive('hasRole')->with('project_manager')->andReturn(true);
+        Auth::loginUsingId($this->user->id);
 
         $response = $this->controller->getProjectTimeline();
 
@@ -178,7 +179,7 @@ class ProjectManagerControllerTest extends TestCase
      */
     public function test_get_project_timeline_without_authentication()
     {
-        Auth::shouldReceive('user')->andReturn(null);
+        Auth::logout();
 
         $response = $this->controller->getProjectTimeline();
 
@@ -195,10 +196,13 @@ class ProjectManagerControllerTest extends TestCase
      */
     public function test_get_project_timeline_without_project_manager_role()
     {
-        $user = User::factory()->create(['role' => 'member']);
-        
-        Auth::shouldReceive('user')->andReturn($user);
-        $user->shouldReceive('hasRole')->with('project_manager')->andReturn(false);
+        Auth::logout();
+
+        $user = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+        ]);
+        $this->assignRole($user, 'staff');
+        Auth::loginUsingId($user->id);
 
         $response = $this->controller->getProjectTimeline();
 
@@ -215,13 +219,20 @@ class ProjectManagerControllerTest extends TestCase
      */
     public function test_get_stats_error_handling()
     {
-        // Mock database error
-        Project::shouldReceive('where')->andThrow(new \Exception('Database error'));
+        Auth::loginUsingId($this->user->id);
 
-        Auth::shouldReceive('user')->andReturn($this->user);
-        $this->user->shouldReceive('hasRole')->with('project_manager')->andReturn(true);
+        $originalDatabase = config('database.connections.mysql.database');
+        $temporaryName = $originalDatabase . '_missing';
+        config(['database.connections.mysql.database' => $temporaryName]);
+        DB::purge('mysql');
 
-        $response = $this->controller->getStats();
+        try {
+            $response = $this->controller->getStats();
+        } finally {
+            config(['database.connections.mysql.database' => $originalDatabase]);
+            DB::purge('mysql');
+            DB::reconnect('mysql');
+        }
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(500, $response->getStatusCode());
@@ -236,13 +247,20 @@ class ProjectManagerControllerTest extends TestCase
      */
     public function test_get_project_timeline_error_handling()
     {
-        // Mock database error
-        Project::shouldReceive('where')->andThrow(new \Exception('Database error'));
+        Auth::loginUsingId($this->user->id);
 
-        Auth::shouldReceive('user')->andReturn($this->user);
-        $this->user->shouldReceive('hasRole')->with('project_manager')->andReturn(true);
+        $originalDatabase = config('database.connections.mysql.database');
+        $temporaryName = $originalDatabase . '_missing';
+        config(['database.connections.mysql.database' => $temporaryName]);
+        DB::purge('mysql');
 
-        $response = $this->controller->getProjectTimeline();
+        try {
+            $response = $this->controller->getProjectTimeline();
+        } finally {
+            config(['database.connections.mysql.database' => $originalDatabase]);
+            DB::purge('mysql');
+            DB::reconnect('mysql');
+        }
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(500, $response->getStatusCode());
@@ -252,9 +270,18 @@ class ProjectManagerControllerTest extends TestCase
         $this->assertEquals('E500.SERVER_ERROR', $data['error']['code']);
     }
 
-    protected function tearDown(): void
+    protected function assignRole(User $user, string $roleName, string $scope = Role::SCOPE_SYSTEM): Role
     {
-        Mockery::close();
-        parent::tearDown();
+        $role = Role::firstOrCreate(
+            ['name' => $roleName],
+            [
+                'scope' => $scope,
+                'allow_override' => false,
+                'is_active' => true
+            ]
+        );
+        $user->roles()->syncWithoutDetaching($role->id);
+        return $role;
     }
+
 }

@@ -57,7 +57,7 @@ class CompensationService
             throw new \Exception('User not authenticated');
         }
 
-        return DB::transaction(function () 
+        return DB::transaction(function () {
             
             $syncedCount = 0;
             $skippedCount = 0;
@@ -128,7 +128,7 @@ class CompensationService
         
         // Build query cho task compensations
         $query = TaskCompensation::with(['task', 'assignment.user'])
-                                ->whereHas('task', function ($q) 
+                                ->whereHas('task', function ($q) {
                                 })
                                 ->where('status', TaskCompensation::STATUS_PENDING);
         
@@ -199,7 +199,7 @@ class CompensationService
     {
         $actorId = $this->resolveActorId();
     
-        return DB::transaction(function () 
+        return DB::transaction(function () {
             
             if (!$contract->canApplyCompensation()) {
                 throw new ValidationException('Contract không thể áp dụng compensation');
@@ -207,7 +207,7 @@ class CompensationService
             
             // Lấy compensations cần apply
             $compensations = TaskCompensation::whereIn('id', $compensationIds)
-                                            ->whereHas('task', function ($q) 
+                                            ->whereHas('task', function ($q) {
                                             })
                                             ->where('status', TaskCompensation::STATUS_PENDING)
                                             ->get();
@@ -268,7 +268,7 @@ class CompensationService
             throw new \Exception('User not authenticated');
         }
 
-        return DB::transaction(function () 
+        return DB::transaction(function () {
             
             if (!$compensation->canBeUpdated()) {
                 throw new ValidationException('Compensation đã được lock, không thể cập nhật');
@@ -308,7 +308,7 @@ class CompensationService
         
         // Lấy tất cả compensations của project
         $compensations = TaskCompensation::with(['task', 'assignment.user', 'contract'])
-                                        ->whereHas('task', function ($q) 
+                                        ->whereHas('task', function ($q) {
                                         })
                                         ->get();
         
@@ -388,7 +388,7 @@ class CompensationService
         
         // Apply filters
         if (!empty($filters['project_id'])) {
-            $query->whereHas('task', function ($q) 
+            $query->whereHas('task', function ($q) {
             });
         }
         
@@ -397,7 +397,7 @@ class CompensationService
         }
         
         if (!empty($filters['user_id'])) {
-            $query->whereHas('assignment', function ($q) 
+            $query->whereHas('assignment', function ($q) {
             });
         }
         

@@ -3,10 +3,11 @@
 namespace Database\Factories;
 
 use App\Models\Task;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Task>
@@ -22,31 +23,48 @@ class TaskFactory extends Factory
      */
     public function definition(): array
     {
-        return [
+        $title = $this->faker->sentence(4);
+
+        $data = [
             'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
             'tenant_id' => Tenant::factory(),
-            'project_id' => ZenaProject::factory(),
+            'project_id' => Project::factory(),
             'parent_id' => null,
-            'title' => $this->faker->sentence(4),
+            'name' => $title,
+            'title' => $title,
             'description' => $this->faker->paragraph(),
             'status' => $this->faker->randomElement(['pending', 'in_progress', 'completed', 'cancelled', 'on_hold']),
             'priority' => $this->faker->randomElement(['low', 'medium', 'high', 'urgent']),
+            'is_hidden' => false,
+            'estimated_hours' => $this->faker->randomFloat(2, 1, 40),
+            'actual_hours' => $this->faker->randomFloat(2, 0, 60),
+            'estimated_cost' => 0,
+            'actual_cost' => 0,
+            'progress_percent' => $this->faker->numberBetween(0, 100),
+            'visibility' => $this->faker->randomElement(['team', 'private', 'public']),
+            'client_approved' => false,
             'assignee_id' => User::factory(),
             'created_by' => User::factory(),
             'start_date' => $this->faker->dateTimeBetween('-1 month', '+1 month'),
-            'end_date' => $this->faker->dateTimeBetween('+1 month', '+3 months'),
-            'completed_at' => null,
-            'estimated_hours' => $this->faker->randomFloat(2, 1, 40),
-            'actual_hours' => $this->faker->randomFloat(2, 0, 40),
-            'progress' => $this->faker->numberBetween(0, 100),
+            'end_date' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
             'tags' => $this->faker->words(2),
             'watchers' => [],
             'dependencies' => [],
-            'order' => $this->faker->numberBetween(1, 100),
-            'visibility' => $this->faker->randomElement(['public', 'team', 'private']),
-            'is_hidden' => false,
-            'client_approved' => $this->faker->boolean(20),
+            'order' => $this->faker->numberBetween(1, 50),
         ];
+
+        return $this->filterTaskAttributes($data);
+    }
+
+    private function filterTaskAttributes(array $attributes): array
+    {
+        if (! Schema::hasTable('tasks')) {
+            return $attributes;
+        }
+
+        $columns = Schema::getColumnListing('tasks');
+
+        return array_intersect_key($attributes, array_flip($columns));
     }
 
     /**
@@ -54,11 +72,10 @@ class TaskFactory extends Factory
      */
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'status' => 'pending',
-            'progress' => 0,
-            'completed_at' => null,
-        ]);
+            'progress_percent' => 0,
+        ]));
     }
 
     /**
@@ -66,11 +83,10 @@ class TaskFactory extends Factory
      */
     public function inProgress(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'status' => 'in_progress',
-            'progress' => $this->faker->numberBetween(10, 90),
-            'completed_at' => null,
-        ]);
+            'progress_percent' => $this->faker->numberBetween(10, 90),
+        ]));
     }
 
     /**
@@ -78,11 +94,11 @@ class TaskFactory extends Factory
      */
     public function completed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'status' => 'completed',
-            'progress' => 100,
-            'completed_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
-        ]);
+            'progress_percent' => 100,
+            'last_activity_at' => now(),
+        ]));
     }
 
     /**
@@ -90,10 +106,10 @@ class TaskFactory extends Factory
      */
     public function overdue(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'status' => 'in_progress',
             'end_date' => $this->faker->dateTimeBetween('-1 month', '-1 day'),
-        ]);
+        ]));
     }
 
     /**
@@ -101,9 +117,9 @@ class TaskFactory extends Factory
      */
     public function highPriority(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'priority' => 'high',
-        ]);
+        ]));
     }
 
     /**
@@ -111,9 +127,9 @@ class TaskFactory extends Factory
      */
     public function lowPriority(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'priority' => 'low',
-        ]);
+        ]));
     }
 
     /**
@@ -121,9 +137,9 @@ class TaskFactory extends Factory
      */
     public function subtask(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'parent_id' => Task::factory(),
-        ]);
+        ]));
     }
 
     /**
@@ -131,9 +147,9 @@ class TaskFactory extends Factory
      */
     public function hidden(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'is_hidden' => true,
-        ]);
+        ]));
     }
 
     /**
@@ -141,8 +157,8 @@ class TaskFactory extends Factory
      */
     public function clientApproved(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state(fn (array $attributes) => $this->filterTaskAttributes([
             'client_approved' => true,
-        ]);
+        ]));
     }
 }

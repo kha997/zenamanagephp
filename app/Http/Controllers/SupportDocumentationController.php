@@ -1,10 +1,10 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Models\SupportDocumentation;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -30,7 +30,10 @@ class SupportDocumentationController extends Controller
         // Search
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) 
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'LIKE', "%{$search}%")
+                  ->orWhere('content', 'LIKE', "%{$search}%")
+                  ->orWhere('tags', 'LIKE', "%{$search}%");
             });
         }
 
@@ -273,7 +276,10 @@ class SupportDocumentationController extends Controller
         }
 
         if ($query) {
-            $documents->where(function($q) 
+            $documents->where(function ($q) use ($query) {
+                $q->where('title', 'LIKE', "%{$query}%")
+                  ->orWhere('content', 'LIKE', "%{$query}%")
+                  ->orWhere('tags', 'LIKE', "%{$query}%");
             });
         }
 
@@ -347,8 +353,9 @@ class SupportDocumentationController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"'
         ];
 
-        $callback = function() 
-            
+        $callback = function () use ($documents) {
+            $file = fopen('php://output', 'w');
+
             // Headers
             fputcsv($file, ['Title', 'Category', 'Status', 'Views', 'Created At', 'Updated At']);
 

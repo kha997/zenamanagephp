@@ -27,7 +27,7 @@ jobs:
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -58,7 +58,7 @@ jobs:
         ./vendor/bin/phpcpd app --min-lines=5 --min-tokens=70 > phpcpd-report.txt
 
     - name: Upload Code Quality Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: code-quality-reports
         path: |
@@ -111,7 +111,7 @@ jobs:
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -140,7 +140,7 @@ jobs:
         ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-security.json
 
     - name: Upload Security Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
@@ -200,7 +200,7 @@ jobs:
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -219,7 +219,7 @@ jobs:
         ./vendor/bin/composer-require-checker check --format=json > composer-require-checker.json
 
     - name: Upload Dependency Reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dependency-reports
         path: |
@@ -293,7 +293,7 @@ jobs:
         output: 'trivy-results.json'
 
     - name: Upload Trivy JSON results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: trivy-results
         path: trivy-results.json
@@ -352,7 +352,7 @@ jobs:
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -368,7 +368,7 @@ jobs:
         ./vendor/bin/composer-require-checker check --format=json > composer-license-check.json
 
     - name: Upload License Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: license-report
         path: composer-license-check.json

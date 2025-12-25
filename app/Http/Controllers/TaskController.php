@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Src\CoreProject\Models\Task;
-use Src\CoreProject\Resources\TaskResource;
+use App\Http\Resources\TaskResource;
 use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Middleware\RBACMiddleware;
 
@@ -59,7 +59,9 @@ class TaskController
             // Sử dụng validated data thay vì raw request
             if (!empty($validated['search'])) {
                 $search = $validated['search'];
-                $query->where(function($q) 
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%{$search}%")
+                      ->orWhere('description', 'LIKE', "%{$search}%");
                 });
             }
 
@@ -81,7 +83,9 @@ class TaskController
             }
 
             if ($request->has('assigned_to')) {
-                $query->whereHas('assignments', function ($q) 
+                $assignedTo = $request->assigned_to;
+                $query->whereHas('assignments', function ($q) use ($assignedTo) {
+                    $q->where('user_id', $assignedTo);
                 });
             }
 
@@ -540,11 +544,13 @@ class TaskController
                     'integer',
                     'exists:tasks,id',
                     'not_in:' . $taskId, // Không thể phụ thuộc vào chính nó
-                    function ($attribute, $value, $fail) 
+                    function ($attribute, $value, $fail) use ($projectId) {
+                        $dependentTask = Task::find($value);
+
                         if ($dependentTask && $dependentTask->project_id !== $projectId) {
                             $fail('Task phụ thuộc phải thuộc cùng dự án.');
                         }
-                    }
+                    },
                 ]
             ]);
 

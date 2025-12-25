@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Src\Foundation\EventBus;
 use Src\RBAC\Models\Permission;
 use Src\RBAC\Resources\PermissionResource;
 
@@ -39,20 +41,22 @@ class PermissionController
         // Search theo code hoặc description
         if ($request->has('search')) {
             $search = $request->get('search');
-            $query->where(function ($q) 
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'LIKE', "%{$search}%")
+                  ->orWhere('description', 'LIKE', "%{$search}%");
             });
         }
 
         // Group by module nếu yêu cầu
         if ($request->get('group_by') === 'module') {
             $permissions = $query->get()->groupBy('module');
-            
+
             // Transform grouped data using PermissionResource
             $transformedData = [];
             foreach ($permissions as $module => $modulePermissions) {
                 $transformedData[$module] = PermissionResource::collection($modulePermissions);
             }
-            
+
             return response()->json([
                 'status' => 'success',
                 'data' => ['permissions_by_module' => $transformedData]
@@ -85,27 +89,27 @@ class PermissionController
     {
         // Validation
         $errors = [];
-        
+
         $module = $request->get('module');
         $action = $request->get('action');
-        
+
         if (empty($module)) {
             $errors['module'] = 'Module không được để trống';
         }
-        
+
         if (empty($action)) {
             $errors['action'] = 'Action không được để trống';
         }
-        
-        if (!empty($module) && !empty($action)) {
+
+        if (! empty($module) && ! empty($action)) {
             $code = Permission::generateCode($module, $action);
-            
+
             if (Permission::where('code', $code)->exists()) {
                 $errors['code'] = 'Permission với code này đã tồn tại: ' . $code;
             }
         }
-        
-        if (!empty($errors)) {
+
+        if (! empty($errors)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Dữ liệu không hợp lệ',

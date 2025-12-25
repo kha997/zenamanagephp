@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Src\DocumentManagement\Events\DocumentApprovedForClient;
@@ -64,7 +65,20 @@ class DocumentService
      */
     public function createDocument(array $documentData, UploadedFile $file, int $userId): Document
     {
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($documentData, $file, $userId) {
+            // Tạo document
+            $document = Document::create([
+                'project_id' => $documentData['project_id'],
+                'title' => $documentData['title'],
+                'description' => $documentData['description'] ?? null,
+                'linked_entity_type' => $documentData['linked_entity_type'] ?? null,
+                'linked_entity_id' => $documentData['linked_entity_id'] ?? null,
+                'tags' => $documentData['tags'] ?? null,
+                'visibility' => $documentData['visibility'] ?? 'internal',
+                'client_approved' => false,
+                'created_by' => $userId,
+                'updated_by' => $userId,
+            ]);
 
             // Tạo version đầu tiên
             $version = $this->createDocumentVersion(
@@ -106,7 +120,8 @@ class DocumentService
      */
     public function createNewVersion(int $documentId, UploadedFile $file, string $comment, int $userId): DocumentVersion
     {
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($documentId, $file, $comment, $userId) {
+            $document = Document::findOrFail($documentId);
             
             // Tạo version mới
             $version = $this->createDocumentVersion($document, $file, $comment, $userId);
@@ -129,7 +144,8 @@ class DocumentService
      */
     public function revertToVersion(int $documentId, int $targetVersionNumber, string $comment, int $userId): DocumentVersion
     {
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($documentId, $targetVersionNumber, $comment, $userId) {
+            $document = Document::findOrFail($documentId);
             $targetVersion = DocumentVersion::forDocument($documentId)
                                           ->where('version_number', $targetVersionNumber)
                                           ->firstOrFail();
@@ -184,7 +200,8 @@ class DocumentService
      */
     public function deleteDocument(int $documentId, int $userId): bool
     {
-        return DB::transaction(function () 
+        return DB::transaction(function () use ($documentId, $userId) {
+            $document = Document::findOrFail($documentId);
             
             // Xóa tất cả files của document
             foreach ($document->versions as $version) {
@@ -234,7 +251,7 @@ class DocumentService
             'document_id' => $document->id,
             'version_number' => $document->getNextVersionNumber(),
             'file_path' => $filePath,
-            'storage_driver' => 'local', 
+            'storage_driver' => 'local', // TODO: Có thể config
             'comment' => $comment,
             'metadata' => [
                 'original_filename' => $file->getClientOriginalName(),
@@ -262,6 +279,6 @@ class DocumentService
         if ($version->storage_driver === 'local' && Storage::disk('local')->exists($version->file_path)) {
             Storage::disk('local')->delete($version->file_path);
         }
-        
+        // TODO: Xử lý cho S3, Google Drive
     }
 }

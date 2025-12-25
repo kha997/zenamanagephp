@@ -82,7 +82,8 @@ class APIRateLimitMiddleware
         $tenantLimit = Cache::remember(
             "rate_limit_{$tenantId}_{$limitType}",
             3600, // 1 hour
-            function () 
+            function () {
+                return null;
             }
         );
         

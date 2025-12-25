@@ -13,7 +13,7 @@ use App\Http\Controllers\Api\DashboardController;
 |
 */
 
-Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
+Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
     
     // Dashboard chính
     Route::get('/dashboard', [DashboardController::class, 'getUserDashboard']);

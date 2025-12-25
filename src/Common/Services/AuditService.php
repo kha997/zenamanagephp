@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
 use App\Models\AuditLog;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * Audit Service - Quản lý audit trail cho hệ thống
@@ -34,7 +35,7 @@ class AuditService
      * Log user action
      */
     public function logAction(
-        string $userId,
+        string|Ulid $userId,
         string $action,
         string $entityType,
         ?string $entityId = null,
@@ -45,6 +46,9 @@ class AuditService
         ?string $projectId = null,
         ?string $tenantId = null
     ): AuditLog {
+        // Normalize user ID to string before further processing
+        $userId = (string) $userId;
+
         // Filter sensitive data
         $oldValues = $this->filterSensitiveData($oldValues);
         $newValues = $this->filterSensitiveData($newValues);
@@ -91,7 +95,8 @@ class AuditService
     {
         $query = AuditLog::where('entity_type', $entityType)
             ->where('entity_id', $entityId)
-            ->orderBy('created_at', 'desc');
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc');
 
         if ($tenantId) {
             $query->where('tenant_id', $tenantId);

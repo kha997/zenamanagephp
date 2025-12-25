@@ -15,7 +15,7 @@ Route::get('/zena-file-test', function () {
 */
 
 // Group all Z.E.N.A routes under /zena prefix
-Route::group(['prefix' => 'zena'], function () {
+Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
 
     // Main API info route
     Route::get('/', function () {

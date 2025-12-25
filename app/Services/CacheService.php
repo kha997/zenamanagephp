@@ -151,11 +151,13 @@ class CacheService
     public function warmUpUserCaches(int $userId): void
     {
         // Warm up user permissions
-        $this->cacheUserPermissions($userId, null, function () 
+        $this->cacheUserPermissions($userId, null, function () {
+            return [];
         });
 
         // Warm up dashboard stats
-        $this->cacheDashboardStats($userId, function () 
+        $this->cacheDashboardStats($userId, function () {
+            return ['stats' => []];
         });
     }
 

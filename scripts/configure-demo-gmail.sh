@@ -33,7 +33,7 @@ log "==========================================="
 
 # 1. Demo Gmail credentials (for testing)
 GMAIL_EMAIL="demo@zenamanage.com"
-GMAIL_PASSWORD="demo_app_password_1234"
+GMAIL_PASSWORD="your_app_password_here"
 FROM_NAME="ZenaManage Demo"
 
 log "Using demo credentials for testing:"

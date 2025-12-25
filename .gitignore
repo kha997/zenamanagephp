@@ -35,3 +35,8 @@ storage/backups/
 
 # local ssl material (private keys must never be committed)
 storage/ssl/
+
+# env files (keep only *.example in repo)
+.env
+.env.*
+production.env

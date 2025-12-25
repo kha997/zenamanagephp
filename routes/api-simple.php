@@ -40,32 +40,34 @@ Route::get('/test-auth', function () {
     ]);
 }); // Temporarily removed middleware for debugging
 
-// Simple projects route without middleware
-Route::get('/projects', function () {
-    return response()->json([
-        'status' => 'success',
-        'data' => [],
-        'message' => 'Projects route working without middleware',
-        'timestamp' => now()->toISOString()
-    ]);
+Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+    // Simple projects route without middleware
+    Route::get('/projects', function () {
+        return response()->json([
+            'status' => 'success',
+            'data' => [],
+            'message' => 'Projects route working without middleware',
+            'timestamp' => now()->toISOString()
+        ]);
+    });
+
+    // Simple projects route with custom middleware
+    Route::get('/projects-with-middleware', function () {
+        return response()->json([
+            'status' => 'success',
+            'data' => [],
+            'message' => 'Projects route working with custom middleware',
+            'timestamp' => now()->toISOString()
+        ]);
+    })->middleware('simple.auth.test');
+
+    // Simple projects route with auth:sanctum middleware
+    Route::get('/projects-with-auth', function () {
+        return response()->json([
+            'status' => 'success',
+            'data' => [],
+            'message' => 'Projects route working with auth middleware',
+            'timestamp' => now()->toISOString()
+        ]);
+    })->middleware('auth:sanctum');
 });
-
-// Simple projects route with custom middleware
-Route::get('/projects-with-middleware', function () {
-    return response()->json([
-        'status' => 'success',
-        'data' => [],
-        'message' => 'Projects route working with custom middleware',
-        'timestamp' => now()->toISOString()
-    ]);
-})->middleware('simple.auth.test');
-
-// Simple projects route with auth:sanctum middleware
-Route::get('/projects-with-auth', function () {
-    return response()->json([
-        'status' => 'success',
-        'data' => [],
-        'message' => 'Projects route working with auth middleware',
-        'timestamp' => now()->toISOString()
-    ]);
-})->middleware('auth:sanctum');

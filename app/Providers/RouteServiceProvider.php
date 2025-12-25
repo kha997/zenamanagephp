@@ -30,8 +30,10 @@ class RouteServiceProvider extends ServiceProvider
 
         $this->routes(function () {
             // Simple API routes for testing middleware
-            Route::prefix('api-simple')
-                ->group(base_path('routes/api-simple.php'));
+            if ($this->app->environment('local')) {
+                Route::prefix('api-simple')
+                    ->group(base_path('routes/api-simple.php'));
+            }
                 
             // Main API routes (consolidated)
             Route::middleware('api')

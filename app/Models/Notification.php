@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\User;
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Notification extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids, HasFactory, TenantScope;
 
     protected $table = 'notifications';
     protected $keyType = 'string';

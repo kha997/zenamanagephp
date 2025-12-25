@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-    // use App\Traits\TenantScope; // Temporarily disabled for debugging
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -28,7 +28,7 @@ use Src\Foundation\Helpers\AuthHelper;
  */
 class Project extends Model
 {
-    use HasUlids, HasFactory; // Temporarily disabled TenantScope for debugging
+    use HasUlids, HasFactory, TenantScope;
 
     protected $table = 'projects';
     

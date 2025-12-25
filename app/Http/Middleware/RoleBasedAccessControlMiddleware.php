@@ -20,10 +20,10 @@ class RoleBasedAccessControlMiddleware
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     * @param  string  $roleOrPermission
+     * @param  string|null  $roleOrPermission
      * @param  string|null  $projectParam
      */
-    public function handle(Request $request, Closure $next, string $roleOrPermission, ?string $projectParam = null): Response
+    public function handle(Request $request, Closure $next, ?string $roleOrPermission = null, ?string $projectParam = null): Response
     {
         $user = Auth::user();
         
@@ -36,6 +36,10 @@ class RoleBasedAccessControlMiddleware
             ], 401);
         }
         
+        if ($roleOrPermission === null) {
+            return $this->handleGeneralAccess($user, $request, $next);
+        }
+
         // Check if user has required role or permission
         $hasAccess = $this->checkAccess($user, $roleOrPermission, $request, $projectParam);
         
@@ -245,5 +249,46 @@ class RoleBasedAccessControlMiddleware
         $request->attributes->set('project', $project);
         
         return true;
+    }
+
+    /**
+     * Handle general RBAC guard when no specific permission is requested.
+     */
+    private function handleGeneralAccess($user, Request $request, Closure $next): Response
+    {
+        $allowedRoles = [
+            'super_admin',
+            'admin',
+            'project_manager',
+            'team_member',
+            'client',
+            'viewer',
+            'designer',
+            'site_engineer',
+            'qc_engineer',
+            'procurement',
+            'finance',
+        ];
+
+        if (!$user->hasAnyRole($allowedRoles)) {
+            Log::warning('Access denied: missing RBAC assignment', [
+                'user_id' => $user->id ?? null,
+                'email' => $user->email ?? null,
+                'tenant_id' => $user->tenant_id ?? null,
+                'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : []
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Access Denied',
+                'message' => 'You do not have sufficient RBAC assignments to access this resource',
+                'code' => 'RBAC_ACCESS_DENIED'
+            ], 403);
+        }
+
+        $request->attributes->set('required_role_permission', 'rbac:authenticated');
+        $request->attributes->set('access_granted', true);
+
+        return $next($request);
     }
 }

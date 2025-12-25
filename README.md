@@ -98,6 +98,10 @@ npm run dev
 php artisan serve --port=8002
 ```
 
+### Production Environment File
+
+For production deployments copy `production.env.example` to `production.env`, edit as needed, and keep `production.env` local-only (it's gitignored so you should never commit secrets).
+
 ### Docker Setup
 ```bash
 # Start Docker containers

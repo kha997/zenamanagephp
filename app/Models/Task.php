@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -35,7 +36,7 @@ use Src\Foundation\Helpers\AuthHelper;
  */
 class Task extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids, HasFactory, TenantScope;
     
     protected $table = 'tasks';
     

@@ -395,7 +395,7 @@ Route::group([], function () {
     | Protected API Routes
     |--------------------------------------------------------------------------
     */
-    Route::group(['middleware' => []], function () {
+    Route::group(['middleware' => ['auth:sanctum', 'tenant.isolation', 'rbac']], function () {
         
         // Test endpoint without authentication
         Route::get('test', function () {

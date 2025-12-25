@@ -38,7 +38,7 @@ FROM_NAME="ZenaManage Demo"
 
 log "Using demo credentials for testing:"
 log "- Email: $GMAIL_EMAIL"
-log "- Password: $SMTP_PASS_INPUT"
+log "- Password: (hidden)"
 log "- From Name: $FROM_NAME"
 log ""
 

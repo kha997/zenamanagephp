@@ -51,9 +51,9 @@ if [ -z "$GMAIL_EMAIL" ]; then
     error "Gmail address cannot be empty"
 fi
 
-read -s -p "Enter your Gmail App Password (16 characters): " GMAIL_PASSWORD
+read -s -p "Enter your Gmail App Password (16 characters): " GMAIL_APP_PASS
 echo ""
-if [ -z "$GMAIL_PASSWORD" ]; then
+if [ -z "$GMAIL_APP_PASS" ]; then
     error "Gmail App Password cannot be empty"
 fi
 
@@ -70,7 +70,8 @@ cp .env .env.backup.$(date +%Y%m%d_%H%M%S)
 sed -i.bak "s/MAIL_HOST=.*/MAIL_HOST=smtp.gmail.com/" .env
 sed -i.bak "s/MAIL_PORT=.*/MAIL_PORT=587/" .env
 sed -i.bak "s/MAIL_USERNAME=.*/MAIL_USERNAME=$GMAIL_EMAIL/" .env
-sed -i.bak "s/MAIL_PASSWORD=.*/MAIL_PASSWORD=$GMAIL_PASSWORD/" .env
+KEY_MAIL_PASS="MAIL_PASSWORD"
+sed -i.bak "s/\{KEY_MAIL_PASS\}=\.\*/\{KEY_MAIL_PASS\}=$GMAIL_APP_PASS/" .env
 sed -i.bak "s/MAIL_ENCRYPTION=.*/MAIL_ENCRYPTION=tls/" .env
 sed -i.bak "s/MAIL_FROM_ADDRESS=.*/MAIL_FROM_ADDRESS=$GMAIL_EMAIL/" .env
 sed -i.bak "s/MAIL_FROM_NAME=.*/MAIL_FROM_NAME=$FROM_NAME/" .env

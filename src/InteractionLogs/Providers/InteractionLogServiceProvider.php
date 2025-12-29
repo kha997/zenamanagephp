@@ -56,7 +56,7 @@ class InteractionLogServiceProvider extends ServiceProvider
      */
     private function loadRoutes(): void
     {
-        $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+        // DISABLED: $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
     }
 
     /**

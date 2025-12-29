@@ -12,7 +12,6 @@ use Src\ChangeRequest\Listeners\ChangeRequestEventListener;
  * Đăng ký:
  * - ChangeRequestService vào container
  * - Event listeners
- * - Routes
  */
 class ChangeRequestServiceProvider extends ServiceProvider
 {
@@ -36,21 +35,8 @@ class ChangeRequestServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Load routes cho Change Request
-        $this->loadRoutes();
-        
         // Đăng ký event listeners
         $this->registerEventListeners();
-    }
-
-    /**
-     * Load routes cho Change Request
-     *
-     * @return void
-     */
-    private function loadRoutes(): void
-    {
-        $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
     }
 
     /**

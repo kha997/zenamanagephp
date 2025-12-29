@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Repositories\ProjectRepository;
 use App\Services\ProjectService;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -16,23 +18,26 @@ use Illuminate\Support\Facades\Log;
 class ProjectController extends Controller
 {
     public function __construct(
-        private ProjectService $projectService
+        private ProjectService $projectService,
+        private ProjectRepository $projectRepository
     ) {}
 
     /**
      * Get all projects with pagination and filtering
      */
-    public function index(IndexProjectRequest $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         try {
             $user = Auth::user();
-            $filters = $request->validated();
+            $filters = $request->all();
+            $perPage = (int)($filters['per_page'] ?? 15);
+            unset($filters['per_page']);
             
             // Apply tenant isolation
             $filters['tenant_id'] = $user->tenant_id;
             $filters['user_id'] = $user->id; // For access control
             
-            $projects = $this->projectRepository->getProjects($filters);
+            $projects = $this->projectRepository->getAll($filters, $perPage);
             
             return response()->json([
                 'status' => 'success',

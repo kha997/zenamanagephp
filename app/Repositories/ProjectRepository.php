@@ -18,6 +18,23 @@ class ProjectRepository
         $this->model = $model;
     }
 
+    private function defaultWith(): array
+    {
+        $candidates = [
+            'tenant',
+            'client',
+            'projectManager',
+            'teamMembers',
+            'teams',
+            'tasks',
+            'documents',
+        ];
+
+        return array_values(array_filter($candidates, function (string $relation): bool {
+            return method_exists($this->model, $relation);
+        }));
+    }
+
     /**
      * Get all projects with pagination.
      */
@@ -57,7 +74,7 @@ class ProjectRepository
             $query->where('end_date', '<=', $filters['end_date']);
         }
 
-        return $query->with(['manager', 'tenant', 'teams', 'tasks'])->paginate($perPage);
+        return $query->with($this->defaultWith())->paginate($perPage);
     }
 
     /**
@@ -65,7 +82,7 @@ class ProjectRepository
      */
     public function getById(int $id): ?Project
     {
-        return $this->model->with(['manager', 'tenant', 'teams', 'tasks'])->find($id);
+        return $this->model->with($this->defaultWith())->find($id);
     }
 
     /**
@@ -74,7 +91,7 @@ class ProjectRepository
     public function getByTenantId(int $tenantId): Collection
     {
         return $this->model->where('tenant_id', $tenantId)
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 
@@ -84,7 +101,7 @@ class ProjectRepository
     public function getByManagerId(int $managerId): Collection
     {
         return $this->model->where('manager_id', $managerId)
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 
@@ -94,7 +111,7 @@ class ProjectRepository
     public function getByStatus(string $status): Collection
     {
         return $this->model->where('status', $status)
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 
@@ -117,7 +134,7 @@ class ProjectRepository
             'manager_id' => $project->manager_id
         ]);
 
-        return $project->load(['manager', 'tenant', 'teams', 'tasks']);
+        return $project->load($this->defaultWith());
     }
 
     /**
@@ -144,7 +161,7 @@ class ProjectRepository
             'tenant_id' => $project->tenant_id
         ]);
 
-        return $project->load(['manager', 'tenant', 'teams', 'tasks']);
+        return $project->load($this->defaultWith());
     }
 
     /**
@@ -219,7 +236,7 @@ class ProjectRepository
     public function getActive(): Collection
     {
         return $this->model->where('status', 'active')
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 
@@ -229,7 +246,7 @@ class ProjectRepository
     public function getCompleted(): Collection
     {
         return $this->model->where('status', 'completed')
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 
@@ -240,7 +257,7 @@ class ProjectRepository
     {
         return $this->model->where('end_date', '<', now())
                           ->where('status', '!=', 'completed')
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 
@@ -254,7 +271,7 @@ class ProjectRepository
         return $this->model->where('start_date', '<=', $startDate)
                           ->where('start_date', '>=', now())
                           ->where('status', 'pending')
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 
@@ -268,7 +285,7 @@ class ProjectRepository
         return $this->model->where('end_date', '<=', $endDate)
                           ->where('end_date', '>=', now())
                           ->where('status', '!=', 'completed')
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 
@@ -374,7 +391,7 @@ class ProjectRepository
         return $this->model->where(function ($q) use ($term) {
             $q->where('name', 'like', '%' . $term . '%')
               ->orWhere('description', 'like', '%' . $term . '%');
-        })->with(['manager', 'tenant', 'teams', 'tasks'])
+        })->with($this->defaultWith())
           ->limit($limit)
           ->get();
     }
@@ -385,7 +402,7 @@ class ProjectRepository
     public function getByIds(array $ids): Collection
     {
         return $this->model->whereIn('id', $ids)
-                          ->with(['manager', 'tenant', 'teams', 'tasks'])
+                          ->with($this->defaultWith())
                           ->get();
     }
 

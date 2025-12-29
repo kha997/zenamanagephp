@@ -9,13 +9,11 @@ use Src\ChangeRequest\Controllers\ChangeRequestController;
 |--------------------------------------------------------------------------
 |
 | Định nghĩa các route API cho module Change Request
-| Tất cả routes đều có prefix /api/v1/change-requests và middleware auth:api
+| Các route này được gắn vào prefix /api/v1 trong routes/api.php và hưởng middleware bảo mật chung.
 |
 */
 
-Route::prefix('api/v1/change-requests')
-    ->middleware(['auth:api'])
-    ->group(function () {
+Route::prefix('change-requests')->group(function () {
         
         // Change Request CRUD routes
         Route::get('/', [ChangeRequestController::class, 'index'])

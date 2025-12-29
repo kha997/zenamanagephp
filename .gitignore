@@ -40,3 +40,6 @@ storage/ssl/
 .env
 .env.*
 production.env
+
+# Local backups
+*.bak.*

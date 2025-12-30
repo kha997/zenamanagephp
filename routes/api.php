@@ -836,6 +836,10 @@ Route::group([], function () {
         |--------------------------------------------------------------------------
         */
         Route::prefix('v1')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+
+
+
+
             Route::apiResource('interaction-logs', InteractionLogController::class);
             Route::prefix('interaction-logs')->group(function () {
                 Route::patch('{id}/approve', [InteractionLogController::class, 'approve']);

@@ -417,3 +417,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 *Last updated: September 24, 2025*
 *Version: 1.0*
+
+## Architecture Rules
+- Routing Architecture Law: docs/architecture/routing-architecture.md

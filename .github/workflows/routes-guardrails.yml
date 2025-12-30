@@ -1,0 +1,98 @@
+name: Routes Guardrails
+
+on:
+  pull_request:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  test-routes-guardrails:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ""
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: zenamanage_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare env
+        run: |
+          cp -f .env.example .env || true
+          cp -f .env.example .env.testing || true
+
+          php artisan key:generate --ansi || true
+
+          # Force testing env (MySQL service)
+          {
+            echo "APP_ENV=testing"
+            echo "APP_DEBUG=true"
+            echo "DB_CONNECTION=mysql"
+            echo "DB_HOST=127.0.0.1"
+            echo "DB_PORT=3306"
+            echo "DB_DATABASE=zenamanage_test"
+            echo "DB_USERNAME=root"
+            echo "DB_PASSWORD="
+          } >> .env.testing
+
+          php artisan config:clear
+          php artisan route:clear
+          php artisan cache:clear
+
+      - name: Migrate test DB
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: zenamanage_test
+          DB_USERNAME: root
+          DB_PASSWORD: ""
+        run: |
+          php artisan migrate:fresh --env=testing --force
+
+      - name: Run RouteHygieneTest
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: zenamanage_test
+          DB_USERNAME: root
+          DB_PASSWORD: ""
+          TERM: dumb
+        run: php artisan test --no-interaction --filter RouteHygieneTest -v
+
+      - name: Run TenantIsolationProjectsTest
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: zenamanage_test
+          DB_USERNAME: root
+          DB_PASSWORD: ""
+          TERM: dumb
+        run: php artisan test --no-interaction --filter TenantIsolationProjectsTest -v

@@ -1052,6 +1052,16 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
     Route::post('/projects/bulk/export', [ExportController::class, 'exportProjects']);
 });
 
+}); // Close the main Route::group() at line 303
+
+}); // Close the Route::group() at line 151
+
+// == Module routes mounted explicitly (providers disabled) ==
+require base_path('src/RBAC/routes/api.php');
+require base_path('src/DocumentManagement/routes/api.php');
+require base_path('src/Compensation/routes/api.php');
+require base_path('src/CoreProject/routes/api.php');
+
 // Password reset routes
 Route::prefix('auth')->group(function () {
     Route::post('/password/reset', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
@@ -1065,10 +1075,6 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
     Route::get('/analytics/projects', [AnalyticsController::class, 'getProjectsAnalytics']);
     Route::get('/analytics/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
 });
-
-}); // Close the main Route::group() at line 303
-
-}); // Close the Route::group() at line 151
 
 // Admin Dashboard API Routes (no middleware for testing)
 Route::prefix('api/admin/dashboard')->group(function () {

@@ -96,3 +96,7 @@ jobs:
           DB_PASSWORD: ""
           TERM: dumb
         run: php artisan test --no-interaction --filter TenantIsolationProjectsTest -v
+
+      - name: Route guard (no double prefix, no dup METHOD+URI)
+        run: |
+          php artisan route:list --json | php scripts/ci/route-guard.php

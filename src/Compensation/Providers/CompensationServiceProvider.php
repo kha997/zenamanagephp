@@ -50,7 +50,7 @@ class CompensationServiceProvider extends ServiceProvider
      */
     private function loadRoutes(): void
     {
-        $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+        // DISABLED (mounted in routes/api.php): $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
     }
 
     /**

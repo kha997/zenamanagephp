@@ -86,7 +86,7 @@ class CoreProjectServiceProvider extends ServiceProvider
     {
         $routePath = __DIR__ . '/../routes/api.php';
         if (file_exists($routePath)) {
-            $this->loadRoutesFrom($routePath);
+            // DISABLED (mounted in routes/api.php): $this->loadRoutesFrom($routePath);
         }
     }
 

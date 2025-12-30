@@ -28,7 +28,7 @@ class DocumentManagementServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Load routes
-        $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+        // DISABLED (mounted in routes/api.php): $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
 
         // Register event listeners
         $this->app['events']->subscribe(DocumentEventListener::class);

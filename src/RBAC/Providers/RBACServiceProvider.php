@@ -38,6 +38,6 @@ class RBACServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Load RBAC routes với prefix api/v1
-        $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+        // DISABLED (mounted in routes/api.php): $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
     }
 }

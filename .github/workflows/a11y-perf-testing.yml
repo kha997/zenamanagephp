@@ -1,9 +1,9 @@
 name: Accessibility & Performance Testing
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main, develop, feature/* ]
-  pull_request:
     branches: [ main, develop ]
   schedule:
     - cron: '0 3 * * *'  # Daily at 3 AM

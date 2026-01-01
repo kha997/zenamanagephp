@@ -3,7 +3,9 @@ name: Auth Guard Lint
 on:
   workflow_dispatch:
   push:
-    branches: [ main, develop ]jobs:
+    branches: [ main, develop ]
+
+jobs:
   auth-lint:
     runs-on: ubuntu-latest
     

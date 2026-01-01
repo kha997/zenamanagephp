@@ -3,7 +3,8 @@ name: Button Test Suite
 on:
   workflow_dispatch:
   push:
-    branches: [ main, develop ]  schedule:
+    branches: [ main, develop ]
+  schedule:
     - cron: '0 2 * * *' # Daily at 2 AM
 
 jobs:

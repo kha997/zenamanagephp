@@ -24,6 +24,18 @@ class RouteHygieneTest extends TestCase
         'api/dashboard',
     ];
 
+    private const ZENA_REQUIRED_MIDDLEWARE = [
+        'auth:sanctum',
+        'tenant.isolation',
+    ];
+
+    private const ZENA_PUBLIC_ROUTES = [
+        'api/zena',
+        'api/zena/health',
+        'api/zena/test',
+        'api/zena/auth/login',
+    ];
+
     public function test_business_routes_reuse_the_security_stack(): void
     {
         $routes = Route::getRoutes();
@@ -101,5 +113,57 @@ class RouteHygieneTest extends TestCase
         }
 
         return implode('|', $filtered);
+    }
+
+    public function test_zena_routes_reuse_sanctum_and_tenant_isolation(): void
+    {
+        $routes = Route::getRoutes();
+        $violations = [];
+
+        foreach ($routes as $route) {
+            $uri = $route->uri();
+
+            if (!Str::startsWith($uri, 'api/zena')) {
+                continue;
+            }
+
+            if (in_array($uri, self::ZENA_PUBLIC_ROUTES, true)) {
+                continue;
+            }
+
+            $middleware = $route->gatherMiddleware();
+            $missing = array_filter(
+                self::ZENA_REQUIRED_MIDDLEWARE,
+                fn (string $required) => !$this->hasMiddleware($middleware, $required)
+            );
+
+            if (!empty($missing)) {
+                $violations[] = [
+                    'name' => $route->getName(),
+                    'uri' => $uri,
+                    'methods' => $this->routeMethods($route->methods()),
+                    'middleware' => $middleware,
+                    'missing' => $missing,
+                ];
+            }
+        }
+
+        if (!empty($violations)) {
+            $messages = array_map(
+                fn ($violation) => sprintf(
+                    '%s | %s | %s | %s | missing: %s',
+                    $violation['uri'],
+                    $violation['name'] ?? 'unnamed',
+                    $violation['methods'],
+                    implode(', ', $violation['middleware']),
+                    implode(', ', $violation['missing'])
+                ),
+                $violations
+            );
+
+            $this->fail('Z.E.N.A routes must include auth:sanctum and tenant.isolation:' . PHP_EOL . implode(PHP_EOL, $messages));
+        }
+
+        $this->assertEmpty($violations, 'Z.E.N.A routes must include auth:sanctum and tenant.isolation.');
     }
 }

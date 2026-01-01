@@ -25,6 +25,11 @@ foreach ($j as $r) {
     // Examples we must forbid:
     // - api/v1/api/v1/...
     // - api/v1/v1/...
+    if (preg_match('#^api/api/(zena|v1/zena)/#', $uri)) {
+        fwrite(STDERR, "ROUTE_GUARD_FAILED\nDOUBLE_PREFIX_FOUND:\n{$uri}\n");
+        exit(1);
+    }
+
     if (preg_match('#^api/v1/(api/v1|v1)/#', $uri)) {
         fwrite(STDERR, "ROUTE_GUARD_FAILED\nDOUBLE_PREFIX_FOUND:\n{$uri}\n");
         exit(1);

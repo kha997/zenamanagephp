@@ -266,12 +266,19 @@ jobs:
         curl -f https://ws.zenamanage.com/health || exit 1
 
     - name: Notify release deployment success
+      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
       uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: success
         channel: '#releases'
-        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
+        success_message: ":white_check_mark: Succeeded GitHub Actions"
+        cancelled_message: ":warning: Cancelled GitHub Actions"
+        failure_message: ":no_entry: Failed GitHub Actions"
 
   rollback-release:
     name: Rollback Release
@@ -301,12 +308,19 @@ jobs:
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify rollback
+      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
       uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: failure
         channel: '#releases'
-        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
         fields: repo,message,commit,author,action,eventName,ref,workflow
+        success_message: ":white_check_mark: Succeeded GitHub Actions"
+        cancelled_message: ":warning: Cancelled GitHub Actions"
+        failure_message: ":no_entry: Failed GitHub Actions"
 
   cleanup-release:
     name: Cleanup Release

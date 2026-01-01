@@ -111,7 +111,15 @@ jobs:
     if: always()
     steps:
       - name: Notify deployment status
+        if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+        continue-on-error: true
         uses: 8398a7/action-slack@v3
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           status: ${{ job.status }}
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author,workflow,job,ref,took
+          success_message: ":white_check_mark: Succeeded GitHub Actions"
+          cancelled_message: ":warning: Cancelled GitHub Actions"
+          failure_message: ":no_entry: Failed GitHub Actions"

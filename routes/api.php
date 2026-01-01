@@ -1041,11 +1041,6 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
 // Include Z.E.N.A API routes
 require __DIR__.'/api_zena.php';
 
-// Test route to verify inclusion works
-Route::get('/zena-test', function () {
-    return response()->json(['message' => 'Z.E.N.A routes are working!']);
-});
-
 Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
     // Export routes
     Route::post('/tasks/bulk/export', [ExportController::class, 'exportTasks']);
@@ -1077,7 +1072,7 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
 });
 
 // Admin Dashboard API Routes (no middleware for testing)
-Route::prefix('api/admin/dashboard')->group(function () {
+Route::prefix('admin/dashboard')->group(function () {
     Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
     Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
     Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);
@@ -1316,7 +1311,7 @@ Route::prefix('websocket')->group(function () {
 });
 
 // Admin Dashboard API Routes (temporarily without middleware for testing)
-Route::prefix('api/admin/dashboard')->group(function () {
+Route::prefix('admin/dashboard')->group(function () {
     Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
     Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
     Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);

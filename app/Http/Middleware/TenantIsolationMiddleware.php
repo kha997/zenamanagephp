@@ -52,10 +52,12 @@ class TenantIsolationMiddleware
         
         // Set tenant context globally
         app()->instance('current_tenant_id', $user->tenant_id);
-        
+        app()->instance('tenant', $user->tenant);
+
         // Add tenant context to request
         $request->attributes->set('tenant_id', $user->tenant_id);
         $request->attributes->set('tenant_user', $user);
+        $request->merge(['tenant_id' => $user->tenant_id]);
         
         // Log tenant access
         Log::info('Tenant isolation applied', [

@@ -17,15 +17,15 @@ class ButtonInventoryGenerator
     public function __construct()
     {
         $this->viewsPath = __DIR__ . "/resources/views";
-        $this->componentsPath = '/Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/components';
+        $this->componentsPath = __DIR__ . "/resources/views/components";
         $this->loadRoutes();
     }
     
     private function loadRoutes()
     {
         // Load web routes
-        $webRoutes = file_get_contents('/Applications/XAMPP/xamppfiles/htdocs/zenamanage/routes/web.php');
-        $apiRoutes = file_get_contents('/Applications/XAMPP/xamppfiles/htdocs/zenamanage/routes/api.php');
+        $webRoutes = file_get_contents(__DIR__ . "/routes/web.php");
+        $apiRoutes = file_get_contents(__DIR__ . "/routes/api.php");
         
         $this->routes = [
             'web' => $webRoutes,
@@ -517,8 +517,9 @@ class ButtonInventoryGenerator
     
     private function generateCSV()
     {
-        $csvPath = '/Applications/XAMPP/xamppfiles/htdocs/zenamanage/docs/testing/button-inventory.csv';
+        $csvPath = __DIR__ . "/docs/testing/button-inventory.csv";
         
+        if (!is_dir(dirname($csvPath))) { mkdir(dirname($csvPath), 0777, true); }
         $file = fopen($csvPath, 'w');
         
         // Write header

@@ -280,7 +280,7 @@ class CompensationController extends Controller
 
     /**
      * Resolve the current actor ID for audit trails
-     * Uses Auth facade instead of auth() helper for better testability
+     * Uses Auth facade instead of helper globals for better testability
      *
      * @return string|int The actor ID or 'system' as fallback
      */

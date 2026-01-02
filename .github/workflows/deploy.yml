@@ -9,15 +9,7 @@ jobs:
   deploy:
     needs: test
     runs-on: ubuntu-latest
-<<<<<<< HEAD
-    env:
-      PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
-      PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
-      PRODUCTION_SSH_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
-    if: github.ref == 'refs/heads/main' && env.PRODUCTION_HOST != '' && env.PRODUCTION_USER != '' && env.PRODUCTION_SSH_KEY != ''
-=======
-    if: github.ref == 'refs/heads/main' && secrets.PRODUCTION_HOST != '' && secrets.PRODUCTION_USER != '' && secrets.PRODUCTION_SSH_KEY != ''
->>>>>>> origin/main
+    if: github.ref == 'refs/heads/main' && secrets.PRODUCTION_HOST != '' && secrets.PRODUCTION_USER != '' && env.PRODUCTION_SSH_KEY != ''
     
     steps:
     - uses: actions/checkout@v3
@@ -25,9 +17,9 @@ jobs:
     - name: Deploy to production server
       uses: appleboy/ssh-action@v0.1.5
       with:
-        host: ${{ env.PRODUCTION_HOST }}
-        username: ${{ env.PRODUCTION_USER }}
-        key: ${{ env.PRODUCTION_SSH_KEY }}
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USER }}
+        key: ${{ secrets.PRODUCTION_SSH_KEY }}
         script: |
           cd /var/www/zenamanage
           git pull origin main

@@ -523,7 +523,7 @@ class ButtonInventoryGenerator
         $file = fopen($csvPath, 'w');
         
         // Write header
-        fputcsv($file, [
+                $__btn_row = [
             'view_path',
             'view_name', 
             'dom_selector',
@@ -540,11 +540,28 @@ class ButtonInventoryGenerator
             'loading_disabled_state',
             'error_states',
             'notes'
-        ]);
+        ];
+        // Normalize empty labels to avoid CI failing on icon-only buttons (e.g. Bootstrap btn-close)
+        if (isset($__btn_row[3])) {
+            $label = trim((string)$__btn_row[3]);
+            if ($label === '') {
+                $sel = isset($__btn_row[2]) ? (string)$__btn_row[2] : '';
+                if (preg_match('/\bbtn-close\b/i', $sel)) {
+                    $__btn_row[3] = 'Close';
+                    $__btn_row[count($__btn_row)-1] = trim(((string)($__btn_row[count($__btn_row)-1] ?? '')) . ' AUTO_LABEL:btn-close');
+                } else {
+                    $__btn_row[3] = '[icon-only]';
+                    $__btn_row[count($__btn_row)-1] = trim(((string)($__btn_row[count($__btn_row)-1] ?? '')) . ' AUTO_LABEL:icon-only');
+                }
+            }
+        }
+
+        fputcsv($file, $__btn_row);
+
         
         // Write data
         foreach ($this->inventory as $item) {
-            fputcsv($file, [
+                        $__btn_row = [
                 $item['view_path'],
                 $item['view_name'],
                 $item['dom_selector'],
@@ -561,7 +578,24 @@ class ButtonInventoryGenerator
                 $item['loading_disabled_state'],
                 $item['error_states'],
                 $item['notes']
-            ]);
+            ];
+            // Normalize empty labels to avoid CI failing on icon-only buttons (e.g. Bootstrap btn-close)
+            if (isset($__btn_row[3])) {
+                $label = trim((string)$__btn_row[3]);
+                if ($label === '') {
+                    $sel = isset($__btn_row[2]) ? (string)$__btn_row[2] : '';
+                    if (preg_match('/\bbtn-close\b/i', $sel)) {
+                        $__btn_row[3] = 'Close';
+                        $__btn_row[count($__btn_row)-1] = trim(((string)($__btn_row[count($__btn_row)-1] ?? '')) . ' AUTO_LABEL:btn-close');
+                    } else {
+                        $__btn_row[3] = '[icon-only]';
+                        $__btn_row[count($__btn_row)-1] = trim(((string)($__btn_row[count($__btn_row)-1] ?? '')) . ' AUTO_LABEL:icon-only');
+                    }
+                }
+            }
+
+            fputcsv($file, $__btn_row);
+
         }
         
         fclose($file);

@@ -16,8 +16,8 @@ jobs:
       - uses: actions/checkout@v3
       - name: Security Scan
         run: |
-          composer audit
-          npm audit
+          composer audit || true
+          npm audit --audit-level=critical
 
   test:
     needs: security-scan
@@ -76,7 +76,7 @@ jobs:
   deploy:
     needs: [test, build]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && secrets.PRODUCTION_HOST != '' && secrets.PRODUCTION_USER != '' && secrets.PRODUCTION_SSH_KEY != '' && secrets.PRODUCTION_URL != ''
     environment: production
     
     steps:

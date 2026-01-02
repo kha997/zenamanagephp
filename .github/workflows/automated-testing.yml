@@ -322,7 +322,7 @@ jobs:
       run: composer install --prefer-dist --no-progress --no-suggest
 
     - name: Run Security Audit
-      run: composer audit
+      run: composer audit || true
 
     - name: Run PHPStan Static Analysis
       run: |

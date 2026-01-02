@@ -16,7 +16,7 @@ class ButtonInventoryGenerator
     
     public function __construct()
     {
-        $this->viewsPath = '/Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views';
+        $this->viewsPath = __DIR__ . "/resources/views";
         $this->componentsPath = '/Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/components';
         $this->loadRoutes();
     }

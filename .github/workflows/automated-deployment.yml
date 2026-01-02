@@ -96,11 +96,19 @@ jobs:
         curl -f https://staging-ws.zenamanage.com/health || exit 1
 
     - name: Notify deployment success
+<<<<<<< HEAD
       if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
         SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
+=======
+      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+>>>>>>> origin/main
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: success
@@ -199,11 +207,19 @@ jobs:
         curl -w "@curl-format.txt" -o /dev/null -s https://api.zenamanage.com/health
 
     - name: Notify deployment success
+<<<<<<< HEAD
       if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
         SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
+=======
+      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+>>>>>>> origin/main
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: success
@@ -243,11 +259,19 @@ jobs:
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify rollback
+<<<<<<< HEAD
       if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
         SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
+=======
+      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+>>>>>>> origin/main
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: failure
@@ -355,11 +379,19 @@ jobs:
           docker-compose -f docker-compose.prod.yml -p zenamanage-blue down
 
     - name: Notify blue-green deployment success
+<<<<<<< HEAD
       if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
         SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
+=======
+      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+>>>>>>> origin/main
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: success
@@ -482,11 +514,19 @@ jobs:
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify canary deployment success
+<<<<<<< HEAD
       if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
         SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
+=======
+      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
+      uses: 8398a7/action-slack@v3
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+>>>>>>> origin/main
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: success

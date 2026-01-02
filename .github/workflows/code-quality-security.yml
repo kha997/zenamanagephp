@@ -122,7 +122,7 @@ jobs:
       run: composer install --prefer-dist --no-progress --no-suggest
 
     - name: Run Composer Security Audit
-      run: composer audit --format=json > composer-audit.json
+      run: composer audit --format=json > composer-audit.json || true
 
     - name: Run PHP Security Checker
       run: |

@@ -95,7 +95,7 @@ jobs:
             cd /var/www/zena
             git pull origin main
             composer install --no-dev --optimize-autoloader
-            npm ci --production
+            npm ci
             npm run build
             php artisan migrate --force
             php artisan config:cache

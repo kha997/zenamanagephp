@@ -229,6 +229,8 @@ jobs:
   deploy-release:
     name: Deploy Release
     runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     needs: [build-release, security-scan-release]
     if: always() && needs.build-release.result == 'success' && needs.security-scan-release.result == 'success'
     environment: production
@@ -266,11 +268,11 @@ jobs:
         curl -f https://ws.zenamanage.com/health || exit 1
 
     - name: Notify release deployment success
-      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: success
@@ -283,6 +285,8 @@ jobs:
   rollback-release:
     name: Rollback Release
     runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     if: failure() && github.event_name == 'release'
     environment: production
     
@@ -308,11 +312,11 @@ jobs:
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify rollback
-      if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        SLACK_WEBHOOK_URL: ${{ env.SLACK_WEBHOOK_URL }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         status: failure

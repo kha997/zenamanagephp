@@ -1,6 +1,9 @@
 name: Button Test Suite
 
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
   push:
     branches: [ main, develop ]
@@ -23,7 +26,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        composer install --no-dev --optimize-autoloader
+        composer install --prefer-dist --no-interaction --optimize-autoloader
         npm install
     
     - name: Generate Button Inventory
@@ -72,7 +75,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        composer install --no-dev --optimize-autoloader
+        composer install --prefer-dist --no-interaction --optimize-autoloader
         npm install
     
     - name: Setup environment
@@ -129,7 +132,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        composer install --no-dev --optimize-autoloader
+        composer install --prefer-dist --no-interaction --optimize-autoloader
         npm install
     
     - name: Setup environment
@@ -192,7 +195,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        composer install --no-dev --optimize-autoloader
+        composer install --prefer-dist --no-interaction --optimize-autoloader
         npm install
     
     - name: Setup environment

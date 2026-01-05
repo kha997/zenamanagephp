@@ -4,6 +4,7 @@ namespace Src\Common\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Contracts\Cache\TaggableStore;
 
 /**
  * CacheService - Centralized caching service for ZenaManage
@@ -26,6 +27,13 @@ class CacheService
      * Cache key prefix
      */
     private const KEY_PREFIX = 'zena_';
+
+    private const TAGGED_KEY_PREFIX = 'tagged:';
+    private const TAG_INDEX_PREFIX = 'tag:index:';
+    private const TAG_META_PREFIX = 'tag:meta:';
+    private const GLOBAL_INDEX_KEY = 'index:keys';
+
+    private ?bool $taggableStore = null;
 
     /**
      * Get value from cache
@@ -233,19 +241,27 @@ class CacheService
      */
     public function putWithTags(array $tags, string $key, $value, ?int $ttl = null): bool
     {
-        try {
-            $fullKey = $this->buildKey($key);
-            $ttl = $ttl ?? self::DEFAULT_TTL;
-            
-            return Cache::tags($tags)->put($fullKey, $value, $ttl);
-        } catch (\Exception $e) {
-            Log::error('Cache putWithTags error', [
-                'tags' => $tags,
-                'key' => $key,
-                'error' => $e->getMessage()
-            ]);
-            return false;
+        $normalizedTags = $this->normalizeTags($tags);
+        $ttl = $ttl ?? self::DEFAULT_TTL;
+
+        if (empty($normalizedTags)) {
+            return $this->put($key, $value, $ttl);
         }
+
+        if ($this->supportsTags()) {
+            try {
+                $fullKey = $this->buildKey($key);
+                return Cache::tags($normalizedTags)->put($fullKey, $value, $ttl);
+            } catch (\Throwable $e) {
+                Log::warning('Cache putWithTags fallback triggered', [
+                    'tags' => $normalizedTags,
+                    'key' => $key,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return $this->storeWithTagFallback($normalizedTags, $key, $value, $ttl);
     }
 
     /**
@@ -258,17 +274,26 @@ class CacheService
      */
     public function getWithTags(array $tags, string $key, $default = null)
     {
-        try {
-            $fullKey = $this->buildKey($key);
-            return Cache::tags($tags)->get($fullKey, $default);
-        } catch (\Exception $e) {
-            Log::error('Cache getWithTags error', [
-                'tags' => $tags,
-                'key' => $key,
-                'error' => $e->getMessage()
-            ]);
-            return $default;
+        $normalizedTags = $this->normalizeTags($tags);
+
+        if (empty($normalizedTags)) {
+            return $this->get($key, $default);
         }
+
+        if ($this->supportsTags()) {
+            try {
+                $fullKey = $this->buildKey($key);
+                return Cache::tags($normalizedTags)->get($fullKey, $default);
+            } catch (\Throwable $e) {
+                Log::warning('Cache getWithTags fallback triggered', [
+                    'tags' => $normalizedTags,
+                    'key' => $key,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return $this->getWithTagsFallback($normalizedTags, $key, $default);
     }
 
     /**
@@ -282,21 +307,27 @@ class CacheService
      */
     public function rememberWithTags(array $tags, string $key, callable $callback, ?int $ttl = null)
     {
-        try {
-            $fullKey = $this->buildKey($key);
-            $ttl = $ttl ?? self::DEFAULT_TTL;
-            
-            return Cache::tags($tags)->remember($fullKey, $ttl, $callback);
-        } catch (\Exception $e) {
-            Log::error('Cache rememberWithTags error', [
-                'tags' => $tags,
-                'key' => $key,
-                'error' => $e->getMessage()
-            ]);
-            
-            // Fallback to direct callback execution
-            return $callback();
+        $normalizedTags = $this->normalizeTags($tags);
+        $ttl = $ttl ?? self::DEFAULT_TTL;
+
+        if (empty($normalizedTags)) {
+            return $this->remember($key, $callback, $ttl);
         }
+
+        if ($this->supportsTags()) {
+            try {
+                $fullKey = $this->buildKey($key);
+                return Cache::tags($normalizedTags)->remember($fullKey, $ttl, $callback);
+            } catch (\Throwable $e) {
+                Log::warning('Cache rememberWithTags fallback triggered', [
+                    'tags' => $normalizedTags,
+                    'key' => $key,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return $this->rememberWithTagsFallback($normalizedTags, $key, $callback, $ttl);
     }
 
     /**
@@ -307,15 +338,24 @@ class CacheService
      */
     public function flushByTags(array $tags): bool
     {
-        try {
-            return Cache::tags($tags)->flush();
-        } catch (\Exception $e) {
-            Log::error('Cache flushByTags error', [
-                'tags' => $tags,
-                'error' => $e->getMessage()
-            ]);
-            return false;
+        $normalizedTags = $this->normalizeTags($tags);
+
+        if (empty($normalizedTags)) {
+            return $this->flush();
         }
+
+        if ($this->supportsTags()) {
+            try {
+                return Cache::tags($normalizedTags)->flush();
+            } catch (\Throwable $e) {
+                Log::warning('Cache flushByTags fallback triggered', [
+                    'tags' => $normalizedTags,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+
+        return $this->flushTagsFallback($normalizedTags);
     }
 
     /**
@@ -379,6 +419,224 @@ class CacheService
     private function buildKey(string $key): string
     {
         return self::KEY_PREFIX . $key;
+    }
+
+    private function supportsTags(): bool
+    {
+        if ($this->taggableStore !== null) {
+            return $this->taggableStore;
+        }
+
+        try {
+            $store = Cache::getStore();
+            $this->taggableStore = $store instanceof TaggableStore;
+        } catch (\Throwable $e) {
+            Log::warning('Cache tag support check failed', [
+                'error' => $e->getMessage()
+            ]);
+            $this->taggableStore = false;
+        }
+
+        return $this->taggableStore;
+    }
+
+    private function normalizeTags(array $tags): array
+    {
+        $normalized = array_filter(array_map(fn ($tag) => strtolower(trim((string) $tag)), $tags), 'strlen');
+        $normalized = array_values(array_unique($normalized));
+        sort($normalized);
+
+        return $normalized;
+    }
+
+    private function buildTagSetHash(array $tags): string
+    {
+        return sha1(implode('|', $tags));
+    }
+
+    private function buildSingleTagHash(string $tag): string
+    {
+        return sha1($tag);
+    }
+
+    private function buildTaggedKey(string $tagHash, string $key): string
+    {
+        return self::KEY_PREFIX . self::TAGGED_KEY_PREFIX . $tagHash . ':' . $key;
+    }
+
+    private function buildTagIndexKey(string $tagHash): string
+    {
+        return self::KEY_PREFIX . self::TAG_INDEX_PREFIX . $tagHash;
+    }
+
+    private function buildTagMetaKey(string $namespacedKey): string
+    {
+        return self::KEY_PREFIX . self::TAG_META_PREFIX . sha1($namespacedKey);
+    }
+
+    private function getGlobalIndexKey(): string
+    {
+        return self::KEY_PREFIX . self::GLOBAL_INDEX_KEY;
+    }
+
+    private function storeWithTagFallback(array $tags, string $key, $value, int $ttl): bool
+    {
+        $tagHash = $this->buildTagSetHash($tags);
+        $taggedKey = $this->buildTaggedKey($tagHash, $key);
+
+        $stored = Cache::put($taggedKey, $value, $ttl);
+
+        if ($stored) {
+            $this->registerTaggedEntry($taggedKey, $tags);
+        }
+
+        return $stored;
+    }
+
+    private function rememberWithTagsFallback(array $tags, string $key, callable $callback, int $ttl)
+    {
+        $tagHash = $this->buildTagSetHash($tags);
+        $taggedKey = $this->buildTaggedKey($tagHash, $key);
+
+        $value = Cache::remember($taggedKey, $ttl, $callback);
+
+        $this->registerTaggedEntry($taggedKey, $tags);
+
+        return $value;
+    }
+
+    private function getWithTagsFallback(array $tags, string $key, $default = null)
+    {
+        $tagHash = $this->buildTagSetHash($tags);
+        $taggedKey = $this->buildTaggedKey($tagHash, $key);
+
+        return Cache::get($taggedKey, $default);
+    }
+
+    private function flushTagsFallback(array $tags): bool
+    {
+        $success = true;
+
+        foreach ($tags as $tag) {
+            $tagHash = $this->buildSingleTagHash($tag);
+            $indexKey = $this->buildTagIndexKey($tagHash);
+            $keys = Cache::get($indexKey, []);
+            if (!is_array($keys)) {
+                $keys = [];
+            }
+            Cache::forget($indexKey);
+
+            foreach ($keys as $taggedKey) {
+                $result = Cache::forget($taggedKey);
+                $success = $success && $result;
+                $this->removeKeyFromGlobalIndex($taggedKey);
+
+                $taggedMeta = $this->getTaggedKeyMetadata($taggedKey);
+                if (!empty($taggedMeta)) {
+                    $this->removeKeyFromIndexes($taggedKey, $taggedMeta, $tag);
+                }
+
+                $this->removeTaggedKeyMetadata($taggedKey);
+            }
+        }
+
+        return $success;
+    }
+
+    private function registerTaggedEntry(string $namespacedKey, array $tags): void
+    {
+        if (empty($tags)) {
+            return;
+        }
+
+        foreach ($tags as $tag) {
+            $this->addKeyToTagIndex($tag, $namespacedKey);
+        }
+
+        $this->storeTaggedKeyMetadata($namespacedKey, $tags);
+        $this->addKeyToGlobalIndex($namespacedKey);
+    }
+
+    private function addKeyToTagIndex(string $tag, string $key): void
+    {
+        $tagHash = $this->buildSingleTagHash($tag);
+        $indexKey = $this->buildTagIndexKey($tagHash);
+        $index = Cache::get($indexKey, []);
+
+        if (!is_array($index)) {
+            $index = [];
+        }
+
+        if (!in_array($key, $index, true)) {
+            $index[] = $key;
+            Cache::forever($indexKey, $index);
+        }
+    }
+
+    private function removeKeyFromTagIndex(string $tag, string $key): void
+    {
+        $tagHash = $this->buildSingleTagHash($tag);
+        $indexKey = $this->buildTagIndexKey($tagHash);
+        $index = Cache::get($indexKey, []);
+
+        if (!is_array($index) || empty($index)) {
+            return;
+        }
+
+        $filtered = array_values(array_diff($index, [$key]));
+
+        if (empty($filtered)) {
+            Cache::forget($indexKey);
+            return;
+        }
+
+        Cache::forever($indexKey, $filtered);
+    }
+
+    private function removeKeyFromIndexes(string $key, array $tags, string $currentTag): void
+    {
+        foreach ($tags as $tag) {
+            if ($tag === $currentTag) {
+                continue;
+            }
+
+            $this->removeKeyFromTagIndex($tag, $key);
+        }
+    }
+
+    private function storeTaggedKeyMetadata(string $key, array $tags): void
+    {
+        Cache::forever($this->buildTagMetaKey($key), $tags);
+    }
+
+    private function getTaggedKeyMetadata(string $key): array
+    {
+        $meta = Cache::get($this->buildTagMetaKey($key), []);
+        return is_array($meta) ? $meta : [];
+    }
+
+    private function removeTaggedKeyMetadata(string $key): void
+    {
+        Cache::forget($this->buildTagMetaKey($key));
+    }
+
+    private function addKeyToGlobalIndex(string $key): void
+    {
+        $indexKey = $this->getGlobalIndexKey();
+        $index = Cache::get($indexKey, []);
+
+        if (!in_array($key, $index, true)) {
+            $index[] = $key;
+            Cache::forever($indexKey, $index);
+        }
+    }
+
+    private function removeKeyFromGlobalIndex(string $key): void
+    {
+        $indexKey = $this->getGlobalIndexKey();
+        $index = Cache::get($indexKey, []);
+        $filtered = array_values(array_diff($index, [$key]));
+        Cache::forever($indexKey, $filtered);
     }
 
     /**

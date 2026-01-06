@@ -1,28 +1,25 @@
 <?php declare(strict_types=1);
 
 namespace App\Events;
-use Illuminate\Support\Facades\Auth;
 
-
+use App\Models\Project;
+use App\Models\User;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Event được dispatch khi tạo project mới
  * Tuân thủ Z.E.N.A architecture với event-driven design
  */
-class ProjectCreated
+class ProjectCreated implements Arrayable
 {
+    use Dispatchable;
 
-    /**
-     * Constructor
-     *
-     * @param Project $project Project vừa được tạo
-     */
     public function __construct(
-        public Project $project
-    ) {
-        
-    }
+        public Project $project,
+        public ?User $actor = null
+    ) {}
 
     /**
      * Lấy tên event theo convention Domain.Entity.Action
@@ -44,12 +41,17 @@ class ProjectCreated
         return [
             'entityId' => $this->project->id,
             'projectId' => $this->project->id,
-            'actorId' => Auth::id(),
+            'actorId' => $this->actor?->id ?? Auth::id(),
             'tenantId' => $this->project->tenant_id,
             'projectName' => $this->project->name,
             'projectData' => $this->project->toArray(),
             'changedFields' => ['created'],
             'timestamp' => now()->format('Y-m-d H:i:s')
         ];
+    }
+
+    public function toArray(): array
+    {
+        return $this->getPayload();
     }
 }

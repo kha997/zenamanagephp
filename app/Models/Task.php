@@ -27,6 +27,7 @@ use Src\Foundation\Helpers\AuthHelper;
  * @property string|null $description Mô tả
  * @property \Carbon\Carbon|null $start_date Ngày bắt đầu
  * @property \Carbon\Carbon|null $end_date Ngày kết thúc
+ * @property \Carbon\Carbon|null $due_date Ngày hoàn thành dự kiến
  * @property string $status Trạng thái
  * @property string $priority Độ ưu tiên
  * @property \Illuminate\Database\Eloquent\Collection|array|null $dependencies Mảng task_ids phụ thuộc
@@ -56,6 +57,7 @@ class Task extends Model
         'description',
         'start_date',
         'end_date',
+        'due_date',
         'status',
         'priority',
         'dependencies',
@@ -78,6 +80,7 @@ class Task extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
+        'due_date' => 'datetime',
         'dependencies' => 'array',
         'watchers' => 'array',
         'is_hidden' => 'boolean',

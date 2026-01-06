@@ -331,6 +331,7 @@ class DashboardRoleBasedService
         $tenantId = $user->tenant_id;
 
         $query = Project::where('tenant_id', $tenantId);
+        $hasTaskDueDate = Schema::hasColumn('tasks', 'due_date');
         
         // Role-based project access
         if ($projectId) {
@@ -365,10 +366,14 @@ class DashboardRoleBasedService
         // Add role-specific metrics
         switch ($role) {
             case 'project_manager':
-                $overview['overdue_tasks'] = Task::whereIn('project_id', $projects->pluck('id'))
-                    ->where('due_date', '<', now())
-                    ->where('status', '!=', 'completed')
-                    ->count();
+                $overdueQuery = Task::whereIn('project_id', $projects->pluck('id'))
+                    ->where('status', '!=', 'completed');
+
+                if ($hasTaskDueDate) {
+                    $overdueQuery->where('due_date', '<', now());
+                }
+
+                $overview['overdue_tasks'] = $overdueQuery->count();
                 break;
             
             case 'site_engineer':

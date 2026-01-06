@@ -38,7 +38,8 @@ class DashboardWidget extends Model
         'data_source',
         'permissions',
         'is_active',
-        'description'
+        'description',
+        'tenant_id'
     ];
 
     protected $casts = [

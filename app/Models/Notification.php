@@ -70,6 +70,7 @@ class Notification extends Model
         'priority',
         'title',
         'body',
+        'message',
         'link_url',
         'channel',
         'read_at',
@@ -209,6 +210,16 @@ class Notification extends Model
     {
         $this->read_at = null;
         return $this->save();
+    }
+
+    public function getMessageAttribute(): ?string
+    {
+        return $this->body;
+    }
+
+    public function setMessageAttribute(?string $value): void
+    {
+        $this->attributes['body'] = $value;
     }
 
     /**

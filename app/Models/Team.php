@@ -23,7 +23,9 @@ class Team extends Model
         'tenant_id',
         'name',
         'description',
+        'status',
         'team_lead_id',
+        'leader_id',
         'department',
         'is_active',
         'settings',
@@ -85,6 +87,24 @@ class Team extends Model
     public function teamLead(): BelongsTo
     {
         return $this->belongsTo(User::class, 'team_lead_id');
+    }
+
+    /**
+     * Alias for the team lead relationship.
+     */
+    public function leader(): BelongsTo
+    {
+        return $this->teamLead();
+    }
+
+    public function getLeaderIdAttribute(): ?string
+    {
+        return $this->team_lead_id;
+    }
+
+    public function setLeaderIdAttribute(?string $value): void
+    {
+        $this->attributes['team_lead_id'] = $value;
     }
 
     /**

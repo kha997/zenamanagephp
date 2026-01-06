@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Traits\TenantScope;
+use Illuminate\Support\Str;
+use App\Models\User;
 
 class Rfi extends Model
 {
@@ -55,6 +57,58 @@ class Rfi extends Model
         'attachments' => 'array',
     ];
 
+    protected static function generateRfiNumber(): string
+    {
+        $candidate = 'RFI-' . strtoupper(Str::random(6));
+
+        while (static::where('rfi_number', $candidate)->exists()) {
+            $candidate = 'RFI-' . strtoupper(Str::random(6));
+        }
+
+        return $candidate;
+    }
+
+    protected static function resolveDefaultUserId(): ?string
+    {
+        return User::orderBy('created_at')->value('id');
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Rfi $rfi) {
+            if (empty($rfi->title)) {
+                $rfi->title = $rfi->subject ?: 'Untitled RFI';
+            }
+            if (empty($rfi->question)) {
+                $rfi->question = $rfi->description ?: 'Question pending';
+            }
+            if (empty($rfi->description)) {
+                $rfi->description = $rfi->question ?: $rfi->subject ?: 'Description pending';
+            }
+            if (empty($rfi->rfi_number)) {
+                $rfi->rfi_number = static::generateRfiNumber();
+            }
+            $defaultUserId = static::resolveDefaultUserId();
+            if (! empty($defaultUserId)) {
+                if (empty($rfi->asked_by)) {
+                    $rfi->asked_by = $defaultUserId;
+                }
+                if (empty($rfi->created_by)) {
+                    $rfi->created_by = $defaultUserId;
+                }
+            }
+        });
+    }
+
+    public function setSubjectAttribute(?string $value): void
+    {
+        $this->attributes['subject'] = $value;
+
+        if (! empty($value) && empty($this->attributes['title'])) {
+            $this->attributes['title'] = $value;
+        }
+    }
+
     /**
      * Get the tenant that owns the RFI.
      */
@@ -85,6 +139,11 @@ class Rfi extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->createdBy();
     }
 
     /**

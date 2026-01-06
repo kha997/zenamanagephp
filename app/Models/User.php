@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 use App\Traits\HasRoles;
 
 /**
@@ -29,7 +30,7 @@ use App\Traits\HasRoles;
  */
 class User extends Authenticatable
 {
-    use HasUlids, HasFactory, HasApiTokens, HasRoles;
+    use HasUlids, HasFactory, HasApiTokens, Notifiable, HasRoles;
 
     /**
      * Cấu hình ULID primary key
@@ -108,8 +109,12 @@ class User extends Authenticatable
     /**
      * Check if user has role.
      */
-    public function hasRole(string $role): bool
+    public function hasRole(string|array $role): bool
     {
+        if (is_array($role)) {
+            return $this->hasAnyRole($role);
+        }
+
         return $this->roles()->where('name', $role)->exists();
     }
 
@@ -129,6 +134,14 @@ class User extends Authenticatable
     public function taskAssignments(): HasMany
     {
         return $this->hasMany(TaskAssignment::class);
+    }
+
+    /**
+     * Relationship: User manages many projects
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'manager_id');
     }
 
     /**
@@ -161,7 +174,7 @@ class User extends Authenticatable
     public function hasPermission(string $permission): bool
     {
         return $this->roles()->whereHas('permissions', function ($query) use ($permission) {
-            return $query->where('name', $permission);
+            return $query->where('code', $permission);
         })->exists();
     }
 
@@ -171,7 +184,7 @@ class User extends Authenticatable
     public function hasAnyPermission(array $permissions): bool
     {
         return $this->roles()->whereHas('permissions', function ($query) use ($permissions) {
-            return $query->whereIn('name', $permissions);
+            return $query->whereIn('code', $permissions);
         })->exists();
     }
 

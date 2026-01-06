@@ -76,6 +76,7 @@ class ChangeRequest extends Model
         'status',
         'impact_level',
         'requested_by',
+        'created_by',
         'assigned_to',
         'approved_by',
         'rejected_by',
@@ -144,6 +145,21 @@ class ChangeRequest extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->requester();
+    }
+
+    public function getCreatedByAttribute(): ?string
+    {
+        return $this->attributes['requested_by'] ?? null;
+    }
+
+    public function setCreatedByAttribute(?string $value): void
+    {
+        $this->attributes['requested_by'] = $value;
     }
 
     /**

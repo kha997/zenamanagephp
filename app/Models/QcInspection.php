@@ -19,10 +19,13 @@ class QcInspection extends Model
 
     protected $fillable = [
         'qc_plan_id',
+        'project_id',
         'tenant_id',
         'title',
+        'name',
         'description',
         'status',
+        'type',
         'inspection_date',
         'inspector_id',
         'findings',
@@ -37,12 +40,40 @@ class QcInspection extends Model
         'photos' => 'array',
     ];
 
+    public function setNameAttribute(?string $value): void
+    {
+        $this->attributes['title'] = $value;
+    }
+
+    public function getNameAttribute(): ?string
+    {
+        return $this->attributes['title'] ?? null;
+    }
+
+    public function setTypeAttribute(?string $value): void
+    {
+        $this->attributes['status'] = $value;
+    }
+
+    public function getTypeAttribute(): ?string
+    {
+        return $this->attributes['status'] ?? null;
+    }
+
     /**
      * Quan hệ với QcPlan
      */
     public function qcPlan(): BelongsTo
     {
         return $this->belongsTo(QcPlan::class);
+    }
+
+    /**
+     * Quan hệ với Project
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'project_id');
     }
 
     /**

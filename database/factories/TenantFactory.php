@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * Factory cho Tenant model
@@ -19,9 +20,17 @@ class TenantFactory extends Factory
      */
     public function definition(): array
     {
+        $name = $this->faker->unique()->company();
+        $slug = Str::slug($name);
+
+        if ($slug === '') {
+            $slug = 'tenant-' . Str::ulid();
+        }
+
         return [
-            'id' => \Illuminate\Support\Str::ulid(),
-            'name' => $this->faker->company(),
+            'id' => Str::ulid(),
+            'name' => $name,
+            'slug' => $slug,
             'domain' => $this->faker->domainName(),
             'settings' => json_encode([
                 'timezone' => 'Asia/Ho_Chi_Minh',

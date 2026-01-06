@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\InteractionLog;
+use App\Models\User;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
 
@@ -44,8 +49,12 @@ class Project extends Model
         'start_date',
         'end_date',
         'status',
+        'priority',
+        'manager_id',
         'progress',
-        'budget_total'
+        'budget_total',
+        'budget',
+        'spent_amount'
     ];
 
     protected $casts = [
@@ -65,6 +74,47 @@ class Project extends Model
         'budget_total' => 0.0
     ];
 
+    public function getBudgetAttribute(): float
+    {
+        return (float) ($this->attributes['budget_total'] ?? 0.0);
+    }
+
+    public function setBudgetAttribute(?float $value): void
+    {
+        $this->attributes['budget_total'] = $value ?? 0.0;
+    }
+
+    public function getSpentAmountAttribute(): float
+    {
+        return (float) ($this->attributes['budget_actual'] ?? 0.0);
+    }
+
+    public function setSpentAmountAttribute(?float $value): void
+    {
+        $this->attributes['budget_actual'] = $value ?? 0.0;
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Project $project) {
+            if (empty($project->code)) {
+                $project->code = static::generateProjectCode($project);
+            }
+        });
+        
+        static::saving(function (Project $project) {
+            if (! empty($project->manager_id) && empty($project->pm_id)) {
+                $project->pm_id = $project->manager_id;
+            } elseif (empty($project->manager_id) && ! empty($project->pm_id)) {
+                $project->manager_id = $project->pm_id;
+            }
+        });
+
+        static::saved(function (Project $project) {
+            static::syncLegacyProject($project);
+        });
+    }
+
     /**
      * Các trạng thái hợp lệ
      */
@@ -82,12 +132,77 @@ class Project extends Model
         self::STATUS_CANCELLED,
     ];
 
+    public const VALID_PRIORITIES = [
+        'low',
+        'medium',
+        'high',
+        'urgent',
+    ];
+
+    private static function syncLegacyProject(Project $project): void
+    {
+        if (! Schema::hasTable('zena_projects')) {
+            return;
+        }
+
+        // Ensure settings is stored as JSON
+        $settings = $project->settings;
+        $settingsJson = null;
+
+        if (is_array($settings)) {
+            $settingsJson = json_encode($settings);
+        } elseif ($settings !== null) {
+            $settingsJson = $settings;
+        }
+
+        $status = $project->status;
+        $statusMap = [
+            'in_progress' => 'active',
+            'draft' => 'planning',
+        ];
+
+        if (isset($statusMap[$status])) {
+            $status = $statusMap[$status];
+        }
+
+        $allowedStatuses = ['planning', 'active', 'on_hold', 'completed', 'cancelled'];
+
+        if (! in_array($status, $allowedStatuses, true)) {
+            $status = 'planning';
+        }
+        DB::table('zena_projects')->updateOrInsert(
+            ['id' => $project->id],
+            [
+                'code' => $project->code,
+                'name' => $project->name,
+                'description' => $project->description,
+                'client_id' => $project->client_id,
+                'status' => $status,
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'budget' => $project->budget_total,
+                'settings' => $settingsJson,
+                'tenant_id' => $project->tenant_id,
+                'created_at' => $project->created_at,
+                'updated_at' => $project->updated_at,
+            ]
+        );
+    }
+
     /**
      * Relationship: Project thuộc về tenant
      */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Tenant::class);
+    }
+
+    /**
+     * Relationship: Project có một quản lý (manager)
+     */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'manager_id');
     }
 
     /**
@@ -138,6 +253,14 @@ class Project extends Model
     }
 
     /**
+     * Alias to users relation for DashboardRoleBasedService compatibility.
+     */
+    public function projectUsers(): BelongsToMany
+    {
+        return $this->users();
+    }
+
+    /**
      * Relationship: Project có nhiều baselines
      */
     public function baselines(): HasMany
@@ -166,12 +289,14 @@ class Project extends Model
      */
     public function teams(): BelongsToMany
     {
+        $pivotTable = Schema::hasTable('project_teams') ? 'project_teams' : 'project_team';
+
         return $this->belongsToMany(
             \App\Models\Team::class,
-            'project_teams',
+            $pivotTable,
             'project_id',
             'team_id'
-        )->withPivot('role')->withTimestamps();
+        )->withPivot(['role', 'joined_at', 'left_at'])->withTimestamps();
     }
 
     /**
@@ -179,7 +304,57 @@ class Project extends Model
      */
     public function interactionLogs(): HasMany
     {
-        return $this->hasMany(\Src\InteractionLogs\Models\InteractionLog::class);
+        return $this->hasMany(InteractionLog::class);
+    }
+
+    /**
+     * Generate a deterministic project code when missing.
+     */
+    protected static function generateProjectCode(Project $project): string
+    {
+        $base = 'PRJ-' . strtoupper(Str::slug($project->name ?: 'project', '_'));
+        $base = rtrim($base, '-_') ?: 'PRJ-PROJECT';
+        $candidate = $base;
+        $suffix = 1;
+
+        while (static::where('code', $candidate)
+            ->where('tenant_id', $project->tenant_id)
+            ->exists()) {
+            $suffix++;
+            $candidate = "{$base}_{$suffix}";
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * Relationship: Project có một client
+     */
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'client_id');
+    }
+
+    /**
+     * Relationship: Project có một project manager
+     */
+    public function projectManager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pm_id');
+    }
+
+    /**
+     * Relationship: Project có nhiều thành viên qua bảng project_team_members
+     */
+    public function teamMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'project_team_members',
+            'project_id',
+            'user_id'
+        )->withPivot(['role', 'joined_at', 'left_at'])
+          ->withTimestamps();
     }
 
     /**

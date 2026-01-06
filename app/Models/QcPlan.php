@@ -20,8 +20,10 @@ class QcPlan extends Model
         'project_id',
         'tenant_id',
         'title',
+        'name',
         'description',
         'status',
+        'type',
         'start_date',
         'end_date',
         'created_by',
@@ -33,6 +35,26 @@ class QcPlan extends Model
         'end_date' => 'date',
         'checklist_items' => 'array',
     ];
+
+    public function setNameAttribute(?string $value): void
+    {
+        $this->attributes['title'] = $value;
+    }
+
+    public function getNameAttribute(): ?string
+    {
+        return $this->attributes['title'] ?? null;
+    }
+
+    public function setTypeAttribute(?string $value): void
+    {
+        $this->attributes['status'] = $value;
+    }
+
+    public function getTypeAttribute(): ?string
+    {
+        return $this->attributes['status'] ?? null;
+    }
 
     /**
      * Quan hệ với Project

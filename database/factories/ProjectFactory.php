@@ -21,6 +21,8 @@ class ProjectFactory extends Factory
      */
     public function definition(): array
     {
+        $manager = User::factory();
+
         return [
             'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
             'tenant_id' => Tenant::factory(),
@@ -28,7 +30,8 @@ class ProjectFactory extends Factory
             'name' => $this->faker->company() . ' Project',
             'description' => $this->faker->paragraph(),
             'client_id' => null,
-            'pm_id' => User::factory(),
+            'manager_id' => $manager,
+            'pm_id' => $manager,
             'created_by' => User::factory(),
             'start_date' => $this->faker->dateTimeBetween('-1 month', '+1 month'),
             'end_date' => $this->faker->dateTimeBetween('+1 month', '+6 months'),

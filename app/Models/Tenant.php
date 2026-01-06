@@ -65,42 +65,62 @@ class Tenant extends Model
         'status' => 'trial',
     ];
 
-    /**
-     * Boot the model.
-     */
-    protected static function boot()
+    protected static function booted(): void
     {
-        parent::boot();
-        
-        // Tự động tạo slug từ name khi tạo mới
-        static::creating(function ($tenant) {
-            if (empty($tenant->slug)) {
-                $tenant->slug = Str::slug($tenant->name);
-                
-                // Đảm bảo slug là duy nhất
-                $originalSlug = $tenant->slug;
-                $counter = 1;
-                while (static::where('slug', $tenant->slug)->exists()) {
-                    $tenant->slug = $originalSlug . '-' . $counter;
-                    $counter++;
-                }
-            }
-        });
-        
-        // Cập nhật slug khi name thay đổi
-        static::updating(function ($tenant) {
+        static::creating(fn (Tenant $tenant) => static::ensureSlug($tenant));
+
+        static::updating(function (Tenant $tenant): void {
             if ($tenant->isDirty('name') && empty($tenant->slug)) {
-                $tenant->slug = Str::slug($tenant->name);
-                
-                // Đảm bảo slug là duy nhất (trừ chính nó)
-                $originalSlug = $tenant->slug;
-                $counter = 1;
-                while (static::where('slug', $tenant->slug)->where('id', '!=', $tenant->id)->exists()) {
-                    $tenant->slug = $originalSlug . '-' . $counter;
-                    $counter++;
-                }
+                static::ensureSlug($tenant);
             }
         });
+    }
+
+    /**
+     * Ensure that the tenant has a valid, unique slug before saving.
+     */
+    protected static function ensureSlug(Tenant $tenant): void
+    {
+        if (!empty($tenant->slug)) {
+            return;
+        }
+
+        $baseSlug = static::generateBaseSlug($tenant);
+        $slug = $baseSlug;
+        $counter = 2;
+
+        while (static::slugExists($slug, $tenant)) {
+            $slug = "{$baseSlug}-{$counter}";
+            $counter++;
+        }
+
+        $tenant->slug = $slug;
+    }
+
+    /**
+     * Build a slug base from tenant name or fallback to a tenant identifier.
+     */
+    protected static function generateBaseSlug(Tenant $tenant): string
+    {
+        $slug = Str::slug((string) $tenant->name);
+
+        if ($slug === '') {
+            $fallback = $tenant->id ?? Str::ulid();
+            $slug = "tenant-{$fallback}";
+        }
+
+        return $slug;
+    }
+
+    protected static function slugExists(string $slug, Tenant $tenant): bool
+    {
+        $query = static::where('slug', $slug);
+
+        if ($tenant->exists && $tenant->id) {
+            $query->where('id', '!=', $tenant->id);
+        }
+
+        return $query->exists();
     }
 
     /**

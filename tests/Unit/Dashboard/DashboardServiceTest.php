@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
 use App\Models\DashboardMetric;
+use App\Models\DashboardMetricValue;
 use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
@@ -48,6 +49,7 @@ class DashboardServiceTest extends TestCase
             'role' => 'project_manager',
             'tenant_id' => $this->tenant->id
         ]);
+        $this->user->forceFill(['role' => 'project_manager']);
         
         // Create test project
         $this->project = Project::create([
@@ -60,6 +62,11 @@ class DashboardServiceTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
         
+        // Reset dashboard fixtures
+        DashboardWidget::truncate();
+        DashboardMetric::truncate();
+        DashboardMetricValue::truncate();
+
         // Create test widgets
         $this->createTestWidgets();
         
@@ -75,8 +82,8 @@ class DashboardServiceTest extends TestCase
             'type' => 'card',
             'category' => 'overview',
             'description' => 'Project overview widget',
-            'config' => json_encode(['default_size' => 'large']),
-            'permissions' => json_encode(['project_manager', 'site_engineer']),
+            'config' => ['default_size' => 'large'],
+            'permissions' => ['roles' => ['project_manager', 'site_engineer']],
             'is_active' => true,
             'tenant_id' => $this->tenant->id
         ]);
@@ -87,8 +94,8 @@ class DashboardServiceTest extends TestCase
             'type' => 'chart',
             'category' => 'tasks',
             'description' => 'Task progress widget',
-            'config' => json_encode(['default_size' => 'medium']),
-            'permissions' => json_encode(['project_manager', 'site_engineer']),
+            'config' => ['default_size' => 'medium'],
+            'permissions' => ['roles' => ['project_manager', 'site_engineer']],
             'is_active' => true,
             'tenant_id' => $this->tenant->id
         ]);
@@ -99,8 +106,8 @@ class DashboardServiceTest extends TestCase
             'type' => 'table',
             'category' => 'communication',
             'description' => 'RFI status widget',
-            'config' => json_encode(['default_size' => 'medium']),
-            'permissions' => json_encode(['project_manager', 'design_lead']),
+            'config' => ['default_size' => 'medium'],
+            'permissions' => ['roles' => ['project_manager', 'design_lead']],
             'is_active' => true,
             'tenant_id' => $this->tenant->id
         ]);
@@ -139,9 +146,10 @@ class DashboardServiceTest extends TestCase
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id,
             'name' => 'Test Dashboard',
-            'layout' => json_encode([]),
+            'layout_config' => [],
+            'widgets' => [],
             'is_default' => true,
-            'preferences' => json_encode(['theme' => 'light'])
+            'preferences' => ['theme' => 'light']
         ]);
 
         $dashboard = $this->dashboardService->getUserDashboard($this->user);
@@ -187,6 +195,7 @@ class DashboardServiceTest extends TestCase
             'role' => 'qc_inspector',
             'tenant_id' => $this->tenant->id
         ]);
+        $qcUser->forceFill(['role' => 'qc_inspector']);
 
         $widgets = $this->dashboardService->getAvailableWidgets($qcUser);
 
@@ -477,14 +486,16 @@ class DashboardServiceTest extends TestCase
         // Mock database to throw exception
         DB::shouldReceive('beginTransaction')->once();
         DB::shouldReceive('rollBack')->once();
-        
-        // Mock UserDashboard to throw exception
-        UserDashboard::shouldReceive('where')->andThrow(new \Exception('Database error'));
+
+        $mockService = Mockery::mock(DashboardService::class)->makePartial();
+        $mockService->shouldAllowMockingProtectedMethods();
+        $mockService->shouldReceive('getOrCreateDashboard')
+            ->andThrow(new \Exception('Database error'));
 
         $this->expectException(\Exception::class);
-        
+
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        $this->dashboardService->addWidget($this->user, $widget->id);
+        $mockService->addWidget($this->user, $widget->id);
     }
 
     /** @test */
@@ -498,6 +509,7 @@ class DashboardServiceTest extends TestCase
             'role' => 'qc_inspector',
             'tenant_id' => $this->tenant->id
         ]);
+        $qcUser->forceFill(['role' => 'qc_inspector']);
 
         // Try to add widget that QC Inspector doesn't have permission for
         $widget = DashboardWidget::where('code', 'project_overview')->first();
@@ -514,7 +526,7 @@ class DashboardServiceTest extends TestCase
         $result = $this->dashboardService->addWidget($this->user, 'non-existent-widget-id');
         
         $this->assertFalse($result['success']);
-        $this->assertStringContains('Widget not found', $result['message']);
+        $this->assertStringContainsString('Widget not found', $result['message']);
     }
 
     /** @test */
@@ -523,7 +535,7 @@ class DashboardServiceTest extends TestCase
         $result = $this->dashboardService->removeWidget($this->user, 'non-existent-instance-id');
         
         $this->assertFalse($result['success']);
-        $this->assertStringContains('Widget instance not found', $result['message']);
+        $this->assertStringContainsString('Widget instance not found', $result['message']);
     }
 
     protected function tearDown(): void

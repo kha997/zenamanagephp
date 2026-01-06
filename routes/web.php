@@ -1,6 +1,9 @@
 <?php
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 
 /*
@@ -48,17 +51,21 @@ Route::get('/login', function() {
     return view('auth.login');
 })->name('login');
 
-Route::post('/login', function() {
-    return redirect('/app/dashboard')->with('success', 'Login successful!');
-})->name('login.post');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
-Route::get('/logout', function() {
+/**
+ * Shared handler for logout requests so both GET and POST routes
+ * execute a proper logout sequence while staying idempotent.
+ */
+$handleLogout = function (Request $request) {
+    Auth::guard('web')->logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
     return redirect('/login')->with('success', 'You have been logged out successfully.');
-})->name('logout');
+};
 
-Route::post('/logout', function() {
-    return redirect('/login')->with('success', 'You have been logged out successfully.');
-})->name('logout.post');
+Route::get('/logout', $handleLogout)->name('logout');
+Route::post('/logout', $handleLogout)->name('logout.post');
 
 // MOVED: All test routes moved to /_debug namespace with debug.gate middleware
 
@@ -343,8 +350,8 @@ Route::get('/admin/users', function() {
     //     Route::post('/schedule', [App\Http\Controllers\Api\Admin\SecretsController::class, 'schedule'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
     // });
 
-    // App Routes - Temporarily without middleware for testing
-    Route::prefix('app')->name('app.')->group(function () {
+    // App Routes - Protected by auth guard
+    Route::middleware(['auth'])->prefix('app')->name('app.')->group(function () {
         // Dashboard route - AUTH TEMPORARILY DISABLED due to auth() helper issues
         Route::get('/dashboard', [App\Http\Controllers\Web\AppController::class, 'dashboard'])->name('dashboard');
         

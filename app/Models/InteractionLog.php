@@ -68,18 +68,27 @@ class InteractionLog extends Model
     ];
 
     protected $fillable = [
+        'tenant_id',
+        'user_id',
         'project_id',
+        'task_id',
         'linked_task_id',
+        'component_id',
         'type',
         'description',
+        'content',
         'tag_path',
         'visibility',
         'client_approved',
+        'is_internal',
+        'metadata',
         'created_by',
     ];
 
     protected $casts = [
         'client_approved' => 'boolean',
+        'is_internal' => 'boolean',
+        'metadata' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

@@ -40,7 +40,12 @@ class DashboardAlert extends Model
         'category',
         'title',
         'message',
+        'severity',
+        'context',
         'data',
+        'widget_id',
+        'metric_id',
+        'triggered_at',
         'is_read',
         'read_at',
         'expires_at'
@@ -48,9 +53,11 @@ class DashboardAlert extends Model
 
     protected $casts = [
         'data' => 'array',
+        'context' => 'array',
         'is_read' => 'boolean',
         'read_at' => 'datetime',
         'expires_at' => 'datetime',
+        'triggered_at' => 'datetime'
     ];
 
     /**

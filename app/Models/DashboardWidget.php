@@ -30,6 +30,7 @@ class DashboardWidget extends Model
     public $incrementing = false;
     
     protected $fillable = [
+        'code',
         'name',
         'type',
         'category',
@@ -37,7 +38,8 @@ class DashboardWidget extends Model
         'data_source',
         'permissions',
         'is_active',
-        'description'
+        'description',
+        'tenant_id'
     ];
 
     protected $casts = [
@@ -122,7 +124,11 @@ class DashboardWidget extends Model
      */
     public function scopeForRole($query, string $role)
     {
-        return $query->whereJsonContains('permissions->roles', $role);
+        return $query->where(function ($inner) use ($role) {
+            $inner->whereJsonContains('permissions->roles', $role)
+                ->orWhereJsonContains('permissions', $role)
+                ->orWhereNull('permissions');
+        });
     }
 
     /**
@@ -130,11 +136,19 @@ class DashboardWidget extends Model
      */
     public function isAvailableForRole(string $role): bool
     {
-        if (!$this->permissions || !isset($this->permissions['roles'])) {
-            return true; // Nếu không có permission config, cho phép tất cả
+        if (empty($this->permissions)) {
+            return true;
         }
 
-        return in_array($role, $this->permissions['roles']);
+        if (isset($this->permissions['roles']) && is_array($this->permissions['roles'])) {
+            return in_array($role, $this->permissions['roles'], true);
+        }
+
+        if (is_array($this->permissions)) {
+            return in_array($role, $this->permissions, true);
+        }
+
+        return true;
     }
 
     /**

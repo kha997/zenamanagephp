@@ -74,6 +74,7 @@ class Document extends Model
         'project_id',
         'tenant_id',
         'uploaded_by',
+        'created_by',
         'name',
         'original_name',
         'file_path',
@@ -114,6 +115,27 @@ class Document extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * Alias to uploader for creator semantics.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * Ensure created_by writes to the uploaded_by column for legacy compatibility.
+     */
+    public function setCreatedByAttribute(string $value): void
+    {
+        $this->attributes['uploaded_by'] = $value;
+    }
+
+    public function getCreatedByAttribute(): ?string
+    {
+        return $this->attributes['uploaded_by'] ?? null;
     }
 
     /**

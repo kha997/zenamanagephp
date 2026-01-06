@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Role;
+use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
+use Laravel\Sanctum\Sanctum;
+use Src\Common\Services\CacheService;
 use Tests\TestCase;
 
 class CachingTest extends TestCase
@@ -16,11 +19,6 @@ class CachingTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
-        
-        // Ensure Redis is available
-        if (!Redis::ping()) {
-            $this->markTestSkipped('Redis is not available');
-        }
     }
 
     /**
@@ -133,17 +131,18 @@ class CachingTest extends TestCase
         $user = \App\Models\User::factory()->create();
         $token = $user->createToken('test-token')->plainTextToken;
 
-        // Set cache keys with tags
+        // Set cache keys with tags via CacheService helper
+        $cacheService = new CacheService();
         $tag1 = 'test_tag_1';
         $tag2 = 'test_tag_2';
-        
-        Cache::tags([$tag1])->put('key1', 'value1', 300);
-        Cache::tags([$tag2])->put('key2', 'value2', 300);
-        Cache::tags([$tag1, $tag2])->put('key3', 'value3', 300);
 
-        $this->assertTrue(Cache::has('key1'));
-        $this->assertTrue(Cache::has('key2'));
-        $this->assertTrue(Cache::has('key3'));
+        $cacheService->putWithTags([$tag1], 'key1', 'value1', 300);
+        $cacheService->putWithTags([$tag2], 'key2', 'value2', 300);
+        $cacheService->putWithTags([$tag1, $tag2], 'key3', 'value3', 300);
+
+        $this->assertNotNull($cacheService->getWithTags([$tag1], 'key1'));
+        $this->assertNotNull($cacheService->getWithTags([$tag2], 'key2'));
+        $this->assertNotNull($cacheService->getWithTags([$tag1, $tag2], 'key3'));
 
         // Invalidate by tag
         $response = $this->postJson('/api/cache/invalidate/tags', [
@@ -163,9 +162,9 @@ class CachingTest extends TestCase
         ]);
 
         // Verify keys with tag1 are invalidated
-        $this->assertFalse(Cache::has('key1'));
-        $this->assertTrue(Cache::has('key2')); // Different tag
-        $this->assertFalse(Cache::has('key3')); // Has tag1
+        $this->assertNull($cacheService->getWithTags([$tag1], 'key1'));
+        $this->assertNotNull($cacheService->getWithTags([$tag2], 'key2')); // Different tag
+        $this->assertNull($cacheService->getWithTags([$tag1, $tag2], 'key3')); // Has tag1
     }
 
     /**
@@ -287,12 +286,26 @@ class CachingTest extends TestCase
      */
     public function test_dashboard_caching_middleware()
     {
-        $user = \App\Models\User::factory()->create();
-        $token = $user->createToken('test-token')->plainTextToken;
+        $tenant = Tenant::factory()->create();
+        $tenantId = (string) $tenant->id;
+        $user = \App\Models\User::factory()->forTenant($tenantId)->create();
+
+        $role = Role::firstOrCreate([
+            'name' => 'admin'
+        ], [
+            'scope' => Role::SCOPE_SYSTEM,
+            'allow_override' => true,
+            'description' => 'Integration test admin role',
+            'is_active' => true
+        ]);
+
+        $user->roles()->syncWithoutDetaching([$role->id]);
+
+        Sanctum::actingAs($user, ['*'], 'sanctum');
 
         $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => $tenantId
         ];
 
         // First request - should not be cached
@@ -379,5 +392,19 @@ class CachingTest extends TestCase
                 'code'
             ]
         ]);
+
+        $response = $this->getJson('/api/cache/error', [
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json'
+        ]);
+
+        $response->assertStatus(500);
+        $response->assertJsonStructure([
+            'success',
+            'error',
+            'message',
+            'code'
+        ]);
+        $this->assertFalse($response->json('success'));
     }
 }

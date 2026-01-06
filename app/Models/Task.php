@@ -6,10 +6,12 @@ use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Src\Compensation\Models\TaskCompensation;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
@@ -25,9 +27,10 @@ use Src\Foundation\Helpers\AuthHelper;
  * @property string|null $description Mô tả
  * @property \Carbon\Carbon|null $start_date Ngày bắt đầu
  * @property \Carbon\Carbon|null $end_date Ngày kết thúc
+ * @property \Carbon\Carbon|null $due_date Ngày hoàn thành dự kiến
  * @property string $status Trạng thái
  * @property string $priority Độ ưu tiên
- * @property array|null $dependencies Mảng task_ids phụ thuộc
+ * @property \Illuminate\Database\Eloquent\Collection|array|null $dependencies Mảng task_ids phụ thuộc
  * @property string|null $conditional_tag Tag điều kiện
  * @property bool $is_hidden Ẩn task
  * @property float $estimated_hours Số giờ ước tính
@@ -50,9 +53,11 @@ class Task extends Model
         'component_id',
         'phase_id',
         'name',
+        'title',
         'description',
         'start_date',
         'end_date',
+        'due_date',
         'status',
         'priority',
         'dependencies',
@@ -75,6 +80,7 @@ class Task extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
+        'due_date' => 'datetime',
         'dependencies' => 'array',
         'watchers' => 'array',
         'is_hidden' => 'boolean',
@@ -99,6 +105,30 @@ class Task extends Model
         'visibility' => 'internal',
         'client_approved' => false
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Task $task) {
+            if (empty($task->name)) {
+                $task->name = 'Untitled Task';
+            }
+        });
+
+        static::saving(function (Task $task) {
+            if (! empty($task->assignee_id) && empty($task->assigned_to)) {
+                $task->assigned_to = $task->assignee_id;
+            } elseif (! empty($task->assigned_to) && empty($task->assignee_id)) {
+                $task->assignee_id = $task->assigned_to;
+            }
+        });
+    }
+
+    public function setTitleAttribute(?string $value): void
+    {
+        if (! empty($value)) {
+            $this->attributes['name'] = $value;
+        }
+    }
 
     /**
      * Các trạng thái hợp lệ
@@ -181,6 +211,84 @@ class Task extends Model
     }
 
     /**
+     * Relationship: Task phụ thuộc vào nhiều task khác (pivot relationship).
+     */
+    public function dependencyTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Task::class,
+            $this->dependencyPivotTable(),
+            'task_id',
+            'dependency_id'
+        )->withTimestamps();
+    }
+
+    /**
+     * Relationship alias for backward compatibility.
+     */
+    public function dependencies(): BelongsToMany
+    {
+        return $this->dependencyTasks();
+    }
+
+    /**
+     * Relationship: Task được nhiều task khác phụ thuộc vào.
+     */
+    public function dependentTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Task::class,
+            $this->dependencyPivotTable(),
+            'dependency_id',
+            'task_id'
+        )->withTimestamps();
+    }
+
+    /**
+     * Accessor so $task->dependencies returns the relation collection.
+     */
+    public function getDependenciesAttribute(): Collection
+    {
+        if ($this->relationLoaded('dependencies')) {
+            return $this->getRelation('dependencies');
+        }
+
+        if ($this->relationLoaded('dependencyTasks')) {
+            return $this->getRelation('dependencyTasks');
+        }
+
+        return $this->dependencyTasks()->get();
+    }
+
+    /**
+     * Accessor for raw dependency IDs persisted on the model.
+     */
+    public function getDependencyIdsAttribute(): array
+    {
+        $value = $this->getAttributeFromArray('dependencies');
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
+    /**
+     * Resolve pivot table name to guard against legacy naming.
+     */
+    protected function dependencyPivotTable(): string
+    {
+        return Schema::hasTable('task_dependencies') ? 'task_dependencies' : 'task_dependency';
+    }
+
+    /**
      * Relationship: Task được assign cho nhiều users
      */
     public function assignedUsers(): BelongsToMany
@@ -254,13 +362,13 @@ class Task extends Model
      */
     public function canStart(): bool
     {
-        if (empty($this->dependencies)) {
+        $dependencies = $this->dependencyTasks;
+
+        if ($dependencies->isEmpty()) {
             return true;
         }
-        
-        $dependentTasks = Task::whereIn('ulid', $this->dependencies)->get();
-        
-        return $dependentTasks->every(function ($task) {
+
+        return $dependencies->every(function (Task $task) {
             return $task->status === self::STATUS_COMPLETED;
         });
     }
@@ -270,9 +378,9 @@ class Task extends Model
      */
     public function getDependentTasks()
     {
-        return Task::where('project_id', $this->project_id)
-                   ->whereJsonContains('dependencies', $this->ulid)
-                   ->get();
+        return $this->dependentTasks()
+                    ->where('project_id', $this->project_id)
+                    ->get();
     }
 
     /**
@@ -322,7 +430,8 @@ class Task extends Model
     {
         return $query->where('status', self::STATUS_PENDING)
                     ->where(function($q) {
-                        $q->whereNull('dependencies')
+                        $q->whereDoesntHave('dependencies')
+                          ->orWhereNull('dependencies')
                           ->orWhereJsonLength('dependencies', 0);
                     });
     }

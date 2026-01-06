@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -11,7 +12,11 @@ class ProjectUpdated implements ShouldBroadcast
 {
     use InteractsWithSockets;
 
-    public function __construct(public Project $project) {}
+    public function __construct(
+        public Project $project,
+        public array $originalData = [],
+        public ?User $actor = null
+    ) {}
 
     public function broadcastOn(): array
     {
@@ -25,6 +30,8 @@ class ProjectUpdated implements ShouldBroadcast
     {
         return [
             'project' => $this->project->load('users', 'tasks'),
+            'originalData' => $this->originalData,
+            'actorId' => $this->actor?->id,
             'timestamp' => now()->toISOString()
         ];
     }

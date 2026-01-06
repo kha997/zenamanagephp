@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class UserRole extends Pivot
 {
+    use HasUlids;
 
     protected $table = 'user_roles';
 
@@ -14,6 +15,9 @@ class UserRole extends Pivot
         'user_id',
         'role_id',
     ];
+
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     public $timestamps = true;
 }

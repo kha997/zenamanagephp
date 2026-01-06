@@ -25,6 +25,10 @@ class ErrorEnvelopeMiddleware
     public function handle(Request $request, Closure $next)
     {
         $response = $next($request);
+
+        if ($response->headers->get('X-Skip-Error-Envelope') === '1') {
+            return $response;
+        }
         
         // Only process JSON responses
         if (!$response instanceof \Illuminate\Http\JsonResponse) {

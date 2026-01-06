@@ -15,9 +15,11 @@ class DebugGateMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Allow debug routes only in non-production environments
-        if (app()->environment('production')) {
-            abort(404, 'Debug routes not available in production');
+        $debugRoutesEnabled = (bool) env('ZENA_DEBUG_ROUTES');
+        $isDebugEnvironment = app()->environment(['local', 'testing']);
+
+        if (! $isDebugEnvironment || ! $debugRoutesEnabled) {
+            abort(404);
         }
 
         return $next($request);

@@ -58,7 +58,7 @@ class AdvancedCacheService
             if ($data !== null) {
                 $this->logCacheHit($key, 'laravel', microtime(true) - $startTime);
                 // Store in Redis for faster access
-                $this->storeInRedis($fullKey, $data, $options);
+                $this->storeInRedis($fullKey, $data);
                 return $data;
             }
 

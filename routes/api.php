@@ -51,50 +51,6 @@ Route::get('/health', function () {
     ]);
 });
 
-// Simple login endpoint (no CSRF)
-Route::post('/login', function(Request $request) {
-    $email = $request->input('email');
-    $password = $request->input('password');
-    
-    // Demo users
-    $demoUsers = [
-        'superadmin@zena.com' => ['name' => 'Super Admin', 'role' => 'super_admin'],
-        'pm@zena.com' => ['name' => 'Project Manager', 'role' => 'project_manager'],
-        'designer@zena.com' => ['name' => 'Designer', 'role' => 'designer'],
-        'site@zena.com' => ['name' => 'Site Engineer', 'role' => 'site_engineer'],
-        'qc@zena.com' => ['name' => 'QC Engineer', 'role' => 'qc_engineer'],
-        'procurement@zena.com' => ['name' => 'Procurement', 'role' => 'procurement'],
-        'finance@zena.com' => ['name' => 'Finance', 'role' => 'finance'],
-        'client@zena.com' => ['name' => 'Client', 'role' => 'client'],
-    ];
-    
-    if ($password === 'zena1234' && isset($demoUsers[$email])) {
-        $userData = $demoUsers[$email];
-        
-        // Create a simple user object for session
-        $user = new \stdClass();
-        $user->id = rand(1000, 9999);
-        $user->name = $userData['name'];
-        $user->email = $email;
-        $user->role = $userData['role'];
-        
-        // Store user data in session
-        session(['user' => $user]);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Đăng nhập thành công!',
-            'redirect' => '/dashboard',
-            'user' => $user
-        ]);
-    }
-    
-    return response()->json([
-        'success' => false,
-        'message' => 'Email hoặc mật khẩu không đúng'
-    ], 401);
-});
-
 Route::get('/v1/health', function () {
     return response()->json([
         'status' => 'success',
@@ -256,11 +212,6 @@ Route::post('/v1/upload-document', function (Request $request) {
             'message' => 'Upload failed: ' . $e->getMessage()
         ], 500);
     }
-});
-
-// Simple test route
-Route::get('test-simple', function () {
-    return response()->json(['status' => 'success', 'message' => 'Simple test working']);
 });
 
 Route::group([], function () {
@@ -1071,22 +1022,6 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
     Route::get('/analytics/dashboard', [AnalyticsController::class, 'getDashboardAnalytics']);
 });
 
-// Admin Dashboard API Routes (no middleware for testing)
-Route::prefix('admin/dashboard')->group(function () {
-    Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
-    Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
-    Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);
-    Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics']);
-});
-
-// Test route
-Route::get('test', function () {
-    return response()->json(['message' => 'Test route working']);
-});
-
-// Test controller route
-Route::get('test-controller', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
-
 // Authentication Routes (public) with rate limiting
 Route::prefix('auth')->middleware([\App\Http\Middleware\EnhancedRateLimitMiddleware::class . ':auth'])->group(function () {
     Route::post('login', [\App\Http\Controllers\Api\AuthenticationController::class, 'login']);
@@ -1099,7 +1034,51 @@ Route::prefix('auth')->middleware([\App\Http\Middleware\EnhancedRateLimitMiddlew
 Route::get('csrf-token', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
 
 // Authenticated Routes (temporarily without middleware for testing)
-Route::group([], function () {
+Route::middleware(['debug.gate'])->group(function () {
+    // Demo login used for legacy testing flows
+    Route::post('/login', function (Request $request) {
+        $email = $request->input('email');
+        $password = $request->input('password');
+
+        $demoUsers = [
+            'superadmin@zena.com' => ['name' => 'Super Admin', 'role' => 'super_admin'],
+            'pm@zena.com' => ['name' => 'Project Manager', 'role' => 'project_manager'],
+            'designer@zena.com' => ['name' => 'Designer', 'role' => 'designer'],
+            'site@zena.com' => ['name' => 'Site Engineer', 'role' => 'site_engineer'],
+            'qc@zena.com' => ['name' => 'QC Engineer', 'role' => 'qc_engineer'],
+            'procurement@zena.com' => ['name' => 'Procurement', 'role' => 'procurement'],
+            'finance@zena.com' => ['name' => 'Finance', 'role' => 'finance'],
+            'client@zena.com' => ['name' => 'Client', 'role' => 'client'],
+        ];
+
+        if ($password === 'zena1234' && isset($demoUsers[$email])) {
+            $userData = $demoUsers[$email];
+            $user = new \stdClass();
+            $user->id = rand(1000, 9999);
+            $user->name = $userData['name'];
+            $user->email = $email;
+            $user->role = $userData['role'];
+
+            session(['user' => $user]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Đăng nhập thành công!',
+                'redirect' => '/dashboard',
+                'user' => $user,
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Email hoặc mật khẩu không đúng',
+        ], 401);
+    });
+
+    // Simple test helper
+    Route::get('test-simple', function () {
+        return response()->json(['status' => 'success', 'message' => 'Simple test working']);
+    });
     // User info and permissions
     Route::prefix('auth')->group(function () {
         Route::get('me', [\App\Http\Controllers\Api\AuthenticationController::class, 'me']);
@@ -1107,7 +1086,7 @@ Route::group([], function () {
     });
     
     // Dashboard API Routes (temporarily with simple responses for testing)
-    Route::prefix('dashboard')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+    Route::prefix('dashboard')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac', 'api.cache'])->group(function () {
         Route::get('data', function () {
             return response()->json([
                 'success' => true,
@@ -1269,6 +1248,8 @@ Route::group([], function () {
         Route::post('invalidate/pattern', [\App\Http\Controllers\Api\CacheController::class, 'invalidatePattern']);
         Route::post('warmup', [\App\Http\Controllers\Api\CacheController::class, 'warmUp']);
         Route::post('clear', [\App\Http\Controllers\Api\CacheController::class, 'clearAll']);
+        Route::get('error', [\App\Http\Controllers\Api\CacheController::class, 'error'])
+            ->withoutMiddleware('error.envelope');
     });
 
 // WebSocket Management Routes (temporarily without middleware for testing)
@@ -1284,45 +1265,36 @@ Route::prefix('websocket')->group(function () {
     Route::post('notification', [\App\Http\Controllers\Api\WebSocketController::class, 'sendNotification']);
 });
 
-    // Dashboard preferences update (no caching)
-    Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
-        Route::put('dashboard/preferences', [\App\Http\Controllers\Api\DashboardController::class, 'updatePreferences']);
+    // Admin Dashboard API Routes (temporarily without middleware for testing)
+    Route::prefix('admin/dashboard')->group(function () {
+        Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
+        Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
+        Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);
+        Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics']);
     });
-    
-    // Project CRUD Operations (moved from web routes) - REMOVED: Already handled by apiResource above
-    // Route::prefix('projects')->group(function () {
-    //     Route::post('/', [\App\Http\Controllers\Api\ProjectController::class, 'store']);
-    //     Route::put('/{project}', [\App\Http\Controllers\Api\ProjectController::class, 'update']);
-    //     Route::delete('/{project}', [\App\Http\Controllers\Api\ProjectController::class, 'destroy']);
-    // });
-    
-    // Task CRUD Operations (moved from web routes) - REMOVED: Already handled by apiResource above
-    // Route::prefix('tasks')->group(function () {
-    //     Route::post('/', [\App\Http\Controllers\Api\TaskController::class, 'store']);
-    //     Route::put('/{task}', [\App\Http\Controllers\Api\TaskController::class, 'update']);
-    //     Route::delete('/{task}', [\App\Http\Controllers\Api\TaskController::class, 'destroy']);
-    //     Route::post('/{task}/documents', [\App\Http\Controllers\Api\TaskController::class, 'storeDocument']);
-    // });
-    
-    // Invitation Operations (moved from web routes)
-    Route::prefix('invitations')->group(function () {
-        Route::post('/accept/{token}', [\App\Http\Controllers\Api\InvitationController::class, 'processAcceptance']);
+
+    // Lightweight test helpers
+    Route::get('test', function () {
+        return response()->json(['message' => 'Test route working']);
     });
+
+    Route::get('test-controller', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
+
+    // Legacy Route Monitoring Routes (temporarily without middleware for testing)
+    Route::prefix('legacy-routes')->group(function () {
+        Route::get('/usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'getUsageStats']);
+        Route::get('/migration-phase', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'getMigrationPhaseStats']);
+        Route::get('/report', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'generateReport']);
+        Route::post('/record-usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'recordUsage']);
+        Route::post('/cleanup', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'cleanup']);
+    });
+
 });
 
-// Admin Dashboard API Routes (temporarily without middleware for testing)
-Route::prefix('admin/dashboard')->group(function () {
-    Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
-    Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
-    Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);
-    Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics']);
+Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+    Route::put('dashboard/preferences', [\App\Http\Controllers\Api\DashboardController::class, 'updatePreferences']);
 });
 
-// Legacy Route Monitoring Routes (temporarily without middleware for testing)
-Route::prefix('legacy-routes')->group(function () {
-    Route::get('/usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'getUsageStats']);
-    Route::get('/migration-phase', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'getMigrationPhaseStats']);
-    Route::get('/report', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'generateReport']);
-    Route::post('/record-usage', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'recordUsage']);
-    Route::post('/cleanup', [App\Http\Controllers\Api\LegacyRouteMonitoringController::class, 'cleanup']);
+Route::prefix('invitations')->group(function () {
+    Route::post('/accept/{token}', [\App\Http\Controllers\Api\InvitationController::class, 'processAcceptance']);
 });

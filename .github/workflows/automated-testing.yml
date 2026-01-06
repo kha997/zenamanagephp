@@ -149,6 +149,8 @@ jobs:
           set_kv REDIS_PORT "${{ env.REDIS_PORT }}" "$ENV_FILE"
 
           php artisan key:generate --env=testing
+          mkdir -p storage/framework/{cache,sessions,views,testing} bootstrap/cache
+          chmod -R ug+rwx storage bootstrap/cache || true
           php artisan optimize:clear --env=testing
 
       - name: Ensure storage directories

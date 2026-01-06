@@ -6,7 +6,10 @@ use Tests\TestCase;
 use App\Services\DashboardRoleBasedService;
 use App\Services\DashboardService;
 use App\Services\DashboardRealTimeService;
+use App\Services\DashboardCustomizationService;
+use App\Services\DashboardDataAggregationService;
 use App\Models\User;
+use App\Models\Role;
 use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
 use App\Models\DashboardMetric;
@@ -17,6 +20,8 @@ use App\Models\RFI;
 use App\Models\Inspection;
 use App\Models\NCR;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Mockery;
 
 class DashboardRoleBasedServiceTest extends TestCase
@@ -29,6 +34,8 @@ class DashboardRoleBasedServiceTest extends TestCase
     protected $user;
     protected $project;
     protected $tenant;
+    protected $dataAggregationService;
+    protected $customizationService;
 
     protected function setUp(): void
     {
@@ -49,10 +56,31 @@ class DashboardRoleBasedServiceTest extends TestCase
             'role' => 'project_manager',
             'tenant_id' => $this->tenant->id
         ]);
+
+        $systemRole = Role::firstOrCreate([
+            'name' => 'project_manager'
+        ], [
+            'scope' => 'system',
+            'allow_override' => false,
+            'description' => 'Project manager role',
+            'is_active' => true
+        ]);
+
+        DB::table('user_roles')->insert([
+            'id' => Str::ulid(),
+            'user_id' => $this->user->id,
+            'role_id' => $systemRole->id,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        $this->user->setAttribute('role', 'project_manager');
+        $this->user->setAttribute('role_code', 'project_manager');
         
         // Create test project
         $this->project = Project::create([
             'name' => 'Test Project',
+            'code' => 'TEST-PROJ-001',
             'description' => 'Test project description',
             'status' => 'active',
             'budget' => 100000,
@@ -61,13 +89,28 @@ class DashboardRoleBasedServiceTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
         
-        // Mock services
+        DB::table('project_user_roles')->insert([
+            'id' => Str::ulid(),
+            'project_id' => $this->project->id,
+            'user_id' => $this->user->id,
+            'role_id' => null,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+        
+        // Mock services required by dashboard customization
         $this->mockDashboardService = Mockery::mock(DashboardService::class);
         $this->mockRealTimeService = Mockery::mock(DashboardRealTimeService::class);
-        
-        $this->roleBasedService = new DashboardRoleBasedService(
+
+        $this->dataAggregationService = new DashboardDataAggregationService();
+        $this->customizationService = new DashboardCustomizationService(
             $this->mockDashboardService,
             $this->mockRealTimeService
+        );
+
+        $this->roleBasedService = new DashboardRoleBasedService(
+            $this->dataAggregationService,
+            $this->customizationService
         );
         
         $this->createTestData();
@@ -341,6 +384,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         DashboardAlert::create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
             'message' => 'Test Alert 1',
             'type' => 'project',
             'severity' => 'medium',
@@ -352,6 +396,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         DashboardAlert::create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
             'message' => 'Test Alert 2',
             'type' => 'budget',
             'severity' => 'high',
@@ -570,7 +615,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         $alert = $alerts[0];
         $this->assertEquals('budget_warning', $alert['type']);
         $this->assertEquals('medium', $alert['severity']);
-        $this->assertStringContains('Budget utilization exceeds 80%', $alert['message']);
+        $this->assertStringContainsString('Budget utilization exceeds 80%', $alert['message']);
     }
 
     protected function tearDown(): void

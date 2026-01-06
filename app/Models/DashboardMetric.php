@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * Model DashboardMetric - Quản lý metrics và KPIs
@@ -31,13 +32,17 @@ class DashboardMetric extends Model
     
     protected $fillable = [
         'metric_code',
+        'code',
         'category',
+        'type',
         'name',
         'unit',
         'calculation_config',
         'display_config',
+        'permissions',
         'is_active',
-        'description'
+        'description',
+        'tenant_id'
     ];
 
     protected $casts = [
@@ -45,6 +50,36 @@ class DashboardMetric extends Model
         'display_config' => 'array',
         'is_active' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (DashboardMetric $metric) {
+            $generatedCode = $metric->metric_code;
+
+            if (empty($generatedCode)) {
+                $generatedCode = $metric->buildMetricCode();
+                $metric->metric_code = $generatedCode;
+            }
+
+            if (empty($metric->code)) {
+                $metric->code = $generatedCode;
+            }
+        });
+    }
+
+    private function buildMetricCode(): string
+    {
+        $base = Str::slug((string) ($this->name ?? 'metric'), '_') ?: 'metric';
+        $code = $base;
+        $suffix = 1;
+
+        while (static::where('metric_code', $code)->exists()) {
+            $suffix++;
+            $code = $base . '_' . $suffix;
+        }
+
+        return $code;
+    }
 
     /**
      * Các danh mục metric hợp lệ

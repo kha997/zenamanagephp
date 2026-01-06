@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -256,14 +257,24 @@ class RoleBasedAccessControlMiddleware
      */
     private function handleGeneralAccess($user, Request $request, Closure $next): Response
     {
+        if ($this->allowsProjectTaskReadAccess($user, $request)) {
+            $request->attributes->set('required_role_permission', 'rbac:project-task.read');
+            $request->attributes->set('access_granted', true);
+
+            return $next($request);
+        }
+
         $allowedRoles = [
             'super_admin',
             'admin',
+            'pm',
             'project_manager',
             'team_member',
             'client',
             'viewer',
+            'guest',
             'designer',
+            'engineer',
             'site_engineer',
             'qc_engineer',
             'procurement',
@@ -290,5 +301,52 @@ class RoleBasedAccessControlMiddleware
         $request->attributes->set('access_granted', true);
 
         return $next($request);
+    }
+
+    /**
+     * Allow select read-only endpoints for lower-tier roles.
+     */
+    private function allowsProjectTaskReadAccess($user, Request $request): bool
+    {
+        if (!$request->isMethod('GET')) {
+            return false;
+        }
+
+        $allowedRouteNames = [
+            'projects.index',
+            'tasks.index',
+        ];
+
+        $route = $request->route();
+        $matchesReadRoute = false;
+
+        if ($route && $route->getName()) {
+            foreach ($allowedRouteNames as $allowedName) {
+                if (Str::is($allowedName, $route->getName())) {
+                    $matchesReadRoute = true;
+                    break;
+                }
+            }
+        }
+
+        if (!$matchesReadRoute) {
+            $path = trim($request->path(), '/');
+            $matchesReadRoute = in_array($path, ['api/projects', 'api/tasks'], true);
+        }
+
+        if (!$matchesReadRoute) {
+            return false;
+        }
+
+        $readRoles = [
+            'super_admin',
+            'admin',
+            'pm',
+            'designer',
+            'engineer',
+            'guest',
+        ];
+
+        return $user->hasAnyRole($readRoles);
     }
 }

@@ -900,7 +900,7 @@ Route::prefix('dashboard')->group(function () {
     | Simple User Management Routes (With Authentication)
     |--------------------------------------------------------------------------
     */
-    Route::prefix('simple')->middleware(['production.security'])->as('dashboard.simple.')->group(function () {
+    Route::prefix('simple')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->as('dashboard.simple.')->group(function () {
         Route::apiResource('users', UserController::class);
     });
 
@@ -909,7 +909,7 @@ Route::prefix('dashboard')->group(function () {
             | Simple User Management V2 Routes (With SimpleJwtAuth)
             |--------------------------------------------------------------------------
             */
-            Route::prefix('users-v2')->middleware(['production.security'])->group(function () {
+            Route::prefix('users-v2')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
                 Route::get('/', [UserControllerV2::class, 'index']);
                 Route::post('/', [UserControllerV2::class, 'store']);
                 Route::get('/profile', [UserControllerV2::class, 'profile']);

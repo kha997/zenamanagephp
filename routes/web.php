@@ -350,8 +350,8 @@ Route::get('/admin/users', function() {
     //     Route::post('/schedule', [App\Http\Controllers\Api\Admin\SecretsController::class, 'schedule'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
     // });
 
-    // App Routes - Temporarily without middleware for testing
-    Route::prefix('app')->name('app.')->group(function () {
+    // App Routes - Protected by auth guard
+    Route::middleware(['auth'])->prefix('app')->name('app.')->group(function () {
         // Dashboard route - AUTH TEMPORARILY DISABLED due to auth() helper issues
         Route::get('/dashboard', [App\Http\Controllers\Web\AppController::class, 'dashboard'])->name('dashboard');
         

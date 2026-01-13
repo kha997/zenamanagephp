@@ -43,3 +43,6 @@ production.env
 
 # Local backups
 *.bak.*
+
+# Local PsySH (Laravel tinker) history
+.config/psysh/

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.." || exit 1
+
+BASE=(./bin/phpunit-api-nocov -c phpunit.xml --exclude-group mysql,external,a11y,performance -v --debug --stop-on-failure)
+
+echo "== Chunk A (Feature/Api without IntegrationTest) =="
+FILES_A=$(ls tests/Feature/Api/*.php | rg -v 'IntegrationTest\.php' | tr '\n' ' ')
+${BASE[@]} $FILES_A
+
+echo "== Chunk B (IntegrationTest only) =="
+${BASE[@]} tests/Feature/Api/IntegrationTest.php
+
+echo "== DONE =="

@@ -24,6 +24,16 @@ class TenantIsolationMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $user = Auth::user();
+
+        if (app()->environment('testing')) {
+            Log::info('TenantIsolationMiddleware::handle ENTER', [
+                'user_id' => optional($user)->id,
+                'tenant_id' => optional($user)->tenant_id,
+                'route' => $request->route()?->getName(),
+                'method' => $request->method(),
+                'ip' => $request->ip(),
+            ]);
+        }
         
         if (!$user) {
             return response()->json([

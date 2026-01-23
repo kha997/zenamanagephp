@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "/Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden" || exit 1
+
+# Clear Laravel caches to avoid leaking stale configs/routes between runs.
+php artisan config:clear >/dev/null 2>&1 || true
+php artisan route:clear >/dev/null 2>&1 || true
+
+: "${RBAC_BYPASS_TESTING:=0}"
+: "${PERF_ASSERTIONS:=1}"
+: "${ZENA_TRACE_FAIL_500:=1}"
+: "${STUB_ROUTES_ENABLED:=1}"
+: "${STUB_METRICS_ENABLED:=1}"
+: "${API_CANONICAL_DOCUMENTS:=0}"
+: "${API_CANONICAL_INSPECTIONS:=0}"
+: "${API_CANONICAL_PROJECTS:=0}"
+export RBAC_BYPASS_TESTING PERF_ASSERTIONS ZENA_TRACE_FAIL_500 \
+  STUB_ROUTES_ENABLED STUB_METRICS_ENABLED \
+  API_CANONICAL_DOCUMENTS API_CANONICAL_INSPECTIONS API_CANONICAL_PROJECTS
+
+STUB_ROUTES_ENABLED=1 STUB_METRICS_ENABLED=1 \
+API_CANONICAL_DOCUMENTS=0 API_CANONICAL_INSPECTIONS=0 API_CANONICAL_PROJECTS=0 \
+./bin/phpunit-api-nocov-chunks 2>&1 | tee storage/logs/qa-gate-api.log
+
+echo "Saved: storage/logs/qa-gate-api.log"

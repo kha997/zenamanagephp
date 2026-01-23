@@ -46,3 +46,11 @@ production.env
 
 # Local PsySH (Laravel tinker) history
 .config/psysh/
+
+# Local dev artifacts
+/storage/logs/*.log
+/logs/*.log
+/database/*.sqlite
+/debug-*.php
+/check-cache.php
+/routes-audit.md

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use App\Services\ErrorEnvelopeService;
 
 /**
  * Enhanced Rate Limiting Middleware
@@ -33,6 +34,7 @@ class EnhancedRateLimitMiddleware
             'requests_per_minute' => 10,
             'burst_limit' => 20,
             'window_size' => 60,
+            'allow_burst' => false,
         ],
         'upload' => [
             'requests_per_minute' => 5,
@@ -56,11 +58,12 @@ class EnhancedRateLimitMiddleware
      */
     public function handle(Request $request, Closure $next, string $type = 'default'): Response
     {
-        $config = $this->getConfig($type);
+        $resolvedType = $this->resolveRateLimitType($type, $request);
+        $config = $this->enforceEndpointPolicies($this->getConfig($resolvedType), $resolvedType, $request);
         $identifier = $this->getIdentifier($request);
         
         // Check rate limit
-        $rateLimitResult = $this->checkRateLimit($identifier, $config, $request, $type);
+        $rateLimitResult = $this->checkRateLimit($identifier, $config, $request, $resolvedType);
         
         if (!$rateLimitResult['allowed']) {
             return $this->rateLimitExceededResponse($rateLimitResult, $request);
@@ -82,6 +85,30 @@ class EnhancedRateLimitMiddleware
     private function getConfig(string $type): array
     {
         return $this->config[$type] ?? $this->config['default'];
+    }
+
+    private function resolveRateLimitType(string $requestedType, Request $request): string
+    {
+        if ($this->isAuthEndpoint($request)) {
+            return 'auth';
+        }
+
+        return $requestedType !== '' ? $requestedType : 'default';
+    }
+
+    private function enforceEndpointPolicies(array $config, string $type, Request $request): array
+    {
+        if ($type === 'auth' || $this->isAuthEndpoint($request)) {
+            $config['allow_burst'] = false;
+            $config['burst_limit'] = $config['requests_per_minute'];
+        }
+
+        return $config;
+    }
+
+    private function isAuthEndpoint(Request $request): bool
+    {
+        return str_starts_with($request->path(), 'api/auth');
     }
     
     /**
@@ -106,7 +133,9 @@ class EnhancedRateLimitMiddleware
         $now = time();
         $windowSize = $config['window_size'];
         $maxRequests = $config['requests_per_minute'];
-        $burstLimit = $config['burst_limit'];
+        $allowBurst = $config['allow_burst'] ?? true;
+        $configuredBurstLimit = $config['burst_limit'] ?? $maxRequests;
+        $burstLimit = $allowBurst ? $configuredBurstLimit : $maxRequests;
         
         // Get current window data
         $windowKey = "rate_limit:{$identifier}:{$type}";
@@ -122,17 +151,12 @@ class EnhancedRateLimitMiddleware
         
         // Check if we're within limits
         $allowed = $currentRequests < $maxRequests;
-        
-        // Check burst limit (allows temporary spikes)
-        $burstAllowed = $currentRequests < $burstLimit;
-        
-        if ($allowed || $burstAllowed) {
-            // Add current request timestamp
+        $isBurstRequest = $allowBurst && $currentRequests >= $maxRequests && $currentRequests < $burstLimit;
+
+        if ($allowed) {
             $currentWindow[] = $now;
-            
-            // Store updated window
             Cache::put($windowKey, $currentWindow, $windowSize + 10); // Extra 10 seconds buffer
-            
+
             return [
                 'allowed' => true,
                 'current_requests' => $currentRequests + 1,
@@ -141,19 +165,23 @@ class EnhancedRateLimitMiddleware
                 'window_size' => $windowSize,
                 'reset_time' => $now + $windowSize,
                 'remaining' => max(0, $maxRequests - ($currentRequests + 1)),
-                'is_burst' => !$allowed && $burstAllowed,
+                'is_burst' => false,
+                'allow_burst' => $allowBurst,
             ];
         }
-        
+
+        $resetTime = $currentWindow ? min($currentWindow) + $windowSize : $now + $windowSize;
+
         return [
             'allowed' => false,
             'current_requests' => $currentRequests,
             'max_requests' => $maxRequests,
             'burst_limit' => $burstLimit,
             'window_size' => $windowSize,
-            'reset_time' => min($currentWindow) + $windowSize,
-            'remaining' => 0,
-            'is_burst' => false,
+            'reset_time' => $resetTime,
+            'remaining' => max(0, $maxRequests - $currentRequests),
+            'is_burst' => $isBurstRequest,
+            'allow_burst' => $allowBurst,
         ];
     }
     
@@ -172,21 +200,30 @@ class EnhancedRateLimitMiddleware
             'rate_limit_result' => $rateLimitResult,
         ]);
         
-        $retryAfter = $rateLimitResult['reset_time'] - time();
-        
-        return response()->json([
-            'success' => false,
-            'error' => 'Rate limit exceeded',
-            'message' => 'Too many requests. Please try again later.',
-            'code' => 'RATE_LIMIT_EXCEEDED',
-            'retry_after' => $retryAfter,
-            'rate_limit' => [
-                'current_requests' => $rateLimitResult['current_requests'],
-                'max_requests' => $rateLimitResult['max_requests'],
-                'window_size' => $rateLimitResult['window_size'],
-                'reset_time' => $rateLimitResult['reset_time'],
-            ]
-        ], 429)->header('Retry-After', $retryAfter);
+        $retryAfter = max(1, $rateLimitResult['reset_time'] - time());
+        $rateLimitDetails = [
+            'current_requests' => $rateLimitResult['current_requests'],
+            'max_requests' => $rateLimitResult['max_requests'],
+            'window_size' => $rateLimitResult['window_size'],
+            'reset_time' => $rateLimitResult['reset_time'],
+        ];
+
+        $response = ErrorEnvelopeService::rateLimitError(
+            'Too many requests. Please try again later.',
+            $retryAfter,
+            null,
+            ['rate_limit' => $rateLimitDetails]
+        );
+
+        $response->headers->set('X-RateLimit-Limit', (string) $rateLimitResult['max_requests']);
+        $response->headers->set('X-RateLimit-Remaining', (string) $rateLimitResult['remaining']);
+        $response->headers->set('X-RateLimit-Reset', (string) $rateLimitResult['reset_time']);
+        $response->headers->set('X-RateLimit-Window', (string) $rateLimitResult['window_size']);
+        if ($rateLimitResult['is_burst']) {
+            $response->headers->set('X-RateLimit-Burst', 'true');
+        }
+
+        return $response;
     }
     
     /**

@@ -119,11 +119,27 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
+            $normalized = $this->normalizePermissionEntry($permission);
             ZenaPermission::firstOrCreate(
-                ['name' => $permission['name']],
-                $permission
+                ['code' => $normalized['code']],
+                $normalized
             );
         }
+    }
+
+    private function normalizePermissionEntry(array $permission): array
+    {
+        $code = $permission['name'] ?? $permission['code'] ?? '';
+        $parts = explode('.', $code, 2);
+        $module = $permission['module'] ?? ($parts[0] ?? '');
+        $action = $permission['action'] ?? ($parts[1] ?? 'access');
+
+        return [
+            'code' => $code,
+            'module' => $module,
+            'action' => $action,
+            'display_name' => $permission['display_name'] ?? ucfirst(str_replace('.', ' ', $code)),
+        ];
     }
 
     /**
@@ -292,7 +308,7 @@ class ZenaRbacSeeder extends Seeder
                 // SuperAdmin gets all permissions
                 $role->permissions()->sync(ZenaPermission::all()->pluck('id'));
             } else {
-                $role->permissions()->sync(ZenaPermission::whereIn('name', $permissions)->pluck('id'));
+                $role->permissions()->sync(ZenaPermission::whereIn('code', $permissions)->pluck('id'));
             }
         }
     }

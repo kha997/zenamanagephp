@@ -127,9 +127,9 @@ class CalculationService
     public function calculateTaskDependenciesImpact(string $taskId): array
     {
         $task = Task::findOrFail($taskId);
-        $dependencies = $task->dependencies ?? [];
-        
-        if (empty($dependencies)) {
+        $dependencyIds = $task->dependency_ids;
+
+        if (empty($dependencyIds)) {
             return [
                 'blocked_by' => [],
                 'blocking' => [],
@@ -137,13 +137,12 @@ class CalculationService
                 'critical_path' => false,
             ];
         }
-        
-        $blockedBy = Task::whereIn('id', $dependencies)
+
+        $blockedBy = Task::whereIn('id', $dependencyIds)
             ->where('status', '!=', 'completed')
             ->get();
-        
-        $blocking = Task::whereJsonContains('dependencies', $taskId)
-            ->get();
+
+        $blocking = $task->dependentTasks;
         
         $canStart = $blockedBy->isEmpty();
         

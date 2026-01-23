@@ -28,6 +28,10 @@ class ExistsRule implements Rule
      */
     public function passes($attribute, $value): bool
     {
+        if ($value === '' || $value === null) {
+            return true;
+        }
+
         $query = DB::table($this->table)->where($this->column, $value);
 
         if ($this->whereColumn && $this->whereValue !== null) {

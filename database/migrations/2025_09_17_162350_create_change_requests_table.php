@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('change_type'); // scope, schedule, cost, quality, risk, resource
             $table->string('priority')->default('medium'); // low, medium, high, urgent
             $table->string('status')->default('pending'); // pending, approved, rejected, implemented
+            $table->timestamp('submitted_at')->nullable();
             $table->string('impact_level')->default('low'); // low, medium, high
             $table->string('requested_by'); // ULID
             $table->string('assigned_to')->nullable(); // ULID
@@ -41,6 +42,10 @@ return new class extends Migration
             $table->text('approval_notes')->nullable();
             $table->text('rejection_reason')->nullable();
             $table->text('implementation_notes')->nullable();
+            $table->text('approval_comments')->nullable();
+            $table->text('rejection_comments')->nullable();
+            $table->decimal('approved_cost', 15, 2)->nullable();
+            $table->integer('approved_schedule_days')->nullable();
             $table->json('attachments')->nullable();
             $table->json('impact_analysis')->nullable();
             $table->json('risk_assessment')->nullable();

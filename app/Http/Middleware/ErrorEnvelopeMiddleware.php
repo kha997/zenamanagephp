@@ -6,6 +6,7 @@ use App\Services\ErrorEnvelopeService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response as BaseResponse;
 
@@ -41,8 +42,12 @@ class ErrorEnvelopeMiddleware
         
         // Get response data
         $data = $response->getData(true);
-        
+
         // If already in error envelope format, return as is
+        if (isset($data['status'])) {
+            return $response;
+        }
+
         if (isset($data['error']) && isset($data['error']['id'])) {
             return $response;
         }
@@ -52,13 +57,23 @@ class ErrorEnvelopeMiddleware
         $errorMessage = $this->getErrorMessage($data, $response->getStatusCode());
         $errorDetails = $this->getErrorDetails($data);
         
-        return ErrorEnvelopeService::error(
+        $errorResponse = ErrorEnvelopeService::error(
             $errorCode,
             $errorMessage,
             $errorDetails,
             $response->getStatusCode(),
             $requestId
         );
+
+        if (!empty($data['errors'])) {
+            $payload = $errorResponse->getData(true);
+            $payload['errors'] = $data['errors'];
+            $errorResponse->setData($payload);
+        }
+
+        $this->preserveRateLimitHeaders($response, $errorResponse);
+
+        return $errorResponse;
     }
     
     /**
@@ -148,5 +163,17 @@ class ErrorEnvelopeMiddleware
         }
         
         return $details;
+    }
+
+    private function preserveRateLimitHeaders(BaseResponse $original, BaseResponse $target): void
+    {
+        foreach ($original->headers->all() as $name => $values) {
+            $lowerName = strtolower($name);
+            if (Str::startsWith($lowerName, 'x-ratelimit') || $lowerName === 'retry-after') {
+                foreach ($values as $value) {
+                    $target->headers->set($name, $value);
+                }
+            }
+        }
     }
 }

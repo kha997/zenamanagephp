@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use LogicException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class RoleBasedAccessControlMiddleware
 {
+    private array $legacyPermissionAliases = [];
+    private array $actionAliasMap = [];
+    private array $projectScopedModules = [];
+
     /**
      * Handle an incoming request.
      *
@@ -35,6 +40,12 @@ class RoleBasedAccessControlMiddleware
                 'code' => 'USER_NOT_AUTHENTICATED'
             ], 401);
         }
+
+        if ($this->shouldBypassRbac()) {
+            $this->logRbacEvent('rbac.bypass', 'info', $user, $request, $roleOrPermission ?? 'rbac:authenticated', $projectParam);
+
+            return $next($request);
+        }
         
         if ($roleOrPermission === null) {
             return $this->handleGeneralAccess($user, $request, $next);
@@ -44,16 +55,8 @@ class RoleBasedAccessControlMiddleware
         $hasAccess = $this->checkAccess($user, $roleOrPermission, $request, $projectParam);
         
         if (!$hasAccess) {
-            Log::warning('Access denied', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'tenant_id' => $user->tenant_id,
-                'required_role_permission' => $roleOrPermission,
-                'route' => $request->route()?->getName(),
-                'method' => $request->method(),
-                'ip' => $request->ip()
-            ]);
-            
+            $this->logRbacEvent('rbac.deny', 'warning', $user, $request, $roleOrPermission, $projectParam);
+
             return response()->json([
                 'success' => false,
                 'error' => 'Access Denied',
@@ -61,6 +64,8 @@ class RoleBasedAccessControlMiddleware
                 'code' => 'ACCESS_DENIED'
             ], 403);
         }
+
+        $this->logRbacEvent('rbac.allow', 'info', $user, $request, $roleOrPermission, $projectParam);
         
         // Add access context to request
         $request->attributes->set('required_role_permission', $roleOrPermission);
@@ -103,17 +108,11 @@ class RoleBasedAccessControlMiddleware
     }
     
     /**
-     * Check if the string is a permission
+     * Check if the string represents a permission identifier.
      */
     private function isPermission(string $roleOrPermission): bool
     {
-        $permissions = [
-            'create_project', 'edit_project', 'delete_project', 'view_project',
-            'create_task', 'edit_task', 'delete_task', 'view_task',
-            'manage_team', 'view_team', 'manage_documents', 'view_documents',
-            'view_analytics', 'manage_settings', 'view_settings'
-        ];
-        return in_array($roleOrPermission, $permissions);
+        return str_contains($roleOrPermission, '.') || array_key_exists($roleOrPermission, $this->getLegacyPermissionAliases());
     }
     
     /**
@@ -132,19 +131,99 @@ class RoleBasedAccessControlMiddleware
      */
     private function checkPermission($user, string $permission, Request $request, ?string $projectParam = null): bool
     {
-        // Get user's permissions
-        $userPermissions = $this->getUserPermissions($user);
-        
-        // Check if user has the permission
-        if (!in_array($permission, $userPermissions)) {
-            return false;
+        foreach ($this->getPermissionCandidates($permission) as $candidate) {
+            if (!$this->hasPermissionSet($user, $candidate)) {
+                continue;
+            }
+
+            if ($projectParam && $this->isProjectSpecificPermission($candidate)) {
+                if (!$this->checkProjectAccess($user, $request, $projectParam)) {
+                    return false;
+                }
+            }
+
+            return true;
         }
-        
-        // If permission is project-specific, check project access
-        if ($projectParam && $this->isProjectSpecificPermission($permission)) {
-            return $this->checkProjectAccess($user, $request, $projectParam);
+
+        return false;
+    }
+
+    private function getPermissionCandidates(string $permission): array
+    {
+        $candidates = [[$permission]];
+
+        foreach ($this->resolveAliasTargets($permission) as $aliasSet) {
+            $candidates[] = $aliasSet;
         }
-        
+
+        return $candidates;
+    }
+
+    private function resolveAliasTargets(string $permission): array
+    {
+        if (!str_contains($permission, '.')) {
+            return [];
+        }
+
+        $lastDot = strrpos($permission, '.');
+        if ($lastDot === false) {
+            return [];
+        }
+
+        $module = substr($permission, 0, $lastDot);
+        $action = strtolower(substr($permission, $lastDot + 1));
+
+        $actionAliasMap = $this->getActionAliasMap();
+
+        if (!isset($actionAliasMap[$action])) {
+            return [];
+        }
+
+        $mappedActions = (array) $actionAliasMap[$action];
+
+        $aliasSets = [];
+        foreach ($mappedActions as $mappedAction) {
+            $aliasSets[] = ["{$module}.{$mappedAction}"];
+        }
+
+        return $aliasSets;
+    }
+
+    private function getLegacyPermissionAliases(): array
+    {
+        if ($this->legacyPermissionAliases === []) {
+            $this->legacyPermissionAliases = config('rbac.legacy_permission_aliases', []);
+        }
+
+        return $this->legacyPermissionAliases;
+    }
+
+    private function getActionAliasMap(): array
+    {
+        if ($this->actionAliasMap === []) {
+            $this->actionAliasMap = config('rbac.action_alias_map', []);
+        }
+
+        return $this->actionAliasMap;
+    }
+
+    private function getProjectScopedModules(): array
+    {
+        if ($this->projectScopedModules === []) {
+            $this->projectScopedModules = config('rbac.project_scoped_modules', []);
+        }
+
+        return $this->projectScopedModules;
+    }
+
+    private function hasPermissionSet($user, array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if (!$user->hasPermission($permission)) {
+                return false;
+            }
+        }
+
         return true;
     }
     
@@ -174,55 +253,30 @@ class RoleBasedAccessControlMiddleware
     }
     
     /**
-     * Get user's permissions
+     * Check if permission requires project context.
      */
-    private function getUserPermissions($user): array
+    private function isProjectSpecificPermission(array|string $permission): bool
     {
-        // This is a simplified implementation
-        // You might want to implement a proper permission system
-        $permissions = [];
-        
-        if ($user->isSuperAdmin()) {
-            $permissions = [
-                'create_project', 'edit_project', 'delete_project', 'view_project',
-                'create_task', 'edit_task', 'delete_task', 'view_task',
-                'manage_team', 'view_team', 'manage_documents', 'view_documents',
-                'view_analytics', 'manage_settings', 'view_settings'
-            ];
-        } else {
-            // Add permission logic based on user's roles
-            if ($user->hasRole('project_manager')) {
-                $permissions = array_merge($permissions, [
-                    'create_project', 'edit_project', 'view_project',
-                    'create_task', 'edit_task', 'view_task',
-                    'manage_team', 'view_team', 'view_documents',
-                    'view_analytics', 'view_settings'
-                ]);
+        $permissions = is_array($permission) ? $permission : [$permission];
+
+        foreach ($permissions as $perm) {
+            if (!str_contains($perm, '.')) {
+                continue;
             }
-            
-            if ($user->hasRole('team_member')) {
-                $permissions = array_merge($permissions, [
-                    'view_project', 'create_task', 'edit_task', 'view_task',
-                    'view_team', 'view_documents'
-                ]);
+
+            $lastDot = strrpos($perm, '.');
+            if ($lastDot === false) {
+                continue;
+            }
+
+            $module = substr($perm, 0, $lastDot);
+
+            if (in_array($module, $this->getProjectScopedModules(), true)) {
+                return true;
             }
         }
-        
-        return array_unique($permissions);
-    }
-    
-    /**
-     * Check if permission is project-specific
-     */
-    private function isProjectSpecificPermission(string $permission): bool
-    {
-        $projectSpecificPermissions = [
-            'edit_project', 'delete_project', 'view_project',
-            'create_task', 'edit_task', 'delete_task', 'view_task',
-            'manage_documents', 'view_documents'
-        ];
-        
-        return in_array($permission, $projectSpecificPermissions);
+
+        return false;
     }
     
     /**
@@ -230,7 +284,8 @@ class RoleBasedAccessControlMiddleware
      */
     private function checkProjectAccess($user, Request $request, string $projectParam): bool
     {
-        $projectId = $request->route($projectParam) ?? $request->input($projectParam);
+        $projectParamValue = $this->resolveProjectParamValue($request, $projectParam);
+        $projectId = $this->normalizeProjectIdentifier($projectParamValue);
         
         if (!$projectId) {
             return false;
@@ -271,12 +326,15 @@ class RoleBasedAccessControlMiddleware
         ];
 
         if (!$user->hasAnyRole($allowedRoles)) {
-            Log::warning('Access denied: missing RBAC assignment', [
-                'user_id' => $user->id ?? null,
-                'email' => $user->email ?? null,
-                'tenant_id' => $user->tenant_id ?? null,
-                'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : []
-            ]);
+            $this->logRbacEvent(
+                'rbac.deny',
+                'warning',
+                $user,
+                $request,
+                'rbac:authenticated',
+                null,
+                ['roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : []]
+            );
 
             return response()->json([
                 'success' => false,
@@ -286,9 +344,80 @@ class RoleBasedAccessControlMiddleware
             ], 403);
         }
 
+        $this->logRbacEvent('rbac.allow', 'info', $user, $request, 'rbac:authenticated');
         $request->attributes->set('required_role_permission', 'rbac:authenticated');
         $request->attributes->set('access_granted', true);
 
         return $next($request);
+    }
+
+    /**
+     * Determine if RBAC should be bypassed in the current environment.
+     */
+    private function shouldBypassRbac(): bool
+    {
+        return app()->environment('testing') && config('rbac.bypass_testing', true);
+    }
+
+    /**
+     * Log RBAC decisions with a consistent structure.
+     */
+    private function logRbacEvent(string $event, string $level, $user, Request $request, ?string $roleOrPermission = null, ?string $projectParam = null, array $extraContext = []): void
+    {
+        $context = [
+            'user_id' => $user->id ?? null,
+            'tenant_id' => $user->tenant_id ?? null,
+            'route' => $request->route()?->getName(),
+            'method' => $request->method(),
+            'required_role_permission' => $roleOrPermission ?? 'rbac:authenticated',
+            'event' => $event,
+        ];
+
+        if ($projectParam) {
+            $context['projectParam'] = $projectParam;
+            $context['projectParamValue'] = $this->resolveProjectParamValue($request, $projectParam);
+        }
+
+        $context = array_merge($context, $extraContext);
+
+        if ($level === 'warning') {
+            Log::warning("RBAC event: {$event}", $context);
+            return;
+        }
+
+        Log::info("RBAC event: {$event}", $context);
+    }
+
+    /**
+     * Resolve the value of a project parameter from route or input.
+     */
+    private function resolveProjectParamValue(Request $request, string $projectParam): mixed
+    {
+        try {
+            $routeValue = $request->route($projectParam);
+        } catch (LogicException) {
+            $routeValue = null;
+        }
+
+        return $routeValue ?? $request->input($projectParam);
+    }
+
+    private function normalizeProjectIdentifier(mixed $projectIdentifier): ?string
+    {
+        if (is_object($projectIdentifier)) {
+            if (method_exists($projectIdentifier, 'getKey')) {
+                return (string) $projectIdentifier->getKey();
+            }
+
+            if (property_exists($projectIdentifier, 'id')) {
+                return (string) $projectIdentifier->id;
+            }
+        }
+
+        if ($projectIdentifier !== null && $projectIdentifier !== false) {
+            return (string) $projectIdentifier;
+        }
+
+        return null;
     }
 }

@@ -35,6 +35,12 @@ class ProjectController extends Controller
     {
         try {
             $user = Auth::user();
+            if (!$this->userHasPermission($user, 'project.read')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Insufficient permissions to view projects'
+                ], 403);
+            }
             $filters = $request->all();
             $perPage = (int)($filters['per_page'] ?? 15);
             unset($filters['per_page']);
@@ -114,6 +120,12 @@ class ProjectController extends Controller
     {
         try {
             $user = Auth::user();
+            if (!$this->userHasPermission($user, 'project.read')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Insufficient permissions to view this project'
+                ], 403);
+            }
             
             $project = $this->projectRepository->getProjectById($id, [
                 'client', 'projectManager', 'teamMembers', 'tasks', 'documents'
@@ -178,7 +190,7 @@ class ProjectController extends Controller
             $user = Auth::user();
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$this->userHasPermission($user, 'project.create')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to create projects'
@@ -300,7 +312,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$this->userHasPermission($user, 'project.update')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to update projects'
@@ -370,7 +382,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$this->userHasPermission($user, 'project.delete')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to delete projects'
@@ -432,7 +444,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$this->userHasPermission($user, 'project.update')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to update project status'
@@ -505,6 +517,12 @@ class ProjectController extends Controller
     {
         try {
             $user = Auth::user();
+            if (!$this->userHasPermission($user, 'project.read')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Insufficient permissions to view project statistics'
+                ], 403);
+            }
             
             $statistics = $this->projectRepository->getProjectStatistics($user->tenant_id);
             
@@ -534,6 +552,12 @@ class ProjectController extends Controller
     {
         try {
             $user = Auth::user();
+            if (!$this->userHasPermission($user, 'project.read')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Insufficient permissions to view projects'
+                ], 403);
+            }
             
             $projects = $this->projectRepository->getProjectsForDropdown($user->tenant_id);
             
@@ -574,7 +598,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$this->userHasPermission($user, 'project.update')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to recalculate progress'
@@ -633,7 +657,7 @@ class ProjectController extends Controller
             }
             
             // Check permission
-            if (!$user->hasPermission('project.write')) {
+            if (!$this->userHasPermission($user, 'project.update')) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Insufficient permissions to recalculate actual cost'
@@ -682,6 +706,29 @@ class ProjectController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    private function userHasPermission(User $user, string $permission): bool
+    {
+        foreach ($this->getPermissionCandidates($permission) as $candidate) {
+            if ($user->hasPermission($candidate)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function getPermissionCandidates(string $permission): array
+    {
+        $map = config('rbac.permission_aliases', []);
+        $candidates = [$permission];
+
+        foreach ($map[$permission] ?? [] as $alias) {
+            $candidates[] = $alias;
+        }
+
+        return $candidates;
     }
 
     private function projectPayload(Project $project): array

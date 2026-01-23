@@ -3,31 +3,74 @@
 namespace Tests\Feature\Api;
 
 use Tests\TestCase;
-use App\Models\User;
+use App\Models\Project;
 use App\Models\ZenaProject;
 use App\Models\ZenaDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Testing\TestResponse;
+use Src\DocumentManagement\Models\DocumentVersion;
+use Tests\Traits\DocumentUploadTestHelper;
+use Tests\Traits\RbacTestTrait;
 
 class DocumentManagementTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, RbacTestTrait, DocumentUploadTestHelper;
 
     protected $user;
     protected $project;
-    protected $token;
+    protected ?string $token = null;
+    private array $skipSanctumAuthentication = [
+        'test_unauthorized_access_returns_401',
+    ];
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->user = User::factory()->create();
+        if (in_array($this->getName(false), $this->skipSanctumAuthentication, true)) {
+            $this->user = $this->makeTenantUser();
+            $this->token = $this->user->createToken('tests')->plainTextToken;
+        } else {
+            $context = $this->actingAsWithPermissions([
+                'document.create',
+                'document.read',
+                'document.update',
+                'document.delete',
+            ]);
+
+            $this->user = $context['user'];
+            $this->token = $context['token'];
+        }
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
-        $this->token = $this->generateJwtToken($this->user);
+        $status = match ($this->project->status) {
+            'in_progress' => 'active',
+            default => $this->project->status,
+        };
+        $startDate = $this->project->start_date?->format('Y-m-d');
+        $endDate = $this->project->end_date?->format('Y-m-d');
+
+        DB::table('zena_projects')->insert([
+            'id' => $this->project->id,
+            'code' => $this->project->code,
+            'name' => $this->project->name,
+            'description' => $this->project->description,
+            'client_id' => null,
+            'status' => $status,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'budget' => null,
+            'settings' => json_encode($this->project->settings ?? []),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->token = $this->user->createToken('tests')->plainTextToken;
         
         Storage::fake('local');
     }
@@ -37,19 +80,10 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_upload_document()
     {
-        $file = UploadedFile::fake()->create('test-document.pdf', 1000);
+        $file = $this->fakePdfFile('test-document.pdf');
+        $payload = $this->documentUploadPayload($this->project, $file);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/documents', [
-            'project_id' => $this->project->id,
-            'title' => 'Test Document',
-            'description' => 'Test document description',
-            'document_type' => 'drawing',
-            'file' => $file,
-            'version' => '1.0',
-            'tags' => ['test', 'drawing']
-        ]);
+        $response = $this->sendDocumentUploadRequest($this->token, $payload);
 
         $response->assertStatus(201)
                 ->assertJsonStructure([
@@ -65,13 +99,66 @@ class DocumentManagementTest extends TestCase
                 ]);
 
         $this->assertDatabaseHas('documents', [
-            'title' => 'Test Document',
+            'name' => 'Test Document',
             'project_id' => $this->project->id,
-            'document_type' => 'drawing'
+            'file_type' => 'drawing'
         ]);
 
-        // Assert file was stored
-        Storage::disk('local')->assertExists('documents/' . $this->project->id . '/' . $response->json('data.file_name'));
+        $documentId = $response->json('data.id');
+        $latestVersion = DocumentVersion::where('document_id', $documentId)
+            ->orderByDesc('version_number')
+            ->first();
+
+        $this->assertNotNull($latestVersion);
+        Storage::disk('local')->assertExists($latestVersion->file_path);
+    }
+
+    public function test_cannot_upload_document_without_permission()
+    {
+        $context = $this->actingAsWithPermissions(['document.read']);
+        $token = $context['sanctum_token'];
+
+        $project = ZenaProject::factory()->create([
+            'created_by' => $context['user']->id,
+            'tenant_id' => $context['user']->tenant_id,
+        ]);
+
+        $file = $this->fakePdfFile('blocked.pdf');
+        $payload = $this->documentUploadPayload($project, $file, [
+            'title' => 'Blocked Upload',
+            'description' => 'Should not be allowed',
+        ]);
+
+        putenv('RBAC_BYPASS_TESTING=0');
+        $_ENV['RBAC_BYPASS_TESTING'] = '0';
+
+        $response = $this->sendDocumentUploadRequest($token, $payload, '/api/documents');
+
+        $response->assertStatus(403)
+                ->assertJsonStructure([
+                    'error' => [
+                        'code',
+                        'message'
+                    ]
+                ]);
+
+        $this->assertEquals(
+            'E403.AUTHORIZATION',
+            data_get($response->json(), 'error.code')
+        );
+
+        $this->assertEquals(
+            'You do not have sufficient RBAC assignments to access this resource',
+            data_get($response->json(), 'error.message')
+        );
+    }
+
+    private function sendDocumentUploadRequest(string $token, array $payload, string $route = '/api/zena/documents'): TestResponse
+    {
+        return $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+        ])->post($route, $payload);
     }
 
     /**
@@ -134,20 +221,50 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_download_document()
     {
-        $document = ZenaDocument::factory()->create([
-            'project_id' => $this->project->id,
-            'uploaded_by' => $this->user->id,
-            'file_path' => 'documents/test-file.pdf'
+        $uploaded = $this->uploadSampleDocument([
+            'title' => 'Download Document',
+            'description' => 'Document prepared for download',
+            'document_type' => 'drawing',
         ]);
-
-        // Create a fake file
-        Storage::disk('local')->put('documents/test-file.pdf', 'fake file content');
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/zena/documents/{$document->id}/download");
+        ])->getJson("/api/zena/documents/{$uploaded['document_id']}/download");
 
         $response->assertStatus(200);
+
+        Storage::disk('local')->assertExists($uploaded['version']->file_path);
+    }
+
+    private function uploadSampleDocument(array $overrides = []): array
+    {
+        $file = UploadedFile::fake()->create($overrides['file_name'] ?? 'test-document.pdf', 1000);
+        $payload = array_merge([
+            'project_id' => $this->project->id,
+            'title' => 'Sample Document',
+            'description' => 'Document created for helper',
+            'document_type' => 'drawing',
+            'file' => $file,
+            'version' => '1.0',
+            'tags' => ['test', 'helper'],
+        ], $overrides);
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson('/api/zena/documents', $payload);
+
+        $response->assertStatus(201);
+
+        $documentId = $response->json('data.id');
+        $version = DocumentVersion::where('document_id', $documentId)
+            ->orderByDesc('version_number')
+            ->firstOrFail();
+
+        return [
+            'document_id' => $documentId,
+            'version' => $version,
+            'response' => $response,
+        ];
     }
 
     /**
@@ -155,36 +272,39 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_create_document_version()
     {
-        $document = ZenaDocument::factory()->create([
-            'project_id' => $this->project->id,
-            'uploaded_by' => $this->user->id
+        $uploaded = $this->uploadSampleDocument([
+            'title' => 'Versioned Document',
+            'description' => 'Document that will receive new versions'
         ]);
+
+        $documentId = $uploaded['document_id'];
 
         $file = UploadedFile::fake()->create('updated-document.pdf', 1000);
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/documents/{$document->id}/version", [
+        ])->postJson("/api/zena/documents/{$documentId}/version", [
             'file' => $file,
             'version' => '2.0',
-            'change_notes' => 'Updated with new specifications'
+            'comment' => 'Updated with new specifications'
         ]);
 
         $response->assertStatus(201)
                 ->assertJsonStructure([
                     'status',
                     'data' => [
-                        'id',
-                        'version',
-                        'parent_document_id',
-                        'change_notes'
+                        'version' => [
+                            'id',
+                            'version_number',
+                            'comment'
+                        ]
                     ]
                 ]);
 
-        $this->assertDatabaseHas('documents', [
-            'parent_document_id' => $document->id,
-            'version' => '2.0',
-            'change_notes' => 'Updated with new specifications'
+        $this->assertDatabaseHas('document_versions', [
+            'document_id' => $documentId,
+            'version_number' => 2,
+            'comment' => 'Updated with new specifications'
         ]);
     }
 
@@ -258,7 +378,7 @@ class DocumentManagementTest extends TestCase
 
         $this->assertDatabaseHas('documents', [
             'id' => $document->id,
-            'title' => 'Updated Document Title'
+            'name' => 'Updated Document Title'
         ]);
     }
 
@@ -298,18 +418,18 @@ class DocumentManagementTest extends TestCase
         ZenaDocument::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
-            'document_type' => 'drawing'
+            'file_type' => 'drawing'
         ]);
 
         ZenaDocument::factory()->count(2)->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
-            'document_type' => 'specification'
+            'file_type' => 'specification'
         ]);
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/documents?document_type=drawing');
+        ])->getJson("/api/zena/documents?document_type=drawing&project_id={$this->project->id}");
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -338,15 +458,8 @@ class DocumentManagementTest extends TestCase
      */
     public function test_unauthorized_access_returns_401()
     {
-        $response = $this->getJson('/api/zena/documents');
+        $response = $this->getJson("/api/zena/documents?project_id={$this->project->id}");
         $response->assertStatus(401);
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
-    {
-        return 'test-jwt-token-' . $user->id;
-    }
 }

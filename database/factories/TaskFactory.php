@@ -27,7 +27,7 @@ class TaskFactory extends Factory
 
         $data = [
             'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
-            'tenant_id' => Tenant::factory(),
+            'tenant_id' => null,
             'project_id' => Project::factory(),
             'parent_id' => null,
             'name' => $title,
@@ -49,11 +49,20 @@ class TaskFactory extends Factory
             'end_date' => $this->faker->dateTimeBetween('+1 month', '+6 months'),
             'tags' => $this->faker->words(2),
             'watchers' => [],
-            'dependencies' => [],
+            'dependency_ids' => [],
             'order' => $this->faker->numberBetween(1, 50),
         ];
 
         return $this->filterTaskAttributes($data);
+    }
+
+    public function configure(): static
+    {
+        return $this->afterMaking(function (Task $task) {
+            $this->alignTenantWithProject($task);
+        })->afterCreating(function (Task $task) {
+            $this->alignTenantWithProject($task);
+        });
     }
 
     private function filterTaskAttributes(array $attributes): array
@@ -65,6 +74,33 @@ class TaskFactory extends Factory
         $columns = Schema::getColumnListing('tasks');
 
         return array_intersect_key($attributes, array_flip($columns));
+    }
+
+    private function alignTenantWithProject(Task $task): void
+    {
+        if (!empty($task->tenant_id)) {
+            return;
+        }
+
+        $tenantId = null;
+
+        if (!empty($task->project_id)) {
+            $project = Project::withoutGlobalScopes()->find($task->project_id);
+
+            if ($project) {
+                $tenantId = $project->tenant_id;
+            }
+        }
+
+        if (empty($tenantId)) {
+            $tenantId = Tenant::factory()->create()->id;
+        }
+
+        $task->tenant_id = $tenantId;
+
+        if ($task->exists) {
+            $task->saveQuietly();
+        }
     }
 
     /**

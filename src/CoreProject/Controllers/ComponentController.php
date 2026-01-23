@@ -8,6 +8,8 @@ use Src\CoreProject\Models\Component;
 use Src\CoreProject\Resources\ComponentResource;
 use Src\CoreProject\Requests\StoreComponentRequest;
 use Src\CoreProject\Requests\UpdateComponentRequest;
+use Src\CoreProject\Events\ComponentProgressUpdated;
+use Illuminate\Support\Facades\Event;
 use Src\RBAC\Middleware\RBACMiddleware;
 use Src\Foundation\Utils\JSendResponse;
 
@@ -58,7 +60,7 @@ class ComponentController
             $data['project_id'] = $projectId;
             
             $component = Component::create($data);
-            return JSendResponse::success(new ComponentResource($component), 'Component đã được tạo thành công');
+            return JSendResponse::success(new ComponentResource($component), 'Component đã được tạo thành công', 201);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo component: ' . $e->getMessage());
         }
@@ -91,14 +93,49 @@ class ComponentController
      * @param string $componentId
      * @return JsonResponse
      */
-    public function update(UpdateComponentRequest $request, string $projectId, string $componentId): JsonResponse
+    public function update(UpdateComponentRequest $request, string $componentId, ?string $projectId = null): JsonResponse
     {
         try {
-            $component = Component::where('project_id', $projectId)
-                                ->where('id', $componentId)
-                                ->firstOrFail();
+            $query = Component::where('id', $componentId);
+
+            if ($projectId) {
+                $query->where('project_id', $projectId);
+            }
+
+            $component = $query->firstOrFail();
             
-            $component->update($request->validated());
+            $data = $request->validated();
+            $progressPercent = null;
+
+            if (array_key_exists('progress_percent', $data)) {
+                $progressPercent = $data['progress_percent'];
+                unset($data['progress_percent']);
+            }
+
+            $component->update($data);
+
+            if ($progressPercent !== null) {
+                $oldProgress = $component->progress_percent;
+                $oldActualCost = $component->actual_cost;
+                $component->updateProgress($progressPercent);
+                $newActualCost = $component->actual_cost;
+
+                Event::dispatch(new ComponentProgressUpdated(
+                    $component->id,
+                    $component->project_id,
+                    optional(auth()->user())->id ?? 0,
+                    optional(auth()->user())->tenant_id ?? 0,
+                    $oldProgress,
+                    $progressPercent,
+                    $oldActualCost,
+                    $newActualCost,
+                    [
+                        'progress_percent' => ['old' => $oldProgress, 'new' => $progressPercent],
+                        'actual_cost' => ['old' => $oldActualCost, 'new' => $newActualCost]
+                    ],
+                    new \DateTime()
+                ));
+            }
             return JSendResponse::success(new ComponentResource($component), 'Component đã được cập nhật thành công');
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể cập nhật component: ' . $e->getMessage());

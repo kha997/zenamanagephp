@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DashboardWidget;
+use App\Models\User;
 use App\Models\UserDashboard;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -27,7 +28,14 @@ class DashboardCustomizationService
     public function getUserCustomizableDashboard(User $user): array
     {
         try {
-            $dashboard = $this->dashboardService->getUserDashboard($user);
+            $dashboard = $this->dashboardService->getUserDashboard($user->id);
+            $currentLayout = $dashboard->layout;
+            $needsCustomLayout = is_null($currentLayout) || (!empty($currentLayout) && !isset($currentLayout[0]['widget_id']));
+            if ($needsCustomLayout) {
+                $defaultLayout = $this->getDefaultLayoutForRole($user->role);
+                $dashboard->update(['layout' => $defaultLayout]);
+                $dashboard->refresh();
+            }
             $availableWidgets = $this->getAvailableWidgetsForUser($user);
             $widgetCategories = $this->getWidgetCategories();
             $layoutTemplates = $this->getLayoutTemplates();
@@ -59,6 +67,7 @@ class DashboardCustomizationService
 
             // Validate widget exists and user has permission
             $widget = DashboardWidget::findOrFail($widgetId);
+            $widgetConfig = $this->ensureArray($widget->config ?? []);
             $this->validateWidgetPermission($user, $widget);
 
             // Get user dashboard
@@ -71,12 +80,14 @@ class DashboardCustomizationService
             }
 
             // Parse current layout
-            $layout = json_decode($dashboard->layout, true) ?? [];
+            $layout = $this->decodeLayout($dashboard->layout ?? []);
             
             // Generate widget instance ID
             $widgetInstanceId = Str::ulid();
             
             // Create widget instance
+            $mergedConfig = array_merge($widgetConfig, $config);
+
             $widgetInstance = [
                 'id' => $widgetInstanceId,
                 'widget_id' => $widgetId,
@@ -84,7 +95,7 @@ class DashboardCustomizationService
                 'title' => $config['title'] ?? $widget->name,
                 'size' => $config['size'] ?? 'medium',
                 'position' => $this->calculateNextPosition($layout),
-                'config' => array_merge($widget->config ?? [], $config),
+                'config' => $mergedConfig,
                 'is_customizable' => $config['is_customizable'] ?? true,
                 'created_at' => now()->toISOString()
             ];
@@ -143,12 +154,13 @@ class DashboardCustomizationService
                 throw new \Exception('Dashboard not found');
             }
 
-            $layout = json_decode($dashboard->layout, true) ?? [];
+            $layout = $this->decodeLayout($dashboard->layout ?? []);
             
             // Find and remove widget instance
             $widgetInstance = null;
             $layout = array_filter($layout, function ($widget) use ($widgetInstanceId, &$widgetInstance) {
-                if (($widget['instance_id'] ?? null) === $widgetInstanceId) {
+                $instanceId = $widget['id'] ?? $widget['instance_id'] ?? null;
+                if ($instanceId === $widgetInstanceId) {
                     $widgetInstance = $widget;
                     return false;
                 }
@@ -207,7 +219,7 @@ class DashboardCustomizationService
                 throw new \Exception('Dashboard not found');
             }
 
-            $layout = json_decode($dashboard->layout, true) ?? [];
+            $layout = $this->decodeLayout($dashboard->layout ?? []);
             
             // Find and update widget instance
             $updated = false;
@@ -269,6 +281,12 @@ class DashboardCustomizationService
     {
         try {
             DB::beginTransaction();
+
+            // Check permissions
+            $permissions = $this->getCustomizationPermissions($user);
+            if (empty($permissions['can_configure_widgets'])) {
+                throw new \Exception('User does not have permission to update layout');
+            }
 
             // Validate layout structure
             $this->validateLayoutStructure($layout);
@@ -377,10 +395,15 @@ class DashboardCustomizationService
     /**
      * Save user preferences
      */
-    public function saveUserPreferences(User $user, array $preferences): array
+    public function saveUserPreferences(User $user, $preferences): array
     {
         try {
             DB::beginTransaction();
+
+            $permissions = $this->getCustomizationPermissions($user);
+            if (empty($permissions['can_configure_widgets'])) {
+                throw new \Exception('User does not have permission to save preferences');
+            }
 
             $dashboard = UserDashboard::where('user_id', $user->id)
                 ->where('tenant_id', $user->tenant_id)
@@ -388,6 +411,10 @@ class DashboardCustomizationService
 
             if (!$dashboard) {
                 $dashboard = $this->createUserDashboard($user);
+            }
+
+            if (is_string($preferences)) {
+                $preferences = json_decode($preferences, true) ?? [];
             }
 
             // Validate preferences
@@ -436,11 +463,9 @@ class DashboardCustomizationService
                 $dashboard = $this->createUserDashboard($user);
             }
 
-            // Get default layout for user role
-            $defaultLayout = $this->getDefaultLayoutForRole($user->role);
-
+            $emptyLayout = [];
             $dashboard->update([
-                'layout' => json_encode($defaultLayout),
+                'layout' => json_encode($emptyLayout),
                 'preferences' => json_encode($this->getDefaultPreferences()),
                 'updated_at' => now()
             ]);
@@ -451,12 +476,12 @@ class DashboardCustomizationService
             $this->realTimeService->broadcastDashboardUpdate(
                 $user->id,
                 'dashboard_reset',
-                ['layout' => $defaultLayout]
+                ['layout' => $emptyLayout]
             );
 
             return [
                 'success' => true,
-                'layout' => $defaultLayout,
+                'layout' => $emptyLayout,
                 'message' => 'Dashboard reset to default successfully'
             ];
 
@@ -473,7 +498,7 @@ class DashboardCustomizationService
     /**
      * Get available widgets for user
      */
-    protected function getAvailableWidgetsForUser(User $user): array
+    public function getAvailableWidgetsForUser(User $user): array
     {
         $widgets = DashboardWidget::where('is_active', true)
             ->where('tenant_id', $user->tenant_id)
@@ -483,6 +508,7 @@ class DashboardCustomizationService
             return true;
         })->map(function ($widget) {
             return [
+                'code' => $widget->code,
                 'id' => $widget->id,
                 'name' => $widget->name,
                 'type' => $widget->type,
@@ -499,7 +525,7 @@ class DashboardCustomizationService
     /**
      * Get widget categories
      */
-    protected function getWidgetCategories(): array
+    public function getWidgetCategories(): array
     {
         return [
             'overview' => [
@@ -543,7 +569,7 @@ class DashboardCustomizationService
     /**
      * Get layout templates
      */
-    protected function getLayoutTemplates(): array
+    public function getLayoutTemplates(): array
     {
         return [
             'project_manager' => [
@@ -551,6 +577,7 @@ class DashboardCustomizationService
                 'name' => 'Project Manager',
                 'description' => 'Comprehensive project management layout',
                 'role' => 'project_manager',
+                'permission' => 'can_apply_templates',
                 'widgets' => [
                     'project_overview',
                     'task_progress',
@@ -565,6 +592,7 @@ class DashboardCustomizationService
                 'name' => 'Site Engineer',
                 'description' => 'Field-focused layout for site engineers',
                 'role' => 'site_engineer',
+                'permission' => 'can_apply_templates',
                 'widgets' => [
                     'daily_tasks',
                     'site_diary',
@@ -579,6 +607,7 @@ class DashboardCustomizationService
                 'name' => 'QC Inspector',
                 'description' => 'Quality control focused layout',
                 'role' => 'qc_inspector',
+                'permission' => 'can_apply_templates',
                 'widgets' => [
                     'inspection_schedule',
                     'ncr_tracking',
@@ -593,6 +622,7 @@ class DashboardCustomizationService
                 'name' => 'Client Representative',
                 'description' => 'Client-focused reporting layout',
                 'role' => 'client_rep',
+                'permission' => 'can_apply_templates',
                 'widgets' => [
                     'project_summary',
                     'progress_report',
@@ -608,7 +638,7 @@ class DashboardCustomizationService
     /**
      * Get customization options
      */
-    protected function getCustomizationOptions(User $user): array
+    public function getCustomizationOptions(User $user): array
     {
         return [
             'widget_sizes' => ['small', 'medium', 'large', 'extra-large'],
@@ -636,7 +666,7 @@ class DashboardCustomizationService
     /**
      * Get customization permissions
      */
-    protected function getCustomizationPermissions(User $user): array
+    public function getCustomizationPermissions(User $user): array
     {
         $permissions = [
             'can_add_widgets' => false,
@@ -666,7 +696,6 @@ class DashboardCustomizationService
             case 'client_rep':
                 $permissions['can_resize_widgets'] = true;
                 $permissions['can_move_widgets'] = true;
-                $permissions['can_configure_widgets'] = true;
                 break;
         }
 
@@ -686,9 +715,9 @@ class DashboardCustomizationService
     /**
      * Check if user can access widget
      */
-    protected function userCanAccessWidget(User $user, DashboardWidget $widget): bool
+    protected function userCanAccessWidget($user, DashboardWidget $widget): bool
     {
-        $permissions = json_decode($widget->permissions, true) ?? [];
+        $permissions = $widget->getResolvedPermissions();
         
         if (empty($permissions)) {
             return true; // No restrictions
@@ -782,6 +811,32 @@ class DashboardCustomizationService
         return $normalized;
     }
 
+    private function decodeLayout(mixed $layout): array
+    {
+        if (is_array($layout)) {
+            return $layout;
+        }
+
+        if (is_string($layout)) {
+            return json_decode($layout, true) ?? [];
+        }
+
+        return [];
+    }
+
+    private function ensureArray(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return json_decode($value, true) ?? [];
+        }
+
+        return [];
+    }
+
     /**
      * Create user dashboard
      */
@@ -810,6 +865,11 @@ class DashboardCustomizationService
         return $this->adaptTemplateToUser($template, (object)['role' => $role]);
     }
 
+    public function getLayoutTemplateForRole(string $role): array
+    {
+        return $this->getDefaultLayoutForRole($role);
+    }
+
     /**
      * Adapt template to user
      */
@@ -819,7 +879,7 @@ class DashboardCustomizationService
         $y = 0;
 
         foreach ($template['widgets'] as $widgetId) {
-            $widget = DashboardWidget::where('id', $widgetId)->first();
+            $widget = DashboardWidget::where('code', $widgetId)->first();
             if ($widget && $this->userCanAccessWidget($user, $widget)) {
                 $layout[] = [
                     'id' => Str::ulid(),

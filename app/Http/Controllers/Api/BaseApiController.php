@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * Base API Controller implementing JSend specification
@@ -69,6 +70,59 @@ abstract class BaseApiController extends Controller
     }
 
     /**
+     * Compatibility helper for controllers using legacy naming.
+     */
+    protected function error(string $message, int $statusCode = 400, $data = null): JsonResponse
+    {
+        return $this->errorResponse($message, $statusCode, $data);
+    }
+
+    /**
+     * Return not found response
+     */
+    protected function notFound(string $message = 'Resource not found'): JsonResponse
+    {
+        return $this->errorResponse($message, 404);
+    }
+
+    /**
+     * Return unauthorized response
+     */
+    protected function unauthorized(string $message = 'Unauthorized'): JsonResponse
+    {
+        return $this->errorResponse($message, 401);
+    }
+
+    /**
+     * Return forbidden response
+     */
+    protected function forbidden(string $message = 'Forbidden'): JsonResponse
+    {
+        return $this->errorResponse($message, 403);
+    }
+
+    /**
+     * Return validation error response
+     */
+    protected function validationError($errors, string $message = 'Validation failed'): JsonResponse
+    {
+        return $this->failResponse($errors, $message, 422);
+    }
+
+    /**
+     * Return a server error response (500)
+     *
+     * @param string $message
+     * @param mixed|null $data
+     * @param int $statusCode
+     * @return JsonResponse
+     */
+    protected function serverError(string $message = 'Internal server error', $data = null, int $statusCode = 500): JsonResponse
+    {
+        return $this->errorResponse($message, $statusCode, $data);
+    }
+
+    /**
      * Return a fail response (client error)
      *
      * @param mixed $data Error data (usually validation errors)
@@ -80,7 +134,8 @@ abstract class BaseApiController extends Controller
     {
         $response = [
             'status' => 'fail',
-            'data' => $data
+            'data' => $data,
+            'errors' => $data
         ];
         
         if ($message !== null) {

@@ -10,18 +10,17 @@ use Src\Foundation\Events\BaseEvent;
 class DocumentDeleted extends BaseEvent
 {
     public function __construct(
-        public int $documentId,
+        public string $documentId,
         public string $documentUlid,
         public string $documentTitle,
-        public int $projectId,
-        public int $userId
+        public string $projectId,
+        public string $userId
     ) {
         parent::__construct(
             entityId: $this->documentId,
             projectId: $this->projectId,
             actorId: $this->userId,
-            changedFields: ['deleted'],
-            eventName: 'Document.Deleted'
+            changedFields: ['deleted']
         );
     }
 
@@ -37,5 +36,10 @@ class DocumentDeleted extends BaseEvent
                 'title' => $this->documentTitle
             ]
         ]);
+    }
+
+    public function getEventName(): string
+    {
+        return 'Document.Document.Deleted';
     }
 }

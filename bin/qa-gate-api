@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "/Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden" || exit 1
+
+: "${RBAC_BYPASS_TESTING:=0}"
+: "${PERF_ASSERTIONS:=1}"
+: "${ZENA_TRACE_FAIL_500:=1}"
+export RBAC_BYPASS_TESTING PERF_ASSERTIONS ZENA_TRACE_FAIL_500
+
+./bin/phpunit-api-nocov-chunks 2>&1 | tee storage/logs/qa-gate-api.log
+echo "Saved: storage/logs/qa-gate-api.log"

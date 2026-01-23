@@ -3,15 +3,16 @@
 namespace Tests\Feature\Api;
 
 use Tests\TestCase;
-use App\Models\User;
 use App\Models\ZenaProject;
 use App\Models\ZenaChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\DB;
+use Tests\Traits\RbacTestTrait;
 
 class ChangeRequestApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, RbacTestTrait;
 
     protected $user;
     protected $project;
@@ -21,11 +22,20 @@ class ChangeRequestApiTest extends TestCase
     {
         parent::setUp();
         
-        $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+        $context = $this->actingAsWithPermissions([
+            'change_request.read',
+            'change_request.create',
+            'change_request.update',
+            'change_request.approve',
+            'change_request.reject',
         ]);
-        $this->token = $this->generateJwtToken($this->user);
+
+        $this->user = $context['user'];
+        $this->token = $context['sanctum_token'];
+        $this->project = ZenaProject::factory()->create([
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+        ]);
     }
 
     /**
@@ -101,6 +111,53 @@ class ChangeRequestApiTest extends TestCase
         ]);
     }
 
+    public function test_cannot_create_change_request_without_permission(): void
+    {
+        $context = $this->actingAsWithPermissions([]);
+        $token = $context['sanctum_token'];
+
+        $project = ZenaProject::factory()->create([
+            'created_by' => $context['user']->id,
+            'tenant_id' => $context['user']->tenant_id,
+        ]);
+
+        $changeRequestData = [
+            'project_id' => $project->id,
+            'title' => 'Blocked Change Request',
+            'description' => 'Should fail RBAC',
+            'change_number' => 'CR-000',
+            'change_type' => 'scope',
+            'justification' => 'Testing restrictions',
+            'alternatives_considered' => 'None',
+            'impact_analysis' => 'Low',
+            'cost_impact' => 0,
+            'schedule_impact_days' => 0,
+            'priority' => 'medium'
+        ];
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->postJson('/api/v1/change-requests', $changeRequestData);
+
+        $response->assertStatus(403)
+                ->assertJsonStructure([
+                    'error' => [
+                        'code',
+                        'message'
+                    ]
+                ]);
+
+        $this->assertEquals(
+            'E403.AUTHORIZATION',
+            data_get($response->json(), 'error.code')
+        );
+
+        $this->assertEquals(
+            'You do not have sufficient RBAC assignments to access this resource',
+            data_get($response->json(), 'error.message')
+        );
+    }
+
     /**
      * Test Change Request submission
      */
@@ -108,7 +165,7 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
             'status' => 'draft'
         ]);
 
@@ -139,7 +196,7 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
             'status' => 'pending_approval'
         ]);
 
@@ -166,6 +223,11 @@ class ChangeRequestApiTest extends TestCase
                     ]
                 ]);
 
+        $responseData = $response->json('data');
+        $this->assertIsArray($responseData);
+        $this->assertEquals('approved', data_get($responseData, 'status'));
+        $this->assertArrayHasKey('approved_cost', $responseData);
+
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'approved',
@@ -180,7 +242,7 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
             'status' => 'pending_approval'
         ]);
 
@@ -219,7 +281,7 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
             'status' => 'approved'
         ]);
 
@@ -256,7 +318,7 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'requested_by' => $this->user->id
         ]);
 
         $updateData = [
@@ -293,7 +355,7 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'requested_by' => $this->user->id
         ]);
 
         $response = $this->withHeaders([
@@ -327,7 +389,7 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
             'cost_impact' => 50000.00,
             'schedule_impact_days' => 15
         ]);
@@ -347,19 +409,29 @@ class ChangeRequestApiTest extends TestCase
     }
 
     /**
-     * Test unauthorized access
+     * Test unauthorized access is rejected with RBAC
      */
-    public function test_unauthorized_access_returns_401()
+    public function test_unauthorized_access_returns_forbidden()
     {
-        $response = $this->getJson('/api/zena/change-requests');
-        $response->assertStatus(401);
+        $response = $this->getJson('/api/v1/change-requests');
+
+        $response->assertStatus(403)
+                ->assertJsonStructure([
+                    'error' => [
+                        'code',
+                        'message'
+                    ]
+                ]);
+
+        $this->assertEquals(
+            'E403.AUTHORIZATION',
+            data_get($response->json(), 'error.code')
+        );
+
+        $this->assertEquals(
+            'You do not have sufficient RBAC assignments to access this resource',
+            data_get($response->json(), 'error.message')
+        );
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
-    {
-        return 'test-jwt-token-' . $user->id;
-    }
 }

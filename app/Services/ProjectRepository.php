@@ -18,7 +18,7 @@ class ProjectRepository
     /**
      * Get project by ID
      */
-    public function getById(int $id): ?Project
+    public function getById(string $id): ?Project
     {
         return Project::find($id);
     }
@@ -34,7 +34,7 @@ class ProjectRepository
     /**
      * Update project
      */
-    public function update(int $id, array $data): bool
+    public function update(string $id, array $data): bool
     {
         $project = $this->getById($id);
         if (!$project) {
@@ -47,7 +47,7 @@ class ProjectRepository
     /**
      * Delete project
      */
-    public function delete(int $id): bool
+    public function delete(string $id): bool
     {
         $project = $this->getById($id);
         if (!$project) {

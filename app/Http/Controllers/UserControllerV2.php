@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Src\Foundation\Utils\JSendResponse;
 
 /**
  * User Controller V2 - Sử dụng SimpleJwtAuth middleware
@@ -19,7 +21,18 @@ class UserControllerV2 extends Controller
      */
     public function __construct()
     {
-        $this->middleware('simple.jwt.auth');
+        $this->middleware(['auth:sanctum', 'tenant.isolation', 'rbac']);
+    }
+
+    private const USER_ROLE_ALLOWLIST = ['super_admin', 'admin', 'pm'];
+
+    private function authorizeUserManagement(Request $request): void
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->hasAnyRole(self::USER_ROLE_ALLOWLIST)) {
+            abort(403);
+        }
     }
 
     /**
@@ -31,6 +44,8 @@ class UserControllerV2 extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->authorizeUserManagement($request);
+
         try {
             $query = User::with(['tenant']);
 
@@ -87,6 +102,8 @@ class UserControllerV2 extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorizeUserManagement($request);
+
         try {
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
@@ -127,6 +144,8 @@ class UserControllerV2 extends Controller
      */
     public function show(Request $request, string $id): JsonResponse
     {
+        $this->authorizeUserManagement($request);
+
         try {
             $user = User::with(['tenant'])->findOrFail($id);
 
@@ -155,6 +174,8 @@ class UserControllerV2 extends Controller
      */
     public function update(Request $request, string $id): JsonResponse
     {
+        $this->authorizeUserManagement($request);
+
         try {
             $user = User::findOrFail($id);
 
@@ -203,6 +224,8 @@ class UserControllerV2 extends Controller
      */
     public function destroy(Request $request, string $id): JsonResponse
     {
+        $this->authorizeUserManagement($request);
+
         try {
             $user = User::findOrFail($id);
 

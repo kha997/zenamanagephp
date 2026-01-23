@@ -29,7 +29,7 @@ return new class extends Migration
             $table->string('created_by');
             $table->string('assigned_to')->nullable();
             $table->date('due_date')->nullable();
-            $table->enum('status', ['open', 'answered', 'closed'])->default('open');
+            $table->enum('status', ['pending', 'in_progress', 'answered', 'closed', 'escalated', 'open'])->default('pending');
             $table->text('answer')->nullable();
             $table->text('response')->nullable();
             $table->string('answered_by')->nullable();

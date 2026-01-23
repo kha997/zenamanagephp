@@ -17,6 +17,12 @@ class RateLimitingTest extends TestCase
         Cache::flush();
     }
 
+    protected function tearDown(): void
+    {
+        Cache::flush();
+        parent::tearDown();
+    }
+
     /**
      * Test rate limiting on authentication endpoints
      */
@@ -73,15 +79,13 @@ class RateLimitingTest extends TestCase
                 // Normal limit
                 $this->assertNotEquals(429, $response->getStatusCode());
             } else {
-                // Burst limit - should still work but with burst header
-                $this->assertNotEquals(429, $response->getStatusCode());
-                if ($response->headers->has('X-RateLimit-Burst')) {
-                    $this->assertEquals('true', $response->headers->get('X-RateLimit-Burst'));
-                }
+                // Once the limit is reached, the auth limiter should block (no burst)
+                $this->assertEquals(429, $response->getStatusCode());
+                $this->assertFalse($response->headers->has('X-RateLimit-Burst'));
             }
         }
 
-        // 21st request should be rate limited
+        // 21st request should still be rate limited
         $response = $this->postJson($endpoint, $data);
         $this->assertEquals(429, $response->getStatusCode());
     }
@@ -126,8 +130,7 @@ class RateLimitingTest extends TestCase
         ];
 
         // Simulate requests from different IPs
-        $this->app['request']->server->set('REMOTE_ADDR', '192.168.1.1');
-        
+        $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.1']);
         // Make 10 requests from first IP
         for ($i = 0; $i < 10; $i++) {
             $response = $this->postJson($endpoint, $data);
@@ -135,11 +138,11 @@ class RateLimitingTest extends TestCase
         }
 
         // 11th request should be rate limited
-        $response = $this->postJson($endpoint, $data);
+        $response = $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.1'])->postJson($endpoint, $data);
         $this->assertEquals(429, $response->getStatusCode());
 
         // Switch to different IP
-        $this->app['request']->server->set('REMOTE_ADDR', '192.168.1.2');
+        $this->withServerVariables(['REMOTE_ADDR' => '192.168.1.2']);
         
         // Should be able to make requests from different IP
         $response = $this->postJson($endpoint, $data);
@@ -229,8 +232,8 @@ class RateLimitingTest extends TestCase
         
         $responseData = $response->json();
         $this->assertArrayHasKey('error', $responseData);
-        $this->assertArrayHasKey('message', $responseData);
-        $this->assertArrayHasKey('code', $responseData);
-        $this->assertEquals('RATE_LIMIT_EXCEEDED', $responseData['code']);
+        $this->assertArrayHasKey('message', $responseData['error']);
+        $this->assertArrayHasKey('code', $responseData['error']);
+        $this->assertEquals('E429.RATE_LIMIT', $responseData['error']['code']);
     }
 }

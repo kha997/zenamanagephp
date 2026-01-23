@@ -118,7 +118,7 @@ return [
             'database' => env('DB_TEST_DATABASE', 'zenamanage_test'),
             'username' => env('DB_TEST_USERNAME', 'root'),
             'password' => env('DB_TEST_PASSWORD', ''),
-            'unix_socket' => env('DB_TEST_SOCKET', ''),
+            'unix_socket' => env('DB_TEST_SOCKET') ?: null,
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',

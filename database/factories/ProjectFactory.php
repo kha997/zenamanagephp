@@ -24,7 +24,7 @@ class ProjectFactory extends Factory
         return [
             'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
             'tenant_id' => Tenant::factory(),
-            'code' => 'PRJ-' . strtoupper($this->faker->unique()->regexify('[A-Z0-9]{8}')),
+            'code' => 'PRJ-' . strtoupper(bin2hex(random_bytes(6))),
             'name' => $this->faker->company() . ' Project',
             'description' => $this->faker->paragraph(),
             'client_id' => null,

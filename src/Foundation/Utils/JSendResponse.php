@@ -16,17 +16,34 @@ class JSendResponse
      * Success response
      * 
      * @param mixed $data
-     * @param int $statusCode
+     * @param string|int|null $messageOrStatusCode
+     * @param int|null $statusCode
      * @return JsonResponse
      */
-    public static function success($data = null, int $statusCode = 200): JsonResponse
+    public static function success($data = null, $messageOrStatusCode = null, ?int $statusCode = null): JsonResponse
     {
         $response = ['status' => 'success'];
-        
+
         if ($data !== null) {
             $response['data'] = $data;
         }
-        
+
+        $message = null;
+
+        if (is_int($messageOrStatusCode)) {
+            $statusCode = $messageOrStatusCode;
+        } elseif (is_string($messageOrStatusCode)) {
+            $message = $messageOrStatusCode;
+        }
+
+        if ($statusCode === null) {
+            $statusCode = 200;
+        }
+
+        if ($message !== null) {
+            $response['message'] = $message;
+        }
+
         return response()->json($response, $statusCode);
     }
     

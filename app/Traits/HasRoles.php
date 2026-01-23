@@ -7,8 +7,12 @@ trait HasRoles
     /**
      * Check if user has a specific role
      */
-    public function hasRole(string $roleName): bool
+    public function hasRole(string|array $roleName): bool
     {
+        if (is_array($roleName)) {
+            return $this->hasAnyRole($roleName);
+        }
+
         return $this->roles()->where('name', $roleName)->exists();
     }
 

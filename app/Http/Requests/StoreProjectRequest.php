@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Src\CoreProject\Models\Project;
 
 class StoreProjectRequest extends FormRequest
 {
@@ -19,7 +21,7 @@ class StoreProjectRequest extends FormRequest
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after:start_date',
             'budget' => 'nullable|numeric|min:0',
-            'status' => 'required|in:planning,active,on_hold,completed,cancelled'
+            'status' => ['required', Rule::in(array_keys(Project::STATUSES))]
         ];
     }
 }

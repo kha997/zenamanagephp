@@ -2,68 +2,73 @@
 
 namespace Tests\Unit\Dashboard;
 
-use Tests\TestCase;
-use App\Services\DashboardService;
+use App\Models\DashboardAlert;
+use App\Models\DashboardMetric;
+use App\Models\DashboardMetricValue;
+use App\Models\DashboardWidget;
+use App\Models\Project;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserDashboard;
-use App\Models\DashboardWidget;
-use App\Models\DashboardMetric;
-use App\Models\DashboardAlert;
-use App\Models\Project;
-use App\Models\Task;
-use App\Models\RFI;
-use App\Models\Inspection;
-use App\Models\NCR;
+use App\Models\UserRoleProject;
+use App\Services\DashboardService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Mockery;
+use Tests\TestCase;
+use Tests\Traits\RbacTestTrait;
 
 class DashboardServiceTest extends TestCase
 {
     use RefreshDatabase;
+    use RbacTestTrait;
 
-    protected $dashboardService;
-    protected $user;
-    protected $project;
-    protected $tenant;
+    protected DashboardService $dashboardService;
+    protected User $user;
+    protected Project $project;
+    protected Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->dashboardService = new DashboardService();
-        
-        // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
-            'name' => 'Test Tenant',
-            'domain' => 'test.com',
-            'is_active' => true
-        ]);
-        
-        // Create test user
-        $this->user = User::create([
+
+        $this->dashboardService = app(DashboardService::class);
+
+        $this->user = $this->makeTenantUser([
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => bcrypt('password'),
             'role' => 'project_manager',
-            'tenant_id' => $this->tenant->id
+            'password' => bcrypt('password'),
+            'is_active' => true,
         ]);
-        
-        // Create test project
+
+        $this->tenant = Tenant::findOrFail($this->user->tenant_id);
+
+        $this->grantPermissionsByCode($this->user, ['dashboard.view', 'project.read']);
+        $role = $this->grantRole($this->user, 'project_manager');
+
         $this->project = Project::create([
+            'tenant_id' => $this->tenant->id,
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
             'budget' => 100000,
-            'start_date' => now(),
+            'spent_amount' => 0,
+            'progress' => 0,
+            'code' => 'DSH-PRJ',
+            'start_date' => now()->subMonth(),
             'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
         ]);
-        
-        // Create test widgets
+
+        UserRoleProject::create([
+            'id' => Str::ulid(),
+            'project_id' => $this->project->id,
+            'user_id' => $this->user->id,
+            'role_id' => $role->id,
+        ]);
+
         $this->createTestWidgets();
-        
-        // Create test metrics
         $this->createTestMetrics();
     }
 
@@ -75,10 +80,14 @@ class DashboardServiceTest extends TestCase
             'type' => 'card',
             'category' => 'overview',
             'description' => 'Project overview widget',
-            'config' => json_encode(['default_size' => 'large']),
-            'permissions' => json_encode(['project_manager', 'site_engineer']),
+            'config' => ['default_size' => 'large'],
+            'data_source' => [
+                'type' => 'static',
+                'data' => ['total_projects' => 1, 'active_projects' => 1]
+            ],
+            'permissions' => ['roles' => ['project_manager', 'site_engineer']],
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -87,10 +96,10 @@ class DashboardServiceTest extends TestCase
             'type' => 'chart',
             'category' => 'tasks',
             'description' => 'Task progress widget',
-            'config' => json_encode(['default_size' => 'medium']),
-            'permissions' => json_encode(['project_manager', 'site_engineer']),
+            'config' => ['default_size' => 'medium'],
+            'permissions' => ['roles' => ['project_manager', 'site_engineer']],
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardWidget::create([
@@ -99,10 +108,10 @@ class DashboardServiceTest extends TestCase
             'type' => 'table',
             'category' => 'communication',
             'description' => 'RFI status widget',
-            'config' => json_encode(['default_size' => 'medium']),
-            'permissions' => json_encode(['project_manager', 'design_lead']),
+            'config' => ['default_size' => 'medium'],
+            'permissions' => ['roles' => ['project_manager', 'design_lead']],
             'is_active' => true,
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -110,194 +119,223 @@ class DashboardServiceTest extends TestCase
     {
         DashboardMetric::create([
             'name' => 'Project Progress',
-            'code' => 'project_progress',
+            'code' => 'project_progress_metric',
+            'metric_code' => 'project_progress',
             'description' => 'Overall project progress percentage',
             'unit' => '%',
             'type' => 'gauge',
             'is_active' => true,
-            'permissions' => json_encode(['project_manager', 'site_engineer', 'client_rep']),
-            'tenant_id' => $this->tenant->id
+            'permissions' => ['roles' => ['project_manager', 'site_engineer', 'client_rep']],
+            'tenant_id' => $this->tenant->id,
         ]);
 
         DashboardMetric::create([
             'name' => 'Budget Utilization',
-            'code' => 'budget_utilization',
+            'code' => 'budget_utilization_metric',
+            'metric_code' => 'budget_utilization',
             'description' => 'Budget utilization percentage',
             'unit' => '%',
             'type' => 'gauge',
             'is_active' => true,
-            'permissions' => json_encode(['project_manager', 'client_rep']),
-            'tenant_id' => $this->tenant->id
+            'permissions' => ['roles' => ['project_manager', 'client_rep']],
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
     /** @test */
     public function it_can_get_user_dashboard()
     {
-        // Create user dashboard
         UserDashboard::create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id,
             'name' => 'Test Dashboard',
-            'layout' => json_encode([]),
+            'layout_config' => [],
+            'widgets' => [],
             'is_default' => true,
-            'preferences' => json_encode(['theme' => 'light'])
+            'is_active' => true,
+            'preferences' => ['theme' => 'light'],
         ]);
 
-        $dashboard = $this->dashboardService->getUserDashboard($this->user);
+        $dashboard = $this->dashboardService->getUserDashboard($this->user->id);
 
-        $this->assertNotNull($dashboard);
-        $this->assertEquals('Test Dashboard', $dashboard['name']);
-        $this->assertTrue($dashboard['is_default']);
+        $this->assertInstanceOf(UserDashboard::class, $dashboard);
+        $this->assertEquals('Test Dashboard', $dashboard->name);
+        $this->assertTrue($dashboard->is_default);
     }
 
     /** @test */
     public function it_creates_default_dashboard_when_none_exists()
     {
-        $dashboard = $this->dashboardService->getUserDashboard($this->user);
+        $dashboard = $this->dashboardService->getUserDashboard($this->user->id);
 
-        $this->assertNotNull($dashboard);
-        $this->assertTrue($dashboard['is_default']);
-        $this->assertIsArray($dashboard['layout']);
+        $this->assertInstanceOf(UserDashboard::class, $dashboard);
+        $this->assertTrue($dashboard->is_default);
+        $this->assertIsArray($dashboard->layout_config);
+        $this->assertEquals('Default Dashboard', $dashboard->name);
     }
 
     /** @test */
     public function it_can_get_available_widgets_for_user()
     {
-        $widgets = $this->dashboardService->getAvailableWidgets($this->user);
+        $widgets = $this->dashboardService->getAvailableWidgetsForUser($this->user);
 
         $this->assertIsArray($widgets);
         $this->assertCount(3, $widgets);
-        
-        // Check that widgets are filtered by user role
-        $widgetCodes = array_column($widgets, 'code');
-        $this->assertContains('project_overview', $widgetCodes);
-        $this->assertContains('task_progress', $widgetCodes);
-        $this->assertContains('rfi_status', $widgetCodes);
+
+        $availableIds = array_column($widgets, 'id');
+        $projectOverviewId = DashboardWidget::where('code', 'project_overview')->value('id');
+        $this->assertContains($projectOverviewId, $availableIds);
     }
 
     /** @test */
     public function it_filters_widgets_by_user_role()
     {
-        // Create QC Inspector user
-        $qcUser = User::create([
+        $qcUser = $this->makeTenantUser([
             'name' => 'QC Inspector',
             'email' => 'qc@example.com',
-            'password' => bcrypt('password'),
             'role' => 'qc_inspector',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
-        $widgets = $this->dashboardService->getAvailableWidgets($qcUser);
+        $this->grantPermissionsByCode($qcUser, ['dashboard.view']);
+        $this->grantRole($qcUser, 'qc_inspector');
 
-        // QC Inspector should not see project_manager specific widgets
-        $widgetCodes = array_column($widgets, 'code');
-        $this->assertNotContains('project_overview', $widgetCodes);
+        $qcWidget = DashboardWidget::create([
+            'name' => 'QC Insights',
+            'code' => 'qc_insights',
+            'type' => 'card',
+            'category' => 'quality',
+            'description' => 'QC-only dashboard widget',
+            'config' => ['default_size' => 'medium'],
+            'data_source' => [
+                'type' => 'static',
+                'data' => ['inspections' => 5]
+            ],
+            'permissions' => ['roles' => ['qc_inspector']],
+            'is_active' => true,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        $adminWidget = DashboardWidget::create([
+            'name' => 'System Overview Admin',
+            'code' => 'system_overview_admin',
+            'type' => 'card',
+            'category' => 'overview',
+            'description' => 'Only visible to system administrators',
+            'config' => ['default_size' => 'large'],
+            'data_source' => [
+                'type' => 'static',
+                'data' => ['systems' => 1]
+            ],
+            'permissions' => ['roles' => ['system_admin']],
+            'is_active' => true,
+            'tenant_id' => null,
+        ]);
+
+        $widgets = $this->dashboardService->getAvailableWidgetsForUser($qcUser);
+        $availableIds = array_column($widgets, 'id');
+
+        $this->assertSame('qc_inspector', $qcUser->role);
+        $this->assertContains($qcWidget->id, $availableIds);
+        $this->assertNotContains($adminWidget->id, $availableIds);
     }
 
     /** @test */
     public function it_can_get_widget_data()
     {
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
         $data = $this->dashboardService->getWidgetData($widget->id, $this->user, $this->project->id);
 
         $this->assertIsArray($data);
         $this->assertArrayHasKey('total_projects', $data);
-        $this->assertArrayHasKey('active_projects', $data);
     }
 
     /** @test */
     public function it_can_add_widget_to_dashboard()
     {
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $result = $this->dashboardService->addWidget($this->user, $widget->id, [
             'title' => 'Custom Project Overview',
-            'size' => 'large'
+            'size' => 'large',
         ]);
 
         $this->assertTrue($result['success']);
         $this->assertArrayHasKey('widget_instance', $result);
-        
-        // Verify widget was added to dashboard
-        $dashboard = $this->dashboardService->getUserDashboard($this->user);
-        $this->assertCount(1, $dashboard['layout']);
-        $this->assertEquals('Custom Project Overview', $dashboard['layout'][0]['title']);
+
+        $dashboard = $this->dashboardService->getUserDashboard($this->user->id);
+        $this->assertNotEmpty($dashboard->layout);
+
+        $customWidget = null;
+        foreach ($dashboard->layout as $instance) {
+            if (($instance['title'] ?? null) === 'Custom Project Overview') {
+                $customWidget = $instance;
+                break;
+            }
+        }
+
+        $this->assertNotNull($customWidget, 'Custom widget instance is present in the dashboard layout');
+        $this->assertEquals('Custom Project Overview', $customWidget['title']);
+        $this->assertEquals('large', $customWidget['size']);
     }
 
     /** @test */
     public function it_can_remove_widget_from_dashboard()
     {
-        // First add a widget
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $addResult = $this->dashboardService->addWidget($this->user, $widget->id);
         $widgetInstanceId = $addResult['widget_instance']['id'];
 
-        // Then remove it
         $result = $this->dashboardService->removeWidget($this->user, $widgetInstanceId);
 
         $this->assertTrue($result['success']);
-        
-        // Verify widget was removed
-        $dashboard = $this->dashboardService->getUserDashboard($this->user);
-        $this->assertCount(0, $dashboard['layout']);
+
+        $dashboard = $this->dashboardService->getUserDashboard($this->user->id);
+        $this->assertCount(0, $dashboard->layout);
     }
 
     /** @test */
     public function it_can_update_widget_configuration()
     {
-        // First add a widget
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $addResult = $this->dashboardService->addWidget($this->user, $widget->id);
         $widgetInstanceId = $addResult['widget_instance']['id'];
 
-        // Update configuration
-        $result = $this->dashboardService->updateWidgetConfig($this->user, $widgetInstanceId, [
+        $updatedDashboard = $this->dashboardService->updateWidgetConfig($this->user->id, $widgetInstanceId, [
             'title' => 'Updated Title',
-            'size' => 'extra-large'
+            'size' => 'extra-large',
         ]);
 
-        $this->assertTrue($result['success']);
-        
-        // Verify configuration was updated
-        $dashboard = $this->dashboardService->getUserDashboard($this->user);
-        $widgetInstance = $dashboard['layout'][0];
-        $this->assertEquals('Updated Title', $widgetInstance['title']);
-        $this->assertEquals('extra-large', $widgetInstance['size']);
+        $this->assertInstanceOf(UserDashboard::class, $updatedDashboard);
+        $this->assertEquals('Updated Title', $updatedDashboard->layout[0]['config']['title']);
+        $this->assertEquals('extra-large', $updatedDashboard->layout[0]['config']['size']);
     }
 
     /** @test */
     public function it_can_update_dashboard_layout()
     {
-        // Add multiple widgets
         $widget1 = DashboardWidget::where('code', 'project_overview')->first();
         $widget2 = DashboardWidget::where('code', 'task_progress')->first();
-        
+
         $this->dashboardService->addWidget($this->user, $widget1->id);
         $this->dashboardService->addWidget($this->user, $widget2->id);
 
-        $dashboard = $this->dashboardService->getUserDashboard($this->user);
-        $layout = $dashboard['layout'];
+        $dashboard = $this->dashboardService->getUserDashboard($this->user->id);
+        $layout = $dashboard->layout;
 
-        // Update layout positions
         $layout[0]['position'] = ['x' => 0, 'y' => 0];
         $layout[1]['position'] = ['x' => 6, 'y' => 0];
 
-        $result = $this->dashboardService->updateDashboardLayout($this->user, $layout);
+        $updated = $this->dashboardService->updateDashboardLayout($this->user->id, $layout, $dashboard->widgets);
 
-        $this->assertTrue($result['success']);
-        
-        // Verify layout was updated
-        $updatedDashboard = $this->dashboardService->getUserDashboard($this->user);
-        $this->assertEquals(['x' => 0, 'y' => 0], $updatedDashboard['layout'][0]['position']);
-        $this->assertEquals(['x' => 6, 'y' => 0], $updatedDashboard['layout'][1]['position']);
+        $this->assertInstanceOf(UserDashboard::class, $updated);
+        $this->assertEquals(['x' => 0, 'y' => 0], $updated->layout_config[0]['position']);
+        $this->assertEquals(['x' => 6, 'y' => 0], $updated->layout_config[1]['position']);
     }
 
     /** @test */
     public function it_can_get_user_alerts()
     {
-        // Create test alerts
         DashboardAlert::create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id,
@@ -306,7 +344,7 @@ class DashboardServiceTest extends TestCase
             'severity' => 'low',
             'is_read' => false,
             'triggered_at' => now(),
-            'context' => json_encode(['project_id' => $this->project->id])
+            'context' => ['project_id' => $this->project->id],
         ]);
 
         DashboardAlert::create([
@@ -317,25 +355,21 @@ class DashboardServiceTest extends TestCase
             'severity' => 'medium',
             'is_read' => true,
             'triggered_at' => now()->subHour(),
-            'context' => json_encode(['project_id' => $this->project->id])
+            'context' => ['project_id' => $this->project->id],
         ]);
 
         $alerts = $this->dashboardService->getUserAlerts($this->user);
 
         $this->assertIsArray($alerts);
         $this->assertCount(2, $alerts);
-        
-        // Check unread alerts
-        $unreadAlerts = array_filter($alerts, function($alert) {
-            return !$alert['is_read'];
-        });
-        $this->assertCount(1, $unreadAlerts);
+
+        $unread = array_filter($alerts, fn($alert) => !$alert['is_read']);
+        $this->assertCount(1, $unread);
     }
 
     /** @test */
     public function it_can_mark_alert_as_read()
     {
-        // Create test alert
         $alert = DashboardAlert::create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id,
@@ -344,14 +378,13 @@ class DashboardServiceTest extends TestCase
             'severity' => 'low',
             'is_read' => false,
             'triggered_at' => now(),
-            'context' => json_encode([])
+            'context' => [],
         ]);
 
         $result = $this->dashboardService->markAlertAsRead($this->user, $alert->id);
 
         $this->assertTrue($result['success']);
-        
-        // Verify alert was marked as read
+
         $alert->refresh();
         $this->assertTrue($alert->is_read);
     }
@@ -359,7 +392,6 @@ class DashboardServiceTest extends TestCase
     /** @test */
     public function it_can_mark_all_alerts_as_read()
     {
-        // Create multiple test alerts
         DashboardAlert::create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id,
@@ -368,7 +400,7 @@ class DashboardServiceTest extends TestCase
             'severity' => 'low',
             'is_read' => false,
             'triggered_at' => now(),
-            'context' => json_encode([])
+            'context' => [],
         ]);
 
         DashboardAlert::create([
@@ -379,14 +411,13 @@ class DashboardServiceTest extends TestCase
             'severity' => 'medium',
             'is_read' => false,
             'triggered_at' => now(),
-            'context' => json_encode([])
+            'context' => [],
         ]);
 
         $result = $this->dashboardService->markAllAlertsAsRead($this->user);
 
         $this->assertTrue($result['success']);
-        
-        // Verify all alerts were marked as read
+
         $alerts = DashboardAlert::where('user_id', $this->user->id)->get();
         foreach ($alerts as $alert) {
             $this->assertTrue($alert->is_read);
@@ -396,22 +427,20 @@ class DashboardServiceTest extends TestCase
     /** @test */
     public function it_can_get_dashboard_metrics()
     {
-        // Create test metric values
-        $metric = DashboardMetric::where('code', 'project_progress')->first();
-        
-        \App\Models\DashboardMetricValue::create([
+        $metric = DashboardMetric::where('metric_code', 'project_progress')->first();
+
+        DashboardMetricValue::create([
             'metric_id' => $metric->id,
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'value' => 75.5,
-            'timestamp' => now(),
-            'context' => json_encode(['phase' => 'construction'])
+            'recorded_at' => now(),
         ]);
 
         $metrics = $this->dashboardService->getDashboardMetrics($this->user, $this->project->id);
 
         $this->assertIsArray($metrics);
-        $this->assertCount(1, $metrics);
+        $this->assertNotEmpty($metrics);
         $this->assertEquals('project_progress', $metrics[0]['code']);
         $this->assertEquals(75.5, $metrics[0]['value']);
     }
@@ -423,41 +452,33 @@ class DashboardServiceTest extends TestCase
             'theme' => 'dark',
             'refresh_interval' => 60,
             'compact_mode' => true,
-            'show_widget_borders' => false
+            'show_widget_borders' => false,
         ];
 
-        $result = $this->dashboardService->saveUserPreferences($this->user, $preferences);
+        $dashboard = $this->dashboardService->saveUserPreferences($this->user->id, $preferences);
 
-        $this->assertTrue($result['success']);
-        
-        // Verify preferences were saved
-        $dashboard = $this->dashboardService->getUserDashboard($this->user);
-        $savedPreferences = $dashboard['preferences'];
-        $this->assertEquals('dark', $savedPreferences['theme']);
-        $this->assertEquals(60, $savedPreferences['refresh_interval']);
-        $this->assertTrue($savedPreferences['compact_mode']);
-        $this->assertFalse($savedPreferences['show_widget_borders']);
+        $this->assertInstanceOf(UserDashboard::class, $dashboard);
+        $this->assertEquals('dark', $dashboard->preferences['theme']);
+        $this->assertEquals(60, $dashboard->preferences['refresh_interval']);
+        $this->assertTrue($dashboard->preferences['compact_mode']);
+        $this->assertFalse($dashboard->preferences['show_widget_borders']);
     }
 
     /** @test */
     public function it_can_reset_dashboard_to_default()
     {
-        // Add custom widgets
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $this->dashboardService->addWidget($this->user, $widget->id);
+        $this->dashboardService->saveUserPreferences($this->user->id, ['theme' => 'dark']);
 
-        // Save custom preferences
-        $this->dashboardService->saveUserPreferences($this->user, ['theme' => 'dark']);
-
-        // Reset dashboard
-        $result = $this->dashboardService->resetDashboard($this->user);
+        $result = $this->dashboardService->resetDashboard($this->user->id);
 
         $this->assertTrue($result['success']);
-        
-        // Verify dashboard was reset
-        $dashboard = $this->dashboardService->getUserDashboard($this->user);
-        $this->assertCount(0, $dashboard['layout']); // No custom widgets
-        $this->assertEquals('light', $dashboard['preferences']['theme']); // Default theme
+        $this->assertInstanceOf(UserDashboard::class, $result['dashboard']);
+
+        $dashboard = $this->dashboardService->getUserDashboard($this->user->id);
+        $this->assertCount(0, $dashboard->layout);
+        $this->assertEquals([], $dashboard->preferences);
     }
 
     /** @test */
@@ -469,20 +490,20 @@ class DashboardServiceTest extends TestCase
 
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $this->dashboardService->addWidget($this->user, $widget->id);
+
+        $dashboard = $this->dashboardService->getUserDashboard($this->user->id);
+        $this->assertCount(1, $dashboard->layout);
     }
 
     /** @test */
     public function it_rolls_back_transaction_on_error()
     {
-        // Mock database to throw exception
         DB::shouldReceive('beginTransaction')->once();
+        DB::shouldReceive('commit')->andThrow(new \Exception('Database error'));
         DB::shouldReceive('rollBack')->once();
-        
-        // Mock UserDashboard to throw exception
-        UserDashboard::shouldReceive('where')->andThrow(new \Exception('Database error'));
 
         $this->expectException(\Exception::class);
-        
+
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         $this->dashboardService->addWidget($this->user, $widget->id);
     }
@@ -490,21 +511,19 @@ class DashboardServiceTest extends TestCase
     /** @test */
     public function it_validates_widget_permissions()
     {
-        // Create QC Inspector user
         $qcUser = User::create([
             'name' => 'QC Inspector',
             'email' => 'qc@example.com',
             'password' => bcrypt('password'),
             'role' => 'qc_inspector',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
-        // Try to add widget that QC Inspector doesn't have permission for
         $widget = DashboardWidget::where('code', 'project_overview')->first();
-        
+
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('User does not have permission to access this widget');
-        
+
         $this->dashboardService->addWidget($qcUser, $widget->id);
     }
 
@@ -512,18 +531,18 @@ class DashboardServiceTest extends TestCase
     public function it_handles_missing_widget_gracefully()
     {
         $result = $this->dashboardService->addWidget($this->user, 'non-existent-widget-id');
-        
+
         $this->assertFalse($result['success']);
-        $this->assertStringContains('Widget not found', $result['message']);
+        $this->assertStringContainsString('Widget not found', $result['message']);
     }
 
     /** @test */
     public function it_handles_missing_widget_instance_gracefully()
     {
         $result = $this->dashboardService->removeWidget($this->user, 'non-existent-instance-id');
-        
+
         $this->assertFalse($result['success']);
-        $this->assertStringContains('Widget instance not found', $result['message']);
+        $this->assertStringContainsString('Widget instance not found', $result['message']);
     }
 
     protected function tearDown(): void

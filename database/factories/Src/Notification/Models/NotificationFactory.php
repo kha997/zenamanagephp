@@ -17,8 +17,11 @@ class NotificationFactory extends Factory
 
     public function definition(): array
     {
+        $types = ['task_assigned', 'project_update', 'deadline_reminder', 'system_alert', 'comment_added'];
+
         return [
             'user_id' => User::factory(),
+            'type' => $this->faker->randomElement($types),
             'priority' => $this->faker->randomElement(Notification::VALID_PRIORITIES),
             'title' => $this->faker->sentence(4),
             'body' => $this->faker->paragraph(2),

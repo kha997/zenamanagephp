@@ -3,6 +3,7 @@
 namespace Src\CoreProject\Requests;
 
 use App\Http\Requests\BaseApiRequest;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\Project;
 
@@ -18,8 +19,8 @@ class UpdateProjectRequest extends BaseApiRequest
      */
     public function rules(): array
     {
-        $projectId = $this->route('project');
-        $project = Project::find($projectId);
+        $projectId = $this->resolveProjectId();
+        $project = $this->resolveCoreProject();
         
         return [
             'name' => [
@@ -105,11 +106,15 @@ class UpdateProjectRequest extends BaseApiRequest
      */
     private function validateStatusTransition($validator): void
     {
-        $projectId = $this->route('project');
-        $project = Project::find($projectId);
+        $project = $this->resolveCoreProject();
         $newStatus = $this->input('status');
         
         if (!$project || !$newStatus || $project->status === $newStatus) {
+            return;
+        }
+
+        // Cho phép kích hoạt lại dự án nếu nó đã hoàn thành hoặc hủy
+        if (in_array($project->status, ['completed', 'cancelled'], true) && $newStatus === 'active') {
             return;
         }
 
@@ -136,8 +141,7 @@ class UpdateProjectRequest extends BaseApiRequest
     {
         $progress = $this->input('progress');
         $status = $this->input('status');
-        $projectId = $this->route('project');
-        $project = Project::find($projectId);
+        $project = $this->resolveCoreProject();
         
         if (!$project) {
             return;
@@ -158,5 +162,23 @@ class UpdateProjectRequest extends BaseApiRequest
         if ($finalProgress == 100 && !in_array($finalStatus, ['completed', 'cancelled'])) {
             $validator->errors()->add('status', 'Dự án có tiến độ 100% phải ở trạng thái hoàn thành.');
         }
+    }
+
+    private function resolveProjectId(): ?string
+    {
+        $projectParam = $this->route('project');
+
+        if ($projectParam instanceof Model) {
+            return (string) $projectParam->getKey();
+        }
+
+        return $projectParam;
+    }
+
+    private function resolveCoreProject(): ?Project
+    {
+        $projectId = $this->resolveProjectId();
+
+        return $projectId ? Project::find($projectId) : null;
     }
 }

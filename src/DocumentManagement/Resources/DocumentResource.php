@@ -23,6 +23,7 @@ class DocumentResource extends JsonResource
             'ulid' => $this->ulid,
             'project_id' => $this->project_id,
             'title' => $this->title,
+            'document_type' => $this->file_type,
             'description' => $this->description,
             'linked_entity_type' => $this->linked_entity_type,
             'linked_entity_id' => $this->linked_entity_id,
@@ -54,11 +55,18 @@ class DocumentResource extends JsonResource
             
             // Computed properties
             'file_url' => $this->currentVersion?->getFileUrl(),
+            'file_name' => $this->currentVersion?->getFileName(),
             'file_size' => $this->currentVersion?->file_size,
             'file_type' => $this->currentVersion?->file_type,
+            'version' => $this->currentVersion?->version_number,
             'latest_version_number' => $this->currentVersion?->version_number,
             'can_download' => $this->canDownload(),
-            'is_client_visible' => $this->isClientVisible()
+            'is_client_visible' => $this->isVisibleToClient()
         ];
+    }
+
+    private function canDownload(): bool
+    {
+        return $this->currentVersion?->fileExists() ?? false;
     }
 }

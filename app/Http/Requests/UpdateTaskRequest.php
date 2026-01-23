@@ -275,12 +275,13 @@ class UpdateTaskRequest extends BaseApiRequest
     {
         // Lấy dependencies của task dependency
         $dependentTask = Task::find($dependencyId);
-        if (!$dependentTask || !$dependentTask->dependencies) {
+        $dependentDependencies = $dependentTask?->dependency_ids ?? [];
+        if (empty($dependentDependencies)) {
             return false;
         }
 
         // Kiểm tra đệ quy
-        return $this->checkCycleRecursive($dependentTask->dependencies, [$taskId], [$dependencyId]);
+        return $this->checkCycleRecursive($dependentDependencies, [$taskId], [$dependencyId]);
     }
 
     /**
@@ -299,8 +300,9 @@ class UpdateTaskRequest extends BaseApiRequest
             
             $visited[] = $depId;
             $task = Task::find($depId);
-            if ($task && $task->dependencies) {
-                if ($this->checkCycleRecursive($task->dependencies, $targetIds, $visited)) {
+            $childDependencies = $task?->dependency_ids ?? [];
+            if ($task && !empty($childDependencies)) {
+                if ($this->checkCycleRecursive($childDependencies, $targetIds, $visited)) {
                     return true;
                 }
             }

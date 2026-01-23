@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\BaseApiController;
 use App\Models\Project;
 use App\Models\Submittal;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
@@ -77,7 +77,7 @@ class SubmittalController extends BaseApiController
                 'project_id' => 'required|exists:projects,id',
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
-                'submittal_type' => 'required|in:shop_drawing,material_sample,product_data,test_report,other',
+                'submittal_type' => 'required|in:drawing,shop_drawing,material_sample,product_data,test_report,other',
                 'specification_section' => 'nullable|string|max:255',
                 'due_date' => 'nullable|date|after:today',
                 'contractor' => 'nullable|string|max:255',
@@ -90,6 +90,8 @@ class SubmittalController extends BaseApiController
 
             $submittal = Submittal::create([
                 'project_id' => $request->input('project_id'),
+                'tenant_id' => $user->tenant_id,
+                'created_by' => $user->id,
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
                 'submittal_type' => $request->input('submittal_type'),
@@ -156,7 +158,7 @@ class SubmittalController extends BaseApiController
             $validator = Validator::make($request->all(), [
                 'title' => 'sometimes|string|max:255',
                 'description' => 'sometimes|string',
-                'submittal_type' => 'sometimes|in:shop_drawing,material_sample,product_data,test_report,other',
+                'submittal_type' => 'sometimes|in:drawing,shop_drawing,material_sample,product_data,test_report,other',
                 'specification_section' => 'nullable|string|max:255',
                 'due_date' => 'nullable|date',
                 'contractor' => 'nullable|string|max:255',
@@ -383,7 +385,8 @@ class SubmittalController extends BaseApiController
             ->first();
         
         $sequence = $lastSubmittal ? (int)substr($lastSubmittal->submittal_number, -4) + 1 : 1;
-        
-        return $projectCode . '-SUB-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        $sequencePadded = str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+
+        return $projectCode . '-SUB-' . $sequencePadded;
     }
 }

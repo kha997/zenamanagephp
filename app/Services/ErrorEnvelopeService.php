@@ -173,15 +173,22 @@ class ErrorEnvelopeService
     public static function rateLimitError(
         string $message = 'Rate limit exceeded',
         int $retryAfter = 60,
-        ?string $requestId = null
+        ?string $requestId = null,
+        array $details = []
     ): JsonResponse {
-        return self::error(
+        $detailsWithRetry = array_merge(['retry_after' => $retryAfter], $details);
+
+        $response = self::error(
             'E429.RATE_LIMIT',
             $message,
-            ['retry_after' => $retryAfter],
+            $detailsWithRetry,
             429,
             $requestId
         );
+
+        $response->header('Retry-After', (string) $retryAfter);
+
+        return $response;
     }
     
     /**

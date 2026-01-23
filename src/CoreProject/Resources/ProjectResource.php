@@ -10,6 +10,15 @@ use App\Http\Resources\BaseApiResource;
  */
 class ProjectResource extends BaseApiResource
 {
+    private const STATUSES = [
+        'planning' => 'Planning',
+        'active' => 'Active',
+        'in_progress' => 'In Progress',
+        'on_hold' => 'On Hold',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ];
+
     /**
      * Transform the resource into an array.
      *
@@ -71,12 +80,22 @@ class ProjectResource extends BaseApiResource
         
         return $this->start_date->diffInDays($this->end_date);
     }
-    
+
     /**
      * Get cost variance (actual - planned)
      */
     private function getCostVariance(): float
     {
         return (float) ($this->actual_cost - $this->planned_cost);
+    }
+
+    private function isActive(): bool
+    {
+        return in_array($this->status, ['active', 'in_progress'], true);
+    }
+
+    private function isCompleted(): bool
+    {
+        return $this->status === 'completed';
     }
 }

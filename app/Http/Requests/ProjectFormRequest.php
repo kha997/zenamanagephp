@@ -36,7 +36,7 @@ class ProjectFormRequest extends FormRequest
             'pm_id' => ['nullable', 'string', 'exists:users,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['required', 'date', 'after:start_date'],
-            'status' => ['sometimes', Rule::in(\App\Models\Project::VALID_STATUSES)],
+            'status' => ['sometimes', 'nullable', Rule::in(\App\Models\Project::VALID_STATUSES)],
             'progress' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'budget_planned' => ['sometimes', 'numeric', 'min:0'],
             'budget_actual' => ['sometimes', 'numeric', 'min:0'],
@@ -88,6 +88,32 @@ class ProjectFormRequest extends FormRequest
         if (Auth::check()) {
             $this->merge([
                 'tenant_id' => Auth::user()->tenant_id,
+            ]);
+        }
+
+        if ($this->filled('name')) {
+            $this->merge([
+                'name' => strip_tags($this->input('name')),
+            ]);
+        }
+
+        if ($this->filled('description')) {
+            $this->merge([
+                'description' => strip_tags($this->input('description')),
+            ]);
+        }
+
+        $now = now();
+
+        if (! $this->filled('start_date')) {
+            $this->merge([
+                'start_date' => $now->toDateString(),
+            ]);
+        }
+
+        if (! $this->filled('end_date')) {
+            $this->merge([
+                'end_date' => $now->copy()->addMonth()->toDateString(),
             ]);
         }
     }

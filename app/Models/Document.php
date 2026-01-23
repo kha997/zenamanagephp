@@ -74,6 +74,7 @@ class Document extends Model
         'project_id',
         'tenant_id',
         'uploaded_by',
+        'created_by',
         'name',
         'original_name',
         'file_path',
@@ -88,6 +89,7 @@ class Document extends Model
         'version',
         'is_current_version',
         'parent_document_id',
+        'tags',
     ];
 
     protected $casts = [
@@ -95,6 +97,7 @@ class Document extends Model
         'file_size' => 'integer',
         'version' => 'integer',
         'is_current_version' => 'boolean',
+        'tags' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -114,6 +117,14 @@ class Document extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * Quan hệ với User (người tạo)
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**

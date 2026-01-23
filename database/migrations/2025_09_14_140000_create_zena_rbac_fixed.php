@@ -47,13 +47,14 @@ return new class extends Migration
 
         // Z.E.N.A User roles pivot table
         Schema::create('zena_user_roles', function (Blueprint $table) {
+            $table->ulid('id')->primary();
             $table->ulid('user_id');
             $table->ulid('role_id');
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('role_id')->references('id')->on('zena_roles')->onDelete('cascade');
-            $table->primary(['user_id', 'role_id']);
+            $table->unique(['user_id', 'role_id']);
         });
     }
 

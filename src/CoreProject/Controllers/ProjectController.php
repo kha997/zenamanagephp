@@ -2,10 +2,13 @@
 
 namespace Src\CoreProject\Controllers;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Controller; // Thêm import này
-use Src\CoreProject\Models\Project;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\Controller;
+use App\Models\Project as AppProject;
+use Src\CoreProject\Models\Project as CoreProjectProject;
 use Src\CoreProject\Resources\ProjectResource;
 use Src\CoreProject\Requests\StoreProjectRequest;
 use Src\CoreProject\Requests\UpdateProjectRequest;
@@ -45,7 +48,11 @@ class ProjectController extends Controller // Thêm extends Controller
             // Sử dụng validated data thay vì raw request
             $validated = $request->validated();
             
-            $query = Project::with(['rootComponents', 'tasks']);
+            $query = CoreProjectProject::with(['rootComponents', 'tasks']);
+            $user = Auth::user();
+            if ($user) {
+                $query->where('tenant_id', $user->tenant_id);
+            }
     
             // Filter theo status với validated data
             if (!empty($validated['status'])) {
@@ -90,16 +97,19 @@ class ProjectController extends Controller // Thêm extends Controller
             $projects = $query->paginate(
                 $validated['per_page'] ?? 15
             );
-    
-            return JSendResponse::success([
-                'projects' => ProjectResource::collection($projects->items()),
-                'pagination' => [
-                    'current_page' => $projects->currentPage(),
-                    'last_page' => $projects->lastPage(),
-                    'per_page' => $projects->perPage(),
-                    'total' => $projects->total()
-                ]
-            ]);
+
+            $projectResources = ProjectResource::collection($projects->items());
+            $response = JSendResponse::success($projectResources);
+            $payload = $response->getData(true);
+            $payload['pagination'] = [
+                'current_page' => $projects->currentPage(),
+                'last_page' => $projects->lastPage(),
+                'per_page' => $projects->perPage(),
+                'total' => $projects->total()
+            ];
+            $response->setData($payload);
+
+            return $response;
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy danh sách dự án: ' . $e->getMessage(), 500);
         }
@@ -122,9 +132,9 @@ class ProjectController extends Controller // Thêm extends Controller
                 $templateId = $projectData['work_template_id'];
                 unset($projectData['work_template_id']);
                 
-                $project = Project::createFromTemplate($templateId, $projectData);
+                $project = CoreProjectProject::createFromTemplate($templateId, $projectData);
             } else {
-                $project = Project::create($projectData);
+                $project = CoreProjectProject::create($projectData);
             }
             
             $project->load(['rootComponents', 'tasks']);
@@ -132,10 +142,11 @@ class ProjectController extends Controller // Thêm extends Controller
             // Dispatch event
             event(new \Src\CoreProject\Events\ProjectCreated($project));
 
-            return JSendResponse::success([
-                'project' => new ProjectResource($project),
-                'message' => 'Dự án đã được tạo thành công.'
-            ], 201);
+            return JSendResponse::success(
+                new ProjectResource($project),
+                'Dự án đã được tạo thành công.',
+                201
+            );
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tạo dự án: ' . $e->getMessage(), 500);
         }
@@ -147,20 +158,19 @@ class ProjectController extends Controller // Thêm extends Controller
      * @param int $projectId
      * @return JsonResponse
      */
-    public function show(string $projectId): JsonResponse // Đổi từ int thành string
+    public function show(AppProject|CoreProjectProject $project): JsonResponse // Đổi từ int thành string
     {
         try {
-            $project = Project::with([
+            $this->ensureProjectBelongsToTenant($project);
+            $project->load([
                 'rootComponents.childComponents',
                 'tasks.assignments.user',
                 'tasks.component'
-            ])->findOrFail($projectId);
-
-            return JSendResponse::success([
-                'project' => new ProjectResource($project)
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
+
+            return JSendResponse::success(new ProjectResource($project));
+        } catch (ModelNotFoundException $e) {
+            return JSendResponse::error('Project not found', 404);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy thông tin dự án: ' . $e->getMessage(), 500);
         }
@@ -173,10 +183,10 @@ class ProjectController extends Controller // Thêm extends Controller
      * @param int $projectId
      * @return JsonResponse
      */
-    public function update(UpdateProjectRequest $request, string $projectId): JsonResponse // Đổi từ int thành string
+    public function update(UpdateProjectRequest $request, AppProject|CoreProjectProject $project): JsonResponse // Đổi từ int thành string
     {
         try {
-            $project = Project::findOrFail($projectId);
+            $this->ensureProjectBelongsToTenant($project);
             $oldData = $project->toArray();
             
             $project->update($request->validated());
@@ -192,12 +202,12 @@ class ProjectController extends Controller // Thêm extends Controller
                 ));
             }
 
-            return JSendResponse::success([
-                'project' => new ProjectResource($project),
-                'message' => 'Dự án đã được cập nhật thành công.'
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
+            return JSendResponse::success(
+                new ProjectResource($project),
+                'Dự án đã được cập nhật thành công.'
+            );
+        } catch (ModelNotFoundException $e) {
+            return JSendResponse::error('Project not found', 404);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể cập nhật dự án: ' . $e->getMessage(), 500);
         }
@@ -209,10 +219,11 @@ class ProjectController extends Controller // Thêm extends Controller
      * @param int $projectId
      * @return JsonResponse
      */
-    public function destroy(string $projectId): JsonResponse // Đổi từ int thành string
+    public function destroy(AppProject|CoreProjectProject $project): JsonResponse // Đổi từ int thành string
     {
         try {
-            $project = Project::findOrFail($projectId);
+            $this->ensureProjectBelongsToTenant($project);
+            $oldData = $project->toArray();
 
             // Kiểm tra xem project có components không
             if ($project->components()->exists()) {
@@ -236,10 +247,10 @@ class ProjectController extends Controller // Thêm extends Controller
             event(new \Src\CoreProject\Events\ProjectUpdated($project, $oldData, ['deleted']));
 
             return JSendResponse::success([
-                'message' => 'Dự án đã được xóa thành công.'
+                'message' => 'Project deleted successfully'
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
+        } catch (ModelNotFoundException $e) {
+            return JSendResponse::error('Project not found', 404);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể xóa dự án: ' . $e->getMessage(), 500);
         }
@@ -251,10 +262,10 @@ class ProjectController extends Controller // Thêm extends Controller
      * @param string $projectId
      * @return JsonResponse
      */
-    public function recalculateProgress(string $projectId): JsonResponse // Đổi từ int thành string
+    public function recalculateProgress(AppProject|CoreProjectProject $project): JsonResponse // Đổi từ int thành string
     {
         try {
-            $project = Project::findOrFail($projectId);
+            $this->ensureProjectBelongsToTenant($project);
             $project->recalculateProgress();
             $project->load(['rootComponents', 'tasks']);
 
@@ -262,8 +273,8 @@ class ProjectController extends Controller // Thêm extends Controller
                 'project' => new ProjectResource($project),
                 'message' => 'Tiến độ dự án đã được tính toán lại.'
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
+        } catch (ModelNotFoundException $e) {
+            return JSendResponse::error('Project not found', 404);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tính toán lại tiến độ: ' . $e->getMessage(), 500);
         }
@@ -275,10 +286,10 @@ class ProjectController extends Controller // Thêm extends Controller
      * @param string $projectId
      * @return JsonResponse
      */
-    public function recalculateActualCost(string $projectId): JsonResponse // Đổi từ int thành string
+    public function recalculateActualCost(AppProject|CoreProjectProject $project): JsonResponse // Đổi từ int thành string
     {
         try {
-            $project = Project::findOrFail($projectId);
+            $this->ensureProjectBelongsToTenant($project);
             $project->recalculateActualCost();
             $project->load(['rootComponents', 'tasks']);
 
@@ -286,10 +297,22 @@ class ProjectController extends Controller // Thêm extends Controller
                 'project' => new ProjectResource($project),
                 'message' => 'Chi phí thực tế đã được tính toán lại.'
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
+        } catch (ModelNotFoundException $e) {
+            return JSendResponse::error('Project not found', 404);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tính toán lại chi phí: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Đảm bảo dự án thuộc tenant của user hiện tại
+     */
+    private function ensureProjectBelongsToTenant(AppProject|CoreProjectProject $project): void
+    {
+        $tenantId = Auth::user()?->tenant_id;
+
+        if ($tenantId && (string) $project->tenant_id !== (string) $tenantId) {
+            throw new ModelNotFoundException();
         }
     }
 }

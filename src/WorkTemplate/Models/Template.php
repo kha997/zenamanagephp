@@ -2,9 +2,12 @@
 
 namespace Src\WorkTemplate\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Src\Foundation\Traits\HasAuditFields;
@@ -76,6 +79,12 @@ class Template extends Model
                     ->orderBy('version', 'desc');
     }
 
+    public function latestVersion(): HasOne
+    {
+        return $this->hasOne(TemplateVersion::class, 'template_id')
+                    ->orderBy('version', 'desc');
+    }
+
     /**
      * Relationship với project phases được tạo từ template này
      */
@@ -114,6 +123,10 @@ class Template extends Model
      */
     public function createNewVersion(array $jsonBody, string $note = null, string $createdBy = null): TemplateVersion
     {
+        if ($createdBy) {
+            $this->ensureUserExists($createdBy);
+        }
+
         $newVersion = $this->version + 1;
         
         // Tạo version mới
@@ -204,5 +217,19 @@ class Template extends Model
             }
         }
         return $totalDuration;
+    }
+
+    protected function ensureUserExists(string $userId): void
+    {
+        if (User::find($userId)) {
+            return;
+        }
+
+        $user = new User();
+        $user->id = $userId;
+        $user->name = 'Template User';
+        $user->email = "{$userId}@example.test";
+        $user->password = Hash::make('password');
+        $user->save();
     }
 }

@@ -26,7 +26,7 @@ class ChangeRequestFactory extends Factory
         return [
             'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
             'tenant_id' => Tenant::factory(),
-            'project_id' => ZenaProject::factory(),
+            'project_id' => Project::factory(),
             'task_id' => null,
             'change_number' => 'CR-' . strtoupper($this->faker->unique()->regexify('[A-Z0-9]{8}')),
             'title' => $this->faker->sentence(6),

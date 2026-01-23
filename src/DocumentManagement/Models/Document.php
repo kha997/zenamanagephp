@@ -68,9 +68,15 @@ class Document extends Model
      */
     public const VISIBILITY_INTERNAL = 'internal';
     public const VISIBILITY_CLIENT = 'client';
+    public const VALID_VISIBILITY = [
+        self::VISIBILITY_INTERNAL,
+        self::VISIBILITY_CLIENT,
+    ];
 
     protected $fillable = [
         'project_id',
+        'uploaded_by',
+        'name',
         'title',
         'description',
         'linked_entity_type',
@@ -81,6 +87,18 @@ class Document extends Model
         'client_approved',
         'created_by',
         'updated_by',
+        'status',
+        'version',
+        'is_current_version',
+        'file_path',
+        'file_type',
+        'mime_type',
+        'file_size',
+        'file_hash',
+        'original_name',
+        'category',
+        'metadata',
+        'parent_document_id',
     ];
 
     protected $casts = [
@@ -89,6 +107,16 @@ class Document extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    public function getTitleAttribute(): ?string
+    {
+        return $this->attributes['name'] ?? null;
+    }
+
+    public function setTitleAttribute(string $value): void
+    {
+        $this->attributes['name'] = $value;
+    }
 
     /**
      * Quan hệ với Project
@@ -128,6 +156,22 @@ class Document extends Model
     public function currentVersion(): HasOne
     {
         return $this->hasOne(DocumentVersion::class, 'id', 'current_version_id');
+    }
+
+    /**
+     * Parent document relationship
+     */
+    public function parentDocument(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_document_id');
+    }
+
+    /**
+     * Child documents (legacy versions)
+     */
+    public function childDocuments(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_document_id');
     }
 
     /**

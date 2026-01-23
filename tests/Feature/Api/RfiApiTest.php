@@ -3,15 +3,17 @@
 namespace Tests\Feature\Api;
 
 use Tests\TestCase;
+use App\Models\Rfi;
 use App\Models\User;
 use App\Models\ZenaProject;
 use App\Models\ZenaRfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\SanctumAuthTestTrait;
 
 class RfiApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, SanctumAuthTestTrait;
 
     protected $user;
     protected $project;
@@ -26,6 +28,7 @@ class RfiApiTest extends TestCase
         
         // Create test project
         $this->project = ZenaProject::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id
         ]);
         
@@ -40,6 +43,7 @@ class RfiApiTest extends TestCase
     {
         // Create test RFIs
         ZenaRfi::factory()->count(3)->create([
+            'tenant_id' => $this->project->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -121,10 +125,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_get_single_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id
-        ]);
+        $rfi = $this->createTenantRfi();
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
@@ -148,10 +149,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_update_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id
-        ]);
+        $rfi = $this->createTenantRfi();
 
         $updateData = [
             'title' => 'Updated RFI Title',
@@ -185,10 +183,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_assign_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id
-        ]);
+        $rfi = $this->createTenantRfi();
 
         $assignData = [
             'assigned_to' => $this->user->id,
@@ -222,15 +217,14 @@ class RfiApiTest extends TestCase
      */
     public function test_can_respond_to_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+        $rfi = $this->createTenantRfi([
             'status' => 'in_progress'
         ]);
 
         $responseData = [
             'response' => 'This is the response to the RFI',
-            'response_notes' => 'Additional notes'
+            'response_notes' => 'Additional notes',
+            'status' => 'answered'
         ];
 
         $response = $this->withHeaders([
@@ -259,9 +253,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_escalate_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+        $rfi = $this->createTenantRfi([
             'status' => 'in_progress'
         ]);
 
@@ -297,9 +289,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_close_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+        $rfi = $this->createTenantRfi([
             'status' => 'answered'
         ]);
 
@@ -328,10 +318,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_delete_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
-            'project_id' => $this->project->id,
-            'created_by' => $this->user->id
-        ]);
+        $rfi = $this->createTenantRfi();
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
@@ -353,13 +340,14 @@ class RfiApiTest extends TestCase
         $response->assertStatus(401);
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
+
+    protected function createTenantRfi(array $attributes = []): Rfi
     {
-        // This would normally use your JWT service
-        // For testing, we'll create a simple token
-        return 'test-jwt-token-' . $user->id;
+        return ZenaRfi::factory()->create(array_merge([
+            'tenant_id' => $this->project->tenant_id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+        ], $attributes));
     }
+
 }

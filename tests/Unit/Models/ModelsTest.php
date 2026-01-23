@@ -127,7 +127,7 @@ class ModelsTest extends TestCase
         $team = Team::factory()->create();
         
         $project->teams()->attach($team);
-        
+
         $this->assertInstanceOf(Collection::class, $project->teams);
         $this->assertTrue($project->teams->contains($team));
     }
@@ -183,9 +183,11 @@ class ModelsTest extends TestCase
         $task2 = Task::factory()->create();
         
         $task1->dependencies()->attach($task2);
-        
-        $this->assertInstanceOf(Collection::class, $task1->dependencies);
-        $this->assertTrue($task1->dependencies->contains($task2));
+
+        $dependencies = $task1->dependencies()->get();
+
+        $this->assertInstanceOf(Collection::class, $dependencies);
+        $this->assertTrue($dependencies->contains($task2));
     }
 
     /** @test */
@@ -241,9 +243,8 @@ class ModelsTest extends TestCase
         
         $this->assertContains('name', $fillable);
         $this->assertContains('description', $fillable);
-        $this->assertContains('status', $fillable);
         $this->assertContains('tenant_id', $fillable);
-        $this->assertContains('leader_id', $fillable);
+        $this->assertContains('team_lead_id', $fillable);
     }
 
     /** @test */
@@ -297,7 +298,7 @@ class ModelsTest extends TestCase
         $fillable = $notification->getFillable();
         
         $this->assertContains('title', $fillable);
-        $this->assertContains('message', $fillable);
+        $this->assertContains('body', $fillable);
         $this->assertContains('type', $fillable);
         $this->assertContains('priority', $fillable);
         $this->assertContains('user_id', $fillable);
@@ -336,7 +337,7 @@ class ModelsTest extends TestCase
         $this->assertContains('priority', $fillable);
         $this->assertContains('project_id', $fillable);
         $this->assertContains('tenant_id', $fillable);
-        $this->assertContains('created_by', $fillable);
+        $this->assertContains('requested_by', $fillable);
     }
 
     /** @test */
@@ -353,7 +354,7 @@ class ModelsTest extends TestCase
     public function change_request_model_belongs_to_creator()
     {
         $user = User::factory()->create();
-        $changeRequest = ChangeRequest::factory()->create(['created_by' => $user->id]);
+        $changeRequest = ChangeRequest::factory()->create(['requested_by' => $user->id]);
         
         $this->assertInstanceOf(User::class, $changeRequest->creator);
         $this->assertEquals($user->id, $changeRequest->creator->id);
@@ -400,13 +401,15 @@ class ModelsTest extends TestCase
         $qcPlan = new QcPlan();
         $fillable = $qcPlan->getFillable();
         
-        $this->assertContains('name', $fillable);
+        $this->assertContains('title', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('status', $fillable);
-        $this->assertContains('type', $fillable);
         $this->assertContains('project_id', $fillable);
         $this->assertContains('tenant_id', $fillable);
         $this->assertContains('created_by', $fillable);
+        $this->assertContains('checklist_items', $fillable);
+        $this->assertContains('start_date', $fillable);
+        $this->assertContains('end_date', $fillable);
     }
 
     /** @test */
@@ -435,23 +438,26 @@ class ModelsTest extends TestCase
         $qcInspection = new QcInspection();
         $fillable = $qcInspection->getFillable();
         
-        $this->assertContains('name', $fillable);
+        $this->assertContains('title', $fillable);
         $this->assertContains('description', $fillable);
         $this->assertContains('status', $fillable);
-        $this->assertContains('type', $fillable);
-        $this->assertContains('project_id', $fillable);
+        $this->assertContains('inspection_date', $fillable);
         $this->assertContains('tenant_id', $fillable);
+        $this->assertContains('qc_plan_id', $fillable);
         $this->assertContains('inspector_id', $fillable);
+        $this->assertContains('findings', $fillable);
+        $this->assertContains('recommendations', $fillable);
+        $this->assertContains('checklist_results', $fillable);
     }
 
     /** @test */
-    public function qc_inspection_model_belongs_to_project()
+    public function qc_inspection_model_belongs_to_qc_plan()
     {
-        $project = Project::factory()->create();
-        $qcInspection = QcInspection::factory()->create(['project_id' => $project->id]);
+        $qcPlan = QcPlan::factory()->create();
+        $qcInspection = QcInspection::factory()->create(['qc_plan_id' => $qcPlan->id]);
         
-        $this->assertInstanceOf(Project::class, $qcInspection->project);
-        $this->assertEquals($project->id, $qcInspection->project->id);
+        $this->assertInstanceOf(QcPlan::class, $qcInspection->qcPlan);
+        $this->assertEquals($qcPlan->id, $qcInspection->qcPlan->id);
     }
 
     /** @test */

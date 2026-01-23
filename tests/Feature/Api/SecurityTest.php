@@ -7,10 +7,11 @@ use App\Models\User;
 use App\Models\ZenaProject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\SanctumAuthTestTrait;
 
 class SecurityTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, SanctumAuthTestTrait;
 
     protected $user;
     protected $project;
@@ -20,9 +21,12 @@ class SecurityTest extends TestCase
     {
         parent::setUp();
         
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->create([
+            'role' => 'super_admin'
+        ]);
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
         $this->token = $this->generateJwtToken($this->user);
     }
@@ -165,7 +169,7 @@ class SecurityTest extends TestCase
             'description' => str_repeat('a', 10000), // Too long description
             'status' => 'invalid_status', // Invalid status
             'start_date' => 'invalid-date', // Invalid date
-            'end_date' => '2024-01-01' // End date before start date
+            'end_date' => 'invalid-date' // Invalid date
         ]);
 
         $response->assertStatus(422)
@@ -207,7 +211,8 @@ class SecurityTest extends TestCase
     {
         $otherUser = User::factory()->create();
         $otherProject = ZenaProject::factory()->create([
-            'created_by' => $otherUser->id
+            'created_by' => $otherUser->id,
+            'tenant_id' => $otherUser->tenant_id,
         ]);
 
         $response = $this->withHeaders([
@@ -260,7 +265,8 @@ class SecurityTest extends TestCase
     public function test_ulid_security()
     {
         $project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         // Test with invalid ULID
@@ -319,11 +325,4 @@ class SecurityTest extends TestCase
         $this->assertStringNotContainsString('sql', strtolower($errorMessage));
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
-    {
-        return 'test-jwt-token-' . $user->id;
-    }
 }

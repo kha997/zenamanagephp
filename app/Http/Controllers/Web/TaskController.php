@@ -109,7 +109,7 @@ class TaskController extends Controller
             $task = $this->taskService->createTask($taskData);
             
             return redirect()
-                ->route('tasks.index')
+                ->route('app.tasks')
                 ->with('success', 'Task đã được tạo thành công!');
         } catch (\Exception $e) {
             return redirect()
@@ -135,7 +135,7 @@ class TaskController extends Controller
             ]);
             
             return redirect()
-                ->route('tasks.index')
+                ->route('app.tasks')
                 ->withErrors(['error' => 'Không thể tải task: ' . $e->getMessage()]);
         }
     }
@@ -229,7 +229,7 @@ class TaskController extends Controller
             
             \Log::info('Task updated successfully', ['task_id' => $taskId]);
             return redirect()
-                ->route('tasks.index')
+                ->route('app.tasks')
                 ->with('success', 'Task đã được cập nhật thành công!');
         } catch (\Exception $e) {
             \Log::error('Task update failed', [
@@ -259,7 +259,7 @@ class TaskController extends Controller
             }
             
             return redirect()
-                ->route('tasks.index')
+                ->route('app.tasks')
                 ->with('success', 'Task đã được xóa thành công!');
         } catch (\Exception $e) {
             return redirect()

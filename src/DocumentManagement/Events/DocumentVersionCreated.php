@@ -12,14 +12,13 @@ class DocumentVersionCreated extends BaseEvent
 {
     public function __construct(
         public DocumentVersion $version,
-        public int $userId
+        public string $userId
     ) {
         parent::__construct(
             entityId: $this->version->document_id,
             projectId: $this->version->document->project_id,
             actorId: $this->userId,
-            changedFields: ['version_created'],
-            eventName: 'Document.Version.Created'
+            changedFields: ['version_created']
         );
     }
 
@@ -38,5 +37,10 @@ class DocumentVersionCreated extends BaseEvent
                 'comment' => $this->version->comment
             ]
         ]);
+    }
+
+    public function getEventName(): string
+    {
+        return 'Document.Version.Created';
     }
 }

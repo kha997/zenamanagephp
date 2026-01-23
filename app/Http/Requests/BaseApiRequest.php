@@ -27,11 +27,9 @@ abstract class BaseApiRequest extends FormRequest
     protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator): void {
         throw new HttpResponseException(
             response()->json([
-                'status' => 'fail',
+                'status' => 'error',
                 'message' => 'Dữ liệu không hợp lệ',
-                'data' => [
-                    'validation_errors' => $validator->errors()->toArray()
-                ]
+                'errors' => $validator->errors()->toArray()
             ], 422)
         );
     }

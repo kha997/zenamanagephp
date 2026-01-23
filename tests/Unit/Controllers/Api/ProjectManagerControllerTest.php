@@ -223,6 +223,8 @@ class ProjectManagerControllerTest extends TestCase
 
         $originalDatabase = config('database.connections.mysql.database');
         $temporaryName = $originalDatabase . '_missing';
+        $originalDefault = config('database.default');
+        config(['database.default' => 'mysql']);
         config(['database.connections.mysql.database' => $temporaryName]);
         DB::purge('mysql');
 
@@ -230,8 +232,13 @@ class ProjectManagerControllerTest extends TestCase
             $response = $this->controller->getStats();
         } finally {
             config(['database.connections.mysql.database' => $originalDatabase]);
+            config(['database.default' => $originalDefault]);
             DB::purge('mysql');
             DB::reconnect('mysql');
+            if ($originalDefault !== 'mysql') {
+                DB::purge($originalDefault);
+                DB::reconnect($originalDefault);
+            }
         }
 
         $this->assertInstanceOf(JsonResponse::class, $response);
@@ -251,6 +258,8 @@ class ProjectManagerControllerTest extends TestCase
 
         $originalDatabase = config('database.connections.mysql.database');
         $temporaryName = $originalDatabase . '_missing';
+        $originalDefault = config('database.default');
+        config(['database.default' => 'mysql']);
         config(['database.connections.mysql.database' => $temporaryName]);
         DB::purge('mysql');
 
@@ -258,8 +267,13 @@ class ProjectManagerControllerTest extends TestCase
             $response = $this->controller->getProjectTimeline();
         } finally {
             config(['database.connections.mysql.database' => $originalDatabase]);
+            config(['database.default' => $originalDefault]);
             DB::purge('mysql');
             DB::reconnect('mysql');
+            if ($originalDefault !== 'mysql') {
+                DB::purge($originalDefault);
+                DB::reconnect($originalDefault);
+            }
         }
 
         $this->assertInstanceOf(JsonResponse::class, $response);

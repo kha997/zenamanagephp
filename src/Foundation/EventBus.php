@@ -32,6 +32,15 @@ class EventBus {
      * @var bool
      */
     private static bool $auditEnabled = true;
+
+    /**
+     * Snapshot of core listeners/middleware registered during service provider boot
+     *
+     * @var array<string, array<callable>>
+     */
+    private static array $coreListenersSnapshot = [];
+    private static array $coreMiddlewareSnapshot = [];
+    private static bool $coreStateCaptured = false;
     
     /**
      * Đăng ký một listener cho một sự kiện
@@ -61,8 +70,18 @@ class EventBus {
                 $instance = new $callback[0]();
                 return call_user_func([$instance, $callback[1]], $payload);
             };
-        } elseif (!is_callable($callback)) {
-            throw new Exception("Callback must be callable or array [class, method]");
+        } else {
+            if (is_string($callback)) {
+                if (!function_exists($callback)) {
+                    throw new Exception("Function {$callback} does not exist");
+                }
+            } elseif (is_object($callback)) {
+                if (!method_exists($callback, '__invoke')) {
+                    throw new Exception("Object " . get_class($callback) . " is not callable");
+                }
+            } else {
+                throw new Exception("Callback must be callable or array [class, method]");
+            }
         }
         
         if (!isset(self::$listeners[$eventName])) {
@@ -218,6 +237,37 @@ class EventBus {
     public static function clearAll(): void {
         self::$listeners = [];
         self::$middleware = [];
+    }
+
+    /**
+     * Capture the core listener/middleware graph after the application boots.
+     *
+     * @return void
+     */
+    public static function freezeCoreState(): void {
+        if (self::$coreStateCaptured) {
+            return;
+        }
+
+        self::$coreListenersSnapshot = self::$listeners;
+        self::$coreMiddlewareSnapshot = self::$middleware;
+        self::$coreStateCaptured = true;
+    }
+
+    /**
+     * Restore the listener/middleware graph back to the core snapshot.
+     *
+     * @return void
+     */
+    public static function restoreCoreState(): void {
+        if (!self::$coreStateCaptured) {
+            self::$listeners = [];
+            self::$middleware = [];
+            return;
+        }
+
+        self::$listeners = self::$coreListenersSnapshot;
+        self::$middleware = self::$coreMiddlewareSnapshot;
     }
     
     /**

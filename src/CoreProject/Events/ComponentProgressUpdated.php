@@ -26,17 +26,19 @@ class ComponentProgressUpdated
      * @param array $changedFields Các field đã thay đổi
      * @param \DateTime $timestamp Thời gian event
      */
+    public \DateTime $timestamp;
+
     public function __construct(
-        public readonly int $componentId,
-        public readonly int $projectId,
-        public readonly int $actorId,
-        public readonly int $tenantId,
+        public readonly string $componentId,
+        public readonly string $projectId,
+        public readonly string $actorId,
+        public readonly string $tenantId,
         public readonly float $oldProgress,
         public readonly float $newProgress,
         public readonly ?float $oldCost,
         public readonly ?float $newCost,
         public readonly array $changedFields,
-        public readonly \DateTime $timestamp
+        ?\DateTime $timestamp = null
     ) {
         $this->timestamp = $timestamp ?? new \DateTime();
     }

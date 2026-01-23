@@ -2,41 +2,57 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Foundation\Validation\ValidatesRequests;
+use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Routing\Controller as BaseController;
 
 /**
  * Base API Controller
  * 
  * Base controller cho tất cả API controllers
  */
-abstract class BaseApiController extends BaseController
+abstract class BaseApiController extends ApiBaseController
 {
-
     /**
      * Return success response
      */
     protected function success($data = null, string $message = 'Success', int $status = 200): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data' => $data
-        ], $status);
+        return $this->successResponse($data, $message, $status);
     }
 
     /**
-     * Return error response
+     * Return error response using the legacy schema.
      */
-    protected function error(string $message = 'Error', $errors = null, int $status = 400): JsonResponse
+    public function error(string $message = 'Error', int $statusCode = 400, $data = null): JsonResponse
     {
-        return response()->json([
+        $payload = [
             'success' => false,
             'message' => $message,
-            'errors' => $errors
-        ], $status);
+        ];
+
+        if ($data !== null) {
+            $payload['errors'] = is_array($data) && array_key_exists('errors', $data)
+                ? $data['errors']
+                : $data;
+        }
+
+        return response()->json($payload, $statusCode);
+    }
+
+    /**
+     * Legacy helper for code that relied on the old error() signature.
+     */
+    public function errorWithErrors(string $message = 'Error', $errors = null, int $status = 400): JsonResponse
+    {
+        return $this->error($message, $status, ['errors' => $errors]);
+    }
+
+    /**
+     * Alias for legacy error helpers.
+     */
+    public function errorLegacy(string $message = 'Error', $errors = null, int $status = 400): JsonResponse
+    {
+        return $this->errorWithErrors($message, $errors, $status);
     }
 
     /**
@@ -44,7 +60,7 @@ abstract class BaseApiController extends BaseController
      */
     protected function validationError($errors, string $message = 'Validation failed'): JsonResponse
     {
-        return $this->error($message, $errors, 422);
+        return $this->errorResponse($message, $errors, 422);
     }
 
     /**
@@ -52,7 +68,7 @@ abstract class BaseApiController extends BaseController
      */
     protected function notFound(string $message = 'Resource not found'): JsonResponse
     {
-        return $this->error($message, null, 404);
+        return $this->errorResponse($message, null, 404);
     }
 
     /**
@@ -60,7 +76,7 @@ abstract class BaseApiController extends BaseController
      */
     protected function unauthorized(string $message = 'Unauthorized'): JsonResponse
     {
-        return $this->error($message, null, 401);
+        return $this->errorResponse($message, null, 401);
     }
 
     /**
@@ -68,14 +84,7 @@ abstract class BaseApiController extends BaseController
      */
     protected function forbidden(string $message = 'Forbidden'): JsonResponse
     {
-        return $this->error($message, null, 403);
+        return $this->errorResponse($message, null, 403);
     }
 
-    /**
-     * Return server error response
-     */
-    protected function serverError(string $message = 'Internal server error'): JsonResponse
-    {
-        return $this->error($message, null, 500);
-    }
 }

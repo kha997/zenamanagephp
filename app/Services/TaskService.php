@@ -2,52 +2,72 @@
 
 namespace App\Services;
 
-use App\Models\Task;
+use Src\CoreProject\Models\Task;
 use App\Models\Project;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class TaskService
 {
     protected $taskRepository;
     protected $auditService;
     
-    public function __construct(TaskRepository $taskRepository, AuditService $auditService)
+    public function __construct(TaskRepository $taskRepository = null, AuditService $auditService = null)
     {
-        $this->taskRepository = $taskRepository;
-        $this->auditService = $auditService;
+        $this->taskRepository = $taskRepository ?? new TaskRepository();
+        $this->auditService = $auditService ?? new AuditService();
     }
     
     /**
      * Create a new task with business logic
      */
-    public function createTask(array $data, int $userId, int $tenantId): Task
+    public function createTask(array $data, ?string $userId = null, ?string $tenantId = null): Task
     {
+        $userId = $userId ?? $data['assignee_id'] ?? Auth::id();
+        $tenantId = $tenantId ?? $data['tenant_id'] ?? $this->inferTenantId($data);
+        $taskName = $data['name'] ?? $data['title'] ?? null;
+
         // Business logic validation
         $this->validateTaskCreation($data, $userId, $tenantId);
         
         // Create task
         $task = $this->taskRepository->create([
-            'title' => $data['title'],
+            'name' => $taskName,
             'description' => $data['description'],
-            'status' => 'pending',
+            'status' => $data['status'] ?? 'pending',
             'priority' => $data['priority'] ?? 'medium',
             'project_id' => $data['project_id'] ?? null,
             'user_id' => $userId,
+            'assignee_id' => $data['assignee_id'] ?? $userId,
             'tenant_id' => $tenantId,
+            'progress_percent' => $data['progress_percent'] ?? 0,
             'due_date' => $data['due_date'] ?? null
         ]);
-        
+
         // Fire events for side effects
         Event::dispatch('task.created', $task);
         
         // Audit logging
         $this->auditService->log('task_created', $userId, $tenantId, [
             'task_id' => $task->id,
-            'task_title' => $task->title
+            'task_title' => $task->name ?? $task->title ?? null
         ]);
         
-        return $task;
+        return Task::find($task->id);
+    }
+
+    public function updateTask(string $taskId, array $attributes): ?Task
+    {
+        $task = $this->taskRepository->getById($taskId);
+        if (!$task) {
+            return null;
+        }
+
+        $this->taskRepository->update($taskId, $attributes);
+
+        return Task::find($taskId);
     }
     
     /**
@@ -110,44 +130,51 @@ class TaskService
     /**
      * Get tasks with business logic filters
      */
-    public function getTasks(array $filters, int $userId, int $tenantId): array
+    public function getTasks(array $filters, ?string $userId = null, ?string $tenantId = null): LengthAwarePaginator
     {
-        // Apply business logic filters
-        $query = $this->taskRepository->getQuery();
-        
-        // Tenant isolation
-        $query->where('tenant_id', $tenantId);
-        
-        // User-specific filters
-        if (isset($filters['user_id'])) {
+        $query = Task::query();
+
+        if ($tenantId) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        if ($userId) {
+            $query->where('user_id', $userId);
+        }
+
+        if (!empty($filters['user_id'])) {
             $query->where('user_id', $filters['user_id']);
         }
-        
-        // Status filters
-        if (isset($filters['status'])) {
+
+        if (!empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
-        
-        // Priority filters
-        if (isset($filters['priority'])) {
+
+        if (!empty($filters['priority'])) {
             $query->where('priority', $filters['priority']);
         }
-        
-        // Project filters
-        if (isset($filters['project_id'])) {
+
+        if (!empty($filters['project_id'])) {
             $query->where('project_id', $filters['project_id']);
         }
-        
-        return $query->get()->toArray();
+
+        $results = $query->get();
+        $perPage = max(1, (int)($filters['per_page'] ?? $results->count()));
+        $currentPage = max(1, (int)($filters['page'] ?? 1));
+
+        return new LengthAwarePaginator($results, $results->count(), $perPage, $currentPage, [
+            'path' => LengthAwarePaginator::resolveCurrentPath()
+        ]);
     }
     
     /**
      * Validate task creation
      */
-    private function validateTaskCreation(array $data, int $userId, int $tenantId): void
+    private function validateTaskCreation(array $data, ?string $userId, ?string $tenantId): void
     {
         // Business rules validation
-        if (empty($data['title'])) {
+        $name = $data['name'] ?? $data['title'] ?? null;
+        if (empty($name)) {
             throw new \InvalidArgumentException('Task title is required');
         }
         
@@ -204,7 +231,7 @@ class TaskService
     /**
      * Check if user can create tasks
      */
-    private function canUserCreateTasks(int $userId, int $tenantId): bool
+    private function canUserCreateTasks(?string $userId, ?string $tenantId): bool
     {
         // Business logic to check user permissions
         return true; // Simplified for demo
@@ -240,9 +267,26 @@ class TaskService
     /**
      * Validate project access
      */
-    private function validateProjectAccess(int $projectId, int $userId, int $tenantId): void
+    private function validateProjectAccess(string $projectId, ?string $userId, ?string $tenantId): void
     {
         // Business logic to validate project access
         // This would check if user has access to the project
+    }
+
+    /**
+     * Infer tenant id from payload.
+     */
+    private function inferTenantId(array $data): ?string
+    {
+        if (isset($data['tenant_id'])) {
+            return $data['tenant_id'];
+        }
+
+        if (isset($data['project_id'])) {
+            $project = Project::find($data['project_id']);
+            return $project->tenant_id ?? null;
+        }
+
+        return null;
     }
 }

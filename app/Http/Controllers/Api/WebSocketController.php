@@ -60,7 +60,7 @@ class WebSocketController extends Controller
     public function markOnline(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
+            'user_id' => 'required|string',
             'activity' => 'sometimes|string',
         ]);
 
@@ -104,7 +104,7 @@ class WebSocketController extends Controller
     public function markOffline(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
+            'user_id' => 'required|string',
         ]);
 
         try {
@@ -142,7 +142,7 @@ class WebSocketController extends Controller
     public function updateActivity(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
+            'user_id' => 'required|string',
             'activity' => 'required|string',
             'metadata' => 'sometimes|array',
         ]);
@@ -189,7 +189,7 @@ class WebSocketController extends Controller
             'event' => 'required|string',
             'data' => 'required|array',
             'target_users' => 'sometimes|array',
-            'target_users.*' => 'integer',
+            'target_users.*' => 'string',
         ]);
 
         try {
@@ -248,7 +248,7 @@ class WebSocketController extends Controller
     public function sendNotification(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
+            'user_id' => 'required|string',
             'notification' => 'required|array',
             'notification.title' => 'required|string',
             'notification.message' => 'required|string',

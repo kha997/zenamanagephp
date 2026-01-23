@@ -6,10 +6,15 @@ use App\Models\DashboardAlert;
 use App\Models\DashboardMetric;
 use App\Models\DashboardWidget;
 use App\Models\DashboardWidgetDataCache;
+use App\Models\Project;
+use App\Models\Task;
 use App\Models\User;
 use App\Models\UserDashboard;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Dashboard Service
@@ -18,6 +23,22 @@ use Illuminate\Support\Facades\DB;
  */
 class DashboardService
 {
+    private const DEFAULT_ROLE = 'viewer';
+    private const ROLE_PRIORITY = [
+        'viewer' => 0,
+        'team_member' => 1,
+        'client' => 1,
+        'client_rep' => 1,
+        'subcontractor_lead' => 1,
+        'qc_inspector' => 2,
+        'design_lead' => 2,
+        'site_engineer' => 2,
+        'project_manager' => 3,
+        'admin' => 4,
+        'system_admin' => 5,
+        'super_admin' => 6,
+    ];
+
     /**
      * Lấy dashboard của user
      */
@@ -42,11 +63,14 @@ class DashboardService
     public function getAvailableWidgetsForUser(User $user): array
     {
         $userRole = $this->getUserRole($user);
-        
+
         $widgets = DashboardWidget::active()
             ->forRole($userRole)
-            ->get()
-            ->map(function ($widget) {
+            ->get();
+
+        $visibleWidgets = $this->filterWidgetsByRole($widgets, $userRole)
+            ->values()
+            ->map(function (DashboardWidget $widget) {
                 return [
                     'id' => $widget->id,
                     'name' => $widget->name,
@@ -58,7 +82,68 @@ class DashboardService
                 ];
             });
 
-        return $widgets->toArray();
+        return $visibleWidgets->toArray();
+    }
+
+    private function filterWidgetsByRole(Collection $widgets, string $role): Collection
+    {
+        return $widgets->filter(fn (DashboardWidget $widget) => $this->isWidgetVisibleToRole($widget, $role));
+    }
+
+    private function isWidgetVisibleToRole(DashboardWidget $widget, string $role): bool
+    {
+        $permissions = DashboardWidget::normalizePermissions($widget->permissions);
+
+        $allowedRoles = $this->resolveAllowedRoles($permissions);
+
+        if (!empty($allowedRoles)) {
+            return in_array($role, $allowedRoles, true);
+        }
+
+        if (!empty($permissions['min_role'])) {
+            return $this->getRoleRank($role) >= $this->getRoleRank((string) $permissions['min_role']);
+        }
+
+        if (!empty($permissions['required_role'])) {
+            return $role === (string) $permissions['required_role'];
+        }
+
+        return true;
+    }
+
+    private function resolveAllowedRoles(array $permissions): array
+    {
+        $roles = [];
+
+        foreach (['roles', 'allowed_roles', 'allowedRoles'] as $key) {
+            if (!empty($permissions[$key])) {
+                $roles = array_merge($roles, (array) $permissions[$key]);
+            }
+        }
+
+        if (!empty($permissions['required_role'])) {
+            $roles[] = $permissions['required_role'];
+        }
+
+        if ($this->hasSequentialKeys($permissions)) {
+            $roles = array_merge($roles, $permissions);
+        }
+
+        return array_values(array_unique(array_filter($roles, fn ($value) => is_string($value) && $value !== '')));
+    }
+
+    private function hasSequentialKeys(array $array): bool
+    {
+        if (empty($array)) {
+            return false;
+        }
+
+        return array_keys($array) === range(0, count($array) - 1);
+    }
+
+    private function getRoleRank(string $role): int
+    {
+        return self::ROLE_PRIORITY[strtolower($role)] ?? self::ROLE_PRIORITY[self::DEFAULT_ROLE];
     }
 
     /**
@@ -101,14 +186,18 @@ class DashboardService
     /**
      * Cập nhật layout của dashboard
      */
-    public function updateDashboardLayout(string $userId, array $layoutConfig, array $widgets): UserDashboard
+    public function updateDashboardLayout(string $userId, array $layoutConfig, ?array $widgets = null): UserDashboard
     {
         $dashboard = $this->getUserDashboard($userId);
-        
-        $dashboard->update([
+        $updateData = [
             'layout_config' => $layoutConfig,
-            'widgets' => $widgets
-        ]);
+        ];
+
+        if (is_array($widgets)) {
+            $updateData['widgets'] = $widgets;
+        }
+
+        $dashboard->update($updateData);
 
         return $dashboard;
     }
@@ -133,15 +222,132 @@ class DashboardService
         return $dashboard->fresh();
     }
 
+    public function addWidget(User $user, string $widgetId, array $config = []): array
+    {
+        DB::beginTransaction();
+
+        try {
+            $widget = DashboardWidget::findOrFail($widgetId);
+
+            if (!$widget->isAvailableForRole($this->getUserRole($user))) {
+                throw new \Exception('User does not have permission to access this widget');
+            }
+
+            $dashboard = $this->getUserDashboard($user->id);
+            $layout = $dashboard['layout'] ?? [];
+
+            $widgetInstance = [
+                'id' => (string) Str::ulid(),
+                'widget_id' => $widgetId,
+                'type' => $widget->type,
+                'title' => $config['title'] ?? $widget->name,
+                'size' => $config['size'] ?? 'medium',
+                'position' => $config['position'] ?? [],
+                'config' => $config,
+                'is_customizable' => true,
+                'created_at' => now()->toISOString()
+            ];
+
+            $layout[] = $widgetInstance;
+
+            $dashboard->update([
+                'layout_config' => $layout,
+                'widgets' => $layout
+            ]);
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'widget_instance' => $widgetInstance
+            ];
+        } catch (ModelNotFoundException $e) {
+            DB::rollBack();
+            return [
+                'success' => false,
+                'message' => 'Widget not found'
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
     /**
      * Xóa widget khỏi dashboard
      */
-    public function removeWidgetFromDashboard(string $userId, string $widgetId): UserDashboard
+    public function removeWidget(User $user, string $widgetIdentifier): array
     {
-        $dashboard = $this->getUserDashboard($userId);
-        $dashboard->removeWidget($widgetId);
+        $dashboard = $this->getUserDashboard($user->id);
+        $layout = $dashboard->layout_config ?? [];
+        $widgets = $dashboard->widgets ?? [];
+        $removed = false;
 
-        return $dashboard->fresh();
+        $layout = $this->removeWidgetInstanceFromStructure($layout, $widgetIdentifier, $removed);
+        $widgets = $this->removeWidgetInstanceFromStructure($widgets, $widgetIdentifier, $removed);
+
+        if (!$removed) {
+            return [
+                'success' => false,
+                'message' => 'Widget instance not found'
+            ];
+        }
+
+        $dashboard->update([
+            'layout_config' => $layout,
+            'widgets' => $widgets
+        ]);
+
+        return [
+            'success' => true,
+            'message' => 'Widget removed successfully'
+        ];
+    }
+
+    private function removeWidgetInstanceFromStructure(array $structure, string $identifier, bool &$removed): array
+    {
+        $result = [];
+
+        foreach ($structure as $key => $value) {
+            if (is_array($value)) {
+                if ($this->matchesWidgetIdentifier($value, $identifier)) {
+                    $removed = true;
+                    continue;
+                }
+
+                $result[$key] = $this->removeWidgetInstanceFromStructure($value, $identifier, $removed);
+                continue;
+            }
+
+            if ($this->scalarMatchesIdentifier($value, $identifier)) {
+                $removed = true;
+                continue;
+            }
+
+            $result[$key] = $value;
+        }
+
+        if (array_is_list($result)) {
+            $result = array_values($result);
+        }
+
+        return $result;
+    }
+
+    private function matchesWidgetIdentifier(array $widget, string $identifier): bool
+    {
+        foreach (['id', 'instance_id', 'widget_instance_id', 'widget_key', 'widget_id'] as $key) {
+            if (isset($widget[$key]) && (string) $widget[$key] === $identifier) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function scalarMatchesIdentifier(mixed $value, string $identifier): bool
+    {
+        return is_scalar($value) && (string) $value === $identifier;
     }
 
     /**
@@ -158,8 +364,10 @@ class DashboardService
     /**
      * Lấy alerts của user
      */
-    public function getUserAlerts(string $userId, ?string $projectId = null, ?string $type = null, ?string $category = null, bool $unreadOnly = false): array
+    public function getUserAlerts(User|string $user, ?string $projectId = null, ?string $type = null, ?string $category = null, bool $unreadOnly = false): array
     {
+        $userId = $this->resolveUserId($user);
+
         $query = DashboardAlert::forUser($userId)
             ->notExpired();
 
@@ -179,38 +387,56 @@ class DashboardService
             $query->unread();
         }
 
-        return $query->latest()->get()->toArray();
+        $alerts = $query
+            ->orderBy('is_read', 'asc')
+            ->orderByDesc('created_at')
+            ->get()
+            ->toArray();
+
+        return array_values($alerts);
     }
 
     /**
      * Đánh dấu alert đã đọc
      */
-    public function markAlertAsRead(string $alertId, string $userId): DashboardAlert
+    public function markAlertAsRead(User|string $user, string $alertId): array
     {
+        $userId = $this->resolveUserId($user);
+
         $alert = DashboardAlert::where('id', $alertId)
             ->where('user_id', $userId)
             ->firstOrFail();
 
         $alert->markAsRead();
 
-        return $alert;
+        return [
+            'success' => true,
+            'alert' => $alert
+        ];
     }
 
     /**
      * Đánh dấu tất cả alerts đã đọc
      */
-    public function markAllAlertsAsRead(string $userId, ?string $projectId = null): int
+    public function markAllAlertsAsRead(User|string $user, ?string $projectId = null): array
     {
+        $userId = $this->resolveUserId($user);
+
         $query = DashboardAlert::forUser($userId)->unread();
 
         if ($projectId) {
             $query->forProject($projectId);
         }
 
-        return $query->update([
+        $updated = $query->update([
             'is_read' => true,
             'read_at' => now()
         ]);
+
+        return [
+            'success' => true,
+            'updated' => $updated
+        ];
     }
 
     /**
@@ -218,6 +444,7 @@ class DashboardService
      */
     public function getDashboardMetrics(User $user, ?string $projectId = null, ?string $category = null, string $timeRange = '7d'): array
     {
+        $tenantId = (string) $user->tenant_id;
         $metrics = DashboardMetric::active();
 
         if ($category) {
@@ -228,7 +455,7 @@ class DashboardService
         foreach ($metrics->get() as $metric) {
             $value = $metric->getLatestValueForProject($projectId ?? '');
             if (!$value && $projectId) {
-                $value = $metric->getLatestValueForTenant($user->tenant_id);
+                $value = $metric->getLatestValueForTenant($tenantId);
             }
 
             $metricsData[] = [
@@ -239,7 +466,34 @@ class DashboardService
                 'unit' => $metric->unit,
                 'value' => $value ? $value->value : 0,
                 'display_config' => $metric->getDisplayConfig(),
-                'recorded_at' => $value ? $value->recorded_at : null
+            'recorded_at' => $value ? $value->recorded_at : null
+        ];
+        }
+        if (empty($metricsData)) {
+            $projectQuery = Project::where('tenant_id', $user->tenant_id);
+            $totalTasks = Task::where('tenant_id', $user->tenant_id)->count();
+
+            $metricsData = [
+                [
+                    'id' => 'projects_active',
+                    'code' => 'projects_active',
+                    'name' => 'Active Projects',
+                    'category' => 'projects',
+                    'unit' => 'count',
+                    'value' => $projectQuery->where('status', 'active')->count(),
+                    'display_config' => [],
+                    'recorded_at' => now()->toISOString()
+                ],
+                [
+                    'id' => 'tasks_total',
+                    'code' => 'tasks_total',
+                    'name' => 'Total Tasks',
+                    'category' => 'tasks',
+                    'unit' => 'count',
+                    'value' => $totalTasks,
+                    'display_config' => [],
+                    'recorded_at' => now()->toISOString()
+                ]
             ];
         }
 
@@ -272,6 +526,16 @@ class DashboardService
         return $this->createDefaultDashboard($userId);
     }
 
+    public function resetDashboard(string $userId): array
+    {
+        $dashboard = $this->resetDashboardToDefault($userId);
+
+        return [
+            'success' => true,
+            'dashboard' => $dashboard,
+        ];
+    }
+
     /**
      * Lưu preferences của user
      */
@@ -297,7 +561,8 @@ class DashboardService
             'tenant_id' => $user->tenant_id,
             'name' => 'Default Dashboard',
             'layout_config' => $template['layout'],
-            'widgets' => $template['widgets'],
+            'widgets' => [],
+            'preferences' => [],
             'is_default' => true,
             'is_active' => true
         ]);
@@ -308,9 +573,28 @@ class DashboardService
      */
     private function getUserRole(User $user): string
     {
-        // Logic để lấy role của user từ RBAC system
-        // Tạm thời return role mặc định
-        return 'project_manager';
+        $explicitRole = trim((string) ($user->role ?? ''));
+
+        if ($explicitRole !== '') {
+            return $explicitRole;
+        }
+
+        $primaryRole = $user->getPrimaryRole();
+
+        if (!empty($primaryRole)) {
+            return $primaryRole;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return 'super_admin';
+        }
+
+        return self::DEFAULT_ROLE;
+    }
+
+    private function resolveUserId(User|string $user): string
+    {
+        return $user instanceof User ? $user->id : $user;
     }
 
     /**
@@ -366,9 +650,11 @@ class DashboardService
             return [];
         }
 
+        $tenantId = (string) $user->tenant_id;
+
         $value = $projectId 
             ? $metric->getLatestValueForProject($projectId)
-            : $metric->getLatestValueForTenant($user->tenant_id);
+            : $metric->getLatestValueForTenant($tenantId);
 
         return [
             'value' => $value ? $value->value : 0,

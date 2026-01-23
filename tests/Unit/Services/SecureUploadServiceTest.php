@@ -231,12 +231,12 @@ class SecureUploadServiceTest extends TestCase
     /** @test */
     public function it_can_create_file_version()
     {
-        $originalFile = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
+        $originalFile = UploadedFile::fake()->createWithContent('document.pdf', '%PDF-1.4 original content');
         
         // Upload original file
         $originalResult = $this->service->uploadFile($originalFile, $this->user->id, $this->tenant->id);
         
-        $newFile = UploadedFile::fake()->create('document_v2.pdf', 150, 'application/pdf');
+        $newFile = UploadedFile::fake()->createWithContent('document_v2.pdf', '%PDF-1.4 updated content');
         
         // Create new version
         $versionResult = $this->service->createFileVersion(
@@ -260,7 +260,7 @@ class SecureUploadServiceTest extends TestCase
         $uploadResult = $this->service->uploadFile($file, $this->user->id, $this->tenant->id);
         
         // Create version
-        $newFile = UploadedFile::fake()->create('document_v2.pdf', 150, 'application/pdf');
+        $newFile = UploadedFile::fake()->createWithContent('document_v2.pdf', '%PDF-1.4 version content');
         $this->service->createFileVersion(
             $uploadResult['file_id'],
             $newFile,

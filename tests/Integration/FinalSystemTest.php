@@ -52,7 +52,8 @@ class FinalSystemTest extends TestCase
             'budget' => 100000,
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
+            'code' => 'PRJ-' . strtoupper(bin2hex(random_bytes(6))),
         ]);
         
         // Create comprehensive test data
@@ -117,7 +118,7 @@ class FinalSystemTest extends TestCase
                 'category' => $widgetData['category'],
                 'description' => "{$widgetData['name']} widget",
                 'config' => json_encode(['default_size' => 'medium']),
-                'permissions' => json_encode(['project_manager', 'site_engineer']),
+                'permissions' => ['project_manager', 'site_engineer'],
                 'is_active' => true,
                 'tenant_id' => $this->tenant->id
             ]);
@@ -144,7 +145,7 @@ class FinalSystemTest extends TestCase
                 'unit' => $metricData['unit'],
                 'type' => $metricData['type'],
                 'is_active' => true,
-                'permissions' => json_encode(['project_manager', 'site_engineer']),
+                'permissions' => ['project_manager', 'site_engineer'],
                 'tenant_id' => $this->tenant->id
             ]);
         }
@@ -156,6 +157,7 @@ class FinalSystemTest extends TestCase
         for ($i = 1; $i <= 100; $i++) {
             Task::create([
                 'title' => "Task {$i}",
+                'name' => "Task {$i}",
                 'description' => "Description for task {$i}",
                 'status' => ['pending', 'in_progress', 'completed'][array_rand(['pending', 'in_progress', 'completed'])],
                 'priority' => ['low', 'medium', 'high'][array_rand(['low', 'medium', 'high'])],
@@ -170,6 +172,11 @@ class FinalSystemTest extends TestCase
         for ($i = 1; $i <= 50; $i++) {
             RFI::create([
                 'subject' => "RFI {$i}",
+                'title' => "RFI {$i}",
+                'question' => "Question for RFI {$i}",
+                'rfi_number' => "RFI-{$i}",
+                'asked_by' => $this->user->id,
+                'created_by' => $this->user->id,
                 'description' => "Description for RFI {$i}",
                 'status' => ['open', 'answered', 'closed'][array_rand(['open', 'answered', 'closed'])],
                 'priority' => ['low', 'medium', 'high'][array_rand(['low', 'medium', 'high'])],

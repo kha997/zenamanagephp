@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\nService;
 use App\Services\EmailVerificationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 /**

@@ -27,11 +27,25 @@ class TaskConditionalToggled
     public ProjectTask $task;
 
     /**
+     * The task id for compatibility
+     *
+     * @var string
+     */
+    public string $taskId;
+
+    /**
      * The project containing the task
      *
      * @var Project
      */
     public Project $project;
+
+    /**
+     * The project id for compatibility
+     *
+     * @var string
+     */
+    public string $projectId;
 
     /**
      * The conditional tag that was toggled
@@ -48,18 +62,25 @@ class TaskConditionalToggled
     public bool $previousVisibility;
 
     /**
-     * New visibility state
+    * New visibility state
+    *
+    * @var bool
+    */
+   public bool $newVisibility;
+
+    /**
+     * Whether the task is hidden after toggle
      *
      * @var bool
      */
-    public bool $newVisibility;
+    public bool $isHidden;
 
     /**
      * User who performed the toggle
      *
-     * @var int|null
+     * @var string
      */
-    public ?int $actorId;
+    public string $actorId;
 
     /**
      * Timestamp when the event occurred
@@ -94,10 +115,13 @@ class TaskConditionalToggled
         int $affectedTasksCount = 1
     ) {
         $this->task = $task;
+        $this->taskId = $task->id;
         $this->project = $project;
+        $this->projectId = $project->id;
         $this->conditionalTag = $conditionalTag;
         $this->previousVisibility = $previousVisibility;
         $this->newVisibility = $newVisibility;
+        $this->isHidden = !$newVisibility;
         $this->affectedTasksCount = $affectedTasksCount;
         $this->actorId = $this->resolveActorId();
         $this->timestamp = Carbon::now();

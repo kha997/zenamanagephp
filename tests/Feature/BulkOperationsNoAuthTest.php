@@ -108,6 +108,7 @@ class BulkOperationsNoAuthTest extends TestCase
             'description' => 'Test project',
             'status' => 'active',
             'tenant_id' => $this->tenant->id,
+            'code' => 'PRJ-' . strtoupper(bin2hex(random_bytes(6))),
             'created_by' => $this->user->id
         ]);
 

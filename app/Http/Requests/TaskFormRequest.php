@@ -115,5 +115,16 @@ class TaskFormRequest extends FormRequest
                 'dependencies' => json_decode($this->dependencies, true) ?: [],
             ]);
         }
+
+        if ($this->filled('status')) {
+            $incomingStatus = strtolower(trim((string)$this->input('status')));
+            $aliases = [
+                'todo' => 'pending',
+            ];
+
+            $this->merge([
+                'status' => $aliases[$incomingStatus] ?? $incomingStatus,
+            ]);
+        }
     }
 }

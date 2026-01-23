@@ -152,6 +152,12 @@ class ApiResponseCacheMiddleware
     private function cacheResponse(string $cacheKey, Response $response, int $ttl): void
     {
         try {
+            // Add cache headers to response
+            $response->headers->set('X-Cache', 'MISS');
+            $response->headers->set('X-Cache-Key', $cacheKey);
+            $response->headers->set('X-Cache-TTL', (string) $ttl);
+            $response->headers->set('X-Cache-Status', 'MISS');
+
             $cacheData = [
                 'status_code' => $response->getStatusCode(),
                 'headers' => $response->headers->all(),
@@ -163,11 +169,6 @@ class ApiResponseCacheMiddleware
                 'ttl' => $ttl,
                 'tags' => ['api_response'],
             ]);
-
-            // Add cache headers to response
-            $response->headers->set('X-Cache', 'MISS');
-            $response->headers->set('X-Cache-Key', $cacheKey);
-            $response->headers->set('X-Cache-TTL', $ttl);
 
         } catch (\Exception $e) {
             Log::warning('Failed to cache API response', [
@@ -195,6 +196,7 @@ class ApiResponseCacheMiddleware
         // Add cache headers
         $response->headers->set('X-Cache', 'HIT');
         $response->headers->set('X-Cache-Date', date('r', $cachedData['cached_at']));
+        $response->headers->set('X-Cache-Status', 'HIT');
 
         return $response;
     }

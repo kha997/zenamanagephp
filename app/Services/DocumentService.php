@@ -179,7 +179,7 @@ class DocumentService
     /**
      * Phê duyệt document cho client
      */
-    public function approveForClient(int $documentId, int $userId): Document
+    public function approveForClient(string $documentId, string $userId): Document
     {
         $document = Document::findOrFail($documentId);
         
@@ -198,7 +198,7 @@ class DocumentService
     /**
      * Xóa document
      */
-    public function deleteDocument(int $documentId, int $userId): bool
+    public function deleteDocument(string $documentId, string $userId): bool
     {
         return DB::transaction(function () use ($documentId, $userId) {
             $document = Document::findOrFail($documentId);
@@ -212,7 +212,13 @@ class DocumentService
             $document->delete();
             
             // Dispatch event
-            EventBus::dispatch(new DocumentDeleted($document, $userId));
+            EventBus::dispatch(new DocumentDeleted(
+                $document->id,
+                $document->ulid,
+                (string) ($document->title ?? $document->name ?? ''),
+                $document->project_id,
+                $userId
+            ));
             
             return true;
         });
@@ -221,7 +227,7 @@ class DocumentService
     /**
      * Lấy thống kê documents
      */
-    public function getDocumentStats(int $projectId): array
+    public function getDocumentStats(string $projectId): array
     {
         $totalDocuments = Document::forProject($projectId)->count();
         $clientApprovedDocuments = Document::forProject($projectId)->clientApproved()->count();
@@ -241,7 +247,7 @@ class DocumentService
     /**
      * Helper: Tạo document version
      */
-    private function createDocumentVersion(Document $document, UploadedFile $file, string $comment, int $userId): DocumentVersion
+    private function createDocumentVersion(Document $document, UploadedFile $file, string $comment, string $userId): DocumentVersion
     {
         // Lưu file
         $filePath = $this->storeFile($file, $document->project_id);

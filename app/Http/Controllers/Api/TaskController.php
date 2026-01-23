@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 
-class TaskController extends Controller
+class TaskController extends BaseApiController
 {
     /**
      * Display a listing of the resource.
@@ -22,6 +25,10 @@ class TaskController extends Controller
             
             if (!$user) {
                 return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            if (DB::logging()) {
+                DB::flushQueryLog();
             }
 
             $query = Task::with([
@@ -38,7 +45,7 @@ class TaskController extends Controller
 
             // Apply filters
             if ($request->filled('project_id')) {
-                $query->byProject($request->input('project_id'));
+                $query->forProject($request->input('project_id'));
             }
 
             if ($request->filled('status')) {
@@ -65,14 +72,14 @@ class TaskController extends Controller
                 $query->dueSoon($request->input('due_soon_days', 3));
             }
 
-            if ($request->filled('search')) {
-                $query->search($request->input('search'));
-            }
+        if ($request->filled('search')) {
+            $query->search($request->input('search'));
+        }
 
-            // Pagination
-            $perPage = min($request->input('per_page', 15), 100);
-            $tasks = $query->orderBy('created_at', 'desc')
-                ->paginate($perPage);
+        // Pagination
+        $perPage = min($request->input('per_page', 15), 100);
+        $tasks = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage);
 
             return response()->json([
                 'success' => true,
@@ -100,6 +107,11 @@ class TaskController extends Controller
             
             if (!$user) {
                 return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            $normalizedStatus = $this->resolveTaskStatus($request);
+            if ($normalizedStatus !== null) {
+                $request->merge(['status' => $normalizedStatus]);
             }
 
             $request->validate([
@@ -207,7 +219,7 @@ class TaskController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id): JsonResponse
+    public function show(Task $task): JsonResponse
     {
         $user = Auth::user();
         
@@ -215,20 +227,13 @@ class TaskController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
-        $task = Task::with(['project', 'component', 'assignments.user', 'dependencies'])
-            ->find($id);
-
-        if (!$task) {
-            return $this->error('Task not found', 404);
-        }
-
-        return $this->successResponse($task);
+        return $this->successResponse($task->load(['project', 'component', 'assignments.user', 'dependencies']));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id): JsonResponse
+    public function update(Request $request, Task $task): JsonResponse
     {
         $user = Auth::user();
         
@@ -236,17 +241,18 @@ class TaskController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
-        $task = Task::find($id);
-
-        if (!$task) {
-            return $this->error('Task not found', 404);
+        $normalizedStatus = $this->resolveTaskStatus($request);
+        if ($normalizedStatus !== null) {
+            $request->merge(['status' => $normalizedStatus]);
         }
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'sometimes|required|in:todo,in_progress,done,pending',
-            'priority' => 'sometimes|required|in:low,medium,high,urgent',
+            'status' => ['sometimes', 'required', Rule::in(Task::VALID_STATUSES)],
+            'priority' => ['sometimes', 'required', Rule::in(Task::VALID_PRIORITIES)],
+            'assignee_id' => 'nullable|string|exists:users,id',
+            'progress_percent' => 'nullable|numeric|min:0|max:100',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after:start_date',
             'estimated_hours' => 'nullable|numeric|min:0',
@@ -262,22 +268,26 @@ class TaskController extends Controller
         try {
             $updateData = $request->only([
                 'name', 'description', 'status', 'priority', 'start_date', 'end_date',
-                'estimated_hours', 'actual_hours', 'dependencies'
+                'estimated_hours', 'actual_hours', 'dependencies', 'progress_percent', 'assignee_id'
             ]);
 
             // Check for circular dependency if updating dependencies
             if (isset($updateData['dependencies']) && is_array($updateData['dependencies'])) {
                 foreach ($updateData['dependencies'] as $depId) {
-                    if ($depId === $id) {
+                    if ($depId === $task->id) {
                         return $this->error('Task cannot depend on itself', 400);
                     }
-                    if ($this->wouldCreateCircularDependency($id, $depId, $task->project_id)) {
+                    if ($this->wouldCreateCircularDependency($task->id, $depId, $task->project_id)) {
                         return $this->error('Updating dependencies would create a circular dependency', 400);
                     }
                 }
             }
 
             $task->update($updateData);
+
+            if (array_key_exists('dependencies', $updateData)) {
+                $task->dependencies()->sync($updateData['dependencies'] ?? []);
+            }
 
             return $this->successResponse($task->load(['project', 'component', 'assignments.user']), 'Task updated successfully');
 
@@ -324,8 +334,13 @@ class TaskController extends Controller
             return $this->error('Unauthorized', 401);
         }
 
+        $normalizedStatus = $this->resolveTaskStatus($request);
+        if ($normalizedStatus !== null) {
+            $request->merge(['status' => $normalizedStatus]);
+        }
+
         $validator = Validator::make($request->all(), [
-            'status' => 'required|in:todo,in_progress,done,pending',
+            'status' => 'required|in:' . implode(',', Task::VALID_STATUSES),
         ]);
 
         if ($validator->fails()) {
@@ -346,6 +361,38 @@ class TaskController extends Controller
         } catch (\Exception $e) {
             return $this->error('Failed to update task status: ' . $e->getMessage(), 500);
         }
+    }
+
+    private function resolveTaskStatus(Request $request): ?string
+    {
+        $payload = $request->all();
+        $candidates = [
+            $request->input('status'),
+            Arr::get($payload, 'data.status'),
+            Arr::get($payload, 'task.status'),
+            Arr::get($payload, 'attributes.status'),
+        ];
+
+        $aliases = [
+            'todo' => Task::STATUS_PENDING,
+            'done' => Task::STATUS_COMPLETED,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (!is_scalar($candidate)) {
+                continue;
+            }
+
+            $normalized = strtolower(trim((string) $candidate));
+
+            if ($normalized === '') {
+                continue;
+            }
+
+            return $aliases[$normalized] ?? $normalized;
+        }
+
+        return null;
     }
 
     /**
@@ -861,4 +908,11 @@ class TaskController extends Controller
         }
     }
 
+    /**
+     * Provide compatibility with legacy error() calls.
+     */
+    protected function error(string $message, int $statusCode = 400, $data = null): JsonResponse
+    {
+        return $this->errorResponse($message, $statusCode, $data);
+    }
 }

@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\nService;
+use App\Services\DashboardCustomizationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -177,11 +178,11 @@ class DashboardCustomizationController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'layout' => 'required|array',
-                'layout.*.id' => 'required|string',
-                'layout.*.position' => 'required|array',
-                'layout.*.position.x' => 'required|integer|min:0',
-                'layout.*.position.y' => 'required|integer|min:0',
+                'layout' => 'array',
+                'layout.*.id' => 'sometimes|string',
+                'layout.*.position' => 'sometimes|array',
+                'layout.*.position.x' => 'sometimes|integer|min:0',
+                'layout.*.position.y' => 'sometimes|integer|min:0',
                 'layout.*.size' => 'sometimes|string|in:small,medium,large,extra-large'
             ]);
 
@@ -493,15 +494,22 @@ class DashboardCustomizationController extends Controller
         try {
             $user = Auth::user();
             $dashboard = $this->customizationService->getUserCustomizableDashboard($user);
+            $dashboardModel = $dashboard['dashboard'];
+            $dashboardData = $dashboardModel->toArray();
+
+            $dashboardLayout = $dashboardData['layout'] ?? [];
+            if (empty($dashboardLayout)) {
+                $dashboardLayout = $this->customizationService->getLayoutTemplateForRole($user->role);
+            }
 
             $exportData = [
                 'version' => '1.0',
                 'exported_at' => now()->toISOString(),
                 'user_role' => $user->role,
                 'dashboard' => [
-                    'name' => $dashboard['dashboard']['name'],
-                    'layout' => $dashboard['dashboard']['layout'],
-                    'preferences' => $dashboard['dashboard']['preferences']
+                    'name' => $dashboardData['name'],
+                    'layout' => $dashboardLayout,
+                    'preferences' => $dashboardData['preferences'] ?? []
                 ],
                 'widgets' => $dashboard['available_widgets']
             ];

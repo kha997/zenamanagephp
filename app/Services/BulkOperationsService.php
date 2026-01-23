@@ -543,7 +543,7 @@ class BulkOperationsService
         }
 
         if ($count === 0) {
-            throw new \Exception('No operations to perform');
+            return;
         }
     }
 

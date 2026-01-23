@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -87,9 +88,17 @@ class AuthController extends Controller
             }
         }
 
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
+        $failedMessage = __('auth.failed');
+
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return response()->json([
+                'message' => $failedMessage,
+            ], 401);
+        }
+
+        throw ValidationException::withMessages([
+            'email' => [$failedMessage],
+        ]);
     }
 
     /**

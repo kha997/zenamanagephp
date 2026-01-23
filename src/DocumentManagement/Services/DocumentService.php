@@ -14,6 +14,7 @@ use Src\DocumentManagement\Events\DocumentVersionCreated;
 use Src\DocumentManagement\Events\DocumentVersionReverted;
 use Src\DocumentManagement\Events\DocumentApprovedForClient;
 use Src\Foundation\EventBus;
+use Src\Foundation\Events\BaseEvent;
 
 /**
  * Service xử lý business logic cho Document Management
@@ -23,7 +24,7 @@ class DocumentService
     /**
      * Lấy danh sách documents theo project
      */
-    public function getDocumentsByProject(int $projectId, array $filters = [])
+    public function getDocumentsByProject(string $projectId, array $filters = [])
     {
         $query = Document::with(['currentVersion', 'creator', 'project'])
                         ->forProject($projectId);
@@ -48,13 +49,17 @@ class DocumentService
             $query->where('client_approved', $filters['client_approved']);
         }
 
+        if (!empty($filters['document_type'])) {
+            $query->where('file_type', $filters['document_type']);
+        }
+
         return $query->orderBy('created_at', 'desc')->paginate(20);
     }
 
     /**
      * Lấy document theo ID
      */
-    public function getDocumentById(int $documentId): ?Document
+    public function getDocumentById(string $documentId): ?Document
     {
         return Document::with(['versions.creator', 'currentVersion', 'creator', 'project'])
                       ->find($documentId);
@@ -63,21 +68,31 @@ class DocumentService
     /**
      * Tạo document mới với version đầu tiên
      */
-    public function createDocument(array $documentData, UploadedFile $file, int $userId): Document
+    public function createDocument(array $documentData, UploadedFile $file, string $userId): Document
     {
         return DB::transaction(function () use ($documentData, $file, $userId) {
             // Tạo document
             $document = Document::create([
                 'project_id' => $documentData['project_id'],
-                'title' => $documentData['title'],
+                'uploaded_by' => $userId,
+                'name' => $documentData['title'],
                 'description' => $documentData['description'] ?? null,
-                'linked_entity_type' => $documentData['linked_entity_type'] ?? null,
-                'linked_entity_id' => $documentData['linked_entity_id'] ?? null,
                 'tags' => $documentData['tags'] ?? null,
-                'visibility' => $documentData['visibility'] ?? 'internal',
-                'client_approved' => false,
+                'category' => $documentData['category'] ?? 'general',
+                'metadata' => $documentData['metadata'] ?? null,
+                'visibility' => $documentData['visibility'] ?? Document::VISIBILITY_INTERNAL,
+                'client_approved' => $documentData['client_approved'] ?? false,
                 'created_by' => $userId,
                 'updated_by' => $userId,
+                'file_path' => '',
+                'file_type' => $documentData['document_type'] ?? 'other',
+                'mime_type' => '',
+                'file_size' => 0,
+                'file_hash' => '',
+                'original_name' => $file->getClientOriginalName(),
+                'status' => 'active',
+                'version' => 0,
+                'is_current_version' => true,
             ]);
 
             // Tạo version đầu tiên
@@ -88,12 +103,25 @@ class DocumentService
                 $userId
             );
 
-            // Cập nhật current_version_id
-            $document->update(['current_version_id' => $version->id]);
+            $filePath = $version->file_path;
+            $fileHash = hash_file('sha256', Storage::disk('local')->path($filePath));
+
+            $document->update([
+                'current_version_id' => $version->id,
+                'file_path' => $filePath,
+                'file_type' => $documentData['document_type'] ?? 'other',
+                'mime_type' => $version->metadata['mime_type'] ?? null,
+                'file_size' => $version->metadata['size'] ?? null,
+                'file_hash' => $fileHash,
+                'original_name' => $version->metadata['original_filename'] ?? null,
+                'status' => 'active',
+                'version' => $version->version_number,
+                'is_current_version' => true,
+            ]);
 
             // Dispatch events
-            EventBus::dispatch(new DocumentCreated($document, $userId));
-            EventBus::dispatch(new DocumentVersionCreated($version, $userId));
+            $this->dispatchEvent(new DocumentCreated($document, $userId));
+            $this->dispatchEvent(new DocumentVersionCreated($version, $userId));
 
             return $document->fresh(['currentVersion', 'creator']);
         });
@@ -102,7 +130,7 @@ class DocumentService
     /**
      * Cập nhật thông tin document
      */
-    public function updateDocument(int $documentId, array $data, int $userId): Document
+    public function updateDocument(string $documentId, array $data, string $userId): Document
     {
         $document = Document::findOrFail($documentId);
         
@@ -110,7 +138,7 @@ class DocumentService
         $document->update(array_merge($data, ['updated_by' => $userId]));
         
         // Dispatch event
-        EventBus::dispatch(new DocumentUpdated($document, $userId, $oldData));
+        $this->dispatchEvent(new DocumentUpdated($document, $oldData, $userId));
         
         return $document->fresh(['currentVersion', 'creator']);
     }
@@ -118,7 +146,7 @@ class DocumentService
     /**
      * Tạo version mới cho document
      */
-    public function createNewVersion(int $documentId, UploadedFile $file, string $comment, int $userId): DocumentVersion
+    public function createNewVersion(string $documentId, UploadedFile $file, string $comment, string $userId): DocumentVersion
     {
         return DB::transaction(function () use ($documentId, $file, $comment, $userId) {
             $document = Document::findOrFail($documentId);
@@ -133,7 +161,7 @@ class DocumentService
             ]);
             
             // Dispatch event
-            EventBus::dispatch(new DocumentVersionCreated($version, $userId));
+            $this->dispatchEvent(new DocumentVersionCreated($version, $userId));
             
             return $version;
         });
@@ -142,7 +170,7 @@ class DocumentService
     /**
      * Revert document về version cũ
      */
-    public function revertToVersion(int $documentId, int $targetVersionNumber, string $comment, int $userId): DocumentVersion
+    public function revertToVersion(string $documentId, int $targetVersionNumber, string $comment, string $userId): DocumentVersion
     {
         return DB::transaction(function () use ($documentId, $targetVersionNumber, $comment, $userId) {
             $document = Document::findOrFail($documentId);
@@ -170,7 +198,7 @@ class DocumentService
             ]);
             
             // Dispatch event
-            EventBus::dispatch(new DocumentVersionReverted($newVersion, $targetVersion, $userId));
+            $this->dispatchEvent(new DocumentVersionReverted($newVersion, $targetVersion->version_number, $userId));
             
             return $newVersion;
         });
@@ -179,7 +207,7 @@ class DocumentService
     /**
      * Phê duyệt document cho client
      */
-    public function approveForClient(int $documentId, int $userId): Document
+    public function approveForClient(string $documentId, string $userId): Document
     {
         $document = Document::findOrFail($documentId);
         
@@ -190,7 +218,7 @@ class DocumentService
         ]);
         
         // Dispatch event
-        EventBus::dispatch(new DocumentApprovedForClient($document, $userId));
+        $this->dispatchEvent(new DocumentApprovedForClient($document, $userId));
         
         return $document->fresh(['currentVersion', 'creator']);
     }
@@ -198,7 +226,7 @@ class DocumentService
     /**
      * Xóa document
      */
-    public function deleteDocument(int $documentId, int $userId): bool
+    public function deleteDocument(string $documentId, string $userId): bool
     {
         return DB::transaction(function () use ($documentId, $userId) {
             $document = Document::findOrFail($documentId);
@@ -207,12 +235,21 @@ class DocumentService
             foreach ($document->versions as $version) {
                 $this->deleteVersionFile($version);
             }
+            if ($document->file_path) {
+                Storage::disk('local')->delete($document->file_path);
+            }
             
             // Xóa document (cascade sẽ xóa versions)
             $document->delete();
             
             // Dispatch event
-            EventBus::dispatch(new DocumentDeleted($document, $userId));
+            $this->dispatchEvent(new DocumentDeleted(
+                $document->id,
+                (string) $document->ulid,
+                (string) ($document->title ?? $document->name ?? ''),
+                $document->project_id,
+                $userId
+            ));
             
             return true;
         });
@@ -221,7 +258,7 @@ class DocumentService
     /**
      * Lấy thống kê documents
      */
-    public function getDocumentStats(int $projectId): array
+    public function getDocumentStats(string $projectId): array
     {
         $totalDocuments = Document::forProject($projectId)->count();
         $clientApprovedDocuments = Document::forProject($projectId)->clientApproved()->count();
@@ -239,9 +276,33 @@ class DocumentService
     }
 
     /**
+     * Download a version file
+     */
+    public function downloadVersion(string $documentId, ?int $versionNumber = null)
+    {
+        $query = DocumentVersion::where('document_id', $documentId);
+
+        if ($versionNumber !== null) {
+            $query->where('version_number', $versionNumber);
+        }
+
+        $version = $query->orderByDesc('version_number')->firstOrFail();
+
+        $disk = Storage::disk($version->storage_driver);
+
+        if (! $disk->exists($version->file_path)) {
+            throw new \RuntimeException('Stored file not found');
+        }
+
+        $fileName = $version->getOriginalFileName() ?? basename($version->file_path);
+
+        return $disk->download($version->file_path, $fileName);
+    }
+
+    /**
      * Helper: Tạo document version
      */
-    private function createDocumentVersion(Document $document, UploadedFile $file, string $comment, int $userId): DocumentVersion
+    private function createDocumentVersion(Document $document, UploadedFile $file, string $comment, string $userId): DocumentVersion
     {
         // Lưu file
         $filePath = $this->storeFile($file, $document->project_id);
@@ -265,7 +326,7 @@ class DocumentService
     /**
      * Helper: Lưu file
      */
-    private function storeFile(UploadedFile $file, int $projectId): string
+    private function storeFile(UploadedFile $file, string $projectId): string
     {
         $directory = "documents/project_{$projectId}";
         return $file->store($directory, 'local');
@@ -280,5 +341,10 @@ class DocumentService
             Storage::disk('local')->delete($version->file_path);
         }
         // TODO: Xử lý cho S3, Google Drive
+    }
+
+    private function dispatchEvent(BaseEvent $event): array
+    {
+        return EventBus::dispatch($event->getEventName(), $event->getPayload());
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\BaseApiController;
 use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class NotificationController extends BaseApiController
@@ -62,16 +63,17 @@ class NotificationController extends BaseApiController
             'title' => 'required|string|max:255',
             'message' => 'required|string',
             'data' => 'nullable|array',
-            'priority' => 'required|in:low,medium,high,urgent',
+            'priority' => 'required|in:' . implode(',', Notification::VALID_PRIORITIES),
             'expires_at' => 'nullable|date|after:now',
         ]);
 
         if ($validator->fails()) {
-            return $this->errorResponse('Validation failed', 422, $validator->errors());
+            return $this->failResponse($validator->errors(), 'Validation failed');
         }
 
         try {
             $notification = Notification::create([
+                'tenant_id' => $user->tenant_id,
                 'user_id' => $request->input('user_id'),
                 'type' => $request->input('type'),
                 'title' => $request->input('title'),
@@ -88,6 +90,7 @@ class NotificationController extends BaseApiController
             return $this->successResponse($notification, 'Notification created successfully', 201);
 
         } catch (\Exception $e) {
+            report($e);
             return $this->errorResponse('Failed to create notification: ' . $e->getMessage(), 500);
         }
     }

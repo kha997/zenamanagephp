@@ -64,12 +64,18 @@ class Notification extends Model
 
     protected $fillable = [
         'user_id',
+        'tenant_id',
+        'project_id',
+        'type',
         'priority',
         'title',
         'body',
         'link_url',
         'channel',
         'read_at',
+        'data',
+        'metadata',
+        'event_key',
     ];
 
     protected $casts = [
@@ -77,6 +83,18 @@ class Notification extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Notification $notification) {
+            if (empty($notification->tenant_id) && $notification->user_id) {
+                $user = User::find($notification->user_id);
+                if ($user) {
+                    $notification->tenant_id = $user->tenant_id;
+                }
+            }
+        });
+    }
 
     /**
      * Quan hệ với User

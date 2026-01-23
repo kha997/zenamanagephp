@@ -4,6 +4,8 @@ namespace App\Exceptions;
 
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Validation\ValidationException;
+use App\Services\ErrorEnvelopeService;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -58,6 +60,27 @@ class Handler extends ExceptionHandler
      */
     protected function unauthenticated($request, AuthenticationException $exception)
     {
-        return response()->json(['message' => 'Unauthenticated'], 401);
+        if ($request->expectsJson()) {
+            return ErrorEnvelopeService::authenticationError($exception->getMessage());
+        }
+
+        return redirect()->guest('/login');
+    }
+
+    protected function invalidJson($request, ValidationException $exception)
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'message' => $exception->getMessage(),
+                    'code' => 'VALIDATION_ERROR',
+                    'details' => $exception->errors(),
+                ],
+                'errors' => $exception->errors(),
+            ], $exception->status);
+        }
+
+        return parent::invalidJson($request, $exception);
     }
 }

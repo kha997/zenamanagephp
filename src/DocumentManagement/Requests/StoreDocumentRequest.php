@@ -4,6 +4,7 @@ namespace Src\DocumentManagement\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Src\DocumentManagement\Models\Document;
 
 /**
  * Form Request để xác thực dữ liệu khi tạo Document mới
@@ -28,7 +29,7 @@ class StoreDocumentRequest extends FormRequest
         return [
             'project_id' => [
                 'required',
-                'integer',
+                'string',
                 'exists:projects,id'
             ],
             'title' => [
@@ -41,13 +42,18 @@ class StoreDocumentRequest extends FormRequest
                 'string',
                 'max:2000'
             ],
+            'document_type' => [
+                'required',
+                'string',
+                'max:100'
+            ],
             'linked_entity_type' => [
                 'nullable',
                 Rule::in(['task', 'diary', 'cr'])
             ],
             'linked_entity_id' => [
                 'nullable',
-                'integer',
+                'string',
                 'required_with:linked_entity_type'
             ],
             'tags' => [
@@ -99,6 +105,12 @@ class StoreDocumentRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        if (!$this->filled('visibility')) {
+            $this->merge([
+                'visibility' => Document::VISIBILITY_INTERNAL
+            ]);
+        }
+
         // Convert tags string to array if needed
         if ($this->has('tags') && is_string($this->tags)) {
             $this->merge([

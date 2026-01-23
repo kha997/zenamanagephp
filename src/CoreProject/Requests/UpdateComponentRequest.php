@@ -30,19 +30,19 @@ class UpdateComponentRequest extends BaseApiRequest
         return [
             'parent_component_id' => [
                 'nullable',
-                'integer',
+                'string',
                 'exists:components,id',
                 'not_in:' . $componentId, // Không thể set chính nó làm parent
                 function ($attribute, $value, $fail) use ($componentId) {
                     if ($value) {
                         // Kiểm tra không tạo vòng lặp trong hierarchy
-                        $component = \zenamanage\CoreProject\Models\Component::find($componentId);
+                        $component = \Src\CoreProject\Models\Component::find($componentId);
                         if ($component && $this->wouldCreateCycle($component, $value)) {
                             $fail('Không thể tạo vòng lặp trong cấu trúc component.');
                         }
                         
                         // Kiểm tra parent component phải thuộc cùng project
-                        $parentComponent = \zenamanage\CoreProject\Models\Component::find($value);
+                        $parentComponent = \Src\CoreProject\Models\Component::find($value);
                         if ($parentComponent && $component && $parentComponent->project_id !== $component->project_id) {
                             $fail('Parent component phải thuộc cùng dự án.');
                         }
@@ -57,7 +57,7 @@ class UpdateComponentRequest extends BaseApiRequest
                 Rule::unique('components')
                     ->ignore($componentId)
                     ->where(function ($query) {
-                        $component = \zenamanage\CoreProject\Models\Component::find($this->route('component'));
+                        $component = \Src\CoreProject\Models\Component::find($this->route('component'));
                         if ($component) {
                             $query->where('project_id', $component->project_id)
                                   ->where('parent_component_id', $this->parent_component_id ?? $component->parent_component_id);
@@ -119,7 +119,7 @@ class UpdateComponentRequest extends BaseApiRequest
             }
             
             $visited[] = $currentId;
-            $parent = \zenamanage\CoreProject\Models\Component::find($currentId);
+            $parent = \Src\CoreProject\Models\Component::find($currentId);
             $currentId = $parent ? $parent->parent_component_id : null;
         }
         

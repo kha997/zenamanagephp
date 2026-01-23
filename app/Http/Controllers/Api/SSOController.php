@@ -7,6 +7,7 @@ use App\Services\LService;
 use App\Services\SAMLService;
 use App\Services\OIDCService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
  * SSO Controller

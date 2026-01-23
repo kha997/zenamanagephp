@@ -12,14 +12,13 @@ class DocumentApprovedForClient extends BaseEvent
 {
     public function __construct(
         public Document $document,
-        public int $userId
+        public string $userId
     ) {
         parent::__construct(
             entityId: $this->document->id,
             projectId: $this->document->project_id,
             actorId: $this->userId,
-            changedFields: ['client_approved'],
-            eventName: 'Document.ApprovedForClient'
+            changedFields: ['client_approved']
         );
     }
 
@@ -37,5 +36,10 @@ class DocumentApprovedForClient extends BaseEvent
                 'client_approved' => $this->document->client_approved
             ]
         ]);
+    }
+
+    public function getEventName(): string
+    {
+        return 'Document.Document.ApprovedForClient';
     }
 }

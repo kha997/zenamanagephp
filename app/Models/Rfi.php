@@ -88,11 +88,27 @@ class Rfi extends Model
     }
 
     /**
+     * Legacy alias for the creator relation.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->createdBy();
+    }
+
+    /**
      * Get the user assigned to answer the RFI.
      */
     public function assignedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    /**
+     * Legacy alias for assigned user relation.
+     */
+    public function assignedUser(): BelongsTo
+    {
+        return $this->assignedTo();
     }
 
     /**

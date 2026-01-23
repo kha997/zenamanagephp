@@ -10,6 +10,7 @@ return [
             'driver' => 'array',
         ],
         
+        
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),

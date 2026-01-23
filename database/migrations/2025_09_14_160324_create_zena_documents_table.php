@@ -17,6 +17,7 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->ulid('project_id');
             $table->ulid('uploaded_by');
+            $table->ulid('created_by')->nullable();
             $table->string('name');
             $table->string('original_name');
             $table->string('file_path');
@@ -36,6 +37,7 @@ return new class extends Migration
             
             $table->foreign('project_id')->references('id')->on('zena_projects')->onDelete('cascade');
             $table->foreign('uploaded_by')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->index(['project_id', 'category']);
             $table->index(['file_hash']);
             $table->index(['parent_document_id', 'version']);

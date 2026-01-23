@@ -3,7 +3,7 @@
 namespace Tests\Unit\Models;
 
 use Tests\TestCase;
-use Src\CoreProject\Models\Project;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -186,8 +186,19 @@ class ProjectTest extends TestCase
     public function it_has_fillable_attributes()
     {
         $fillable = [
-            'tenant_id', 'code', 'name', 'description', 'start_date', 'end_date',
-            'status', 'progress', 'budget_total'
+            'tenant_id',
+            'manager_id',
+            'code',
+            'name',
+            'description',
+            'start_date',
+            'end_date',
+            'status',
+            'priority',
+            'progress',
+            'budget',
+            'spent_amount',
+            'budget_total',
         ];
 
         $this->assertEquals($fillable, $this->project->getFillable());

@@ -3,10 +3,9 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Project;
-use App\Models\User;
 use Tests\TestCase;
 use Tests\Traits\DatabaseTrait;
-use Tests\Traits\AuthenticationTrait;
+use Tests\Traits\RbacTestTrait;
 use Illuminate\Foundation\Testing\WithFaker;
 
 /**
@@ -14,14 +13,15 @@ use Illuminate\Foundation\Testing\WithFaker;
  */
 class ProjectApiTest extends TestCase
 {
-    use DatabaseTrait, AuthenticationTrait, WithFaker;
+    use DatabaseTrait, RbacTestTrait, WithFaker;
     
     /**
      * Test get projects list
      */
     public function test_can_get_projects_list(): void
     {
-        $user = $this->actingAsUser();
+        $context = $this->actingAsWithPermissions(['project.read']);
+        $user = $context['user'];
         
         // Tạo test projects cho tenant của user
         Project::factory()->count(3)->create([
@@ -52,9 +52,21 @@ class ProjectApiTest extends TestCase
                 ->assertJson([
                     'status' => 'success'
                 ]);
-        
         // Verify chỉ trả về projects của tenant hiện tại
         $this->assertCount(3, $response->json('data'));
+    }
+
+    public function test_cannot_list_projects_without_project_read_permission(): void
+    {
+        $this->actingAsWithPermissions([]);
+
+        $response = $this->getJson('/api/v1/projects');
+
+        $response->assertStatus(403)
+                ->assertJson([
+                    'status' => 'error',
+                    'message' => 'Insufficient permissions to view projects'
+                ]);
     }
     
     /**
@@ -62,7 +74,8 @@ class ProjectApiTest extends TestCase
      */
     public function test_can_create_new_project(): void
     {
-        $user = $this->actingAsUser();
+        $context = $this->actingAsWithPermissions(['project.write']);
+        $user = $context['user'];
         
         $projectData = [
             'name' => 'New Test Project',
@@ -71,9 +84,9 @@ class ProjectApiTest extends TestCase
             'end_date' => now()->addMonths(6)->format('Y-m-d'),
             'status' => 'planning'
         ];
-        
+
         $response = $this->postJson('/api/v1/projects', $projectData);
-        
+
         $response->assertStatus(201)
                 ->assertJsonStructure([
                     'status',
@@ -100,13 +113,53 @@ class ProjectApiTest extends TestCase
             'tenant_id' => $user->tenant_id
         ]);
     }
+
+    public function test_cannot_create_project_without_permission(): void
+    {
+        $this->actingAsWithPermissions([]);
+
+        $projectData = [
+            'name' => 'Unauthorized Project',
+            'description' => 'Should be blocked by RBAC',
+            'start_date' => now()->format('Y-m-d'),
+            'end_date' => now()->addMonths(2)->format('Y-m-d'),
+            'status' => 'planning'
+        ];
+
+        $response = $this->postJson('/api/v1/projects', $projectData);
+
+        $response->assertStatus(403)
+                ->assertJson([
+                    'status' => 'error',
+                    'message' => 'Insufficient permissions to create projects'
+                ]);
+    }
+
+    public function test_project_store_response_team_members_are_brief(): void
+    {
+        $this->actingAsWithPermissions(['project.write']);
+
+        $projectData = [
+            'name' => 'Brief Team Project',
+            'description' => 'Ensure team members serialization is brief',
+            'start_date' => now()->format('Y-m-d'),
+            'end_date' => now()->addMonths(3)->format('Y-m-d'),
+            'status' => 'planning'
+        ];
+
+        $response = $this->postJson('/api/zena/projects', $projectData);
+
+        $response->assertStatus(201)
+                ->assertJsonPath('data.teamMembers', [])
+                ->assertJsonMissingPath('data.teamMembers.0.projects');
+    }
     
     /**
      * Test create project với invalid data
      */
     public function test_cannot_create_project_with_invalid_data(): void
     {
-        $this->actingAsUser();
+        $this->actingAsWithPermissions(['project.write']);
         
         $invalidData = [
             'name' => '', // Required field empty
@@ -115,7 +168,6 @@ class ProjectApiTest extends TestCase
         ];
         
         $response = $this->postJson('/api/v1/projects', $invalidData);
-        
         $response->assertStatus(422)
                 ->assertJsonStructure([
                     'status',
@@ -132,7 +184,8 @@ class ProjectApiTest extends TestCase
      */
     public function test_can_get_specific_project(): void
     {
-        $user = $this->actingAsUser();
+        $context = $this->actingAsWithPermissions(['project.read']);
+        $user = $context['user'];
         
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id,
@@ -157,7 +210,7 @@ class ProjectApiTest extends TestCase
      */
     public function test_cannot_access_project_from_different_tenant(): void
     {
-        $this->actingAsUser();
+        $this->actingAsWithPermissions(['project.read']);
         
         // Tạo project cho tenant khác
         $otherProject = Project::factory()->create();
@@ -176,11 +229,13 @@ class ProjectApiTest extends TestCase
      */
     public function test_can_update_project(): void
     {
-        $user = $this->actingAsUser();
+        $context = $this->actingAsWithPermissions(['project.write']);
+        $user = $context['user'];
         
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id,
-            'name' => 'Original Name'
+            'name' => 'Original Name',
+            'status' => 'planning'
         ]);
         
         $updateData = [
@@ -213,7 +268,8 @@ class ProjectApiTest extends TestCase
      */
     public function test_can_delete_project(): void
     {
-        $user = $this->actingAsUser();
+        $context = $this->actingAsWithPermissions(['project.write']);
+        $user = $context['user'];
         
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id

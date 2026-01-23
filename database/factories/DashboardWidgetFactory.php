@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\DashboardWidget;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\DashboardWidget>
@@ -20,6 +21,7 @@ class DashboardWidgetFactory extends Factory
     public function definition(): array
     {
         return [
+            'code' => 'DW-' . Str::upper(Str::random(8)),
             'name' => $this->faker->words(3, true),
             'type' => $this->faker->randomElement(['chart', 'table', 'card', 'metric', 'alert']),
             'category' => $this->faker->randomElement(['overview', 'progress', 'analytics', 'alerts', 'quality', 'budget', 'safety']),

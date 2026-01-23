@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * User Role Assignment Seeder
@@ -24,17 +25,10 @@ class UserRoleSeeder extends Seeder
         $adminRole = Role::where('name', 'System Admin')->first();
         
         if ($adminUser && $adminRole) {
-            // Gán system admin role cho admin user bằng updateOrInsert()
-            DB::table('user_roles')->updateOrInsert(
-                [
-                    'user_id' => $adminUser->id,
-                    'role_id' => $adminRole->id
-                ],
-                [
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]
-            );
+            $this->ensureUserRole([
+                'user_id' => $adminUser->id,
+                'role_id' => $adminRole->id,
+            ]);
         }
 
         // Gán roles cho các users khác
@@ -43,17 +37,31 @@ class UserRoleSeeder extends Seeder
         
         if ($memberRole) {
             foreach ($otherUsers as $user) {
-                DB::table('user_roles')->updateOrInsert(
-                    [
-                        'user_id' => $user->id,
-                        'role_id' => $memberRole->id
-                    ],
-                    [
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ]
-                );
+                $this->ensureUserRole([
+                    'user_id' => $user->id,
+                    'role_id' => $memberRole->id,
+                ]);
             }
         }
+    }
+
+    private function ensureUserRole(array $attributes): void
+    {
+        $recordExists = DB::table('user_roles')->where($attributes)->exists();
+
+        if ($recordExists) {
+            DB::table('user_roles')
+                ->where($attributes)
+                ->update(['updated_at' => now()]);
+
+            return;
+        }
+
+        DB::table('user_roles')->insert([
+            'id' => (string) Str::ulid(),
+            'created_at' => now(),
+            'updated_at' => now(),
+            ...$attributes,
+        ]);
     }
 }

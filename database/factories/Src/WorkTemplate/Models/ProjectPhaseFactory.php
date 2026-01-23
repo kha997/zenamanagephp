@@ -3,6 +3,7 @@
 namespace Database\Factories\Src\WorkTemplate\Models;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 use Src\WorkTemplate\Models\ProjectPhase;
 use Src\CoreProject\Models\Project;
 use Src\WorkTemplate\Models\Template;
@@ -32,6 +33,7 @@ class ProjectPhaseFactory extends Factory
     public function definition(): array
     {
         return [
+            'id' => (string) Str::ulid(),
             'project_id' => Project::factory(),
             'name' => $this->faker->words(3, true),
             'order' => $this->faker->numberBetween(1, 10),

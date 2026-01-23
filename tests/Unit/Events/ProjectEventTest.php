@@ -3,6 +3,7 @@
 namespace Tests\Unit\Events;
 
 use App\Models\Project;
+use App\Models\User;
 use Src\CoreProject\Events\ProjectCreated;
 use Src\CoreProject\Events\ProjectUpdated;
 use Tests\TestCase;
@@ -22,14 +23,16 @@ class ProjectEventTest extends TestCase
     public function test_project_created_event_is_dispatched(): void
     {
         Event::fake();
-        
+
         $project = Project::factory()->create();
-        
+        $user = User::factory()->create();
+
         // Manually dispatch event (normally done in service)
-        event(new ProjectCreated($project, auth()->user()));
-        
-        Event::assertDispatched(ProjectCreated::class, function ($event) use ($project) {
-            return $event->project->id === $project->id;
+        event(new ProjectCreated($project, $user));
+
+        Event::assertDispatched(ProjectCreated::class, function ($event) use ($project, $user) {
+            return $event->project->id === $project->id &&
+                   $event->user?->id === $user->id;
         });
     }
     
@@ -42,15 +45,18 @@ class ProjectEventTest extends TestCase
         
         $project = Project::factory()->create();
         $originalData = $project->toArray();
-        
+        $user = User::factory()->create();
+
         $project->update(['name' => 'Updated Name']);
-        
+        $changedFields = ['name'];
+
         // Manually dispatch event
-        event(new ProjectUpdated($project, $originalData, auth()->user()));
-        
-        Event::assertDispatched(ProjectUpdated::class, function ($event) use ($project) {
+        event(new ProjectUpdated($project, $originalData, $changedFields, $user));
+
+        Event::assertDispatched(ProjectUpdated::class, function ($event) use ($project, $user) {
             return $event->project->id === $project->id &&
-                   $event->project->name === 'Updated Name';
+                   $event->project->name === 'Updated Name' &&
+                   $event->user?->id === $user->id;
         });
     }
     
@@ -60,10 +66,10 @@ class ProjectEventTest extends TestCase
     public function test_project_event_payload_structure(): void
     {
         $project = Project::factory()->create();
-        $user = $this->createAuthenticatedUser();
-        
+        $user = User::factory()->create();
+
         $event = new ProjectCreated($project, $user);
-        
+
         $this->assertInstanceOf(Project::class, $event->project);
         $this->assertEquals($project->id, $event->project->id);
         $this->assertEquals($user->id, $event->user->id);

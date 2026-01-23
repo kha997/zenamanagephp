@@ -37,8 +37,10 @@ return new class extends Migration
             'zena_documents_parent_document_id_foreign',
             'zena_documents_tenant_id_foreign',
             'documents_uploaded_by_foreign',
+            'documents_created_by_foreign',
             'zena_documents_project_id_foreign',
             'zena_documents_uploaded_by_foreign',
+            'zena_documents_created_by_foreign',
         ];
 
         foreach ($foreignKeys as $fk) {
@@ -77,6 +79,13 @@ return new class extends Migration
                   ->references('id')
                   ->on('users')
                   ->onDelete('cascade')
+                  ->onUpdate('cascade');
+
+            // Creator foreign key
+            $table->foreign('created_by')
+                  ->references('id')
+                  ->on('users')
+                  ->onDelete('set null')
                   ->onUpdate('cascade');
 
             // Parent document foreign key

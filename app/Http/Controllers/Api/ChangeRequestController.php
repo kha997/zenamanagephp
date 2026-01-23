@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\BaseApiController;
 use App\Models\ChangeRequest;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
@@ -10,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Carbon;
 
 class ChangeRequestController extends BaseApiController
 {
@@ -93,6 +93,7 @@ class ChangeRequestController extends BaseApiController
             }
 
             $changeRequest = ChangeRequest::create([
+                'tenant_id' => $user->tenant_id,
                 'project_id' => $request->input('project_id'),
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
@@ -104,6 +105,7 @@ class ChangeRequestController extends BaseApiController
                 'justification' => $request->input('justification'),
                 'alternatives_considered' => $request->input('alternatives_considered'),
                 'status' => 'draft',
+                'requested_at' => now(),
                 'requested_by' => $user->id,
                 'change_number' => $this->generateChangeRequestNumber($request->input('project_id')),
             ]);
@@ -128,7 +130,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name', 'attachments'])
+            $changeRequest = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name'])
                 ->find($id);
 
             if (!$changeRequest) {
@@ -279,6 +281,14 @@ class ChangeRequestController extends BaseApiController
                 return $this->validationError($validator->errors());
             }
 
+            $validator = Validator::make($request->all(), [
+                'implementation_notes' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
             DB::beginTransaction();
 
             $changeRequest->update([
@@ -293,14 +303,20 @@ class ChangeRequestController extends BaseApiController
             // Update project budget and schedule if approved
             if ($changeRequest->status === 'approved') {
                 $project = $changeRequest->project;
-                if ($project) {
-                    if ($request->input('approved_cost')) {
-                        $project->increment('budget', $request->input('approved_cost'));
+                    if ($project) {
+                        if ($request->input('approved_cost')) {
+                            $project->increment('budget', $request->input('approved_cost'));
+                        }
+                        if ($request->filled('approved_schedule_days')) {
+                            $days = (int) $request->input('approved_schedule_days');
+                            if ($days > 0) {
+                                $currentEnd = $project->end_date ? Carbon::parse($project->end_date) : Carbon::now();
+                                $project->update([
+                                    'end_date' => $currentEnd->addDays($days),
+                                ]);
+                            }
+                        }
                     }
-                    if ($request->input('approved_schedule_days')) {
-                        $project->increment('end_date', $request->input('approved_schedule_days'));
-                    }
-                }
             }
 
             DB::commit();
@@ -383,6 +399,7 @@ class ChangeRequestController extends BaseApiController
 
             $changeRequest->update([
                 'status' => 'implemented',
+                'implementation_notes' => $request->input('implementation_notes'),
                 'implemented_by' => $user->id,
                 'implemented_at' => now(),
             ]);
@@ -458,7 +475,7 @@ class ChangeRequestController extends BaseApiController
         
         $sequence = $lastChangeRequest ? (int)substr($lastChangeRequest->change_number, -4) + 1 : 1;
         
-        return $projectCode . '-CR-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return $projectCode . '-CR-' . str_pad((string)$sequence, 4, '0', STR_PAD_LEFT);
     }
 
     /**

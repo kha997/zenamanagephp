@@ -35,6 +35,7 @@ class UserDashboard extends Model
         'tenant_id',
         'name',
         'layout_config',
+        'layout',
         'widgets',
         'preferences',
         'is_default',
@@ -47,6 +48,10 @@ class UserDashboard extends Model
         'preferences' => 'array',
         'is_default' => 'boolean',
         'is_active' => 'boolean',
+    ];
+
+    protected $appends = [
+        'layout',
     ];
 
     /**
@@ -185,6 +190,28 @@ class UserDashboard extends Model
     public function getLayoutConfig(): array
     {
         return $this->layout_config ?? [];
+    }
+
+    /**
+     * Accessor shortcut for layout config
+     */
+    public function getLayoutAttribute(): array
+    {
+        return $this->widgets ?? [];
+    }
+
+    /**
+     * Mutator for layout data to keep widgets in sync.
+     */
+    public function setLayoutAttribute($value): void
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $this->attributes['widgets'] = json_encode($decoded ?? []);
+            return;
+        }
+
+        $this->attributes['widgets'] = json_encode($value ?? []);
     }
 
     /**

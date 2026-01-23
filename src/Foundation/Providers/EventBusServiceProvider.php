@@ -73,8 +73,9 @@ class EventBusServiceProvider extends ServiceProvider
             }
         }
         
-        // Enable audit logging
+        // Enable audit logging and snapshot the core listener graph
         $eventBus->setAuditEnabled(true);
+        EventBus::freezeCoreState();
     }
 
     /**

@@ -7,6 +7,8 @@ use App\Services\tService;
 use App\Services\ImportExportService;
 use App\Services\BulkOperationsService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Bulk Operations Controller
@@ -232,9 +234,18 @@ class BulkOperationsController extends Controller
     public function bulkUpdateTaskStatus(Request $request): JsonResponse
     {
         try {
+            $user = Auth::user();
+
+            if (!$user->hasAnyRole(['super_admin', 'admin', 'pm'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Insufficient permissions to perform bulk task updates'
+                ], 403);
+            }
+
             $request->validate([
-                'task_ids' => 'required|array|max:1000',
-                'task_ids.*' => 'required|string',
+                'task_ids' => 'present|array|max:1000',
+                'task_ids.*' => 'string',
                 'status' => 'required|string|in:pending,in_progress,completed,cancelled'
             ]);
 

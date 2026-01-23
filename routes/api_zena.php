@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use Src\DocumentManagement\Controllers\DocumentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -10,7 +11,6 @@ use App\Http\Controllers\Api\AuthController;
 */
 
 Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
-
     // Main API info route
     Route::get('/', function () {
         return response()->json([
@@ -198,13 +198,17 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
             Route::get('/daily-report', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getDailySiteReport'])->name('site-engineer.daily-report');
         });
 
+        $projectControllerClass = config('api_migration.canonical_projects')
+            ? \Src\CoreProject\Controllers\ProjectController::class
+            : \App\Http\Controllers\Api\ProjectController::class;
+
         // Project Management routes
-        Route::group(['prefix' => 'projects'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\ProjectController::class, 'index'])->name('projects.index');
-            Route::post('/', [\App\Http\Controllers\Api\ProjectController::class, 'store'])->name('projects.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'show'])->name('projects.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'update'])->name('projects.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'destroy'])->name('projects.destroy');
+        Route::group(['prefix' => 'projects'], function () use ($projectControllerClass) {
+            Route::get('/', [$projectControllerClass, 'index'])->name('projects.index');
+            Route::post('/', [$projectControllerClass, 'store'])->name('projects.store');
+            Route::get('/{id}', [$projectControllerClass, 'show'])->name('projects.show');
+            Route::put('/{id}', [$projectControllerClass, 'update'])->name('projects.update');
+            Route::delete('/{id}', [$projectControllerClass, 'destroy'])->name('projects.destroy');
         });
 
         // Tasks Management routes
@@ -260,15 +264,19 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
         });
 
         // Inspections routes
-        Route::group(['prefix' => 'inspections'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\InspectionController::class, 'index'])->name('inspections.index');
-            Route::post('/', [\App\Http\Controllers\Api\InspectionController::class, 'store'])->name('inspections.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'show'])->name('inspections.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'update'])->name('inspections.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'destroy'])->name('inspections.destroy');
-            Route::post('/{id}/schedule', [\App\Http\Controllers\Api\InspectionController::class, 'schedule'])->name('inspections.schedule');
-            Route::post('/{id}/conduct', [\App\Http\Controllers\Api\InspectionController::class, 'conduct'])->name('inspections.conduct');
-            Route::post('/{id}/complete', [\App\Http\Controllers\Api\InspectionController::class, 'complete'])->name('inspections.complete');
+        $inspectionController = config('api_migration.canonical_inspections')
+            ? \Src\Quality\Controllers\InspectionController::class
+            : \App\Http\Controllers\Api\InspectionController::class;
+
+        Route::group(['prefix' => 'inspections'], function () use ($inspectionController) {
+            Route::get('/', [$inspectionController, 'index'])->name('inspections.index');
+            Route::post('/', [$inspectionController, 'store'])->name('inspections.store');
+            Route::get('/{id}', [$inspectionController, 'show'])->name('inspections.show');
+            Route::put('/{id}', [$inspectionController, 'update'])->name('inspections.update');
+            Route::delete('/{id}', [$inspectionController, 'destroy'])->name('inspections.destroy');
+            Route::post('/{id}/schedule', [$inspectionController, 'schedule'])->name('inspections.schedule');
+            Route::post('/{id}/conduct', [$inspectionController, 'conduct'])->name('inspections.conduct');
+            Route::post('/{id}/complete', [$inspectionController, 'complete'])->name('inspections.complete');
         });
 
         // Safety Incidents routes - DISABLED (Controller not implemented)
@@ -298,13 +306,16 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
         });
         */
 
-        // Document Management routes (using SimpleDocumentController)
+        // Document Management routes
         Route::group(['prefix' => 'documents'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])->name('documents.index');
-            Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])->name('documents.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])->name('documents.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->name('documents.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->name('documents.destroy');
+            Route::get('/', [DocumentController::class, 'index'])->name('documents.index');
+            Route::post('/', [DocumentController::class, 'store'])->name('documents.store');
+            Route::get('/{id}', [DocumentController::class, 'show'])->name('documents.show');
+            Route::put('/{id}', [DocumentController::class, 'update'])->name('documents.update');
+            Route::delete('/{id}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+            Route::post('/{id}/version', [DocumentController::class, 'createVersion'])->name('documents.version');
+            Route::get('/{id}/versions', [DocumentController::class, 'getVersions'])->name('documents.versions');
+            Route::get('/{id}/download', [DocumentController::class, 'downloadVersion'])->name('documents.download');
         });
 
         /*

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Project;
 use App\Models\User;
+use App\Support\JsonContainsCompat;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -266,9 +267,10 @@ class ProjectSearchService
         $suggestions['project_managers'] = $pmNames;
         
         // Tag suggestions
-        $tags = Project::query()
-            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->whereJsonContains('tags', $query)
+        $tagsQuery = Project::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId));
+
+        $tags = JsonContainsCompat::apply($tagsQuery, 'tags', $query)
             ->limit(10)
             ->get()
             ->pluck('tags')

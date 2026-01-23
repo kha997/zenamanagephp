@@ -2,6 +2,7 @@
 
 return [
     'default' => env('DB_CONNECTION', 'sqlite'),
+    'perf_assertions' => filter_var(env('PERF_ASSERTIONS', false), FILTER_VALIDATE_BOOLEAN),
     
     'connections' => [
         'sqlite' => [

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\User;
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,7 +26,7 @@ use Src\CoreProject\Models\Project;
  */
 class NotificationRule extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids, HasFactory, TenantScope;
 
     protected $table = 'notification_rules';
     protected $keyType = 'string';
@@ -60,20 +61,36 @@ class NotificationRule extends Model
     ];
 
     protected $fillable = [
+        'tenant_id',
         'user_id',
         'project_id',
         'event_key',
         'min_priority',
         'channels',
+        'conditions',
+        'description',
         'is_enabled',
     ];
 
     protected $casts = [
         'channels' => 'array',
+        'conditions' => 'array',
         'is_enabled' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $rule) {
+            if (empty($rule->tenant_id) && auth()->check()) {
+                $tenantId = auth()->user()?->tenant_id;
+                if ($tenantId) {
+                    $rule->tenant_id = $tenantId;
+                }
+            }
+        });
+    }
 
     /**
      * Quan hệ với User

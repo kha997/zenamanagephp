@@ -14,7 +14,7 @@ class Kernel extends HttpKernel
      * @var array<int, class-string|string>
      */
     protected $middleware = [
-        // Temporarily disabled all global middleware for debugging
+        \Illuminate\Http\Middleware\HandleCors::class,
     ];
 
     /**
@@ -24,6 +24,7 @@ class Kernel extends HttpKernel
      */
     protected $middlewareGroups = [
         'web' => [
+            \App\Http\Middleware\TestAdminDashboardBypass::class,
             \App\Http\Middleware\EncryptCookies::class,
             \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
             \Illuminate\Session\Middleware\StartSession::class,
@@ -34,6 +35,7 @@ class Kernel extends HttpKernel
 
         'api' => [
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\SecurityHeadersMiddleware::class,
             \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
         ],
     ];
@@ -57,6 +59,7 @@ class Kernel extends HttpKernel
         'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
         'input.sanitization' => \App\Http\Middleware\InputSanitizationMiddleware::class,
         'error.envelope' => \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
+        'api.legacy' => \App\Http\Middleware\DeprecationHeadersMiddleware::class,
         'legacy.route' => \App\Http\Middleware\LegacyRouteMiddleware::class,
         'legacy.redirect' => \App\Http\Middleware\LegacyRedirectMiddleware::class,
         'legacy.gone' => \App\Http\Middleware\LegacyGoneMiddleware::class,

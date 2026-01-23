@@ -43,10 +43,10 @@ class TemplateController extends Controller
      * @param Request $request
      * @return int|null
      */
-    protected function getUserId(Request $request): ?int
+    protected function getUserId(Request $request): ?string
     {
         $user = $request->user('api');
-        return $user ? $user->id : null;
+        return $user ? (string) $user->id : null;
     }
 
     /**
@@ -71,7 +71,7 @@ class TemplateController extends Controller
         
         // Search theo name nếu có
         if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->get('search') . '%');
+            $query->where('template_name', 'like', '%' . $request->get('search') . '%');
         }
         
         // Sắp xếp
@@ -193,10 +193,9 @@ class TemplateController extends Controller
             
             $template->delete();
             
-            return JSendResponse::success(
-                null,
-                'Template deleted successfully'
-            );
+            return JSendResponse::success([
+                'message' => 'Template đã được xóa thành công'
+            ]);
         } catch (\Exception $e) {
             return JSendResponse::error(
                 'Failed to delete template: ' . $e->getMessage(),
@@ -232,10 +231,10 @@ class TemplateController extends Controller
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
-            return JSendResponse::success(
-                $result,
-                'Template applied successfully'
-            );
+            return JSendResponse::success([
+                'result' => $result,
+                'message' => 'Template applied successfully'
+            ]);
         } catch (\Exception $e) {
             return JSendResponse::error(
                 'Failed to apply template: ' . $e->getMessage(),
@@ -262,10 +261,10 @@ class TemplateController extends Controller
             ->orderBy('version_number', 'desc')
             ->get();
         
-        return JSendResponse::success(
-            $versions,
-            'Template versions retrieved successfully'
-        );
+            return JSendResponse::success([
+                'versions' => $versions,
+                'message' => 'Template versions retrieved successfully'
+            ]);
     }
 
     /**

@@ -233,8 +233,8 @@ class TaskController
             }
 
             // Kiểm tra dependencies từ tasks khác
-            $dependentTasks = Task::where('project_id', $projectId)
-                ->whereJsonContains('dependencies', $taskId)
+            $dependentTasks = $task->dependentTasks()
+                ->where('project_id', $projectId)
                 ->exists();
 
             if ($dependentTasks) {
@@ -272,7 +272,7 @@ class TaskController
                     'id' => $task->id,
                     'name' => $task->name,
                     'status' => $task->status,
-                    'dependencies' => $task->dependencies ?? []
+                    'dependencies' => $task->dependency_ids
                 ];
             });
 
@@ -557,6 +557,8 @@ class TaskController
             $task->update([
                 'dependencies' => $request->dependencies
             ]);
+
+            $task->dependencies()->sync($request->dependencies);
 
             $task->load(['component', 'assignments.user', 'project']);
 

@@ -29,6 +29,7 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->string('event_key')->nullable();
             $table->ulid('project_id')->nullable();
+            $table->timestamp('expires_at')->nullable();
             $table->timestamps();
 
             // Foreign key constraints with explicit names
@@ -47,6 +48,7 @@ return new class extends Migration
             $table->index(['project_id']);
             $table->index(['event_key']);
             $table->index(['type']);
+            $table->index(['expires_at']);
         });
     }
 

@@ -39,6 +39,8 @@ class ProjectRepositoryTest extends TestCase
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'manager_id' => $this->user->id
+            ,
+            'status' => 'active'
         ]);
     }
 

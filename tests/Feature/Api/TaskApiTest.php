@@ -8,6 +8,7 @@ use App\Models\ZenaTask;
 use Tests\TestCase;
 use Tests\Traits\DatabaseTrait;
 use Tests\Traits\AuthenticationTrait;
+use Laravel\Sanctum\Sanctum;
 
 /**
  * Feature tests cho Task API endpoints
@@ -21,7 +22,7 @@ class TaskApiTest extends TestCase
      */
     public function test_can_get_tasks_for_project(): void
     {
-        $user = $this->actingAsUser();
+        $user = $this->authenticateWithSanctum();
         
         $project = ZenaProject::factory()->create([
             'tenant_id' => $user->tenant_id
@@ -29,29 +30,36 @@ class TaskApiTest extends TestCase
         
         // Tạo tasks cho project
         ZenaTask::factory()->count(5)->create([
-            'project_id' => $project->id
+            'project_id' => $project->id,
+            'tenant_id' => $project->tenant_id,
         ]);
-        
+
         $response = $this->getJson("/api/v1/projects/{$project->id}/tasks");
         
         $response->assertStatus(200)
+                ->assertJson([
+                    'success' => true,
+                    'message' => 'Tasks retrieved successfully',
+                ])
                 ->assertJsonStructure([
-                    'status',
                     'data' => [
-                        '*' => [
-                            'id',
-                            'project_id',
-                            'name',
-                            'start_date',
-                            'end_date',
-                            'status',
-                            'dependencies'
-                        ]
+                        'data' => [
+                            '*' => [
+                                'id',
+                                'project_id',
+                                'name',
+                                'start_date',
+                                'end_date',
+                                'status',
+                                'dependencies'
+                            ]
+                        ],
+                        'total',
                     ]
                 ]);
-        
+
         // Verify trả về tasks
-        $this->assertCount(5, $response->json('data'));
+        $this->assertCount(5, $response->json('data.data'));
     }
     
     /**
@@ -59,7 +67,7 @@ class TaskApiTest extends TestCase
      */
     public function test_can_create_task_with_dependencies(): void
     {
-        $user = $this->actingAsUser();
+        $user = $this->authenticateWithSanctum();
         
         $project = ZenaProject::factory()->create([
             'tenant_id' => $user->tenant_id
@@ -94,7 +102,7 @@ class TaskApiTest extends TestCase
      */
     public function test_can_update_task_status(): void
     {
-        $user = $this->actingAsUser();
+        $user = $this->authenticateWithSanctum();
         
         $project = ZenaProject::factory()->create([
             'tenant_id' => $user->tenant_id
@@ -106,6 +114,7 @@ class TaskApiTest extends TestCase
         ]);
         
         $updateData = [
+            'project_id' => $project->id,
             'status' => 'in_progress'
         ];
         
@@ -123,5 +132,16 @@ class TaskApiTest extends TestCase
             'id' => $task->id,
             'status' => 'in_progress'
         ]);
+    }
+
+    /**
+     * Helper to authenticate via Sanctum guard.
+     */
+    private function authenticateWithSanctum(array $attributes = [], array $roles = []): \App\Models\User
+    {
+        $user = $this->actingAsUser($attributes, $roles);
+        Sanctum::actingAs($user);
+
+        return $user;
     }
 }

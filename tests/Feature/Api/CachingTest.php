@@ -5,7 +5,6 @@ namespace Tests\Feature\Api;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 
 class CachingTest extends TestCase
@@ -15,12 +14,8 @@ class CachingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['cache.default' => 'array']);
         Cache::flush();
-        
-        // Ensure Redis is available
-        if (!Redis::ping()) {
-            $this->markTestSkipped('Redis is not available');
-        }
     }
 
     /**
@@ -298,19 +293,30 @@ class CachingTest extends TestCase
         // First request - should not be cached
         $response1 = $this->getJson('/api/dashboard/data', $headers);
         $response1->assertStatus(200);
-        $this->assertFalse($response1->headers->has('X-Cache-Status'));
+        $this->assertEquals('MISS', $response1->headers->get('X-Cache-Status'));
 
         // Second request - should be cached
         $response2 = $this->getJson('/api/dashboard/data', $headers);
         $response2->assertStatus(200);
-        
-        // Check if caching headers are present
-        if ($response2->headers->has('X-Cache-Status')) {
-            $this->assertEquals('HIT', $response2->headers->get('X-Cache-Status'));
-        }
+        $this->assertEquals('HIT', $response2->headers->get('X-Cache-Status'));
+        $this->assertEquals(
+            $response1->headers->get('X-Cache-Key'),
+            $response2->headers->get('X-Cache-Key')
+        );
 
-        // Response should be identical
-        $this->assertEquals($response1->getContent(), $response2->getContent());
+        $body1 = $response1->json();
+        $body2 = $response2->json();
+
+        // Compare payload while ignoring generated_at timestamp
+        $this->assertEquals($body1['success'], $body2['success']);
+        $payload1 = $body1['data'] ?? [];
+        $payload2 = $body2['data'] ?? [];
+        $generated1 = $payload1['generated_at'] ?? null;
+        $generated2 = $payload2['generated_at'] ?? null;
+        unset($payload1['generated_at'], $payload2['generated_at']);
+        $this->assertEquals($payload1, $payload2);
+        $this->assertNotEmpty($generated2);
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T[-0-9:.]+(?:Z|[+\-][0-9:.]+)?$/', $generated2);
     }
 
     /**
@@ -373,11 +379,13 @@ class CachingTest extends TestCase
 
         $response->assertStatus(400);
         $response->assertJsonStructure([
-            'success',
             'error' => [
+                'id',
+                'code',
                 'message',
-                'code'
+                'details'
             ]
         ]);
+        $this->assertIsArray($response->json('error.details'));
     }
 }

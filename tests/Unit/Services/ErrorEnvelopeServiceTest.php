@@ -132,7 +132,7 @@ class ErrorEnvelopeServiceTest extends TestCase
         $this->assertEquals(120, $data['error']['details']['retry_after']);
         
         // Check Retry-After header
-        $this->assertEquals('60', $response->headers->get('Retry-After'));
+        $this->assertEquals('120', $response->headers->get('Retry-After'));
     }
 
     /**

@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Models\Document;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
-class DocumentController extends Controller
+class DocumentController extends BaseApiController
 {
     /**
      * Display a listing of the resource.
@@ -25,10 +27,7 @@ class DocumentController extends Controller
 
             $query = Document::with([
                 'project:id,name,status',
-                'task:id,name,status',
-                'component:id,name,type',
-                'uploadedBy:id,name,email',
-                'approvedBy:id,name,email',
+                'uploader:id,name,email',
                 'tenant:id,name'
             ]);
 
@@ -100,8 +99,7 @@ class DocumentController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
@@ -155,7 +153,7 @@ class DocumentController extends Controller
                 'status' => 'active',
             ]);
 
-            return $this->successResponse($document->load(['project', 'uploadedBy']), 'Document uploaded successfully', 201);
+            return $this->successResponse($document->load(['project', 'uploader']), 'Document uploaded successfully', 201);
 
         } catch (\Exception $e) {
             return $this->error('Failed to upload document: ' . $e->getMessage(), 500);
@@ -167,14 +165,13 @@ class DocumentController extends Controller
      */
     public function show(string $id): JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
         }
 
-        $document = Document::with(['project', 'uploadedBy', 'versions'])
+        $document = Document::with(['project', 'uploader', 'versions'])
             ->find($id);
 
         if (!$document) {
@@ -189,8 +186,7 @@ class DocumentController extends Controller
      */
     public function update(Request $request, string $id): JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
@@ -221,7 +217,7 @@ class DocumentController extends Controller
                 'title', 'description', 'document_type', 'version', 'tags', 'status'
             ]));
 
-            return $this->successResponse($document->load(['project', 'uploadedBy']), 'Document updated successfully');
+            return $this->successResponse($document->load(['project', 'uploader']), 'Document updated successfully');
 
         } catch (\Exception $e) {
             return $this->error('Failed to update document: ' . $e->getMessage(), 500);
@@ -233,8 +229,7 @@ class DocumentController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
@@ -266,8 +261,7 @@ class DocumentController extends Controller
      */
     public function download(string $id): JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
@@ -298,8 +292,7 @@ class DocumentController extends Controller
      */
     public function createVersion(Request $request, string $id): JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
@@ -358,9 +351,14 @@ class DocumentController extends Controller
                 'change_notes' => $request->input('change_notes'),
             ]);
 
-            return $this->successResponse($newVersion->load(['project', 'uploadedBy']), 'Document version created successfully', 201);
+            return $this->successResponse($newVersion->load(['project', 'uploader']), 'Document version created successfully', 201);
 
         } catch (\Exception $e) {
+            Log::error('Failed to create document version', [
+                'document_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+
             return $this->error('Failed to create document version: ' . $e->getMessage(), 500);
         }
     }
@@ -370,8 +368,7 @@ class DocumentController extends Controller
      */
     public function getVersions(string $id): JsonResponse
     {
-        $authService = new AuthService();
-        $user = $authService->getCurrentUser();
+        $user = Auth::user();
         
         if (!$user) {
             return $this->error('Unauthorized', 401);
@@ -385,7 +382,7 @@ class DocumentController extends Controller
 
         $versions = Document::where('parent_document_id', $id)
             ->orWhere('id', $id)
-            ->with(['uploadedBy'])
+            ->with(['uploader'])
             ->orderBy('created_at', 'desc')
             ->get();
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Support\JsonContainsCompat;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
@@ -414,7 +415,11 @@ class AdvancedCachingService
     private function forgetByTags(array $tags): bool
     {
         try {
-            return \App\Models\CacheEntry::whereJsonContains('tags', $tags)->delete() > 0;
+            return JsonContainsCompat::apply(
+                \App\Models\CacheEntry::query(),
+                'tags',
+                $tags
+            )->delete() > 0;
         } catch (\Exception $e) {
             Log::warning("Database cache forget by tags failed: " . $e->getMessage());
             return false;

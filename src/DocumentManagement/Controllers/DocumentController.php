@@ -5,7 +5,10 @@ namespace Src\DocumentManagement\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Src\DocumentManagement\Models\Document;
+use Src\DocumentManagement\Models\DocumentVersion;
 use Src\DocumentManagement\Services\DocumentService;
 use Src\DocumentManagement\Resources\DocumentResource;
 use Src\DocumentManagement\Resources\DocumentCollection;
@@ -62,14 +65,13 @@ class DocumentController
                 'entity_type' => $request->get('entity_type'),
                 'entity_id' => $request->get('entity_id'),
                 'visibility' => $request->get('visibility'),
-                'client_approved' => $request->get('client_approved')
+                'client_approved' => $request->get('client_approved'),
+                'document_type' => $request->get('document_type')
             ];
 
             $documents = $this->documentService->getDocumentsByProject($projectId, $filters);
 
-            return JSendResponse::success([
-                'documents' => new DocumentCollection($documents)
-            ]);
+            return JSendResponse::success(new DocumentCollection($documents));
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to retrieve documents: ' . $e->getMessage(), 500);
         }
@@ -107,15 +109,15 @@ class DocumentController
     public function store(StoreDocumentRequest $request): JsonResponse
     {
         try {
+            $userId = (string) $request->user('api')->id;
+
             $document = $this->documentService->createDocument(
                 $request->validated(),
                 $request->file('file'),
-                $request->user('api')->id  // Sửa từ $request->user()->id
+                $userId
             );
     
-            return JSendResponse::success([
-                'document' => new DocumentResource($document)
-            ], 'Document created successfully', 201);
+            return JSendResponse::success(new DocumentResource($document), 'Document created successfully', 201);
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to create document: ' . $e->getMessage(), 500);
         }
@@ -131,19 +133,19 @@ class DocumentController
     public function update(UpdateDocumentRequest $request, string $id): JsonResponse
     {
         try {
+            $userId = (string) $request->user('api')->id;
+
             $document = $this->documentService->updateDocument(
                 $id,
                 $request->validated(),
-                $request->user('api')->id  // Sửa từ $request->user()->id
+                $userId
             );
     
             if (!$document) {
                 return JSendResponse::error('Document not found', 404);
             }
     
-            return JSendResponse::success([
-                'document' => new DocumentResource($document)
-            ], 'Document updated successfully');
+            return JSendResponse::success(new DocumentResource($document), 'Document updated successfully');
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to update document: ' . $e->getMessage(), 500);
         }
@@ -186,12 +188,54 @@ class DocumentController
                 'comment' => 'nullable|string|max:500'
             ]);
 
-            $version = $this->documentService->createNewVersion(
-                $id,
-                $request->file('file'),
-                $request->get('comment', ''),
-                $request->user()->id
-            );
+            $file = $request->file('file');
+            $tenantId = $request->user()?->tenant_id ?? 'system';
+            $userId = (string) $request->user()->id;
+
+            $debugMeta = [
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'document_id' => $id,
+                'disk' => 'local',
+                'path' => null,
+                'original_name' => $file?->getClientOriginalName(),
+                'file_size' => $file?->getSize(),
+            ];
+
+            $traceVersionDiagnostics = app()->environment('testing') && env('ZENA_TRACE_DOC_VERSION', false);
+
+            $createVersion = function () use ($id, $file, $request, $userId) {
+                return $this->documentService->createNewVersion(
+                    $id,
+                    $file,
+                    $request->get('comment', ''),
+                    $userId
+                );
+            };
+
+            if ($traceVersionDiagnostics) {
+                Log::debug('[testing] document.createVersion start', $debugMeta);
+
+                try {
+                    $version = $createVersion();
+                } catch (\Throwable $e) {
+                    Log::error('[testing] document.createVersion exception', [
+                        'ex' => $e::class,
+                        'msg' => $e->getMessage(),
+                        'trace' => Str::limit($e->getTraceAsString(), 4000),
+                        'context' => $debugMeta,
+                    ]);
+
+                    throw $e;
+                }
+
+                $debugMeta['path'] = $version->file_path ?? null;
+                $debugMeta['storage_driver'] = $version->storage_driver ?? null;
+                $debugMeta['version_id'] = $version->id ?? null;
+                Log::debug('[testing] document.createVersion success', $debugMeta);
+            } else {
+                $version = $createVersion();
+            }
 
             if (!$version) {
                 return JSendResponse::error('Document not found', 404);
@@ -202,6 +246,44 @@ class DocumentController
             ], 'New version created successfully', 201);
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to create version: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Lấy tất cả versions của document
+     */
+    public function getVersions(string $id): JsonResponse
+    {
+        try {
+            $versions = DocumentVersion::forDocument($id)
+                ->orderByDesc('version_number')
+                ->get();
+
+            if ($versions->isEmpty()) {
+                $documents = Document::where(function ($query) use ($id) {
+                    $query->where('id', $id)
+                        ->orWhere('parent_document_id', $id);
+                })
+                ->orderByDesc('created_at')
+                ->get();
+
+                $payload = $documents->map(fn (Document $document) => [
+                    'id' => $document->id,
+                    'version' => $document->version ?? 1,
+                    'created_at' => $document->created_at?->toISOString(),
+                ])->values()->all();
+                return JSendResponse::success($payload);
+            }
+
+            $payload = $versions->map(fn (DocumentVersion $version) => [
+                'id' => $version->id,
+                'version' => $version->version_number,
+                'created_at' => $version->created_at?->toISOString(),
+            ]);
+            $payload = $payload->values()->all();
+            return JSendResponse::success($payload);
+        } catch (\Exception $e) {
+            return JSendResponse::error('Failed to retrieve document versions: ' . $e->getMessage(), 500);
         }
     }
 

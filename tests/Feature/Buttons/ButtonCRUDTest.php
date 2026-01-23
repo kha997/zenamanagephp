@@ -5,10 +5,9 @@ namespace Tests\Feature\Buttons;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
-use App\Models\User;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
+use Tests\Support\InteractsWithRbac;
+use Tests\TestCase;
 
 /**
  * Button CRUD Test
@@ -18,6 +17,7 @@ use Illuminate\Support\Facades\Hash;
 class ButtonCRUDTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithRbac;
 
     protected $tenant;
     protected $user;
@@ -27,20 +27,14 @@ class ButtonCRUDTest extends TestCase
     {
         parent::setUp();
         
-        // Create test tenant
         $this->tenant = Tenant::create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
             'status' => 'active'
         ]);
 
-        // Create test user
-        $this->user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@test-' . uniqid() . '.com',
-            'password' => Hash::make('password'),
-            'tenant_id' => $this->tenant->id
-        ]);
+        $this->seedRolesAndPermissions();
+        $this->user = $this->createUserWithRole('super_admin', $this->tenant);
 
         // Create test project
         $this->project = Project::create([

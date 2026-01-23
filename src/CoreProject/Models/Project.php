@@ -16,6 +16,7 @@ use Src\Foundation\Traits\HasAuditLog;
 use Src\Foundation\Events\EventBus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Support\Str;
 
 /**
  * Model Project - Quản lý dự án
@@ -81,6 +82,34 @@ class Project extends Model
         self::STATUS_COMPLETED,
         self::STATUS_CANCELLED,
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Project $project) {
+            if (empty($project->code)) {
+                $project->code = 'PRJ-' . strtoupper(Str::random(8));
+            }
+        });
+    }
+
+    /**
+     * Đồng bộ các trạng thái với dự án (giá trị => nhãn hiển thị)
+     */
+    public const STATUSES = [
+        self::STATUS_PLANNING => 'Planning',
+        self::STATUS_ACTIVE => 'Active',
+        self::STATUS_ON_HOLD => 'On Hold',
+        self::STATUS_COMPLETED => 'Completed',
+        self::STATUS_CANCELLED => 'Cancelled',
+    ];
+
+    /**
+     * Lấy mảng trạng thái (giữ trạng thái và nhãn) cho reuse.
+     */
+    public static function statuses(): array
+    {
+        return self::STATUSES;
+    }
 
     /**
      * Relationship: Project thuộc về tenant

@@ -1,16 +1,23 @@
 <?php
 
+use App\Traits\SkipsSchemaIntrospection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    use SkipsSchemaIntrospection;
+
     /**
      * Run the migrations.
      */
     public function up(): void
     {
+        if (self::shouldSkipSchemaIntrospection()) {
+            return;
+        }
+
         // Drop duplicate columns first (separate operations for SQLite)
         if (Schema::hasColumn('notifications', 'message')) {
             Schema::table('notifications', function (Blueprint $table) {

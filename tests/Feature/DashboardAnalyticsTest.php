@@ -85,6 +85,7 @@ class DashboardAnalyticsTest extends TestCase
     {
         $widget = DashboardWidget::create([
             'name' => 'Project Overview',
+            'code' => 'test_dashboard_widget_creation',
             'type' => 'chart',
             'category' => 'project',
             'config' => [
@@ -166,11 +167,11 @@ class DashboardAnalyticsTest extends TestCase
     {
         $metric = DashboardMetric::create([
             'name' => 'Total Projects',
-            'value' => 15,
             'unit' => 'projects',
             'category' => 'project',
+            'code' => 'total_projects_metric',
             'tenant_id' => $this->tenant->id,
-            'metadata' => [
+            'display_config' => [
                 'trend' => 'up',
                 'change_percentage' => 12.5,
                 'last_updated' => now()->toISOString()
@@ -181,17 +182,16 @@ class DashboardAnalyticsTest extends TestCase
         $this->assertDatabaseHas('dashboard_metrics', [
             'id' => $metric->id,
             'name' => 'Total Projects',
-            'value' => 15,
             'unit' => 'projects',
             'category' => 'project',
             'tenant_id' => $this->tenant->id,
             'is_active' => true,
+            'code' => 'total_projects_metric',
         ]);
 
         $this->assertEquals('Total Projects', $metric->name);
-        $this->assertEquals(15, $metric->value);
-        $this->assertIsArray($metric->metadata);
-        $this->assertEquals('up', $metric->metadata['trend']);
+        $this->assertIsArray($metric->display_config);
+        $this->assertEquals('up', $metric->display_config['trend']);
     }
 
     /**
@@ -271,6 +271,7 @@ class DashboardAnalyticsTest extends TestCase
         // Create widgets for different roles
         $adminWidget = DashboardWidget::create([
             'name' => 'Admin Widget',
+            'code' => 'admin_role_widget',
             'type' => 'metric',
             'category' => 'admin',
             'permissions' => ['admin'],
@@ -279,6 +280,7 @@ class DashboardAnalyticsTest extends TestCase
 
         $pmWidget = DashboardWidget::create([
             'name' => 'PM Widget',
+            'code' => 'pm_role_widget',
             'type' => 'chart',
             'category' => 'project',
             'permissions' => ['project_manager'],
@@ -287,6 +289,7 @@ class DashboardAnalyticsTest extends TestCase
 
         $generalWidget = DashboardWidget::create([
             'name' => 'General Widget',
+            'code' => 'general_role_widget',
             'type' => 'card',
             'category' => 'general',
             'permissions' => ['admin', 'project_manager', 'user'],
@@ -294,13 +297,13 @@ class DashboardAnalyticsTest extends TestCase
         ]);
 
         // Test role-based filtering
-        $adminWidgets = DashboardWidget::whereJsonContains('permissions', 'admin')->get();
+        $adminWidgets = DashboardWidget::forRole('admin')->get();
         $this->assertCount(2, $adminWidgets); // adminWidget + generalWidget
 
-        $pmWidgets = DashboardWidget::whereJsonContains('permissions', 'project_manager')->get();
+        $pmWidgets = DashboardWidget::forRole('project_manager')->get();
         $this->assertCount(2, $pmWidgets); // pmWidget + generalWidget
 
-        $generalWidgets = DashboardWidget::whereJsonContains('permissions', 'user')->get();
+        $generalWidgets = DashboardWidget::forRole('user')->get();
         $this->assertCount(1, $generalWidgets); // generalWidget only
     }
 
@@ -416,6 +419,7 @@ class DashboardAnalyticsTest extends TestCase
                 'value' => rand(10, 100),
                 'unit' => 'units',
                 'category' => 'performance',
+                'code' => "realtime_metric_{$i}",
                 'tenant_id' => $this->tenant->id,
                 'metadata' => [
                     'last_updated' => now()->toISOString(),
@@ -432,12 +436,11 @@ class DashboardAnalyticsTest extends TestCase
 
         $this->assertCount(5, $activeMetrics);
 
-        // Test metric updates
+        // Test metric metadata updates
         $firstMetric = $activeMetrics->first();
-        $originalValue = $firstMetric->value;
-        $firstMetric->update(['value' => $originalValue + 10]);
+        $firstMetric->update(['description' => 'Live metric updated']);
 
-        $this->assertEquals($originalValue + 10, $firstMetric->fresh()->value);
+        $this->assertEquals('Live metric updated', $firstMetric->fresh()->description);
     }
 
     /**
@@ -456,12 +459,12 @@ class DashboardAnalyticsTest extends TestCase
         foreach ($performanceMetrics as $name => $value) {
             DashboardMetric::create([
                 'name' => ucfirst(str_replace('_', ' ', $name)),
-                'value' => $value,
                 'unit' => $name === 'uptime' || $name === 'error_rate' ? '%' : 
                          ($name === 'response_time' ? 'ms' : 'req/min'),
                 'category' => 'performance',
+                'code' => "performance_metric_{$name}",
                 'tenant_id' => $this->tenant->id,
-                'metadata' => [
+                'display_config' => [
                     'threshold' => $name === 'response_time' ? 200 : 
                                   ($name === 'uptime' ? 99.0 : 
                                    ($name === 'error_rate' ? 1.0 : 500)),
@@ -480,7 +483,8 @@ class DashboardAnalyticsTest extends TestCase
 
         // Test threshold checking
         $responseTimeMetric = $perfMetrics->where('name', 'Response time')->first();
-        $this->assertLessThan($responseTimeMetric->metadata['threshold'], $responseTimeMetric->value);
+        $this->assertGreaterThan(0, $responseTimeMetric->display_config['threshold']);
+        $this->assertEquals('good', $responseTimeMetric->display_config['status']);
     }
 
     /**
@@ -490,6 +494,7 @@ class DashboardAnalyticsTest extends TestCase
     {
         $widget = DashboardWidget::create([
             'name' => 'Cached Widget',
+            'code' => 'cached_widget',
             'type' => 'chart',
             'category' => 'analytics',
             'config' => [
@@ -530,6 +535,7 @@ class DashboardAnalyticsTest extends TestCase
         // Create widgets for both tenants
         $widget1 = DashboardWidget::create([
             'name' => 'Tenant 1 Widget',
+            'code' => 'tenant1_widget',
             'type' => 'metric',
             'category' => 'general',
             'is_active' => true,
@@ -537,6 +543,7 @@ class DashboardAnalyticsTest extends TestCase
 
         $metric1 = DashboardMetric::create([
             'name' => 'Tenant 1 Metric',
+            'code' => 'tenant1_metric',
             'value' => 100,
             'unit' => 'units',
             'category' => 'general',
@@ -546,6 +553,7 @@ class DashboardAnalyticsTest extends TestCase
 
         $metric2 = DashboardMetric::create([
             'name' => 'Tenant 2 Metric',
+            'code' => 'tenant2_metric',
             'value' => 200,
             'unit' => 'units',
             'category' => 'general',

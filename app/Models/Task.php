@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Src\Compensation\Models\TaskCompensation;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
+use App\Support\JsonContainsCompat;
 
 /**
  * Model Task - Quản lý công việc
@@ -75,8 +76,8 @@ class Task extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
-        'dependencies' => 'array',
         'watchers' => 'array',
+        'dependencies' => 'array',
         'is_hidden' => 'boolean',
         'estimated_hours' => 'float',
         'actual_hours' => 'float',
@@ -100,6 +101,22 @@ class Task extends Model
         'client_approved' => false
     ];
 
+    public function getDependencyIdsAttribute(): array
+    {
+        $value = $this->attributes['dependencies'] ?? null;
+
+        if (is_null($value)) {
+            return [];
+        }
+
+        return json_decode($value, true) ?? [];
+    }
+
+    public function setDependencyIdsAttribute(array $values): void
+    {
+        $this->attributes['dependencies'] = $values ? json_encode($values) : null;
+    }
+
     /**
      * Các trạng thái hợp lệ
      */
@@ -108,6 +125,7 @@ class Task extends Model
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_ON_HOLD = 'on_hold';
     public const STATUS_CANCELLED = 'cancelled';
+    public const STATUS_TODO = self::STATUS_PENDING;
 
     public const VALID_STATUSES = [
         self::STATUS_PENDING,
@@ -153,7 +171,7 @@ class Task extends Model
      */
     public function assignee(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_to');
+        return $this->belongsTo(User::class, 'assignee_id');
     }
 
     /**
@@ -178,6 +196,73 @@ class Task extends Model
     public function assignments(): HasMany
     {
         return $this->hasMany(TaskAssignment::class);
+    }
+
+    /**
+     * Relationship: Task có nhiều dependencies
+     */
+    public function dependencies(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            'task_dependencies',
+            'task_id',
+            'dependency_id'
+        )->withTimestamps();
+    }
+
+    /**
+     * Detect circular dependency via depth-first search.
+     */
+    public function hasCircularDependency(string $dependencyId): bool
+    {
+        $visited = [];
+
+        return $this->searchDependencyPath($dependencyId, $this->id, $visited);
+    }
+
+    /**
+     * Recursively traverse dependencies to find a path back to the target.
+     */
+    private function searchDependencyPath(string $currentId, string $targetId, array &$visited): bool
+    {
+        if ($currentId === $targetId) {
+            return true;
+        }
+
+        if (in_array($currentId, $visited, true)) {
+            return false;
+        }
+
+        $visited[] = $currentId;
+
+        $currentTask = self::find($currentId);
+
+        if (!$currentTask) {
+            return false;
+        }
+
+        foreach ($currentTask->dependencies()->get() as $dependency) {
+            if ($this->searchDependencyPath($dependency->id, $targetId, $visited)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Attach a dependency if it is not already present.
+     */
+    public function addDependency(string $dependencyId): bool
+    {
+        if ($this->dependencies()->wherePivot('dependency_id', $dependencyId)->exists()) {
+            return false;
+        }
+
+        $this->dependencies()->attach($dependencyId);
+
+        return true;
     }
 
     /**
@@ -254,11 +339,11 @@ class Task extends Model
      */
     public function canStart(): bool
     {
-        if (empty($this->dependencies)) {
+        if (empty($this->dependency_ids)) {
             return true;
         }
         
-        $dependentTasks = Task::whereIn('ulid', $this->dependencies)->get();
+        $dependentTasks = Task::whereIn('ulid', $this->dependency_ids)->get();
         
         return $dependentTasks->every(function ($task) {
             return $task->status === self::STATUS_COMPLETED;
@@ -270,15 +355,17 @@ class Task extends Model
      */
     public function getDependentTasks()
     {
-        return Task::where('project_id', $this->project_id)
-                   ->whereJsonContains('dependencies', $this->ulid)
-                   ->get();
+        return JsonContainsCompat::apply(
+            Task::query()->where('project_id', $this->project_id),
+            'dependencies',
+            $this->ulid
+        )->get();
     }
 
     /**
      * Scope: Lọc theo project
      */
-    public function scopeForProject($query, int $projectId)
+    public function scopeForProject($query, string $projectId)
     {
         return $query->where('project_id', $projectId);
     }
@@ -313,6 +400,17 @@ class Task extends Model
     public function scopeByPriority($query, string $priority)
     {
         return $query->where('priority', $priority);
+    }
+
+    /**
+     * Scope: Search by name or description
+     */
+    public function scopeSearch($query, string $term)
+    {
+        return $query->where(function ($subQuery) use ($term) {
+            $subQuery->where('name', 'like', '%' . $term . '%')
+                     ->orWhere('description', 'like', '%' . $term . '%');
+        });
     }
 
     /**

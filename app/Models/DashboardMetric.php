@@ -30,10 +30,14 @@ class DashboardMetric extends Model
     public $incrementing = false;
     
     protected $fillable = [
+        'tenant_id',
+        'code',
         'metric_code',
+        'type',
         'category',
         'name',
         'unit',
+        'permissions',
         'calculation_config',
         'display_config',
         'is_active',
@@ -43,6 +47,7 @@ class DashboardMetric extends Model
     protected $casts = [
         'calculation_config' => 'array',
         'display_config' => 'array',
+        'permissions' => 'array',
         'is_active' => 'boolean',
     ];
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\BaseApiController;
 use App\Models\Task;
 use App\Models\TaskAssignment;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class TaskAssignmentController extends BaseApiController

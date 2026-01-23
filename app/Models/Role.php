@@ -86,7 +86,9 @@ class Role extends Model
             'user_roles',
             'role_id',
             'user_id'
-        )->withTimestamps();
+        )->using(UserRole::class)
+          ->withPivot('id')
+          ->withTimestamps();
     }
 
     /**

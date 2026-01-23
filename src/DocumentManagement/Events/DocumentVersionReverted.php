@@ -13,14 +13,13 @@ class DocumentVersionReverted extends BaseEvent
     public function __construct(
         public DocumentVersion $newVersion,
         public int $revertedFromVersionNumber,
-        public int $userId
+        public string $userId
     ) {
         parent::__construct(
             entityId: $this->newVersion->document_id,
             projectId: $this->newVersion->document->project_id,
             actorId: $this->userId,
-            changedFields: ['version_reverted'],
-            eventName: 'Document.Version.Reverted'
+            changedFields: ['version_reverted']
         );
     }
 
@@ -36,5 +35,10 @@ class DocumentVersionReverted extends BaseEvent
                 'reverted_from_version_number' => $this->revertedFromVersionNumber
             ]
         ]);
+    }
+
+    public function getEventName(): string
+    {
+        return 'Document.Version.Reverted';
     }
 }

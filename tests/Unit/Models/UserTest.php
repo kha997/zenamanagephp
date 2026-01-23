@@ -4,6 +4,8 @@ namespace Tests\Unit\Models;
 
 use Tests\TestCase;
 use App\Models\User;
+use App\Models\Project;
+use App\Models\Notification;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -35,13 +37,15 @@ class UserTest extends TestCase
     /** @test */
     public function it_has_many_projects()
     {
-        $project = \Src\CoreProject\Models\Project::factory()->create([
-            'tenant_id' => $this->tenant->id
+        $project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'manager_id' => $this->user->id,
         ]);
 
         // Since Project model doesn't have created_by field, we'll test the relationship differently
-        $this->assertInstanceOf(\Src\CoreProject\Models\Project::class, $project);
+        $this->assertInstanceOf(Project::class, $project);
         $this->assertEquals($this->tenant->id, $project->tenant_id);
+        $this->assertTrue($this->user->projects->contains($project));
     }
 
     /** @test */
@@ -84,12 +88,13 @@ class UserTest extends TestCase
     /** @test */
     public function it_has_many_notifications()
     {
-        $notification = \App\Models\ZenaNotification::factory()->create([
+        $notification = Notification::factory()->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id
         ]);
 
-        $this->assertTrue($this->user->zenaNotifications->contains($notification));
+        $this->user->refresh()->load('zenaNotifications');
+        $this->assertTrue($this->user->zenaNotifications->contains('id', $notification->id));
     }
 
     /** @test */
@@ -157,10 +162,11 @@ class UserTest extends TestCase
     public function it_has_fillable_attributes()
     {
         $fillable = [
-            'name', 'email', 'password', 'phone', 'avatar', 'preferences',
-            'last_login_at', 'is_active', 'oidc_provider', 'oidc_subject_id',
-            'oidc_data', 'saml_provider', 'saml_name_id', 'saml_data',
-            'first_name', 'last_name', 'department', 'job_title', 'manager'
+            'tenant_id', 'role', 'name', 'email', 'password', 'phone', 'avatar',
+            'preferences', 'last_login_at', 'last_login_ip', 'is_active',
+            'oidc_provider', 'oidc_subject_id', 'oidc_data', 'saml_provider',
+            'saml_name_id', 'saml_data', 'first_name', 'last_name', 'department',
+            'job_title', 'manager',
         ];
 
         $this->assertEquals($fillable, $this->user->getFillable());

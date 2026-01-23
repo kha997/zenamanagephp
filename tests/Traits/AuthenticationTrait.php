@@ -12,6 +12,7 @@ use Src\RBAC\Services\AuthService;
  */
 trait AuthenticationTrait
 {
+
     /**
      * Tạo user với JWT token cho testing
      *
@@ -25,13 +26,15 @@ trait AuthenticationTrait
         
         $user = User::factory()->create(array_merge([
             'tenant_id' => $tenant->id,
+            'role' => 'super_admin',
         ], $attributes));
         
+
         // Assign roles if provided
         if (!empty($roles)) {
             foreach ($roles as $roleCode) {
                 $role = Role::factory()->create(['name' => $roleCode]);
-                $user->systemRoles()->attach($role->id);
+                $user->roles()->attach($role->id);
             }
         }
         
@@ -48,7 +51,8 @@ trait AuthenticationTrait
     {
         $authService = app(AuthService::class);
         $token = $authService->createTokenForUser($user);
-        $this->withHeader('Authorization', 'Bearer ' . $token);
+        $sanctumToken = $user->createToken('testing-token')->plainTextToken;
+        $this->withHeader('Authorization', 'Bearer ' . $sanctumToken);
         
         return $token;
     }

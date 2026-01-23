@@ -1,5 +1,6 @@
 <?php
 
+use App\Traits\SkipsSchemaIntrospection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -7,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
+    use SkipsSchemaIntrospection;
+
     /**
      * Run the migrations.
      *
@@ -14,6 +17,10 @@ return new class extends Migration
      */
     public function up()
     {
+        if (self::shouldSkipSchemaIntrospection()) {
+            return;
+        }
+
         Schema::table('components', function (Blueprint $table) {
             // Add missing fields only if they don't exist
             if (!Schema::hasColumn('components', 'tenant_id')) {

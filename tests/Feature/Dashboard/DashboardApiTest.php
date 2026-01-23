@@ -48,6 +48,7 @@ class DashboardApiTest extends TestCase
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
+            'code' => 'PRJ-' . strtoupper(bin2hex(random_bytes(6))),
             'budget' => 100000,
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
@@ -62,9 +63,11 @@ class DashboardApiTest extends TestCase
         
         // Create test data
         $this->createTestData();
-        
-        // Authenticate user
-        Sanctum::actingAs($this->user);
+
+        // Authenticate user unless the test requests otherwise
+        if ($this->getName(false) !== 'it_requires_authentication') {
+            Sanctum::actingAs($this->user);
+        }
     }
 
     protected function createTestWidgets(): void
@@ -135,6 +138,7 @@ class DashboardApiTest extends TestCase
     {
         // Create test tasks
         Task::create([
+            'name' => 'Test Task 1',
             'title' => 'Test Task 1',
             'description' => 'Test task description',
             'status' => 'in_progress',
@@ -146,6 +150,7 @@ class DashboardApiTest extends TestCase
         ]);
 
         Task::create([
+            'name' => 'Test Task 2',
             'title' => 'Test Task 2',
             'description' => 'Test task description',
             'status' => 'completed',
@@ -158,8 +163,14 @@ class DashboardApiTest extends TestCase
 
         // Create test RFIs
         RFI::create([
+            'title' => 'Test RFI 1',
             'subject' => 'Test RFI 1',
             'description' => 'Test RFI description',
+            'question' => 'Please clarify the requirements',
+            'rfi_number' => 'RFI-0001',
+            'asked_by' => $this->user->id,
+            'created_by' => $this->user->id,
+            'updated_by' => $this->user->id,
             'status' => 'open',
             'priority' => 'high',
             'due_date' => now()->addDays(3),
@@ -334,7 +345,8 @@ class DashboardApiTest extends TestCase
         $layout[1]['position'] = ['x' => 6, 'y' => 0];
 
         $response = $this->putJson('/api/v1/dashboard/layout', [
-            'layout' => $layout
+            'layout' => $layout,
+            'widgets' => $dashboardResponse->json('data.widgets')
         ]);
 
         $response->assertStatus(200)
@@ -837,7 +849,13 @@ class DashboardApiTest extends TestCase
             'user_role' => 'project_manager',
             'dashboard' => [
                 'name' => 'Imported Dashboard',
-                'layout' => [],
+                'layout' => [
+                    [
+                        'id' => 'imported_widget',
+                        'position' => ['x' => 0, 'y' => 0],
+                        'size' => 'medium'
+                    ]
+                ],
                 'preferences' => ['theme' => 'dark']
             ],
             'widgets' => []
@@ -894,8 +912,10 @@ class DashboardApiTest extends TestCase
 
         $response->assertStatus(500)
                 ->assertJsonStructure([
-                    'success',
-                    'message'
+                    'error' => [
+                        'code',
+                        'message'
+                    ]
                 ]);
     }
 
@@ -908,9 +928,11 @@ class DashboardApiTest extends TestCase
 
         $response->assertStatus(422)
                 ->assertJsonStructure([
-                    'success',
-                    'message',
-                    'errors'
+                    'error' => [
+                        'code',
+                        'message',
+                        'details'
+                    ]
                 ]);
     }
 
@@ -934,8 +956,10 @@ class DashboardApiTest extends TestCase
 
         $response->assertStatus(403)
                 ->assertJsonStructure([
-                    'success',
-                    'message'
+                    'error' => [
+                        'code',
+                        'message'
+                    ]
                 ]);
     }
 
@@ -948,9 +972,11 @@ class DashboardApiTest extends TestCase
 
         $response->assertStatus(422)
                 ->assertJsonStructure([
-                    'success',
-                    'message',
-                    'errors'
+                    'error' => [
+                        'code',
+                        'message',
+                        'details'
+                    ]
                 ]);
     }
 
@@ -963,8 +989,10 @@ class DashboardApiTest extends TestCase
 
         $response->assertStatus(500)
                 ->assertJsonStructure([
-                    'success',
-                    'message'
+                    'error' => [
+                        'code',
+                        'message'
+                    ]
                 ]);
     }
 
@@ -979,18 +1007,17 @@ class DashboardApiTest extends TestCase
 
         $response->assertStatus(422)
                 ->assertJsonStructure([
-                    'success',
-                    'message',
-                    'errors'
+                    'error' => [
+                        'code',
+                        'message',
+                        'details'
+                    ]
                 ]);
     }
 
     /** @test */
     public function it_requires_authentication()
     {
-        // Clear authentication
-        Sanctum::actingAs(null);
-
         $response = $this->getJson('/api/v1/dashboard');
 
         $response->assertStatus(401);
@@ -1010,8 +1037,10 @@ class DashboardApiTest extends TestCase
 
         $response->assertStatus(500)
                 ->assertJsonStructure([
-                    'success',
-                    'message'
+                    'error' => [
+                        'code',
+                        'message'
+                    ]
                 ]);
     }
 }

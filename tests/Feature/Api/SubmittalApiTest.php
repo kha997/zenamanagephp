@@ -8,10 +8,11 @@ use App\Models\ZenaProject;
 use App\Models\ZenaSubmittal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\SanctumAuthTestTrait;
 
 class SubmittalApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, SanctumAuthTestTrait;
 
     protected $user;
     protected $project;
@@ -23,7 +24,8 @@ class SubmittalApiTest extends TestCase
         
         $this->user = User::factory()->create();
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
         $this->token = $this->generateJwtToken($this->user);
     }
@@ -318,11 +320,4 @@ class SubmittalApiTest extends TestCase
         $response->assertStatus(401);
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
-    {
-        return 'test-jwt-token-' . $user->id;
-    }
 }

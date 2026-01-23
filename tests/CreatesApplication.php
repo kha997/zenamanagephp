@@ -17,6 +17,10 @@ trait CreatesApplication
 
         $app->make(Kernel::class)->bootstrap();
 
+        if (method_exists($this, 'getEnvironmentSetUp')) {
+            $this->getEnvironmentSetUp($app);
+        }
+
         return $app;
     }
 }

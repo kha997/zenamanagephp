@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
+use App\Models\Notification;
 use App\Models\ZenaNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -21,7 +22,7 @@ class RealTimeNotificationsTest extends TestCase
         parent::setUp();
         
         $this->user = User::factory()->create();
-        $this->token = $this->generateJwtToken($this->user);
+        $this->token = $this->createSanctumToken($this->user);
     }
 
     /**
@@ -34,7 +35,7 @@ class RealTimeNotificationsTest extends TestCase
             'type' => 'task_assigned',
             'title' => 'New Task Assigned',
             'message' => 'You have been assigned a new task',
-            'priority' => 'medium',
+            'priority' => Notification::PRIORITY_NORMAL,
             'data' => ['task_id' => '123']
         ];
 
@@ -68,7 +69,8 @@ class RealTimeNotificationsTest extends TestCase
     public function test_can_get_notifications()
     {
         ZenaNotification::factory()->count(5)->create([
-            'user_id' => $this->user->id
+            'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         $response = $this->withHeaders([
@@ -104,6 +106,7 @@ class RealTimeNotificationsTest extends TestCase
     {
         $notification = ZenaNotification::factory()->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'unread'
         ]);
 
@@ -134,7 +137,9 @@ class RealTimeNotificationsTest extends TestCase
     {
         ZenaNotification::factory()->count(3)->create([
             'user_id' => $this->user->id,
-            'status' => 'unread'
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'unread',
+            'read_at' => null
         ]);
 
         $response = $this->withHeaders([
@@ -161,12 +166,16 @@ class RealTimeNotificationsTest extends TestCase
     {
         ZenaNotification::factory()->count(3)->create([
             'user_id' => $this->user->id,
-            'status' => 'unread'
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'unread',
+            'read_at' => null
         ]);
 
         ZenaNotification::factory()->count(2)->create([
             'user_id' => $this->user->id,
-            'status' => 'read'
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'read',
+            'read_at' => now()
         ]);
 
         $response = $this->withHeaders([
@@ -191,16 +200,20 @@ class RealTimeNotificationsTest extends TestCase
     {
         ZenaNotification::factory()->count(2)->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'type' => 'task_assigned',
-            'priority' => 'high',
-            'status' => 'unread'
+            'priority' => Notification::PRIORITY_CRITICAL,
+            'status' => 'unread',
+            'read_at' => null
         ]);
 
         ZenaNotification::factory()->count(3)->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'type' => 'rfi_submitted',
-            'priority' => 'medium',
-            'status' => 'read'
+            'priority' => Notification::PRIORITY_NORMAL,
+            'status' => 'read',
+            'read_at' => now()
         ]);
 
         $response = $this->withHeaders([
@@ -232,11 +245,13 @@ class RealTimeNotificationsTest extends TestCase
     {
         ZenaNotification::factory()->count(2)->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'type' => 'task_assigned'
         ]);
 
         ZenaNotification::factory()->count(3)->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'type' => 'rfi_submitted'
         ]);
 
@@ -261,11 +276,13 @@ class RealTimeNotificationsTest extends TestCase
     {
         ZenaNotification::factory()->count(2)->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'unread'
         ]);
 
         ZenaNotification::factory()->count(3)->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'read'
         ]);
 
@@ -289,7 +306,8 @@ class RealTimeNotificationsTest extends TestCase
     public function test_can_delete_notification()
     {
         $notification = ZenaNotification::factory()->create([
-            'user_id' => $this->user->id
+            'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         $response = $this->withHeaders([
@@ -328,7 +346,7 @@ class RealTimeNotificationsTest extends TestCase
             'type' => 'invalid_type',
             'title' => 'Test',
             'message' => 'Test message',
-            'priority' => 'medium'
+            'priority' => Notification::PRIORITY_NORMAL
         ]);
 
         $response->assertStatus(422)
@@ -370,6 +388,7 @@ class RealTimeNotificationsTest extends TestCase
     {
         $notification = ZenaNotification::factory()->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'expires_at' => now()->subHour()
         ]);
 
@@ -386,8 +405,8 @@ class RealTimeNotificationsTest extends TestCase
     /**
      * Generate JWT token for testing
      */
-    private function generateJwtToken(User $user): string
+    private function createSanctumToken(User $user): string
     {
-        return 'test-jwt-token-' . $user->id;
+        return $user->createToken('test-api-token')->plainTextToken;
     }
 }

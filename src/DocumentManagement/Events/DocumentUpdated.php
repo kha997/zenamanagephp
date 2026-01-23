@@ -13,14 +13,13 @@ class DocumentUpdated extends BaseEvent
     public function __construct(
         public Document $document,
         public array $changedFields,
-        public int $userId
+        public string $userId
     ) {
         parent::__construct(
             entityId: $this->document->id,
             projectId: $this->document->project_id,
             actorId: $this->userId,
-            changedFields: $this->changedFields,
-            eventName: 'Document.Updated'
+            changedFields: $this->changedFields
         );
     }
 
@@ -39,5 +38,10 @@ class DocumentUpdated extends BaseEvent
             ],
             'changes' => $this->changedFields
         ]);
+    }
+
+    public function getEventName(): string
+    {
+        return 'Document.Document.Updated';
     }
 }

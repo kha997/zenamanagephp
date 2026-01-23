@@ -1,0 +1,34 @@
+<?php declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('projects', function (Blueprint $table) {
+            if (!Schema::hasColumn('projects', 'budget')) {
+                $table->decimal('budget', 15, 2)->default(0)->after('progress');
+            }
+
+            if (!Schema::hasColumn('projects', 'spent_amount')) {
+                $table->decimal('spent_amount', 15, 2)->default(0)->after('budget');
+            }
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('projects', function (Blueprint $table) {
+            $table->dropColumn(['budget', 'spent_amount']);
+        });
+    }
+};

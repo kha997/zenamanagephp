@@ -20,6 +20,7 @@ class DocumentFactory extends Factory
     {
         return [
             'project_id' => Project::factory(),
+            'uploaded_by' => User::factory(),
             'title' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(2),
             'linked_entity_type' => $this->faker->randomElement(Document::VALID_ENTITY_TYPES),
@@ -28,6 +29,15 @@ class DocumentFactory extends Factory
             'tags' => $this->faker->randomElements(['contract', 'design', 'specification', 'report'], $this->faker->numberBetween(0, 2)),
             'visibility' => $this->faker->randomElement(Document::VALID_VISIBILITY),
             'client_approved' => $this->faker->boolean(30),
+            'original_name' => $this->faker->word() . '.pdf',
+            'file_path' => 'documents/test-file.pdf',
+            'file_type' => 'application/pdf',
+            'mime_type' => 'application/pdf',
+            'file_size' => $this->faker->numberBetween(1000, 5000),
+            'file_hash' => $this->faker->md5,
+            'status' => 'active',
+            'version' => 1,
+            'is_current_version' => true,
             'created_by' => User::factory(),
             'updated_by' => User::factory(),
         ];

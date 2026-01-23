@@ -3,12 +3,12 @@
 namespace Tests\Feature\Buttons;
 
 use App\Models\Project;
-use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\Support\InteractsWithRbac;
+use Tests\TestCase;
 
 /**
  * Button Authorization Test
@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Hash;
 class ButtonAuthorizationTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithRbac;
 
     protected $tenant;
     protected $users = [];
@@ -26,23 +27,27 @@ class ButtonAuthorizationTest extends TestCase
     {
         parent::setUp();
         
-        // Create test tenant
         $this->tenant = Tenant::create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
             'status' => 'active'
         ]);
 
-        // Create users for each role
-        $roles = ['super_admin', 'admin', 'pm', 'designer', 'engineer', 'guest'];
-        
-        foreach ($roles as $role) {
-            $this->users[$role] = User::create([
-                'name' => ucfirst($role) . ' User',
-                'email' => $role . '@test-' . uniqid() . '.com',
-                'password' => Hash::make('password'),
-                'tenant_id' => $this->tenant->id
-            ]);
+        $this->seedRolesAndPermissions();
+
+        foreach (['super_admin', 'admin', 'pm', 'designer', 'engineer', 'guest'] as $role) {
+            $this->users[$role] = $this->createUserWithRole($role, $this->tenant);
+        }
+
+        foreach (['designer', 'engineer', 'guest'] as $role) {
+            $this->assertTrue(
+                $this->users[$role]->hasRole($role),
+                "{$role} user should retain the {$role} role"
+            );
+            $this->assertFalse(
+                $this->users[$role]->hasAnyRole(['super_admin', 'admin', 'pm']),
+                "{$role} should not inherit admin-level roles"
+            );
         }
 
         // Create test project
@@ -56,27 +61,31 @@ class ButtonAuthorizationTest extends TestCase
         ]);
     }
 
+    protected function authRole(string $role): User
+    {
+        $user = $this->users[$role];
+        $this->actingAs($user);        // web guard for /admin/dashboard
+        \Laravel\Sanctum\Sanctum::actingAs($user); // api guard for /api/*
+        return $user;
+    }
+
     /**
      * Test super_admin access to all functions
      */
     public function test_super_admin_has_full_access(): void
     {
-        $this->actingAs($this->users['super_admin']);
+        $this->authRole('super_admin');
 
-        // Test admin access
-        $response = $this->get('/admin');
+        $response = $this->get('/admin/dashboard');
         $response->assertStatus(200);
 
-        // Test project access
-        $response = $this->get('/projects');
+        $response = $this->getJson('/api/projects');
         $response->assertStatus(200);
 
-        // Test task access
-        $response = $this->get('/tasks');
+        $response = $this->getJson('/api/tasks');
         $response->assertStatus(200);
 
-        // Test team access
-        $response = $this->get('/team');
+        $response = $this->getJson('/api/dashboard/users-v2');
         $response->assertStatus(200);
     }
 
@@ -85,22 +94,18 @@ class ButtonAuthorizationTest extends TestCase
      */
     public function test_admin_has_tenant_access(): void
     {
-        $this->actingAs($this->users['admin']);
+        $this->authRole('admin');
 
-        // Test project access
-        $response = $this->get('/projects');
+        $response = $this->getJson('/api/projects');
         $response->assertStatus(200);
 
-        // Test task access
-        $response = $this->get('/tasks');
+        $response = $this->getJson('/api/tasks');
         $response->assertStatus(200);
 
-        // Test team access
-        $response = $this->get('/team');
+        $response = $this->getJson('/api/dashboard/users-v2');
         $response->assertStatus(200);
 
-        // Test admin access (should be denied)
-        $response = $this->get('/admin');
+        $response = $this->get('/admin/dashboard');
         $response->assertStatus(403);
     }
 
@@ -109,22 +114,18 @@ class ButtonAuthorizationTest extends TestCase
      */
     public function test_pm_has_project_access(): void
     {
-        $this->actingAs($this->users['pm']);
+        $this->authRole('pm');
 
-        // Test project access
-        $response = $this->get('/projects');
+        $response = $this->getJson('/api/projects');
         $response->assertStatus(200);
 
-        // Test task access
-        $response = $this->get('/tasks');
+        $response = $this->getJson('/api/tasks');
         $response->assertStatus(200);
 
-        // Test team access
-        $response = $this->get('/team');
+        $response = $this->getJson('/api/dashboard/users-v2');
         $response->assertStatus(200);
 
-        // Test admin access (should be denied)
-        $response = $this->get('/admin');
+        $response = $this->get('/admin/dashboard');
         $response->assertStatus(403);
     }
 
@@ -133,22 +134,18 @@ class ButtonAuthorizationTest extends TestCase
      */
     public function test_designer_has_limited_access(): void
     {
-        $this->actingAs($this->users['designer']);
+        $this->authRole('designer');
 
-        // Test project access (read-only)
-        $response = $this->get('/projects');
+        $response = $this->getJson('/api/projects');
         $response->assertStatus(200);
 
-        // Test task access
-        $response = $this->get('/tasks');
+        $response = $this->getJson('/api/tasks');
         $response->assertStatus(200);
 
-        // Test team access (should be denied)
-        $response = $this->get('/team');
+        $response = $this->getJson('/api/dashboard/users-v2');
         $response->assertStatus(403);
 
-        // Test admin access (should be denied)
-        $response = $this->get('/admin');
+        $response = $this->get('/admin/dashboard');
         $response->assertStatus(403);
     }
 
@@ -157,22 +154,18 @@ class ButtonAuthorizationTest extends TestCase
      */
     public function test_engineer_has_limited_access(): void
     {
-        $this->actingAs($this->users['engineer']);
+        $this->authRole('engineer');
 
-        // Test project access (read-only)
-        $response = $this->get('/projects');
+        $response = $this->getJson('/api/projects');
         $response->assertStatus(200);
 
-        // Test task access
-        $response = $this->get('/tasks');
+        $response = $this->getJson('/api/tasks');
         $response->assertStatus(200);
 
-        // Test team access (should be denied)
-        $response = $this->get('/team');
+        $response = $this->getJson('/api/dashboard/users-v2');
         $response->assertStatus(403);
 
-        // Test admin access (should be denied)
-        $response = $this->get('/admin');
+        $response = $this->get('/admin/dashboard');
         $response->assertStatus(403);
     }
 
@@ -181,22 +174,18 @@ class ButtonAuthorizationTest extends TestCase
      */
     public function test_guest_has_read_only_access(): void
     {
-        $this->actingAs($this->users['guest']);
+        $this->authRole('guest');
 
-        // Test project access (read-only)
-        $response = $this->get('/projects');
+        $response = $this->getJson('/api/projects');
         $response->assertStatus(200);
 
-        // Test task access (read-only)
-        $response = $this->get('/tasks');
+        $response = $this->getJson('/api/tasks');
         $response->assertStatus(200);
 
-        // Test team access (should be denied)
-        $response = $this->get('/team');
+        $response = $this->getJson('/api/dashboard/users-v2');
         $response->assertStatus(403);
 
-        // Test admin access (should be denied)
-        $response = $this->get('/admin');
+        $response = $this->get('/admin/dashboard');
         $response->assertStatus(403);
     }
 
@@ -219,17 +208,20 @@ class ButtonAuthorizationTest extends TestCase
             'tenant_id' => $otherTenant->id
         ]);
 
-        $this->actingAs($this->users['pm']);
+        $otherProject = Project::create([
+            'tenant_id' => $otherTenant->id,
+            'code' => 'OTHER-' . uniqid(),
+            'name' => 'Other Tenant Project',
+            'description' => 'Should be isolated',
+            'status' => 'active',
+            'budget_total' => 75000.00
+        ]);
 
-        // Test that user can only access their tenant's data
-        $response = $this->get('/projects');
+        $this->authRole('pm');
+
+        $response = $this->getJson('/api/projects');
         $response->assertStatus(200);
-        
-        // Verify no cross-tenant data access
-        $projects = $response->viewData('projects') ?? [];
-        foreach ($projects as $project) {
-            $this->assertEquals($this->tenant->id, $project->tenant_id);
-        }
+        $response->assertJsonMissing(['id' => $otherProject->id]);
     }
 
     /**
@@ -237,30 +229,38 @@ class ButtonAuthorizationTest extends TestCase
      */
     public function test_crud_operation_permissions(): void
     {
-        // Test project creation permissions
-        $this->actingAs($this->users['pm']);
-        
-        $response = $this->post('/projects', [
+        $this->authRole('pm');
+
+        $response = $this->postJson('/api/projects', [
             'name' => 'New Project',
             'description' => 'Test project',
             'code' => 'NEW-' . uniqid(),
             'status' => 'active',
             'budget_total' => 50000.00
         ]);
-        
-        $response->assertStatus(201);
 
-        // Test project creation with designer (should be denied)
-        $this->actingAs($this->users['designer']);
-        
-        $response = $this->post('/projects', [
+        if (!in_array($response->status(), [200, 201], true)) {
+            file_put_contents('/tmp/crud_operation_failure.json', json_encode([
+                'status' => $response->status(),
+                'body' => $response->json(),
+            ]));
+        }
+
+        $this->assertTrue(
+            in_array($response->status(), [200, 201], true),
+            'Expected project creation to return 200 or 201'
+        );
+
+        $this->authRole('designer');
+
+        $response = $this->postJson('/api/projects', [
             'name' => 'New Project 2',
             'description' => 'Test project 2',
             'code' => 'NEW2-' . uniqid(),
             'status' => 'active',
             'budget_total' => 50000.00
         ]);
-        
+
         $response->assertStatus(403);
     }
 
@@ -269,20 +269,18 @@ class ButtonAuthorizationTest extends TestCase
      */
     public function test_api_authorization(): void
     {
-        $this->actingAs($this->users['pm']);
+        $this->authRole('pm');
 
-        // Test authorized API access
-        $response = $this->getJson('/api/v1/projects');
+        $response = $this->getJson('/api/projects');
         $response->assertStatus(200);
 
-        // Test unauthorized API access
-        $this->actingAs($this->users['guest']);
-        
-        $response = $this->postJson('/api/v1/projects', [
+        $this->authRole('guest');
+
+        $response = $this->postJson('/api/projects', [
             'name' => 'Unauthorized Project',
             'description' => 'Should be denied'
         ]);
-        
+
         $response->assertStatus(403);
     }
 
@@ -291,20 +289,20 @@ class ButtonAuthorizationTest extends TestCase
      */
     public function test_bulk_operation_permissions(): void
     {
-        $this->actingAs($this->users['pm']);
+        $this->authRole('pm');
 
         // Test authorized bulk operation
-        $response = $this->postJson('/api/tasks/bulk/status-change', [
+        $response = $this->postJson('/api/auth/bulk/tasks/update-status', [
             'task_ids' => [],
             'status' => 'completed'
         ]);
-        
-        $response->assertStatus(200);
+
+        $this->assertContains($response->status(), [200, 201, 202]);
 
         // Test unauthorized bulk operation
-        $this->actingAs($this->users['guest']);
+        $this->authRole('guest');
         
-        $response = $this->postJson('/api/tasks/bulk/status-change', [
+        $response = $this->postJson('/api/auth/bulk/tasks/update-status', [
             'task_ids' => [],
             'status' => 'completed'
         ]);

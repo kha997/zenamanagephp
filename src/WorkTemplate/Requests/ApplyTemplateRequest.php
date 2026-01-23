@@ -5,6 +5,7 @@ namespace Src\WorkTemplate\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\Project;
+use Src\WorkTemplate\Models\ProjectPhase;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -257,7 +258,7 @@ class ApplyTemplateRequest extends FormRequest
         $mapping = $this->input('phase_mapping');
         
         // Lấy danh sách phases của project
-        $projectPhaseIds = \Src\CoreProject\Models\ProjectPhase::where('project_id', $projectId)
+        $projectPhaseIds = ProjectPhase::where('project_id', $projectId)
             ->pluck('id')
             ->toArray();
         
@@ -299,7 +300,7 @@ class ApplyTemplateRequest extends FormRequest
         try {
             $user = $this->user();
             if ($user && isset($user->tenant_id)) {
-                return $user->tenant_id;
+                return (string) $user->tenant_id;
             }
             
             Log::warning('ApplyTemplateRequest: Không thể lấy tenant_id từ user', [

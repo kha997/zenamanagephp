@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasRoles;
+use App\Collections\UserCollection;
 
 /**
  * Model User - Quản lý người dùng với RBAC và Multi-tenancy
@@ -29,7 +31,7 @@ use App\Traits\HasRoles;
  */
 class User extends Authenticatable
 {
-    use HasUlids, HasFactory, HasApiTokens, HasRoles;
+    use HasUlids, HasFactory, HasApiTokens, HasRoles, SoftDeletes;
 
     /**
      * Cấu hình ULID primary key
@@ -39,6 +41,7 @@ class User extends Authenticatable
 
     protected $fillable = [
         'tenant_id',
+        'role',
         'name',
         'email',
         'password',
@@ -46,6 +49,7 @@ class User extends Authenticatable
         'avatar',
         'preferences',
         'last_login_at',
+        'last_login_ip',
         'is_active',
         'oidc_provider',
         'oidc_subject_id',
@@ -66,6 +70,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
+        'id' => 'string',
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
         'is_active' => 'boolean',
@@ -98,6 +103,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Relationship: User quản lý nhiều projects
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'manager_id');
+    }
+
+    /**
      * Relationship: User có nhiều Z.E.N.A notifications
      */
     public function zenaNotifications(): HasMany
@@ -106,11 +119,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user has role.
+     * Check if user has at least one of the given roles.
+     *
+     * @param string|string[] $roles
      */
-    public function hasRole(string $role): bool
+    public function hasRole(string|array $roles): bool
     {
-        return $this->roles()->where('name', $role)->exists();
+        $roles = (array)$roles;
+
+        if (in_array($this->role, $roles, true)) {
+            return true;
+        }
+
+        return $this->roles()->whereIn('name', $roles)->exists();
     }
 
     /**
@@ -147,11 +168,20 @@ class User extends Authenticatable
         return $this->hasMany(Task::class, 'created_by');
     }
 
+    public function newCollection(array $models = []): UserCollection
+    {
+        return new UserCollection($models);
+    }
+
     /**
      * Check if user has any of the given roles.
      */
     public function hasAnyRole(array $roles): bool
     {
+        if (!empty($this->role) && in_array($this->role, $roles, true)) {
+            return true;
+        }
+
         return $this->roles()->whereIn('name', $roles)->exists();
     }
 
@@ -160,8 +190,13 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permission): bool
     {
+        if ($this->role === 'super_admin' || $this->hasAnyRole(['super_admin'])) {
+            return true;
+        }
+
         return $this->roles()->whereHas('permissions', function ($query) use ($permission) {
-            return $query->where('name', $permission);
+            $query->where('name', $permission)
+                  ->orWhere('code', $permission);
         })->exists();
     }
 
@@ -170,8 +205,13 @@ class User extends Authenticatable
      */
     public function hasAnyPermission(array $permissions): bool
     {
+        if ($this->role === 'super_admin' || $this->hasAnyRole(['super_admin'])) {
+            return true;
+        }
+
         return $this->roles()->whereHas('permissions', function ($query) use ($permissions) {
-            return $query->whereIn('name', $permissions);
+            $query->whereIn('name', $permissions)
+                  ->orWhereIn('code', $permissions);
         })->exists();
     }
 

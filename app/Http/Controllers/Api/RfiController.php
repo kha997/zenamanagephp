@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\BaseApiController;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Project;
 use App\Models\Rfi;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
@@ -79,9 +80,12 @@ class RfiController extends BaseApiController
             }
 
             $validator = Validator::make($request->all(), [
+                'tenant_id' => 'required|exists:tenants,id',
                 'project_id' => 'required|exists:projects,id',
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
+                'subject' => 'nullable|string|max:255',
+                'question' => 'nullable|string',
                 'priority' => 'required|in:low,medium,high,urgent',
                 'due_date' => 'nullable|date|after:today',
                 'assigned_to' => 'nullable|exists:users,id',
@@ -94,22 +98,27 @@ class RfiController extends BaseApiController
             }
 
             $rfi = Rfi::create([
+                'tenant_id' => $request->input('tenant_id'),
                 'project_id' => $request->input('project_id'),
                 'title' => $request->input('title'),
+                'subject' => $request->input('subject', $request->input('title')),
                 'description' => $request->input('description'),
+                'question' => $request->input('question', $request->input('description')),
                 'priority' => $request->input('priority'),
                 'due_date' => $request->input('due_date'),
                 'assigned_to' => $request->input('assigned_to'),
                 'location' => $request->input('location'),
                 'drawing_reference' => $request->input('drawing_reference'),
-                'status' => 'pending',
+                'asked_by' => $user->id,
                 'created_by' => $user->id,
                 'rfi_number' => $this->generateRfiNumber($request->input('project_id')),
             ]);
 
             $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name']);
+            $rfiData = $rfi->toArray();
+            $rfiData['status'] = $rfi->status;
 
-            return $this->successResponse($rfi, 'RFI created successfully', 201);
+            return $this->successResponse($rfiData, 'RFI created successfully', 201);
         } catch (\Exception $e) {
             return $this->serverError('Failed to create RFI: ' . $e->getMessage());
         }
@@ -127,7 +136,7 @@ class RfiController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $rfi = Rfi::with(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name', 'attachments'])
+            $rfi = Rfi::with(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name'])
                 ->find($id);
 
             if (!$rfi) {
@@ -389,6 +398,6 @@ class RfiController extends BaseApiController
         
         $sequence = $lastRfi ? (int)substr($lastRfi->rfi_number, -4) + 1 : 1;
         
-        return $projectCode . '-RFI-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return $projectCode . '-RFI-' . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
     }
 }

@@ -15,7 +15,10 @@ abstract class BaseApiResource extends JsonResource
      * @param Request $request
      * @return array
      */
-    abstract public function toArray($request): array;
+    public function toArray($request): array
+    {
+        return parent::toArray($request);
+    }
 
     /**
      * Format ULID for API response

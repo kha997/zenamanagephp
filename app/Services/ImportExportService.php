@@ -1,8 +1,9 @@
 <?php
 
 namespace App\Services;
-use Illuminate\Support\Facades\Auth;
 
+use Closure;
+use Illuminate\Support\Facades\Auth;
 
 use App\Models\Project;
 use App\Models\Task;
@@ -454,7 +455,7 @@ class ImportExportService
     {
         $value = data_get($item, $column['field']);
         
-        if (isset($column['formatter']) && is_callable($column['formatter'])) {
+        if (isset($column['formatter']) && $column['formatter'] instanceof Closure) {
             return $column['formatter']($value, $item);
         }
         

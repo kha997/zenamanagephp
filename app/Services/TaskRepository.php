@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Task;
+use Src\CoreProject\Models\Task;
 use Illuminate\Database\Eloquent\Collection;
 
 class TaskRepository
@@ -18,7 +18,7 @@ class TaskRepository
     /**
      * Get task by ID
      */
-    public function getById(int $id): ?Task
+    public function getById(string $id): ?Task
     {
         return Task::find($id);
     }
@@ -34,7 +34,7 @@ class TaskRepository
     /**
      * Update task
      */
-    public function update(int $id, array $data): bool
+    public function update(string $id, array $data): bool
     {
         $task = $this->getById($id);
         if (!$task) {
@@ -47,7 +47,7 @@ class TaskRepository
     /**
      * Delete task
      */
-    public function delete(int $id): bool
+    public function delete(string $id): bool
     {
         $task = $this->getById($id);
         if (!$task) {

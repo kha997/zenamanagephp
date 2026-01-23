@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\Event;
  * @property int $impact_days
  * @property float $impact_cost
  * @property array $impact_kpi
- * @property string $created_by
+ * @property string $requested_by
+ * @property string|null $created_by
  * @property string|null $decided_by
  * @property \Carbon\Carbon|null $decided_at
  * @property string|null $decision_note
@@ -75,11 +76,13 @@ class ChangeRequest extends Model
         'priority',
         'status',
         'impact_level',
+        'created_by',
         'requested_by',
         'assigned_to',
         'approved_by',
         'rejected_by',
         'requested_at',
+        'submitted_at',
         'due_date',
         'approved_at',
         'rejected_at',
@@ -94,6 +97,10 @@ class ChangeRequest extends Model
         'attachments',
         'impact_analysis',
         'risk_assessment',
+        'cost_impact',
+        'schedule_impact_days',
+        'approved_cost',
+        'approved_schedule_days',
     ];
 
     protected $casts = [
@@ -101,7 +108,12 @@ class ChangeRequest extends Model
         'actual_cost' => 'decimal:2',
         'estimated_days' => 'integer',
         'actual_days' => 'integer',
+        'cost_impact' => 'decimal:2',
+        'schedule_impact_days' => 'integer',
+        'approved_cost' => 'decimal:2',
+        'approved_schedule_days' => 'integer',
         'requested_at' => 'datetime',
+        'submitted_at' => 'datetime',
         'due_date' => 'date',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
@@ -147,6 +159,22 @@ class ChangeRequest extends Model
     }
 
     /**
+     * Alias for {@see requester()} to preserve legacy `creator` calls.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->requester();
+    }
+
+    /**
+     * Alias for requestedBy relationship used in controllers.
+     */
+    public function requestedBy(): BelongsTo
+    {
+        return $this->requester();
+    }
+
+    /**
      * Quan hệ với User (người được assign)
      */
     public function assignee(): BelongsTo
@@ -160,6 +188,14 @@ class ChangeRequest extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Alias for approver relationship used in controllers.
+     */
+    public function approvedBy(): BelongsTo
+    {
+        return $this->approver();
     }
 
     /**

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Stringable;
 
 /**
  * Model DashboardWidgetDataCache - Cache dữ liệu widget
@@ -78,33 +79,33 @@ class DashboardWidgetDataCache extends Model
     /**
      * Scope: Lọc theo widget
      */
-    public function scopeForWidget($query, string $widgetId)
+    public function scopeForWidget($query, string|Stringable $widgetId)
     {
-        return $query->where('widget_id', $widgetId);
+        return $query->where('widget_id', self::normalizeId($widgetId));
     }
 
     /**
      * Scope: Lọc theo user
      */
-    public function scopeForUser($query, string $userId)
+    public function scopeForUser($query, string|Stringable $userId)
     {
-        return $query->where('user_id', $userId);
+        return $query->where('user_id', self::normalizeId($userId));
     }
 
     /**
      * Scope: Lọc theo project
      */
-    public function scopeForProject($query, string $projectId)
+    public function scopeForProject($query, string|Stringable $projectId)
     {
-        return $query->where('project_id', $projectId);
+        return $query->where('project_id', self::normalizeId($projectId));
     }
 
     /**
      * Scope: Lọc theo tenant
      */
-    public function scopeForTenant($query, string $tenantId)
+    public function scopeForTenant($query, string|Stringable $tenantId)
     {
-        return $query->where('tenant_id', $tenantId);
+        return $query->where('tenant_id', self::normalizeId($tenantId));
     }
 
     /**
@@ -152,14 +153,17 @@ class DashboardWidgetDataCache extends Model
      */
     public static function generateCacheKey(
         string $widgetId,
-        string $userId,
-        ?string $projectId = null,
+        string|Stringable $userId,
+        string|Stringable|null $projectId = null,
         array $params = []
     ): string {
-        $key = "widget:{$widgetId}:user:{$userId}";
+        $normalizedUserId = self::normalizeId($userId);
+        $normalizedProjectId = self::normalizeNullableId($projectId);
+
+        $key = "widget:{$widgetId}:user:{$normalizedUserId}";
         
-        if ($projectId) {
-            $key .= ":project:{$projectId}";
+        if ($normalizedProjectId) {
+            $key .= ":project:{$normalizedProjectId}";
         }
         
         if (!empty($params)) {
@@ -174,8 +178,8 @@ class DashboardWidgetDataCache extends Model
      */
     public static function getCacheData(
         string $widgetId,
-        string $userId,
-        ?string $projectId = null,
+        string|Stringable $userId,
+        string|Stringable|null $projectId = null,
         array $params = []
     ): ?array {
         $cacheKey = self::generateCacheKey($widgetId, $userId, $projectId, $params);
@@ -192,23 +196,26 @@ class DashboardWidgetDataCache extends Model
      */
     public static function setCacheData(
         string $widgetId,
-        string $userId,
-        string $tenantId,
+        string|Stringable $userId,
+        string|Stringable $tenantId,
         array $data,
         int $ttlMinutes = 60,
-        ?string $projectId = null,
+        string|Stringable|null $projectId = null,
         array $params = []
     ): self {
         $cacheKey = self::generateCacheKey($widgetId, $userId, $projectId, $params);
         
         // Xóa cache cũ nếu có
         self::byKey($cacheKey)->delete();
+        $normalizedUserId = self::normalizeId($userId);
+        $normalizedTenantId = self::normalizeId($tenantId);
+        $normalizedProjectId = self::normalizeNullableId($projectId);
         
         return self::create([
             'widget_id' => $widgetId,
-            'user_id' => $userId,
-            'project_id' => $projectId,
-            'tenant_id' => $tenantId,
+            'user_id' => $normalizedUserId,
+            'project_id' => $normalizedProjectId,
+            'tenant_id' => $normalizedTenantId,
             'cache_key' => $cacheKey,
             'data' => $data,
             'expires_at' => now()->addMinutes($ttlMinutes)
@@ -220,8 +227,8 @@ class DashboardWidgetDataCache extends Model
      */
     public static function clearCacheData(
         string $widgetId,
-        string $userId,
-        ?string $projectId = null,
+        string|Stringable $userId,
+        string|Stringable|null $projectId = null,
         array $params = []
     ): void {
         $cacheKey = self::generateCacheKey($widgetId, $userId, $projectId, $params);
@@ -232,7 +239,7 @@ class DashboardWidgetDataCache extends Model
     /**
      * Xóa tất cả cache của user
      */
-    public static function clearUserCache(string $userId): void
+    public static function clearUserCache(string|Stringable $userId): void
     {
         self::forUser($userId)->delete();
     }
@@ -240,7 +247,7 @@ class DashboardWidgetDataCache extends Model
     /**
      * Xóa tất cả cache của project
      */
-    public static function clearProjectCache(string $projectId): void
+    public static function clearProjectCache(string|Stringable $projectId): void
     {
         self::forProject($projectId)->delete();
     }
@@ -251,5 +258,29 @@ class DashboardWidgetDataCache extends Model
     public static function clearExpiredCache(): void
     {
         self::expired()->delete();
+    }
+
+    private static function normalizeNullableId(string|Stringable|null $id): ?string
+    {
+        if ($id === null) {
+            return null;
+        }
+
+        $normalized = self::normalizeId($id);
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    private static function normalizeId(string|Stringable|null $id): string
+    {
+        if ($id instanceof Stringable) {
+            return (string) $id;
+        }
+
+        if ($id === null) {
+            return '';
+        }
+
+        return (string) $id;
     }
 }

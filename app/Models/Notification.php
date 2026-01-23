@@ -70,6 +70,7 @@ class Notification extends Model
         'priority',
         'title',
         'body',
+        'status',
         'link_url',
         'channel',
         'read_at',
@@ -77,6 +78,7 @@ class Notification extends Model
         'metadata',
         'event_key',
         'project_id',
+        'expires_at',
     ];
 
     protected $casts = [
@@ -85,7 +87,32 @@ class Notification extends Model
         'updated_at' => 'datetime',
         'data' => 'array',
         'metadata' => 'array',
+        'expires_at' => 'datetime',
     ];
+
+    protected $appends = [
+        'message',
+        'is_expired',
+    ];
+
+    public function getMessageAttribute(): ?string
+    {
+        return $this->attributes['body'] ?? null;
+    }
+
+    public function setMessageAttribute(?string $value): void
+    {
+        $this->attributes['body'] = $value;
+    }
+
+    public function getIsExpiredAttribute(): bool
+    {
+        if (! isset($this->attributes['expires_at']) || $this->attributes['expires_at'] === null) {
+            return false;
+        }
+
+        return $this->getAttribute('expires_at')->isPast();
+    }
 
     /**
      * Quan hệ với User

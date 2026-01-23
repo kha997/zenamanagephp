@@ -7,20 +7,23 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use App\Models\User;
 use App\Models\Tenant;
-use Src\CoreProject\Models\Project;
+use App\Models\Project;
 use Src\WorkTemplate\Models\ProjectPhase;
 use Src\WorkTemplate\Models\ProjectTask;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Event;
 use Src\WorkTemplate\Events\TaskConditionalToggled;
+use Laravel\Sanctum\Sanctum;
 
 class ProjectTaskControllerTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
 
     private User $user;
-    private string $token;
     private Project $project;
+    private array $skipSanctumAuthentication = [
+        'test_authentication_required_for_task_operations',
+    ];
 
     protected function setUp(): void
     {
@@ -33,17 +36,14 @@ class ProjectTaskControllerTest extends TestCase
             'domain' => 'test.com'
         ]);
 
-        // Tạo user và login
+        // Tạo user và authenticating thông qua Sanctum
         $this->user = User::factory()->create([
             'password' => Hash::make('password123'),
         ]);
+        if (! in_array($this->getName(false), $this->skipSanctumAuthentication, true)) {
+            Sanctum::actingAs($this->user);
+        }
 
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $this->user->email,
-            'password' => 'password123',
-        ]);
-
-        $this->token = $loginResponse->json('data.token');
         
         // Tạo project cho test
         $this->project = Project::factory()->create();
@@ -51,7 +51,6 @@ class ProjectTaskControllerTest extends TestCase
 
     private function authenticatedJson(string $method, string $uri, array $data = [], array $headers = [])
     {
-        $headers['Authorization'] = 'Bearer ' . $this->token;
         return $this->json($method, $uri, $data, $headers);
     }
 
@@ -61,6 +60,7 @@ class ProjectTaskControllerTest extends TestCase
     public function test_can_toggle_conditional_task(): void
     {
         Event::fake();
+        $this->authenticate();
         
         $phase = ProjectPhase::factory()->create([
             'project_id' => $this->project->id,
@@ -109,6 +109,7 @@ class ProjectTaskControllerTest extends TestCase
      */
     public function test_toggle_task_without_conditional_tag(): void
     {
+        $this->authenticate();
         $phase = ProjectPhase::factory()->create([
             'project_id' => $this->project->id,
         ]);
@@ -137,6 +138,7 @@ class ProjectTaskControllerTest extends TestCase
      */
     public function test_toggle_task_not_in_project(): void
     {
+        $this->authenticate();
         $otherProject = Project::factory()->create();
         $phase = ProjectPhase::factory()->create([
             'project_id' => $otherProject->id,
@@ -165,6 +167,7 @@ class ProjectTaskControllerTest extends TestCase
      */
     public function test_can_get_conditional_tasks(): void
     {
+        $this->authenticate();
         $phase = ProjectPhase::factory()->create([
             'project_id' => $this->project->id,
         ]);
@@ -232,12 +235,24 @@ class ProjectTaskControllerTest extends TestCase
      */
     public function test_authentication_required_for_task_operations(): void
     {
-        $task = ProjectTask::factory()->create();
-        
+        $phase = ProjectPhase::factory()->create([
+            'project_id' => $this->project->id,
+        ]);
+
+        $task = ProjectTask::factory()->create([
+            'project_id' => $this->project->id,
+            'phase_id' => $phase->id,
+        ]);
+
         $response = $this->postJson("/api/v1/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional");
         $response->assertStatus(401);
         
         $response = $this->getJson("/api/v1/projects/{$this->project->id}/tasks/conditional");
         $response->assertStatus(401);
+    }
+
+    private function authenticate(): void
+    {
+        Sanctum::actingAs($this->user);
     }
 }

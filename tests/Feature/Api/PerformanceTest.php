@@ -11,10 +11,14 @@ use App\Models\ZenaSubmittal;
 use App\Models\ZenaChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\SanctumAuthTestTrait;
 
+/**
+ * @group performance
+ */
 class PerformanceTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, SanctumAuthTestTrait;
 
     protected $user;
     protected $project;
@@ -26,7 +30,8 @@ class PerformanceTest extends TestCase
         
         $this->user = User::factory()->create();
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
         $this->token = $this->generateJwtToken($this->user);
     }
@@ -38,7 +43,8 @@ class PerformanceTest extends TestCase
     {
         // Create 100 projects
         ZenaProject::factory()->count(100)->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         $startTime = microtime(true);
@@ -361,11 +367,4 @@ class PerformanceTest extends TestCase
         $this->assertLessThanOrEqual(10, $queryCount);
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
-    {
-        return 'test-jwt-token-' . $user->id;
-    }
 }

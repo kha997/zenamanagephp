@@ -33,6 +33,7 @@ class UserRoleProject extends Model
     public $incrementing = false;
     
     protected $fillable = [
+        'id',
         'project_id',
         'user_id',
         'role_id'

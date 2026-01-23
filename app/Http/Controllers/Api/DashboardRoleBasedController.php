@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\dService;
+use App\Models\Project;
+use App\Services\DashboardRoleBasedService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -563,14 +565,21 @@ class DashboardRoleBasedController extends Controller
             $projectId = $request->get('project_id');
 
             // Verify user has access to this project
-            $hasAccess = \App\Models\Project::where('id', $projectId)
+            $hasAccess = Project::where('id', $projectId)
                 ->where('tenant_id', $user->tenant_id)
                 ->where(function ($query) use ($user) {
-                    $query->whereHas('projectUsers', function ($q) use ($user) {
-                        $q->where('user_id', $user->id);
-                    });
+                    $query->where('pm_id', $user->id)
+                          ->orWhereHas('projectUsers', function ($q) use ($user) {
+                              $q->where('user_id', $user->id);
+                          });
                 })
                 ->exists();
+
+            if (!$hasAccess && $user->role === 'project_manager') {
+                $hasAccess = Project::where('id', $projectId)
+                    ->where('tenant_id', $user->tenant_id)
+                    ->exists();
+            }
 
             if (!$hasAccess) {
                 return response()->json([

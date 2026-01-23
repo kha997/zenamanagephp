@@ -7,28 +7,72 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\InteractionLog;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class AuditService
 {
     /**
      * Log user action
      */
-    public function logAction(array $data): InteractionLog
+    public function logAction(array $data): ?InteractionLog
     {
-        $log = InteractionLog::create([
-            'id' => \Str::ulid(),
-            'tenant_id' => $data['tenant_id'],
-            'user_id' => $data['user_id'],
-            'project_id' => $data['project_id'] ?? null,
-            'task_id' => $data['task_id'] ?? null,
-            'component_id' => $data['component_id'] ?? null,
-            'type' => $data['type'],
-            'content' => $data['content'],
-            'metadata' => $data['metadata'] ?? [],
-            'is_internal' => $data['is_internal'] ?? false,
-        ]);
+        if (!$this->interactionLogTableExists()) {
+            Log::debug('Skipping interaction log write because the interaction_logs table is unavailable', [
+                'connection' => config('database.default')
+            ]);
 
-        return $log;
+            return null;
+        }
+
+        try {
+            return InteractionLog::create([
+                'id' => \Str::ulid(),
+                'tenant_id' => $data['tenant_id'],
+                'user_id' => $data['user_id'],
+                'project_id' => $data['project_id'] ?? null,
+                'task_id' => $data['task_id'] ?? null,
+                'component_id' => $data['component_id'] ?? null,
+                'type' => $data['type'],
+                'content' => $data['content'],
+                'metadata' => $data['metadata'] ?? [],
+                'is_internal' => $data['is_internal'] ?? false,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Audit log writing failed', [
+                'error' => $e->getMessage(),
+                'user_id' => $data['user_id'] ?? null,
+                'tenant_id' => $data['tenant_id'] ?? null,
+                'connection' => config('database.default')
+            ]);
+        }
+
+        return null;
+    }
+
+    public function log(string $eventType, ?string $userId, ?string $tenantId, array $data = []): ?InteractionLog
+    {
+        return $this->logAction([
+            'tenant_id' => $tenantId,
+            'user_id' => $userId,
+            'type' => $eventType,
+            'content' => $data['message'] ?? "Event: {$eventType}",
+            'metadata' => $data,
+            'is_internal' => $data['is_internal'] ?? true,
+        ]);
+    }
+
+    private function interactionLogTableExists(): bool
+    {
+        try {
+            return Schema::hasTable('interaction_logs');
+        } catch (\Throwable $e) {
+            Log::warning('Failed to verify interaction_logs table existence', [
+                'error' => $e->getMessage(),
+                'connection' => config('database.default')
+            ]);
+
+            return false;
+        }
     }
 
     /**

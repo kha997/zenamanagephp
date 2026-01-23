@@ -83,6 +83,16 @@ abstract class BaseEvent {
     abstract public function getEventName(): string;
     
     /**
+     * Lấy payload mặc định
+     * 
+     * @return array
+     */
+    public function getPayload(): array
+    {
+        return $this->toArray();
+    }
+
+    /**
      * Chuyển đổi event thành array payload
      * 
      * @return array

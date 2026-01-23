@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * Model DashboardWidget - Quản lý các widget có sẵn trong hệ thống
@@ -30,6 +31,7 @@ class DashboardWidget extends Model
     public $incrementing = false;
     
     protected $fillable = [
+        'code',
         'name',
         'type',
         'category',
@@ -37,7 +39,8 @@ class DashboardWidget extends Model
         'data_source',
         'permissions',
         'is_active',
-        'description'
+        'description',
+        'tenant_id'
     ];
 
     protected $casts = [
@@ -85,6 +88,17 @@ class DashboardWidget extends Model
         self::CATEGORY_SAFETY,
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (DashboardWidget $widget) {
+            if (empty($widget->code)) {
+                $base = $widget->name ?? 'widget';
+                $generated = Str::slug($base, '_');
+                $widget->code = $generated !== '' ? $generated : 'widget_' . strtoupper(Str::random(6));
+            }
+        });
+    }
+
     /**
      * Relationship: Widget có nhiều cache data
      */
@@ -122,7 +136,17 @@ class DashboardWidget extends Model
      */
     public function scopeForRole($query, string $role)
     {
-        return $query->whereJsonContains('permissions->roles', $role);
+        $driver = $query->getConnection()->getDriverName();
+
+        return $query->where(function ($query) use ($role, $driver) {
+            if ($driver === 'sqlite') {
+                $query->whereRaw("EXISTS (SELECT 1 FROM json_each(json_extract(permissions, '$.roles')) WHERE value = ?)", [$role])
+                      ->orWhereRaw("EXISTS (SELECT 1 FROM json_each(permissions) WHERE value = ?)", [$role]);
+            } else {
+                $query->whereJsonContains('permissions->roles', $role)
+                      ->orWhereJsonContains('permissions', $role);
+            }
+        });
     }
 
     /**
@@ -151,5 +175,34 @@ class DashboardWidget extends Model
     public function getDataSourceConfig(): array
     {
         return $this->data_source ?? [];
+    }
+
+    /**
+     * Resolve stored permissions into a canonical array.
+     */
+    public function getResolvedPermissions(): array
+    {
+        return self::normalizePermissions($this->permissions);
+    }
+
+    /**
+     * Normalize widget permissions input.
+     */
+    public static function normalizePermissions($permissions): array
+    {
+        if (is_array($permissions)) {
+            return $permissions;
+        }
+
+        if (is_object($permissions)) {
+            return (array) $permissions;
+        }
+
+        if (is_string($permissions)) {
+            $decoded = json_decode($permissions, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
     }
 }

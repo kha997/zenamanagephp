@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Traits\SkipsSchemaIntrospection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
 
 class SchemaAuditService
 {
+    use SkipsSchemaIntrospection;
+
     /**
      * Audit documents and history schemas
      */
@@ -482,6 +485,10 @@ class SchemaAuditService
      */
     protected static function getTableIndexes(string $table): array
     {
+        if (self::shouldSkipSchemaIntrospection()) {
+            return [];
+        }
+
         try {
             $indexes = DB::select("SHOW INDEX FROM {$table}");
             return array_map(function($index) {
@@ -502,6 +509,10 @@ class SchemaAuditService
      */
     protected static function getTableForeignKeys(string $table): array
     {
+        if (self::shouldSkipSchemaIntrospection()) {
+            return [];
+        }
+
         try {
             $foreignKeys = DB::select("
                 SELECT 

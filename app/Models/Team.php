@@ -18,6 +18,16 @@ class Team extends Model
     
     protected $keyType = 'string';
     public $incrementing = false;
+    
+    /**
+     * Ensure the primary key is always returned as string for comparisons.
+     */
+    public function getKey()
+    {
+        $key = parent::getKey();
+
+        return is_object($key) ? (string) $key : $key;
+    }
 
     protected $fillable = [
         'tenant_id',
@@ -40,6 +50,16 @@ class Team extends Model
         'is_active' => true,
         'settings' => '[]',
     ];
+
+    public function getLeaderIdAttribute(): ?string
+    {
+        return $this->team_lead_id;
+    }
+
+    public function setLeaderIdAttribute(?string $value): void
+    {
+        $this->attributes['team_lead_id'] = $value;
+    }
 
     /**
      * Team status constants
@@ -85,6 +105,14 @@ class Team extends Model
     public function teamLead(): BelongsTo
     {
         return $this->belongsTo(User::class, 'team_lead_id');
+    }
+
+    /**
+     * Alias to get the team leader.
+     */
+    public function leader(): BelongsTo
+    {
+        return $this->teamLead();
     }
 
     /**

@@ -13,6 +13,8 @@ class Submittal extends Model
 
     protected $fillable = [
         'project_id',
+        'tenant_id',
+        'created_by',
         'submittal_number',
         'package_no',
         'title',
@@ -48,6 +50,22 @@ class Submittal extends Model
         'rejected_at' => 'datetime',
         'attachments' => 'array',
     ];
+
+    /**
+     * Ensure tenant_id is populated from the project when missing.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Submittal $submittal) {
+            if (empty($submittal->tenant_id) && $submittal->project_id) {
+                $project = Project::find($submittal->project_id);
+
+                if ($project) {
+                    $submittal->tenant_id = $project->tenant_id;
+                }
+            }
+        });
+    }
 
     /**
      * Get the project that owns the submittal.

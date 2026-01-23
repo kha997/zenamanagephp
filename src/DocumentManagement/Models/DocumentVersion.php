@@ -154,6 +154,27 @@ class DocumentVersion extends Model
     }
 
     /**
+     * Lấy URL để truy cập file (không tạm thời)
+     */
+    public function getFileUrl(): ?string
+    {
+        try {
+            switch ($this->storage_driver) {
+                case self::STORAGE_LOCAL:
+                    return Storage::disk('local')->url($this->file_path);
+                case self::STORAGE_S3:
+                    return Storage::disk('s3')->url($this->file_path);
+                case self::STORAGE_GDRIVE:
+                    return null;
+                default:
+                    return null;
+            }
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
      * Kiểm tra xem file có tồn tại không
      */
     public function fileExists(): bool
@@ -191,6 +212,11 @@ class DocumentVersion extends Model
     public function getFileExtension(): string
     {
         return pathinfo($this->file_path, PATHINFO_EXTENSION);
+    }
+
+    public function isCurrentVersion(): bool
+    {
+        return $this->document?->current_version_id === $this->id;
     }
 
     /**

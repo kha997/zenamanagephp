@@ -24,6 +24,9 @@ class QcInspection extends Model
         'description',
         'status',
         'inspection_date',
+        'scheduled_at',
+        'conducted_at',
+        'completed_at',
         'inspector_id',
         'findings',
         'recommendations',
@@ -33,6 +36,9 @@ class QcInspection extends Model
 
     protected $casts = [
         'inspection_date' => 'date',
+        'scheduled_at' => 'datetime',
+        'conducted_at' => 'datetime',
+        'completed_at' => 'datetime',
         'checklist_results' => 'array',
         'photos' => 'array',
     ];

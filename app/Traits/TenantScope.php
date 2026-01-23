@@ -18,13 +18,16 @@ trait TenantScope
     protected static function bootTenantScope()
     {
         static::addGlobalScope('tenant', function (Builder $builder) {
-            // Only apply scope if we have a tenant context
-            if (app()->has('tenant') || request()->has('tenant_id')) {
-                $tenantId = app('tenant')?->id ?? request('tenant_id');
-                
-                if ($tenantId) {
-                    $builder->where($builder->getModel()->getTable() . '.tenant_id', $tenantId);
-                }
+            $tenantId = null;
+
+            if (app()->bound('tenant')) {
+                $tenantId = app('tenant')->id;
+            } elseif (request()->has('tenant_id')) {
+                $tenantId = request('tenant_id');
+            }
+
+            if ($tenantId) {
+                $builder->where($builder->getModel()->getTable() . '.tenant_id', $tenantId);
             }
         });
     }
@@ -58,7 +61,13 @@ trait TenantScope
      */
     public function scopeForCurrentTenant(Builder $query): Builder
     {
-        $tenantId = app('tenant')?->id ?? request('tenant_id');
+        $tenantId = null;
+        
+        if (app()->bound('tenant')) {
+            $tenantId = app('tenant')->id;
+        } elseif (request()->has('tenant_id')) {
+            $tenantId = request('tenant_id');
+        }
         
         if ($tenantId) {
             return $query->where('tenant_id', $tenantId);

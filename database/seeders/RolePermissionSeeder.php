@@ -151,7 +151,7 @@ class RolePermissionSeeder extends Seeder
             );
 
             // Assign permissions to role
-            $permissionIds = Permission::whereIn('name', $permissions)->pluck('id');
+            $permissionIds = Permission::whereIn('code', $permissions)->pluck('id');
             $role->permissions()->sync($permissionIds);
         }
     }

@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
+use Src\CoreProject\Models\Project as CoreProject;
+use Src\CoreProject\Models\Task as CoreTask;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,14 @@ class RouteServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->configureRateLimiting();
+
+        Route::bind('task', function ($value) {
+            return \App\Models\Task::find($value) ?? CoreTask::find($value);
+        });
+
+        Route::bind('project', function ($value) {
+            return \App\Models\Project::find($value) ?? CoreProject::find($value);
+        });
 
         $this->routes(function () {
             // Simple API routes for testing middleware

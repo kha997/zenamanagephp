@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,9 +10,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Log;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
+use Illuminate\Support\Str;
 
 /**
  * Model Project - Quản lý dự án
@@ -28,7 +31,7 @@ use Src\Foundation\Helpers\AuthHelper;
  */
 class Project extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids, HasFactory, TenantScope, SoftDeletes;
 
     protected $table = 'projects';
     
@@ -38,13 +41,17 @@ class Project extends Model
     
     protected $fillable = [
         'tenant_id',
+        'manager_id',
         'code',
         'name',
         'description',
         'start_date',
         'end_date',
         'status',
+        'priority',
         'progress',
+        'budget',
+        'spent_amount',
         'budget_total'
     ];
 
@@ -82,12 +89,38 @@ class Project extends Model
         self::STATUS_CANCELLED,
     ];
 
+    public const VALID_PRIORITIES = [
+        'low',
+        'medium',
+        'high',
+        'urgent',
+        'critical',
+        'normal',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Project $project) {
+            if (empty($project->code)) {
+                $project->code = 'PRJ-' . strtoupper(Str::random(8));
+            }
+        });
+    }
+
     /**
      * Relationship: Project thuộc về tenant
      */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Tenant::class);
+    }
+
+    /**
+     * Relationship: Project thuộc về manager
+     */
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'manager_id');
     }
 
     /**
@@ -138,6 +171,14 @@ class Project extends Model
     }
 
     /**
+     * Alias for users relationship used by dashboard helpers.
+     */
+    public function projectUsers(): BelongsToMany
+    {
+        return $this->users();
+    }
+
+    /**
      * Relationship: Project có nhiều baselines
      */
     public function baselines(): HasMany
@@ -172,6 +213,19 @@ class Project extends Model
             'project_id',
             'team_id'
         )->withPivot('role')->withTimestamps();
+    }
+
+    /**
+     * Relationship: Project có nhiều thành viên (users)
+     */
+    public function teamMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'project_team_members',
+            'project_id',
+            'user_id'
+        )->withPivot(['role', 'joined_at', 'left_at'])->withTimestamps();
     }
 
     /**

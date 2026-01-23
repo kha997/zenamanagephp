@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use App\Support\JsonContainsCompat;
 
 class CacheEntry extends Model
 {
@@ -45,7 +46,7 @@ class CacheEntry extends Model
      */
     public function scopeWithTags($query, array $tags)
     {
-        return $query->whereJsonContains('tags', $tags);
+        return JsonContainsCompat::apply($query, 'tags', $tags);
     }
 
     /**

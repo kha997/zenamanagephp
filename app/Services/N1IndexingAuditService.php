@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Traits\SkipsSchemaIntrospection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class N1IndexingAuditService
 {
+    use SkipsSchemaIntrospection;
+
     /**
      * Perform comprehensive N+1 and indexing audit
      */
@@ -540,6 +543,10 @@ class N1IndexingAuditService
      */
     protected static function getTableIndexes(string $table): array
     {
+        if (self::shouldSkipSchemaIntrospection()) {
+            return [];
+        }
+
         try {
             $indexes = DB::select("SHOW INDEX FROM {$table}");
             return array_map(function($index) {

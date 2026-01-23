@@ -53,9 +53,9 @@ class TestDatabaseSeeder extends Seeder
 
         // Create permissions
         $permissions = [
-            'project.create', 'project.view', 'project.update', 'project.delete',
-            'component.create', 'component.view', 'component.update', 'component.delete',
-            'task.create', 'task.view', 'task.update', 'task.delete', 'task.assign',
+            'project.create', 'project.read', 'project.update', 'project.delete',
+            'component.create', 'component.read', 'component.update', 'component.delete',
+            'task.create', 'task.read', 'task.update', 'task.delete', 'task.assign',
             'user.manage', 'role.manage'
         ];
 
@@ -74,14 +74,14 @@ class TestDatabaseSeeder extends Seeder
         $adminRole->permissions()->sync($adminPermissions->pluck('id'));
 
         $pmPermissions = Permission::whereIn('code', [
-            'project.view', 'project.update',
-            'component.create', 'component.view', 'component.update',
-            'task.create', 'task.view', 'task.update', 'task.assign'
+            'project.read', 'project.update',
+            'component.create', 'component.read', 'component.update',
+            'task.create', 'task.read', 'task.update', 'task.assign'
         ])->get();
         $pmRole->permissions()->sync($pmPermissions->pluck('id'));
 
         $userPermissions = Permission::whereIn('code', [
-            'project.view', 'task.view', 'task.update'
+            'project.read', 'task.read', 'task.update'
         ])->get();
         $userRole->permissions()->sync($userPermissions->pluck('id'));
 

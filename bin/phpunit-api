@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PHP_BIN="${PHP_BIN:-php}"
+LOG_FILE="$REPO_ROOT/storage/logs/phpunit-feature-api.debug.log"
+
+export XDEBUG_MODE=off
+
+cd "$REPO_ROOT"
+mkdir -p "$(dirname "$LOG_FILE")"
+
+dump_last_started_test() {
+    local exit_status=$?
+
+    if [ "$exit_status" -eq 0 ]; then
+        return
+    fi
+
+    printf '\nLast started test (from %s):\n' "$LOG_FILE"
+
+    if command -v rg >/dev/null 2>&1; then
+        tail -n 30 "$LOG_FILE" | rg "Test '.*' started" | tail -n 1
+    else
+        tail -n 30 "$LOG_FILE" | grep -E "Test '.*' started" | tail -n 1
+    fi
+}
+
+trap 'dump_last_started_test' EXIT
+
+if ! "$PHP_BIN" -d opcache.enable_cli=0 \
+    -d memory_limit=-1 \
+    -d max_execution_time=0 \
+    "$REPO_ROOT/vendor/bin/phpunit" \
+    -c phpunit.xml \
+    --exclude-group mysql,external,a11y,performance \
+    --debug \
+    "$@" \
+    2>&1 | tee "$LOG_FILE"
+then
+    exit "${PIPESTATUS[0]}"
+fi

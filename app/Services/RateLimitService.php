@@ -70,6 +70,32 @@ class RateLimitService
     }
 
     /**
+     * Get static configuration for rate limit types (used by tests)
+     */
+    public function getConfig(string $type = 'default'): array
+    {
+        $configs = [
+            'default' => [
+                'requests_per_minute' => 60,
+                'burst_limit' => 100,
+                'window_size' => 60,
+            ],
+            'auth' => [
+                'requests_per_minute' => 5,
+                'burst_limit' => 10,
+                'window_size' => 60,
+            ],
+            'api' => [
+                'requests_per_minute' => 10,
+                'burst_limit' => 20,
+                'window_size' => 60,
+            ],
+        ];
+
+        return $configs[$type] ?? $configs['default'];
+    }
+
+    /**
      * Check if request is allowed based on multiple criteria
      */
     public function isRequestAllowed(Request $request, string $endpoint = null): array
@@ -249,7 +275,7 @@ class RateLimitService
     /**
      * Get unique identifier for rate limiting
      */
-    private function getIdentifier(Request $request): string
+    public function getIdentifier(Request $request): string
     {
         if ($request->user()) {
             return 'user:' . $request->user()->id;

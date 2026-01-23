@@ -10,6 +10,21 @@ use App\Http\Resources\BaseApiResource;
  */
 class TaskResource extends BaseApiResource
 {
+    private const STATUSES = [
+        'pending' => 'Pending',
+        'in_progress' => 'In Progress',
+        'completed' => 'Completed',
+        'on_hold' => 'On Hold',
+        'cancelled' => 'Cancelled',
+    ];
+
+    private const PRIORITIES = [
+        'low' => 'Low',
+        'medium' => 'Medium',
+        'high' => 'High',
+        'critical' => 'Critical',
+    ];
+
     /**
      * Transform the resource into an array.
      *

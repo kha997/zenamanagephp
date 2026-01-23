@@ -10,8 +10,6 @@ use Src\CoreProject\Events\ProjectProgressUpdated;
 use Src\CoreProject\Events\ProjectCostUpdated;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Component;
-use Src\Foundation\EventBus;
-
 /**
  * ProjectCalculationListener
  * 
@@ -20,13 +18,6 @@ use Src\Foundation\EventBus;
  */
 class ProjectCalculationListener
 {
-    protected EventBus $eventBus;
-    
-    public function __construct(EventBus $eventBus)
-    {
-        $this->eventBus = $eventBus;
-    }
-
     /**
      * Xử lý event ComponentProgressUpdated
      * 
@@ -78,7 +69,7 @@ class ProjectCalculationListener
      * @param int $actorId
      * @return void
      */
-    protected function recalculateProjectProgress(int $projectId, int $actorId): void
+    protected function recalculateProjectProgress(string $projectId, string $actorId): void
     {
         $project = Project::findOrFail($projectId);
         $oldProgress = $project->progress;
@@ -110,7 +101,7 @@ class ProjectCalculationListener
             $project->update(['progress' => $newProgress]);
             
             // Dispatch ProjectProgressUpdated event
-            $this->eventBus->publish('Project.Progress.Updated', [
+            EventBus::publish('Project.Progress.Updated', [
                 'entityId' => $projectId,
                 'projectId' => $projectId,
                 'actorId' => $actorId,
@@ -132,7 +123,7 @@ class ProjectCalculationListener
      * @param int $actorId
      * @return void
      */
-    protected function recalculateProjectCost(int $projectId, int $actorId): void
+    protected function recalculateProjectCost(string $projectId, string $actorId): void
     {
         $project = Project::findOrFail($projectId);
         $oldCost = $project->actual_cost;
@@ -147,7 +138,7 @@ class ProjectCalculationListener
             $project->update(['actual_cost' => $newCost]);
             
             // Dispatch ProjectCostUpdated event
-            $this->eventBus->publish('Project.Cost.Updated', [
+            EventBus::publish('Project.Cost.Updated', [
                 'entityId' => $projectId,
                 'projectId' => $projectId,
                 'actorId' => $actorId,

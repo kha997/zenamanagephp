@@ -101,8 +101,14 @@ class ProjectManagerController extends Controller
 
             // Get task statistics
             $totalTasks = Task::whereIn('project_id', $projectIds)->count();
-            $completedTasks = Task::whereIn('project_id', $projectIds)->where('status', 'done')->count();
-            $pendingTasks = Task::whereIn('project_id', $projectIds)->whereIn('status', ['todo', 'in_progress'])->count();
+            $completedStatuses = ['done', 'completed'];
+            $pendingStatuses = ['todo', 'in_progress', 'pending'];
+            $completedTasks = Task::whereIn('project_id', $projectIds)
+                ->whereIn('status', $completedStatuses)
+                ->count();
+            $pendingTasks = Task::whereIn('project_id', $projectIds)
+                ->whereIn('status', $pendingStatuses)
+                ->count();
             $overdueTasks = Task::whereIn('project_id', $projectIds)
                 ->whereNotNull('end_date')
                 ->whereDate('end_date', '<', Carbon::today())

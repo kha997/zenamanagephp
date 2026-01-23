@@ -30,7 +30,7 @@ class TaskResource extends JsonResource
             'start_date' => $this->start_date?->format('Y-m-d'),
             'end_date' => $this->end_date?->format('Y-m-d'),
             'status' => $this->status,
-            'dependencies' => $this->dependencies ?? [],
+            'dependencies' => $this->dependency_ids,
             'conditional_tag' => $this->conditional_tag,
             'is_hidden' => (bool) $this->is_hidden,
             

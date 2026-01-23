@@ -3,55 +3,74 @@
 namespace Tests\Feature;
 
 use App\Models\Project;
-use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
+use Tests\Traits\RbacTestTrait;
 
 class TenantIsolationProjectsTest extends TestCase
 {
     use RefreshDatabase;
+    use RbacTestTrait;
 
     public function test_projects_list_isolation_by_tenant(): void
     {
-        $tenantA = Tenant::factory()->create();
-        $tenantB = Tenant::factory()->create();
+        $originalEnv = getenv('RBAC_BYPASS_TESTING');
+        $originalConfig = config('rbac.bypass_testing');
 
-        $userA = User::factory()->forTenant((string) $tenantA->id)->create();
-        $userB = User::factory()->forTenant((string) $tenantB->id)->create();
+        putenv('RBAC_BYPASS_TESTING=0');
+        $_ENV['RBAC_BYPASS_TESTING'] = '0';
+        $_SERVER['RBAC_BYPASS_TESTING'] = '0';
+        config(['rbac.bypass_testing' => false]);
 
-        $role = Role::factory()->create([
-            'name' => 'team_member',
-            'scope' => 'system',
-            'is_active' => true,
-        ]);
+        try {
+            $tenantA = Tenant::factory()->create();
+            $tenantB = Tenant::factory()->create();
 
-        $userB->roles()->attach($role->id);
+            $userA = User::factory()->create(['tenant_id' => $tenantA->id]);
+            $userB = User::factory()->create(['tenant_id' => $tenantB->id]);
 
-        $projectA = Project::factory()->create([
-            'tenant_id' => $tenantA->id,
-            'created_by' => $userA->id,
-            'pm_id' => $userA->id,
-        ]);
+            $this->grantPermissionsByCode($userA, ['project.read']);
+            $this->grantRole($userA, 'team_member');
 
-        $projectB = Project::factory()->create([
-            'tenant_id' => $tenantB->id,
-            'created_by' => $userB->id,
-            'pm_id' => $userB->id,
-        ]);
+            $projectA = Project::factory()->create([
+                'tenant_id' => $tenantA->id,
+                'created_by' => $userA->id,
+                'pm_id' => $userA->id,
+            ]);
 
-        Sanctum::actingAs($userB);
+            $projectB = Project::factory()->create([
+                'tenant_id' => $tenantB->id,
+                'created_by' => $userB->id,
+                'pm_id' => $userB->id,
+            ]);
 
-        $response = $this->getJson('/api/projects');
+            Sanctum::actingAs($userA);
 
-        $response->assertOk();
-        $data = $response->json('data', []);
+            $response = $this->withHeaders([
+                'X-Tenant-ID' => (string) $tenantA->id,
+            ])->getJson('/api/projects');
 
-        $this->assertCount(1, $data, 'Only the tenant B project should be visible.');
-        $this->assertEquals($projectB->id, $data[0]['id']);
-        $this->assertEquals($tenantB->id, $data[0]['tenant_id']);
-        $this->assertNotEquals($projectA->id, $data[0]['id'], 'Tenant A project must not be returned.');
+            $response->assertOk();
+            $data = $response->json('data', []);
+
+            $this->assertCount(1, $data, 'Only the tenant A project should be visible.');
+            $this->assertEquals($projectA->id, $data[0]['id']);
+            $this->assertEquals($tenantA->id, $data[0]['tenant_id']);
+            $this->assertNotEquals($projectB->id, $data[0]['id'], 'Tenant B project must not be returned.');
+        } finally {
+            if ($originalEnv === false) {
+                putenv('RBAC_BYPASS_TESTING');
+                unset($_ENV['RBAC_BYPASS_TESTING'], $_SERVER['RBAC_BYPASS_TESTING']);
+            } else {
+                putenv("RBAC_BYPASS_TESTING={$originalEnv}");
+                $_ENV['RBAC_BYPASS_TESTING'] = $originalEnv;
+                $_SERVER['RBAC_BYPASS_TESTING'] = $originalEnv;
+            }
+
+            config(['rbac.bypass_testing' => $originalConfig]);
+        }
     }
 }

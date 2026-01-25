@@ -88,7 +88,7 @@ class ProjectController extends Controller
             }
             
             // Check tenant isolation
-            if ($project->tenant_id !== $user->tenant_id) {
+            if ((string) $project->tenant_id !== (string) $user->tenant_id) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Access denied to this project'
@@ -105,7 +105,11 @@ class ProjectController extends Controller
             }
             
             // Get project metrics
-            $metrics = $this->projectService->getProjectMetrics($project);
+            $metrics = $this->projectService->getProjectMetrics(
+                (string) $project->id,
+                (string) $user->id,
+                (string) $user->tenant_id
+            );
             
             return response()->json([
                 'status' => 'success',
@@ -190,7 +194,7 @@ class ProjectController extends Controller
             }
             
             // Check tenant isolation
-            if ($project->tenant_id !== $user->tenant_id) {
+            if ((string) $project->tenant_id !== (string) $user->tenant_id) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Access denied to this project'
@@ -248,7 +252,7 @@ class ProjectController extends Controller
             }
             
             // Check tenant isolation
-            if ($project->tenant_id !== $user->tenant_id) {
+            if ((string) $project->tenant_id !== (string) $user->tenant_id) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Access denied to this project'
@@ -308,7 +312,7 @@ class ProjectController extends Controller
             }
             
             // Check tenant isolation
-            if ($project->tenant_id !== $user->tenant_id) {
+            if ((string) $project->tenant_id !== (string) $user->tenant_id) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Access denied to this project'

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,6 +12,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() === 'sqlite') {
+            // SQLite không hỗ trợ drop foreign keys / change column được dùng trong migration này.
+            return;
+        }
         Schema::table('task_assignments', function (Blueprint $table) {
             $table->dropForeign(['user_id']);
         });

@@ -80,9 +80,17 @@ class ProjectRepository
     /**
      * Get project by ID.
      */
-    public function getById(int $id): ?Project
+    public function getById(string $id): ?Project
     {
         return $this->model->with($this->defaultWith())->find($id);
+    }
+
+    /**
+     * Alias for getById to match controller expectations.
+     */
+    public function getProjectById(string $id): ?Project
+    {
+        return $this->getById($id);
     }
 
     /**

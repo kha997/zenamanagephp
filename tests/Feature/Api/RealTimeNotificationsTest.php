@@ -4,7 +4,7 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\ZenaNotification;
+use App\Models\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
@@ -67,7 +67,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_can_get_notifications()
     {
-        ZenaNotification::factory()->count(5)->create([
+        Notification::factory()->count(5)->create([
             'user_id' => $this->user->id
         ]);
 
@@ -102,7 +102,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_can_mark_notification_as_read()
     {
-        $notification = ZenaNotification::factory()->create([
+        $notification = Notification::factory()->create([
             'user_id' => $this->user->id,
             'status' => 'unread'
         ]);
@@ -132,7 +132,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_can_mark_all_notifications_as_read()
     {
-        ZenaNotification::factory()->count(3)->create([
+        Notification::factory()->count(3)->create([
             'user_id' => $this->user->id,
             'status' => 'unread'
         ]);
@@ -147,7 +147,7 @@ class RealTimeNotificationsTest extends TestCase
                     'message'
                 ]);
 
-        $unreadCount = ZenaNotification::where('user_id', $this->user->id)
+        $unreadCount = Notification::where('user_id', $this->user->id)
             ->whereNull('read_at')
             ->count();
 
@@ -159,12 +159,12 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_can_get_unread_notification_count()
     {
-        ZenaNotification::factory()->count(3)->create([
+        Notification::factory()->count(3)->create([
             'user_id' => $this->user->id,
             'status' => 'unread'
         ]);
 
-        ZenaNotification::factory()->count(2)->create([
+        Notification::factory()->count(2)->create([
             'user_id' => $this->user->id,
             'status' => 'read'
         ]);
@@ -189,14 +189,14 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_can_get_notification_statistics()
     {
-        ZenaNotification::factory()->count(2)->create([
+        Notification::factory()->count(2)->create([
             'user_id' => $this->user->id,
             'type' => 'task_assigned',
             'priority' => 'high',
             'status' => 'unread'
         ]);
 
-        ZenaNotification::factory()->count(3)->create([
+        Notification::factory()->count(3)->create([
             'user_id' => $this->user->id,
             'type' => 'rfi_submitted',
             'priority' => 'medium',
@@ -230,12 +230,12 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_can_filter_notifications_by_type()
     {
-        ZenaNotification::factory()->count(2)->create([
+        Notification::factory()->count(2)->create([
             'user_id' => $this->user->id,
             'type' => 'task_assigned'
         ]);
 
-        ZenaNotification::factory()->count(3)->create([
+        Notification::factory()->count(3)->create([
             'user_id' => $this->user->id,
             'type' => 'rfi_submitted'
         ]);
@@ -259,12 +259,12 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_can_filter_notifications_by_status()
     {
-        ZenaNotification::factory()->count(2)->create([
+        Notification::factory()->count(2)->create([
             'user_id' => $this->user->id,
             'status' => 'unread'
         ]);
 
-        ZenaNotification::factory()->count(3)->create([
+        Notification::factory()->count(3)->create([
             'user_id' => $this->user->id,
             'status' => 'read'
         ]);
@@ -288,7 +288,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_can_delete_notification()
     {
-        $notification = ZenaNotification::factory()->create([
+        $notification = Notification::factory()->create([
             'user_id' => $this->user->id
         ]);
 
@@ -368,7 +368,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_notification_expiration()
     {
-        $notification = ZenaNotification::factory()->create([
+        $notification = Notification::factory()->create([
             'user_id' => $this->user->id,
             'expires_at' => now()->subHour()
         ]);

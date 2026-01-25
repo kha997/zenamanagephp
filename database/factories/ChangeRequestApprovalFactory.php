@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\ChangeRequestApproval;
-use App\Models\ZenaChangeRequest;
+use App\Models\ChangeRequest;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -23,7 +23,7 @@ class ChangeRequestApprovalFactory extends Factory
     {
         return [
             'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
-            'change_request_id' => ZenaChangeRequest::factory(),
+            'change_request_id' => ChangeRequest::factory(),
             'user_id' => User::factory(),
             'level' => $this->faker->randomElement(['level_1', 'level_2', 'level_3', 'final']),
             'status' => $this->faker->randomElement(['pending', 'approved', 'rejected']),

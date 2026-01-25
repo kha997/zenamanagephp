@@ -3,10 +3,10 @@
 namespace Database\Factories;
 
 use App\Models\ChangeRequest;
-use App\Models\Project;
-use App\Models\Task;
 use App\Models\User;
 use App\Models\Tenant;
+use App\Models\Project;
+use App\Models\Task;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -26,7 +26,7 @@ class ChangeRequestFactory extends Factory
         return [
             'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
             'tenant_id' => Tenant::factory(),
-            'project_id' => ZenaProject::factory(),
+            'project_id' => Project::factory(),
             'task_id' => null,
             'change_number' => 'CR-' . strtoupper($this->faker->unique()->regexify('[A-Z0-9]{8}')),
             'title' => $this->faker->sentence(6),
@@ -36,6 +36,7 @@ class ChangeRequestFactory extends Factory
             'status' => $this->faker->randomElement(['pending', 'approved', 'rejected', 'implemented']),
             'impact_level' => $this->faker->randomElement(['low', 'medium', 'high']),
             'requested_by' => User::factory(),
+            'created_by' => User::factory(),
             'assigned_to' => User::factory(),
             'approved_by' => null,
             'rejected_by' => null,
@@ -186,7 +187,7 @@ class ChangeRequestFactory extends Factory
     public function withTask(): static
     {
         return $this->state(fn (array $attributes) => [
-            'task_id' => ZenaTask::factory(),
+            'task_id' => Task::factory(),
         ]);
     }
 }

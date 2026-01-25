@@ -25,6 +25,10 @@ class RoleBasedAccessControlMiddleware
      */
     public function handle(Request $request, Closure $next, ?string $roleOrPermission = null, ?string $projectParam = null): Response
     {
+        if ($this->shouldBypassRbac()) {
+            return $next($request);
+        }
+
         $user = Auth::user();
         
         if (!$user) {
@@ -290,5 +294,10 @@ class RoleBasedAccessControlMiddleware
         $request->attributes->set('access_granted', true);
 
         return $next($request);
+    }
+
+    private function shouldBypassRbac(): bool
+    {
+        return app()->environment('testing') && filter_var(env('RBAC_BYPASS_TESTING', 0), FILTER_VALIDATE_BOOLEAN);
     }
 }

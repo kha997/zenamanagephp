@@ -50,7 +50,11 @@ class ErrorEnvelopeService
             'details' => $details
         ];
         
-        $response = response()->json(['error' => $error], $statusCode);
+        $response = response()->json([
+            'success' => false,
+            'data' => null,
+            'error' => $error,
+        ], $statusCode);
         
         // Add Retry-After header for specific status codes
         if (in_array($statusCode, [429, 503])) {

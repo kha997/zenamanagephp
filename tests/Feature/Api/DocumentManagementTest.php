@@ -4,8 +4,8 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaDocument;
+use App\Models\Project;
+use App\Models\Document;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
@@ -24,7 +24,7 @@ class DocumentManagementTest extends TestCase
         parent::setUp();
         
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
         $this->token = $this->generateJwtToken($this->user);
@@ -134,7 +134,7 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_download_document()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
             'file_path' => 'documents/test-file.pdf'
@@ -155,7 +155,7 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_create_document_version()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id
         ]);
@@ -193,13 +193,13 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_get_document_versions()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id
         ]);
 
         // Create versions
-        ZenaDocument::factory()->count(2)->create([
+        Document::factory()->count(2)->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
             'parent_document_id' => $document->id
@@ -230,7 +230,7 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_update_document()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id
         ]);
@@ -267,7 +267,7 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_delete_document()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
             'file_path' => 'documents/test-file.pdf'
@@ -295,13 +295,13 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_filter_documents()
     {
-        ZenaDocument::factory()->count(3)->create([
+        Document::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
             'document_type' => 'drawing'
         ]);
 
-        ZenaDocument::factory()->count(2)->create([
+        Document::factory()->count(2)->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
             'document_type' => 'specification'

@@ -6,11 +6,11 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\ZenaRole;
 use App\Models\ZenaPermission;
-use App\Models\ZenaProject;
-use App\Models\ZenaTask;
-use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
-use App\Models\ZenaChangeRequest;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\Rfi;
+use App\Models\Submittal;
+use App\Models\ChangeRequest;
 use App\Models\ZenaMaterialRequest;
 use App\Models\ZenaPurchaseOrder;
 use App\Models\ZenaInvoice;
@@ -436,7 +436,7 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($projects as $projectData) {
-            $project = ZenaProject::firstOrCreate(
+            $project = Project::firstOrCreate(
                 ['code' => $projectData['code']],
                 $projectData
             );
@@ -451,7 +451,7 @@ class ZenaRbacSeeder extends Seeder
 
     private function createSampleTasks(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $pm = User::where('email', 'pm@zena.com')->first();
         $designer = User::where('email', 'designer@zena.com')->first();
         $siteEngineer = User::where('email', 'site@zena.com')->first();
@@ -493,13 +493,13 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($tasks as $taskData) {
-            ZenaTask::create($taskData);
+            Task::create($taskData);
         }
     }
 
     private function createSampleRfis(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $siteEngineer = User::where('email', 'site@zena.com')->first();
         $designer = User::where('email', 'designer@zena.com')->first();
 
@@ -528,13 +528,13 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($rfis as $rfiData) {
-            ZenaRfi::create($rfiData);
+            Rfi::create($rfiData);
         }
     }
 
     private function createSampleSubmittals(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $designer = User::where('email', 'designer@zena.com')->first();
         $pm = User::where('email', 'pm@zena.com')->first();
 
@@ -563,13 +563,13 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($submittals as $submittalData) {
-            ZenaSubmittal::create($submittalData);
+            Submittal::create($submittalData);
         }
     }
 
     private function createSampleChangeRequests(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $siteEngineer = User::where('email', 'site@zena.com')->first();
         $pm = User::where('email', 'pm@zena.com')->first();
 
@@ -600,13 +600,13 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($changeRequests as $crData) {
-            ZenaChangeRequest::create($crData);
+            ChangeRequest::create($crData);
         }
     }
 
     private function createSampleMaterialRequests(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $siteEngineer = User::where('email', 'site@zena.com')->first();
         $procurement = User::where('email', 'proc@zena.com')->first();
 
@@ -640,7 +640,7 @@ class ZenaRbacSeeder extends Seeder
 
     private function createSamplePurchaseOrders(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $procurement = User::where('email', 'proc@zena.com')->first();
         $finance = User::where('email', 'finance@zena.com')->first();
 
@@ -676,7 +676,7 @@ class ZenaRbacSeeder extends Seeder
 
     private function createSampleInvoices(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $finance = User::where('email', 'finance@zena.com')->first();
 
         $invoices = [
@@ -708,7 +708,7 @@ class ZenaRbacSeeder extends Seeder
 
     private function createSampleQcPlans(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $qc = User::where('email', 'qc@zena.com')->first();
 
         $qcPlans = [
@@ -737,7 +737,7 @@ class ZenaRbacSeeder extends Seeder
 
     private function createSampleNcrs(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $qc = User::where('email', 'qc@zena.com')->first();
         $siteEngineer = User::where('email', 'site@zena.com')->first();
 
@@ -773,7 +773,7 @@ class ZenaRbacSeeder extends Seeder
 
     private function createSampleDrawings(): void
     {
-        $project = ZenaProject::first();
+        $project = Project::first();
         $designer = User::where('email', 'designer@zena.com')->first();
 
         $drawings = [

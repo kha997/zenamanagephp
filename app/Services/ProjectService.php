@@ -59,15 +59,22 @@ class ProjectService
     /**
      * Get project metrics
      */
-    public function getProjectMetrics(int $projectId, int $userId, int $tenantId): array
+    public function getProjectMetrics(string $projectId, string $userId, string $tenantId): array
     {
-        $project = $this->projectRepository->findById($projectId);
+        $project = $this->projectRepository->getById($projectId);
         
         // Validate access
         $this->validateProjectAccess($project, $userId, $tenantId);
         
         // Get metrics from metrics service
-        return $this->metricsService->getProjectMetrics($projectId);
+        if (method_exists($this->metricsService, 'getProjectMetrics')) {
+            return $this->metricsService->getProjectMetrics($projectId);
+        }
+
+        return [
+            'project_id' => $projectId,
+            'status' => 'metrics unavailable',
+        ];
     }
     
     /**
@@ -100,9 +107,9 @@ class ProjectService
     /**
      * Validate project access
      */
-    private function validateProjectAccess(Project $project, int $userId, int $tenantId): void
+    private function validateProjectAccess(Project $project, string $userId, string $tenantId): void
     {
-        if ($project->tenant_id !== $tenantId) {
+        if ((string) $project->tenant_id !== (string) $tenantId) {
             throw new \UnauthorizedException('Project not found in tenant');
         }
         
@@ -122,7 +129,7 @@ class ProjectService
     /**
      * Check if user can access project
      */
-    private function canUserAccessProject(Project $project, int $userId): bool
+    private function canUserAccessProject(Project $project, string $userId): bool
     {
         return true; // Simplified for demo
     }

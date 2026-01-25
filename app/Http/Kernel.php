@@ -14,7 +14,8 @@ class Kernel extends HttpKernel
      * @var array<int, class-string|string>
      */
     protected $middleware = [
-        // Temporarily disabled all global middleware for debugging
+        \App\Http\Middleware\EnhancedRateLimitMiddleware::class,
+        \App\Http\Middleware\ApiResponseCacheMiddleware::class,
     ];
 
     /**
@@ -33,6 +34,8 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
+            \Illuminate\Http\Middleware\HandleCors::class,
+            \App\Http\Middleware\SecurityHeadersMiddleware::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\ApiResponseEnvelopeMiddleware::class,
         ],
@@ -83,6 +86,36 @@ class Kernel extends HttpKernel
     public function getMiddlewareAliases(): array
     {
         return self::CANONICAL_MIDDLEWARE_ALIASES;
+    }
+    
+    /**
+     * Return middleware stack for tooling compatibility.
+     *
+     * @return array<int, class-string|string>
+     */
+    public function getMiddleware(): array
+    {
+        return $this->middleware;
+    }
+
+    /**
+     * Return middleware groups for tooling compatibility.
+     *
+     * @return array<string, array<int, class-string|string>>
+     */
+    public function getMiddlewareGroups(): array
+    {
+        return $this->middlewareGroups;
+    }
+
+    /**
+     * Return route middleware map for tooling compatibility.
+     *
+     * @return array<string, class-string|string>
+     */
+    public function getRouteMiddleware(): array
+    {
+        return $this->routeMiddleware;
     }
     
     /**

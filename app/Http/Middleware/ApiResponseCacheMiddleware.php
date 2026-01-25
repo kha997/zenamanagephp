@@ -167,7 +167,7 @@ class ApiResponseCacheMiddleware
             // Add cache headers to response
             $response->headers->set('X-Cache', 'MISS');
             $response->headers->set('X-Cache-Key', $cacheKey);
-            $response->headers->set('X-Cache-TTL', $ttl);
+            $response->headers->set('X-Cache-TTL', (string) $ttl);
 
         } catch (\Exception $e) {
             Log::warning('Failed to cache API response', [

@@ -540,7 +540,9 @@ class DashboardController extends Controller
     {
         return response()->json([
             'success' => true,
-            'csrf_token' => csrf_token()
+            'data' => [
+                'csrf_token' => csrf_token(),
+            ],
         ]);
     }
 }

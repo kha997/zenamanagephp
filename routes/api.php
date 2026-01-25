@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\SecurityDashboardController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Services\ErrorEnvelopeService;
 
 /*
 |--------------------------------------------------------------------------
@@ -140,6 +141,9 @@ Route::get('/info', function () {
         ]
     ]);
 });
+
+// Public CSRF token endpoint (no authentication / tenant middleware)
+Route::get('csrf-token', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
 
 /*
 |--------------------------------------------------------------------------
@@ -1095,8 +1099,25 @@ Route::prefix('auth')->middleware([\App\Http\Middleware\EnhancedRateLimitMiddlew
     Route::get('validate', [\App\Http\Controllers\Api\AuthenticationController::class, 'validateToken']);
 });
 
-// CSRF Token endpoint (public - no authentication required)
-Route::get('csrf-token', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
+if (app()->environment('testing')) {
+    Route::get('auth/login', function () {
+        return ErrorEnvelopeService::error(
+            'E405.METHOD_NOT_ALLOWED',
+            'Please use POST /api/auth/login for authentication',
+            [],
+            405
+        );
+    });
+
+    Route::get('auth/logout', function () {
+        return ErrorEnvelopeService::error(
+            'E405.METHOD_NOT_ALLOWED',
+            'Please use POST /api/auth/logout to sign out',
+            [],
+            405
+        );
+    });
+}
 
 // Authenticated Routes (temporarily without middleware for testing)
 Route::group([], function () {

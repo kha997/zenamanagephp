@@ -4,7 +4,7 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
@@ -21,7 +21,7 @@ class SecurityTest extends TestCase
         parent::setUp();
         
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
         $this->token = $this->generateJwtToken($this->user);
@@ -206,7 +206,7 @@ class SecurityTest extends TestCase
     public function test_user_can_only_access_own_data()
     {
         $otherUser = User::factory()->create();
-        $otherProject = ZenaProject::factory()->create([
+        $otherProject = Project::factory()->create([
             'created_by' => $otherUser->id
         ]);
 
@@ -226,12 +226,12 @@ class SecurityTest extends TestCase
         $tenant1User = User::factory()->create(['tenant_id' => 1]);
         $tenant2User = User::factory()->create(['tenant_id' => 2]);
         
-        $tenant1Project = ZenaProject::factory()->create([
+        $tenant1Project = Project::factory()->create([
             'created_by' => $tenant1User->id,
             'tenant_id' => 1
         ]);
         
-        $tenant2Project = ZenaProject::factory()->create([
+        $tenant2Project = Project::factory()->create([
             'created_by' => $tenant2User->id,
             'tenant_id' => 2
         ]);
@@ -259,7 +259,7 @@ class SecurityTest extends TestCase
      */
     public function test_ulid_security()
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
 

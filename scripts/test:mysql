@@ -122,7 +122,16 @@ MYSQL_PWD="${DB_PASSWORD}" \
     --user="$DB_USERNAME" \
     -e "CREATE DATABASE IF NOT EXISTS \`$DB_DATABASE\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-"./scripts/xphp" artisan optimize:clear
-"./scripts/xphp" artisan config:clear
+# CI-safe cache clears (avoid optimize:clear -> view:clear 'View path not found')
+if [ "${CI:-}" = "true" ]; then
+  mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache
+  chmod -R ug+rwX storage bootstrap/cache 2>/dev/null || true
+  "./scripts/xphp" artisan event:clear || true
+  "./scripts/xphp" artisan cache:clear || true
+  "./scripts/xphp" artisan route:clear || true
+  "./scripts/xphp" artisan config:clear || true
+else
+  "./scripts/xphp" artisan optimize:clear
+fi
 "./scripts/xphp" artisan migrate:fresh --seed --env=testing
 "./scripts/xphp" "./vendor/bin/phpunit" -c phpunit.xml -v --no-coverage "$@"

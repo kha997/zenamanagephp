@@ -14,7 +14,11 @@ class ComprehensiveApiIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Cache::flush();
+        try {
+            Cache::store('array')->flush();
+        } catch (\Throwable $e) {
+            Cache::flush();
+        }
     }
 
     /**

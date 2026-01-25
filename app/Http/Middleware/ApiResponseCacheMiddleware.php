@@ -31,6 +31,11 @@ class ApiResponseCacheMiddleware
      */
     public function handle(Request $request, Closure $next, string $ttl = '300'): Response
     {
+        // Do not cache authenticated requests (prevents cross-user/tenant cache bleed)
+        if ($request->headers->has('Authorization')) {
+            return $next($request);
+        }
+
         // Only cache GET requests
         if ($request->method() !== 'GET') {
             return $next($request);

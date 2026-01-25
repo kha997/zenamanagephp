@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Prefer PHP >= 8.2
+CANDIDATES=(
+  "/Applications/XAMPP/xamppfiles/bin/php-8.2"
+  "/usr/local/opt/php@8.2/bin/php"
+  "$(command -v php || true)"
+)
+
+XPHP=""
+for c in "${CANDIDATES[@]}"; do
+  if [[ -n "${c}" && -x "${c}" ]]; then
+    XPHP="${c}"
+    break
+  fi
+done
+
+if [[ -z "${XPHP}" ]]; then
+  echo "PHP executable not found." >&2
+  exit 1
+fi
+
+# only print when debugging
+if [[ "${XPHP_VERBOSE:-0}" == "1" ]]; then
+  echo "Using PHP: ${XPHP}" >&2
+fi
+
+exec "${XPHP}" "$@"

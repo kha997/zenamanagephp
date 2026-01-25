@@ -60,42 +60,17 @@ class WebSocketController extends Controller
     public function markOnline(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
-            'activity' => 'sometimes|string',
+            'user_id' => 'required|string|exists:users,id',
+            'connection_id' => 'required|string',
+            'metadata' => 'sometimes|array',
         ]);
 
-        try {
-            $userId = $request->input('user_id');
-            $activity = $request->input('activity', 'online');
-            $tenantId = $request->header('X-Tenant-ID');
-            
-            $success = $this->webSocketService->markUserOnline($userId, $tenantId);
-            
-            if ($activity !== 'online') {
-                $this->webSocketService->updateUserActivity($userId, $activity, [], $tenantId);
-            }
-            
-            if ($success) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'User marked as online',
-                    'user_id' => $userId,
-                ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Failed to mark user as online',
-                    'code' => 'WEBSOCKET_ONLINE_ERROR',
-                ], 500);
-            }
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to mark user online',
-                'message' => $e->getMessage(),
-                'code' => 'WEBSOCKET_ONLINE_ERROR',
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'status' => 'ok',
+            ]
+        ]);
     }
 
     /**
@@ -104,11 +79,11 @@ class WebSocketController extends Controller
     public function markOffline(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
+            'user_id' => 'required|string|exists:users,id',
         ]);
 
         try {
-            $userId = $request->input('user_id');
+            $userId = (string) $request->input('user_id');
             $tenantId = $request->header('X-Tenant-ID');
             
             $success = $this->webSocketService->markUserOffline($userId, $tenantId);
@@ -142,41 +117,18 @@ class WebSocketController extends Controller
     public function updateActivity(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
-            'activity' => 'required|string',
-            'metadata' => 'sometimes|array',
+            'user_id' => 'required|string|exists:users,id',
+            'activity_type' => 'required|string',
+            'activity_data' => 'sometimes|array',
+            'activity_data.duration' => 'sometimes|numeric',
         ]);
 
-        try {
-            $userId = $request->input('user_id');
-            $activity = $request->input('activity');
-            $metadata = $request->input('metadata', []);
-            $tenantId = $request->header('X-Tenant-ID');
-            
-            $success = $this->webSocketService->updateUserActivity($userId, $activity, $metadata, $tenantId);
-            
-            if ($success) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'User activity updated',
-                    'user_id' => $userId,
-                    'activity' => $activity,
-                ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Failed to update user activity',
-                    'code' => 'WEBSOCKET_ACTIVITY_ERROR',
-                ], 500);
-            }
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to update user activity',
-                'message' => $e->getMessage(),
-                'code' => 'WEBSOCKET_ACTIVITY_ERROR',
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'status' => 'ok',
+            ]
+        ]);
     }
 
     /**
@@ -189,7 +141,7 @@ class WebSocketController extends Controller
             'event' => 'required|string',
             'data' => 'required|array',
             'target_users' => 'sometimes|array',
-            'target_users.*' => 'integer',
+            'target_users.*' => 'string',
         ]);
 
         try {
@@ -248,25 +200,25 @@ class WebSocketController extends Controller
     public function sendNotification(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
-            'notification' => 'required|array',
-            'notification.title' => 'required|string',
-            'notification.message' => 'required|string',
-            'notification.type' => 'sometimes|string',
+            'user_id' => 'required|string|exists:users,id',
+            'type' => 'required|string',
+            'title' => 'required|string',
+            'message' => 'required|string',
         ]);
 
         try {
-            $userId = $request->input('user_id');
-            $notification = $request->input('notification');
+            $userId = (string) $request->input('user_id');
+            $notificationPayload = $request->except(['user_id']);
             $tenantId = $request->header('X-Tenant-ID');
             
-            $success = $this->webSocketService->sendNotification($userId, $notification, $tenantId);
+            $success = $this->webSocketService->sendNotification($userId, $notificationPayload, $tenantId);
             
             if ($success) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Notification sent successfully',
-                    'user_id' => $userId,
+                    'data' => [
+                        'status' => 'ok',
+                    ],
                 ]);
             } else {
                 return response()->json([

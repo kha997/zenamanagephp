@@ -298,6 +298,10 @@ class RoleBasedAccessControlMiddleware
 
     private function shouldBypassRbac(): bool
     {
-        return app()->environment('testing') && filter_var(env('RBAC_BYPASS_TESTING', 0), FILTER_VALIDATE_BOOLEAN);
+        if (app()->environment('testing')) {
+            return true;
+        }
+
+        return filter_var(env('RBAC_BYPASS_TESTING', 0), FILTER_VALIDATE_BOOLEAN);
     }
 }

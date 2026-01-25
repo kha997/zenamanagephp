@@ -97,6 +97,27 @@ class SubmittalApiTest extends TestCase
     }
 
     /**
+     * Ensure submittal IDs are ULID-formatted strings.
+     */
+    public function test_submittal_id_is_ulid()
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson('/api/zena/submittals', [
+            'project_id' => $this->project->id,
+            'title' => 'ULID test',
+            'description' => 'Ensuring submittal IDs stay ULID strings',
+            'submittal_number' => 'SUB-ULID',
+            'submittal_type' => 'drawing',
+        ]);
+
+        $response->assertStatus(201);
+        $id = $response->json('data.id');
+        $this->assertIsString($id);
+        $this->assertMatchesRegularExpression('/^[0-9A-HJKMNP-TV-Z]{26}$/', $id);
+    }
+
+    /**
      * Test Submittal submission
      */
     public function test_can_submit_submittal()

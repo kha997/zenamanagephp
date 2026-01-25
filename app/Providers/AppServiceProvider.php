@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\AdvancedCacheService;
 use App\Services\RateLimitService;
+use App\Services\TenancyService;
 use App\Services\WebSocketService;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(WebSocketService::class, function () {
             return new WebSocketService();
+        });
+        
+        $this->app->singleton(TenancyService::class, function () {
+            return new TenancyService();
         });
     }
 

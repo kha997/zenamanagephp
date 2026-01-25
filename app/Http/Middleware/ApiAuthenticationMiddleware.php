@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\TenancyService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class ApiAuthenticationMiddleware
 {
+    public function __construct(private TenancyService $tenancyService)
+    {
+    }
+
     /**
      * Handle an incoming request.
      *
@@ -43,8 +48,10 @@ class ApiAuthenticationMiddleware
             $request->attributes->set('auth_user', $user);
             $request->attributes->set('tenant_id', $user->tenant_id);
             
-            // Set tenant context globally
-            app()->instance('current_tenant_id', $user->tenant_id);
+            // Set tenant context globally (if available)
+            if ($user->tenant_id) {
+                $this->tenancyService->setTenantContext($user->tenant_id, $user->tenant);
+            }
             
             // Log successful authentication
             Log::info('User authenticated via API', [

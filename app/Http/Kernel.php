@@ -34,10 +34,13 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
+            \App\Http\Middleware\ResetRequestContextMiddleware::class,
+\App\Http\Middleware\CorsMiddleware::class,
             \Illuminate\Http\Middleware\HandleCors::class,
-            \App\Http\Middleware\SecurityHeadersMiddleware::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\ApiResponseEnvelopeMiddleware::class,
+            \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
+            \App\Http\Middleware\SecurityHeadersMiddleware::class,
         ],
     ];
 

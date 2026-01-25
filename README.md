@@ -140,6 +140,12 @@ Access the comprehensive testing interface at `/testing-suite`:
 - **Accessibility Testing**: WCAG compliance validation
 - **Mobile Testing**: Mobile responsiveness testing
 
+### macOS (XAMPP PHP)
+- Run tests with XAMPP PHP on macOS XAMPP by prefixing commands with `./scripts/xphp` (e.g. `./scripts/xphp ./vendor/bin/phpunit --filter ComprehensiveApiIntegrationTest`).
+
+### Standardized MySQL PHPUnit runner
+- Use `./scripts/test:mysql [phpunit args...]` to ensure the test database is running over TCP (auto-detects 3306/3307), clears caches, runs `migrate:fresh --seed --env=testing`, and finally executes PHPUnit with any forwarded arguments.
+
 ### Test Coverage
 - ✅ Route accessibility and response codes
 - ✅ Component rendering and functionality

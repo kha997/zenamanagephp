@@ -2,6 +2,7 @@
 
 namespace App\Traits;
 
+use App\Services\TenancyService;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -18,13 +19,10 @@ trait TenantScope
     protected static function bootTenantScope()
     {
         static::addGlobalScope('tenant', function (Builder $builder) {
-            // Only apply scope if we have a tenant context
-            if (app()->has('tenant') || request()->has('tenant_id')) {
-                $tenantId = app('tenant')?->id ?? request('tenant_id');
-                
-                if ($tenantId) {
-                    $builder->where($builder->getModel()->getTable() . '.tenant_id', $tenantId);
-                }
+            $tenantId = static::resolveTenantIdForScope();
+
+            if ($tenantId) {
+                $builder->where($builder->getModel()->getTable() . '.tenant_id', $tenantId);
             }
         });
     }
@@ -58,12 +56,36 @@ trait TenantScope
      */
     public function scopeForCurrentTenant(Builder $query): Builder
     {
-        $tenantId = app('tenant')?->id ?? request('tenant_id');
+        $tenantId = static::resolveTenantIdForScope();
         
         if ($tenantId) {
             return $query->where('tenant_id', $tenantId);
         }
         
         return $query;
+    }
+
+    /**
+     * Determine tenant id for scopes using the tenancy service or request.
+     */
+    private static function resolveTenantIdForScope(): ?string
+    {
+        $tenantService = app(TenancyService::class);
+        $tenantId = $tenantService->currentTenantId();
+
+        if ($tenantId) {
+            return $tenantId;
+        }
+
+        if (app()->bound('request')) {
+            $request = app('request');
+            $headerTenantId = $request->get('tenant_id');
+
+            if ($headerTenantId !== null && (string) $headerTenantId !== '') {
+                return (string) $headerTenantId;
+            }
+        }
+
+        return null;
     }
 }

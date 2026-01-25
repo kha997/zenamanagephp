@@ -6,6 +6,7 @@ use App\Http\Controllers\BaseApiController;
 use App\Models\Project;
 use App\Models\Rfi;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
@@ -23,7 +24,7 @@ class RfiController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $query = Rfi::with(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name']);
+            $query = Rfi::with(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
             // Filter by project if specified
             if ($request->has('project_id')) {
@@ -107,7 +108,7 @@ class RfiController extends BaseApiController
                 'rfi_number' => $this->generateRfiNumber($request->input('project_id')),
             ]);
 
-            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name']);
+            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
             return $this->successResponse($rfi, 'RFI created successfully', 201);
         } catch (\Exception $e) {
@@ -127,7 +128,7 @@ class RfiController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $rfi = Rfi::with(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name', 'attachments'])
+            $rfi = Rfi::with(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name'])
                 ->find($id);
 
             if (!$rfi) {
@@ -178,7 +179,7 @@ class RfiController extends BaseApiController
                 'assigned_to', 'location', 'drawing_reference', 'status'
             ]));
 
-            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name']);
+            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
             return $this->successResponse($rfi, 'RFI updated successfully');
         } catch (\Exception $e) {
@@ -246,7 +247,7 @@ class RfiController extends BaseApiController
                 'assignment_notes' => $request->input('notes'),
             ]);
 
-            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name']);
+            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
             return $this->successResponse($rfi, 'RFI assigned successfully');
         } catch (\Exception $e) {
@@ -288,7 +289,7 @@ class RfiController extends BaseApiController
                 'responded_at' => now(),
             ]);
 
-            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name']);
+            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
             return $this->successResponse($rfi, 'RFI response submitted successfully');
         } catch (\Exception $e) {
@@ -324,7 +325,7 @@ class RfiController extends BaseApiController
                 'closed_at' => now(),
             ]);
 
-            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name']);
+            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
             return $this->successResponse($rfi, 'RFI closed successfully');
         } catch (\Exception $e) {
@@ -367,7 +368,7 @@ class RfiController extends BaseApiController
                 'escalated_at' => now(),
             ]);
 
-            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedUser:id,name']);
+            $rfi->load(['project:id,name', 'createdBy:id,name', 'assignedTo:id,name']);
 
             return $this->successResponse($rfi, 'RFI escalated successfully');
         } catch (\Exception $e) {

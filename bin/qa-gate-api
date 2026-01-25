@@ -15,6 +15,14 @@ php artisan route:clear  >/dev/null 2>&1 || true
 : "${ZENA_TRACE_FAIL_500:=1}"
 : "${QA_GATE_DB:=mysql}"
 
+: "${DB_HOST:=127.0.0.1}"
+: "${DB_PORT:=3306}"
+: "${DB_SOCKET:=}"
+: "${DB_DATABASE:=zenamanage_test}"
+: "${DB_USERNAME:=root}"
+: "${DB_PASSWORD:=}"
+export DB_HOST DB_PORT DB_SOCKET DB_DATABASE DB_USERNAME DB_PASSWORD
+
 # Defaults (visible/exported), but the actual phpunit runs are pinned below.
 : "${STUB_ROUTES_ENABLED:=1}"
 : "${STUB_METRICS_ENABLED:=1}"
@@ -34,6 +42,14 @@ fi
 
 if [ "$QA_GATE_DB" = "sqlite" ]; then
   echo "== Smoke mode (QA_GATE_DB=sqlite) using phpunit.sqlite.xml ==" | tee -a "$LOG"
+
+  export DB_CONNECTION="sqlite"
+  export DB_DATABASE=":memory:"
+  export DB_HOST=""
+  export DB_PORT=""
+  export DB_USERNAME=""
+  export DB_PASSWORD=""
+  export DB_SOCKET=""
 
   run_smoke_filter() {
     local label="$1"
@@ -60,6 +76,48 @@ if [ "$QA_GATE_DB" = "sqlite" ]; then
   run_smoke_filter "SmokeZenaShowAndWorkflowTest" "SmokeZenaShowAndWorkflowTest" || rc=1
 
   exit "$rc"
+fi
+
+if [ "$QA_GATE_DB" != "sqlite" ]; then
+  socket_display="${DB_SOCKET:-<empty>}"
+  echo "== MySQL env values ==" | tee -a "$LOG"
+  printf 'DB_HOST=%s DB_PORT=%s DB_SOCKET=%s DB_DATABASE=%s DB_USERNAME=%s\n' \
+    "$DB_HOST" "$DB_PORT" "$socket_display" "$DB_DATABASE" "$DB_USERNAME" \
+    | tee -a "$LOG"
+
+  echo "== MySQL PDO ping ==" | tee -a "$LOG"
+  set +e
+  php -r '
+$host = getenv("DB_HOST") ?: "127.0.0.1";
+$port = getenv("DB_PORT") ?: "3306";
+$database = getenv("DB_DATABASE") ?: "";
+$username = getenv("DB_USERNAME") ?: "";
+$password = getenv("DB_PASSWORD") ?: "";
+$socket = getenv("DB_SOCKET") ?: "";
+$dsnParts = ["mysql:host={$host}", "port={$port}"];
+if ($database !== "") {
+    $dsnParts[] = "dbname={$database}";
+}
+if ($socket !== "") {
+    $dsnParts[] = "unix_socket={$socket}";
+}
+$dsn = implode(";", $dsnParts);
+try {
+    $pdo = new PDO($dsn, $username, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $pdo->query("SELECT 1");
+    echo "MySQL ping OK\n";
+} catch (PDOException $e) {
+    fwrite(STDERR, "MySQL ping failed: " . $e->getMessage() . "\n");
+    exit(1);
+}
+' 2>&1 | tee -a "$LOG"
+  db_ping_rc=${PIPESTATUS[0]}
+  set -e
+
+  if [ "$db_ping_rc" -ne 0 ]; then
+    echo "!! MySQL ping failed (exit $db_ping_rc)" | tee -a "$LOG"
+    exit "$db_ping_rc"
+  fi
 fi
 
 # Chunk A: tests/Feature/Api/*.php excluding IntegrationTest.php

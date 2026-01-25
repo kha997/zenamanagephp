@@ -2,24 +2,114 @@
 set -euo pipefail
 cd "/Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden" || exit 1
 
+LOG="storage/logs/qa-gate-api.log"
+mkdir -p "$(dirname "$LOG")"
+: > "$LOG"
+
 # Clear Laravel caches to avoid leaking stale configs/routes between runs.
 php artisan config:clear >/dev/null 2>&1 || true
-php artisan route:clear >/dev/null 2>&1 || true
+php artisan route:clear  >/dev/null 2>&1 || true
 
 : "${RBAC_BYPASS_TESTING:=0}"
 : "${PERF_ASSERTIONS:=1}"
 : "${ZENA_TRACE_FAIL_500:=1}"
+: "${QA_GATE_DB:=mysql}"
+
+# Defaults (visible/exported), but the actual phpunit runs are pinned below.
 : "${STUB_ROUTES_ENABLED:=1}"
 : "${STUB_METRICS_ENABLED:=1}"
 : "${API_CANONICAL_DOCUMENTS:=0}"
 : "${API_CANONICAL_INSPECTIONS:=0}"
 : "${API_CANONICAL_PROJECTS:=0}"
+
 export RBAC_BYPASS_TESTING PERF_ASSERTIONS ZENA_TRACE_FAIL_500 \
   STUB_ROUTES_ENABLED STUB_METRICS_ENABLED \
   API_CANONICAL_DOCUMENTS API_CANONICAL_INSPECTIONS API_CANONICAL_PROJECTS
 
-STUB_ROUTES_ENABLED=1 STUB_METRICS_ENABLED=1 \
-API_CANONICAL_DOCUMENTS=0 API_CANONICAL_INSPECTIONS=0 API_CANONICAL_PROJECTS=0 \
-./bin/phpunit-api-nocov-chunks 2>&1 | tee storage/logs/qa-gate-api.log
+PHPUNIT="./vendor/bin/phpunit"
+if [ ! -x "$PHPUNIT" ]; then
+  echo "ERROR: vendor/bin/phpunit not found or not executable. Run composer install." | tee -a "$LOG"
+  exit 1
+fi
 
-echo "Saved: storage/logs/qa-gate-api.log"
+if [ "$QA_GATE_DB" = "sqlite" ]; then
+  echo "== Smoke mode (QA_GATE_DB=sqlite) using phpunit.sqlite.xml ==" | tee -a "$LOG"
+
+  run_smoke_filter() {
+    local label="$1"
+    local filter="$2"
+
+    echo "== Smoke test ($label) ==" | tee -a "$LOG"
+    set +e
+    RBAC_BYPASS_TESTING=1 QA_GATE_DB=sqlite "$PHPUNIT" --no-coverage -c phpunit.sqlite.xml --testsuite=Feature --filter "$filter" 2>&1 | tee -a "$LOG"
+    local rc=${PIPESTATUS[0]}
+    set -e
+
+    if [ "$rc" -ne 0 ]; then
+      echo "!! $label FAILED (exit $rc)" | tee -a "$LOG"
+    else
+      echo "OK $label PASSED" | tee -a "$LOG"
+    fi
+
+    echo | tee -a "$LOG"
+    return "$rc"
+  }
+
+  rc=0
+  run_smoke_filter "SmokeZenaEndpointsTest" "SmokeZenaEndpointsTest" || rc=1
+  run_smoke_filter "SmokeZenaShowAndWorkflowTest" "SmokeZenaShowAndWorkflowTest" || rc=1
+
+  exit "$rc"
+fi
+
+# Chunk A: tests/Feature/Api/*.php excluding IntegrationTest.php
+CHUNK_A_FILES=()
+while IFS= read -r -d '' f; do
+  CHUNK_A_FILES+=("$f")
+done < <(find tests/Feature/Api -maxdepth 1 -type f -name '*.php' ! -name 'IntegrationTest.php' -print0 2>/dev/null || true)
+
+if [ "${#CHUNK_A_FILES[@]}" -eq 0 ]; then
+  echo "ERROR: No Chunk A files found under tests/Feature/Api" | tee -a "$LOG"
+  exit 1
+fi
+
+if [ ! -f tests/Feature/Api/IntegrationTest.php ]; then
+  echo "ERROR: Missing tests/Feature/Api/IntegrationTest.php" | tee -a "$LOG"
+  exit 1
+fi
+
+run_chunk() {
+  local title="$1"; shift
+  echo "== $title ==" | tee -a "$LOG"
+
+  # Allow failure inside pipeline, capture phpunit exit code, then restore -e.
+  set +e
+  "$@" 2>&1 | tee -a "$LOG"
+  local rc=${PIPESTATUS[0]}
+  set -e
+
+  if [ "$rc" -ne 0 ]; then
+    echo "!! $title FAILED (exit $rc)" | tee -a "$LOG"
+  else
+    echo "OK $title PASSED" | tee -a "$LOG"
+  fi
+
+  echo | tee -a "$LOG"
+  return "$rc"
+}
+
+overall=0
+
+run_chunk "Chunk A (Feature/Api without IntegrationTest)" \
+  env STUB_ROUTES_ENABLED=1 STUB_METRICS_ENABLED=1 \
+      API_CANONICAL_DOCUMENTS=0 API_CANONICAL_INSPECTIONS=0 API_CANONICAL_PROJECTS=0 \
+      "$PHPUNIT" --no-coverage -c phpunit.xml "${CHUNK_A_FILES[@]}" || overall=1
+
+run_chunk "Chunk B (IntegrationTest only)" \
+  env STUB_ROUTES_ENABLED=1 STUB_METRICS_ENABLED=1 \
+      API_CANONICAL_DOCUMENTS=0 API_CANONICAL_INSPECTIONS=0 API_CANONICAL_PROJECTS=0 \
+      "$PHPUNIT" --no-coverage -c phpunit.xml tests/Feature/Api/IntegrationTest.php || overall=1
+
+echo "== DONE (overall=$overall) ==" | tee -a "$LOG"
+echo "Saved: $LOG"
+exit "$overall"

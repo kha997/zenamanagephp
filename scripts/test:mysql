@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 
 # Ensure Laravel writable dirs exist (CI fresh checkout may miss them)
+# Ensure we run from repo root (CI + local)
+ROOT_DIR="20 20 12 61 79 80 81 98 701 33 100 204 250 395 398 399 400cd "20 20 12 61 79 80 81 98 701 33 100 204 250 395 398 399 400dirname "")/.." && pwd)"
+cd ""
 mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache
+chmod -R ug+rwX storage bootstrap/cache 2>/dev/null || true
 
 
 set -euo pipefail

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# Ensure Laravel writable dirs exist (CI fresh checkout may miss them)
+mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache
+
+
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

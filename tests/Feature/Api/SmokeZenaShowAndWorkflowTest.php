@@ -162,6 +162,13 @@ class SmokeZenaShowAndWorkflowTest extends TestCase
         );
 
         $this->assertEnvelopePayload(
+            $this->postJson("/api/zena/rfis/{$this->rfi->id}/assign", [
+                'assigned_to' => $this->user->id,
+                'notes' => 'Smoke assignment note',
+            ])
+        );
+
+        $this->assertEnvelopePayload(
             $this->postJson("/api/zena/rfis/{$this->rfi->id}/respond", [
                 'response' => 'Smoke response',
                 'status' => 'answered',

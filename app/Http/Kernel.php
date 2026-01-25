@@ -34,7 +34,7 @@ class Kernel extends HttpKernel
 
         'api' => [
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
+            \App\Http\Middleware\ApiResponseEnvelopeMiddleware::class,
         ],
     ];
 
@@ -56,7 +56,6 @@ class Kernel extends HttpKernel
         'cors' => \App\Http\Middleware\CorsMiddleware::class,
         'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
         'input.sanitization' => \App\Http\Middleware\InputSanitizationMiddleware::class,
-        'error.envelope' => \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
         'legacy.route' => \App\Http\Middleware\LegacyRouteMiddleware::class,
         'legacy.redirect' => \App\Http\Middleware\LegacyRedirectMiddleware::class,
         'legacy.gone' => \App\Http\Middleware\LegacyGoneMiddleware::class,

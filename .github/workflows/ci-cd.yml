@@ -27,7 +27,14 @@ jobs:
       with:
         php-version: '8.2'
         extensions: mbstring, dom, fileinfo, mysql
-        coverage: xdebug
+        coverage: pcov
+        ini-values: |
+          pcov.enabled=1
+          pcov.directory=app
+          pcov.exclude="~vendor~"
+
+    - name: Verify PCOV loaded
+      run: php -m | grep -i pcov
     
     - name: Copy .env
       run: php -r "file_exists('.env') || copy('.env.example', '.env');"

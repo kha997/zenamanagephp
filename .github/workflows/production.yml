@@ -45,7 +45,14 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, dom, filter, gd, json, redis
-          coverage: xdebug
+          coverage: pcov
+          ini-values: |
+            pcov.enabled=1
+            pcov.directory=app
+            pcov.exclude="~vendor~"
+
+      - name: Verify PCOV loaded
+        run: php -m | grep -i pcov
 
       - name: Install dependencies
         run: |

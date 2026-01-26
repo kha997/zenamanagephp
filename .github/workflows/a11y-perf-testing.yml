@@ -41,7 +41,14 @@ jobs:
       with:
         php-version: ${{ env.PHP_VERSION }}
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
-        coverage: xdebug
+        coverage: pcov
+        ini-values: |
+          pcov.enabled=1
+          pcov.directory=app
+          pcov.exclude="~vendor~"
+
+    - name: Verify PCOV loaded
+      run: php -m | grep -i pcov
 
     - name: Cache Composer dependencies
       uses: actions/cache@v4

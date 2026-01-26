@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Services\DataRetentionService;
 use App\Services\StructuredLoggingService;
+use App\Services\TenancyService;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
@@ -86,7 +87,7 @@ class DataRetentionCommand extends Command
             if (!$tenant) {
                 $this->warn("Tenant {$tenantOption} not found or archived, skipping.");
             } else {
-                $contexts[] = ['type' => 'tenant', 'tenant_id' => $tenant->id];
+                $contexts[] = ['type' => 'tenant', 'tenant' => $tenant];
             }
         }
 
@@ -97,13 +98,13 @@ class DataRetentionCommand extends Command
                 $tenantQuery->whereNull('deleted_at');
             }
 
-            $tenantIds = $tenantQuery->pluck('id');
+            $tenants = $tenantQuery->get();
 
-            if ($tenantIds->isEmpty()) {
+            if ($tenants->isEmpty()) {
                 $this->warn('No tenants found matching --all-tenants.');
             } else {
-                foreach ($tenantIds as $tenantId) {
-                    $contexts[] = ['type' => 'tenant', 'tenant_id' => $tenantId];
+                foreach ($tenants as $tenant) {
+                    $contexts[] = ['type' => 'tenant', 'tenant' => $tenant];
                 }
             }
         }
@@ -117,13 +118,25 @@ class DataRetentionCommand extends Command
             return Command::SUCCESS;
         }
 
-        try {
-            foreach ($contexts as $context) {
-                $tenantId = $context['tenant_id'] ?? null;
-                $isSystem = $context['type'] === 'system';
-                $contextLabel = $isSystem ? 'system tables' : "tenant {$tenantId}";
+        $tenancyService = app(TenancyService::class);
+        $tenantSummaries = [];
+        $failures = [];
+        $exitCode = Command::SUCCESS;
 
-                $results = DataRetentionService::executeRetentionPolicies($tenantId, $dryRun, $isSystem);
+        foreach ($contexts as $context) {
+            $tenant = $context['tenant'] ?? null;
+            $tenantId = $tenant?->id ?? ($context['tenant_id'] ?? null);
+            $isSystem = $context['type'] === 'system';
+            $contextLabel = $isSystem ? 'system tables' : "tenant {$tenantId}";
+
+            try {
+                if ($tenantId && $tenant) {
+                    $tenancyService->setTenantContext($tenantId, $tenant);
+                } else {
+                    $tenancyService->clearTenantContext();
+                }
+
+                $results = DataRetentionService::executeRetentionPolicies($tenantId, $dryRun, $isSystem, $tenant);
 
                 $this->line('');
                 $this->line("Retention Policy Results ({$contextLabel}) [dry run: " . ($dryRun ? 'yes' : 'no') . "]");
@@ -166,15 +179,62 @@ class DataRetentionCommand extends Command
                     'skipped' => $skipped,
                     'dry_run' => $dryRun,
                 ]);
+
+                if (!$isSystem) {
+                    $tenantSummaries[] = [
+                        'tenant_id' => $tenantId,
+                        'tenant_name' => $tenant?->name,
+                        'successful' => $successful,
+                        'failed' => $failed,
+                        'skipped' => $skipped,
+                    ];
+                }
+            } catch (\Exception $e) {
+                $exitCode = Command::FAILURE;
+                $failures[] = [
+                    'context' => $contextLabel,
+                    'tenant_id' => $tenantId,
+                    'message' => $e->getMessage(),
+                ];
+
+                StructuredLoggingService::logError('Data retention execution failed', $e, [
+                    'context' => $contextLabel,
+                    'tenant_id' => $tenantId,
+                ]);
+
+                $this->error("Retention failed for {$contextLabel}: " . $e->getMessage());
+            } finally {
+                $tenancyService->clearTenantContext();
+            }
+        }
+
+        if ($allTenants && !empty($tenantSummaries)) {
+            $this->line('');
+            $this->line('Tenant execution summary:');
+            $this->line('========================');
+
+            foreach ($tenantSummaries as $summary) {
+                $label = $summary['tenant_name'] ?
+                    "{$summary['tenant_name']} ({$summary['tenant_id']})" :
+                    ($summary['tenant_id'] ?? 'Unknown tenant');
+
+                $this->line("• {$label}: {$summary['successful']} succeeded, {$summary['failed']} failed, {$summary['skipped']} skipped.");
             }
 
-            return Command::SUCCESS;
-        } catch (\Exception $e) {
-            StructuredLoggingService::logError('Data retention execution failed', $e);
-
-            $this->error('Data retention execution failed: ' . $e->getMessage());
-            return Command::FAILURE;
+            $this->line('');
         }
+
+        if (!empty($failures)) {
+            $this->line('<fg=red>Failures detected:</>');
+
+            foreach ($failures as $failure) {
+                $this->line(" - {$failure['context']}: {$failure['message']}");
+            }
+
+            $this->line('');
+        }
+
+        return $exitCode;
     }
 
     /**

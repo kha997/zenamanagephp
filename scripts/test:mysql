@@ -123,7 +123,8 @@ MYSQL_PWD="${DB_PASSWORD}" \
     -e "CREATE DATABASE IF NOT EXISTS \`$DB_DATABASE\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 # CI-safe cache clears (avoid optimize:clear -> view:clear 'View path not found')
-if [ "${CI:-}" = "true" ]; then
+if [ "${GITHUB_ACTIONS:-}" = "true" ] || [ -n "${CI:-}" ]; then
+  echo "CI=${CI:-} GITHUB_ACTIONS=${GITHUB_ACTIONS:-} -> CI-safe cache clears" >&2
   mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache
   chmod -R ug+rwX storage bootstrap/cache 2>/dev/null || true
   "./scripts/xphp" artisan event:clear || true

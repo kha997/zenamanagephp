@@ -33,10 +33,10 @@ jobs:
         fi
 
     - uses: actions/checkout@v3
-      if: steps.check-production-secrets.outputs.ready == 'true'
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
 
     - name: Deploy to production server
-      if: steps.check-production-secrets.outputs.ready == 'true'
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.PRODUCTION_HOST }}

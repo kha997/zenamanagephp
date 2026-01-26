@@ -50,7 +50,7 @@ jobs:
           pcov.exclude="~vendor~"
 
     - name: Verify PCOV loaded
-      run: php -m | grep -i pcov
+      run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
     - name: Cache Composer dependencies
       uses: actions/cache@v4
@@ -127,7 +127,7 @@ jobs:
           pcov.exclude="~vendor~"
 
     - name: Verify PCOV loaded
-      run: php -m | grep -i pcov
+      run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
     - name: Cache Composer dependencies
       uses: actions/cache@v4
@@ -204,7 +204,7 @@ jobs:
           pcov.exclude="~vendor~"
 
     - name: Verify PCOV loaded
-      run: php -m | grep -i pcov
+      run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
     - name: Cache Composer dependencies
       uses: actions/cache@v4
@@ -274,6 +274,10 @@ jobs:
       with:
         php-version: ${{ env.PHP_VERSION }}
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+        ini-values: |
+          pcov.enabled=1
+          pcov.directory=app
+          pcov.exclude="~vendor~"
 
     - name: Cache Composer dependencies
       uses: actions/cache@v4
@@ -330,6 +334,10 @@ jobs:
       with:
         php-version: ${{ env.PHP_VERSION }}
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+        ini-values: |
+          pcov.enabled=1
+          pcov.directory=app
+          pcov.exclude="~vendor~"
 
     - name: Cache Composer dependencies
       uses: actions/cache@v4

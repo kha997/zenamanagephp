@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\User;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -172,6 +173,19 @@ class Project extends Model
             'project_id',
             'team_id'
         )->withPivot('role')->withTimestamps();
+    }
+
+    /**
+     * Relationship: Project có nhiều thành viên đội ngũ trực tiếp
+     */
+    public function teamMembers(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            User::class,
+            'project_team_members',
+            'project_id',
+            'user_id'
+        )->withTimestamps();
     }
 
     /**

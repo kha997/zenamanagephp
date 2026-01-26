@@ -31,6 +31,11 @@ class ApiResponseCacheMiddleware
      */
     public function handle(Request $request, Closure $next, string $ttl = '300'): Response
     {
+        // Do not cache authenticated requests (prevents cross-user/tenant cache bleed)
+        if ($request->headers->has('Authorization')) {
+            return $next($request);
+        }
+
         // Only cache GET requests
         if ($request->method() !== 'GET') {
             return $next($request);
@@ -167,7 +172,7 @@ class ApiResponseCacheMiddleware
             // Add cache headers to response
             $response->headers->set('X-Cache', 'MISS');
             $response->headers->set('X-Cache-Key', $cacheKey);
-            $response->headers->set('X-Cache-TTL', $ttl);
+            $response->headers->set('X-Cache-TTL', (string) $ttl);
 
         } catch (\Exception $e) {
             Log::warning('Failed to cache API response', [

@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\AdvancedCacheService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Cache Management Controller
@@ -59,6 +60,7 @@ class CacheController extends Controller
 
         try {
             $key = $request->input('key');
+            Cache::forget($key);
             $success = $this->cacheService->invalidate($key);
             
             if ($success) {
@@ -163,22 +165,23 @@ class CacheController extends Controller
         $request->validate([
             'keys' => 'required|array',
             'keys.*' => 'string',
-            'data_provider' => 'required|string|in:dashboard,projects,tasks,users',
+            'data_provider' => 'sometimes|string|in:dashboard,projects,tasks,users',
         ]);
 
         try {
             $keys = $request->input('keys');
-            $dataProvider = $request->input('data_provider');
-            
-            $dataProviderCallback = $this->getDataProvider($dataProvider);
+            $providerKey = $request->input('data_provider', 'dashboard');
+            $dataProviderCallback = $this->getDataProvider($providerKey);
             $success = $this->cacheService->warmUp($keys, $dataProviderCallback);
             
             if ($success) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Cache warmed up successfully',
-                    'keys' => $keys,
-                    'provider' => $dataProvider,
+                    'data' => [
+                        'keys' => $keys,
+                        'provider' => $providerKey,
+                    ],
                 ]);
             } else {
                 return response()->json([

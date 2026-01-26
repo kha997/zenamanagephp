@@ -14,7 +14,8 @@ class Kernel extends HttpKernel
      * @var array<int, class-string|string>
      */
     protected $middleware = [
-        // Temporarily disabled all global middleware for debugging
+        \App\Http\Middleware\EnhancedRateLimitMiddleware::class,
+        \App\Http\Middleware\ApiResponseCacheMiddleware::class,
     ];
 
     /**
@@ -33,8 +34,13 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
+            \App\Http\Middleware\ResetRequestContextMiddleware::class,
+\App\Http\Middleware\CorsMiddleware::class,
+            \Illuminate\Http\Middleware\HandleCors::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\ApiResponseEnvelopeMiddleware::class,
             \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
+            \App\Http\Middleware\SecurityHeadersMiddleware::class,
         ],
     ];
 
@@ -56,7 +62,6 @@ class Kernel extends HttpKernel
         'cors' => \App\Http\Middleware\CorsMiddleware::class,
         'security.headers' => \App\Http\Middleware\SecurityHeadersMiddleware::class,
         'input.sanitization' => \App\Http\Middleware\InputSanitizationMiddleware::class,
-        'error.envelope' => \App\Http\Middleware\ErrorEnvelopeMiddleware::class,
         'legacy.route' => \App\Http\Middleware\LegacyRouteMiddleware::class,
         'legacy.redirect' => \App\Http\Middleware\LegacyRedirectMiddleware::class,
         'legacy.gone' => \App\Http\Middleware\LegacyGoneMiddleware::class,
@@ -84,6 +89,36 @@ class Kernel extends HttpKernel
     public function getMiddlewareAliases(): array
     {
         return self::CANONICAL_MIDDLEWARE_ALIASES;
+    }
+    
+    /**
+     * Return middleware stack for tooling compatibility.
+     *
+     * @return array<int, class-string|string>
+     */
+    public function getMiddleware(): array
+    {
+        return $this->middleware;
+    }
+
+    /**
+     * Return middleware groups for tooling compatibility.
+     *
+     * @return array<string, array<int, class-string|string>>
+     */
+    public function getMiddlewareGroups(): array
+    {
+        return $this->middlewareGroups;
+    }
+
+    /**
+     * Return route middleware map for tooling compatibility.
+     *
+     * @return array<string, class-string|string>
+     */
+    public function getRouteMiddleware(): array
+    {
+        return $this->routeMiddleware;
     }
     
     /**

@@ -4,11 +4,11 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaTask;
-use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
-use App\Models\ZenaChangeRequest;
+use App\Models\Project;
+use App\Models\Task;
+use App\Models\Rfi;
+use App\Models\Submittal;
+use App\Models\ChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
@@ -25,7 +25,7 @@ class PerformanceTest extends TestCase
         parent::setUp();
         
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
         $this->token = $this->generateJwtToken($this->user);
@@ -37,7 +37,7 @@ class PerformanceTest extends TestCase
     public function test_project_listing_performance()
     {
         // Create 100 projects
-        ZenaProject::factory()->count(100)->create([
+        Project::factory()->count(100)->create([
             'created_by' => $this->user->id
         ]);
 
@@ -62,7 +62,7 @@ class PerformanceTest extends TestCase
     public function test_task_listing_performance()
     {
         // Create 500 tasks
-        ZenaTask::factory()->count(500)->create([
+        Task::factory()->count(500)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -88,7 +88,7 @@ class PerformanceTest extends TestCase
     public function test_rfi_listing_performance()
     {
         // Create 200 RFIs
-        ZenaRfi::factory()->count(200)->create([
+        Rfi::factory()->count(200)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -114,7 +114,7 @@ class PerformanceTest extends TestCase
     public function test_submittal_listing_performance()
     {
         // Create 200 submittals
-        ZenaSubmittal::factory()->count(200)->create([
+        Submittal::factory()->count(200)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -140,7 +140,7 @@ class PerformanceTest extends TestCase
     public function test_change_request_listing_performance()
     {
         // Create 200 change requests
-        ZenaChangeRequest::factory()->count(200)->create([
+        ChangeRequest::factory()->count(200)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -167,7 +167,7 @@ class PerformanceTest extends TestCase
     {
         // Create 1000 tasks with various names
         for ($i = 0; $i < 1000; $i++) {
-            ZenaTask::factory()->create([
+            Task::factory()->create([
                 'project_id' => $this->project->id,
                 'created_by' => $this->user->id,
                 'name' => 'Task ' . $i . ' ' . $this->faker->words(3, true)
@@ -197,7 +197,7 @@ class PerformanceTest extends TestCase
         // Create 500 tasks with different statuses
         $statuses = ['todo', 'in_progress', 'done', 'pending'];
         for ($i = 0; $i < 500; $i++) {
-            ZenaTask::factory()->create([
+            Task::factory()->create([
                 'project_id' => $this->project->id,
                 'created_by' => $this->user->id,
                 'status' => $statuses[$i % 4]
@@ -225,7 +225,7 @@ class PerformanceTest extends TestCase
     public function test_pagination_performance()
     {
         // Create 1000 tasks
-        ZenaTask::factory()->count(1000)->create([
+        Task::factory()->count(1000)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -251,7 +251,7 @@ class PerformanceTest extends TestCase
     public function test_complex_query_performance()
     {
         // Create tasks with dependencies
-        $tasks = ZenaTask::factory()->count(100)->create([
+        $tasks = Task::factory()->count(100)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -284,7 +284,7 @@ class PerformanceTest extends TestCase
     public function test_concurrent_request_performance()
     {
         // Create test data
-        ZenaTask::factory()->count(100)->create([
+        Task::factory()->count(100)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -319,7 +319,7 @@ class PerformanceTest extends TestCase
         $initialMemory = memory_get_usage();
 
         // Create large dataset
-        ZenaTask::factory()->count(1000)->create([
+        Task::factory()->count(1000)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -345,7 +345,7 @@ class PerformanceTest extends TestCase
         // Enable query logging
         \DB::enableQueryLog();
 
-        ZenaTask::factory()->count(100)->create([
+        Task::factory()->count(100)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);

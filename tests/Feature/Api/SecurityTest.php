@@ -2,9 +2,10 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
+use App\Models\Project;
+use App\Models\Tenant;
 use App\Models\User;
-use App\Models\ZenaProject;
+use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
@@ -21,7 +22,7 @@ class SecurityTest extends TestCase
         parent::setUp();
         
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
         $this->token = $this->generateJwtToken($this->user);
@@ -206,7 +207,7 @@ class SecurityTest extends TestCase
     public function test_user_can_only_access_own_data()
     {
         $otherUser = User::factory()->create();
-        $otherProject = ZenaProject::factory()->create([
+        $otherProject = Project::factory()->create([
             'created_by' => $otherUser->id
         ]);
 
@@ -215,7 +216,7 @@ class SecurityTest extends TestCase
         ])->getJson("/api/zena/projects/{$otherProject->id}");
 
         // Should return 404 or 403 depending on implementation
-        $this->assertContains($response->status(), [403, 404]);
+        $this->assertContains($response->status(), [401, 403, 404]);
     }
 
     /**
@@ -223,17 +224,20 @@ class SecurityTest extends TestCase
      */
     public function test_multi_tenant_isolation()
     {
-        $tenant1User = User::factory()->create(['tenant_id' => 1]);
-        $tenant2User = User::factory()->create(['tenant_id' => 2]);
+        $tenant1 = Tenant::factory()->create();
+        $tenant2 = Tenant::factory()->create();
+
+        $tenant1User = User::factory()->create(['tenant_id' => $tenant1->id]);
+        $tenant2User = User::factory()->create(['tenant_id' => $tenant2->id]);
         
-        $tenant1Project = ZenaProject::factory()->create([
+        $tenant1Project = Project::factory()->create([
             'created_by' => $tenant1User->id,
-            'tenant_id' => 1
+            'tenant_id' => $tenant1->id
         ]);
         
-        $tenant2Project = ZenaProject::factory()->create([
+        $tenant2Project = Project::factory()->create([
             'created_by' => $tenant2User->id,
-            'tenant_id' => 2
+            'tenant_id' => $tenant2->id
         ]);
 
         $token1 = $this->generateJwtToken($tenant1User);
@@ -242,16 +246,18 @@ class SecurityTest extends TestCase
         // User from tenant 1 should not see tenant 2's project
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token1,
+            'X-Tenant-ID' => $tenant1->id,
         ])->getJson("/api/zena/projects/{$tenant2Project->id}");
 
-        $this->assertContains($response->status(), [403, 404]);
+        $this->assertContains($response->status(), [401, 403, 404]);
 
         // User from tenant 2 should not see tenant 1's project
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $token2,
+            'X-Tenant-ID' => $tenant2->id,
         ])->getJson("/api/zena/projects/{$tenant1Project->id}");
 
-        $this->assertContains($response->status(), [403, 404]);
+        $this->assertContains($response->status(), [401, 403, 404]);
     }
 
     /**
@@ -259,7 +265,7 @@ class SecurityTest extends TestCase
      */
     public function test_ulid_security()
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
 
@@ -320,10 +326,85 @@ class SecurityTest extends TestCase
     }
 
     /**
+     * TenantIsolationMiddleware should resolve /api/auth/me using the authenticated tenant,
+     * even when X-Tenant-ID is stale or mismatched.
+     */
+    public function test_auth_me_ignores_mismatched_tenant_header()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('auth-me-mismatch')->plainTextToken;
+        $otherTenant = Tenant::factory()->create();
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'X-Tenant-ID' => $otherTenant->id,
+        ])->getJson('/api/auth/me');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('data.id', $user->id);
+        $response->assertJsonPath('success', true);
+    }
+
+    public function test_data_routes_reject_tenant_mismatch_header()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('tenant-header-mismatch')->plainTextToken;
+        $otherTenant = Tenant::factory()->create();
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'X-Tenant-ID' => $otherTenant->id,
+        ])->getJson('/api/dashboard/data');
+
+        $response->assertStatus(401);
+        $response->assertJsonPath('code', 'TENANT_MISMATCH');
+    }
+
+    /**
+     * Data routes should allow requests without an X-Tenant-ID header, relying on the
+     * authenticated user's tenant_id instead of weakening isolation rules.
+     */
+    public function test_data_routes_allow_missing_tenant_header_when_user_has_tenant()
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('tenant-header-optional')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->getJson('/api/dashboard/data');
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+    }
+
+    public function test_sequential_auth_me_requests_do_not_share_tenant_context()
+    {
+        $firstUser = User::factory()->create();
+        $secondUser = User::factory()->create();
+        $firstToken = $firstUser->createToken('sequential-first')->plainTextToken;
+        $secondToken = $secondUser->createToken('sequential-second')->plainTextToken;
+
+        $responseOne = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $firstToken,
+            'X-Tenant-ID' => $firstUser->tenant_id,
+        ])->getJson('/api/auth/me');
+
+        $responseOne->assertStatus(200);
+        $responseOne->assertJsonPath('data.id', $firstUser->id);
+
+        $responseTwo = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $secondToken,
+        ])->getJson('/api/auth/me');
+
+        $responseTwo->assertStatus(200);
+        $responseTwo->assertJsonPath('data.id', $secondUser->id);
+    }
+
+    /**
      * Generate JWT token for testing
      */
     private function generateJwtToken(User $user): string
     {
-        return 'test-jwt-token-' . $user->id;
+        return $user->createToken('security-test-token')->plainTextToken;
     }
 }

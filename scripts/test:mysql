@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
+
+# Ensure Laravel writable dirs exist (CI fresh checkout may miss them)
+mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache
+chmod -R ug+rwX storage bootstrap/cache 2>/dev/null || true
+
+
+ENV_FILE="$REPO_ROOT/.env.testing"
+
+# Fallback defaults in case .env.testing is missing values
+DB_CONNECTION_DEFAULT="mysql"
+DB_HOST_DEFAULT="127.0.0.1"
+DB_PORT_DEFAULT="3306"
+DB_DATABASE_DEFAULT="zenamanage_test"
+DB_USERNAME_DEFAULT="root"
+DB_PASSWORD_DEFAULT=""
+DB_SOCKET_DEFAULT=""
+
+DB_CONNECTION="$DB_CONNECTION_DEFAULT"
+DB_HOST="$DB_HOST_DEFAULT"
+DB_PORT="$DB_PORT_DEFAULT"
+DB_DATABASE="$DB_DATABASE_DEFAULT"
+DB_USERNAME="$DB_USERNAME_DEFAULT"
+DB_PASSWORD="$DB_PASSWORD_DEFAULT"
+DB_SOCKET="$DB_SOCKET_DEFAULT"
+
+if [ -f "$ENV_FILE" ]; then
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+fi
+
+MYSQLADMIN_XAMPP="/Applications/XAMPP/xamppfiles/bin/mysqladmin"
+XAMPP_CTL="/Applications/XAMPP/xamppfiles/xampp"
+MYSQL_CMD_XAMPP="/Applications/XAMPP/xamppfiles/bin/mysql"
+
+PORT_CANDIDATES=(3306 3307)
+PING_BINARY=""
+
+if [ -x "$MYSQLADMIN_XAMPP" ]; then
+    PING_BINARY="$MYSQLADMIN_XAMPP"
+elif command -v mysqladmin >/dev/null 2>&1; then
+    PING_BINARY="$(command -v mysqladmin)"
+fi
+
+DETECTED_PORT="${DB_PORT:-$DB_PORT_DEFAULT}"
+
+ping_mysql() {
+    local port=$1
+    if [ -z "$PING_BINARY" ]; then
+        return 1
+    fi
+
+    "$PING_BINARY" --host=127.0.0.1 --port="$port" ping >/dev/null 2>&1
+}
+
+try_detect_port() {
+    if [ -z "$PING_BINARY" ]; then
+        return
+    fi
+
+    for port in "${PORT_CANDIDATES[@]}"; do
+        if ping_mysql "$port"; then
+            DETECTED_PORT="$port"
+            return
+        fi
+    done
+}
+
+try_detect_port
+
+if [ -z "$DETECTED_PORT" ] || ! ping_mysql "$DETECTED_PORT"; then
+    if [ -x "$XAMPP_CTL" ]; then
+        echo "MySQL not responding on 127.0.0.1:3306/3307; starting via XAMPP..."
+        if ! sudo "$XAMPP_CTL" startmysql >/dev/null 2>&1; then
+            echo "Unable to start MySQL through XAMPP; please start the service manually." >&2
+            exit 1
+        fi
+        sleep 3
+        try_detect_port
+    else
+        echo "MySQL is not reachable and XAMPP is not installed. Start a local MySQL (TCP) instance on 127.0.0.1:3306 or 3307 and rerun the script." >&2
+        exit 1
+    fi
+fi
+
+if [ -z "$DETECTED_PORT" ]; then
+    echo "Failed to detect a running MySQL server on 127.0.0.1:3306 or 3307." >&2
+    exit 1
+fi
+
+MYSQL_CMD="${MYSQL_CMD_XAMPP}"
+if [ ! -x "$MYSQL_CMD" ]; then
+    MYSQL_CMD="$(command -v mysql || true)"
+fi
+
+if [ -z "$MYSQL_CMD" ]; then
+    echo "MySQL client is unavailable. Install mysql or add it to PATH." >&2
+    exit 1
+fi
+
+echo "Using MySQL on 127.0.0.1:${DETECTED_PORT} for testing database ${DB_DATABASE}..."
+
+export DB_CONNECTION="${DB_CONNECTION}"
+export DB_HOST=127.0.0.1
+export DB_PORT="$DETECTED_PORT"
+export DB_DATABASE="${DB_DATABASE}"
+export DB_USERNAME="${DB_USERNAME}"
+export DB_PASSWORD="${DB_PASSWORD}"
+export DB_SOCKET=""
+
+MYSQL_PWD="${DB_PASSWORD}" \
+    "$MYSQL_CMD" \
+    --host=127.0.0.1 \
+    --port="$DB_PORT" \
+    --protocol=TCP \
+    --user="$DB_USERNAME" \
+    -e "CREATE DATABASE IF NOT EXISTS \`$DB_DATABASE\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# CI-safe cache clears (avoid optimize:clear -> view:clear 'View path not found')
+if [ "${GITHUB_ACTIONS:-}" = "true" ] || [ -n "${CI:-}" ]; then
+  echo "CI=${CI:-} GITHUB_ACTIONS=${GITHUB_ACTIONS:-} -> CI-safe cache clears" >&2
+  mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions storage/logs bootstrap/cache
+  chmod -R ug+rwX storage bootstrap/cache 2>/dev/null || true
+  "./scripts/xphp" artisan event:clear || true
+  "./scripts/xphp" artisan cache:clear || true
+  "./scripts/xphp" artisan route:clear || true
+  "./scripts/xphp" artisan config:clear || true
+else
+  "./scripts/xphp" artisan optimize:clear
+fi
+"./scripts/xphp" artisan migrate:fresh --seed --env=testing
+"./scripts/xphp" "./vendor/bin/phpunit" -c phpunit.xml -v --no-coverage "$@"

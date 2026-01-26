@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\ZenaProject;
+use App\Models\Project;
 use App\Models\ZenaComponent;
-use App\Models\ZenaTask;
+use App\Models\Task;
 use Tests\TestCase;
 use Tests\Traits\DatabaseTrait;
 use Tests\Traits\AuthenticationTrait;
@@ -23,12 +23,12 @@ class TaskApiTest extends TestCase
     {
         $user = $this->actingAsUser();
         
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id
         ]);
         
         // Tạo tasks cho project
-        ZenaTask::factory()->count(5)->create([
+        Task::factory()->count(5)->create([
             'project_id' => $project->id
         ]);
         
@@ -61,13 +61,13 @@ class TaskApiTest extends TestCase
     {
         $user = $this->actingAsUser();
         
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id
         ]);
         
         // Tạo prerequisite tasks
-        $task1 = ZenaTask::factory()->create(['project_id' => $project->id]);
-        $task2 = ZenaTask::factory()->create(['project_id' => $project->id]);
+        $task1 = Task::factory()->create(['project_id' => $project->id]);
+        $task2 = Task::factory()->create(['project_id' => $project->id]);
         
         $taskData = [
             'name' => 'Dependent Task',
@@ -96,11 +96,11 @@ class TaskApiTest extends TestCase
     {
         $user = $this->actingAsUser();
         
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id
         ]);
         
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $project->id,
             'status' => 'pending'
         ]);

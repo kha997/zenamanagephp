@@ -42,9 +42,12 @@ class TenantIsolationProjectsTest extends TestCase
             'pm_id' => $userB->id,
         ]);
 
-        Sanctum::actingAs($userB);
+        $token = $userB->createToken('test-token')->plainTextToken;
 
-        $response = $this->getJson('/api/projects');
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'X-Tenant-ID' => $tenantB->id,
+        ])->getJson('/api/projects');
 
         $response->assertOk();
         $data = $response->json('data', []);

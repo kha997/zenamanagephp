@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "/Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden" || exit 1
+
+LOG="storage/logs/qa-gate-api.log"
+mkdir -p "$(dirname "$LOG")"
+: > "$LOG"
+
+# Clear Laravel caches to avoid leaking stale configs/routes between runs.
+php artisan config:clear >/dev/null 2>&1 || true
+php artisan route:clear  >/dev/null 2>&1 || true
+
+: "${RBAC_BYPASS_TESTING:=0}"
+: "${PERF_ASSERTIONS:=1}"
+: "${ZENA_TRACE_FAIL_500:=1}"
+: "${QA_GATE_DB:=mysql}"
+
+: "${DB_HOST:=127.0.0.1}"
+: "${DB_PORT:=3306}"
+: "${DB_SOCKET:=}"
+: "${DB_DATABASE:=zenamanage_test}"
+: "${DB_USERNAME:=root}"
+: "${DB_PASSWORD:=}"
+export DB_HOST DB_PORT DB_SOCKET DB_DATABASE DB_USERNAME DB_PASSWORD
+
+# Defaults (visible/exported), but the actual phpunit runs are pinned below.
+: "${STUB_ROUTES_ENABLED:=1}"
+: "${STUB_METRICS_ENABLED:=1}"
+: "${API_CANONICAL_DOCUMENTS:=0}"
+: "${API_CANONICAL_INSPECTIONS:=0}"
+: "${API_CANONICAL_PROJECTS:=0}"
+
+export RBAC_BYPASS_TESTING PERF_ASSERTIONS ZENA_TRACE_FAIL_500 \
+  STUB_ROUTES_ENABLED STUB_METRICS_ENABLED \
+  API_CANONICAL_DOCUMENTS API_CANONICAL_INSPECTIONS API_CANONICAL_PROJECTS
+
+PHPUNIT="./vendor/bin/phpunit"
+if [ ! -x "$PHPUNIT" ]; then
+  echo "ERROR: vendor/bin/phpunit not found or not executable. Run composer install." | tee -a "$LOG"
+  exit 1
+fi
+
+if [ "$QA_GATE_DB" = "sqlite" ]; then
+  echo "== Smoke mode (QA_GATE_DB=sqlite) using phpunit.sqlite.xml ==" | tee -a "$LOG"
+
+  export DB_CONNECTION="sqlite"
+  export DB_DATABASE=":memory:"
+  export DB_HOST=""
+  export DB_PORT=""
+  export DB_USERNAME=""
+  export DB_PASSWORD=""
+  export DB_SOCKET=""
+
+  run_smoke_filter() {
+    local label="$1"
+    local filter="$2"
+
+    echo "== Smoke test ($label) ==" | tee -a "$LOG"
+    set +e
+    RBAC_BYPASS_TESTING=1 QA_GATE_DB=sqlite "$PHPUNIT" --no-coverage -c phpunit.sqlite.xml --testsuite=Feature --filter "$filter" 2>&1 | tee -a "$LOG"
+    local rc=${PIPESTATUS[0]}
+    set -e
+
+    if [ "$rc" -ne 0 ]; then
+      echo "!! $label FAILED (exit $rc)" | tee -a "$LOG"
+    else
+      echo "OK $label PASSED" | tee -a "$LOG"
+    fi
+
+    echo | tee -a "$LOG"
+    return "$rc"
+  }
+
+  rc=0
+  run_smoke_filter "SmokeZenaEndpointsTest" "SmokeZenaEndpointsTest" || rc=1
+  run_smoke_filter "SmokeZenaShowAndWorkflowTest" "SmokeZenaShowAndWorkflowTest" || rc=1
+
+  exit "$rc"
+fi
+
+if [ "$QA_GATE_DB" != "sqlite" ]; then
+  socket_display="${DB_SOCKET:-<empty>}"
+  echo "== MySQL env values ==" | tee -a "$LOG"
+  printf 'DB_HOST=%s DB_PORT=%s DB_SOCKET=%s DB_DATABASE=%s DB_USERNAME=%s\n' \
+    "$DB_HOST" "$DB_PORT" "$socket_display" "$DB_DATABASE" "$DB_USERNAME" \
+    | tee -a "$LOG"
+
+  echo "== MySQL PDO ping ==" | tee -a "$LOG"
+  set +e
+  db_ping_output=$(php -r '
+$host = getenv("DB_HOST") ?: "127.0.0.1";
+$port = getenv("DB_PORT") ?: "3306";
+$database = getenv("DB_DATABASE") ?: "";
+$username = getenv("DB_USERNAME") ?: "";
+$password = getenv("DB_PASSWORD") ?: "";
+$socket = getenv("DB_SOCKET") ?: "";
+$dsnParts = ["mysql:host={$host}", "port={$port}"];
+if ($database !== "") {
+    $dsnParts[] = "dbname={$database}";
+}
+if ($socket !== "") {
+    $dsnParts[] = "unix_socket={$socket}";
+}
+$dsn = implode(";", $dsnParts);
+try {
+    $pdo = new PDO($dsn, $username, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $pdo->query("SELECT 1");
+    echo "MySQL ping OK\n";
+} catch (PDOException $e) {
+    fwrite(STDERR, "MySQL ping failed: " . $e->getMessage() . "\n");
+    exit(1);
+}
+' 2>&1)
+  db_ping_rc=$?
+  set -e
+
+  printf '%s\n' "$db_ping_output" | tee -a "$LOG"
+
+  if [ "$db_ping_rc" -ne 0 ]; then
+    echo "!! MySQL ping failed (exit $db_ping_rc)" | tee -a "$LOG"
+    if printf '%s\n' "$db_ping_output" | grep -qi 'Operation not permitted'; then
+      echo "!! MySQL TCP appears blocked (Operation not permitted). Use QA_GATE_DB=sqlite for sandbox verification." | tee -a "$LOG"
+      exit 6
+    fi
+    exit "$db_ping_rc"
+  fi
+fi
+
+# Chunk A: tests/Feature/Api/*.php excluding IntegrationTest.php
+CHUNK_A_FILES=()
+while IFS= read -r -d '' f; do
+  CHUNK_A_FILES+=("$f")
+done < <(find tests/Feature/Api -maxdepth 1 -type f -name '*.php' ! -name 'IntegrationTest.php' -print0 2>/dev/null || true)
+
+if [ "${#CHUNK_A_FILES[@]}" -eq 0 ]; then
+  echo "ERROR: No Chunk A files found under tests/Feature/Api" | tee -a "$LOG"
+  exit 1
+fi
+
+if [ ! -f tests/Feature/Api/IntegrationTest.php ]; then
+  echo "ERROR: Missing tests/Feature/Api/IntegrationTest.php" | tee -a "$LOG"
+  exit 1
+fi
+
+run_chunk() {
+  local title="$1"; shift
+  echo "== $title ==" | tee -a "$LOG"
+
+  # Allow failure inside pipeline, capture phpunit exit code, then restore -e.
+  set +e
+  "$@" 2>&1 | tee -a "$LOG"
+  local rc=${PIPESTATUS[0]}
+  set -e
+
+  if [ "$rc" -ne 0 ]; then
+    echo "!! $title FAILED (exit $rc)" | tee -a "$LOG"
+  else
+    echo "OK $title PASSED" | tee -a "$LOG"
+  fi
+
+  echo | tee -a "$LOG"
+  return "$rc"
+}
+
+overall=0
+
+run_chunk "Chunk A (Feature/Api without IntegrationTest)" \
+  env STUB_ROUTES_ENABLED=1 STUB_METRICS_ENABLED=1 \
+      API_CANONICAL_DOCUMENTS=0 API_CANONICAL_INSPECTIONS=0 API_CANONICAL_PROJECTS=0 \
+      "$PHPUNIT" --no-coverage -c phpunit.xml "${CHUNK_A_FILES[@]}" || overall=1
+
+run_chunk "Chunk B (IntegrationTest only)" \
+  env STUB_ROUTES_ENABLED=1 STUB_METRICS_ENABLED=1 \
+      API_CANONICAL_DOCUMENTS=0 API_CANONICAL_INSPECTIONS=0 API_CANONICAL_PROJECTS=0 \
+      "$PHPUNIT" --no-coverage -c phpunit.xml tests/Feature/Api/IntegrationTest.php || overall=1
+
+echo "== DONE (overall=$overall) ==" | tee -a "$LOG"
+echo "Saved: $LOG"
+exit "$overall"

@@ -4,8 +4,8 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaChangeRequest;
+use App\Models\Project;
+use App\Models\ChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
@@ -22,7 +22,7 @@ class ChangeRequestApiTest extends TestCase
         parent::setUp();
         
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
         $this->token = $this->generateJwtToken($this->user);
@@ -33,7 +33,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_get_change_request_list()
     {
-        ZenaChangeRequest::factory()->count(3)->create([
+        ChangeRequest::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id
         ]);
@@ -106,7 +106,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_submit_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'draft'
@@ -137,7 +137,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_approve_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending_approval'
@@ -178,7 +178,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_reject_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending_approval'
@@ -217,7 +217,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_implement_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'approved'
@@ -254,7 +254,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_update_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -291,7 +291,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_delete_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -325,7 +325,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_change_request_impact_level_calculation()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'cost_impact' => 50000.00,

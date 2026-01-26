@@ -53,8 +53,20 @@ class AuthenticationController extends Controller
         if (!$result['success']) {
             return response()->json($result, 401);
         }
-        
-        return response()->json($result, 200);
+
+        $expiresAt = $result['expires_at'];
+        if ($expiresAt instanceof \DateTimeInterface) {
+            $expiresAt = $expiresAt->format(\DateTime::ATOM);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user' => $result['user'],
+                'token' => $result['token'],
+                'expires_at' => $expiresAt,
+            ],
+        ], 200);
     }
     
     /**
@@ -118,16 +130,11 @@ class AuthenticationController extends Controller
         
         return response()->json([
             'success' => true,
-            'user' => [
+            'data' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'tenant_id' => $user->tenant_id,
-                'avatar' => $user->avatar,
-                'preferences' => $user->preferences,
-                'last_login_at' => $user->last_login_at,
-                'last_activity_at' => $user->last_activity_at,
-                'is_active' => $user->is_active
+                'created_at' => $user->created_at?->toISOString(),
             ]
         ]);
     }
@@ -191,8 +198,10 @@ class AuthenticationController extends Controller
         
         return response()->json([
             'success' => true,
-            'roles' => $roles,
-            'permissions' => $permissions
+            'data' => [
+                'roles' => $roles,
+                'permissions' => $permissions
+            ]
         ]);
     }
     

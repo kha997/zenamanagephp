@@ -37,6 +37,7 @@ class WebSocketService
             'new_notification',
             'notification_read',
             'notification_cleared',
+            'system_notification',
         ],
         'projects' => [
             'project_created',
@@ -99,7 +100,7 @@ class WebSocketService
     /**
      * Broadcast to user-specific channel
      */
-    public function broadcastToUser(int $userId, string $event, array $data, string $tenantId = null): bool
+    public function broadcastToUser(string $userId, string $event, array $data, string $tenantId = null): bool
     {
         $channel = "user:{$userId}";
         return $this->broadcast($channel, $event, $data, $tenantId);
@@ -168,7 +169,7 @@ class WebSocketService
     /**
      * Mark user as online
      */
-    public function markUserOnline(int $userId, string $tenantId = null): bool
+    public function markUserOnline(string $userId, string $tenantId = null): bool
     {
         try {
             $key = $this->buildOnlineUserKey($userId, $tenantId);
@@ -201,7 +202,7 @@ class WebSocketService
     /**
      * Mark user as offline
      */
-    public function markUserOffline(int $userId, string $tenantId = null): bool
+    public function markUserOffline(string $userId, string $tenantId = null): bool
     {
         try {
             $key = $this->buildOnlineUserKey($userId, $tenantId);
@@ -227,7 +228,7 @@ class WebSocketService
     /**
      * Update user activity
      */
-    public function updateUserActivity(int $userId, string $activity, array $metadata = [], string $tenantId = null): bool
+    public function updateUserActivity(string $userId, string $activity, array $metadata = [], string $tenantId = null): bool
     {
         try {
             $key = $this->buildOnlineUserKey($userId, $tenantId);
@@ -265,7 +266,7 @@ class WebSocketService
     /**
      * Send notification via WebSocket
      */
-    public function sendNotification(int $userId, array $notification, string $tenantId = null): bool
+    public function sendNotification(string $userId, array $notification, string $tenantId = null): bool
     {
         try {
             $event = 'new_notification';
@@ -363,7 +364,7 @@ class WebSocketService
     /**
      * Build online user key
      */
-    private function buildOnlineUserKey(int $userId, string $tenantId = null): string
+    private function buildOnlineUserKey(string $userId, string $tenantId = null): string
     {
         if ($tenantId) {
             return "online_users:{$tenantId}:{$userId}";

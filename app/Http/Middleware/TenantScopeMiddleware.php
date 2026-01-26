@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\TenancyService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +15,10 @@ class TenantScopeMiddleware
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
+    public function __construct(private TenancyService $tenancyService)
+    {
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
         // Check if user is authenticated
@@ -37,7 +42,7 @@ class TenantScopeMiddleware
         $request->attributes->set('tenant_id', $user->tenant_id);
         
         // Add tenant scope to the request for easy access
-        app()->instance('current_tenant_id', $user->tenant_id);
+        $this->tenancyService->setTenantContext($user->tenant_id, $user->tenant);
 
         return $next($request);
     }

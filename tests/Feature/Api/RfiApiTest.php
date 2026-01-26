@@ -4,8 +4,8 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaRfi;
+use App\Models\Project;
+use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
@@ -25,7 +25,7 @@ class RfiApiTest extends TestCase
         $this->user = User::factory()->create();
         
         // Create test project
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
         
@@ -39,7 +39,7 @@ class RfiApiTest extends TestCase
     public function test_can_get_rfi_list()
     {
         // Create test RFIs
-        ZenaRfi::factory()->count(3)->create([
+        Rfi::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -121,7 +121,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_get_single_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -148,7 +148,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_update_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -185,7 +185,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_assign_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -222,7 +222,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_respond_to_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'in_progress'
@@ -259,7 +259,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_escalate_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'in_progress'
@@ -297,7 +297,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_close_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'answered'
@@ -328,7 +328,7 @@ class RfiApiTest extends TestCase
      */
     public function test_can_delete_rfi()
     {
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);

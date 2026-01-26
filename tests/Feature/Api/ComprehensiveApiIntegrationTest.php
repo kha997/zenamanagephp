@@ -14,7 +14,11 @@ class ComprehensiveApiIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Cache::flush();
+        try {
+            Cache::store('array')->flush();
+        } catch (\Throwable $e) {
+            Cache::flush();
+        }
     }
 
     /**
@@ -298,8 +302,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $tenant1 = \App\Models\Tenant::factory()->create();
         $tenant2 = \App\Models\Tenant::factory()->create();
 
-        $user1 = \App\Models\User::factory()->create(['tenant_id' => $tenant1->id]);
-        $user2 = \App\Models\User::factory()->create(['tenant_id' => $tenant2->id]);
+        $user1 = \App\Models\User::factory()->create(['tenant_id' => (string) $tenant1->id]);
+        $user2 = \App\Models\User::factory()->create(['tenant_id' => (string) $tenant2->id]);
 
         $token1 = $user1->createToken('test-token')->plainTextToken;
         $token2 = $user2->createToken('test-token')->plainTextToken;
@@ -307,23 +311,23 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $headers1 = [
             'Authorization' => 'Bearer ' . $token1,
             'Accept' => 'application/json',
-            'X-Tenant-ID' => $tenant1->id
+            'X-Tenant-ID' => (string) $tenant1->id
         ];
 
         $headers2 = [
             'Authorization' => 'Bearer ' . $token2,
             'Accept' => 'application/json',
-            'X-Tenant-ID' => $tenant2->id
+            'X-Tenant-ID' => (string) $tenant2->id
         ];
 
         // Test that users can only access their own data
         $response1 = $this->getJson('/api/auth/me', $headers1);
         $response1->assertStatus(200);
-        $this->assertEquals($user1->id, $response1->json('data.id'));
+        $this->assertEquals((string) $user1->id, $response1->json('data.id'));
 
         $response2 = $this->getJson('/api/auth/me', $headers2);
         $response2->assertStatus(200);
-        $this->assertEquals($user2->id, $response2->json('data.id'));
+        $this->assertEquals((string) $user2->id, $response2->json('data.id'));
 
         // Test tenant isolation in dashboard
         $response1 = $this->getJson('/api/dashboard/data', $headers1);
@@ -334,6 +338,37 @@ class ComprehensiveApiIntegrationTest extends TestCase
 
         // Data should be different for different tenants
         $this->assertNotEquals($response1->getContent(), $response2->getContent());
+    }
+
+    /**
+     * Ensure sequential /api/auth/me calls with different tenants stay isolated
+     */
+    public function test_sequential_auth_me_requests_do_not_share_tenant_context()
+    {
+        $tenant1 = \App\Models\Tenant::factory()->create();
+        $tenant2 = \App\Models\Tenant::factory()->create();
+
+        $user1 = \App\Models\User::factory()->create(['tenant_id' => (string) $tenant1->id]);
+        $user2 = \App\Models\User::factory()->create(['tenant_id' => (string) $tenant2->id]);
+
+        $token1 = $user1->createToken('test-token')->plainTextToken;
+        $token2 = $user2->createToken('test-token')->plainTextToken;
+
+        $response1 = $this->getJson('/api/auth/me', [
+            'Authorization' => 'Bearer ' . $token1,
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant1->id,
+        ]);
+        $response1->assertStatus(200);
+        $this->assertEquals((string) $user1->id, $response1->json('data.id'));
+
+        $response2 = $this->getJson('/api/auth/me', [
+            'Authorization' => 'Bearer ' . $token2,
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant2->id,
+        ]);
+        $response2->assertStatus(200);
+        $this->assertEquals((string) $user2->id, $response2->json('data.id'));
     }
 
     /**

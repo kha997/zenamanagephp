@@ -6,6 +6,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Models\Tenant;
 use App\Models\Project;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -26,7 +27,9 @@ class NotificationFactory extends Factory
         $channels = ['inapp', 'email', 'webhook'];
         $types = ['task_assigned', 'project_update', 'deadline_reminder', 'system_alert', 'comment_added'];
 
-        return [
+        $table = (new Notification())->getTable();
+
+        $data = [
             'id' => \Illuminate\Support\Str::ulid(),
             'user_id' => User::factory(),
             'tenant_id' => Tenant::factory(),
@@ -50,6 +53,12 @@ class NotificationFactory extends Factory
             'event_key' => $this->faker->optional(0.8)->slug(3),
             'project_id' => $this->faker->optional(0.6)->randomElement(Project::pluck('id')->toArray()),
         ];
+
+        if (Schema::hasTable($table) && Schema::hasColumn($table, 'status')) {
+            $data['status'] = $this->faker->randomElement(['pending', 'read', 'archived']);
+        }
+
+        return $data;
     }
 
     /**

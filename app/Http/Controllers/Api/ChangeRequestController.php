@@ -25,7 +25,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $query = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+            $query = ChangeRequest::with(['project:id,name', 'requester:id,name', 'approver:id,name']);
 
             // Filter by project if specified
             if ($request->has('project_id')) {
@@ -108,7 +108,7 @@ class ChangeRequestController extends BaseApiController
                 'change_number' => $this->generateChangeRequestNumber($request->input('project_id')),
             ]);
 
-            $changeRequest->load(['project:id,name', 'requestedBy:id,name']);
+            $changeRequest->load(['project:id,name', 'requester:id,name']);
 
             return $this->successResponse($changeRequest, 'Change request created successfully', 201);
         } catch (\Exception $e) {
@@ -128,7 +128,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name', 'attachments'])
+            $changeRequest = ChangeRequest::with(['project:id,name', 'requester:id,name', 'approver:id,name'])
                 ->find($id);
 
             if (!$changeRequest) {
@@ -182,7 +182,7 @@ class ChangeRequestController extends BaseApiController
                 'justification', 'alternatives_considered', 'status'
             ]));
 
-            $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+            $changeRequest->load(['project:id,name', 'requester:id,name', 'approver:id,name']);
 
             return $this->successResponse($changeRequest, 'Change request updated successfully');
         } catch (\Exception $e) {
@@ -243,7 +243,7 @@ class ChangeRequestController extends BaseApiController
                 'submitted_at' => now(),
             ]);
 
-            $changeRequest->load(['project:id,name', 'requestedBy:id,name']);
+            $changeRequest->load(['project:id,name', 'requester:id,name']);
 
             return $this->successResponse($changeRequest, 'Change request submitted successfully');
         } catch (\Exception $e) {
@@ -294,18 +294,24 @@ class ChangeRequestController extends BaseApiController
             if ($changeRequest->status === 'approved') {
                 $project = $changeRequest->project;
                 if ($project) {
-                    if ($request->input('approved_cost')) {
-                        $project->increment('budget', $request->input('approved_cost'));
+                    $approvedCost = $request->input('approved_cost');
+                    $approvedScheduleDays = (int) $request->input('approved_schedule_days');
+
+                    if ($approvedCost) {
+                        $project->increment('budget_total', $approvedCost);
                     }
-                    if ($request->input('approved_schedule_days')) {
-                        $project->increment('end_date', $request->input('approved_schedule_days'));
+
+                    if ($approvedScheduleDays > 0) {
+                        $baseEndDate = $project->end_date ? $project->end_date->copy() : now();
+                        $project->end_date = $baseEndDate->addDays($approvedScheduleDays);
+                        $project->save();
                     }
                 }
             }
 
             DB::commit();
 
-            $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+            $changeRequest->load(['project:id,name', 'requester:id,name', 'approver:id,name']);
 
             return $this->successResponse($changeRequest, 'Change request approved successfully');
         } catch (\Exception $e) {
@@ -349,7 +355,7 @@ class ChangeRequestController extends BaseApiController
                 'rejected_at' => now(),
             ]);
 
-            $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+            $changeRequest->load(['project:id,name', 'requester:id,name', 'approver:id,name']);
 
             return $this->successResponse($changeRequest, 'Change request rejected successfully');
         } catch (\Exception $e) {
@@ -392,7 +398,7 @@ class ChangeRequestController extends BaseApiController
 
             DB::commit();
 
-            $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+            $changeRequest->load(['project:id,name', 'requester:id,name', 'approver:id,name']);
 
             return $this->successResponse($changeRequest, 'Change request applied successfully');
         } catch (\Exception $e) {
@@ -467,12 +473,12 @@ class ChangeRequestController extends BaseApiController
     private function calculateCostImpactPercentage(ChangeRequest $changeRequest): float
     {
         $project = $changeRequest->project;
-        if (!$project || !$project->budget) {
+        if (!$project || !$project->budget_total) {
             return 0;
         }
 
         $costImpact = $changeRequest->approved_cost ?? $changeRequest->cost_impact ?? 0;
-        return round(($costImpact / $project->budget) * 100, 2);
+        return round(($costImpact / $project->budget_total) * 100, 2);
     }
 
     /**

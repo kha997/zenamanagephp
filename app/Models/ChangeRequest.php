@@ -76,6 +76,7 @@ class ChangeRequest extends Model
         'status',
         'impact_level',
         'requested_by',
+        'created_by',
         'assigned_to',
         'approved_by',
         'rejected_by',

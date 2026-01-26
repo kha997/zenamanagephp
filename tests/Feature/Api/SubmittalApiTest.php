@@ -4,8 +4,8 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaSubmittal;
+use App\Models\Project;
+use App\Models\Submittal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 
@@ -22,7 +22,7 @@ class SubmittalApiTest extends TestCase
         parent::setUp();
         
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id
         ]);
         $this->token = $this->generateJwtToken($this->user);
@@ -33,7 +33,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_get_submittal_list()
     {
-        ZenaSubmittal::factory()->count(3)->create([
+        Submittal::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -97,11 +97,32 @@ class SubmittalApiTest extends TestCase
     }
 
     /**
+     * Ensure submittal IDs are ULID-formatted strings.
+     */
+    public function test_submittal_id_is_ulid()
+    {
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->postJson('/api/zena/submittals', [
+            'project_id' => $this->project->id,
+            'title' => 'ULID test',
+            'description' => 'Ensuring submittal IDs stay ULID strings',
+            'submittal_number' => 'SUB-ULID',
+            'submittal_type' => 'drawing',
+        ]);
+
+        $response->assertStatus(201);
+        $id = $response->json('data.id');
+        $this->assertIsString($id);
+        $this->assertMatchesRegularExpression('/^[0-9A-HJKMNP-TV-Z]{26}$/', $id);
+    }
+
+    /**
      * Test Submittal submission
      */
     public function test_can_submit_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'draft'
@@ -132,7 +153,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_review_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'submitted'
@@ -169,7 +190,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_approve_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending_review'
@@ -206,7 +227,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_reject_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending_review'
@@ -245,7 +266,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_update_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -280,7 +301,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_delete_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);

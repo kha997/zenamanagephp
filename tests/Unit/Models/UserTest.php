@@ -84,7 +84,7 @@ class UserTest extends TestCase
     /** @test */
     public function it_has_many_notifications()
     {
-        $notification = \App\Models\ZenaNotification::factory()->create([
+        $notification = \App\Models\Notification::factory()->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenant->id
         ]);

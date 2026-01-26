@@ -2,8 +2,13 @@
 
 namespace App\Exceptions;
 
+use App\Services\ErrorEnvelopeService;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -58,6 +63,66 @@ class Handler extends ExceptionHandler
      */
     protected function unauthenticated($request, AuthenticationException $exception)
     {
-        return response()->json(['message' => 'Unauthenticated'], 401);
+        if ($request->expectsJson() || $request->is('api/*')) {
+            return ErrorEnvelopeService::authenticationError('Authentication required');
+        }
+
+        return parent::unauthenticated($request, $exception);
+    }
+
+    public function render($request, Throwable $exception)
+    {
+        if ($request->expectsJson() || $request->is('api/*')) {
+            if ($exception instanceof ThrottleRequestsException) {
+                $message = $exception->getMessage() ?: 'Too many requests. Please try again later.';
+
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'message' => $message,
+                        'code' => 'E429.RATE_LIMIT'
+                    ]
+                ], 429);
+            }
+
+            if ($exception instanceof NotFoundHttpException) {
+                return ErrorEnvelopeService::notFoundError('Endpoint');
+            }
+
+            if ($exception instanceof HttpExceptionInterface) {
+                $statusCode = $exception->getStatusCode();
+                $message = $exception->getMessage() ?: $this->getDefaultMessageForStatus($statusCode);
+
+                return ErrorEnvelopeService::error(
+                    $this->getHttpErrorCode($statusCode),
+                    $message,
+                    [],
+                    $statusCode
+                );
+            }
+        }
+
+        return parent::render($request, $exception);
+    }
+
+    private function getHttpErrorCode(int $statusCode): string
+    {
+        return match ($statusCode) {
+            400 => 'E400.BAD_REQUEST',
+            401 => 'E401.AUTHENTICATION',
+            403 => 'E403.AUTHORIZATION',
+            404 => 'E404.NOT_FOUND',
+            409 => 'E409.CONFLICT',
+            422 => 'E422.VALIDATION',
+            429 => 'E429.RATE_LIMIT',
+            500 => 'E500.SERVER_ERROR',
+            503 => 'E503.SERVICE_UNAVAILABLE',
+            default => 'E' . $statusCode . '.HTTP_ERROR',
+        };
+    }
+
+    private function getDefaultMessageForStatus(int $statusCode): string
+    {
+        return SymfonyResponse::$statusTexts[$statusCode] ?? 'HTTP error occurred';
     }
 }

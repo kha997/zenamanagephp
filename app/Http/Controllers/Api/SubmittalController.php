@@ -6,6 +6,7 @@ use App\Http\Controllers\BaseApiController;
 use App\Models\Project;
 use App\Models\Submittal;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
@@ -122,7 +123,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = Submittal::with(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name', 'attachments'])
+            $submittal = Submittal::with(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name'])
                 ->find($id);
 
             if (!$submittal) {

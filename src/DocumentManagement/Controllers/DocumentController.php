@@ -273,7 +273,16 @@ class DocumentController
     public function downloadVersion(string $documentId, int $versionNumber = null)
     {
         try {
-            return $this->documentService->downloadVersion($documentId, $versionNumber);
+            $payload = $this->documentService->downloadVersion($documentId, $versionNumber);
+
+            if ($payload['is_local']) {
+                return response()->download(
+                    $payload['absolute_path'],
+                    $payload['filename']
+                );
+            }
+
+            return response()->redirectTo($payload['url']);
         } catch (\Exception $e) {
             return JSendResponse::error('Failed to download file: ' . $e->getMessage(), 500);
         }

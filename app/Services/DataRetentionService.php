@@ -9,48 +9,70 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
+use App\Models\Tenant;
 
 class DataRetentionService
 {
     /**
      * Execute data retention policies
      */
-    public static function executeRetentionPolicies(?string $tenantId = null, bool $dryRun = true, bool $allowSystem = false): array
+    public static function executeRetentionPolicies(string|\Stringable|null $tenantId = null, bool $dryRun = true, bool $allowSystem = false, ?Tenant $tenant = null): array
     {
-        $results = [];
+        $tenancyService = app(TenancyService::class);
+
+        // Normalize ULID/Stringable to string for downstream lookups
+        $tenantId = $tenantId !== null ? (string) $tenantId : null;
+
+
+        if ($tenantId && !$tenant) {
+            $tenant = Tenant::where('id', $tenantId)->first();
+        }
+
+        if ($tenantId && $tenant) {
+            $tenancyService->setTenantContext($tenantId, $tenant);
+        } else {
+            $tenancyService->clearTenantContext();
+        }
+
         $context = $tenantId ? 'tenant' : ($allowSystem ? 'system' : 'global');
         $policies = DB::table('data_retention_policies')
             ->where('is_active', true)
             ->get();
 
-        foreach ($policies as $policy) {
-            try {
-                $result = self::executePolicy($policy, $tenantId, $dryRun, $allowSystem);
-                $results[$policy->table_name] = $result;
+        $results = [];
 
-                Log::info('Data retention policy executed', [
-                    'table' => $policy->table_name,
-                    'retention_period' => $policy->retention_period,
-                    'retention_type' => $policy->retention_type,
-                    'records_affected' => $result['records_affected'],
-                    'tenant_id' => $tenantId,
-                    'context' => $context,
-                    'dry_run' => $dryRun,
-                    'skipped' => $result['skipped'] ?? false,
-                ]);
-            } catch (\Exception $e) {
-                $results[$policy->table_name] = [
-                    'success' => false,
-                    'error' => $e->getMessage(),
-                ];
+        try {
+            foreach ($policies as $policy) {
+                try {
+                    $result = self::executePolicy($policy, $tenantId, $dryRun, $allowSystem);
+                    $results[$policy->table_name] = $result;
 
-                Log::error('Data retention policy failed', [
-                    'table' => $policy->table_name,
-                    'error' => $e->getMessage(),
-                    'tenant_id' => $tenantId,
-                    'context' => $context,
-                ]);
+                    Log::info('Data retention policy executed', [
+                        'table' => $policy->table_name,
+                        'retention_period' => $policy->retention_period,
+                        'retention_type' => $policy->retention_type,
+                        'records_affected' => $result['records_affected'],
+                        'tenant_id' => $tenantId,
+                        'context' => $context,
+                        'dry_run' => $dryRun,
+                        'skipped' => $result['skipped'] ?? false,
+                    ]);
+                } catch (\Exception $e) {
+                    $results[$policy->table_name] = [
+                        'success' => false,
+                        'error' => $e->getMessage(),
+                    ];
+
+                    Log::error('Data retention policy failed', [
+                        'table' => $policy->table_name,
+                        'error' => $e->getMessage(),
+                        'tenant_id' => $tenantId,
+                        'context' => $context,
+                    ]);
+                }
             }
+        } finally {
+            $tenancyService->clearTenantContext();
         }
 
         return $results;

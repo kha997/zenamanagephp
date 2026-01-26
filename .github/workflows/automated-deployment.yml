@@ -32,13 +32,36 @@ jobs:
     environment: staging
     
     steps:
+    - name: Gate staging secrets
+      id: check-staging-secrets
+      run: |
+        missing=""
+        if [[ -z "${{ secrets.STAGING_HOST }}" ]]; then
+          missing="${missing} STAGING_HOST"
+        fi
+        if [[ -z "${{ secrets.STAGING_USERNAME }}" ]]; then
+          missing="${missing} STAGING_USERNAME"
+        fi
+        if [[ -z "${{ secrets.STAGING_SSH_KEY }}" ]]; then
+          missing="${missing} STAGING_SSH_KEY"
+        fi
+        if [[ -n "$missing" ]]; then
+          echo "Skipping deploy because secrets missing:$missing"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Checkout code
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Container Registry
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
@@ -47,6 +70,7 @@ jobs:
 
     - name: Extract metadata
       id: meta
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -55,6 +79,7 @@ jobs:
           type=sha,prefix=staging-
 
     - name: Build and push Docker images
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -66,6 +91,7 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Deploy to staging server
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.STAGING_HOST }}
@@ -82,11 +108,13 @@ jobs:
           docker-compose -f docker-compose.prod.yml exec app php artisan view:cache
 
     - name: Run health check
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://staging.zenamanage.com/health || exit 1
 
     - name: Run smoke tests
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
       run: |
         # Test API endpoints
         curl -f https://staging-api.zenamanage.com/health || exit 1
@@ -94,7 +122,7 @@ jobs:
         curl -f https://staging-ws.zenamanage.com/health || exit 1
 
     - name: Notify deployment success
-      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-staging-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
@@ -115,13 +143,36 @@ jobs:
     environment: production
     
     steps:
+    - name: Gate production secrets
+      id: check-production-secrets
+      run: |
+        missing=""
+        if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
+          missing="${missing} PRODUCTION_HOST"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_USERNAME }}" ]]; then
+          missing="${missing} PRODUCTION_USERNAME"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
+          missing="${missing} PRODUCTION_SSH_KEY"
+        fi
+        if [[ -n "$missing" ]]; then
+          echo "Skipping deploy because secrets missing:$missing"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Checkout code
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Container Registry
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
@@ -130,6 +181,7 @@ jobs:
 
     - name: Extract metadata
       id: meta
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -140,6 +192,7 @@ jobs:
           type=sha,prefix=production-
 
     - name: Build and push Docker images
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -151,6 +204,7 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Create backup before deployment
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -161,6 +215,7 @@ jobs:
           ./docker-manage.sh backup
 
     - name: Deploy to production server
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -177,11 +232,13 @@ jobs:
           docker-compose -f docker-compose.prod.yml exec app php artisan view:cache
 
     - name: Run health check
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Run smoke tests
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       run: |
         # Test API endpoints
         curl -f https://api.zenamanage.com/health || exit 1
@@ -189,13 +246,14 @@ jobs:
         curl -f https://ws.zenamanage.com/health || exit 1
 
     - name: Run performance tests
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
       run: |
         # Basic performance check
         curl -w "@curl-format.txt" -o /dev/null -s https://dashboard.zenamanage.com/
         curl -w "@curl-format.txt" -o /dev/null -s https://api.zenamanage.com/health
 
     - name: Notify deployment success
-      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-production-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
@@ -216,10 +274,32 @@ jobs:
     environment: production
     
     steps:
+    - name: Gate rollback secrets
+      id: check-rollback-secrets
+      run: |
+        missing=""
+        if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
+          missing="${missing} PRODUCTION_HOST"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_USERNAME }}" ]]; then
+          missing="${missing} PRODUCTION_USERNAME"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
+          missing="${missing} PRODUCTION_SSH_KEY"
+        fi
+        if [[ -n "$missing" ]]; then
+          echo "Skipping deploy because secrets missing:$missing"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Checkout code
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Rollback to previous version
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -232,12 +312,13 @@ jobs:
           docker-compose -f docker-compose.prod.yml exec app php artisan config:cache
 
     - name: Run health check after rollback
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify rollback
-      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
@@ -258,13 +339,36 @@ jobs:
     environment: production
     
     steps:
+    - name: Gate blue-green secrets
+      id: check-blue-green-secrets
+      run: |
+        missing=""
+        if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
+          missing="${missing} PRODUCTION_HOST"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_USERNAME }}" ]]; then
+          missing="${missing} PRODUCTION_USERNAME"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
+          missing="${missing} PRODUCTION_SSH_KEY"
+        fi
+        if [[ -n "$missing" ]]; then
+          echo "Skipping deploy because secrets missing:$missing"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Checkout code
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Container Registry
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
@@ -273,6 +377,7 @@ jobs:
 
     - name: Extract metadata
       id: meta
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -280,6 +385,7 @@ jobs:
           type=sha,prefix=blue-green-
 
     - name: Build and push Docker images
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -291,6 +397,7 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Deploy to green environment
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -304,11 +411,13 @@ jobs:
           docker-compose -f docker-compose.prod.yml -p zenamanage-green exec app php artisan config:cache
 
     - name: Run health check on green environment
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://green.zenamanage.com/health || exit 1
 
     - name: Run comprehensive tests on green environment
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       run: |
         # Test API endpoints
         curl -f https://green-api.zenamanage.com/health || exit 1
@@ -318,6 +427,7 @@ jobs:
         curl -f https://green.zenamanage.com/api/health || exit 1
 
     - name: Switch traffic to green environment
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -331,11 +441,13 @@ jobs:
           echo "Switching traffic to green environment..."
 
     - name: Run final health check
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Clean up blue environment
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -347,7 +459,7 @@ jobs:
           docker-compose -f docker-compose.prod.yml -p zenamanage-blue down
 
     - name: Notify blue-green deployment success
-      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
@@ -368,13 +480,36 @@ jobs:
     environment: production
     
     steps:
+    - name: Gate canary secrets
+      id: check-canary-secrets
+      run: |
+        missing=""
+        if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
+          missing="${missing} PRODUCTION_HOST"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_USERNAME }}" ]]; then
+          missing="${missing} PRODUCTION_USERNAME"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
+          missing="${missing} PRODUCTION_SSH_KEY"
+        fi
+        if [[ -n "$missing" ]]; then
+          echo "Skipping deploy because secrets missing:$missing"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Checkout code
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       uses: docker/setup-buildx-action@v3
 
     - name: Log in to Container Registry
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       uses: docker/login-action@v3
       with:
         registry: ${{ env.REGISTRY }}
@@ -383,6 +518,7 @@ jobs:
 
     - name: Extract metadata
       id: meta
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -390,6 +526,7 @@ jobs:
           type=sha,prefix=canary-
 
     - name: Build and push Docker images
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       uses: docker/build-push-action@v5
       with:
         context: .
@@ -401,6 +538,7 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Deploy canary version
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -414,16 +552,19 @@ jobs:
           docker-compose -f docker-compose.prod.yml -p zenamanage-canary exec app php artisan config:cache
 
     - name: Run health check on canary
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://canary.zenamanage.com/health || exit 1
 
     - name: Monitor canary for 5 minutes
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       run: |
         echo "Monitoring canary deployment for 5 minutes..."
         sleep 300
 
     - name: Run performance tests on canary
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       run: |
         # Test response times
         curl -w "@curl-format.txt" -o /dev/null -s https://canary.zenamanage.com/
@@ -431,6 +572,7 @@ jobs:
         curl -f https://canary.zenamanage.com/api/health || exit 1
 
     - name: Increase canary traffic to 50%
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -441,11 +583,13 @@ jobs:
           echo "Increasing canary traffic to 50%..."
 
     - name: Monitor canary for additional 5 minutes
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       run: |
         echo "Monitoring canary deployment for additional 5 minutes..."
         sleep 300
 
     - name: Run final performance tests
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       run: |
         # Test response times
         curl -w "@curl-format.txt" -o /dev/null -s https://canary.zenamanage.com/
@@ -453,6 +597,7 @@ jobs:
         curl -f https://canary.zenamanage.com/api/health || exit 1
 
     - name: Promote canary to full deployment
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -467,12 +612,13 @@ jobs:
           docker-compose -f docker-compose.prod.yml exec app php artisan config:cache
 
     - name: Run final health check
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify canary deployment success
-      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-canary-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:

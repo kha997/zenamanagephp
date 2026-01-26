@@ -38,6 +38,7 @@ class DocumentVersion extends Model
     public const STORAGE_LOCAL = 'local';
     public const STORAGE_S3 = 's3';
     public const STORAGE_GDRIVE = 'gdrive';
+    public const STORAGE_GCS = 'gcs';
 
     /**
      * Danh sách các storage driver hợp lệ
@@ -46,6 +47,7 @@ class DocumentVersion extends Model
         self::STORAGE_LOCAL,
         self::STORAGE_S3,
         self::STORAGE_GDRIVE,
+        self::STORAGE_GCS,
     ];
 
     protected $fillable = [
@@ -143,7 +145,8 @@ class DocumentVersion extends Model
                 case self::STORAGE_S3:
                     return Storage::disk('s3')->temporaryUrl($this->file_path, now()->addHours(1));
                 case self::STORAGE_GDRIVE:
-                    // Implement Google Drive URL logic
+                case self::STORAGE_GCS:
+                    // Google-backed storage behavior to be implemented once a provider is available.
                     return null;
                 default:
                     return null;
@@ -234,3 +237,4 @@ class DocumentVersion extends Model
         return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
     }
 }
+

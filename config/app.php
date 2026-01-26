@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Task Scheduler Flag
+    |--------------------------------------------------------------------------
+    |
+    | This flag determines whether the application should initialize the
+    | scheduled commands defined in the console kernel.
+    |
+    */
+
+    'enable_scheduler' => env('ENABLE_SCHEDULER', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

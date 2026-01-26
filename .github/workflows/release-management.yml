@@ -35,6 +35,7 @@ jobs:
     
     steps:
     - name: Checkout code
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -86,6 +87,7 @@ jobs:
     
     steps:
     - name: Checkout code
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
@@ -138,6 +140,7 @@ jobs:
     
     steps:
     - name: Checkout code
+      if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
@@ -186,6 +189,7 @@ jobs:
     
     steps:
     - name: Checkout code
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
@@ -234,10 +238,32 @@ jobs:
     environment: production
     
     steps:
+    - name: Gate release secrets
+      id: check-release-secrets
+      run: |
+        missing=""
+        if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
+          missing="${missing} PRODUCTION_HOST"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_USERNAME }}" ]]; then
+          missing="${missing} PRODUCTION_USERNAME"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
+          missing="${missing} PRODUCTION_SSH_KEY"
+        fi
+        if [[ -n "$missing" ]]; then
+          echo "Skipping deploy because secrets missing:$missing"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Checkout code
+      if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Deploy to production server
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -254,11 +280,13 @@ jobs:
           docker-compose -f docker-compose.prod.yml exec app php artisan view:cache
 
     - name: Run health check
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Run smoke tests
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
       run: |
         # Test API endpoints
         curl -f https://api.zenamanage.com/health || exit 1
@@ -266,7 +294,7 @@ jobs:
         curl -f https://ws.zenamanage.com/health || exit 1
 
     - name: Notify release deployment success
-      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
@@ -287,10 +315,32 @@ jobs:
     environment: production
     
     steps:
+    - name: Gate rollback secrets
+      id: check-rollback-secrets
+      run: |
+        missing=""
+        if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
+          missing="${missing} PRODUCTION_HOST"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_USERNAME }}" ]]; then
+          missing="${missing} PRODUCTION_USERNAME"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
+          missing="${missing} PRODUCTION_SSH_KEY"
+        fi
+        if [[ -n "$missing" ]]; then
+          echo "Skipping deploy because secrets missing:$missing"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Checkout code
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v4
 
     - name: Rollback to previous version
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -303,12 +353,13 @@ jobs:
           docker-compose -f docker-compose.prod.yml exec app php artisan config:cache
 
     - name: Run health check after rollback
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
       run: |
         sleep 30
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify rollback
-      if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
@@ -329,10 +380,31 @@ jobs:
     if: always()
     
     steps:
+    - name: Gate cleanup secrets
+      id: check-cleanup-secrets
+      run: |
+        missing=""
+        if [[ -z "${{ secrets.PRODUCTION_HOST }}" ]]; then
+          missing="${missing} PRODUCTION_HOST"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_USERNAME }}" ]]; then
+          missing="${missing} PRODUCTION_USERNAME"
+        fi
+        if [[ -z "${{ secrets.PRODUCTION_SSH_KEY }}" ]]; then
+          missing="${missing} PRODUCTION_SSH_KEY"
+        fi
+        if [[ -n "$missing" ]]; then
+          echo "Skipping deploy because secrets missing:$missing"
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Clean up old Docker images
+      if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
@@ -345,6 +417,7 @@ jobs:
           docker system prune -f
 
     - name: Clean up old backups
+      if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}

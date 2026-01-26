@@ -255,7 +255,7 @@ php artisan queue:work               # Start queue worker
 php artisan queue:restart           # Restart queue workers
 php artisan queue:failed            # List failed jobs
 php artisan queue:retry all         # Retry all failed jobs
-php artisan queue:flush             # Flush all failed jobs
+php artisan queue:prune-failed        # Prune failed jobs (safer than flush)
 ```
 
 ## 📊 **MONITORING COMMANDS**

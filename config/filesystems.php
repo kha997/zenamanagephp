@@ -1,5 +1,26 @@
 <?php declare(strict_types=1);
 
+/*
+|--------------------------------------------------------------------------
+| Google Cloud Storage Shared Config
+|--------------------------------------------------------------------------
+|
+| alias the same credentials for google, gcs, and gdrive drivers so
+| different consumers can reference the canonical disk without duplication.
+|
+*/
+
+$gcsDisk = [
+    'driver' => 'gcs',
+    'project_id' => env('GOOGLE_CLOUD_PROJECT_ID'),
+    'key_file' => env('GOOGLE_CLOUD_KEY_FILE'),
+    'bucket' => env('GOOGLE_CLOUD_STORAGE_BUCKET'),
+    'path_prefix' => env('GOOGLE_CLOUD_STORAGE_PATH_PREFIX', ''),
+    'storage_api_uri' => env('GOOGLE_CLOUD_STORAGE_API_URI'),
+    'visibility' => 'private',
+    'throw' => false,
+];
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -67,16 +88,10 @@ return [
             'throw' => false,
         ],
 
-        'google' => [
-            'driver' => 'gcs',
-            'project_id' => env('GOOGLE_CLOUD_PROJECT_ID'),
-            'key_file' => env('GOOGLE_CLOUD_KEY_FILE'),
-            'bucket' => env('GOOGLE_CLOUD_STORAGE_BUCKET'),
-            'path_prefix' => env('GOOGLE_CLOUD_STORAGE_PATH_PREFIX', ''),
-            'storage_api_uri' => env('GOOGLE_CLOUD_STORAGE_API_URI'),
-            'visibility' => 'private',
-            'throw' => false,
-        ],
+        'google' => $gcsDisk,
+        'gcs' => $gcsDisk,
+        // gdrive is kept for legacy compatibility; it currently shares the GCS disk configuration.
+        'gdrive' => $gcsDisk,
     ],
 
     /*

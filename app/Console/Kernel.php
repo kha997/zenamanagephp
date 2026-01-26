@@ -12,13 +12,14 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Temporarily commented out to avoid dependency issues
-        /*
+        if (!config('app.enable_scheduler', false)) {
+            return;
+        }
+
         // System Health Monitoring
         $schedule->command('maintenance:run --task=metrics')
             ->everyFiveMinutes()
-            ->withoutOverlapping()
-            ->runInBackground();
+            ->withoutOverlapping();
 
         // Cache Maintenance
         $schedule->command('maintenance:run --task=cache')
@@ -54,9 +55,9 @@ class Kernel extends ConsoleKernel
             ->everyFiveMinutes()
             ->withoutOverlapping();
 
-        // Failed Job Cleanup
-        $schedule->command('queue:flush')
-            ->dailyAt('07:00')
+        // Queue Restart
+        $schedule->command('queue:restart')
+            ->hourly()
             ->withoutOverlapping();
 
         // Session Cleanup
@@ -83,7 +84,6 @@ class Kernel extends ConsoleKernel
         $schedule->command('config:cache')
             ->dailyAt('12:00')
             ->withoutOverlapping();
-        */
     }
 
     /**

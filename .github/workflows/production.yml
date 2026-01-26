@@ -52,7 +52,7 @@ jobs:
             pcov.exclude="~vendor~"
 
       - name: Verify PCOV loaded
-        run: php -m | grep -i pcov
+        run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
       - name: Install dependencies
         run: |

@@ -6,13 +6,21 @@ on:
     branches: [ main ]
 
 jobs:
-      - name: Run Playwright finance smoke
-        env:
-          API_BASE_URL: http://127.0.0.1:8000
-        run: |
-          set -euo pipefail
-          php artisan serve --host=127.0.0.1 --port=8000 --env=testing >/tmp/php.log 2>&1 &
-          PHP_PID=$!
-          trap 'kill $PHP_PID || true' EXIT
-          cd frontend
-          npm run test:e2e:smoke:finance
+  playwright-smoke:
+    name: Playwright Finance Smoke
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Playwright finance smoke
+      env:
+        API_BASE_URL: http://127.0.0.1:8000
+      run: |
+        set -euo pipefail
+        php artisan serve --host=127.0.0.1 --port=8000 --env=testing >/tmp/php.log 2>&1 &
+        PHP_PID=$!
+        trap 'kill $PHP_PID || true' EXIT
+        cd frontend
+        npm run test:e2e:smoke:finance

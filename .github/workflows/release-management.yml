@@ -294,7 +294,7 @@ jobs:
         curl -f https://ws.zenamanage.com/health || exit 1
 
     - name: Notify release deployment success
-      if: ${{ steps.check-release-secrets.outputs.ready == 'true' && secrets.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:
@@ -359,7 +359,7 @@ jobs:
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify rollback
-      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' && secrets.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
       uses: 8398a7/action-slack@v3
       env:

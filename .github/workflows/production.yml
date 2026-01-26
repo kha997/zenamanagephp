@@ -137,7 +137,7 @@ jobs:
     if: always()
     steps:
       - name: Notify deployment status
-        if: ${{ always() && secrets.SLACK_WEBHOOK_URL != '' }}
+        if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
         uses: 8398a7/action-slack@v3
         env:

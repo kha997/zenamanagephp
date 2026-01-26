@@ -14,12 +14,14 @@ use Src\DocumentManagement\Events\DocumentVersionCreated;
 use Src\DocumentManagement\Events\DocumentVersionReverted;
 use Src\DocumentManagement\Events\DocumentApprovedForClient;
 use Src\Foundation\EventBus;
+use Src\Foundation\Services\FileStorageService;
 
 /**
  * Service xử lý business logic cho Document Management
  */
 class DocumentService
 {
+    private ?FileStorageService $fileStorageService = null;
     /**
      * Lấy danh sách documents theo project
      */
@@ -219,6 +221,46 @@ class DocumentService
     }
 
     /**
+     * Tải về version của tài liệu
+     */
+    public function downloadVersion(string $documentId, ?int $versionNumber = null): array
+    {
+        $document = Document::with('currentVersion')->findOrFail($documentId);
+        $version = $this->resolveVersion($document, $versionNumber);
+
+        $disk = $version->storage_driver ?: DocumentVersion::STORAGE_LOCAL;
+        $storageService = $this->fileStorageService();
+
+        if (!$storageService->fileExists($version->file_path, $disk)) {
+            throw new \RuntimeException('Document version file not found');
+        }
+
+        $payload = [
+            'disk' => $disk,
+            'path' => $version->file_path,
+            'filename' => $version->getOriginalFileName() ?? $version->getFileName(),
+            'is_local' => $disk === DocumentVersion::STORAGE_LOCAL,
+            'absolute_path' => null,
+            'url' => null,
+        ];
+
+        if ($payload['is_local']) {
+            $payload['absolute_path'] = Storage::disk($disk)->path($version->file_path);
+            return $payload;
+        }
+
+        $url = $storageService->getFileUrl($version->file_path, $disk);
+
+        if (!$url) {
+            throw new \RuntimeException('Unable to generate download URL for remote storage');
+        }
+
+        $payload['url'] = $url;
+
+        return $payload;
+    }
+
+    /**
      * Lấy thống kê documents
      */
     public function getDocumentStats(int $projectId): array
@@ -251,7 +293,7 @@ class DocumentService
             'document_id' => $document->id,
             'version_number' => $document->getNextVersionNumber(),
             'file_path' => $filePath,
-            'storage_driver' => 'local', // TODO: Có thể config
+            'storage_driver' => DocumentVersion::STORAGE_LOCAL,
             'comment' => $comment,
             'metadata' => [
                 'original_filename' => $file->getClientOriginalName(),
@@ -271,14 +313,38 @@ class DocumentService
         return $file->store($directory, 'local');
     }
 
+    private function resolveVersion(Document $document, ?int $versionNumber): DocumentVersion
+    {
+        if ($versionNumber !== null) {
+            return DocumentVersion::forDocument($document->id)
+                ->where('version_number', $versionNumber)
+                ->firstOrFail();
+        }
+
+        if ($document->currentVersion) {
+            return $document->currentVersion;
+        }
+
+        return DocumentVersion::forDocument($document->id)
+            ->orderBy('version_number', 'desc')
+            ->firstOrFail();
+    }
+
+    private function fileStorageService(): FileStorageService
+    {
+        return $this->fileStorageService ??= app(FileStorageService::class);
+    }
+
     /**
      * Helper: Xóa file của version
      */
     private function deleteVersionFile(DocumentVersion $version): void
     {
-        if ($version->storage_driver === 'local' && Storage::disk('local')->exists($version->file_path)) {
-            Storage::disk('local')->delete($version->file_path);
+        $disk = $version->storage_driver ?? DocumentVersion::STORAGE_LOCAL;
+        $storageService = $this->fileStorageService();
+
+        if ($storageService->fileExists($version->file_path, $disk)) {
+            $storageService->deleteFile($version->file_path, $disk);
         }
-        // TODO: Xử lý cho S3, Google Drive
     }
 }

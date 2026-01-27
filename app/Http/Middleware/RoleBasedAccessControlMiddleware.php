@@ -39,13 +39,13 @@ class RoleBasedAccessControlMiddleware
         $normalizedPath = $this->normalizeApiPath($request->path());
         $request->attributes->set('rbac_normalized_path', $normalizedPath);
 
+        if ($this->isProjectManagerDashboardRoute($normalizedPath) && $user->hasRole('project_manager')) {
+            return $next($request);
+        }
         if ($roleOrPermission === null) {
             return $this->handleGeneralAccess($user, $request, $next);
         }
 
-        if ($this->isProjectManagerDashboardRoute($normalizedPath) && $user->hasRole('project_manager')) {
-            return $next($request);
-        }
 
         // Check if user has required role or permission
         $hasAccess = $this->checkAccess($user, $roleOrPermission, $request, $projectParam);

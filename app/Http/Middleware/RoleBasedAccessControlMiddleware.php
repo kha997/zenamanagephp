@@ -36,8 +36,15 @@ class RoleBasedAccessControlMiddleware
             ], 401);
         }
         
+        $normalizedPath = $this->normalizeApiPath($request->path());
+        $request->attributes->set('rbac_normalized_path', $normalizedPath);
+
         if ($roleOrPermission === null) {
             return $this->handleGeneralAccess($user, $request, $next);
+        }
+
+        if ($this->isProjectManagerDashboardRoute($normalizedPath) && $user->hasRole('project_manager')) {
+            return $next($request);
         }
 
         // Check if user has required role or permission
@@ -290,5 +297,29 @@ class RoleBasedAccessControlMiddleware
         $request->attributes->set('access_granted', true);
 
         return $next($request);
+    }
+
+    /**
+     * Normalize API paths so /api/v1/... and /api/... map to the same permission key.
+     */
+    private function normalizeApiPath(string $path): string
+    {
+        $segments = array_values(
+            array_filter(explode('/', trim($path, '/')), fn ($segment) => $segment !== '')
+        );
+
+        if (count($segments) >= 2 && $segments[0] === 'api' && preg_match('/^v\\d+$/', $segments[1])) {
+            array_splice($segments, 1, 1);
+        }
+
+        return implode('/', $segments);
+    }
+
+    /**
+     * Detect project manager dashboard routes after normalization.
+     */
+    private function isProjectManagerDashboardRoute(string $normalizedPath): bool
+    {
+        return str_starts_with($normalizedPath, 'api/project-manager/dashboard');
     }
 }

@@ -22,5 +22,5 @@ jobs:
         php artisan serve --host=127.0.0.1 --port=8000 --env=testing >/tmp/php.log 2>&1 &
         PHP_PID=$!
         trap 'kill $PHP_PID || true' EXIT
-        cd frontend
+        npm ci
         npm run test:e2e:smoke:finance

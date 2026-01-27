@@ -16,7 +16,9 @@
     "build": "tsc && npm run build:css",
     "build:css": "tailwindcss -i ./src/index.css -o ./dist/output.css",
     "dev": "vite",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e:smoke": "npm run test:e2e",
+    "test:e2e:smoke:finance": "npm run test:e2e"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",

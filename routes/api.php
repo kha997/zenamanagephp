@@ -769,6 +769,10 @@ Route::group([], function () {
             Route::get('dashboard/stats', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getStats']);
             Route::get('dashboard/timeline', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getProjectTimeline']);
         });
+        Route::prefix('v1/project-manager')->group(function () {
+            Route::get('dashboard/stats', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getStats']);
+            Route::get('dashboard/timeline', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getProjectTimeline']);
+        });
 
         /*
         |--------------------------------------------------------------------------

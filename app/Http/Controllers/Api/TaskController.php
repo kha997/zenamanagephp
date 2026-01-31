@@ -2,16 +2,21 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
 {
+    use ZenaContractResponseTrait;
+
     /**
      * Display a listing of the resource.
      */
@@ -74,11 +79,7 @@ class TaskController extends Controller
             $tasks = $query->orderBy('created_at', 'desc')
                 ->paginate($perPage);
 
-            return response()->json([
-                'success' => true,
-                'data' => $tasks,
-                'message' => 'Tasks retrieved successfully'
-            ]);
+            return $this->zenaSuccessResponse($tasks, 'Tasks retrieved successfully');
 
         } catch (\Exception $e) {
             Log::error('Task index error: ' . $e->getMessage());
@@ -181,11 +182,11 @@ class TaskController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'data' => $task->load(['project', 'assignee', 'creator', 'tenant']),
-                'message' => 'Task created successfully'
-            ], 201);
+            return $this->zenaSuccessResponse(
+                $task->load(['project', 'assignee', 'creator', 'tenant']),
+                'Task created successfully',
+                201
+            );
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -222,7 +223,7 @@ class TaskController extends Controller
             return $this->error('Task not found', 404);
         }
 
-        return $this->successResponse($task);
+        return $this->zenaSuccessResponse($task);
     }
 
     /**
@@ -279,7 +280,10 @@ class TaskController extends Controller
 
             $task->update($updateData);
 
-            return $this->successResponse($task->load(['project', 'component', 'assignments.user']), 'Task updated successfully');
+            return $this->zenaSuccessResponse(
+                $task->load(['project', 'component', 'assignments.user']),
+                'Task updated successfully'
+            );
 
         } catch (\Exception $e) {
             return $this->error('Failed to update task: ' . $e->getMessage(), 500);
@@ -306,7 +310,7 @@ class TaskController extends Controller
         try {
             $task->delete();
 
-            return $this->successResponse(null, 'Task deleted successfully');
+            return $this->zenaSuccessResponse(null, 'Task deleted successfully');
 
         } catch (\Exception $e) {
             return $this->error('Failed to delete task: ' . $e->getMessage(), 500);
@@ -341,7 +345,10 @@ class TaskController extends Controller
         try {
             $task->update(['status' => $request->input('status')]);
 
-            return $this->successResponse($task->load(['project', 'component', 'assignments.user']), 'Task status updated successfully');
+            return $this->zenaSuccessResponse(
+                $task->load(['project', 'component', 'assignments.user']),
+                'Task status updated successfully'
+            );
 
         } catch (\Exception $e) {
             return $this->error('Failed to update task status: ' . $e->getMessage(), 500);
@@ -365,7 +372,7 @@ class TaskController extends Controller
             return $this->error('Task not found', 404);
         }
 
-        return $this->successResponse($task->dependencies);
+        return $this->zenaSuccessResponse($task->dependencies);
     }
 
     /**
@@ -783,11 +790,10 @@ class TaskController extends Controller
             if ($task->addDependency($dependencyId)) {
                 $task->update(['updated_by' => $user->id]);
                 
-                return response()->json([
-                    'success' => true,
-                    'data' => $task->load(['dependencies']),
-                    'message' => 'Dependency added successfully'
-                ]);
+                return $this->zenaSuccessResponse(
+                    $task->load(['dependencies']),
+                    'Dependency added successfully'
+                );
             } else {
                 return response()->json([
                     'success' => false,
@@ -833,11 +839,10 @@ class TaskController extends Controller
             if ($task->removeDependency($dependencyId)) {
                 $task->update(['updated_by' => $user->id]);
                 
-                return response()->json([
-                    'success' => true,
-                    'data' => $task->load(['dependencies']),
-                    'message' => 'Dependency removed successfully'
-                ]);
+                return $this->zenaSuccessResponse(
+                    $task->load(['dependencies']),
+                    'Dependency removed successfully'
+                );
             } else {
                 return response()->json([
                     'success' => false,

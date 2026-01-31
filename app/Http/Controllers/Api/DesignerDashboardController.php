@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\Drawing;
 use App\Models\Project;
 use App\Models\Rfi;
 use App\Models\Submittal;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class DesignerDashboardController extends Controller
 {
+    use ZenaContractResponseTrait;
+
     /**
      * Get Designer dashboard overview.
      */
@@ -68,10 +72,7 @@ class DesignerDashboardController extends Controller
             'upcoming_design_deadlines' => $this->getUpcomingDesignDeadlines($projects->pluck('id')->toArray(), $user->id),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $overview,
-        ]);
+        return $this->zenaSuccessResponse($overview);
     }
 
     /**
@@ -124,10 +125,7 @@ class DesignerDashboardController extends Controller
                 ];
             });
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $tasks,
-        ]);
+        return $this->zenaSuccessResponse($tasks);
     }
 
     /**
@@ -183,12 +181,9 @@ class DesignerDashboardController extends Controller
             'draft' => $drawings->where('status', 'draft')->count(),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'drawings' => $drawings,
-                'summary' => $statusSummary,
-            ],
+        return $this->zenaSuccessResponse([
+            'drawings' => $drawings,
+            'summary' => $statusSummary,
         ]);
     }
 
@@ -233,10 +228,7 @@ class DesignerDashboardController extends Controller
                 ];
             });
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $rfis,
-        ]);
+        return $this->zenaSuccessResponse($rfis);
     }
 
     /**
@@ -291,12 +283,9 @@ class DesignerDashboardController extends Controller
             'draft' => $submittals->where('status', 'draft')->count(),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'submittals' => $submittals,
-                'summary' => $statusSummary,
-            ],
+        return $this->zenaSuccessResponse([
+            'submittals' => $submittals,
+            'summary' => $statusSummary,
         ]);
     }
 
@@ -341,10 +330,7 @@ class DesignerDashboardController extends Controller
             }),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $workload,
-        ]);
+        return $this->zenaSuccessResponse($workload);
     }
 
     /**

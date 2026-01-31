@@ -2,15 +2,59 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\BaseApiController;
+use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
 use App\Models\Project;
 use App\Models\Submittal;
+use App\Services\ZenaAuditLogger;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
-class SubmittalController extends BaseApiController
+class SubmittalController extends ApiBaseController
 {
+    public function __construct(private ZenaAuditLogger $auditLogger)
+    {
+    }
+
+    private function tenantId(): string
+    {
+        $tenantId = app('current_tenant_id') ?? request()->get('tenant_id');
+
+        if (!$tenantId) {
+            throw new \RuntimeException('Tenant context missing');
+        }
+
+        return (string) $tenantId;
+    }
+
+    private function submittalQuery(array $relations = null): Builder
+    {
+        $relations ??= [
+            'project:id,name',
+            'submittedBy:id,name',
+            'reviewedBy:id,name',
+        ];
+
+        $query = Submittal::query()
+            ->where('tenant_id', $this->tenantId());
+
+        if (!empty($relations)) {
+            $query->with($relations);
+        }
+
+        return $query;
+    }
+
+    private function submittalForTenant(string $id, array $relations = null): Submittal
+    {
+        return $this->submittalQuery($relations)
+            ->where('id', $id)
+            ->firstOrFail();
+    }
+
     /**
      * Display a listing of submittals.
      */
@@ -23,7 +67,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $query = Submittal::with(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
+            $query = $this->submittalQuery();
 
             // Filter by project if specified
             if ($request->has('project_id')) {
@@ -55,7 +99,7 @@ class SubmittalController extends BaseApiController
 
             $submittals = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-            return $this->successResponse($submittals, 'Submittals retrieved successfully');
+            return $this->listSuccessResponse($submittals, 'Submittals retrieved successfully');
         } catch (\Exception $e) {
             return $this->serverError('Failed to retrieve submittals: ' . $e->getMessage());
         }
@@ -88,8 +132,15 @@ class SubmittalController extends BaseApiController
                 return $this->validationError($validator->errors());
             }
 
+            $project = $this->projectForTenant($request->input('project_id'));
+
+            if (!$project) {
+                return $this->notFound('Project not found');
+            }
+
             $submittal = Submittal::create([
-                'project_id' => $request->input('project_id'),
+                'tenant_id' => $this->tenantId(),
+                'project_id' => $project->id,
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
                 'submittal_type' => $request->input('submittal_type'),
@@ -99,10 +150,20 @@ class SubmittalController extends BaseApiController
                 'manufacturer' => $request->input('manufacturer'),
                 'status' => 'draft',
                 'submitted_by' => $user->id,
-                'submittal_number' => $this->generateSubmittalNumber($request->input('project_id')),
+                'submittal_number' => $this->generateSubmittalNumber($request->input('project_id'), $project),
             ]);
 
             $submittal->load(['project:id,name', 'submittedBy:id,name']);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.submittal.create',
+                'submittal',
+                (string) $submittal->id,
+                201,
+                $submittal->project_id,
+                $this->tenantId()
+            );
 
             return $this->successResponse($submittal, 'Submittal created successfully', 201);
         } catch (\Exception $e) {
@@ -122,14 +183,16 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = Submittal::with(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name', 'attachments'])
-                ->find($id);
-
-            if (!$submittal) {
-                return $this->notFound('Submittal not found');
-            }
+            $submittal = $this->submittalForTenant($id, [
+                'project:id,name',
+                'submittedBy:id,name',
+                'reviewedBy:id,name',
+                'attachments',
+            ]);
 
             return $this->successResponse($submittal, 'Submittal retrieved successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to retrieve submittal: ' . $e->getMessage());
         }
@@ -147,11 +210,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = Submittal::find($id);
-
-            if (!$submittal) {
-                return $this->notFound('Submittal not found');
-            }
+            $submittal = $this->submittalForTenant($id);
 
             $validator = Validator::make($request->all(), [
                 'title' => 'sometimes|string|max:255',
@@ -175,7 +234,19 @@ class SubmittalController extends BaseApiController
 
             $submittal->load(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
 
+            $this->auditLogger->log(
+                $request,
+                'zena.submittal.update',
+                'submittal',
+                (string) $submittal->id,
+                200,
+                $submittal->project_id,
+                $this->tenantId()
+            );
+
             return $this->successResponse($submittal, 'Submittal updated successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to update submittal: ' . $e->getMessage());
         }
@@ -193,15 +264,24 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = Submittal::find($id);
+            $submittal = $this->submittalForTenant($id);
 
-            if (!$submittal) {
-                return $this->notFound('Submittal not found');
-            }
-
+            $projectId = $submittal->project_id;
             $submittal->delete();
 
+            $this->auditLogger->log(
+                $request,
+                'zena.submittal.delete',
+                'submittal',
+                (string) $submittal->id,
+                200,
+                $projectId,
+                $this->tenantId()
+            );
+
             return $this->successResponse(null, 'Submittal deleted successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to delete submittal: ' . $e->getMessage());
         }
@@ -219,11 +299,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = Submittal::find($id);
-
-            if (!$submittal) {
-                return $this->notFound('Submittal not found');
-            }
+            $submittal = $this->submittalForTenant($id);
 
             if ($submittal->status !== 'draft') {
                 return $this->errorResponse('Only draft submittals can be submitted', 400);
@@ -236,7 +312,19 @@ class SubmittalController extends BaseApiController
 
             $submittal->load(['project:id,name', 'submittedBy:id,name']);
 
+            $this->auditLogger->log(
+                $request,
+                'zena.submittal.submit',
+                'submittal',
+                (string) $submittal->id,
+                200,
+                $submittal->project_id,
+                $this->tenantId()
+            );
+
             return $this->successResponse($submittal, 'Submittal submitted successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to submit submittal: ' . $e->getMessage());
         }
@@ -254,11 +342,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = Submittal::find($id);
-
-            if (!$submittal) {
-                return $this->notFound('Submittal not found');
-            }
+            $submittal = $this->submittalForTenant($id);
 
             $validator = Validator::make($request->all(), [
                 'review_status' => 'required|in:approved,rejected,revised',
@@ -280,7 +364,19 @@ class SubmittalController extends BaseApiController
 
             $submittal->load(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
 
+            $this->auditLogger->log(
+                $request,
+                'zena.submittal.review',
+                'submittal',
+                (string) $submittal->id,
+                200,
+                $submittal->project_id,
+                $this->tenantId()
+            );
+
             return $this->successResponse($submittal, 'Submittal reviewed successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to review submittal: ' . $e->getMessage());
         }
@@ -298,11 +394,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = Submittal::find($id);
-
-            if (!$submittal) {
-                return $this->notFound('Submittal not found');
-            }
+            $submittal = $this->submittalForTenant($id);
 
             $validator = Validator::make($request->all(), [
                 'approval_comments' => 'nullable|string',
@@ -321,7 +413,19 @@ class SubmittalController extends BaseApiController
 
             $submittal->load(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
 
+            $this->auditLogger->log(
+                $request,
+                'zena.submittal.approve',
+                'submittal',
+                (string) $submittal->id,
+                200,
+                $submittal->project_id,
+                $this->tenantId()
+            );
+
             return $this->successResponse($submittal, 'Submittal approved successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to approve submittal: ' . $e->getMessage());
         }
@@ -339,11 +443,7 @@ class SubmittalController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $submittal = Submittal::find($id);
-
-            if (!$submittal) {
-                return $this->notFound('Submittal not found');
-            }
+            $submittal = $this->submittalForTenant($id);
 
             $validator = Validator::make($request->all(), [
                 'rejection_reason' => 'required|string',
@@ -364,7 +464,19 @@ class SubmittalController extends BaseApiController
 
             $submittal->load(['project:id,name', 'submittedBy:id,name', 'reviewedBy:id,name']);
 
+            $this->auditLogger->log(
+                $request,
+                'zena.submittal.reject',
+                'submittal',
+                (string) $submittal->id,
+                200,
+                $submittal->project_id,
+                $this->tenantId()
+            );
+
             return $this->successResponse($submittal, 'Submittal rejected successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Submittal not found');
         } catch (\Exception $e) {
             return $this->serverError('Failed to reject submittal: ' . $e->getMessage());
         }
@@ -373,17 +485,25 @@ class SubmittalController extends BaseApiController
     /**
      * Generate unique submittal number.
      */
-    private function generateSubmittalNumber(string $projectId): string
+    private function generateSubmittalNumber(string $projectId, ?Project $project = null): string
     {
-        $project = Project::find($projectId);
+        $project ??= $this->projectForTenant($projectId);
         $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
         
-        $lastSubmittal = Submittal::where('project_id', $projectId)
+        $lastSubmittal = Submittal::where('tenant_id', $this->tenantId())
+            ->where('project_id', $projectId)
             ->orderBy('created_at', 'desc')
             ->first();
         
         $sequence = $lastSubmittal ? (int)substr($lastSubmittal->submittal_number, -4) + 1 : 1;
         
         return $projectCode . '-SUB-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+    }
+
+    private function projectForTenant(string $projectId): ?Project
+    {
+        return Project::where('id', $projectId)
+            ->where('tenant_id', $this->tenantId())
+            ->first();
     }
 }

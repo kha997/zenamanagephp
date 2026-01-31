@@ -14,85 +14,89 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
     // Main API info route
     Route::get('/', function () {
         return response()->json([
+            'success' => true,
             'status' => 'success',
             'message' => 'Z.E.N.A API is running',
-            'version' => '1.0.0',
-            'endpoints' => [
-                'auth' => [
-                    'POST /api/zena/auth/login' => 'User login',
-                    'POST /api/zena/auth/logout' => 'User logout',
-                    'GET /api/zena/auth/me' => 'Get user profile',
-                    'POST /api/zena/auth/refresh' => 'Refresh token',
-                    'GET /api/zena/auth/dashboard-url' => 'Get dashboard URL',
-                    'POST /api/zena/auth/check-permission' => 'Check user permission',
-                    'GET /api/zena/auth/notifications' => 'Get user notifications',
-                    'POST /api/zena/auth/notifications/{id}/read' => 'Mark notification as read',
+            'data' => [
+                'version' => '1.0.0',
+                'endpoints' => [
+                    'auth' => [
+                        'POST /api/zena/auth/login' => 'User login',
+                        'POST /api/zena/auth/logout' => 'User logout',
+                        'GET /api/zena/auth/me' => 'Get user profile',
+                        'POST /api/zena/auth/refresh' => 'Refresh token',
+                        'GET /api/zena/auth/dashboard-url' => 'Get dashboard URL',
+                        'POST /api/zena/auth/check-permission' => 'Check user permission',
+                        'GET /api/zena/auth/notifications' => 'Get user notifications',
+                        'POST /api/zena/auth/notifications/{id}/read' => 'Mark notification as read',
+                    ],
+                    'dashboard' => [
+                        'GET /api/zena/dashboard' => 'Get dashboard overview',
+                        'GET /api/zena/dashboard/widgets' => 'Get dashboard widgets',
+                        'GET /api/zena/dashboard/metrics' => 'Get dashboard metrics',
+                        'GET /api/zena/dashboard/alerts' => 'Get dashboard alerts',
+                    ],
+                    'role-specific' => [
+                        'GET /api/zena/pm/dashboard' => 'PM Dashboard',
+                        'GET /api/zena/designer/dashboard' => 'Designer Dashboard',
+                        'GET /api/zena/site-engineer/dashboard' => 'Site Engineer Dashboard',
+                    ]
                 ],
-                'dashboard' => [
-                    'GET /api/zena/dashboard' => 'Get dashboard overview',
-                    'GET /api/zena/dashboard/widgets' => 'Get dashboard widgets',
-                    'GET /api/zena/dashboard/metrics' => 'Get dashboard metrics',
-                    'GET /api/zena/dashboard/alerts' => 'Get dashboard alerts',
-                ],
-                'role-specific' => [
-                    'GET /api/zena/pm/dashboard' => 'PM Dashboard',
-                    'GET /api/zena/designer/dashboard' => 'Designer Dashboard',
-                    'GET /api/zena/site-engineer/dashboard' => 'Site Engineer Dashboard',
-                ]
+                'timestamp' => now(),
             ],
-            'timestamp' => now(),
         ]);
     })->name('api.info');
 
     // Public auth routes
     Route::group(['prefix' => 'auth'], function () {
-        Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
+        Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:zena-login')->name('auth.login');
     });
 
     Route::get('/health', function () {
         return response()->json([
+            'success' => true,
             'status' => 'success',
             'message' => 'Z.E.N.A API is running',
-            'timestamp' => now(),
+            'data' => [
+                'timestamp' => now(),
+            ],
         ]);
     })->name('api.health');
-
-    Route::get('/test', function () {
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Test route working',
-            'timestamp' => now(),
-        ]);
-    })->name('api.test');
 
     Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
 
         Route::prefix('auth')->group(function () {
-            Route::post('/logout', [AuthController::class, 'logout'])->name('auth.logout');
-            Route::get('/me', [AuthController::class, 'me'])->name('auth.me');
-            Route::post('/refresh', [AuthController::class, 'refresh'])->name('auth.refresh');
-            Route::post('/check-permission', [AuthController::class, 'checkPermission'])->name('auth.check-permission');
-            Route::get('/dashboard-url', [AuthController::class, 'getDashboardUrl'])->name('auth.dashboard-url');
-            Route::get('/notifications', [AuthController::class, 'getNotifications'])->name('auth.notifications');
-            Route::post('/notifications/{id}/read', [AuthController::class, 'markNotificationAsRead'])->name('auth.notifications.read');
+            Route::post('/logout', [AuthController::class, 'logout'])->middleware('rbac:auth.logout')->name('auth.logout');
+            Route::get('/me', [AuthController::class, 'me'])->middleware('rbac:auth.me')->name('auth.me');
+            Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('rbac:auth.refresh')->name('auth.refresh');
+            Route::post('/check-permission', [AuthController::class, 'checkPermission'])->middleware('rbac:auth.check-permission')->name('auth.check-permission');
+            Route::get('/dashboard-url', [AuthController::class, 'getDashboardUrl'])->middleware('rbac:auth.dashboard-url')->name('auth.dashboard-url');
+            Route::get('/notifications', [AuthController::class, 'getNotifications'])->middleware('rbac:auth.notifications.view')->name('auth.notifications');
+            Route::post('/notifications/{id}/read', [AuthController::class, 'markNotificationAsRead'])->middleware('rbac:auth.notifications.read')->name('auth.notifications.read');
         });
 
         Route::get('/simple-test', function () {
             return response()->json([
+                'success' => true,
                 'status' => 'success',
                 'message' => 'Simple test working',
-                'timestamp' => now(),
+                'data' => [
+                    'timestamp' => now(),
+                ],
             ]);
-        });
+        })->middleware('rbac:auth.test.simple');
 
         Route::get('/minimal-auth-test', function () {
             try {
                 $user = auth()->user();
                 return response()->json([
+                    'success' => true,
                     'status' => 'success',
                     'message' => 'Minimal auth test working',
-                    'user' => $user ? $user->id : null,
-                    'timestamp' => now(),
+                    'data' => [
+                        'user' => $user ? $user->id : null,
+                        'timestamp' => now(),
+                    ],
                 ]);
             } catch (\Exception $e) {
                 return response()->json([
@@ -101,16 +105,19 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
                     'timestamp' => now(),
                 ]);
             }
-        });
+        })->middleware('rbac:auth.test.minimal');
 
         Route::get('/sanctum-auth-test', function () {
             try {
                 $user = auth('sanctum')->user();
                 return response()->json([
+                    'success' => true,
                     'status' => 'success',
                     'message' => 'Sanctum auth test working',
-                    'user' => $user ? $user->id : null,
-                    'timestamp' => now(),
+                    'data' => [
+                        'user' => $user ? $user->id : null,
+                        'timestamp' => now(),
+                    ],
                 ]);
             } catch (\Exception $e) {
                 return response()->json([
@@ -119,7 +126,7 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
                     'timestamp' => now(),
                 ]);
             }
-        });
+        })->middleware('rbac:auth.test.sanctum');
 
         Route::get('/me-test', function () {
             try {
@@ -140,6 +147,7 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
                     ->toArray();
 
                 return response()->json([
+                    'success' => true,
                     'status' => 'success',
                     'data' => [
                         'user' => [
@@ -160,115 +168,118 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
                     'timestamp' => now(),
                 ]);
             }
-        });
+        })->middleware('rbac:auth.test.me');
 
         Route::get('/auth-test', function () {
             return response()->json([
+                'success' => true,
                 'status' => 'success',
                 'message' => 'Auth test working',
-                'user' => auth()->user(),
-                'timestamp' => now(),
+                'data' => [
+                    'user' => auth()->user(),
+                    'timestamp' => now(),
+                ],
             ]);
-        });
+        })->middleware('rbac:auth.test.auth');
 
         // Role-specific dashboard routes
         Route::group(['prefix' => 'pm'], function () {
-            Route::get('/dashboard', [\App\Http\Controllers\Api\PmDashboardController::class, 'getOverview'])->name('pm.dashboard');
-            Route::get('/progress', [\App\Http\Controllers\Api\PmDashboardController::class, 'getProjectProgress'])->name('pm.progress');
-            Route::get('/risks', [\App\Http\Controllers\Api\PmDashboardController::class, 'getRiskAssessment'])->name('pm.risks');
-            Route::get('/weekly-report', [\App\Http\Controllers\Api\PmDashboardController::class, 'getWeeklyReport'])->name('pm.weekly-report');
+            Route::get('/dashboard', [\App\Http\Controllers\Api\PmDashboardController::class, 'getOverview'])->middleware('rbac:pm.dashboard')->name('pm.dashboard');
+            Route::get('/progress', [\App\Http\Controllers\Api\PmDashboardController::class, 'getProjectProgress'])->middleware('rbac:pm.progress')->name('pm.progress');
+            Route::get('/risks', [\App\Http\Controllers\Api\PmDashboardController::class, 'getRiskAssessment'])->middleware('rbac:pm.risks')->name('pm.risks');
+            Route::get('/weekly-report', [\App\Http\Controllers\Api\PmDashboardController::class, 'getWeeklyReport'])->middleware('rbac:pm.weekly-report')->name('pm.weekly-report');
         });
 
         Route::group(['prefix' => 'designer'], function () {
-            Route::get('/dashboard', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getOverview'])->name('designer.dashboard');
-            Route::get('/tasks', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getDesignTasks'])->name('designer.tasks');
-            Route::get('/drawings', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getDrawingsStatus'])->name('designer.drawings');
-            Route::get('/rfis', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getRfisToAnswer'])->name('designer.rfis');
-            Route::get('/submittals', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getSubmittalsStatus'])->name('designer.submittals');
-            Route::get('/workload', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getDesignWorkload'])->name('designer.workload');
+            Route::get('/dashboard', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getOverview'])->middleware('rbac:designer.dashboard')->name('designer.dashboard');
+            Route::get('/tasks', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getDesignTasks'])->middleware('rbac:designer.tasks')->name('designer.tasks');
+            Route::get('/drawings', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getDrawingsStatus'])->middleware('rbac:designer.drawings')->name('designer.drawings');
+            Route::get('/rfis', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getRfisToAnswer'])->middleware('rbac:designer.rfis')->name('designer.rfis');
+            Route::get('/submittals', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getSubmittalsStatus'])->middleware('rbac:designer.submittals')->name('designer.submittals');
+            Route::get('/workload', [\App\Http\Controllers\Api\DesignerDashboardController::class, 'getDesignWorkload'])->middleware('rbac:designer.workload')->name('designer.workload');
         });
 
         Route::group(['prefix' => 'site-engineer'], function () {
-            Route::get('/dashboard', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getOverview'])->name('site-engineer.dashboard');
-            Route::get('/tasks', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getSiteTasks'])->name('site-engineer.tasks');
-            Route::get('/material-requests', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getMaterialRequests'])->name('site-engineer.material-requests');
-            Route::get('/rfis', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getSiteRfis'])->name('site-engineer.rfis');
-            Route::get('/inspections', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getQcInspections'])->name('site-engineer.inspections');
-            Route::get('/safety', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getSiteSafetyStatus'])->name('site-engineer.safety');
-            Route::get('/daily-report', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getDailySiteReport'])->name('site-engineer.daily-report');
+            Route::get('/dashboard', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getOverview'])->middleware('rbac:site-engineer.dashboard')->name('site-engineer.dashboard');
+            Route::get('/tasks', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getSiteTasks'])->middleware('rbac:site-engineer.tasks')->name('site-engineer.tasks');
+            Route::get('/material-requests', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getMaterialRequests'])->middleware('rbac:site-engineer.material-requests')->name('site-engineer.material-requests');
+            Route::get('/rfis', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getSiteRfis'])->middleware('rbac:site-engineer.rfis')->name('site-engineer.rfis');
+            Route::get('/inspections', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getQcInspections'])->middleware('rbac:site-engineer.inspections')->name('site-engineer.inspections');
+            Route::get('/safety', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getSiteSafetyStatus'])->middleware('rbac:site-engineer.safety')->name('site-engineer.safety');
+            Route::get('/daily-report', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getDailySiteReport'])->middleware('rbac:site-engineer.daily-report')->name('site-engineer.daily-report');
         });
 
         // Project Management routes
         Route::group(['prefix' => 'projects'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\ProjectController::class, 'index'])->name('projects.index');
-            Route::post('/', [\App\Http\Controllers\Api\ProjectController::class, 'store'])->name('projects.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'show'])->name('projects.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'update'])->name('projects.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'destroy'])->name('projects.destroy');
+            Route::get('/', [\App\Http\Controllers\Api\ProjectController::class, 'index'])->middleware('rbac:project.view')->name('projects.index');
+            Route::post('/', [\App\Http\Controllers\Api\ProjectController::class, 'store'])->middleware('rbac:project.create')->name('projects.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'show'])->middleware('rbac:project.view')->name('projects.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'destroy'])->middleware('rbac:project.delete')->name('projects.destroy');
         });
 
         // Tasks Management routes
         Route::group(['prefix' => 'tasks'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\TaskController::class, 'index'])->name('tasks.index');
-            Route::post('/', [\App\Http\Controllers\Api\TaskController::class, 'store'])->name('tasks.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'show'])->name('tasks.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'update'])->name('tasks.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'destroy'])->name('tasks.destroy');
-            Route::patch('/{id}/status', [\App\Http\Controllers\Api\TaskController::class, 'updateStatus'])->name('tasks.update-status');
-            Route::get('/{id}/dependencies', [\App\Http\Controllers\Api\TaskController::class, 'getDependencies'])->name('tasks.dependencies');
-            Route::post('/{id}/dependencies', [\App\Http\Controllers\Api\TaskController::class, 'addDependency'])->name('tasks.add-dependency');
-            Route::delete('/{id}/dependencies/{dependencyId}', [\App\Http\Controllers\Api\TaskController::class, 'removeDependency'])->name('tasks.remove-dependency');
+            Route::get('/', [\App\Http\Controllers\Api\TaskController::class, 'index'])->middleware('rbac:task.view')->name('tasks.index');
+            Route::post('/', [\App\Http\Controllers\Api\TaskController::class, 'store'])->middleware('rbac:task.create')->name('tasks.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'show'])->middleware('rbac:task.view')->name('tasks.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'update'])->middleware('rbac:task.update')->name('tasks.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\TaskController::class, 'destroy'])->middleware('rbac:task.delete')->name('tasks.destroy');
+            Route::patch('/{id}/status', [\App\Http\Controllers\Api\TaskController::class, 'updateStatus'])->middleware('rbac:task.update-status')->name('tasks.update-status');
+            Route::get('/{id}/dependencies', [\App\Http\Controllers\Api\TaskController::class, 'getDependencies'])->middleware('rbac:task.dependencies.view')->name('tasks.dependencies');
+            Route::post('/{id}/dependencies', [\App\Http\Controllers\Api\TaskController::class, 'addDependency'])->middleware('rbac:task.dependencies.add')->name('tasks.add-dependency');
+            Route::delete('/{id}/dependencies/{dependencyId}', [\App\Http\Controllers\Api\TaskController::class, 'removeDependency'])->middleware('rbac:task.dependencies.remove')->name('tasks.remove-dependency');
         });
 
         // RFI (Request for Information) routes
         Route::group(['prefix' => 'rfis'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\RfiController::class, 'index'])->name('rfis.index');
-            Route::post('/', [\App\Http\Controllers\Api\RfiController::class, 'store'])->name('rfis.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\RfiController::class, 'show'])->name('rfis.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\RfiController::class, 'update'])->name('rfis.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\RfiController::class, 'destroy'])->name('rfis.destroy');
-            Route::post('/{id}/assign', [\App\Http\Controllers\Api\RfiController::class, 'assign'])->name('rfis.assign');
-            Route::post('/{id}/respond', [\App\Http\Controllers\Api\RfiController::class, 'respond'])->name('rfis.respond');
-            Route::post('/{id}/close', [\App\Http\Controllers\Api\RfiController::class, 'close'])->name('rfis.close');
-            Route::post('/{id}/escalate', [\App\Http\Controllers\Api\RfiController::class, 'escalate'])->name('rfis.escalate');
+            Route::get('/', [\App\Http\Controllers\Api\RfiController::class, 'index'])->middleware('rbac:rfi.view')->name('rfis.index');
+            Route::post('/', [\App\Http\Controllers\Api\RfiController::class, 'store'])->middleware('rbac:rfi.create')->name('rfis.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\RfiController::class, 'show'])->middleware('rbac:rfi.view')->name('rfis.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\RfiController::class, 'update'])->middleware('rbac:rfi.edit')->name('rfis.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\RfiController::class, 'destroy'])->middleware('rbac:rfi.delete')->name('rfis.destroy');
+            Route::post('/{id}/assign', [\App\Http\Controllers\Api\RfiController::class, 'assign'])->middleware('rbac:rfi.assign')->name('rfis.assign');
+            Route::post('/{id}/respond', [\App\Http\Controllers\Api\RfiController::class, 'respond'])->middleware('rbac:rfi.respond')->name('rfis.respond');
+            Route::post('/{id}/close', [\App\Http\Controllers\Api\RfiController::class, 'close'])->middleware('rbac:rfi.close')->name('rfis.close');
+            Route::post('/{id}/escalate', [\App\Http\Controllers\Api\RfiController::class, 'escalate'])->middleware('rbac:rfi.escalate')->name('rfis.escalate');
         });
 
         // Submittals routes
         Route::group(['prefix' => 'submittals'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\SubmittalController::class, 'index'])->name('submittals.index');
-            Route::post('/', [\App\Http\Controllers\Api\SubmittalController::class, 'store'])->name('submittals.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\SubmittalController::class, 'show'])->name('submittals.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\SubmittalController::class, 'update'])->name('submittals.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\SubmittalController::class, 'destroy'])->name('submittals.destroy');
-            Route::post('/{id}/submit', [\App\Http\Controllers\Api\SubmittalController::class, 'submit'])->name('submittals.submit');
-            Route::post('/{id}/review', [\App\Http\Controllers\Api\SubmittalController::class, 'review'])->name('submittals.review');
-            Route::post('/{id}/approve', [\App\Http\Controllers\Api\SubmittalController::class, 'approve'])->name('submittals.approve');
-            Route::post('/{id}/reject', [\App\Http\Controllers\Api\SubmittalController::class, 'reject'])->name('submittals.reject');
+            Route::get('/', [\App\Http\Controllers\Api\SubmittalController::class, 'index'])->middleware('rbac:submittal.view')->name('submittals.index');
+            Route::post('/', [\App\Http\Controllers\Api\SubmittalController::class, 'store'])->middleware('rbac:submittal.create')->name('submittals.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\SubmittalController::class, 'show'])->middleware('rbac:submittal.view')->name('submittals.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\SubmittalController::class, 'update'])->middleware('rbac:submittal.edit')->name('submittals.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\SubmittalController::class, 'destroy'])->middleware('rbac:submittal.delete')->name('submittals.destroy');
+            Route::post('/{id}/submit', [\App\Http\Controllers\Api\SubmittalController::class, 'submit'])->middleware('rbac:submittal.submit')->name('submittals.submit');
+            Route::post('/{id}/review', [\App\Http\Controllers\Api\SubmittalController::class, 'review'])->middleware('rbac:submittal.review')->name('submittals.review');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Api\SubmittalController::class, 'approve'])->middleware('rbac:submittal.approve')->name('submittals.approve');
+            Route::post('/{id}/reject', [\App\Http\Controllers\Api\SubmittalController::class, 'reject'])->middleware('rbac:submittal.reject')->name('submittals.reject');
         });
 
         // Change Requests routes
         Route::group(['prefix' => 'change-requests'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'index'])->name('change-requests.index');
-            Route::post('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'store'])->name('change-requests.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'show'])->name('change-requests.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'update'])->name('change-requests.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'destroy'])->name('change-requests.destroy');
-            Route::post('/{id}/submit', [\App\Http\Controllers\Api\ChangeRequestController::class, 'submit'])->name('change-requests.submit');
-            Route::post('/{id}/approve', [\App\Http\Controllers\Api\ChangeRequestController::class, 'approve'])->name('change-requests.approve');
-            Route::post('/{id}/reject', [\App\Http\Controllers\Api\ChangeRequestController::class, 'reject'])->name('change-requests.reject');
-            Route::post('/{id}/apply', [\App\Http\Controllers\Api\ChangeRequestController::class, 'apply'])->name('change-requests.apply');
+            Route::get('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'index'])->middleware('rbac:change-request.view')->name('change-requests.index');
+            Route::post('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'store'])->middleware('rbac:change-request.create')->name('change-requests.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'show'])->middleware('rbac:change-request.view')->name('change-requests.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'update'])->middleware('rbac:change-request.update')->name('change-requests.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'destroy'])->middleware('rbac:change-request.delete')->name('change-requests.destroy');
+            Route::post('/{id}/submit', [\App\Http\Controllers\Api\ChangeRequestController::class, 'submit'])->middleware('rbac:change-request.submit')->name('change-requests.submit');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Api\ChangeRequestController::class, 'approve'])->middleware('rbac:change-request.approve')->name('change-requests.approve');
+            Route::post('/{id}/reject', [\App\Http\Controllers\Api\ChangeRequestController::class, 'reject'])->middleware('rbac:change-request.reject')->name('change-requests.reject');
+            Route::post('/{id}/apply', [\App\Http\Controllers\Api\ChangeRequestController::class, 'apply'])->middleware('rbac:change-request.apply')->name('change-requests.apply');
         });
 
         // Inspections routes
         Route::group(['prefix' => 'inspections'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\InspectionController::class, 'index'])->name('inspections.index');
-            Route::post('/', [\App\Http\Controllers\Api\InspectionController::class, 'store'])->name('inspections.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'show'])->name('inspections.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'update'])->name('inspections.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'destroy'])->name('inspections.destroy');
-            Route::post('/{id}/schedule', [\App\Http\Controllers\Api\InspectionController::class, 'schedule'])->name('inspections.schedule');
-            Route::post('/{id}/conduct', [\App\Http\Controllers\Api\InspectionController::class, 'conduct'])->name('inspections.conduct');
-            Route::post('/{id}/complete', [\App\Http\Controllers\Api\InspectionController::class, 'complete'])->name('inspections.complete');
+            Route::get('/', [\App\Http\Controllers\Api\InspectionController::class, 'index'])->middleware('rbac:inspection.view')->name('inspections.index');
+            Route::post('/', [\App\Http\Controllers\Api\InspectionController::class, 'store'])->middleware('rbac:inspection.create')->name('inspections.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'show'])->middleware('rbac:inspection.view')->name('inspections.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'update'])->middleware('rbac:inspection.edit')->name('inspections.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\InspectionController::class, 'destroy'])->middleware('rbac:inspection.delete')->name('inspections.destroy');
+            Route::post('/{id}/schedule', [\App\Http\Controllers\Api\InspectionController::class, 'schedule'])->middleware('rbac:inspection.schedule')->name('inspections.schedule');
+            Route::post('/{id}/conduct', [\App\Http\Controllers\Api\InspectionController::class, 'conduct'])->middleware('rbac:inspection.conduct')->name('inspections.conduct');
+            Route::post('/{id}/complete', [\App\Http\Controllers\Api\InspectionController::class, 'complete'])->middleware('rbac:inspection.complete')->name('inspections.complete');
         });
 
         // Safety Incidents routes - DISABLED (Controller not implemented)
@@ -300,11 +311,11 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
 
         // Document Management routes (using SimpleDocumentController)
         Route::group(['prefix' => 'documents'], function () {
-            Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])->name('documents.index');
-            Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])->name('documents.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])->name('documents.show');
-            Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->name('documents.update');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->name('documents.destroy');
+            Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])->middleware('rbac:document.view')->name('documents.index');
+            Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])->middleware('rbac:document.create')->name('documents.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])->middleware('rbac:document.view')->name('documents.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->middleware('rbac:document.update')->name('documents.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->middleware('rbac:document.delete')->name('documents.destroy');
         });
 
         /*
@@ -313,14 +324,14 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
         |--------------------------------------------------------------------------
         */
         Route::prefix('notifications')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\NotificationController::class, 'index'])->name('notifications.index');
-            Route::post('/', [\App\Http\Controllers\Api\NotificationController::class, 'store'])->name('notifications.store');
-            Route::get('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'show'])->name('notifications.show');
-            Route::put('/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
-            Route::put('/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
-            Route::delete('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy'])->name('notifications.destroy');
-            Route::get('/stats/count', [\App\Http\Controllers\Api\NotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
-            Route::get('/stats/summary', [\App\Http\Controllers\Api\NotificationController::class, 'getStats'])->name('notifications.stats');
+            Route::get('/', [\App\Http\Controllers\Api\NotificationController::class, 'index'])->middleware('rbac:notification.view')->name('notifications.index');
+            Route::post('/', [\App\Http\Controllers\Api\NotificationController::class, 'store'])->middleware('rbac:notification.create')->name('notifications.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'show'])->middleware('rbac:notification.view')->name('notifications.show');
+            Route::put('/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markAsRead'])->middleware('rbac:notification.read')->name('notifications.mark-read');
+            Route::put('/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllAsRead'])->middleware('rbac:notification.mark-all-read')->name('notifications.mark-all-read');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy'])->middleware('rbac:notification.delete')->name('notifications.destroy');
+            Route::get('/stats/count', [\App\Http\Controllers\Api\NotificationController::class, 'getUnreadCount'])->middleware('rbac:notification.stats')->name('notifications.unread-count');
+            Route::get('/stats/summary', [\App\Http\Controllers\Api\NotificationController::class, 'getStats'])->middleware('rbac:notification.stats')->name('notifications.stats');
         });
     });
 });

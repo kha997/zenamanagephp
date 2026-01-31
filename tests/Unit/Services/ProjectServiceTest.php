@@ -39,7 +39,11 @@ class ProjectServiceTest extends TestCase
             'status' => 'planning',
         ];
         
-        $project = $this->projectService->createProject($projectData);
+        $project = $this->projectService->createProject(
+            $projectData,
+            $user->id,
+            $user->tenant_id
+        );
         
         $this->assertInstanceOf(Project::class, $project);
         $this->assertEquals('Test Project', $project->name);

@@ -29,7 +29,7 @@ Route::prefix('v1/auth')->group(function () {
 });
 
 // RBAC management routes (chỉ cần rbac middleware)
-Route::prefix('v1/rbac')->group(function () {
+Route::prefix('v1/rbac')->middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
     // Role management
     Route::get('roles', [RoleController::class, 'index'])->middleware('rbac:role.view');
     Route::post('roles', [RoleController::class, 'store'])->middleware('rbac:role.create');

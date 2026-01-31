@@ -2,8 +2,15 @@
 
 namespace App\Exceptions;
 
+use App\Services\ErrorEnvelopeService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -47,6 +54,139 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             
         });
+
+        $this->renderable(function (AuthenticationException $exception, Request $request) {
+            if (!$this->isZenaRequest($request)) {
+                return null;
+            }
+
+            $existingResponse = $this->resolveExceptionResponse($exception);
+            if ($this->isEnvelopeResponse($existingResponse)) {
+                return $existingResponse;
+            }
+
+            return ErrorEnvelopeService::authenticationError(
+                $exception->getMessage() ?: 'Authentication required',
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        });
+
+        $this->renderable(function (AuthorizationException $exception, Request $request) {
+            if (!$this->isZenaRequest($request)) {
+                return null;
+            }
+
+            $existingResponse = $this->resolveExceptionResponse($exception);
+            if ($this->isEnvelopeResponse($existingResponse)) {
+                return $existingResponse;
+            }
+
+            return ErrorEnvelopeService::authorizationError(
+                $exception->getMessage() ?: 'Insufficient permissions',
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        });
+
+        $this->renderable(function (ModelNotFoundException $exception, Request $request) {
+            if (!$this->isZenaRequest($request)) {
+                return null;
+            }
+
+            $existingResponse = $this->resolveExceptionResponse($exception);
+            if ($this->isEnvelopeResponse($existingResponse)) {
+                return $existingResponse;
+            }
+
+            $model = class_basename($exception->getModel() ?? 'Resource');
+
+            return ErrorEnvelopeService::notFoundError(
+                $model,
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        });
+
+        $this->renderable(function (NotFoundHttpException $exception, Request $request) {
+            if (!$this->isZenaRequest($request)) {
+                return null;
+            }
+
+            $existingResponse = $this->resolveExceptionResponse($exception);
+            if ($this->isEnvelopeResponse($existingResponse)) {
+                return $existingResponse;
+            }
+
+            return ErrorEnvelopeService::notFoundError(
+                'Resource',
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        });
+
+        $this->renderable(function (HttpException $exception, Request $request) {
+            if (!$this->isZenaRequest($request) || $exception->getStatusCode() !== 400) {
+                return null;
+            }
+
+            $existingResponse = $this->resolveExceptionResponse($exception);
+            if ($this->isEnvelopeResponse($existingResponse)) {
+                return $existingResponse;
+            }
+
+            return ErrorEnvelopeService::error(
+                'E400.BAD_REQUEST',
+                $exception->getMessage() ?: 'Bad request',
+                [],
+                400,
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        });
+    }
+
+    /**
+     * Determine whether the current request belongs to the ZENA API surface.
+     */
+    private function isZenaRequest(Request $request): bool
+    {
+        $path = ltrim($request->path(), '/');
+
+        if (str_starts_with($path, 'api/zena')) {
+            return true;
+        }
+
+        $routeName = $request->route()?->getName();
+        if ($routeName && str_starts_with($routeName, 'zena.')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check whether the response has already been wrapped by the error envelope.
+     */
+    private function isEnvelopeResponse(?JsonResponse $response): bool
+    {
+        if (!$response) {
+            return false;
+        }
+
+        $data = $response->getData(true);
+
+        return is_array($data)
+            && isset($data['error'])
+            && is_array($data['error'])
+            && isset($data['error']['id']);
+    }
+
+    private function resolveExceptionResponse(Throwable $exception): ?JsonResponse
+    {
+        if (method_exists($exception, 'getResponse')) {
+            $response = $exception->getResponse();
+            if ($response instanceof JsonResponse) {
+                return $response;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -58,6 +198,18 @@ class Handler extends ExceptionHandler
      */
     protected function unauthenticated($request, AuthenticationException $exception)
     {
-        return response()->json(['message' => 'Unauthenticated'], 401);
+        if ($this->isZenaRequest($request)) {
+            $existingResponse = $this->resolveExceptionResponse($exception);
+            if ($this->isEnvelopeResponse($existingResponse)) {
+                return $existingResponse;
+            }
+
+            return ErrorEnvelopeService::authenticationError(
+                $exception->getMessage() ?: 'Authentication required',
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        }
+
+        return parent::unauthenticated($request, $exception);
     }
 }

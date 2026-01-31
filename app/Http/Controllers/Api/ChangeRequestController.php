@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\BaseApiController;
+use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Models\ChangeRequest;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
@@ -10,9 +11,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ChangeRequestController extends BaseApiController
 {
+    use ZenaContractResponseTrait;
     /**
      * Display a listing of change requests.
      */
@@ -25,7 +28,13 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
+            $tenantId = $this->resolveTenantId($request);
+            if (!$tenantId) {
+                return $this->errorResponse('Tenant context missing', 400);
+            }
+
             $query = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+            $query->where('tenant_id', $tenantId);
 
             // Filter by project if specified
             if ($request->has('project_id')) {
@@ -57,7 +66,7 @@ class ChangeRequestController extends BaseApiController
 
             $changeRequests = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-            return $this->successResponse($changeRequests, 'Change requests retrieved successfully');
+            return $this->zenaSuccessResponse($changeRequests, 'Change requests retrieved successfully');
         } catch (\Exception $e) {
             return $this->serverError('Failed to retrieve change requests: ' . $e->getMessage());
         }
@@ -75,8 +84,17 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
+            $tenantId = $this->resolveTenantId($request);
+            if (!$tenantId) {
+                return $this->errorResponse('Tenant context missing', 400);
+            }
+
             $validator = Validator::make($request->all(), [
-                'project_id' => 'required|exists:projects,id',
+                'project_id' => [
+                    'required',
+                    'string',
+                    Rule::exists('projects', 'id')->where('tenant_id', $tenantId),
+                ],
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
                 'change_type' => 'required|in:scope,cost,schedule,quality,design,other',
@@ -93,6 +111,7 @@ class ChangeRequestController extends BaseApiController
             }
 
             $changeRequest = ChangeRequest::create([
+                'tenant_id' => $tenantId,
                 'project_id' => $request->input('project_id'),
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
@@ -104,13 +123,14 @@ class ChangeRequestController extends BaseApiController
                 'justification' => $request->input('justification'),
                 'alternatives_considered' => $request->input('alternatives_considered'),
                 'status' => 'draft',
+                'requested_at' => now(),
                 'requested_by' => $user->id,
                 'change_number' => $this->generateChangeRequestNumber($request->input('project_id')),
             ]);
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name']);
 
-            return $this->successResponse($changeRequest, 'Change request created successfully', 201);
+            return $this->zenaSuccessResponse($changeRequest, 'Change request created successfully', 201);
         } catch (\Exception $e) {
             return $this->serverError('Failed to create change request: ' . $e->getMessage());
         }
@@ -456,9 +476,19 @@ class ChangeRequestController extends BaseApiController
             ->orderBy('created_at', 'desc')
             ->first();
         
-        $sequence = $lastChangeRequest ? (int)substr($lastChangeRequest->change_number, -4) + 1 : 1;
+        $sequence = $lastChangeRequest ? (int) substr($lastChangeRequest->change_number, -4) + 1 : 1;
+        $sequenceString = (string) $sequence;
         
-        return $projectCode . '-CR-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return $projectCode . '-CR-' . str_pad($sequenceString, 4, '0', STR_PAD_LEFT);
+    }
+
+    private function resolveTenantId(Request $request): ?string
+    {
+        $tenantId = $request->attributes->get('tenant_id')
+            ?? app('current_tenant_id')
+            ?? Auth::user()?->tenant_id;
+
+        return $tenantId ? (string) $tenantId : null;
     }
 
     /**

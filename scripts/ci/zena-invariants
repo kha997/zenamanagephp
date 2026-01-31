@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="/Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden"
+SQLITE_DB="/tmp/zenamanage_test.sqlite"
+
+cd "$REPO_ROOT"
+
+export APP_ENV=testing
+export DB_CONNECTION=sqlite
+export DB_DATABASE="$SQLITE_DB"
+export PCOV_ENABLED=0
+
+print_zena_config() {
+    php -r '
+require "vendor/autoload.php";
+$app = require "bootstrap/app.php";
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+printf(
+    "ZENA INVARIANTS CONFIG: env=%s | default=%s | sqlite=%s | mysql_host=%s | mysql_db=%s\n",
+    $app->environment(),
+    config("database.default"),
+    config("database.connections.sqlite.database") ?? "null",
+    config("database.connections.mysql.host") ?? "null",
+    config("database.connections.mysql.database") ?? "null"
+);
+'
+}
+
+ensure_sqlite_connection() {
+    DEFAULT_CONNECTION=$(php -r '
+require "vendor/autoload.php";
+$app = require "bootstrap/app.php";
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+printf("%s", config("database.default"));
+')
+
+    if [[ "$DEFAULT_CONNECTION" != "sqlite" ]]; then
+        echo "ERROR: zena-invariants requires sqlite but database.default is '$DEFAULT_CONNECTION'."
+        exit 1
+    fi
+}
+
+print_zena_config
+ensure_sqlite_connection
+
+mkdir -p "$(dirname "$DB_DATABASE")"
+rm -f "$DB_DATABASE"
+touch "$DB_DATABASE"
+
+php artisan migrate:fresh --force
+php artisan test --group=zena-invariants -v

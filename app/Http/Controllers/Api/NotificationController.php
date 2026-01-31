@@ -1,16 +1,19 @@
 <?php
 
 namespace App\Http\Controllers\Api;
-use Illuminate\Support\Facades\Auth;
 
-
+use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\BaseApiController;
 use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class NotificationController extends BaseApiController
 {
+    use ZenaContractResponseTrait;
+
     /**
      * Display a listing of the resource.
      */
@@ -42,7 +45,7 @@ class NotificationController extends BaseApiController
         $notifications = $query->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        return $this->successResponse($notifications);
+        return $this->zenaSuccessResponse($notifications);
     }
 
     /**
@@ -85,7 +88,7 @@ class NotificationController extends BaseApiController
             // Broadcast real-time notification
             $this->broadcastNotification($notification);
 
-            return $this->successResponse($notification, 'Notification created successfully', 201);
+            return $this->zenaSuccessResponse($notification, 'Notification created successfully', 201);
 
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to create notification: ' . $e->getMessage(), 500);
@@ -110,7 +113,7 @@ class NotificationController extends BaseApiController
             return $this->errorResponse('Notification not found', 404);
         }
 
-        return $this->successResponse($notification);
+        return $this->zenaSuccessResponse($notification);
     }
 
     /**
@@ -137,7 +140,7 @@ class NotificationController extends BaseApiController
                 'status' => 'read'
             ]);
 
-            return $this->successResponse($notification, 'Notification marked as read');
+            return $this->zenaSuccessResponse($notification, 'Notification marked as read');
 
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to mark notification as read: ' . $e->getMessage(), 500);
@@ -163,7 +166,7 @@ class NotificationController extends BaseApiController
                     'status' => 'read'
                 ]);
 
-            return $this->successResponse(null, 'All notifications marked as read');
+        return $this->zenaSuccessResponse(null, 'All notifications marked as read');
 
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to mark all notifications as read: ' . $e->getMessage(), 500);
@@ -191,7 +194,7 @@ class NotificationController extends BaseApiController
         try {
             $notification->delete();
 
-            return $this->successResponse(null, 'Notification deleted successfully');
+        return $this->zenaSuccessResponse(null, 'Notification deleted successfully');
 
         } catch (\Exception $e) {
             return $this->errorResponse('Failed to delete notification: ' . $e->getMessage(), 500);
@@ -213,7 +216,7 @@ class NotificationController extends BaseApiController
             ->whereNull('read_at')
             ->count();
 
-        return $this->successResponse(['count' => $count]);
+        return $this->zenaSuccessResponse(['count' => $count]);
     }
 
     /**
@@ -241,7 +244,7 @@ class NotificationController extends BaseApiController
                 ->pluck('count', 'priority'),
         ];
 
-        return $this->successResponse($stats);
+        return $this->zenaSuccessResponse($stats);
     }
 
     /**

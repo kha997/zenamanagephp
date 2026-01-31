@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Base API Controller implementing JSend specification
@@ -33,17 +34,48 @@ abstract class BaseApiController extends Controller
      */
     protected function successResponse($data = null, ?string $message = null, int $statusCode = 200): JsonResponse
     {
-        $response = ['status' => 'success'];
-        
-        if ($data !== null) {
-            $response['data'] = $data;
-        }
-        
+        $response = [
+            'success' => true,
+            'status' => 'success',
+            'data' => $data,
+        ];
+
         if ($message !== null) {
             $response['message'] = $message;
         }
-        
+
         return response()->json($response, $statusCode);
+    }
+
+    /**
+     * Return a paginated list response that exposes strict data/meta envelope.
+     *
+     * @param LengthAwarePaginator $paginator
+     * @param string|null $message
+     * @param int $statusCode
+     * @return JsonResponse
+     */
+    protected function listSuccessResponse(LengthAwarePaginator $paginator, ?string $message = null, int $statusCode = 200): JsonResponse
+    {
+        $payload = [
+            'success' => true,
+            'status' => 'success',
+            'data' => $paginator->items(),
+            'meta' => [
+                'pagination' => [
+                    'page' => $paginator->currentPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                    'last_page' => $paginator->lastPage(),
+                ],
+            ],
+        ];
+
+        if ($message !== null) {
+            $payload['message'] = $message;
+        }
+
+        return response()->json($payload, $statusCode);
     }
 
     /**
@@ -91,26 +123,58 @@ abstract class BaseApiController extends Controller
     }
 
     /**
+     * Return validation error response
+     */
+    protected function validationError($errors, ?string $message = 'Validation failed'): JsonResponse
+    {
+        return $this->failResponse($errors, $message, 422);
+    }
+
+    /**
+     * Return not found response
+     */
+    protected function notFound(string $message = 'Resource not found'): JsonResponse
+    {
+        return $this->errorResponse($message, 404);
+    }
+
+    /**
+     * Return unauthorized response
+     */
+    protected function unauthorized(string $message = 'Unauthorized'): JsonResponse
+    {
+        return $this->errorResponse($message, 401);
+    }
+
+    /**
+     * Return forbidden response
+     */
+    protected function forbidden(string $message = 'Forbidden'): JsonResponse
+    {
+        return $this->errorResponse($message, 403);
+    }
+
+    /**
+     * Return server error response
+     */
+    protected function serverError(string $message = 'Internal server error'): JsonResponse
+    {
+        return $this->errorResponse($message, 500);
+    }
+
+    /**
      * Return a paginated response
      *
      * @param LengthAwarePaginator $paginator
      * @param string|null $message
      * @return JsonResponse
      */
+    /**
+     * @deprecated Use listSuccessResponse() to keep the ZENA list envelope unified.
+     */
     protected function paginatedResponse(LengthAwarePaginator $paginator, ?string $message = null): JsonResponse
     {
-        return $this->successResponse([
-            'items' => $paginator->items(),
-            'pagination' => [
-                'current_page' => $paginator->currentPage(),
-                'per_page' => $paginator->perPage(),
-                'total' => $paginator->total(),
-                'last_page' => $paginator->lastPage(),
-                'from' => $paginator->firstItem(),
-                'to' => $paginator->lastItem(),
-                'has_more_pages' => $paginator->hasMorePages()
-            ]
-        ], $message);
+        return $this->listSuccessResponse($paginator, $message);
     }
 
     /**

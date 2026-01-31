@@ -1,0 +1,1122 @@
+[
+    {
+        "method": "GET",
+        "uri": "api/zena/auth-test",
+        "name": "zena.",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.test.auth"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/auth/check-permission",
+        "name": "zena.auth.check-permission",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.check-permission"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/auth/dashboard-url",
+        "name": "zena.auth.dashboard-url",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.dashboard-url"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/auth/login",
+        "name": "zena.auth.login",
+        "middleware": [
+            "api",
+            "throttle:zena-login"
+        ],
+        "public": true
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/auth/logout",
+        "name": "zena.auth.logout",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.logout"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/auth/me",
+        "name": "zena.auth.me",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.me"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/auth/notifications/{id}/read",
+        "name": "zena.auth.notifications.read",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.notifications.read"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/auth/notifications",
+        "name": "zena.auth.notifications",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.notifications.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/auth/refresh",
+        "name": "zena.auth.refresh",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.refresh"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/change-requests/{id}/apply",
+        "name": "zena.change-requests.apply",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.apply"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/change-requests/{id}/approve",
+        "name": "zena.change-requests.approve",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.approve"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/change-requests/{id}/reject",
+        "name": "zena.change-requests.reject",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.reject"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/change-requests/{id}/submit",
+        "name": "zena.change-requests.submit",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.submit"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/change-requests/{id}",
+        "name": "zena.change-requests.destroy",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.delete"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/change-requests/{id}",
+        "name": "zena.change-requests.show",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/change-requests/{id}",
+        "name": "zena.change-requests.update",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.update"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/change-requests",
+        "name": "zena.change-requests.index",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/change-requests",
+        "name": "zena.change-requests.store",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:change-request.create"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/designer/dashboard",
+        "name": "zena.designer.dashboard",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:designer.dashboard"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/designer/drawings",
+        "name": "zena.designer.drawings",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:designer.drawings"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/designer/rfis",
+        "name": "zena.designer.rfis",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:designer.rfis"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/designer/submittals",
+        "name": "zena.designer.submittals",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:designer.submittals"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/designer/tasks",
+        "name": "zena.designer.tasks",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:designer.tasks"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/designer/workload",
+        "name": "zena.designer.workload",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:designer.workload"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/documents/{id}",
+        "name": "zena.documents.destroy",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:document.delete"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/documents/{id}",
+        "name": "zena.documents.show",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:document.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/documents/{id}",
+        "name": "zena.documents.update",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:document.update"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/documents",
+        "name": "zena.documents.index",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:document.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/documents",
+        "name": "zena.documents.store",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:document.create"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/health",
+        "name": "zena.api.health",
+        "middleware": [
+            "api"
+        ],
+        "public": true
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/inspections/{id}/complete",
+        "name": "zena.inspections.complete",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:inspection.complete"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/inspections/{id}/conduct",
+        "name": "zena.inspections.conduct",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:inspection.conduct"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/inspections/{id}/schedule",
+        "name": "zena.inspections.schedule",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:inspection.schedule"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/inspections/{id}",
+        "name": "zena.inspections.destroy",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:inspection.delete"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/inspections/{id}",
+        "name": "zena.inspections.show",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:inspection.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/inspections/{id}",
+        "name": "zena.inspections.update",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:inspection.edit"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/inspections",
+        "name": "zena.inspections.index",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:inspection.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/inspections",
+        "name": "zena.inspections.store",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:inspection.create"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/me-test",
+        "name": "zena.",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.test.me"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/minimal-auth-test",
+        "name": "zena.",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.test.minimal"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/notifications/read-all",
+        "name": "zena.notifications.mark-all-read",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:notification.mark-all-read"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/notifications/stats/count",
+        "name": "zena.notifications.unread-count",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:notification.stats"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/notifications/stats/summary",
+        "name": "zena.notifications.stats",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:notification.stats"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/notifications/{id}/read",
+        "name": "zena.notifications.mark-read",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:notification.read"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/notifications/{id}",
+        "name": "zena.notifications.destroy",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:notification.delete"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/notifications/{id}",
+        "name": "zena.notifications.show",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:notification.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/notifications",
+        "name": "zena.notifications.index",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:notification.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/notifications",
+        "name": "zena.notifications.store",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:notification.create"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/pm/dashboard",
+        "name": "zena.pm.dashboard",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:pm.dashboard"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/pm/progress",
+        "name": "zena.pm.progress",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:pm.progress"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/pm/risks",
+        "name": "zena.pm.risks",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:pm.risks"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/pm/weekly-report",
+        "name": "zena.pm.weekly-report",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:pm.weekly-report"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/projects/{id}",
+        "name": "zena.projects.destroy",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:project.delete"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/projects/{id}",
+        "name": "zena.projects.show",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:project.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/projects/{id}",
+        "name": "zena.projects.update",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:project.update"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/projects",
+        "name": "zena.projects.index",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:project.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/projects",
+        "name": "zena.projects.store",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:project.create"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/rfis/{id}/assign",
+        "name": "zena.rfis.assign",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.assign"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/rfis/{id}/close",
+        "name": "zena.rfis.close",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.close"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/rfis/{id}/escalate",
+        "name": "zena.rfis.escalate",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.escalate"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/rfis/{id}/respond",
+        "name": "zena.rfis.respond",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.respond"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/rfis/{id}",
+        "name": "zena.rfis.destroy",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.delete"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/rfis/{id}",
+        "name": "zena.rfis.show",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/rfis/{id}",
+        "name": "zena.rfis.update",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.edit"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/rfis",
+        "name": "zena.rfis.index",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/rfis",
+        "name": "zena.rfis.store",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:rfi.create"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/sanctum-auth-test",
+        "name": "zena.",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.test.sanctum"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/simple-test",
+        "name": "zena.",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:auth.test.simple"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/site-engineer/daily-report",
+        "name": "zena.site-engineer.daily-report",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:site-engineer.daily-report"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/site-engineer/dashboard",
+        "name": "zena.site-engineer.dashboard",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:site-engineer.dashboard"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/site-engineer/inspections",
+        "name": "zena.site-engineer.inspections",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:site-engineer.inspections"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/site-engineer/material-requests",
+        "name": "zena.site-engineer.material-requests",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:site-engineer.material-requests"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/site-engineer/rfis",
+        "name": "zena.site-engineer.rfis",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:site-engineer.rfis"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/site-engineer/safety",
+        "name": "zena.site-engineer.safety",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:site-engineer.safety"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/site-engineer/tasks",
+        "name": "zena.site-engineer.tasks",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:site-engineer.tasks"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/submittals/{id}/approve",
+        "name": "zena.submittals.approve",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.approve"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/submittals/{id}/reject",
+        "name": "zena.submittals.reject",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.reject"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/submittals/{id}/review",
+        "name": "zena.submittals.review",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.review"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/submittals/{id}/submit",
+        "name": "zena.submittals.submit",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.submit"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/submittals/{id}",
+        "name": "zena.submittals.destroy",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.delete"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/submittals/{id}",
+        "name": "zena.submittals.show",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/submittals/{id}",
+        "name": "zena.submittals.update",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.edit"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/submittals",
+        "name": "zena.submittals.index",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/submittals",
+        "name": "zena.submittals.store",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:submittal.create"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/tasks/{id}/dependencies/{dependencyId}",
+        "name": "zena.tasks.remove-dependency",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.dependencies.remove"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/tasks/{id}/dependencies",
+        "name": "zena.tasks.dependencies",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.dependencies.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/tasks/{id}/dependencies",
+        "name": "zena.tasks.add-dependency",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.dependencies.add"
+        ],
+        "public": false
+    },
+    {
+        "method": "PATCH",
+        "uri": "api/zena/tasks/{id}/status",
+        "name": "zena.tasks.update-status",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.update-status"
+        ],
+        "public": false
+    },
+    {
+        "method": "DELETE",
+        "uri": "api/zena/tasks/{id}",
+        "name": "zena.tasks.destroy",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.delete"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/tasks/{id}",
+        "name": "zena.tasks.show",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "PUT",
+        "uri": "api/zena/tasks/{id}",
+        "name": "zena.tasks.update",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.update"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena/tasks",
+        "name": "zena.tasks.index",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.view"
+        ],
+        "public": false
+    },
+    {
+        "method": "POST",
+        "uri": "api/zena/tasks",
+        "name": "zena.tasks.store",
+        "middleware": [
+            "api",
+            "auth:sanctum",
+            "tenant.isolation",
+            "rbac:task.create"
+        ],
+        "public": false
+    },
+    {
+        "method": "GET",
+        "uri": "api/zena",
+        "name": "zena.api.info",
+        "middleware": [
+            "api"
+        ],
+        "public": true
+    }
+]

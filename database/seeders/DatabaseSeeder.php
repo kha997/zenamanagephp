@@ -26,6 +26,8 @@ class DatabaseSeeder extends Seeder
             // RBAC System
             RoleSeeder::class,
             PermissionSeeder::class,
+            ZenaPermissionsSeeder::class,
+            ZenaAdminRolePermissionSeeder::class,
             UserRoleSeeder::class,
             
             // Sidebar Configuration

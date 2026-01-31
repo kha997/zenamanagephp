@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Tests\Feature\Zena\ZenaRouteSurfaceInvariantTest;
 use Tests\TestCase;
 
 class RouteHygieneTest extends TestCase
@@ -29,12 +30,7 @@ class RouteHygieneTest extends TestCase
         'tenant.isolation',
     ];
 
-    private const ZENA_PUBLIC_ROUTES = [
-        'api/zena',
-        'api/zena/health',
-        'api/zena/test',
-        'api/zena/auth/login',
-    ];
+    private const ZENA_PUBLIC_ROUTES = ZenaRouteSurfaceInvariantTest::PUBLIC_ALLOWLIST_URIS;
 
     public function test_business_routes_reuse_the_security_stack(): void
     {
@@ -115,6 +111,9 @@ class RouteHygieneTest extends TestCase
         return implode('|', $filtered);
     }
 
+    /**
+     * @group zena-invariants
+     */
     public function test_zena_routes_reuse_sanctum_and_tenant_isolation(): void
     {
         $routes = Route::getRoutes();
@@ -165,5 +164,17 @@ class RouteHygieneTest extends TestCase
         }
 
         $this->assertEmpty($violations, 'Z.E.N.A routes must include auth:sanctum and tenant.isolation.');
+    }
+
+    /**
+     * @group zena-invariants
+     */
+    public function test_zena_public_allowlist_is_consistent(): void
+    {
+        $this->assertSame(
+            ZenaRouteSurfaceInvariantTest::PUBLIC_ALLOWLIST_URIS,
+            self::ZENA_PUBLIC_ROUTES,
+            'Z.E.N.A public allowlist must match the invariant definition.'
+        );
     }
 }

@@ -43,22 +43,24 @@ Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(fun
 //     return response()->file(public_path('api-demo.html'));
 // })->name('api.demo');
 
-// Simple Authentication Routes (no middleware)
-Route::get('/login', function() {
-    return view('auth.login');
-})->name('login');
+// Simple Authentication Routes (available in local/testing environments only)
+if (app()->environment(['local', 'testing'])) {
+    Route::get('/login', function () {
+        return view('auth.login');
+    })->name('login');
 
-Route::post('/login', function() {
-    return redirect('/app/dashboard')->with('success', 'Login successful!');
-})->name('login.post');
+    Route::post('/login', function () {
+        return redirect('/app/dashboard')->with('success', 'Login successful!');
+    })->name('login.post');
 
-Route::get('/logout', function() {
-    return redirect('/login')->with('success', 'You have been logged out successfully.');
-})->name('logout');
+    Route::get('/logout', function () {
+        return redirect('/login')->with('success', 'You have been logged out successfully.');
+    })->name('logout');
 
-Route::post('/logout', function() {
-    return redirect('/login')->with('success', 'You have been logged out successfully.');
-})->name('logout.post');
+    Route::post('/logout', function () {
+        return redirect('/login')->with('success', 'You have been logged out successfully.');
+    })->name('logout.post');
+}
 
 // MOVED: All test routes moved to /_debug namespace with debug.gate middleware
 
@@ -181,22 +183,24 @@ Route::get('/admin/dashboard', function() {
     return view('admin.dashboard');
 })->middleware(['auth', 'rbac:admin'])->name('admin-dashboard');
 
-// Test Routes (No middleware for testing)
-Route::get('/admin-dashboard-complete', function() {
-    return view('admin.dashboard');
-})->name('admin-dashboard-complete');
+if (app()->environment(['local', 'testing'])) {
+    // Test Routes (No middleware for testing)
+    Route::get('/admin-dashboard-complete', function () {
+        return view('admin.dashboard');
+    })->name('admin-dashboard-complete');
 
-Route::get('/projects-complete', function() {
-    return view('app.projects');
-})->name('projects-complete');
+    Route::get('/projects-complete', function () {
+        return view('app.projects');
+    })->name('projects-complete');
 
-Route::get('/tasks-complete', function() {
-    return view('app.tasks');
-})->name('tasks-complete');
+    Route::get('/tasks-complete', function () {
+        return view('app.tasks');
+    })->name('tasks-complete');
 
-Route::get('/calendar-complete', function() {
-    return view('app.calendar');
-})->name('calendar-complete');
+    Route::get('/calendar-complete', function () {
+        return view('app.calendar');
+    })->name('calendar-complete');
+}
 
 // Tailwind CSS Test Route
 Route::get('/test-tailwind', function() {
@@ -343,8 +347,8 @@ Route::get('/admin/users', function() {
     //     Route::post('/schedule', [App\Http\Controllers\Api\Admin\SecretsController::class, 'schedule'])->middleware(['auth:sanctum', 'ability:admin', 'rate.limit:secrets']);
     // });
 
-    // App Routes - Temporarily without middleware for testing
-    Route::prefix('app')->name('app.')->group(function () {
+    // App Routes (tenant-scoped, auth + tenant isolation enforced)
+    Route::prefix('app')->name('app.')->middleware(['auth', 'tenant.isolation'])->group(function () {
         // Dashboard route - AUTH TEMPORARILY DISABLED due to auth() helper issues
         Route::get('/dashboard', [App\Http\Controllers\Web\AppController::class, 'dashboard'])->name('dashboard');
         

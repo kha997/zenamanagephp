@@ -35,9 +35,10 @@ class Permission extends Model
     
     protected $fillable = [
         'code',
+        'name',
         'module',
         'action',
-        'description'
+        'description',
     ];
 
     /**

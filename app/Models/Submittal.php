@@ -12,6 +12,8 @@ class Submittal extends Model
     use HasFactory, TenantScope;
 
     protected $fillable = [
+        'id',
+        'tenant_id',
         'project_id',
         'submittal_number',
         'package_no',

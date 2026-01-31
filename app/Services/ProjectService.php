@@ -22,7 +22,7 @@ class ProjectService
     /**
      * Create a new project with business logic
      */
-    public function createProject(array $data, int $userId, int $tenantId): Project
+    public function createProject(array $data, string|int $userId, string|int $tenantId): Project
     {
         // Business logic validation
         $this->validateProjectCreation($data, $userId, $tenantId);
@@ -47,11 +47,20 @@ class ProjectService
         Event::dispatch('project.created', $project);
         
         // Audit logging
-        $this->auditService->log('project_created', $userId, $tenantId, [
-            'project_id' => $project->id,
-            'project_name' => $project->name,
-            'project_code' => $project->code
-        ]);
+        try {
+            $this->auditService->logCrudOperation('create', 'project', $project->id, [
+                'tenant_id' => $tenantId,
+                'user_id' => $userId,
+                'project_id' => $project->id,
+                'project_name' => $project->name,
+                'project_code' => $project->code,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to log project creation', [
+                'project_id' => $project->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
         
         return $project;
     }
@@ -73,7 +82,7 @@ class ProjectService
     /**
      * Generate project code
      */
-    private function generateProjectCode(int $tenantId): string
+    private function generateProjectCode(string|int $tenantId): string
     {
         $prefix = 'PRJ';
         $tenantCode = strtoupper(substr(md5($tenantId), 0, 3));
@@ -86,7 +95,7 @@ class ProjectService
     /**
      * Validate project creation
      */
-    private function validateProjectCreation(array $data, int $userId, int $tenantId): void
+    private function validateProjectCreation(array $data, string|int $userId, string|int $tenantId): void
     {
         if (empty($data['name'])) {
             throw new \InvalidArgumentException('Project name is required');
@@ -100,7 +109,7 @@ class ProjectService
     /**
      * Validate project access
      */
-    private function validateProjectAccess(Project $project, int $userId, int $tenantId): void
+    private function validateProjectAccess(Project $project, string|int $userId, string|int $tenantId): void
     {
         if ($project->tenant_id !== $tenantId) {
             throw new \UnauthorizedException('Project not found in tenant');
@@ -114,7 +123,7 @@ class ProjectService
     /**
      * Check if user can create projects
      */
-    private function canUserCreateProjects(int $userId, int $tenantId): bool
+    private function canUserCreateProjects(string|int $userId, string|int $tenantId): bool
     {
         return true; // Simplified for demo
     }
@@ -122,7 +131,7 @@ class ProjectService
     /**
      * Check if user can access project
      */
-    private function canUserAccessProject(Project $project, int $userId): bool
+    private function canUserAccessProject(Project $project, string|int $userId): bool
     {
         return true; // Simplified for demo
     }

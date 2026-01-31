@@ -77,6 +77,30 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = self::CANONICAL_MIDDLEWARE_ALIASES;
 
     /**
+     * The priority-sorted list of middleware.
+     *
+     * Ensures the Authenticate/TenantIsolation/RBAC sequence never interleaves
+     * other middleware in a way that would return the wrong status code.
+     *
+     * @var array<int, class-string|string>
+     */
+    protected $middlewarePriority = [
+        \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests::class,
+        \Illuminate\Routing\Middleware\ThrottleRequests::class,
+        \Illuminate\Routing\Middleware\ThrottleRequestsWithRedis::class,
+        \Illuminate\Contracts\Session\Middleware\AuthenticatesSessions::class,
+        \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        \Illuminate\Auth\Middleware\Authorize::class,
+        \App\Http\Middleware\Authenticate::class,
+        \App\Http\Middleware\TenantIsolationMiddleware::class,
+        \App\Http\Middleware\RoleBasedAccessControlMiddleware::class,
+    ];
+
+    /**
      * Return middleware aliases for tooling compatibility.
      *
      * @return array<string, class-string|string>

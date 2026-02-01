@@ -12,7 +12,6 @@ use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class ProjectManagerControllerTest extends TestCase
 {
@@ -221,18 +220,11 @@ class ProjectManagerControllerTest extends TestCase
     {
         Auth::loginUsingId($this->user->id);
 
-        $originalDatabase = config('database.connections.mysql.database');
-        $temporaryName = $originalDatabase . '_missing';
-        config(['database.connections.mysql.database' => $temporaryName]);
-        DB::purge('mysql');
+        Auth::shouldReceive('user')
+            ->once()
+            ->andThrow(new \RuntimeException('boom'));
 
-        try {
-            $response = $this->controller->getStats();
-        } finally {
-            config(['database.connections.mysql.database' => $originalDatabase]);
-            DB::purge('mysql');
-            DB::reconnect('mysql');
-        }
+        $response = $this->controller->getStats();
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(500, $response->getStatusCode());
@@ -249,18 +241,11 @@ class ProjectManagerControllerTest extends TestCase
     {
         Auth::loginUsingId($this->user->id);
 
-        $originalDatabase = config('database.connections.mysql.database');
-        $temporaryName = $originalDatabase . '_missing';
-        config(['database.connections.mysql.database' => $temporaryName]);
-        DB::purge('mysql');
+        Auth::shouldReceive('user')
+            ->once()
+            ->andThrow(new \RuntimeException('boom'));
 
-        try {
-            $response = $this->controller->getProjectTimeline();
-        } finally {
-            config(['database.connections.mysql.database' => $originalDatabase]);
-            DB::purge('mysql');
-            DB::reconnect('mysql');
-        }
+        $response = $this->controller->getProjectTimeline();
 
         $this->assertInstanceOf(JsonResponse::class, $response);
         $this->assertEquals(500, $response->getStatusCode());

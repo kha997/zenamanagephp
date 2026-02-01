@@ -108,6 +108,7 @@ class Task extends Model
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_ON_HOLD = 'on_hold';
     public const STATUS_CANCELLED = 'cancelled';
+    public const STATUS_TODO = self::STATUS_PENDING;
 
     public const VALID_STATUSES = [
         self::STATUS_PENDING,

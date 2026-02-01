@@ -46,3 +46,7 @@ production.env
 
 # Local PsySH (Laravel tinker) history
 .config/psysh/
+public/_*.php
+debug-rfis*
+zenamanage_test.sqlite
+server.php

@@ -23,11 +23,16 @@ class AuditLog extends Model
         'new_data',
         'ip_address',
         'user_agent',
+        'route',
+        'method',
+        'status_code',
+        'meta',
     ];
 
     protected $casts = [
         'old_data' => 'array',
         'new_data' => 'array',
+        'meta' => 'array',
     ];
 
     /**

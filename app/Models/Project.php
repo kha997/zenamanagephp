@@ -82,6 +82,13 @@ class Project extends Model
         self::STATUS_CANCELLED,
     ];
 
+    public const VALID_PRIORITIES = [
+        'low',
+        'medium',
+        'high',
+        'urgent',
+    ];
+
     /**
      * Relationship: Project thuộc về tenant
      */

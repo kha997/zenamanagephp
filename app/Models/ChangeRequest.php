@@ -163,6 +163,22 @@ class ChangeRequest extends Model
     }
 
     /**
+     * Alias for requester
+     */
+    public function requestedBy(): BelongsTo
+    {
+        return $this->requester();
+    }
+
+    /**
+     * Alias for approver
+     */
+    public function approvedBy(): BelongsTo
+    {
+        return $this->approver();
+    }
+
+    /**
      * Quan hệ với User (người reject)
      */
     public function rejector(): BelongsTo

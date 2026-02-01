@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\MaterialRequest;
 use App\Models\Project;
 use App\Models\QcInspection;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 
 class SiteEngineerDashboardController extends Controller
 {
+    use ZenaContractResponseTrait;
+
     /**
      * Get Site Engineer dashboard overview.
      */
@@ -68,10 +71,7 @@ class SiteEngineerDashboardController extends Controller
             'site_conditions' => $this->getSiteConditions($projects->pluck('id')->toArray()),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $overview,
-        ]);
+        return $this->zenaSuccessResponse($overview);
     }
 
     /**
@@ -124,10 +124,7 @@ class SiteEngineerDashboardController extends Controller
                 ];
             });
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $tasks,
-        ]);
+        return $this->zenaSuccessResponse($tasks);
     }
 
     /**
@@ -185,10 +182,7 @@ class SiteEngineerDashboardController extends Controller
                 ];
             });
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $materialRequests,
-        ]);
+        return $this->zenaSuccessResponse($materialRequests);
     }
 
     /**
@@ -243,10 +237,7 @@ class SiteEngineerDashboardController extends Controller
                 ];
             });
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $rfis,
-        ]);
+        return $this->zenaSuccessResponse($rfis);
     }
 
     /**
@@ -300,10 +291,7 @@ class SiteEngineerDashboardController extends Controller
                 ];
             });
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $inspections,
-        ]);
+        return $this->zenaSuccessResponse($inspections);
     }
 
     /**
@@ -340,10 +328,7 @@ class SiteEngineerDashboardController extends Controller
             'safety_training_status' => $this->getSafetyTrainingStatus($projects->pluck('id')->toArray()),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $safetyStatus,
-        ]);
+        return $this->zenaSuccessResponse($safetyStatus);
     }
 
     /**
@@ -384,10 +369,7 @@ class SiteEngineerDashboardController extends Controller
             'safety_observations' => $this->getSafetyObservations($projects->pluck('id')->toArray(), $date),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $report,
-        ]);
+        return $this->zenaSuccessResponse($report);
     }
 
     /**

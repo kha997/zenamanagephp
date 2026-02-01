@@ -3,14 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
+use Laravel\Sanctum\PersonalAccessToken;
+use App\Services\ZenaAuditLogger;
 
 class AuthController extends Controller
 {
+    use ZenaContractResponseTrait;
+
+    public function __construct(private ZenaAuditLogger $auditLogger)
+    {
+    }
+
     /**
      * Login user and return token with user data.
      */
@@ -72,32 +82,41 @@ class AuthController extends Controller
         $token = $user->createToken('auth-token', ['*'], now()->addHours(2))->plainTextToken;
 
         // Get user roles and permissions
-        $roles = $user->roles()->pluck('name')->toArray();
-        $permissions = $user->roles()->with('permissions')->with(['user', 'project'])->get()
+        $rolesWithPermissions = $user->roles()->with('permissions')->get();
+        $roles = $rolesWithPermissions->pluck('name')->toArray();
+        $permissions = $rolesWithPermissions
             ->pluck('permissions')
             ->flatten()
             ->pluck('name')
             ->unique()
+            ->values()
             ->toArray();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Login successful',
-            'data' => [
-                'token' => $token,
-                'token_type' => 'Bearer',
-                'expires_in' => 7200, // 2 hours
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'avatar' => $user->avatar,
-                    'roles' => $roles,
-                    'permissions' => $permissions,
-                    'last_login_at' => $user->last_login_at,
-                ],
+        $this->auditLogger->log(
+            $request,
+            'zena.auth.login',
+            'auth',
+            (string) $user->id,
+            200,
+            null,
+            $user->tenant_id,
+            (string) $user->id
+        );
+
+        return $this->zenaSuccessResponse([
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => 7200, // 2 hours
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'avatar' => $user->avatar,
+                'roles' => $roles,
+                'permissions' => $permissions,
+                'last_login_at' => $user->last_login_at,
             ],
-        ]);
+        ], 'Login successful');
     }
 
     /**
@@ -105,7 +124,7 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $user = Auth::guard('sanctum')->user();
+        $user = $request->user('sanctum') ?? Auth::guard('sanctum')->user();
         
         if (!$user) {
             return response()->json([
@@ -113,13 +132,41 @@ class AuthController extends Controller
                 'message' => 'Unauthorized',
             ], 401);
         }
-        
-        $user->currentAccessToken()->delete();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Logout successful',
-        ]);
+        $this->revokeTokenFromRequest($request, $user);
+
+        $this->auditLogger->log(
+            $request,
+            'zena.auth.logout',
+            'auth',
+            (string) $user->id,
+            200,
+            null,
+            $user->tenant_id,
+            (string) $user->id
+        );
+
+        return $this->zenaSuccessResponse(null, 'Logout successful');
+    }
+
+    private function revokeTokenFromRequest(Request $request, User $user): void
+    {
+        $currentAccessToken = $request->user('sanctum')?->currentAccessToken();
+
+        if ($currentAccessToken instanceof PersonalAccessToken) {
+            $currentAccessToken->delete();
+            return;
+        }
+
+        $bearer = $request->bearerToken();
+
+        if ($bearer) {
+            PersonalAccessToken::findToken($bearer)?->delete();
+            return;
+        }
+
+        // Fallback: delete all tokens so we do not leave any lingering credentials.
+        $user->tokens()->delete();
     }
 
     /**
@@ -137,28 +184,27 @@ class AuthController extends Controller
         }
         
         // Get user roles and permissions
-        $roles = $user->roles()->pluck('name')->toArray();
-        $permissions = $user->roles()->with('permissions')->with(['user', 'project'])->get()
+        $rolesWithPermissions = $user->roles()->with('permissions')->get();
+        $roles = $rolesWithPermissions->pluck('name')->toArray();
+        $permissions = $rolesWithPermissions
             ->pluck('permissions')
             ->flatten()
             ->pluck('name')
             ->unique()
+            ->values()
             ->toArray();
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'phone' => $user->phone,
-                    'avatar' => $user->avatar,
-                    'roles' => $roles,
-                    'permissions' => $permissions,
-                    'last_login_at' => $user->last_login_at,
-                    'created_at' => $user->created_at,
-                ],
+        return $this->zenaSuccessResponse([
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'avatar' => $user->avatar,
+                'roles' => $roles,
+                'permissions' => $permissions,
+                'last_login_at' => $user->last_login_at,
+                'created_at' => $user->created_at,
             ],
         ]);
     }
@@ -183,15 +229,11 @@ class AuthController extends Controller
         // Create new token
         $token = $user->createToken('auth-token', ['*'], now()->addHours(2))->plainTextToken;
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Token refreshed successfully',
-            'data' => [
-                'token' => $token,
-                'token_type' => 'Bearer',
-                'expires_in' => 7200, // 2 hours
-            ],
-        ]);
+        return $this->zenaSuccessResponse([
+            'token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => 7200, // 2 hours
+        ], 'Token refreshed successfully');
     }
 
     /**
@@ -212,12 +254,9 @@ class AuthController extends Controller
 
         $dashboardUrl = $this->getDashboardUrlByRole($roles);
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'dashboard_url' => $dashboardUrl,
-                'roles' => $roles,
-            ],
+        return $this->zenaSuccessResponse([
+            'dashboard_url' => $dashboardUrl,
+            'roles' => $roles,
         ]);
     }
 
@@ -267,12 +306,9 @@ class AuthController extends Controller
             $query->where('name', $permission);
         })->exists();
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'has_permission' => $hasPermission,
-                'permission' => $permission,
-            ],
+        return $this->zenaSuccessResponse([
+            'has_permission' => $hasPermission,
+            'permission' => $permission,
         ]);
     }
 
@@ -301,12 +337,9 @@ class AuthController extends Controller
 
         $notifications = $query->limit($limit)->with(['user', 'project'])->get();
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'notifications' => $notifications,
-                'unread_count' => $user->zenaNotifications()->whereNull('read_at')->count(),
-            ],
+        return $this->zenaSuccessResponse([
+            'notifications' => $notifications,
+            'unread_count' => $user->zenaNotifications()->whereNull('read_at')->count(),
         ]);
     }
 
@@ -328,9 +361,6 @@ class AuthController extends Controller
         
         $notification->markAsRead();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Notification marked as read',
-        ]);
+        return $this->zenaSuccessResponse(null, 'Notification marked as read');
     }
 }

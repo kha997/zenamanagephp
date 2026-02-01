@@ -40,6 +40,9 @@ return new class extends Migration
                 Schema::rename($oldTable, $newTable);
             }
         }
+
+        $this->renameUniqueIndexIfExists('permissions', 'zena_permissions_code_unique', 'permissions_code_unique', ['code']);
+        $this->renameUniqueIndexIfExists('roles', 'zena_roles_name_unique', 'roles_name_unique', ['name']);
     }
 
     /**
@@ -76,5 +79,38 @@ return new class extends Migration
                 Schema::rename($oldTable, $newTable);
             }
         }
+
+        $this->renameUniqueIndexIfExists('zena_permissions', 'permissions_code_unique', 'zena_permissions_code_unique', ['code']);
+        $this->renameUniqueIndexIfExists('zena_roles', 'roles_name_unique', 'zena_roles_name_unique', ['name']);
+    }
+
+    private function renameUniqueIndexIfExists(string $table, string $from, string $to, array $columns): void
+    {
+        if (!Schema::hasTable($table)) {
+            return;
+        }
+
+        $connection = Schema::getConnection();
+        $schemaManager = $connection->getDoctrineSchemaManager();
+        $indexes = $schemaManager->listTableIndexes($table);
+
+        $hasOld = isset($indexes[$from]);
+        $hasNew = isset($indexes[$to]);
+
+        if (!$hasOld && !$hasNew) {
+            return;
+        }
+
+        Schema::table($table, function (Blueprint $tableBlueprint) use ($from, $to, $columns, $hasOld, $hasNew) {
+            if ($hasOld) {
+                $tableBlueprint->dropUnique($from);
+            }
+
+            if ($hasNew) {
+                $tableBlueprint->dropUnique($to);
+            }
+
+            $tableBlueprint->unique($columns, $to);
+        });
     }
 };

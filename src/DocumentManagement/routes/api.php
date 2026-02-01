@@ -15,6 +15,7 @@ use Src\DocumentManagement\Controllers\DocumentController;
 
 Route::prefix('api/v1/documents')
     ->as('v1.')
+    ->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])
     ->group(function () {
         
         // Simple Document CRUD routes (no middleware for testing)

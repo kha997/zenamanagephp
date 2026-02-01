@@ -59,11 +59,9 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting()
     {
-        // Temporarily disable rate limiting to fix cache issues
-        /*
-        RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user('api')?->id ?: $request->ip());
+        RateLimiter::for('zena-login', function (Request $request) {
+            $identity = strtolower((string) ($request->input('email') ?? $request->input('username') ?? ''));
+            return Limit::perMinute(10)->by($request->ip() . '|' . $identity);
         });
-        */
     }
 }

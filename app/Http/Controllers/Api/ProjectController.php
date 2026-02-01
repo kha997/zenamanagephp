@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProjectFormRequest;
+use App\Models\Project;
 use App\Repositories\ProjectRepository;
 use App\Services\ProjectService;
-use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +19,8 @@ use Illuminate\Support\Facades\Log;
  */
 class ProjectController extends Controller
 {
+    use ZenaContractResponseTrait;
+
     public function __construct(
         private ProjectService $projectService,
         private ProjectRepository $projectRepository
@@ -39,18 +43,7 @@ class ProjectController extends Controller
             
             $projects = $this->projectRepository->getAll($filters, $perPage);
             
-            return response()->json([
-                'status' => 'success',
-                'data' => $projects->items(),
-                'meta' => [
-                    'total' => $projects->total(),
-                    'per_page' => $projects->perPage(),
-                    'current_page' => $projects->currentPage(),
-                    'last_page' => $projects->lastPage(),
-                    'from' => $projects->firstItem(),
-                    'to' => $projects->lastItem()
-                ]
-            ]);
+            return $this->zenaSuccessResponse($projects);
             
         } catch (\Exception $e) {
             Log::error('Failed to get projects', [
@@ -106,12 +99,9 @@ class ProjectController extends Controller
             // Get project metrics
             $metrics = $this->projectService->getProjectMetrics($project);
             
-            return response()->json([
-                'status' => 'success',
-                'data' => [
-                    'project' => $project,
-                    'metrics' => $metrics
-                ]
+            return $this->zenaSuccessResponse([
+                'project' => $project,
+                'metrics' => $metrics,
             ]);
             
         } catch (\Exception $e) {
@@ -148,13 +138,13 @@ class ProjectController extends Controller
             $data = $request->validated();
             $data['tenant_id'] = $user->tenant_id;
             
-            $project = $this->projectService->createProject($data, $user->id);
+            $project = $this->projectService->createProject($data, $user->id, $user->tenant_id);
             
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Project created successfully',
-                'data' => $project->load(['client', 'projectManager', 'teamMembers'])
-            ], 201);
+            return $this->zenaSuccessResponse(
+                $project,
+                'Project created successfully',
+                201
+            );
             
         } catch (\Exception $e) {
             Log::error('Failed to create project', [
@@ -207,11 +197,10 @@ class ProjectController extends Controller
             $data = $request->validated();
             $project = $this->projectService->updateProject($project, $data, $user->id);
             
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Project updated successfully',
-                'data' => $project->load(['client', 'projectManager', 'teamMembers'])
-            ]);
+            return $this->zenaSuccessResponse(
+                $project->load(['client', 'projectManager', 'teamMembers']),
+                'Project updated successfully'
+            );
             
         } catch (\Exception $e) {
             Log::error('Failed to update project', [
@@ -264,10 +253,7 @@ class ProjectController extends Controller
             
             $this->projectService->deleteProject($project, $user->id);
             
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Project deleted successfully'
-            ]);
+            return $this->zenaSuccessResponse(null, 'Project deleted successfully');
             
         } catch (\Exception $e) {
             Log::error('Failed to delete project', [

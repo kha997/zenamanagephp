@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Permission as AppPermission;
+use App\Services\ErrorEnvelopeService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +36,32 @@ class RoleBasedAccessControlMiddleware
                 'message' => 'User not authenticated',
                 'code' => 'USER_NOT_AUTHENTICATED'
             ], 401);
+        }
+        
+        $headerTenantId = trim((string) $request->header('X-Tenant-ID'));
+        if ($headerTenantId === '') {
+            return ErrorEnvelopeService::error(
+                'TENANT_REQUIRED',
+                'X-Tenant-ID header is required',
+                [],
+                400,
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        }
+
+        $tenantId = $request->attributes->get('tenant_id');
+        if (!$tenantId && app()->bound('current_tenant_id')) {
+            $tenantId = app('current_tenant_id');
+        }
+
+        if (!$tenantId) {
+            return ErrorEnvelopeService::error(
+                'TENANT_REQUIRED',
+                'X-Tenant-ID header is required',
+                [],
+                400,
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
         }
         
         $normalizedPath = $this->normalizeApiPath($request->path());
@@ -114,13 +142,16 @@ class RoleBasedAccessControlMiddleware
      */
     private function isPermission(string $roleOrPermission): bool
     {
-        $permissions = [
-            'create_project', 'edit_project', 'delete_project', 'view_project',
-            'create_task', 'edit_task', 'delete_task', 'view_task',
-            'manage_team', 'view_team', 'manage_documents', 'view_documents',
-            'view_analytics', 'manage_settings', 'view_settings'
-        ];
-        return in_array($roleOrPermission, $permissions);
+        $exists = AppPermission::where('code', $roleOrPermission)
+            ->orWhere('name', $roleOrPermission)
+            ->exists();
+
+        Log::info('rbac.permission_check', [
+            'permission' => $roleOrPermission,
+            'found' => $exists,
+        ]);
+
+        return $exists;
     }
     
     /**
@@ -139,22 +170,17 @@ class RoleBasedAccessControlMiddleware
      */
     private function checkPermission($user, string $permission, Request $request, ?string $projectParam = null): bool
     {
-        // Get user's permissions
-        $userPermissions = $this->getUserPermissions($user);
-        
-        // Check if user has the permission
-        if (!in_array($permission, $userPermissions)) {
+        if (!$user->hasPermission($permission)) {
             return false;
         }
-        
-        // If permission is project-specific, check project access
+
         if ($projectParam && $this->isProjectSpecificPermission($permission)) {
             return $this->checkProjectAccess($user, $request, $projectParam);
         }
-        
+
         return true;
     }
-    
+
     /**
      * Get user's roles
      */
@@ -178,44 +204,6 @@ class RoleBasedAccessControlMiddleware
         }
         
         return $roles;
-    }
-    
-    /**
-     * Get user's permissions
-     */
-    private function getUserPermissions($user): array
-    {
-        // This is a simplified implementation
-        // You might want to implement a proper permission system
-        $permissions = [];
-        
-        if ($user->isSuperAdmin()) {
-            $permissions = [
-                'create_project', 'edit_project', 'delete_project', 'view_project',
-                'create_task', 'edit_task', 'delete_task', 'view_task',
-                'manage_team', 'view_team', 'manage_documents', 'view_documents',
-                'view_analytics', 'manage_settings', 'view_settings'
-            ];
-        } else {
-            // Add permission logic based on user's roles
-            if ($user->hasRole('project_manager')) {
-                $permissions = array_merge($permissions, [
-                    'create_project', 'edit_project', 'view_project',
-                    'create_task', 'edit_task', 'view_task',
-                    'manage_team', 'view_team', 'view_documents',
-                    'view_analytics', 'view_settings'
-                ]);
-            }
-            
-            if ($user->hasRole('team_member')) {
-                $permissions = array_merge($permissions, [
-                    'view_project', 'create_task', 'edit_task', 'view_task',
-                    'view_team', 'view_documents'
-                ]);
-            }
-        }
-        
-        return array_unique($permissions);
     }
     
     /**

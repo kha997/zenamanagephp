@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\ChangeRequest;
 use App\Models\Project;
 use App\Models\Rfi;
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
 
 class PmDashboardController extends Controller
 {
+    use ZenaContractResponseTrait;
+
     /**
      * Get PM dashboard overview.
      */
@@ -68,10 +71,7 @@ class PmDashboardController extends Controller
             'upcoming_milestones' => $this->getUpcomingMilestones($projects->pluck('id')->toArray()),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $overview,
-        ]);
+        return $this->zenaSuccessResponse($overview);
     }
 
     /**
@@ -124,10 +124,7 @@ class PmDashboardController extends Controller
             'timeline_progress' => $this->getTimelineProgress($projectId),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $progress,
-        ]);
+        return $this->zenaSuccessResponse($progress);
     }
 
     /**
@@ -165,10 +162,7 @@ class PmDashboardController extends Controller
             'quality_issues' => $this->getQualityIssues($projects->pluck('id')->toArray()),
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $risks,
-        ]);
+        return $this->zenaSuccessResponse($risks);
     }
 
     /**
@@ -229,10 +223,7 @@ class PmDashboardController extends Controller
             ],
         ];
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $report,
-        ]);
+        return $this->zenaSuccessResponse($report);
     }
 
     /**

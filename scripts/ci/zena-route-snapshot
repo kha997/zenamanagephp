@@ -1,0 +1,48 @@
+#!/usr/bin/env php
+<?php declare(strict_types=1);
+
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Routing\Route as RoutingRoute;
+
+require __DIR__ . '/../../vendor/autoload.php';
+$app = require __DIR__ . '/../../bootstrap/app.php';
+$kernel = $app->make(Kernel::class);
+$kernel->bootstrap();
+
+$allowlist = [
+    'api/zena',
+    'api/zena/auth/login',
+    'api/zena/health',
+];
+
+$routes = collect($app['router']->getRoutes())
+    ->filter(static fn (RoutingRoute $route) => str_starts_with($route->uri(), 'api/zena'))
+    ->map(static function (RoutingRoute $route) use ($allowlist) {
+        $methods = array_filter($route->methods(), static fn (string $method) => $method !== 'HEAD');
+        sort($methods);
+        if ($methods === []) {
+            $methods = ['GET'];
+        }
+
+        $middleware = array_values(array_filter(array_map(static fn (?string $entry) => trim((string) $entry), $route->gatherMiddleware()), static fn (string $entry) => $entry !== ''));
+
+        return [
+            'method' => implode('|', $methods),
+            'uri' => $route->uri(),
+            'name' => $route->getName(),
+            'middleware' => $middleware,
+            'public' => in_array($route->uri(), $allowlist, true),
+        ];
+    })
+    ->sortBy(static fn (array $route) => $route['uri'] . '|' . $route['method'])
+    ->values()
+    ->toArray();
+
+$destination = __DIR__ . '/../../docs/zena/contract/route-surface.snapshot.json';
+$directory = dirname($destination);
+if (!is_dir($directory)) {
+    mkdir($directory, 0755, true);
+}
+
+file_put_contents($destination, json_encode($routes, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+echo "Wrote route snapshot to {$destination}\n";

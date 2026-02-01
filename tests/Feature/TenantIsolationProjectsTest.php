@@ -44,7 +44,12 @@ class TenantIsolationProjectsTest extends TestCase
 
         Sanctum::actingAs($userB);
 
-        $response = $this->getJson('/api/projects');
+        $response = $this
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'X-Tenant-ID' => (string) $tenantB->id,
+            ])
+            ->getJson('/api/projects');
 
         $response->assertOk();
         $data = $response->json('data', []);
@@ -53,5 +58,16 @@ class TenantIsolationProjectsTest extends TestCase
         $this->assertEquals($projectB->id, $data[0]['id']);
         $this->assertEquals($tenantB->id, $data[0]['tenant_id']);
         $this->assertNotEquals($projectA->id, $data[0]['id'], 'Tenant A project must not be returned.');
+
+        $missingTenantResponse = $this
+            ->flushHeaders()
+            ->getJson('/api/projects');
+
+        $missingTenantResponse->assertStatus(400);
+        $this->assertSame(
+            'TENANT_REQUIRED',
+            $missingTenantResponse->json('error.code'),
+            'Requests without X-Tenant-ID should return a TENANT_REQUIRED error.'
+        );
     }
 }

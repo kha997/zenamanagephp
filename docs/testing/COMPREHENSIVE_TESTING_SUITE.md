@@ -27,6 +27,30 @@ This document provides comprehensive documentation for the ZenaManage testing su
 4. **Accessibility Tests** - WCAG 2.1 AA compliance
 5. **Performance Tests** - Performance budgets and monitoring
 
+## 🌱 **Seed Parity**
+
+### **Seed parity invariants**
+**Location:** `tests/Feature/Zena/ZenaSeedParityInvariantTest.php`
+
+**Purpose:** Running the Zena seeders from within this invariant test rebuilds the canonical RBAC state in-process, so every sqlite and MySQL run is deterministic. Because the test executes the seeders twice and checks that admin roles still own all canonical permissions, it catches any drift that might slip into prod before the merge.
+
+## 🚧 **Production readiness guardrails**
+
+### **Seeder wiring guardrail**
+**Location:** `tests/Feature/Zena/ZenaSeederWiringInvariantTest.php`
+
+Verifies `DatabaseSeeder` executes the canonical `ZenaPermissionsSeeder` and `ZenaAdminRolePermissionSeeder` twice, that canonical permission codes match their names, and that the System Admin role(s) still own every canonical permission. This workflow catches regressions around seeder wiring before deploy.
+
+### **MySQL migration/cast guardrail**
+**Location:** `tests/Feature/Zena/ZenaMySqlMigrationRiskInvariantTest.php`
+
+Confirms the sqlite gate keeps `database.default=sqlite`, that `audit_logs.meta` exists/casts as JSON/array, and that we can persist array meta data via the SQLite schema expectations. The MySQL parity script (`scripts/ci/zena-invariants-mysql`) now also prints `php artisan migrate:status` after `migrate:fresh` to ease failure triage.
+
+### **Audit PII-sensitive data guardrail**
+**Location:** `tests/Feature/Zena/ZenaAuditPiiInvariantTest.php`
+
+Ensures login + logout audit rows (and any derived meta) never include sensitive substrings such as `password`, `token`, `authorization`, `bearer`, or Personal Access Token raw values. The `ZenaAuditLogger` now limits meta to a small whitelist (route, method, status, tenant/user IDs, entity ID) and sanitizes unacceptable patterns before persisting.
+
 ## 🧪 **UNIT TESTS**
 
 ### **ErrorEnvelopeService Tests**
@@ -319,6 +343,32 @@ php artisan test --coverage
 
 # Run specific test file
 php artisan test tests/Unit/Services/ErrorEnvelopeServiceTest.php
+```
+
+### **How to run Zena RBAC/Tenant invariants locally**
+
+```bash
+cd /Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden
+./scripts/ci/zena-invariants
+```
+
+- The runner exports `APP_ENV=testing`, `DB_CONNECTION=sqlite`, and `DB_DATABASE=/tmp/zenamanage_test.sqlite` before refreshing migrations so these invariants execute against a deterministic SQLite store.
+- **SSOT note:** `.env.testing` MUST set `DB_CONNECTION=sqlite` and `DB_DATABASE=zenamanage_test.sqlite`; inline overrides (e.g., `DB_CONNECTION=sqlite php artisan ...`) remain allowed but are no longer required to keep the invariants reproducible.
+
+### **MySQL parity for Zena invariants in CI**
+The GitHub Actions job `zena-invariants-mysql` mirrors the sqlite-based run but forces `APP_ENV=testing`, `DB_CONNECTION=mysql`, and Laravel connection settings that point at the MySQL service container before calling `./scripts/ci/zena-invariants-mysql`. This ensures any migrations, indexes, or constraints that only surface on MySQL are caught by CI while leaving the sqlite SSOT unchanged.
+
+To exercise this parity job locally (requires a running MySQL 8 instance matching the CI env vars):
+
+```bash
+export APP_ENV=testing
+export DB_CONNECTION=mysql
+export DB_HOST=127.0.0.1
+export DB_PORT=3306
+export DB_DATABASE=zenamanage_test
+export DB_USERNAME=root
+export DB_PASSWORD=root_password
+./scripts/ci/zena-invariants-mysql
 ```
 
 ### **CI/CD Pipeline**

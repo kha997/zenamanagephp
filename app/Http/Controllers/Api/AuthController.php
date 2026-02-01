@@ -92,15 +92,21 @@ class AuthController extends Controller
             ->values()
             ->toArray();
 
+        $actorId = (string) $user->id;
+        $tenantId = $user->tenant_id ?? trim((string) $request->header('X-Tenant-ID', ''));
+        if ($tenantId === '') {
+            $tenantId = null;
+        }
+
         $this->auditLogger->log(
             $request,
             'zena.auth.login',
             'auth',
-            (string) $user->id,
+            $actorId,
             200,
             null,
-            $user->tenant_id,
-            (string) $user->id
+            $tenantId,
+            $actorId
         );
 
         return $this->zenaSuccessResponse([

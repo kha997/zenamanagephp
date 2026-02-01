@@ -36,7 +36,7 @@ class DemoUsersSeeder extends Seeder
         ];
 
         foreach ($roles as $roleData) {
-            Role::create($roleData);
+            Role::updateOrCreate(['name' => $roleData['name']], $roleData);
         }
 
         // Create super admin user

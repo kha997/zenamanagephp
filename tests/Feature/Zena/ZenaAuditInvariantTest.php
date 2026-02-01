@@ -24,6 +24,7 @@ class ZenaAuditInvariantTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->assertTestingDatabaseMode();
 
         $this->app['router']->aliasMiddleware('rbac', RoleBasedAccessControlMiddleware::class);
         $this->seedAuthPermissions();
@@ -42,7 +43,12 @@ class ZenaAuditInvariantTest extends TestCase
         $response->assertStatus(200);
         $this->assertIsString($response->json('data.token'));
 
-        $log = AuditLog::where('action', 'zena.auth.login')->firstOrFail();
+        $log = AuditLog::where('action', 'zena.auth.login')
+            ->where('user_id', (string) $user->id)
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('route', 'api/zena/auth/login')
+            ->latest('id')
+            ->firstOrFail();
 
         $this->assertSame('api/zena/auth/login', $log->route);
         $this->assertSame('POST', $log->method);

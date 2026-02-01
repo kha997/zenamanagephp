@@ -10,6 +10,7 @@ export APP_ENV=testing
 export DB_CONNECTION=sqlite
 export DB_DATABASE="$SQLITE_DB"
 export PCOV_ENABLED=0
+export ZENA_INVARIANTS_DB=sqlite
 
 print_zena_config() {
     php -r '
@@ -17,14 +18,15 @@ require "vendor/autoload.php";
 $app = require "bootstrap/app.php";
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
-printf(
-    "ZENA INVARIANTS CONFIG: env=%s | default=%s | sqlite=%s | mysql_host=%s | mysql_db=%s\n",
-    $app->environment(),
-    config("database.default"),
-    config("database.connections.sqlite.database") ?? "null",
-    config("database.connections.mysql.host") ?? "null",
-    config("database.connections.mysql.database") ?? "null"
-);
+    printf(
+        "ZENA INVARIANTS CONFIG: env=%s | mode=%s | default=%s | sqlite=%s | mysql_host=%s | mysql_db=%s\n",
+        $app->environment(),
+        getenv("ZENA_INVARIANTS_DB") ?: "unset",
+        config("database.default"),
+        config("database.connections.sqlite.database") ?? "null",
+        config("database.connections.mysql.host") ?? "null",
+        config("database.connections.mysql.database") ?? "null"
+    );
 '
 }
 

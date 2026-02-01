@@ -6,6 +6,7 @@ use App\Models\Permission as AppPermission;
 use App\Models\Role as AppRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -27,12 +28,19 @@ class ZenaRbacPermissionStoreInvariantTest extends TestCase
             ]
         );
 
-        $role = AppRole::create([
-            'name' => 'RBAC Guard Role',
+        $role = AppRole::firstOrNew(['name' => 'RBAC Guard Role']);
+
+        if (! $role->exists && empty($role->id)) {
+            $role->id = (string) Str::ulid();
+        }
+
+        $role->fill([
             'scope' => AppRole::SCOPE_SYSTEM,
             'description' => 'Role created by RBAC invariant test',
             'allow_override' => false,
         ]);
+
+        $role->save();
 
         $role->permissions()->attach($permission->id);
 

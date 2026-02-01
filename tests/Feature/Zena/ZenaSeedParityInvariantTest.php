@@ -9,6 +9,7 @@ use Database\Seeders\ZenaPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -76,13 +77,20 @@ class ZenaSeedParityInvariantTest extends TestCase
     private function createAdminRoles(): void
     {
         foreach (ZenaAdminRolePermissionSeeder::ADMIN_ROLE_NAMES as $name) {
-            AppRole::create([
-                'name' => $name,
+            $role = AppRole::firstOrNew(['name' => $name]);
+
+            if (! $role->exists && empty($role->id)) {
+                $role->id = (string) Str::ulid();
+            }
+
+            $role->fill([
                 'scope' => AppRole::SCOPE_SYSTEM,
                 'allow_override' => false,
                 'description' => "Parity seed role {$name}",
                 'is_active' => true,
             ]);
+
+            $role->save();
         }
     }
 

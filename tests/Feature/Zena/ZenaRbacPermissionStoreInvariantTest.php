@@ -17,13 +17,15 @@ class ZenaRbacPermissionStoreInvariantTest extends TestCase
 
     public function test_rbac_checks_permission_name_field(): void
     {
-        $permission = AppPermission::create([
-            'code' => 'rfi.view',
-            'name' => 'rfi.view',
-            'module' => 'rfi',
-            'action' => 'view',
-            'description' => 'Smoke guard for RBAC permission name',
-        ]);
+        $permission = AppPermission::updateOrCreate(
+            ['code' => 'rfi.view'],
+            [
+                'name' => 'rfi.view',
+                'module' => 'rfi',
+                'action' => 'view',
+                'description' => 'Smoke guard for RBAC permission name',
+            ]
+        );
 
         $role = AppRole::create([
             'name' => 'RBAC Guard Role',

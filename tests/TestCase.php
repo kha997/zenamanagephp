@@ -101,4 +101,105 @@ abstract class TestCase extends BaseTestCase
             $table->timestamps();
         });
     }
+
+    protected function assertTestingDatabaseMode(): void
+    {
+        $mode = $this->getInvariantsDatabaseMode();
+        $environment = app()->environment();
+        $defaultConnection = config('database.default');
+        $sqliteDatabase = config('database.connections.sqlite.database') ?? 'null';
+
+        $mysqlConfig = config('database.connections.mysql') ?? [];
+        $mysqlHost = $mysqlConfig['host'] ?? null;
+        $mysqlPort = $mysqlConfig['port'] ?? null;
+        $mysqlDatabase = $mysqlConfig['database'] ?? null;
+        $mysqlUsername = $mysqlConfig['username'] ?? null;
+
+        $diag = sprintf(
+            'env=%s mode=%s default=%s sqlite=%s mysql_host=%s mysql_port=%s mysql_db=%s mysql_user=%s',
+            $environment,
+            $mode,
+            $defaultConnection,
+            $sqliteDatabase,
+            $mysqlHost ?? 'null',
+            $mysqlPort ?? 'null',
+            $mysqlDatabase ?? 'null',
+            $mysqlUsername ?? 'null'
+        );
+
+        $this->assertSame(
+            'testing',
+            $environment,
+            "Zena invariants must run in the testing environment ($diag)."
+        );
+
+        if ($mode === 'mysql') {
+            $expectedHost = $this->resolveInvariantEnvValue('DB_HOST', 'mysql');
+            $expectedPort = $this->resolveInvariantEnvValue('DB_PORT', '3306');
+            $expectedDatabase = $this->resolveInvariantEnvValue('DB_DATABASE', 'zenamanage_test');
+            $expectedUsername = $this->resolveInvariantEnvValue('DB_USERNAME', 'root');
+
+            $this->assertSame(
+                'mysql',
+                $defaultConnection,
+                "Zena invariants mysql mode must use the mysql connection ($diag)."
+            );
+
+            $this->assertSame(
+                $expectedHost,
+                (string) ($mysqlHost ?? ''),
+                "Zena invariants mysql host must match the exported DB_HOST ($diag)."
+            );
+
+            $this->assertSame(
+                $expectedPort,
+                (string) ($mysqlPort ?? ''),
+                "Zena invariants mysql port must match the exported DB_PORT ($diag)."
+            );
+
+            $this->assertSame(
+                $expectedDatabase,
+                (string) ($mysqlDatabase ?? ''),
+                "Zena invariants mysql database must match the exported DB_DATABASE ($diag)."
+            );
+
+            $this->assertSame(
+                $expectedUsername,
+                (string) ($mysqlUsername ?? ''),
+                "Zena invariants mysql username must match the exported DB_USERNAME ($diag)."
+            );
+        } else {
+            $this->assertSame(
+                'sqlite',
+                $defaultConnection,
+                "Zena invariants must use the sqlite connection ($diag)."
+            );
+
+            $this->assertTrue(
+                str_ends_with($sqliteDatabase, 'zenamanage_test.sqlite'),
+                "Zena invariants must point to the sqlite test file ($diag)."
+            );
+        }
+    }
+
+    protected function getInvariantsDatabaseMode(): string
+    {
+        $mode = getenv('ZENA_INVARIANTS_DB');
+        if (!$mode) {
+            return 'sqlite';
+        }
+
+        return strtolower($mode);
+    }
+
+    private function resolveInvariantEnvValue(string $name, string $default): string
+    {
+        $value = getenv($name);
+
+        if ($value === false || $value === '') {
+            return $default;
+        }
+
+        return $value;
+    }
 }

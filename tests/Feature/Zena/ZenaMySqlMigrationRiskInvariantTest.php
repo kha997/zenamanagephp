@@ -18,10 +18,15 @@ class ZenaMySqlMigrationRiskInvariantTest extends TestCase
 
     public function test_sqlite_gate_respects_migration_meta_column(): void
     {
+        $this->assertTestingDatabaseMode();
+
+        $mode = $this->getInvariantsDatabaseMode();
+        $gateConnection = $mode === 'mysql' ? 'mysql' : 'sqlite';
+
         $this->assertSame(
-            'sqlite',
+            $gateConnection,
             config('database.default'),
-            'The sqlite gate must remain on the sqlite connection to avoid reaching for MySQL during CI-level migration checks.'
+            "The {$gateConnection} gate must remain on the {$gateConnection} connection during invariants mode '{$mode}'."
         );
 
         $this->assertTrue(

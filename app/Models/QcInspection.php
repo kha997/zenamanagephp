@@ -60,6 +60,21 @@ class QcInspection extends Model
     {
         return $this->belongsTo(User::class, 'inspector_id');
     }
+    /**
+     * Provide a pseudo project_id attribute derived from the plan.
+     */
+    public function getProjectIdAttribute(): ?string
+    {
+        return $this->qcPlan?->project_id;
+    }
+
+    /**
+     * Project attribute derived from the QC plan.
+     */
+    public function getProjectAttribute(): ?Project
+    {
+        return $this->qcPlan?->project;
+    }
 
     /**
      * Quan hệ với NCRs

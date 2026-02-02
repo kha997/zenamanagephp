@@ -27,7 +27,7 @@ class NotificationFactory extends Factory
         $types = ['task_assigned', 'project_update', 'deadline_reminder', 'system_alert', 'comment_added'];
 
         return [
-            'id' => \Illuminate\Support\Str::ulid(),
+            'id' => (string) \Illuminate\Support\Str::ulid(),
             'user_id' => User::factory(),
             'tenant_id' => Tenant::factory(),
             'type' => $this->faker->randomElement($types),

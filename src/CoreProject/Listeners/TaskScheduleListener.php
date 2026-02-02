@@ -53,7 +53,7 @@ class TaskScheduleListener
             
             // Tìm các task phụ thuộc vào task vừa hoàn thành
             $dependentTasks = Task::where('project_id', $projectId)
-                ->whereJsonContains('dependencies', $taskId)
+                ->whereJsonContains('dependencies_json', $taskId)
                 ->get();
 
             foreach ($dependentTasks as $task) {
@@ -129,7 +129,7 @@ class TaskScheduleListener
      */
     private function areAllDependenciesCompleted(Task $task): bool
     {
-        $dependencies = $task->dependencies ?? [];
+        $dependencies = $task->dependencies_json ?? [];
         
         if (empty($dependencies)) {
             return true;

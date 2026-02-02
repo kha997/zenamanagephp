@@ -74,6 +74,8 @@ class Document extends Model
         'project_id',
         'tenant_id',
         'uploaded_by',
+        'created_by',
+        'updated_by',
         'name',
         'original_name',
         'file_path',
@@ -114,6 +116,22 @@ class Document extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * Quan hệ với User (người tạo)
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Quan hệ với User (người cập nhật gần nhất)
+     */
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     /**

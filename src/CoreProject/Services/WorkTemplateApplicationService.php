@@ -251,7 +251,7 @@ class WorkTemplateApplicationService
             }
             
             if (!empty($actualDependencies)) {
-                $task->update(['dependencies' => $actualDependencies]);
+                $task->update(['dependencies_json' => $actualDependencies]);
             }
         }
     }

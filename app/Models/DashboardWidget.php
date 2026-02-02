@@ -31,13 +31,15 @@ class DashboardWidget extends Model
     
     protected $fillable = [
         'name',
+        'code',
         'type',
         'category',
         'config',
         'data_source',
         'permissions',
         'is_active',
-        'description'
+        'description',
+        'tenant_id'
     ];
 
     protected $casts = [
@@ -122,7 +124,11 @@ class DashboardWidget extends Model
      */
     public function scopeForRole($query, string $role)
     {
-        return $query->whereJsonContains('permissions->roles', $role);
+        return $query->where(function ($query) use ($role) {
+            $query->whereNull('permissions')
+                ->orWhereJsonContains('permissions->roles', $role)
+                ->orWhereJsonContains('permissions', $role);
+        });
     }
 
     /**
@@ -130,11 +136,28 @@ class DashboardWidget extends Model
      */
     public function isAvailableForRole(string $role): bool
     {
-        if (!$this->permissions || !isset($this->permissions['roles'])) {
+        $permissions = $this->permissions;
+
+        if (!$permissions) {
             return true; // Nếu không có permission config, cho phép tất cả
         }
 
-        return in_array($role, $this->permissions['roles']);
+        if (is_string($permissions)) {
+            $decoded = json_decode($permissions, true);
+            if (is_array($decoded)) {
+                $permissions = $decoded;
+            }
+        }
+
+        if (isset($permissions['roles']) && is_array($permissions['roles'])) {
+            return in_array($role, $permissions['roles']);
+        }
+
+        if (is_array($permissions)) {
+            return in_array($role, $permissions);
+        }
+
+        return true;
     }
 
     /**

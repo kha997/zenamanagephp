@@ -160,7 +160,7 @@ class TaskController extends Controller
                 'spent_hours' => $request->input('spent_hours'),
                 'parent_id' => $request->input('parent_id'),
                 'order' => $request->input('order', 0),
-                'dependencies' => $dependencies,
+                'dependencies_json' => $dependencies,
                 'watchers' => $request->input('watchers', []),
                 'tags' => $request->input('tags', []),
                 'is_hidden' => $request->input('is_hidden', false),
@@ -265,10 +265,11 @@ class TaskController extends Controller
                 'name', 'description', 'status', 'priority', 'start_date', 'end_date',
                 'estimated_hours', 'actual_hours', 'dependencies'
             ]);
+            $requestedDependencies = $updateData['dependencies'] ?? null;
 
             // Check for circular dependency if updating dependencies
-            if (isset($updateData['dependencies']) && is_array($updateData['dependencies'])) {
-                foreach ($updateData['dependencies'] as $depId) {
+            if (is_array($requestedDependencies)) {
+                foreach ($requestedDependencies as $depId) {
                     if ($depId === $id) {
                         return $this->error('Task cannot depend on itself', 400);
                     }
@@ -276,6 +277,11 @@ class TaskController extends Controller
                         return $this->error('Updating dependencies would create a circular dependency', 400);
                     }
                 }
+            }
+
+            if (array_key_exists('dependencies', $updateData)) {
+                $updateData['dependencies_json'] = $updateData['dependencies'];
+                unset($updateData['dependencies']);
             }
 
             $task->update($updateData);

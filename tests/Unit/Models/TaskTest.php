@@ -73,8 +73,8 @@ class TaskTest extends TestCase
         ]);
 
         // Task model sử dụng dependencies field là array, không phải relationship
-        $this->task->update(['dependencies' => [$dependentTask->id]]);
-        $this->assertTrue(in_array($dependentTask->id, $this->task->dependencies));
+        $this->task->update(['dependencies_json' => [$dependentTask->id]]);
+        $this->assertTrue(in_array($dependentTask->id, $this->task->dependencies_json));
     }
 
     /** @test */
@@ -191,7 +191,7 @@ class TaskTest extends TestCase
     {
         $fillable = [
             'project_id', 'component_id', 'phase_id', 'name', 'description',
-            'start_date', 'end_date', 'status', 'priority', 'dependencies',
+            'start_date', 'end_date', 'status', 'priority', 'dependencies_json',
             'conditional_tag', 'is_hidden', 'estimated_hours', 'actual_hours',
             'progress_percent', 'tags', 'visibility', 'client_approved'
         ];
@@ -209,7 +209,7 @@ class TaskTest extends TestCase
         $this->assertArrayHasKey('progress_percent', $casts);
         $this->assertArrayHasKey('estimated_hours', $casts);
         $this->assertArrayHasKey('actual_hours', $casts);
-        $this->assertArrayHasKey('dependencies', $casts);
+        $this->assertArrayHasKey('dependencies_json', $casts);
         $this->assertArrayHasKey('tags', $casts);
         $this->assertArrayHasKey('is_hidden', $casts);
         $this->assertArrayHasKey('client_approved', $casts);
@@ -301,15 +301,15 @@ class TaskTest extends TestCase
     /** @test */
     public function it_can_check_if_has_dependencies()
     {
-        $this->assertFalse(!empty($this->task->dependencies));
+        $this->assertFalse(!empty($this->task->dependencies_json));
 
         $dependentTask = Task::factory()->create([
             'project_id' => $this->project->id,
             'tenant_id' => $this->tenant->id
         ]);
 
-        $this->task->update(['dependencies' => [$dependentTask->id]]);
-        $this->assertTrue(!empty($this->task->dependencies));
+        $this->task->update(['dependencies_json' => [$dependentTask->id]]);
+        $this->assertTrue(!empty($this->task->dependencies_json));
     }
 
     /** @test */

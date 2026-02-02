@@ -4,6 +4,7 @@ namespace Tests\Traits;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Tests\Traits\AuthenticationTrait;
 
 /**
  * Trait để hỗ trợ database operations trong tests
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Artisan;
 trait DatabaseTrait
 {
     use RefreshDatabase;
+    use AuthenticationTrait;
     
     /**
      * Setup test database

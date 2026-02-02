@@ -2,19 +2,80 @@
 
 namespace Tests;
 
+use App\Models\Project;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
+    private static ?int $projectCodeHookDispatcherId = null;
 
     protected function setUp(): void
     {
         $this->prepareSqliteDatabaseFile();
         parent::setUp();
+        $this->registerArrayBindingWatch();
+        $this->registerProjectCodeHook();
         $this->ensureSqliteSubmittalsTable();
+    }
+
+    private function registerArrayBindingWatch(): void
+    {
+        if (!env('DEBUG_ARRAY_BINDINGS')) {
+            return;
+        }
+
+        DB::listen(function ($query) {
+            $bindings = $query->bindings ?? [];
+            foreach ($bindings as $binding) {
+                if (is_array($binding)) {
+                    $backtrace = collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS))
+                        ->filter(fn ($frame) => isset($frame['file']) && str_starts_with($frame['file'], base_path()))
+                        ->reject(fn ($frame) => str_contains($frame['file'], DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR))
+                        ->map(fn ($frame) => ($frame['file'] ?? 'unknown') . ':' . ($frame['line'] ?? '?'))
+                        ->values()
+                        ->all();
+
+                    throw new \RuntimeException(sprintf(
+                        'Array binding detected for SQL [%s] with bindings %s traces [%s]',
+                        $query->sql ?? 'unknown',
+                        json_encode($bindings),
+                        implode(' >> ', $backtrace)
+                    ));
+                }
+            }
+        });
+    }
+
+    private function registerProjectCodeHook(): void
+    {
+        if (!app()->environment('testing')) {
+            return;
+        }
+
+        $dispatcher = Project::getEventDispatcher();
+
+        if ($dispatcher === null) {
+            return;
+        }
+
+        $dispatcherId = spl_object_id($dispatcher);
+
+        if (self::$projectCodeHookDispatcherId === $dispatcherId) {
+            return;
+        }
+
+        Project::creating(function (Project $project) {
+            if (empty($project->code)) {
+                $project->code = 'PRJ-' . strtoupper(Str::random(8));
+            }
+        });
+
+        self::$projectCodeHookDispatcherId = $dispatcherId;
     }
 
     private function prepareSqliteDatabaseFile(): void
@@ -100,6 +161,11 @@ abstract class TestCase extends BaseTestCase
             $table->string('role_id');
             $table->timestamps();
         });
+    }
+
+    protected function assertStringContains(string $needle, string $haystack, string $message = ''): void
+    {
+        $this->assertStringContainsString($needle, $haystack, $message);
     }
 
     protected function assertTestingDatabaseMode(): void

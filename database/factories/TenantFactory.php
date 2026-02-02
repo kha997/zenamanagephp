@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * Factory cho Tenant model
@@ -20,9 +21,10 @@ class TenantFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => \Illuminate\Support\Str::ulid(),
+            'id' => (string) \Illuminate\Support\Str::ulid(),
             'name' => $this->faker->company(),
             'domain' => $this->faker->domainName(),
+            'slug' => Str::slug($this->faker->unique()->company()),
             'settings' => json_encode([
                 'timezone' => 'Asia/Ho_Chi_Minh',
                 'currency' => 'VND'

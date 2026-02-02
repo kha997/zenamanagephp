@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
+use App\Models\UserRoleProject;
+use App\Models\User;
 
 /**
  * Model Project - Quản lý dự án
@@ -41,11 +43,17 @@ class Project extends Model
         'code',
         'name',
         'description',
+        'pm_id',
+        'manager_id',
         'start_date',
         'end_date',
         'status',
+        'priority',
         'progress',
-        'budget_total'
+        'budget_total',
+        'budget_actual',
+        'budget',
+        'spent_amount'
     ];
 
     protected $casts = [
@@ -64,6 +72,26 @@ class Project extends Model
         'progress' => 0.0,
         'budget_total' => 0.0
     ];
+
+    public function getBudgetAttribute(): float
+    {
+        return (float) ($this->attributes['budget_total'] ?? 0.0);
+    }
+
+    public function setBudgetAttribute($value): void
+    {
+        $this->attributes['budget_total'] = $value;
+    }
+
+    public function getSpentAmountAttribute(): float
+    {
+        return (float) ($this->attributes['budget_actual'] ?? 0.0);
+    }
+
+    public function setSpentAmountAttribute($value): void
+    {
+        $this->attributes['budget_actual'] = $value;
+    }
 
     /**
      * Các trạng thái hợp lệ
@@ -97,6 +125,21 @@ class Project extends Model
         return $this->belongsTo(\App\Models\Tenant::class);
     }
 
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pm_id');
+    }
+
+    public function getManagerIdAttribute(): ?string
+    {
+        return $this->attributes['pm_id'] ?? null;
+    }
+
+    public function setManagerIdAttribute(?string $value): void
+    {
+        $this->attributes['pm_id'] = $value;
+    }
+
     /**
      * Relationship: Project có nhiều components
      */
@@ -128,6 +171,14 @@ class Project extends Model
     public function userRoles(): HasMany
     {
         return $this->hasMany(\Src\RBAC\Models\UserRoleProject::class);
+    }
+
+    /**
+     * Relationship: Project có nhiều bản ghi project-user cụ thể
+     */
+    public function projectUsers(): HasMany
+    {
+        return $this->hasMany(UserRoleProject::class, 'project_id');
     }
 
     /**

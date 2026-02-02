@@ -31,7 +31,7 @@ class TaskResource extends BaseApiResource
             'status_label' => $this->getStatusLabel(),
             'priority' => $this->priority,
             'priority_label' => $this->getPriorityLabel(),
-            'dependencies' => $this->dependencies,
+            'dependencies' => $this->dependencies_json ?? [],
             'conditional_tag' => $this->conditional_tag,
             'is_hidden' => $this->is_hidden,
             'estimated_hours' => $this->formatDecimal($this->estimated_hours),

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use JsonException;
 
 /**
  * Model DashboardMetricValue - Lưu trữ giá trị metrics theo thời gian
@@ -33,7 +34,9 @@ class DashboardMetricValue extends Model
         'tenant_id',
         'value',
         'metadata',
-        'recorded_at'
+        'recorded_at',
+        'timestamp',
+        'context'
     ];
 
     protected $casts = [
@@ -41,6 +44,36 @@ class DashboardMetricValue extends Model
         'value' => 'float',
         'recorded_at' => 'datetime',
     ];
+
+    public function setTimestampAttribute($value): void
+    {
+        $this->attributes['recorded_at'] = $value;
+    }
+
+    public function setContextAttribute($value): void
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $value = $decoded;
+            }
+        }
+
+        if (is_array($value)) {
+            try {
+                $value = json_encode($value, JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                $value = json_encode($value);
+            }
+        }
+
+        $this->attributes['metadata'] = $value;
+    }
+
+    public function getContextAttribute()
+    {
+        return $this->metadata;
+    }
 
     /**
      * Relationship: Giá trị thuộc về metric

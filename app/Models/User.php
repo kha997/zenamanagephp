@@ -58,6 +58,7 @@ class User extends Authenticatable
         'department',
         'job_title',
         'manager',
+        'role',
     ];
 
     protected $hidden = [
@@ -144,6 +145,14 @@ class User extends Authenticatable
     public function createdTasks(): HasMany
     {
         return $this->hasMany(Task::class, 'created_by');
+    }
+
+    /**
+     * Relationship: User manages many projects
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'pm_id');
     }
 
     /**

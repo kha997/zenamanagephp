@@ -147,6 +147,14 @@ class ChangeRequest extends Model
     }
 
     /**
+     * Alias for requester to keep compatibility.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->requester();
+    }
+
+    /**
      * Quan hệ với User (người được assign)
      */
     public function assignee(): BelongsTo

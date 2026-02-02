@@ -32,7 +32,7 @@ use Illuminate\Support\Facades\Log;
  * @property \Carbon\Carbon|null $end_date Ngày kết thúc
  * @property string $status Trạng thái
  * @property string $priority Độ ưu tiên
- * @property array|null $dependencies Mảng task_ids phụ thuộc
+ * @property array|null $dependencies_json Mảng task_ids phụ thuộc
  * @property string|null $conditional_tag Tag điều kiện
  * @property bool $is_hidden Ẩn task
  * @property float $estimated_hours Số giờ ước tính
@@ -59,7 +59,7 @@ class Task extends Model
         'end_date',
         'status',
         'priority',
-        'dependencies',
+        'dependencies_json',
         'conditional_tag',
         'is_hidden',
         'estimated_hours',
@@ -74,7 +74,7 @@ class Task extends Model
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
-        'dependencies' => 'array',
+        'dependencies_json' => 'array',
         'is_hidden' => 'boolean',
         'estimated_hours' => 'float',
         'actual_hours' => 'float',
@@ -211,11 +211,11 @@ class Task extends Model
      */
     public function canStart(): bool
     {
-        if (empty($this->dependencies)) {
+        if (empty($this->dependencies_json)) {
             return true;
         }
         
-        $dependentTasks = Task::whereIn('ulid', $this->dependencies)->get();
+        $dependentTasks = Task::whereIn('ulid', $this->dependencies_json)->get();
         
         return $dependentTasks->every(function ($task) {
             return $task->status === self::STATUS_COMPLETED;
@@ -228,7 +228,7 @@ class Task extends Model
     public function getDependentTasks()
     {
         return Task::where('project_id', $this->project_id)
-                   ->whereJsonContains('dependencies', $this->ulid)
+                   ->whereJsonContains('dependencies_json', $this->ulid)
                    ->get();
     }
 
@@ -279,8 +279,8 @@ class Task extends Model
     {
         return $query->where('status', self::STATUS_PENDING)
                     ->where(function($q) {
-                        $q->whereNull('dependencies')
-                          ->orWhereJsonLength('dependencies', 0);
+                        $q->whereNull('dependencies_json')
+                          ->orWhereJsonLength('dependencies_json', 0);
                     });
     }
 

@@ -398,7 +398,6 @@ class DashboardServiceTest extends TestCase
     {
         // Create test metric values
         $metric = DashboardMetric::where('code', 'project_progress')->first();
-        
         \App\Models\DashboardMetricValue::create([
             'metric_id' => $metric->id,
             'tenant_id' => $this->tenant->id,
@@ -528,6 +527,7 @@ class DashboardServiceTest extends TestCase
 
     protected function tearDown(): void
     {
+        UserDashboard::resetStaticMock();
         Mockery::close();
         parent::tearDown();
     }

@@ -24,7 +24,9 @@ class Team extends Model
         'name',
         'description',
         'team_lead_id',
+        'leader_id',
         'department',
+        'status',
         'is_active',
         'settings',
         'created_by',
@@ -33,12 +35,14 @@ class Team extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'status' => 'string',
         'settings' => 'array',
     ];
 
     protected $attributes = [
         'is_active' => true,
         'settings' => '[]',
+        'status' => self::STATUS_ACTIVE,
     ];
 
     /**
@@ -85,6 +89,21 @@ class Team extends Model
     public function teamLead(): BelongsTo
     {
         return $this->belongsTo(User::class, 'team_lead_id');
+    }
+
+    public function leader(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'team_lead_id');
+    }
+
+    public function getLeaderIdAttribute(): ?string
+    {
+        return $this->team_lead_id;
+    }
+
+    public function setLeaderIdAttribute(?string $value): void
+    {
+        $this->attributes['team_lead_id'] = $value;
     }
 
     /**

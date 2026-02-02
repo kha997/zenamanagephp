@@ -2,6 +2,8 @@
 
 namespace Src\CoreProject\Events;
 
+use App\Models\Project;
+use App\Models\User;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -13,23 +15,16 @@ class ProjectCreated
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    /**
-     * @param int $projectId ID của project
-     * @param int $actorId ID của user tạo project
-     * @param int $tenantId ID của tenant
-     * @param string $projectName Tên project
-     * @param int|null $templateId ID của template (nếu tạo từ template)
-     * @param array $projectData Dữ liệu project
-     * @param \DateTime $timestamp Thời gian event
-     */
+    public const EVENT_NAME = 'Project.Project.Created';
+
+    public readonly \DateTime $timestamp;
+
     public function __construct(
-        public readonly int $projectId,
-        public readonly int $actorId,
-        public readonly int $tenantId,
-        public readonly string $projectName,
-        public readonly ?int $templateId,
-        public readonly array $projectData,
-        public readonly \DateTime $timestamp
+        public readonly Project $project,
+        public readonly ?User $user = null,
+        public readonly ?int $templateId = null,
+        public readonly array $projectData = [],
+        ?\DateTime $timestamp = null
     ) {
         $this->timestamp = $timestamp ?? new \DateTime();
     }
@@ -39,7 +34,7 @@ class ProjectCreated
      */
     public function getEventName(): string
     {
-        return 'Project.Project.Created';
+        return self::EVENT_NAME;
     }
 
     /**
@@ -48,13 +43,18 @@ class ProjectCreated
     public function getPayload(): array
     {
         return [
-            'project_id' => $this->projectId,
-            'actor_id' => $this->actorId,
-            'tenant_id' => $this->tenantId,
-            'project_name' => $this->projectName,
+            'project_id' => $this->project->id,
+            'actor_id' => $this->user?->id,
+            'tenant_id' => $this->project->tenant_id,
+            'project_name' => $this->project->name,
             'template_id' => $this->templateId,
             'project_data' => $this->projectData,
             'timestamp' => $this->timestamp->format('Y-m-d H:i:s')
         ];
+    }
+
+    public function toArray(): array
+    {
+        return $this->getPayload();
     }
 }

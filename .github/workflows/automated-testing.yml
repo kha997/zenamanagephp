@@ -20,18 +20,27 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
       
       redis:
         image: redis:7-alpine
@@ -76,7 +85,7 @@ jobs:
 
     - name: Create database
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
 
     - name: Run database migrations
       run: php artisan migrate --env=testing --force
@@ -134,21 +143,25 @@ jobs:
     env:
       APP_ENV: testing
       DB_CONNECTION: mysql
-      DB_HOST: mysql
+      DB_HOST: 127.0.0.1
       DB_PORT: 3306
-      DB_DATABASE: zenamanage_test
+      DB_DATABASE: laravel
       DB_USERNAME: root
-      DB_PASSWORD: ''
+      DB_PASSWORD: root
 
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping -h mysql --silent" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
     - name: Checkout code
@@ -180,7 +193,7 @@ jobs:
     - name: Wait for MySQL service
       run: |
         for i in {1..30}; do
-          if mysqladmin ping -h mysql --silent; then
+          if mysqladmin ping -h 127.0.0.1 -proot --silent; then
             echo 'MySQL ready'
             exit 0
           fi
@@ -190,33 +203,36 @@ jobs:
         exit 1
 
     - name: Ensure MySQL database exists
-      run: mysql -h mysql -uroot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+      run: mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
 
     - name: Run MySQL zena invariants parity
-      env:
-        DB_HOST: mysql
-        DB_PORT: 3306
-        DB_DATABASE: zenamanage_test
-        DB_USERNAME: root
-        DB_PASSWORD: ''
       run: ./scripts/ci/zena-invariants-mysql
 
   feature-tests:
     name: Feature Tests
     runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
       redis:
         image: redis:7-alpine
         ports:
@@ -260,7 +276,7 @@ jobs:
 
     - name: Create database
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
 
     - name: Run database migrations
       run: php artisan migrate --env=testing --force
@@ -282,19 +298,28 @@ jobs:
     name: API Tests (Fast)
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
       redis:
         image: redis:7-alpine
         ports:
@@ -338,7 +363,7 @@ jobs:
 
     - name: Create database
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
 
     - name: Run database migrations
       run: php artisan migrate --env=testing --force
@@ -356,19 +381,28 @@ jobs:
     name: API Tests (Slow)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
       redis:
         image: redis:7-alpine
         ports:
@@ -412,7 +446,7 @@ jobs:
 
     - name: Create database
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
 
     - name: Run database migrations
       run: php artisan migrate --env=testing --force
@@ -440,19 +474,28 @@ jobs:
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
       redis:
         image: redis:7-alpine
         ports:
@@ -496,7 +539,7 @@ jobs:
 
     - name: Create database
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
 
     - name: Run database migrations
       run: php artisan migrate --env=testing --force
@@ -517,19 +560,28 @@ jobs:
   performance-tests:
     name: Performance Tests
     runs-on: ubuntu-latest
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
       redis:
         image: redis:7-alpine
         ports:
@@ -569,7 +621,7 @@ jobs:
 
     - name: Create database
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
 
     - name: Run database migrations
       run: php artisan migrate --env=testing --force

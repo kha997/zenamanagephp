@@ -2,6 +2,11 @@ name: Automated Testing
 
 on:
   workflow_dispatch:
+    inputs:
+      debug_timeout:
+        description: 'Set to true when manually dispatching to log timeout/ulimit details. Defaults to false so regular runs stay clean.'
+        required: false
+        default: 'false'
   push:
     branches: [ main, develop, 'feature/*' ]
   schedule:
@@ -417,6 +422,17 @@ jobs:
 
     - name: Optimize framework caches
       run: php artisan optimize:clear
+
+    - name: Debug timeout environment (manual only)
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_timeout == 'true' }}
+      run: |
+        echo "PATH=$PATH"
+        command -v timeout || true
+        timeout --version || true
+        ulimit -a || true
+        env | sort | grep -i -E 'timeout|time(limit)?|limit|kill|alarm|command_timeout|ci_timeout|seconds|ulimit' || true
+        env | sort | grep -E '^RUNNER_|^GITHUB_ACTIONS$|^ImageOS=' || true
+        date
 
     - name: Run Slow API Feature Tests
       run: php artisan test tests/Feature/Api -v --stop-on-failure --group=slow

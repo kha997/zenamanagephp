@@ -350,7 +350,7 @@ jobs:
   api-tests-slow:
     name: API Tests (Slow)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
     
     services:
       mysql:

@@ -116,6 +116,14 @@ class Component extends Model
     }
 
     /**
+     * Relationship alias for children components
+     */
+    public function childComponents(): HasMany
+    {
+        return $this->children();
+    }
+
+    /**
      * Relationship: Component có nhiều tasks
      */
     public function tasks(): HasMany

@@ -7,12 +7,15 @@ use App\Models\User;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
+use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
+use Tests\Traits\AuthenticationTrait;
+use Tests\Traits\ApiTestTrait;
 
+/** @group slow */
 class ProjectManagerApiIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait, ApiTestTrait;
 
     protected $user;
     protected $tenant;
@@ -30,7 +33,18 @@ class ProjectManagerApiIntegrationTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'role' => 'project_manager'
         ]);
-        
+
+        $projectManagerRole = Role::firstOrCreate(
+            ['name' => 'project_manager'],
+            [
+                'scope' => Role::SCOPE_SYSTEM,
+                'allow_override' => false,
+                'description' => 'Project Manager',
+                'is_active' => true,
+            ]
+        );
+        $this->user->roles()->syncWithoutDetaching($projectManagerRole->id);
+
         // Create project
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
@@ -41,11 +55,13 @@ class ProjectManagerApiIntegrationTest extends TestCase
         
         // Create tasks
         Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'status' => 'pending'
         ]);
         
         Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'status' => 'completed'
         ]);
@@ -56,7 +72,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_project_manager_dashboard_stats_endpoint()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
 
@@ -121,7 +137,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
             'role' => 'member'
         ]);
 
-        Sanctum::actingAs($member);
+        $this->apiAs($member, $this->tenant);
 
         $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
 
@@ -143,9 +159,9 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_project_manager_dashboard_timeline_endpoint()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->apiGet('/api/v1/project-manager/dashboard/timeline');
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -200,7 +216,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
             'role' => 'member'
         ]);
 
-        Sanctum::actingAs($member);
+        $this->apiAs($member, $this->tenant);
 
         $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
 
@@ -261,9 +277,9 @@ class ProjectManagerApiIntegrationTest extends TestCase
             'pm_id' => $otherUser->id
         ]);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->apiGet('/api/v1/project-manager/dashboard/stats');
 
         $response->assertStatus(200);
         
@@ -285,12 +301,13 @@ class ProjectManagerApiIntegrationTest extends TestCase
             
             for ($j = 0; $j < 10; $j++) {
                 Task::factory()->create([
+                    'tenant_id' => $this->tenant->id,
                     'project_id' => $project->id
                 ]);
             }
         }
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $startTime = microtime(true);
         
@@ -320,11 +337,11 @@ class ProjectManagerApiIntegrationTest extends TestCase
             ]);
         }
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $startTime = microtime(true);
         
-        $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->apiGet('/api/v1/project-manager/dashboard/timeline');
         
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds

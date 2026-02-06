@@ -13,7 +13,6 @@ use App\Models\Task;
 use App\Models\RFI;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
 
 class SystemIntegrationTest extends TestCase
@@ -59,7 +58,7 @@ class SystemIntegrationTest extends TestCase
         $this->createComprehensiveTestData();
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createComprehensiveTestData(): void
@@ -656,7 +655,7 @@ class SystemIntegrationTest extends TestCase
                 'tenant_id' => $this->tenant->id
             ]);
 
-            Sanctum::actingAs($user);
+            $this->apiAs($user, $this->tenant);
 
             // Test role-based dashboard
             $roleBasedResponse = $this->getJson('/api/v1/dashboard/role-based');

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\User;
+use Carbon\Carbon;
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -85,6 +86,10 @@ class Notification extends Model
         'updated_at' => 'datetime',
         'data' => 'array',
         'metadata' => 'array',
+    ];
+
+    protected $appends = [
+        'is_expired'
     ];
 
     /**
@@ -252,5 +257,19 @@ class Notification extends Model
         return static::read()
                     ->where('read_at', '<', now()->subDays(30))
                     ->delete();
+    }
+
+    /**
+     * Xác định xem thông báo đã hết hạn dựa trên metadata.expires_at
+     */
+    public function getIsExpiredAttribute(): bool
+    {
+        $expiresAt = data_get($this->metadata, 'expires_at');
+
+        if ($expiresAt === null) {
+            return false;
+        }
+
+        return Carbon::parse($expiresAt)->isPast();
     }
 }

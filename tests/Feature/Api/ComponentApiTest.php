@@ -73,7 +73,7 @@ class ComponentApiTest extends TestCase
         ];
         
         $response = $this->postJson("/api/v1/projects/{$project->id}/components", $componentData);
-        
+
         $response->assertStatus(201)
                 ->assertJson([
                     'status' => 'success',
@@ -115,7 +115,7 @@ class ComponentApiTest extends TestCase
         ];
         
         $response = $this->postJson("/api/v1/projects/{$project->id}/components", $childData);
-        
+
         $response->assertStatus(201)
                 ->assertJson([
                     'status' => 'success',
@@ -149,7 +149,7 @@ class ComponentApiTest extends TestCase
             'progress_percent' => 50
         ];
         
-        $response = $this->putJson("/api/v1/components/{$component->id}", $updateData);
+        $response = $this->patchJson("/api/v1/components/{$component->id}", $updateData);
         
         $response->assertStatus(200)
                 ->assertJson([

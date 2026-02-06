@@ -75,12 +75,14 @@ class ComponentService
                 'updated_by' => $this->resolveActorId(),
             ]);
             
+            $tenantId = (string) (session('tenant_id') ?? 'system');
+
             // Dispatch event for component creation
             Event::dispatch(new ComponentProgressUpdated(
                 $component->id,
                 $projectId,
                 $this->resolveActorId(),
-                session('tenant_id'),
+                $tenantId,
                 0, // old progress
                 $component->progress_percent, // new progress
                 0, // old cost
@@ -124,13 +126,15 @@ class ComponentService
                 $changedFields[] = 'actual_cost';
             }
             
+            $tenantId = (string) (session('tenant_id') ?? 'system');
+
             // Dispatch event if progress or cost changed
             if (!empty($changedFields)) {
                 Event::dispatch(new ComponentProgressUpdated(
                     $component->id,
                     $component->project_id,
                     $this->resolveActorId(),
-                    session('tenant_id'),
+                    $tenantId,
                     $oldProgress,
                     $component->progress_percent,
                     $oldCost,
@@ -175,11 +179,13 @@ class ComponentService
             
             // Trigger roll-up calculation for project
             if ($deleted) {
+                $tenantId = (string) (session('tenant_id') ?? 'system');
+
                 Event::dispatch(new ComponentProgressUpdated(
                     $componentId,
                     $projectId,
                     $this->resolveActorId(), // Thay đổi từ auth()->id()
-                    session('tenant_id'),
+                    $tenantId,
                     $component->progress_percent,
                     0, // component deleted
                     $component->actual_cost,

@@ -80,9 +80,25 @@ class ProjectRepository
     /**
      * Get project by ID.
      */
-    public function getById(int $id): ?Project
+    public function getById(string $id): ?Project
     {
         return $this->model->with($this->defaultWith())->find($id);
+    }
+
+    /**
+     * Get project by ID with optional relations.
+     */
+    public function getProjectById(string $id, array $with = []): ?Project
+    {
+        $query = $this->model->newQuery();
+
+        if (!empty($with)) {
+            $query->with($with);
+        } else {
+            $query->with($this->defaultWith());
+        }
+
+        return $query->find($id);
     }
 
     /**

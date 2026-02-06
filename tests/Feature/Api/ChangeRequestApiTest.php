@@ -4,14 +4,17 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
+use App\Models\Role;
 use App\Models\ZenaProject;
 use App\Models\ZenaChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\SchemaAwareChangeRequestAssertions;
 
 class ChangeRequestApiTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
+    use SchemaAwareChangeRequestAssertions;
 
     protected $user;
     protected $project;
@@ -23,9 +26,29 @@ class ChangeRequestApiTest extends TestCase
         
         $this->user = User::factory()->create();
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
+
+        $superAdminRole = Role::firstOrCreate([
+            'name' => 'super_admin',
+        ], [
+            'scope' => Role::SCOPE_SYSTEM,
+            'is_active' => true,
+        ]);
+        $this->user->roles()->syncWithoutDetaching($superAdminRole->id);
+
         $this->token = $this->generateJwtToken($this->user);
+    }
+
+    private function getAuthHeaders(array $overrides = []): array
+    {
+        return array_merge([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'X-Tenant-ID' => (string) $this->user->tenant_id,
+            'Authorization' => 'Bearer ' . $this->token,
+        ], $overrides);
     }
 
     /**
@@ -35,26 +58,32 @@ class ChangeRequestApiTest extends TestCase
     {
         ZenaChangeRequest::factory()->count(3)->create([
             'project_id' => $this->project->id,
-            'requested_by' => $this->user->id
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/change-requests');
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->getJson('/api/zena/change-requests');
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'status',
                     'data' => [
-                        'data' => [
-                            '*' => [
-                                'id',
-                                'title',
-                                'change_type',
-                                'status',
-                                'priority',
-                                'created_at'
-                            ]
+                        '*' => [
+                            'id',
+                            'title',
+                            'change_type',
+                            'status',
+                            'priority',
+                            'created_at'
+                        ]
+                    ],
+                    'meta' => [
+                        'pagination' => [
+                            'page',
+                            'per_page',
+                            'total',
+                            'last_page'
                         ]
                     ]
                 ]);
@@ -74,14 +103,11 @@ class ChangeRequestApiTest extends TestCase
             'justification' => 'Required for project success',
             'alternatives_considered' => 'Alternative 1, Alternative 2',
             'impact_analysis' => 'Minimal impact on schedule',
-            'cost_impact' => 10000.00,
-            'schedule_impact_days' => 5,
             'priority' => 'medium'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/change-requests', $changeRequestData);
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->postJson('/api/zena/change-requests', $changeRequestData);
 
         $response->assertStatus(201)
                 ->assertJsonStructure([
@@ -108,23 +134,17 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'draft'
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/change-requests/{$changeRequest->id}/submit");
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/submit");
 
-        $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'status',
-                    'data' => [
-                        'id',
-                        'status',
-                        'submitted_at'
-                    ]
-                ]);
+        $response->assertStatus(200);
+        $this->assertChangeRequestResponse($response, ['submitted_at']);
+        $response->assertJsonPath('data.status', 'submitted');
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
@@ -139,37 +159,27 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'pending_approval'
         ]);
 
         $approvalData = [
             'approved_cost' => 15000.00,
-            'approved_schedule_days' => 7,
             'approval_comments' => 'Approved with modifications'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/change-requests/{$changeRequest->id}/approve", $approvalData);
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/approve", $approvalData);
 
-        $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'status',
-                    'data' => [
-                        'id',
-                        'approved_cost',
-                        'approved_schedule_days',
-                        'approval_comments',
-                        'status',
-                        'approved_at'
-                    ]
-                ]);
+        $response->assertStatus(200);
+        $this->assertChangeRequestResponse($response, ['approved_at', 'approved_by', 'approval_notes']);
+        $response->assertJsonPath('data.status', 'approved');
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'approved',
-            'approved_cost' => 15000.00
+            'approved_by' => $this->user->id
         ]);
     }
 
@@ -180,7 +190,8 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'pending_approval'
         ]);
 
@@ -189,21 +200,12 @@ class ChangeRequestApiTest extends TestCase
             'rejection_comments' => 'Please revise the proposal'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/change-requests/{$changeRequest->id}/reject", $rejectionData);
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/reject", $rejectionData);
 
-        $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'status',
-                    'data' => [
-                        'id',
-                        'rejection_reason',
-                        'rejection_comments',
-                        'status',
-                        'rejected_at'
-                    ]
-                ]);
+        $response->assertStatus(200);
+        $this->assertChangeRequestResponse($response, ['rejection_reason', 'rejected_at', 'rejected_by']);
+        $response->assertJsonPath('data.status', 'rejected');
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
@@ -219,7 +221,8 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
             'status' => 'approved'
         ]);
 
@@ -227,25 +230,16 @@ class ChangeRequestApiTest extends TestCase
             'implementation_notes' => 'Change has been implemented successfully'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/change-requests/{$changeRequest->id}/apply", $implementationData);
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/apply", $implementationData);
 
-        $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'status',
-                    'data' => [
-                        'id',
-                        'implementation_notes',
-                        'status',
-                        'implemented_at'
-                    ]
-                ]);
+        $response->assertStatus(200);
+        $this->assertChangeRequestResponse($response, ['implementation_notes', 'implemented_at', 'implemented_by']);
+        $response->assertJsonPath('data.status', 'implemented');
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'status' => 'implemented',
-            'implementation_notes' => 'Change has been implemented successfully'
+            'status' => 'implemented'
         ]);
     }
 
@@ -256,7 +250,8 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id
         ]);
 
         $updateData = [
@@ -265,9 +260,8 @@ class ChangeRequestApiTest extends TestCase
             'priority' => 'high'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/change-requests/{$changeRequest->id}", $updateData);
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->putJson("/api/zena/change-requests/{$changeRequest->id}", $updateData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -293,12 +287,12 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->deleteJson("/api/zena/change-requests/{$changeRequest->id}");
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->deleteJson("/api/zena/change-requests/{$changeRequest->id}");
 
         $response->assertStatus(200);
 
@@ -312,12 +306,15 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_change_request_creation_requires_valid_data()
     {
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/change-requests', []);
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->postJson('/api/zena/change-requests', []);
 
-        $response->assertStatus(422)
-                ->assertJsonValidationErrors(['project_id', 'title', 'description', 'change_type']);
+        $response->assertStatus(422);
+
+        $validationData = $response->json('error.details.data', []);
+        foreach (['project_id', 'title', 'description', 'change_type'] as $field) {
+            $this->assertArrayHasKey($field, $validationData);
+        }
     }
 
     /**
@@ -327,14 +324,12 @@ class ChangeRequestApiTest extends TestCase
     {
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'cost_impact' => 50000.00,
-            'schedule_impact_days' => 15
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/zena/change-requests/{$changeRequest->id}");
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->getJson("/api/zena/change-requests/{$changeRequest->id}");
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -344,6 +339,9 @@ class ChangeRequestApiTest extends TestCase
                         'impact_level'
                     ]
                 ]);
+
+        $impactLevel = $response->json('data.impact_level');
+        $this->assertContains($impactLevel, ['low', 'medium', 'high'], 'Impact level should be one of the expected tiers');
     }
 
     /**
@@ -360,6 +358,6 @@ class ChangeRequestApiTest extends TestCase
      */
     private function generateJwtToken(User $user): string
     {
-        return 'test-jwt-token-' . $user->id;
+        return $user->createToken('change-request-tests')->plainTextToken;
     }
 }

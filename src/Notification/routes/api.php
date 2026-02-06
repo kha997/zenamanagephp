@@ -28,20 +28,24 @@ Route::prefix('api/v1/notifications')
             
         Route::get('/{id}', [NotificationController::class, 'show'])
             ->name('notifications.show')
-            ->where('id', '[0-9]+');
+            ->where('id', '[0-9A-Za-z]+');
             
         Route::put('/{id}', [NotificationController::class, 'update'])
             ->name('notifications.update')
-            ->where('id', '[0-9]+');
+            ->where('id', '[0-9A-Za-z]+');
             
         Route::delete('/{id}', [NotificationController::class, 'destroy'])
             ->name('notifications.destroy')
-            ->where('id', '[0-9]+');
+            ->where('id', '[0-9A-Za-z]+');
         
         // Notification action routes
         Route::post('/{id}/mark-read', [NotificationController::class, 'markAsRead'])
             ->name('notifications.mark-read')
-            ->where('id', '[0-9]+');
+            ->where('id', '[0-9A-Za-z]+');
+        
+        Route::put('/{id}/read', [NotificationController::class, 'markAsRead'])
+            ->name('notifications.mark-read')
+            ->where('id', '[0-9A-Za-z]+');
             
         Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])
             ->name('notifications.mark-all-read');
@@ -88,5 +92,5 @@ Route::prefix('api/v1/notification-rules')
             
         Route::get('/project/{projectId}', [NotificationRuleController::class, 'getByProject'])
             ->name('notification-rules.by-project')
-            ->where('projectId', '[0-9]+');
+            ->where('projectId', '[0-9A-Za-z]+');
     });

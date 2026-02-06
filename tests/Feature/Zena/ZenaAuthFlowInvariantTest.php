@@ -12,7 +12,6 @@ use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route as RouteFacade;
 use Illuminate\Testing\TestResponse;
-use Laravel\Sanctum\Sanctum;
 use Src\RBAC\Services\AuthService;
 use Tests\TestCase;
 
@@ -138,7 +137,6 @@ class ZenaAuthFlowInvariantTest extends TestCase
 
         $this->zenaGet('api/zena/auth/me', $tenant)->assertStatus(401);
 
-        Sanctum::actingAs($user, ['*'], 'sanctum');
         $token = $this->createAuthToken($user);
 
         $missingTenantResponse = $this
@@ -169,7 +167,6 @@ class ZenaAuthFlowInvariantTest extends TestCase
 
         $this->zenaPost('api/zena/auth/logout', $tenant)->assertStatus(401);
 
-        Sanctum::actingAs($user, ['*'], 'sanctum');
         $token = $this->createAuthToken($user);
 
         $this->zenaPost('api/zena/auth/logout', $tenant, [], $token)->assertStatus(403);

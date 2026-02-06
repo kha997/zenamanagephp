@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
+use Laravel\Sanctum\Sanctum;
 
 class ComprehensiveApiIntegrationTest extends TestCase
 {
@@ -35,7 +37,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
         // Test login with rate limiting
         $user = \App\Models\User::factory()->create([
             'email' => 'test@example.com',
-            'password' => bcrypt('password123')
+            'password' => bcrypt('password123'),
+            'role' => 'admin'
         ]);
 
         $loginData = [
@@ -60,12 +63,16 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $this->assertTrue($response->headers->has('X-RateLimit-Remaining'));
 
         $token = $response->json('data.token');
+        $tenantId = $response->json('data.user.tenant_id');
 
         // Test authenticated endpoints
         $headers = [
             'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json'
         ];
+        if ($tenantId !== null && $tenantId !== '') {
+            $headers['X-Tenant-ID'] = (string) $tenantId;
+        }
 
         // Test user info endpoint
         $response = $this->getJson('/api/auth/me', $headers);
@@ -105,12 +112,17 @@ class ComprehensiveApiIntegrationTest extends TestCase
      */
     public function test_dashboard_workflow_with_caching()
     {
-        $user = \App\Models\User::factory()->create();
+        $tenant = Tenant::factory()->create();
+        $user = \App\Models\User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'admin'
+        ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $headers = [
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id
         ];
 
         // Test dashboard data endpoint (should be cached)
@@ -172,12 +184,17 @@ class ComprehensiveApiIntegrationTest extends TestCase
      */
     public function test_cache_management_workflow()
     {
-        $user = \App\Models\User::factory()->create();
+        $tenant = Tenant::factory()->create();
+        $user = \App\Models\User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'admin'
+        ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $headers = [
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id
         ];
 
         // Test cache stats
@@ -192,20 +209,22 @@ class ComprehensiveApiIntegrationTest extends TestCase
 
         // Test cache warmup
         $response = $this->postJson('/api/cache/warmup', [
-            'keys' => ['dashboard_data', 'user_preferences']
+            'keys' => ['dashboard_data', 'user_preferences'],
+            'data_provider' => 'dashboard'
         ], $headers);
         $response->assertStatus(200);
 
         // Test cache invalidation
         $testKey = 'test_key_' . uniqid();
-        Cache::put($testKey, 'test_value', 300);
+        $prefixedKey = "tenant:{$tenant->id}:{$testKey}";
+        Cache::put($prefixedKey, 'test_value', 300);
 
         $response = $this->postJson('/api/cache/invalidate/key', [
             'key' => $testKey
         ], $headers);
         $response->assertStatus(200);
 
-        $this->assertFalse(Cache::has($testKey));
+        $this->assertFalse(Cache::has($prefixedKey));
     }
 
     /**
@@ -213,12 +232,17 @@ class ComprehensiveApiIntegrationTest extends TestCase
      */
     public function test_websocket_workflow()
     {
-        $user = \App\Models\User::factory()->create();
+        $tenant = Tenant::factory()->create();
+        $user = \App\Models\User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'admin'
+        ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $headers = [
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id
         ];
 
         // Test WebSocket info
@@ -295,11 +319,17 @@ class ComprehensiveApiIntegrationTest extends TestCase
     public function test_multi_tenant_isolation()
     {
         // Create users from different tenants
-        $tenant1 = \App\Models\Tenant::factory()->create();
-        $tenant2 = \App\Models\Tenant::factory()->create();
+        $tenant1 = Tenant::factory()->create();
+        $tenant2 = Tenant::factory()->create();
 
-        $user1 = \App\Models\User::factory()->create(['tenant_id' => $tenant1->id]);
-        $user2 = \App\Models\User::factory()->create(['tenant_id' => $tenant2->id]);
+        $user1 = \App\Models\User::factory()->create([
+            'tenant_id' => $tenant1->id,
+            'role' => 'admin'
+        ]);
+        $user2 = \App\Models\User::factory()->create([
+            'tenant_id' => $tenant2->id,
+            'role' => 'admin'
+        ]);
 
         $token1 = $user1->createToken('test-token')->plainTextToken;
         $token2 = $user2->createToken('test-token')->plainTextToken;
@@ -307,29 +337,33 @@ class ComprehensiveApiIntegrationTest extends TestCase
         $headers1 = [
             'Authorization' => 'Bearer ' . $token1,
             'Accept' => 'application/json',
-            'X-Tenant-ID' => $tenant1->id
+            'X-Tenant-ID' => (string) $tenant1->id
         ];
 
         $headers2 = [
             'Authorization' => 'Bearer ' . $token2,
             'Accept' => 'application/json',
-            'X-Tenant-ID' => $tenant2->id
+            'X-Tenant-ID' => (string) $tenant2->id
         ];
 
         // Test that users can only access their own data
-        $response1 = $this->getJson('/api/auth/me', $headers1);
+        Sanctum::actingAs($user1);
+        $response1 = $this->withHeaders($headers1)->getJson('/api/auth/me');
         $response1->assertStatus(200);
         $this->assertEquals($user1->id, $response1->json('data.id'));
 
-        $response2 = $this->getJson('/api/auth/me', $headers2);
+        Sanctum::actingAs($user2);
+        $response2 = $this->withHeaders($headers2)->getJson('/api/auth/me');
         $response2->assertStatus(200);
         $this->assertEquals($user2->id, $response2->json('data.id'));
 
         // Test tenant isolation in dashboard
-        $response1 = $this->getJson('/api/dashboard/data', $headers1);
+        Sanctum::actingAs($user1);
+        $response1 = $this->withHeaders($headers1)->getJson('/api/dashboard/data');
         $response1->assertStatus(200);
 
-        $response2 = $this->getJson('/api/dashboard/data', $headers2);
+        Sanctum::actingAs($user2);
+        $response2 = $this->withHeaders($headers2)->getJson('/api/dashboard/data');
         $response2->assertStatus(200);
 
         // Data should be different for different tenants
@@ -358,7 +392,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ];
 
         // Exhaust rate limit
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < 20; $i++) {
             $this->postJson('/api/auth/login', $loginData);
         }
 
@@ -373,12 +407,17 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ]);
 
         // Test validation errors
-        $user = \App\Models\User::factory()->create();
+        $tenant = Tenant::factory()->create();
+        $user = \App\Models\User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'admin'
+        ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $headers = [
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id
         ];
 
         // Test invalid cache key
@@ -400,12 +439,17 @@ class ComprehensiveApiIntegrationTest extends TestCase
      */
     public function test_performance_across_endpoints()
     {
-        $user = \App\Models\User::factory()->create();
+        $tenant = Tenant::factory()->create();
+        $user = \App\Models\User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'admin'
+        ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $headers = [
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id
         ];
 
         $endpoints = [
@@ -440,12 +484,17 @@ class ComprehensiveApiIntegrationTest extends TestCase
      */
     public function test_security_headers()
     {
-        $user = \App\Models\User::factory()->create();
+        $tenant = Tenant::factory()->create();
+        $user = \App\Models\User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'role' => 'admin'
+        ]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         $headers = [
             'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id
         ];
 
         $endpoints = [

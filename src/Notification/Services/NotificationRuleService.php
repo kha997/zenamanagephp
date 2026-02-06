@@ -47,10 +47,12 @@ class NotificationRuleService
         ]);
 
         // Dispatch event
-        EventBus::dispatch('NotificationRule.Created', [
-            'ruleId' => $rule->ulid,
+        EventBus::dispatch('Notification.Rule.Created', [
+            'entityId' => $rule->id,
+            'ruleId' => $rule->id,
+            'actorId' => $rule->user_id,
             'userId' => $rule->user_id,
-            'projectId' => $rule->project_id,
+            'projectId' => $rule->project_id ?? 'system',
             'eventKey' => $rule->event_key,
             'timestamp' => now()->toISOString()
         ]);
@@ -63,10 +65,10 @@ class NotificationRuleService
      * 
      * @param string $ruleId
      * @param array $data
-     * @param int $userId
+     * @param string $userId
      * @return NotificationRule|null
      */
-    public function updateRule(string $ruleId, array $data, int $userId): ?NotificationRule
+    public function updateRule(string $ruleId, array $data, string $userId): ?NotificationRule
     {
         $rule = NotificationRule::where('ulid', $ruleId)
             ->where('user_id', $userId)
@@ -90,10 +92,12 @@ class NotificationRuleService
         $rule->update($data);
 
         // Dispatch event
-        EventBus::dispatch('NotificationRule.Updated', [
-            'ruleId' => $rule->ulid,
+        EventBus::dispatch('Notification.Rule.Updated', [
+            'entityId' => $rule->id,
+            'ruleId' => $rule->id,
+            'actorId' => $rule->user_id,
             'userId' => $rule->user_id,
-            'projectId' => $rule->project_id,
+            'projectId' => $rule->project_id ?? 'system',
             'eventKey' => $rule->event_key,
             'oldData' => $oldData,
             'newData' => $rule->fresh()->toArray(),
@@ -107,10 +111,10 @@ class NotificationRuleService
      * Xóa quy tắc thông báo
      * 
      * @param string $ruleId
-     * @param int $userId
+     * @param string $userId
      * @return bool
      */
-    public function deleteRule(string $ruleId, int $userId): bool
+    public function deleteRule(string $ruleId, string $userId): bool
     {
         $rule = NotificationRule::where('ulid', $ruleId)
             ->where('user_id', $userId)
@@ -124,9 +128,12 @@ class NotificationRuleService
         $rule->delete();
 
         // Dispatch event
-        EventBus::dispatch('NotificationRule.Deleted', [
+        EventBus::dispatch('Notification.Rule.Deleted', [
+            'entityId' => $ruleId,
             'ruleId' => $ruleId,
+            'actorId' => $userId,
             'userId' => $userId,
+            'projectId' => $rule->project_id ?? 'system',
             'ruleData' => $ruleData,
             'timestamp' => now()->toISOString()
         ]);
@@ -137,14 +144,14 @@ class NotificationRuleService
     /**
      * Lấy danh sách quy tắc của user
      * 
-     * @param int $userId
+     * @param string $userId
      * @param int|null $projectId
      * @param int $page
      * @param int $perPage
      * @return LengthAwarePaginator
      */
     public function getUserRules(
-        int $userId,
+        string $userId,
         ?int $projectId = null,
         int $page = 1,
         int $perPage = 20
@@ -166,10 +173,10 @@ class NotificationRuleService
      * 
      * @param string $ruleId
      * @param bool $enabled
-     * @param int $userId
+     * @param string $userId
      * @return bool
      */
-    public function toggleRule(string $ruleId, bool $enabled, int $userId): bool
+    public function toggleRule(string $ruleId, bool $enabled, string $userId): bool
     {
         $rule = NotificationRule::where('ulid', $ruleId)
             ->where('user_id', $userId)
@@ -183,9 +190,12 @@ class NotificationRuleService
         $rule->save();
 
         // Dispatch event
-        EventBus::dispatch('NotificationRule.Toggled', [
-            'ruleId' => $rule->ulid,
+        EventBus::dispatch('Notification.Rule.Toggled', [
+            'entityId' => $rule->id,
+            'ruleId' => $rule->id,
+            'actorId' => $userId,
             'userId' => $rule->user_id,
+            'projectId' => $rule->project_id ?? 'system',
             'enabled' => $enabled,
             'timestamp' => now()->toISOString()
         ]);
@@ -196,7 +206,7 @@ class NotificationRuleService
     /**
      * Lấy quy tắc áp dụng cho một event cụ thể
      * 
-     * @param int $userId
+     * @param string $userId
      * @param string $eventKey
      * @param int|null $projectId
      * @param string $priority
@@ -204,7 +214,7 @@ class NotificationRuleService
      * @return Collection
      */
     public function getApplicableRules(
-        int $userId,
+        string $userId,
         string $eventKey,
         ?int $projectId = null,
         string $priority = 'normal',
@@ -240,10 +250,10 @@ class NotificationRuleService
     /**
      * Tạo quy tắc mặc định cho user mới
      * 
-     * @param int $userId
+     * @param string $userId
      * @return Collection
      */
-    public function createDefaultRules(int $userId): Collection
+    public function createDefaultRules(string $userId): Collection
     {
         $defaultRules = [
             [

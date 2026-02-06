@@ -161,7 +161,6 @@ class RfiController extends ApiBaseController
                 'project:id,name',
                 'createdBy:id,name',
                 'assignedTo:id,name',
-                'attachments'
             ]);
 
             return $this->successResponse($rfi, 'RFI retrieved successfully');

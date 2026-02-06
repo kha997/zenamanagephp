@@ -4,17 +4,56 @@ namespace Tests\Feature\Api;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTestTrait;
 
 class RateLimitingTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+
+    private const LOGIN_ENDPOINT = '/api/auth/login';
+
+    private ?string $prevCacheDefault = null;
+    protected string $tenantId;
+    protected array $loginCredentials = [];
+    protected array $loginHeaders = [];
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->prevCacheDefault = config('cache.default');
+        config(['cache.default' => 'array']);
         Cache::flush();
+
+        $this->apiActingAsTenantAdmin();
+        Cache::flush();
+        $this->tenantId = $this->apiFeatureTenant->id;
+        $this->loginCredentials = [
+            'email' => $this->apiFeatureUser->email,
+            'password' => 'password'
+        ];
+        $this->loginHeaders = [
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $this->tenantId,
+        ];
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        Cache::flush();
+        if ($this->prevCacheDefault !== null) {
+            config(['cache.default' => $this->prevCacheDefault]);
+        }
+        parent::tearDown();
+    }
+
+    protected function loginRequest(array $payload = null): TestResponse
+    {
+        return $this->withHeaders($this->loginHeaders)->postJson(self::LOGIN_ENDPOINT, $payload ?? $this->loginCredentials);
     }
 
     /**
@@ -22,15 +61,11 @@ class RateLimitingTest extends TestCase
      */
     public function test_auth_endpoints_rate_limiting()
     {
-        $endpoint = '/api/auth/login';
-        $data = [
-            'email' => 'test@example.com',
-            'password' => 'password'
-        ];
+        $data = $this->loginCredentials;
 
         // Test normal requests within limit
         for ($i = 0; $i < 10; $i++) {
-            $response = $this->postJson($endpoint, $data);
+            $response = $this->loginRequest($data);
             
             // Should have rate limit headers
             $this->assertTrue($response->headers->has('X-RateLimit-Limit'));
@@ -47,8 +82,13 @@ class RateLimitingTest extends TestCase
             $this->assertEquals(9 - $i, $remaining);
         }
 
-        // Test rate limit exceeded
-        $response = $this->postJson($endpoint, $data);
+        // Consume the burst allowance (requests 11-20)
+        for ($j = 0; $j < 10; $j++) {
+            $this->loginRequest($data);
+        }
+
+        // 21st request should be rate limited
+        $response = $this->loginRequest($data);
         $this->assertEquals(429, $response->getStatusCode());
         $this->assertTrue($response->headers->has('X-RateLimit-Limit'));
         $this->assertEquals('0', $response->headers->get('X-RateLimit-Remaining'));
@@ -59,15 +99,11 @@ class RateLimitingTest extends TestCase
      */
     public function test_burst_limit_functionality()
     {
-        $endpoint = '/api/auth/login';
-        $data = [
-            'email' => 'test@example.com',
-            'password' => 'password'
-        ];
+        $data = $this->loginCredentials;
 
         // Make requests up to burst limit (20)
         for ($i = 0; $i < 20; $i++) {
-            $response = $this->postJson($endpoint, $data);
+            $response = $this->loginRequest($data);
             
             if ($i < 10) {
                 // Normal limit
@@ -82,7 +118,7 @@ class RateLimitingTest extends TestCase
         }
 
         // 21st request should be rate limited
-        $response = $this->postJson($endpoint, $data);
+        $response = $this->loginRequest($data);
         $this->assertEquals(429, $response->getStatusCode());
     }
 
@@ -91,24 +127,16 @@ class RateLimitingTest extends TestCase
      */
     public function test_api_endpoints_rate_limiting()
     {
-        // Create a user and get token for authenticated requests
-        $user = \App\Models\User::factory()->create();
-        $token = $user->createToken('test-token')->plainTextToken;
-
         $endpoint = '/api/dashboard/data';
-        $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ];
 
         // Test normal requests within API limit (100/minute)
         for ($i = 0; $i < 10; $i++) {
-            $response = $this->getJson($endpoint, $headers);
-            
+            $response = $this->apiGet($endpoint);
+
             // Should have rate limit headers
             $this->assertTrue($response->headers->has('X-RateLimit-Limit'));
             $this->assertTrue($response->headers->has('X-RateLimit-Remaining'));
-            
+
             // Check header values for API endpoints
             $this->assertEquals('100', $response->headers->get('X-RateLimit-Limit'));
         }
@@ -119,30 +147,26 @@ class RateLimitingTest extends TestCase
      */
     public function test_rate_limiting_per_ip_address()
     {
-        $endpoint = '/api/auth/login';
-        $data = [
-            'email' => 'test@example.com',
-            'password' => 'password'
-        ];
+        $data = $this->loginCredentials;
 
         // Simulate requests from different IPs
-        $this->app['request']->server->set('REMOTE_ADDR', '192.168.1.1');
+        $baseIp = ['REMOTE_ADDR' => '192.168.1.1'];
         
-        // Make 10 requests from first IP
-        for ($i = 0; $i < 10; $i++) {
-            $response = $this->postJson($endpoint, $data);
+        // Make 20 requests from first IP
+        for ($i = 0; $i < 20; $i++) {
+            $response = $this->withServerVariables($baseIp)->loginRequest($data);
             $this->assertNotEquals(429, $response->getStatusCode());
         }
 
-        // 11th request should be rate limited
-        $response = $this->postJson($endpoint, $data);
+        // 21st request should be rate limited
+        $response = $this->withServerVariables($baseIp)->loginRequest($data);
         $this->assertEquals(429, $response->getStatusCode());
 
         // Switch to different IP
-        $this->app['request']->server->set('REMOTE_ADDR', '192.168.1.2');
+        $newIp = ['REMOTE_ADDR' => '192.168.1.2'];
         
         // Should be able to make requests from different IP
-        $response = $this->postJson($endpoint, $data);
+        $response = $this->withServerVariables($newIp)->loginRequest($data);
         $this->assertNotEquals(429, $response->getStatusCode());
     }
 
@@ -151,26 +175,24 @@ class RateLimitingTest extends TestCase
      */
     public function test_rate_limiting_window_reset()
     {
-        $endpoint = '/api/auth/login';
-        $data = [
-            'email' => 'test@example.com',
-            'password' => 'password'
-        ];
+        $data = $this->loginCredentials;
 
-        // Exhaust rate limit
-        for ($i = 0; $i < 10; $i++) {
-            $this->postJson($endpoint, $data);
+        // Exhaust rate limit and burst allowance
+        for ($i = 0; $i < 20; $i++) {
+            $this->loginRequest($data);
         }
 
         // Should be rate limited
-        $response = $this->postJson($endpoint, $data);
+        $response = $this->loginRequest($data);
         $this->assertEquals(429, $response->getStatusCode());
 
-        // Clear cache to simulate window reset
+        // Clear cache to simulate window reset after the bucket window expires
+        $now = Carbon::now();
+        Carbon::setTestNow($now->copy()->addMinutes(2));
         Cache::flush();
 
         // Should be able to make requests again
-        $response = $this->postJson($endpoint, $data);
+        $response = $this->loginRequest($data);
         $this->assertNotEquals(429, $response->getStatusCode());
     }
 
@@ -179,13 +201,7 @@ class RateLimitingTest extends TestCase
      */
     public function test_rate_limiting_headers_format()
     {
-        $endpoint = '/api/auth/login';
-        $data = [
-            'email' => 'test@example.com',
-            'password' => 'password'
-        ];
-
-        $response = $this->postJson($endpoint, $data);
+        $response = $this->loginRequest();
 
         // Check all required headers are present
         $this->assertTrue($response->headers->has('X-RateLimit-Limit'));
@@ -211,26 +227,24 @@ class RateLimitingTest extends TestCase
      */
     public function test_rate_limiting_error_response()
     {
-        $endpoint = '/api/auth/login';
-        $data = [
-            'email' => 'test@example.com',
-            'password' => 'password'
-        ];
-
-        // Exhaust rate limit
-        for ($i = 0; $i < 10; $i++) {
-            $this->postJson($endpoint, $data);
+        // Exhaust rate limit and burst allowance
+        for ($i = 0; $i < 20; $i++) {
+            $this->loginRequest();
         }
 
-        $response = $this->postJson($endpoint, $data);
+        $response = $this->loginRequest();
 
-        $this->assertEquals(429, $response->getStatusCode());
+        $response->assertStatus(429);
         $this->assertJson($response->getContent());
-        
+
         $responseData = $response->json();
+        $this->assertFalse($responseData['success']);
+        $this->assertStringContainsString('Too many requests', $responseData['message']);
         $this->assertArrayHasKey('error', $responseData);
-        $this->assertArrayHasKey('message', $responseData);
-        $this->assertArrayHasKey('code', $responseData);
-        $this->assertEquals('RATE_LIMIT_EXCEEDED', $responseData['code']);
+        $this->assertIsArray($responseData['error']);
+        $this->assertEquals('E429.RATE_LIMIT', $responseData['error']['code']);
+        $this->assertStringContainsString('Too many requests', $responseData['error']['message']);
+        $this->assertArrayHasKey('details', $responseData['error']);
+        $this->assertIsArray($responseData['error']['details']);
     }
 }

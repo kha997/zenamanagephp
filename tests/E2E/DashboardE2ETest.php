@@ -13,7 +13,6 @@ use App\Models\Task;
 use App\Models\RFI;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 
 class DashboardE2ETest extends TestCase
 {
@@ -64,7 +63,7 @@ class DashboardE2ETest extends TestCase
         $this->createTestData();
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createTestWidgets(): void
@@ -645,7 +644,7 @@ class DashboardE2ETest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($qcUser);
+        $this->apiAs($qcUser, $this->tenant);
 
         // Get role-based dashboard for QC Inspector
         $roleBasedResponse = $this->getJson('/api/v1/dashboard/role-based');
@@ -671,7 +670,7 @@ class DashboardE2ETest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($clientUser);
+        $this->apiAs($clientUser, $this->tenant);
 
         $clientRoleBasedResponse = $this->getJson('/api/v1/dashboard/role-based');
         $clientRoleBasedResponse->assertStatus(200);
@@ -700,7 +699,7 @@ class DashboardE2ETest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($qcUser);
+        $this->apiAs($qcUser, $this->tenant);
 
         // Try to add widget that QC Inspector doesn't have permission for
         $projectOverviewWidget = DashboardWidget::where('code', 'project_overview')->first();
@@ -757,7 +756,8 @@ class DashboardE2ETest extends TestCase
     public function it_can_handle_unauthorized_access()
     {
         // Clear authentication
-        Sanctum::actingAs(null);
+        $this->flushHeaders();
+        $this->withHeaders($this->apiHeadersForTenant((string) $this->tenant->id));
 
         $response = $this->getJson('/api/v1/dashboard');
         $response->assertStatus(401);

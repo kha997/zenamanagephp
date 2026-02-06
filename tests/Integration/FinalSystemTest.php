@@ -13,7 +13,6 @@ use App\Models\Task;
 use App\Models\RFI;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
 
 class FinalSystemTest extends TestCase
@@ -59,7 +58,7 @@ class FinalSystemTest extends TestCase
         $this->createComprehensiveTestData();
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createComprehensiveTestData(): void
@@ -470,7 +469,7 @@ class FinalSystemTest extends TestCase
                 'tenant_id' => $this->tenant->id
             ]);
 
-            Sanctum::actingAs($user);
+            $this->apiAs($user, $this->tenant);
 
             // Test role-based dashboard
             $roleBasedResponse = $this->getJson('/api/v1/dashboard/role-based');
@@ -525,7 +524,7 @@ class FinalSystemTest extends TestCase
     {
         echo "\n=== COMPREHENSIVE ERROR SCENARIO TESTING ===\n";
         
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test invalid widget ID
         echo "Testing invalid widget ID...\n";
@@ -583,7 +582,7 @@ class FinalSystemTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($unauthorizedUser);
+        $this->apiAs($unauthorizedUser, $this->tenant);
 
         $unauthorizedResponse = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id
@@ -599,7 +598,7 @@ class FinalSystemTest extends TestCase
     {
         echo "\n=== COMPREHENSIVE PERFORMANCE TESTING ===\n";
         
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test dashboard load performance
         echo "Testing dashboard load performance...\n";
@@ -678,7 +677,7 @@ class FinalSystemTest extends TestCase
         $response->assertStatus(401);
         echo "✓ Authentication required\n";
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test permission validation
         echo "Testing permission validation...\n";
@@ -739,7 +738,7 @@ class FinalSystemTest extends TestCase
             'tenant_id' => $otherTenant->id
         ]);
 
-        Sanctum::actingAs($otherUser);
+        $this->apiAs($otherUser, $this->tenant);
 
         $response = $this->getJson('/api/v1/dashboard/role-based');
         $response->assertStatus(200);
@@ -758,7 +757,7 @@ class FinalSystemTest extends TestCase
     {
         echo "\n=== FINAL SYSTEM VALIDATION ===\n";
         
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Validate all core functionalities
         $coreFunctionalities = [
@@ -799,7 +798,7 @@ class FinalSystemTest extends TestCase
                 'tenant_id' => $this->tenant->id
             ]);
 
-            Sanctum::actingAs($user);
+            $this->apiAs($user, $this->tenant);
 
             $response = $this->getJson('/api/v1/dashboard/role-based');
             $response->assertStatus(200);

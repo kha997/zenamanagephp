@@ -3,6 +3,9 @@
 namespace Tests\Feature\Api;
 
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTestTrait;
+use App\Models\Task;
+use App\Models\TaskDependency;
 use App\Models\User;
 use App\Models\ZenaProject;
 use App\Models\ZenaTask;
@@ -11,21 +14,21 @@ use Illuminate\Foundation\Testing\WithFaker;
 
 class TaskDependenciesTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
 
-    protected $user;
-    protected $project;
-    protected $token;
+    protected User $user;
+    protected ZenaProject $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->user = User::factory()->create();
+
+        $this->apiActingAsTenantAdmin();
+        $this->user = $this->apiFeatureUser;
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->apiFeatureTenant->id,
         ]);
-        $this->token = $this->generateJwtToken($this->user);
     }
 
     /**
@@ -35,17 +38,17 @@ class TaskDependenciesTest extends TestCase
     {
         $task1 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         $task2 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/tasks/{$task1->id}/dependencies", [
+        $response = $this->apiPost("/api/zena/tasks/{$task1->id}/dependencies", [
             'dependency_id' => $task2->id
         ]);
 
@@ -56,11 +59,14 @@ class TaskDependenciesTest extends TestCase
                         'id',
                         'dependencies'
                     ]
-                ]);
+                ])
+                ->assertJsonCount(1, 'data.dependencies')
+                ->assertJsonPath('data.dependencies.0.id', $task2->id);
 
-        $this->assertDatabaseHas('tasks', [
-            'id' => $task1->id,
-            'dependencies' => json_encode([$task2->id])
+        $this->assertDatabaseHas('task_dependencies', [
+            'tenant_id' => $this->project->tenant_id,
+            'task_id' => $task1->id,
+            'dependency_id' => $task2->id
         ]);
     }
 
@@ -72,19 +78,21 @@ class TaskDependenciesTest extends TestCase
         $task1 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'dependencies' => ['task2-id']
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         $task2 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->deleteJson("/api/zena/tasks/{$task1->id}/dependencies", [
-            'dependency_id' => 'task2-id'
-        ]);
+        $this->createTaskDependencyRecord($task1, $task2);
+
+        $response = $this->withHeaders($this->resolveApiHeaders())
+                ->deleteJson("/api/zena/tasks/{$task1->id}/dependencies/{$task2->id}", [
+                    'dependency_id' => $task2->id
+                ]);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -93,11 +101,13 @@ class TaskDependenciesTest extends TestCase
                         'id',
                         'dependencies'
                     ]
-                ]);
+                ])
+                ->assertJsonPath('data.dependencies', []);
 
-        $this->assertDatabaseHas('tasks', [
-            'id' => $task1->id,
-            'dependencies' => json_encode([])
+        $this->assertDatabaseMissing('task_dependencies', [
+            'tenant_id' => $this->project->tenant_id,
+            'task_id' => $task1->id,
+            'dependency_id' => $task2->id
         ]);
     }
 
@@ -108,29 +118,26 @@ class TaskDependenciesTest extends TestCase
     {
         $task1 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         $task2 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'dependencies' => [$task1->id]
+            'tenant_id' => $this->project->tenant_id
         ]);
 
+        $this->createTaskDependencyRecord($task2, $task1);
+
         // Try to create circular dependency: task1 -> task2 -> task1
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/tasks/{$task1->id}/dependencies", [
+        $response = $this->apiPost("/api/zena/tasks/{$task1->id}/dependencies", [
             'dependency_id' => $task2->id
         ]);
 
-        $response->assertStatus(400)
-                ->assertJsonStructure([
-                    'status',
-                    'message'
-                ]);
+        $response->assertStatus(400);
 
-        $this->assertStringContainsString('circular dependency', $response->json('message'));
+        $this->assertStringContainsString('circular dependency', strtolower($response->getContent()));
     }
 
     /**
@@ -140,22 +147,17 @@ class TaskDependenciesTest extends TestCase
     {
         $task = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/tasks/{$task->id}/dependencies", [
+        $response = $this->apiPost("/api/zena/tasks/{$task->id}/dependencies", [
             'dependency_id' => $task->id
         ]);
 
-        $response->assertStatus(400)
-                ->assertJsonStructure([
-                    'status',
-                    'message'
-                ]);
+        $response->assertStatus(400);
 
-        $this->assertStringContainsString('cannot depend on itself', $response->json('message'));
+        $this->assertStringContainsString('cannot depend on itself', strtolower($response->getContent()));
     }
 
     /**
@@ -165,35 +167,33 @@ class TaskDependenciesTest extends TestCase
     {
         $task1 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         $task2 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'dependencies' => [$task1->id]
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         $task3 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'dependencies' => [$task2->id]
+            'tenant_id' => $this->project->tenant_id
         ]);
 
+        $this->createTaskDependencyRecord($task2, $task1);
+        $this->createTaskDependencyRecord($task3, $task2);
+
         // Try to create circular dependency: task1 -> task2 -> task3 -> task1
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/tasks/{$task3->id}/dependencies", [
+        $response = $this->apiPost("/api/zena/tasks/{$task3->id}/dependencies", [
             'dependency_id' => $task1->id
         ]);
 
-        $response->assertStatus(400)
-                ->assertJsonStructure([
-                    'status',
-                    'message'
-                ]);
+        $response->assertStatus(400);
 
-        $this->assertStringContainsString('circular dependency', $response->json('message'));
+        $this->assertStringContainsString('circular dependency', strtolower($response->getContent()));
     }
 
     /**
@@ -204,20 +204,21 @@ class TaskDependenciesTest extends TestCase
         $task1 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'todo'
+            'status' => 'todo',
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         $task2 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'todo',
-            'dependencies' => [$task1->id]
+            'tenant_id' => $this->project->tenant_id
         ]);
 
+        $this->createTaskDependencyRecord($task2, $task1);
+
         // Update task1 to completed
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/tasks/{$task1->id}/status", [
+        $response = $this->apiPatch("/api/zena/tasks/{$task1->id}/status", [
             'status' => 'done'
         ]);
 
@@ -229,9 +230,7 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         // Now task2 should be able to start
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/tasks/{$task2->id}/status", [
+        $response = $this->apiPatch("/api/zena/tasks/{$task2->id}/status", [
             'status' => 'in_progress'
         ]);
 
@@ -250,23 +249,26 @@ class TaskDependenciesTest extends TestCase
     {
         $task1 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         $task2 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         $task3 = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'dependencies' => [$task1->id, $task2->id]
+            'tenant_id' => $this->project->tenant_id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/zena/tasks/{$task3->id}/dependencies");
+        $this->createTaskDependencyRecord($task3, $task1);
+        $this->createTaskDependencyRecord($task3, $task2);
+
+        $response = $this->apiGet("/api/zena/tasks/{$task3->id}/dependencies");
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -275,9 +277,11 @@ class TaskDependenciesTest extends TestCase
                 ]);
 
         $dependencies = $response->json('data');
-        $this->assertCount(2, $dependencies);
-        $this->assertContains($task1->id, $dependencies);
-        $this->assertContains($task2->id, $dependencies);
+        $dependencyIds = array_column($dependencies, 'id');
+
+        $this->assertCount(2, $dependencyIds);
+        $this->assertContains($task1->id, $dependencyIds);
+        $this->assertContains($task2->id, $dependencyIds);
     }
 
     /**
@@ -287,13 +291,12 @@ class TaskDependenciesTest extends TestCase
     {
         $task = ZenaTask::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         // Test with non-existent task
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/tasks/{$task->id}/dependencies", [
+        $response = $this->apiPost("/api/zena/tasks/{$task->id}/dependencies", [
             'dependency_id' => 'non-existent-id'
         ]);
 
@@ -318,11 +321,13 @@ class TaskDependenciesTest extends TestCase
         $response->assertStatus(401);
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
+    private function createTaskDependencyRecord(Task $task, Task $dependency): TaskDependency
     {
-        return 'test-jwt-token-' . $user->id;
+        return TaskDependency::create([
+            'tenant_id' => $this->project->tenant_id,
+            'task_id' => $task->id,
+            'dependency_id' => $dependency->id,
+        ]);
     }
+
 }

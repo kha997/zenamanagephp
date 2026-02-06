@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 use Src\Compensation\Models\TaskCompensation;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
+use App\Models\TaskDependency;
+use App\Services\TaskDependencyService;
 
 /**
  * Model Task - Quản lý công việc
@@ -254,6 +256,70 @@ class Task extends Model
             'dependency_id',
             'task_id'
         )->withTimestamps();
+    }
+
+    public function addDependency(string $dependencyId): bool
+    {
+        $service = app(TaskDependencyService::class);
+        return $service->addDependency($this->id, $dependencyId, $this->tenant_id)['success'];
+    }
+
+    public function removeDependency(string $dependencyId): bool
+    {
+        $service = app(TaskDependencyService::class);
+        return $service->removeDependency($this->id, $dependencyId, $this->tenant_id)['success'];
+    }
+
+    /**
+     * Detect if adding dependency would create a circular reference.
+     */
+    public function hasCircularDependency(string $dependencyId): bool
+    {
+        if ($this->id === $dependencyId) {
+            return true;
+        }
+
+        return $this->hasPath($dependencyId, $this->id) || $this->hasPath($this->id, $dependencyId);
+    }
+
+    /**
+     * Depth-first search to check if there is a path between two tasks.
+     */
+    protected function hasPath(string $sourceTaskId, string $targetTaskId): bool
+    {
+        if ($sourceTaskId === $targetTaskId) {
+            return true;
+        }
+
+        $visited = [];
+        $stack = [$sourceTaskId];
+
+        while (!empty($stack)) {
+            $currentTaskId = array_pop($stack);
+
+            if ($currentTaskId === $targetTaskId) {
+                return true;
+            }
+
+            if (isset($visited[$currentTaskId])) {
+                continue;
+            }
+
+            $visited[$currentTaskId] = true;
+
+            $dependents = TaskDependency::where('dependency_id', $currentTaskId)
+                ->where('tenant_id', $this->tenant_id)
+                ->pluck('task_id')
+                ->toArray();
+
+            foreach ($dependents as $dependentId) {
+                if (!isset($visited[$dependentId])) {
+                    $stack[] = $dependentId;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

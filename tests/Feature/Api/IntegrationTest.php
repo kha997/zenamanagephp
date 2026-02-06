@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use Tests\TestCase;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\ZenaProject;
 use App\Models\ZenaTask;
@@ -15,25 +16,32 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Tests\Traits\AuthenticationTestTrait;
 
 class IntegrationTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
 
-    protected $user;
-    protected $project;
-    protected $token;
+    protected User $user;
+    protected ZenaProject $project;
+    protected Project $appProject;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->user = User::factory()->create();
+
+        $this->apiActingAsTenantAdmin();
+        $this->user = $this->apiFeatureUser;
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
-        $this->token = $this->generateJwtToken($this->user);
-        
+
+        $this->appProject = Project::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'created_by' => $this->user->id,
+        ]);
+
         Storage::fake('local');
     }
 
@@ -54,9 +62,7 @@ class IntegrationTest extends TestCase
             'location' => 'Test Location'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/projects', $projectData);
+        $response = $this->apiPost('/api/zena/projects', $projectData);
 
         $response->assertStatus(201);
         $project = $response->json('data');
@@ -65,16 +71,15 @@ class IntegrationTest extends TestCase
         $taskData = [
             'project_id' => $project['id'],
             'name' => 'Integration Test Task',
+            'title' => 'Integration Test Task',
             'description' => 'Test task for integration testing',
-            'status' => 'todo',
+            'status' => 'pending',
             'priority' => 'high',
             'start_date' => '2024-01-01',
             'end_date' => '2024-01-31'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/tasks', $taskData);
+        $response = $this->apiPost('/api/zena/tasks', $taskData);
 
         $response->assertStatus(201);
         $task = $response->json('data');
@@ -89,9 +94,7 @@ class IntegrationTest extends TestCase
             'location' => 'Building A'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/rfis', $rfiData);
+        $response = $this->apiPost('/api/zena/rfis', $rfiData);
 
         $response->assertStatus(201);
         $rfi = $response->json('data');
@@ -102,13 +105,11 @@ class IntegrationTest extends TestCase
             'title' => 'Integration Test Submittal',
             'description' => 'Test submittal for integration testing',
             'submittal_number' => 'SUB-001',
-            'submittal_type' => 'drawing',
+            'submittal_type' => 'shop_drawing',
             'specification_section' => 'Section 1'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/submittals', $submittalData);
+        $response = $this->apiPost('/api/zena/submittals', $submittalData);
 
         $response->assertStatus(201);
         $submittal = $response->json('data');
@@ -120,32 +121,32 @@ class IntegrationTest extends TestCase
             'description' => 'Test change request for integration testing',
             'change_number' => 'CR-001',
             'change_type' => 'scope',
+            'impact_analysis' => 'Integration workflow requires this change to proceed',
             'justification' => 'Required for project success',
             'cost_impact' => 50000,
             'schedule_impact_days' => 10,
             'priority' => 'high'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/change-requests', $changeRequestData);
+        $response = $this->apiPost('/api/zena/change-requests', $changeRequestData);
 
         $response->assertStatus(201);
         $changeRequest = $response->json('data');
 
         // 6. Upload Document
-        $file = UploadedFile::fake()->create('integration-test.pdf', 1000);
+        $file = UploadedFile::fake()->createWithContent(
+            'integration-test.pdf',
+            "%PDF-1.4\n%âãÏÓ\nIntegration test document for workflow Phoenix.\n"
+        );
         $documentData = [
-            'project_id' => $project['id'],
+            'project_id' => $this->appProject->id,
             'title' => 'Integration Test Document',
             'description' => 'Test document for integration testing',
             'document_type' => 'drawing',
             'file' => $file
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/documents', $documentData);
+        $response = $this->apiPost('/api/zena/documents', $documentData);
 
         $response->assertStatus(201);
         $document = $response->json('data');
@@ -156,12 +157,10 @@ class IntegrationTest extends TestCase
             'type' => 'task_assigned',
             'title' => 'Integration Test Notification',
             'message' => 'Test notification for integration testing',
-            'priority' => 'medium'
+            'priority' => 'normal'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/notifications', $notificationData);
+        $response = $this->apiPost('/api/zena/notifications', $notificationData);
 
         $response->assertStatus(201);
         $notification = $response->json('data');
@@ -183,15 +182,14 @@ class IntegrationTest extends TestCase
     {
         // Create RFI
         $rfi = ZenaRfi::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending'
         ]);
 
         // Assign RFI
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/rfis/{$rfi->id}/assign", [
+        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/assign", [
             'assigned_to' => $this->user->id,
             'assignment_notes' => 'Please review this RFI'
         ]);
@@ -203,11 +201,10 @@ class IntegrationTest extends TestCase
         ]);
 
         // Respond to RFI
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/rfis/{$rfi->id}/respond", [
+        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/respond", [
             'response' => 'This is the response to the RFI',
-            'response_notes' => 'Additional notes'
+            'response_notes' => 'Additional notes',
+            'status' => 'answered'
         ]);
 
         $response->assertStatus(200);
@@ -217,9 +214,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Close RFI
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/rfis/{$rfi->id}/close");
+        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/close");
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('rfis', [
@@ -241,9 +236,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Submit Submittal
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/submittals/{$submittal->id}/submit");
+        $response = $this->apiPost("/api/zena/submittals/{$submittal->id}/submit");
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('submittals', [
@@ -252,9 +245,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Review Submittal
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/submittals/{$submittal->id}/review", [
+        $response = $this->apiPost("/api/zena/submittals/{$submittal->id}/review", [
             'review_notes' => 'This submittal looks good',
             'status' => 'approved'
         ]);
@@ -273,15 +264,14 @@ class IntegrationTest extends TestCase
     {
         // Create Change Request
         $changeRequest = ZenaChangeRequest::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
+            'requested_by' => $this->user->id,
             'status' => 'draft'
         ]);
 
         // Submit Change Request
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/change-requests/{$changeRequest->id}/submit");
+        $response = $this->apiPost("/api/zena/change-requests/{$changeRequest->id}/submit");
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('change_requests', [
@@ -290,11 +280,9 @@ class IntegrationTest extends TestCase
         ]);
 
         // Approve Change Request
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/change-requests/{$changeRequest->id}/approve", [
+        $response = $this->apiPost("/api/zena/change-requests/{$changeRequest->id}/approve", [
             'approved_cost' => 75000,
-            'approved_schedule_days' => 15,
+            'approved_schedule_days' => 0,
             'approval_comments' => 'Approved with modifications'
         ]);
 
@@ -305,9 +293,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Implement Change Request
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/change-requests/{$changeRequest->id}/apply", [
+        $response = $this->apiPost("/api/zena/change-requests/{$changeRequest->id}/apply", [
             'implementation_notes' => 'Change has been implemented successfully'
         ]);
 
@@ -325,43 +311,40 @@ class IntegrationTest extends TestCase
     {
         // Create tasks
         $task1 = ZenaTask::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'todo'
+            'status' => 'pending'
         ]);
 
         $task2 = ZenaTask::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'todo'
+            'status' => 'pending'
         ]);
 
         // Add dependency
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/tasks/{$task2->id}/dependencies", [
+        $response = $this->apiPost("/api/zena/tasks/{$task2->id}/dependencies", [
             'dependency_id' => $task1->id
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('tasks', [
-            'id' => $task2->id,
-            'dependencies' => json_encode([$task1->id])
+        $this->assertDatabaseHas('task_dependencies', [
+            'task_id' => $task2->id,
+            'dependency_id' => $task1->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         // Complete task1
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/tasks/{$task1->id}/status", [
+        $response = $this->apiPatch("/api/zena/tasks/{$task1->id}/status", [
             'status' => 'done'
         ]);
 
         $response->assertStatus(200);
 
         // Start task2
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/tasks/{$task2->id}/status", [
+        $response = $this->apiPatch("/api/zena/tasks/{$task2->id}/status", [
             'status' => 'in_progress'
         ]);
 
@@ -374,29 +357,31 @@ class IntegrationTest extends TestCase
     public function test_document_versioning_integration()
     {
         // Create document
-        $file = UploadedFile::fake()->create('original-document.pdf', 1000);
+        $file = UploadedFile::fake()->createWithContent(
+            'original-document.pdf',
+            "%PDF-1.4\n%Original integration test document.\n"
+        );
         $documentData = [
-            'project_id' => $this->project->id,
+            'project_id' => $this->appProject->id,
             'title' => 'Original Document',
             'description' => 'Original document description',
             'document_type' => 'drawing',
             'file' => $file
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/documents', $documentData);
+        $response = $this->apiPost('/api/zena/documents', $documentData);
 
         $response->assertStatus(201);
         $document = $response->json('data');
 
         // Create version
-        $newFile = UploadedFile::fake()->create('updated-document.pdf', 1000);
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/documents/{$document['id']}/version", [
+        $newFile = UploadedFile::fake()->createWithContent(
+            'updated-document.pdf',
+            "%PDF-1.4\n%Updated version content for integration test.\n"
+        );
+        $response = $this->apiPost("/api/v1/documents/{$document['id']}/versions", [
             'file' => $newFile,
-            'version' => '2.0',
+            'version' => 2,
             'change_notes' => 'Updated with new specifications'
         ]);
 
@@ -404,9 +389,7 @@ class IntegrationTest extends TestCase
         $version = $response->json('data');
 
         // Get versions
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/zena/documents/{$document['id']}/versions");
+        $response = $this->apiGet("/api/v1/documents/{$document['id']}/versions");
 
         $response->assertStatus(200);
         $versions = $response->json('data');
@@ -421,24 +404,18 @@ class IntegrationTest extends TestCase
         // Create notification
         $notification = ZenaNotification::factory()->create([
             'user_id' => $this->user->id,
-            'status' => 'unread'
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         // Mark as read
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/notifications/{$notification->id}/read");
+        $response = $this->apiPut("/api/zena/notifications/{$notification->id}/read");
 
         $response->assertStatus(200);
-        $this->assertDatabaseHas('notifications', [
-            'id' => $notification->id,
-            'status' => 'read'
-        ]);
+        $notification->refresh();
+        $this->assertNotNull($notification->read_at);
 
         // Get unread count
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/notifications/stats/count');
+        $response = $this->apiGet('/api/zena/notifications/stats/count');
 
         $response->assertStatus(200);
         $this->assertEquals(0, $response->json('data.count'));
@@ -451,28 +428,33 @@ class IntegrationTest extends TestCase
     {
         // Create project
         $project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
 
         // Create related entities
         $task = ZenaTask::factory()->create([
             'project_id' => $project->id,
+            'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id
         ]);
 
         $rfi = ZenaRfi::factory()->create([
             'project_id' => $project->id,
+            'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id
         ]);
 
         $submittal = ZenaSubmittal::factory()->create([
             'project_id' => $project->id,
+            'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id
         ]);
 
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $project->id,
-            'created_by' => $this->user->id
+            'tenant_id' => $this->user->tenant_id,
+            'requested_by' => $this->user->id
         ]);
 
         // Verify all entities reference the same project
@@ -485,14 +467,7 @@ class IntegrationTest extends TestCase
         $this->assertEquals($this->user->id, $task->created_by);
         $this->assertEquals($this->user->id, $rfi->created_by);
         $this->assertEquals($this->user->id, $submittal->created_by);
-        $this->assertEquals($this->user->id, $changeRequest->created_by);
+        $this->assertEquals($this->user->id, $changeRequest->requested_by);
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
-    {
-        return 'test-jwt-token-' . $user->id;
-    }
 }

@@ -148,7 +148,7 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name', 'attachments'])
+            $changeRequest = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name'])
                 ->find($id);
 
             if (!$changeRequest) {
@@ -315,7 +315,7 @@ class ChangeRequestController extends BaseApiController
                 $project = $changeRequest->project;
                 if ($project) {
                     if ($request->input('approved_cost')) {
-                        $project->increment('budget', $request->input('approved_cost'));
+                        $project->increment('budget_total', $request->input('approved_cost'));
                     }
                     if ($request->input('approved_schedule_days')) {
                         $project->increment('end_date', $request->input('approved_schedule_days'));

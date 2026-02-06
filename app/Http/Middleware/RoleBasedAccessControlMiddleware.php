@@ -39,29 +39,23 @@ class RoleBasedAccessControlMiddleware
         }
         
         $headerTenantId = trim((string) $request->header('X-Tenant-ID'));
-        if ($headerTenantId === '') {
-            return ErrorEnvelopeService::error(
-                'TENANT_REQUIRED',
-                'X-Tenant-ID header is required',
-                [],
-                400,
-                ErrorEnvelopeService::getCurrentRequestId()
-            );
-        }
-
         $tenantId = $request->attributes->get('tenant_id');
         if (!$tenantId && app()->bound('current_tenant_id')) {
             $tenantId = app('current_tenant_id');
         }
 
         if (!$tenantId) {
-            return ErrorEnvelopeService::error(
-                'TENANT_REQUIRED',
-                'X-Tenant-ID header is required',
-                [],
-                400,
-                ErrorEnvelopeService::getCurrentRequestId()
-            );
+            if ($headerTenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'X-Tenant-ID header is required',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $tenantId = $headerTenantId;
         }
         
         $normalizedPath = $this->normalizeApiPath($request->path());
@@ -190,7 +184,7 @@ class RoleBasedAccessControlMiddleware
         // You might want to implement a proper role system
         $roles = [];
         
-        if ($user->isSuperAdmin()) {
+        if ($user->isSuperAdmin() || $user->hasRole('admin') || $user->role === 'admin') {
             $roles[] = 'admin';
         }
         
@@ -261,6 +255,7 @@ class RoleBasedAccessControlMiddleware
             'designer',
             'site_engineer',
             'qc_engineer',
+            'qc_inspector',
             'procurement',
             'finance',
         ];
@@ -308,6 +303,7 @@ class RoleBasedAccessControlMiddleware
      */
     private function isProjectManagerDashboardRoute(string $normalizedPath): bool
     {
-        return str_starts_with($normalizedPath, 'api/project-manager/dashboard');
+        return str_starts_with($normalizedPath, 'api/project-manager/dashboard')
+            || str_starts_with($normalizedPath, 'api/v1/project-manager/dashboard');
     }
 }

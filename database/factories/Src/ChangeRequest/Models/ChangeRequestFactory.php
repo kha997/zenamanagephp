@@ -9,7 +9,7 @@ use App\Models\User;
 
 /**
  * Factory cho ChangeRequest model
- * 
+ *
  * Tạo test data cho change requests với workflow states
  */
 class ChangeRequestFactory extends Factory
@@ -23,23 +23,15 @@ class ChangeRequestFactory extends Factory
     {
         return [
             'project_id' => Project::factory(),
-            'code' => 'CR-' . $this->faker->unique()->numberBetween(1000, 9999),
             'title' => $this->faker->sentence(4),
             'description' => $this->faker->paragraph(4),
             'status' => $this->faker->randomElement(['draft', 'awaiting_approval', 'approved', 'rejected']),
-            'impact_days' => $this->faker->numberBetween(0, 30),
-            'impact_cost' => $this->faker->randomFloat(2, 0, 25000),
-            'impact_kpi' => json_encode([
-                'quality' => $this->faker->randomElement(['+5%', '+10%', '-2%']),
-                'timeline' => $this->faker->randomElement(['+5 days', '+10 days', 'no impact']),
-                'budget' => $this->faker->randomElement(['+$5000', '+$10000', 'within budget'])
-            ]),
             'created_by' => User::factory(),
             'decided_by' => null,
             'decided_at' => null,
             'decision_note' => null,
             'created_at' => $this->faker->dateTimeBetween('-2 months', 'now'),
-            'updated_at' => now()
+            'updated_at' => now(),
         ];
     }
 
@@ -52,7 +44,7 @@ class ChangeRequestFactory extends Factory
             'status' => 'draft',
             'decided_by' => null,
             'decided_at' => null,
-            'decision_note' => null
+            'decision_note' => null,
         ]);
     }
 
@@ -70,7 +62,7 @@ class ChangeRequestFactory extends Factory
                 'client requirements',
                 'technical necessity',
                 'business value'
-            ])
+            ]),
         ]);
     }
 
@@ -87,24 +79,8 @@ class ChangeRequestFactory extends Factory
                 'budget constraints',
                 'timeline impact',
                 'technical complexity',
-                'scope limitations'
-            ])
-        ]);
-    }
-
-    /**
-     * High impact change request
-     */
-    public function highImpact(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'impact_days' => $this->faker->numberBetween(15, 45),
-            'impact_cost' => $this->faker->randomFloat(2, 15000, 50000),
-            'impact_kpi' => json_encode([
-                'quality' => '+15%',
-                'timeline' => '+' . $this->faker->numberBetween(15, 30) . ' days',
-                'budget' => '+$' . $this->faker->numberBetween(15000, 50000)
-            ])
+                'scope limitations',
+            ]),
         ]);
     }
 }

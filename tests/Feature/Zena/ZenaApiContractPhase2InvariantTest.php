@@ -10,6 +10,7 @@ use App\Models\Role as AppRole;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -132,18 +133,21 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
             'updated_at' => $project->updated_at,
         ]);
 
+        $file = $this->createPdfUpload('contract-upload.pdf');
+
         $payload = [
-            'name' => 'Contract Upload',
-            'file_path' => '/contracts/uploaded.pdf',
-            'mime_type' => 'application/pdf',
-            'file_size' => 2048,
             'project_id' => $project->id,
+            'title' => 'Contract Upload',
+            'document_type' => 'drawing',
+            'description' => 'Contract invariants smoke document',
+            'file' => $file,
         ];
 
         $headers = $this->contractHeaders($tenantA, $tokenA);
 
-        $response = $this->withHeaders($headers)
-            ->postJson('/api/zena/documents', $payload);
+        $this->apiHeaders = $headers;
+        $response = $this->apiPostMultipart('/api/zena/documents', $payload);
+        $this->apiHeaders = [];
 
         $response->assertStatus(201);
         $this->assertTrue($response->json('success'));
@@ -234,6 +238,13 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
         ];
 
         return Document::create(array_merge($defaults, $attributes));
+    }
+
+    private function createPdfUpload(string $name = 'contract-upload.pdf'): UploadedFile
+    {
+        $content = "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n";
+
+        return UploadedFile::fake()->createWithContent($name, $content, 'application/pdf');
     }
 
     private function createTenantWithUser(string $password = 'Secret123!'): array

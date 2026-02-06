@@ -3,37 +3,49 @@
 namespace Tests\Feature\Api;
 
 use App\Models\ZenaProject;
-use App\Models\ZenaComponent;
 use App\Models\ZenaTask;
+use App\Models\User;
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTestTrait;
 use Tests\Traits\DatabaseTrait;
-use Tests\Traits\AuthenticationTrait;
 
 /**
  * Feature tests cho Task API endpoints
  */
 class TaskApiTest extends TestCase
 {
-    use DatabaseTrait, AuthenticationTrait;
+    use DatabaseTrait;
+    use AuthenticationTestTrait;
+
+    protected User $user;
+    protected string $tenantId;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->apiActingAsTenantAdmin();
+        $this->user = $this->apiFeatureUser;
+        $this->tenantId = $this->apiFeatureTenant->id;
+    }
     
     /**
      * Test get tasks for project
      */
     public function test_can_get_tasks_for_project(): void
     {
-        $user = $this->actingAsUser();
-        
         $project = ZenaProject::factory()->create([
-            'tenant_id' => $user->tenant_id
+            'tenant_id' => $this->tenantId
         ]);
         
         // Tạo tasks cho project
         ZenaTask::factory()->count(5)->create([
-            'project_id' => $project->id
+            'project_id' => $project->id,
+            'tenant_id' => $this->tenantId
         ]);
         
-        $response = $this->getJson("/api/v1/projects/{$project->id}/tasks");
-        
+        $response = $this->apiGet('/api/zena/tasks', ['project_id' => $project->id]);
+
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'status',
@@ -45,7 +57,7 @@ class TaskApiTest extends TestCase
                             'start_date',
                             'end_date',
                             'status',
-                            'dependencies'
+                            'dependencies_json'
                         ]
                     ]
                 ]);
@@ -59,32 +71,34 @@ class TaskApiTest extends TestCase
      */
     public function test_can_create_task_with_dependencies(): void
     {
-        $user = $this->actingAsUser();
-        
         $project = ZenaProject::factory()->create([
-            'tenant_id' => $user->tenant_id
+            'tenant_id' => $this->tenantId
         ]);
         
         // Tạo prerequisite tasks
-        $task1 = ZenaTask::factory()->create(['project_id' => $project->id]);
-        $task2 = ZenaTask::factory()->create(['project_id' => $project->id]);
+        $task1 = ZenaTask::factory()->create(['project_id' => $project->id, 'tenant_id' => $this->tenantId]);
+        $task2 = ZenaTask::factory()->create(['project_id' => $project->id, 'tenant_id' => $this->tenantId]);
         
         $taskData = [
             'name' => 'Dependent Task',
+            'title' => 'Dependent Task',
             'start_date' => now()->addDays(5)->format('Y-m-d'),
             'end_date' => now()->addDays(10)->format('Y-m-d'),
             'status' => 'pending',
+            'project_id' => $project->id,
             'dependencies' => [$task1->id, $task2->id]
         ];
         
-        $response = $this->postJson("/api/v1/projects/{$project->id}/tasks", $taskData);
+        $response = $this->apiPost('/api/zena/tasks', $taskData);
+
         
         $response->assertStatus(201)
                 ->assertJson([
                     'status' => 'success',
                     'data' => [
                         'name' => 'Dependent Task',
-                        'dependencies' => [$task1->id, $task2->id]
+                        'project_id' => $project->id,
+                        'dependencies_json' => [$task1->id, $task2->id]
                     ]
                 ]);
     }
@@ -94,22 +108,21 @@ class TaskApiTest extends TestCase
      */
     public function test_can_update_task_status(): void
     {
-        $user = $this->actingAsUser();
-        
         $project = ZenaProject::factory()->create([
-            'tenant_id' => $user->tenant_id
+            'tenant_id' => $this->tenantId
         ]);
         
         $task = ZenaTask::factory()->create([
             'project_id' => $project->id,
-            'status' => 'pending'
+            'status' => 'pending',
+            'tenant_id' => $this->tenantId
         ]);
         
         $updateData = [
             'status' => 'in_progress'
         ];
         
-        $response = $this->putJson("/api/v1/tasks/{$task->id}", $updateData);
+        $response = $this->apiPut("/api/zena/tasks/{$task->id}", $updateData);
         
         $response->assertStatus(200)
                 ->assertJson([

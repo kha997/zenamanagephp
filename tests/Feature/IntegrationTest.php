@@ -3,42 +3,34 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Tenant;
-use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\Task;
-use Src\ChangeRequest\Models\ChangeRequest;
-use Src\DocumentManagement\Models\Document;
-use Illuminate\Support\Facades\Hash;
 
 class IntegrationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected User $user;
+    protected string $tenantId;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->apiActingAsTenantAdmin();
+        $this->user = $this->apiFeatureUser;
+        $this->tenantId = $this->apiFeatureTenant->id;
+    }
 
     /**
      * Test complete project workflow
      */
     public function test_complete_project_workflow(): void
     {
-        // 1. Setup tenant and user
-        $tenant = Tenant::factory()->create();
-        $user = User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'password' => Hash::make('password123')
-        ]);
-        
-        // 2. Login
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $user->email,
-            'password' => 'password123'
-        ]);
-        $token = $loginResponse->json('data.token');
-        
         // 3. Create project
-        $projectResponse = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token
-        ])->postJson('/api/v1/projects', [
+        $projectResponse = $this->apiPost('/api/v1/projects', [
             'name' => 'Integration Test Project',
             'description' => 'Test project for integration testing',
             'start_date' => now()->format('Y-m-d'),
@@ -50,9 +42,7 @@ class IntegrationTest extends TestCase
         $projectId = $projectResponse->json('data.project.id');
         
         // 4. Create tasks
-        $taskResponse = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token
-        ])->postJson('/api/v1/tasks', [
+        $taskResponse = $this->apiPost('/api/v1/tasks', [
             'name' => 'Integration Test Task',
             'description' => 'Test task for integration testing',
             'project_id' => $projectId,
@@ -65,9 +55,7 @@ class IntegrationTest extends TestCase
         $taskId = $taskResponse->json('data.task.id');
         
         // 5. Create change request
-        $crResponse = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token
-        ])->postJson('/api/v1/change-requests', [
+        $crResponse = $this->apiPost('/api/v1/change-requests', [
             'title' => 'Integration Test CR',
             'description' => 'Test change request',
             'project_id' => $projectId,
@@ -84,16 +72,35 @@ class IntegrationTest extends TestCase
         
         // 7. Test tenant isolation
         $otherTenant = Tenant::factory()->create();
-        $otherUser = User::factory()->create(['tenant_id' => $otherTenant->id]);
+        $otherUser = User::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'password' => Hash::make('password'),
+            'is_active' => true,
+            'role' => 'super_admin',
+        ]);
+
+        $robustRole = \App\Models\Role::firstOrCreate(
+            ['name' => 'super_admin'],
+            ['scope' => 'system', 'description' => 'Super Admin', 'is_active' => true]
+        );
+        $otherUser->roles()->syncWithoutDetaching($robustRole->id);
+        $this->ensureRoleHasTenantPermissions('super_admin');
+        $this->ensureRoleHasTenantPermissions('Admin');
         
-        $otherLoginResponse = $this->postJson('/api/v1/auth/login', [
+        $otherLoginResponse = $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $otherTenant->id,
+        ])->postJson('/api/auth/login', [
             'email' => $otherUser->email,
             'password' => 'password'
         ]);
-        $otherToken = $otherLoginResponse->json('data.token');
+        $otherLoginResponse->assertStatus(200);
+        $otherToken = $this->extractLoginToken($otherLoginResponse);
         
         // Other user should not see the project
         $unauthorizedResponse = $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $otherTenant->id,
             'Authorization' => 'Bearer ' . $otherToken
         ])->getJson("/api/v1/projects/{$projectId}");
         

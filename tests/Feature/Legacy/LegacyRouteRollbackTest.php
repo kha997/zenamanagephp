@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Models\Tenant;
 use App\Services\LegacyRouteMonitoringService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 
 class LegacyRouteRollbackTest extends TestCase
 {
@@ -38,7 +37,7 @@ class LegacyRouteRollbackTest extends TestCase
      */
     public function test_emergency_rollback_procedure()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Record some usage before rollback
         $this->monitoringService->recordUsage('/dashboard', '/app/dashboard', [
@@ -64,7 +63,7 @@ class LegacyRouteRollbackTest extends TestCase
      */
     public function test_phased_rollback_procedure()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Get current migration phase stats
         $phaseStats = $this->monitoringService->getMigrationPhaseStats();
@@ -89,7 +88,7 @@ class LegacyRouteRollbackTest extends TestCase
      */
     public function test_rollback_monitoring_endpoints()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test usage stats endpoint
         $response = $this->getJson('/api/v1/legacy-routes/usage');
@@ -135,7 +134,7 @@ class LegacyRouteRollbackTest extends TestCase
      */
     public function test_rollback_data_cleanup()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Record some test data
         $this->monitoringService->recordUsage('/dashboard', '/app/dashboard');
@@ -180,7 +179,7 @@ class LegacyRouteRollbackTest extends TestCase
             'role' => 'member'
         ]);
 
-        Sanctum::actingAs($member);
+        $this->apiAs($member, $this->tenant);
 
         $response = $this->getJson('/api/v1/legacy-routes/usage');
         $response->assertStatus(403);
@@ -199,7 +198,7 @@ class LegacyRouteRollbackTest extends TestCase
      */
     public function test_rollback_error_handling()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test invalid cleanup request
         $response = $this->postJson('/api/v1/legacy-routes/cleanup', [
@@ -222,7 +221,7 @@ class LegacyRouteRollbackTest extends TestCase
      */
     public function test_rollback_performance()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Record multiple usage entries
         for ($i = 0; $i < 100; $i++) {
@@ -251,7 +250,7 @@ class LegacyRouteRollbackTest extends TestCase
      */
     public function test_rollback_data_integrity()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Record usage with metadata
         $metadata = [
@@ -279,7 +278,7 @@ class LegacyRouteRollbackTest extends TestCase
      */
     public function test_rollback_recommendations()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Generate high usage to trigger recommendations
         for ($i = 0; $i < 150; $i++) {

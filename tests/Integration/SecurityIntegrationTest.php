@@ -13,7 +13,6 @@ use App\Models\Task;
 use App\Models\RFI;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
 
 class SecurityIntegrationTest extends TestCase
@@ -168,7 +167,7 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($qcUser);
+        $this->apiAs($qcUser, $this->tenant);
 
         // QC Inspector should not be able to access project_manager widget
         $projectManagerWidget = DashboardWidget::where('code', 'project_overview')->first();
@@ -202,7 +201,7 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($clientUser);
+        $this->apiAs($clientUser, $this->tenant);
 
         // Client Rep should not see project_manager specific metrics
         $response = $this->getJson('/api/v1/dashboard/metrics');
@@ -238,7 +237,7 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $otherTenant->id
         ]);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // User should not be able to access other tenant's project
         $response = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
@@ -267,7 +266,7 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $otherTenant->id
         ]);
 
-        Sanctum::actingAs($otherUser);
+        $this->apiAs($otherUser, $this->tenant);
 
         // Other user should not see this tenant's data
         $response = $this->getJson('/api/v1/dashboard/role-based');
@@ -284,7 +283,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_input_sanitization()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $widget = DashboardWidget::first();
 
@@ -309,7 +308,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_sql_injection_prevention()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test SQL injection in widget ID
         $maliciousWidgetId = "1'; DROP TABLE users; --";
@@ -344,7 +343,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_rate_limiting()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Make many requests quickly
         for ($i = 0; $i < 100; $i++) {
@@ -363,7 +362,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_data_encryption()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $widget = DashboardWidget::first();
 
@@ -387,7 +386,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_session_security()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test session handling
         $response = $this->getJson('/api/v1/dashboard/role-based');
@@ -401,7 +400,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_file_upload_security()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test file upload validation (if applicable)
         $maliciousFile = 'malicious.php';
@@ -444,7 +443,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_security_headers()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $response = $this->getJson('/api/v1/dashboard/role-based');
         $response->assertStatus(200);
@@ -459,7 +458,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_audit_logging()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $widget = DashboardWidget::first();
 
@@ -477,7 +476,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_data_validation()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test invalid widget configuration
         $response = $this->postJson('/api/v1/dashboard/widgets', [
@@ -503,7 +502,7 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($lowPrivilegeUser);
+        $this->apiAs($lowPrivilegeUser, $this->tenant);
 
         // Try to access high-privilege operations
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
@@ -532,7 +531,7 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $otherTenant->id
         ]);
 
-        Sanctum::actingAs($otherUser);
+        $this->apiAs($otherUser, $this->tenant);
 
         // Try to access data from different tenant
         $response = $this->getJson('/api/v1/dashboard/role-based');
@@ -549,7 +548,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_injection_attack_prevention()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test NoSQL injection
         $maliciousInput = '{"$ne": null}';
@@ -594,7 +593,7 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($limitedUser);
+        $this->apiAs($limitedUser, $this->tenant);
 
         // Try to perform admin operations
         $response = $this->getJson('/api/v1/dashboard/role-based/permissions');

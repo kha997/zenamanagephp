@@ -10,7 +10,6 @@ use App\Models\Tenant;
 use Src\CoreProject\Models\Project;
 use Src\Notification\Models\Notification;
 use Src\Notification\Models\NotificationRule;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Event;
 use Src\Notification\Events\NotificationCreated;
 
@@ -24,28 +23,17 @@ class NotificationApiTest extends TestCase
     protected User $user;
     protected Tenant $tenant;
     protected Project $project;
-    protected string $token;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->tenant = Tenant::factory()->create();
-        $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id,
-            'password' => Hash::make('password123'),
-        ]);
-        
+
+        $this->apiActingAsTenantAdmin();
+        $this->tenant = $this->apiFeatureTenant;
+        $this->user = $this->apiFeatureUser;
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id
         ]);
-        
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $this->user->email,
-            'password' => 'password123',
-        ]);
-        
-        $this->token = $loginResponse->json('data.token');
     }
 
     /**
@@ -53,30 +41,31 @@ class NotificationApiTest extends TestCase
      */
     public function test_get_notifications(): void
     {
-        // Tạo test notifications
-        Notification::factory(3)->create([
-            'user_id' => $this->user->id
-        ]);
+        Notification::factory()->forUser($this->user)->count(3)->create();
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->getJson('/api/v1/notifications');
+        $response = $this->apiGet('/api/v1/notifications');
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'status',
                     'data' => [
-                        'notifications' => [
-                            '*' => [
-                                'id',
-                                'priority',
-                                'title',
-                                'body',
-                                'link_url',
-                                'channel',
-                                'read_at',
-                                'created_at'
-                            ]
+                        '*' => [
+                            'id',
+                            'priority',
+                            'title',
+                            'body',
+                            'link_url',
+                            'channel',
+                            'read_at',
+                            'created_at'
+                        ]
+                    ],
+                    'meta' => [
+                        'pagination' => [
+                            'page',
+                            'per_page',
+                            'total',
+                            'last_page'
                         ]
                     ]
                 ]);
@@ -87,14 +76,11 @@ class NotificationApiTest extends TestCase
      */
     public function test_mark_notification_as_read(): void
     {
-        $notification = Notification::factory()->create([
-            'user_id' => $this->user->id,
+        $notification = Notification::factory()->forUser($this->user)->create([
             'read_at' => null
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->patchJson('/api/v1/notifications/' . $notification->id . '/read');
+        $response = $this->apiPost("/api/v1/notifications/{$notification->id}/mark-read");
 
         $response->assertStatus(200);
         
@@ -115,9 +101,7 @@ class NotificationApiTest extends TestCase
             'is_enabled' => true
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson('/api/v1/notification-rules', $data);
+        $response = $this->apiPost('/api/v1/notification-rules', $data);
 
         $response->assertStatus(201);
         
@@ -139,6 +123,7 @@ class NotificationApiTest extends TestCase
         // Tạo notification rule
         NotificationRule::factory()->create([
             'user_id' => $this->user->id,
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'event_key' => 'task.created',
             'min_priority' => 'normal',

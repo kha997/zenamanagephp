@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
-use App\Http\Controllers\BaseApiController;
 use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
-class NotificationController extends BaseApiController
+class NotificationController extends ApiBaseController
 {
     use ZenaContractResponseTrait;
 
@@ -33,7 +34,13 @@ class NotificationController extends BaseApiController
         }
 
         if ($request->has('status')) {
-            $query->where('status', $request->input('status'));
+            $status = $request->input('status');
+
+            if ($status === 'unread') {
+                $query->whereNull('read_at');
+            } elseif ($status === 'read') {
+                $query->whereNotNull('read_at');
+            }
         }
 
         if ($request->has('read')) {
@@ -65,7 +72,7 @@ class NotificationController extends BaseApiController
             'title' => 'required|string|max:255',
             'message' => 'required|string',
             'data' => 'nullable|array',
-            'priority' => 'required|in:low,medium,high,urgent',
+            'priority' => ['required', Rule::in(Notification::VALID_PRIORITIES)],
             'expires_at' => 'nullable|date|after:now',
         ]);
 
@@ -74,15 +81,21 @@ class NotificationController extends BaseApiController
         }
 
         try {
+            $metadata = $request->input('metadata', []);
+
+            if ($request->filled('expires_at')) {
+                $metadata['expires_at'] = $request->input('expires_at');
+            }
+
             $notification = Notification::create([
+                'tenant_id' => $user->tenant_id,
                 'user_id' => $request->input('user_id'),
                 'type' => $request->input('type'),
                 'title' => $request->input('title'),
-                'message' => $request->input('message'),
+                'body' => $request->input('message'),
                 'data' => $request->input('data', []),
+                'metadata' => $metadata,
                 'priority' => $request->input('priority'),
-                'expires_at' => $request->input('expires_at'),
-                'status' => 'unread',
             ]);
 
             // Broadcast real-time notification
@@ -136,8 +149,7 @@ class NotificationController extends BaseApiController
 
         try {
             $notification->update([
-                'read_at' => now(),
-                'status' => 'read'
+                'read_at' => now()
             ]);
 
             return $this->zenaSuccessResponse($notification, 'Notification marked as read');
@@ -162,8 +174,7 @@ class NotificationController extends BaseApiController
             Notification::where('user_id', $user->id)
                 ->whereNull('read_at')
                 ->update([
-                    'read_at' => now(),
-                    'status' => 'read'
+                    'read_at' => now()
                 ]);
 
         return $this->zenaSuccessResponse(null, 'All notifications marked as read');

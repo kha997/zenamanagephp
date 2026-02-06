@@ -28,18 +28,18 @@ class StoreComponentRequest extends BaseApiRequest
         return [
             'project_id' => [
                 'required',
-                'integer',
+                'string',
                 'exists:projects,id'
             ],
             'parent_component_id' => [
                 'nullable',
-                'integer',
+                'string',
                 'exists:components,id',
                 function ($attribute, $value, $fail) {
                     // Kiểm tra parent component phải thuộc cùng project
                     if ($value && $this->project_id) {
-                        $parentComponent = \zenamanage\CoreProject\Models\Component::find($value);
-                        if ($parentComponent && $parentComponent->project_id !== (int)$this->project_id) {
+                        $parentComponent = \Src\CoreProject\Models\Component::find($value);
+                        if ($parentComponent && $parentComponent->project_id !== $this->project_id) {
                             $fail('Parent component phải thuộc cùng dự án.');
                         }
                     }
@@ -100,12 +100,14 @@ class StoreComponentRequest extends BaseApiRequest
     protected function prepareForValidation(): void
     {
         // Đặt giá trị mặc định
+        $routeProjectId = $this->route('projectId') ?? $this->route('project_id');
         $this->merge([
             'progress_percent' => $this->progress_percent ?? 0,
             'planned_cost' => $this->planned_cost ?? 0,
             'actual_cost' => $this->actual_cost ?? 0,
             'visibility' => $this->visibility ?? 'internal',
-            'client_approved' => $this->client_approved ?? false
+            'client_approved' => $this->client_approved ?? false,
+            'project_id' => $this->project_id ?? $routeProjectId
         ]);
     }
 }

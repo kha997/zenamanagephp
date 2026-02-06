@@ -97,7 +97,7 @@ class ProjectController extends Controller
             }
             
             // Get project metrics
-            $metrics = $this->projectService->getProjectMetrics($project);
+            $metrics = $this->projectService->getProjectMetrics($project->id, $user->id, $user->tenant_id);
             
             return $this->zenaSuccessResponse([
                 'project' => $project,

@@ -29,16 +29,19 @@ trait CreatesTestData
             'tenant_id' => $tenant->id,
             'password' => Hash::make('password123')
         ], $attributes));
-        
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
+
+        $loginResponse = $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id,
+        ])->postJson('/api/auth/login', [
             'email' => $user->email,
             'password' => 'password123'
         ]);
-        
+
         return [
             'user' => $user,
             'tenant' => $tenant,
-            'token' => $loginResponse->json('data.token')
+            'token' => $loginResponse->json('data.token'),
         ];
     }
     

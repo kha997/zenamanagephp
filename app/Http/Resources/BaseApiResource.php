@@ -10,14 +10,6 @@ use Illuminate\Http\Resources\Json\JsonResource;
 abstract class BaseApiResource extends JsonResource
 {
     /**
-     * Transform the resource into an array.
-     *
-     * @param Request $request
-     * @return array
-     */
-    abstract public function toArray($request): array;
-
-    /**
      * Format ULID for API response
      *
      * @param string|null $ulid

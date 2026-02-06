@@ -8,7 +8,6 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
 
 class PerformanceMonitoringTest extends TestCase
@@ -40,7 +39,7 @@ class PerformanceMonitoringTest extends TestCase
         // Create test data
         $this->createTestData(100, 500);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test dashboard stats endpoint performance
         $startTime = microtime(true);
@@ -64,7 +63,7 @@ class PerformanceMonitoringTest extends TestCase
         // Create test data
         $this->createTestData(50, 200);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test dashboard page performance
         $startTime = microtime(true);
@@ -88,7 +87,7 @@ class PerformanceMonitoringTest extends TestCase
         // Create test data
         $this->createTestData(200, 1000);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Enable query logging
         DB::enableQueryLog();
@@ -118,7 +117,7 @@ class PerformanceMonitoringTest extends TestCase
         // Create test data
         $this->createTestData(100, 500);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $memoryBefore = memory_get_usage();
         
@@ -142,7 +141,7 @@ class PerformanceMonitoringTest extends TestCase
         // Create test data
         $this->createTestData(50, 200);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $startTime = microtime(true);
         
@@ -173,7 +172,7 @@ class PerformanceMonitoringTest extends TestCase
         // Create large dataset
         $this->createTestData(1000, 5000);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $startTime = microtime(true);
         
@@ -206,7 +205,7 @@ class PerformanceMonitoringTest extends TestCase
             ]);
         }
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Enable query logging
         DB::enableQueryLog();
@@ -230,7 +229,7 @@ class PerformanceMonitoringTest extends TestCase
         // Create test data
         $this->createTestData(100, 500);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // First request (cache miss)
         $startTime = microtime(true);
@@ -257,7 +256,7 @@ class PerformanceMonitoringTest extends TestCase
      */
     public function test_error_handling_performance()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $startTime = microtime(true);
         

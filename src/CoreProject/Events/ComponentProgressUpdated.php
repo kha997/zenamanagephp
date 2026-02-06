@@ -14,29 +14,31 @@ class ComponentProgressUpdated
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    public readonly \DateTime $timestamp;
+
     /**
-     * @param int $componentId ID của component
-     * @param int $projectId ID của project
-     * @param int $actorId ID của user thực hiện
-     * @param int $tenantId ID của tenant
+     * @param string $componentId ID của component
+     * @param string $projectId ID của project
+     * @param string $actorId ID của user thực hiện
+     * @param string $tenantId ID của tenant
      * @param float $oldProgress Progress cũ
      * @param float $newProgress Progress mới
      * @param float|null $oldCost Cost cũ
      * @param float|null $newCost Cost mới
      * @param array $changedFields Các field đã thay đổi
-     * @param \DateTime $timestamp Thời gian event
+     * @param \DateTime|null $timestamp Thời gian event
      */
     public function __construct(
-        public readonly int $componentId,
-        public readonly int $projectId,
-        public readonly int $actorId,
-        public readonly int $tenantId,
+        public readonly string $componentId,
+        public readonly string $projectId,
+        public readonly string $actorId,
+        public readonly string $tenantId,
         public readonly float $oldProgress,
         public readonly float $newProgress,
         public readonly ?float $oldCost,
         public readonly ?float $newCost,
         public readonly array $changedFields,
-        public readonly \DateTime $timestamp
+        ?\DateTime $timestamp = null
     ) {
         $this->timestamp = $timestamp ?? new \DateTime();
     }

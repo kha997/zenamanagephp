@@ -41,9 +41,9 @@ class NotificationRuleController
     /**
      * Lấy ID người dùng hiện tại một cách an toàn
      *
-     * @return int|null
+     * @return string|null
      */
-    private function getUserId(): ?int
+    private function getUserId(): ?string
     {
         try {
             if (AuthHelper::check()) {
@@ -109,7 +109,6 @@ class NotificationRuleController
 
             return JSendResponse::success(
                 new NotificationRuleResource($rule),
-                'Quy tắc thông báo đã được tạo thành công',
                 201
             );
         } catch (Exception $e) {

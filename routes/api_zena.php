@@ -208,7 +208,9 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
             Route::get('/safety', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getSiteSafetyStatus'])->middleware('rbac:site-engineer.safety')->name('site-engineer.safety');
             Route::get('/daily-report', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getDailySiteReport'])->middleware('rbac:site-engineer.daily-report')->name('site-engineer.daily-report');
         });
+    });
 
+    Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
         // Project Management routes
         Route::group(['prefix' => 'projects'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ProjectController::class, 'index'])->middleware('rbac:project.view')->name('projects.index');

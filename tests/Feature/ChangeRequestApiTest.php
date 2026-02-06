@@ -12,10 +12,12 @@ use Src\ChangeRequest\Models\ChangeRequest;
 use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
 use Illuminate\Support\Facades\Hash;
+use Tests\Traits\SchemaAwareChangeRequestAssertions;
 
 class ChangeRequestApiTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
+    use SchemaAwareChangeRequestAssertions;
 
     protected $user;
     protected $tenant;
@@ -98,13 +100,10 @@ class ChangeRequestApiTest extends TestCase
             'title' => 'Change Material Specification',
             'description' => 'Change from granite to marble flooring',
             'project_id' => $this->project->id,
-            'impact_days' => 5,
-            'impact_cost' => 50000,
-            'impact_kpi' => [
-                'quality' => 'improved',
-                'timeline' => 'delayed',
-                'budget' => 'increased'
-            ]
+            'priority' => 'medium',
+            'visibility' => 'internal',
+            'justification' => 'Reduce long-term maintenance costs',
+            'tags' => ['flooring', 'materials']
         ];
 
         $response = $this->withHeaders([
@@ -112,24 +111,13 @@ class ChangeRequestApiTest extends TestCase
         ])->postJson('/api/v1/change-requests', $crData);
 
         $response->assertStatus(201)
-                 ->assertJsonStructure([
-                     'status',
-                     'data' => [
-                         'change_request' => [
-                             'id',
-                             'code',
-                             'title',
-                             'description',
-                             'project_id',
-                             'status',
-                             'impact_days',
-                             'impact_cost',
-                             'impact_kpi',
-                             'created_at',
-                             'updated_at'
-                         ]
-                     ]
-                 ]);
+                 ->assertJsonPath('status', 'success');
+
+        $this->assertChangeRequestResponse(
+            $response,
+            ['project_id', 'title', 'description', 'priority', 'visibility', 'change_number'],
+            false
+        );
 
         $this->assertDatabaseHas('change_requests', [
             'title' => $crData['title'],
@@ -155,21 +143,14 @@ class ChangeRequestApiTest extends TestCase
                  ->assertJsonStructure([
                      'status',
                      'data' => [
-                         'change_requests' => [
-                             '*' => [
-                                 'id',
-                                 'code',
-                                 'title',
-                                 'description',
-                                 'project_id',
-                                 'status',
-                                 'impact_days',
-                                 'impact_cost',
-                                 'created_at',
-                                 'updated_at'
-                             ]
-                         ],
-                         'pagination'
+                         'data',
+                         'meta' => [
+                             'total',
+                             'status_summary',
+                             'priority_summary',
+                             'total_impact_cost',
+                             'total_impact_days',
+                         ]
                      ]
                  ]);
     }
@@ -189,15 +170,10 @@ class ChangeRequestApiTest extends TestCase
         ])->postJson("/api/v1/change-requests/{$changeRequest->id}/submit");
 
         $response->assertStatus(200)
-                 ->assertJson([
-                     'status' => 'success',
-                     'data' => [
-                         'change_request' => [
-                             'id' => $changeRequest->id,
-                             'status' => 'awaiting_approval'
-                         ]
-                     ]
-                 ]);
+                 ->assertJsonPath('status', 'success')
+                 ->assertJsonPath('data.status', 'awaiting_approval');
+
+        $this->assertChangeRequestResponse($response, ['project_id'], false);
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
@@ -222,15 +198,14 @@ class ChangeRequestApiTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson([
-                     'status' => 'success',
-                     'data' => [
-                         'change_request' => [
-                             'id' => $changeRequest->id,
-                             'status' => 'approved'
-                         ]
-                     ]
-                 ]);
+                 ->assertJsonPath('status', 'success')
+                 ->assertJsonPath('data.status', 'approved');
+
+        $this->assertChangeRequestResponse(
+            $response,
+            ['project_id', 'approved_by', 'decision_note'],
+            false
+        );
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
@@ -257,15 +232,10 @@ class ChangeRequestApiTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson([
-                     'status' => 'success',
-                     'data' => [
-                         'change_request' => [
-                             'id' => $changeRequest->id,
-                             'status' => 'rejected'
-                         ]
-                     ]
-                 ]);
+                 ->assertJsonPath('status', 'success')
+                 ->assertJsonPath('data.status', 'rejected');
+
+        $this->assertChangeRequestResponse($response, ['project_id', 'rejection_reason'], false);
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,

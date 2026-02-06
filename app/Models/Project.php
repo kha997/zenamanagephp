@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
 use App\Models\UserRoleProject;
@@ -117,6 +118,31 @@ class Project extends Model
         'urgent',
     ];
 
+    public function setNameAttribute(?string $value): void
+    {
+        $sanitized = static::sanitizeText($value);
+
+        $this->attributes['name'] = $sanitized === null ? '' : $sanitized;
+    }
+
+    public function setDescriptionAttribute(?string $value): void
+    {
+        $this->attributes['description'] = static::sanitizeText($value);
+    }
+
+    private static function sanitizeText(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $withoutScripts = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $value);
+        $cleaned = strip_tags($withoutScripts);
+        $cleaned = html_entity_decode($cleaned, ENT_QUOTES, 'UTF-8');
+
+        return Str::squish($cleaned);
+    }
+
     /**
      * Relationship: Project thuộc về tenant
      */
@@ -128,6 +154,16 @@ class Project extends Model
     public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'pm_id');
+    }
+
+    public function projectManager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pm_id');
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'client_id');
     }
 
     public function getManagerIdAttribute(): ?string
@@ -193,6 +229,11 @@ class Project extends Model
             'user_id'
         )->withPivot(['role_id'])
           ->withTimestamps();
+    }
+
+    public function teamMembers(): BelongsToMany
+    {
+        return $this->users();
     }
 
     /**

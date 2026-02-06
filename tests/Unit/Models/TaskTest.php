@@ -3,10 +3,10 @@
 namespace Tests\Unit\Models;
 
 use Tests\TestCase;
-use Src\CoreProject\Models\Task;
-use Src\CoreProject\Models\Project;
+use App\Models\Task;
 use App\Models\User;
 use App\Models\Tenant;
+use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class TaskTest extends TestCase
@@ -190,10 +190,32 @@ class TaskTest extends TestCase
     public function it_has_fillable_attributes()
     {
         $fillable = [
-            'project_id', 'component_id', 'phase_id', 'name', 'description',
-            'start_date', 'end_date', 'status', 'priority', 'dependencies_json',
-            'conditional_tag', 'is_hidden', 'estimated_hours', 'actual_hours',
-            'progress_percent', 'tags', 'visibility', 'client_approved'
+            'tenant_id',
+            'project_id',
+            'component_id',
+            'phase_id',
+            'name',
+            'title',
+            'description',
+            'start_date',
+            'end_date',
+            'status',
+            'priority',
+            'dependencies_json',
+            'conditional_tag',
+            'is_hidden',
+            'estimated_hours',
+            'actual_hours',
+            'estimated_cost',
+            'actual_cost',
+            'progress_percent',
+            'tags',
+            'visibility',
+            'client_approved',
+            'assignee_id',
+            'assigned_to',
+            'watchers',
+            'created_by'
         ];
 
         $this->assertEquals($fillable, $this->task->getFillable());
@@ -255,7 +277,7 @@ class TaskTest extends TestCase
         ]);
 
         // Task model có progress_percent từ factory, kiểm tra giá trị hiện tại
-        $this->assertIsFloat($this->task->progress_percent);
+        $this->assertIsInt($this->task->progress_percent);
     }
 
     /** @test */

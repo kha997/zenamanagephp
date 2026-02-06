@@ -438,4 +438,18 @@ class MetricsService
         
         return 'healthy';
     }
+
+    public function getProjectMetrics(string $projectId): array
+    {
+        return [
+            'project_id' => $projectId,
+            'progress' => 0,
+            'tasks' => [
+                'total' => 0,
+                'completed' => 0,
+                'pending' => 0,
+            ],
+            'status' => 'planning',
+        ];
+    }
 }

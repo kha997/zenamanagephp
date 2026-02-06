@@ -102,6 +102,14 @@ class Document extends Model
         'deleted_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'title',
+        'document_type',
+        'file_name',
+        'change_notes',
+        'tags',
+    ];
+
     /**
      * Quan hệ với Project
      */
@@ -287,5 +295,61 @@ class Document extends Model
     public function getTagsAsString(): string
     {
         return $this->tags ? implode(', ', $this->tags) : '';
+    }
+
+    /**
+     * Title attribute (fallback to name)
+     */
+    public function getTitleAttribute(): ?string
+    {
+        return $this->attributes['title'] ?? $this->attributes['name'] ?? null;
+    }
+
+    /**
+     * Document type attribute (metadata preference)
+     */
+    public function getDocumentTypeAttribute(): ?string
+    {
+        if (!empty($this->attributes['document_type'])) {
+            return $this->attributes['document_type'];
+        }
+
+        if (!empty($this->metadata['document_type'])) {
+            return $this->metadata['document_type'];
+        }
+
+        return $this->attributes['category'] ?? null;
+    }
+
+    /**
+     * File name attribute for API consumers
+     */
+    public function getFileNameAttribute(): ?string
+    {
+        if (!empty($this->attributes['file_name'])) {
+            return $this->attributes['file_name'];
+        }
+
+        if (!empty($this->attributes['file_path'])) {
+            return basename($this->attributes['file_path']);
+        }
+
+        return $this->attributes['original_name'] ?? null;
+    }
+
+    /**
+     * Change notes accessor (stored in metadata)
+     */
+    public function getChangeNotesAttribute(): ?string
+    {
+        return $this->metadata['change_notes'] ?? null;
+    }
+
+    /**
+     * Tags attribute derived from metadata
+     */
+    public function getTagsAttribute(): array
+    {
+        return $this->metadata['tags'] ?? [];
     }
 }

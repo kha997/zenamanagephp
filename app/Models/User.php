@@ -90,6 +90,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Relationship: User có nhiều system roles (RBAC)
+     */
+    public function systemRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'system_user_roles', 'user_id', 'role_id')
+            ->withTimestamps();
+    }
+
+    /**
      * Relationship: User thuộc về một tenant
      */
     public function tenant(): BelongsTo
@@ -108,8 +117,12 @@ class User extends Authenticatable
     /**
      * Check if user has role.
      */
-    public function hasRole(string $role): bool
+    public function hasRole(string|array $role): bool
     {
+        if (is_array($role)) {
+            return $this->hasAnyRole($role);
+        }
+
         return $this->roles()->where('name', $role)->exists();
     }
 
@@ -160,6 +173,10 @@ class User extends Authenticatable
      */
     public function hasAnyRole(array $roles): bool
     {
+        if ($this->role && in_array($this->role, $roles, true)) {
+            return true;
+        }
+
         return $this->roles()->whereIn('name', $roles)->exists();
     }
 

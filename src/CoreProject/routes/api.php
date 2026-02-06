@@ -8,7 +8,7 @@ use Src\CoreProject\Controllers\WorkTemplateController;
 use Src\CoreProject\Controllers\TaskAssignmentController;
 use Src\CoreProject\Controllers\BaselineController;
 
-Route::prefix('api/v1')
+Route::prefix('v1')
     ->middleware(['auth:api'])
     ->group(function () {
         // Project routes với RBAC permissions
@@ -20,15 +20,15 @@ Route::prefix('api/v1')
         Route::delete('projects/{project}', [ProjectController::class, 'destroy'])->middleware('rbac:project.delete');
         
         // Project-specific component routes theo yêu cầu
-        Route::prefix('projects/{project_id}')
+        Route::prefix('projects/{projectId}')
             ->group(function () {
-                // POST /projects/{project_id}/components
+                // POST /projects/{projectId}/components
                 Route::post('components', [ComponentController::class, 'store'])->middleware('rbac:component.create');
-                
-                // GET /projects/{project_id}/components/tree
+
+                // GET /projects/{projectId}/components/tree
                 Route::get('components/tree', [ComponentController::class, 'tree'])->middleware('rbac:component.view');
-                
-                // GET /projects/{project_id}/components (list components)
+
+                // GET /projects/{projectId}/components (list components)
                 Route::get('components', [ComponentController::class, 'index'])->middleware('rbac:component.view');
                 
                 // Baseline routes cho project

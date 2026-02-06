@@ -39,6 +39,13 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
+            
+            // Debug API routes (local/testing + debug=on)
+            if ($this->app->environment(['local', 'testing']) && config('app.debug')) {
+                Route::middleware('api')
+                    ->prefix('api')
+                    ->group(base_path('routes/debug_api.php'));
+            }
                 
             // Web routes
             Route::middleware('web')
@@ -61,7 +68,7 @@ class RouteServiceProvider extends ServiceProvider
     {
         RateLimiter::for('zena-login', function (Request $request) {
             $identity = strtolower((string) ($request->input('email') ?? $request->input('username') ?? ''));
-            return Limit::perMinute(10)->by($request->ip() . '|' . $identity);
+            return Limit::perMinute(20)->by($request->ip() . '|' . $identity);
         });
     }
 }

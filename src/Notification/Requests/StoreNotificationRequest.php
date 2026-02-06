@@ -88,7 +88,7 @@ class StoreNotificationRequest extends FormRequest
      * 
      * @return int|null
      */
-    private function getUserId(): ?int
+    private function getUserId(): ?string
     {
         try {
             if (AuthHelper::check()) {

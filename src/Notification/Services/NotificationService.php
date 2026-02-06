@@ -29,6 +29,7 @@ class NotificationService
     {
         $notification = Notification::create([
             'user_id' => $data['user_id'],
+            'type' => $data['type'] ?? Notification::TYPE_SYSTEM,
             'priority' => $data['priority'] ?? 'normal',
             'title' => $data['title'],
             'body' => $data['body'],
@@ -40,12 +41,14 @@ class NotificationService
         ]);
 
         // Dispatch event để xử lý gửi thông báo qua các kênh khác nhau
-        EventBus::dispatch('Notification.Created', [
-            'notificationId' => $notification->ulid,
+        EventBus::dispatch('Notification.Notification.Created', [
+            'entityId' => $notification->id,
+            'projectId' => $notification->project_id ?? 'system',
+            'actorId' => $notification->user_id,
+            'notificationId' => $notification->id,
             'userId' => $notification->user_id,
             'channel' => $notification->channel,
             'priority' => $notification->priority,
-            'projectId' => $notification->project_id,
             'timestamp' => now()->toISOString()
         ]);
 
@@ -74,21 +77,21 @@ class NotificationService
     /**
      * Lấy danh sách thông báo của user với phân trang
      * 
-     * @param int $userId
+     * @param string $userId
      * @param array $filters
      * @param int $page
      * @param int $perPage
      * @return LengthAwarePaginator
      */
     public function getUserNotifications(
-        int $userId,
+        string $userId,
         array $filters = [],
         int $page = 1,
         int $perPage = 20
     ): LengthAwarePaginator {
         $query = Notification::query()
             ->forUser($userId)
-            ->with(['user', 'project'])
+            ->with('user')
             ->orderBy('created_at', 'desc');
 
         // Lọc theo trạng thái đọc
@@ -127,12 +130,12 @@ class NotificationService
      * Đánh dấu thông báo đã đọc
      * 
      * @param string $notificationId
-     * @param int $userId
+     * @param string $userId
      * @return bool
      */
-    public function markAsRead(string $notificationId, int $userId): bool
+    public function markAsRead(string $notificationId, string $userId): bool
     {
-        $notification = Notification::where('ulid', $notificationId)
+        $notification = Notification::where('id', $notificationId)
             ->where('user_id', $userId)
             ->first();
 
@@ -145,8 +148,11 @@ class NotificationService
             $notification->save();
 
             // Dispatch event
-            EventBus::dispatch('Notification.Read', [
-                'notificationId' => $notification->ulid,
+            EventBus::dispatch('Notification.Notification.Read', [
+                'entityId' => $notification->id,
+                'projectId' => $notification->project_id ?? 'system',
+                'actorId' => $userId,
+                'notificationId' => $notification->id,
                 'userId' => $notification->user_id,
                 'readAt' => $notification->read_at->toISOString(),
                 'timestamp' => now()->toISOString()
@@ -160,19 +166,22 @@ class NotificationService
      * Đánh dấu nhiều thông báo đã đọc
      * 
      * @param array $notificationIds
-     * @param int $userId
+     * @param string $userId
      * @return int Số lượng thông báo đã được đánh dấu
      */
-    public function markMultipleAsRead(array $notificationIds, int $userId): int
+    public function markMultipleAsRead(array $notificationIds, string $userId): int
     {
-        $count = Notification::whereIn('ulid', $notificationIds)
+        $count = Notification::whereIn('id', $notificationIds)
             ->where('user_id', $userId)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
         if ($count > 0) {
             // Dispatch event
-            EventBus::dispatch('Notification.BulkRead', [
+            EventBus::dispatch('Notification.Notification.BulkRead', [
+                'entityId' => $notificationIds[0] ?? null,
+                'projectId' => 'system',
+                'actorId' => $userId,
                 'notificationIds' => $notificationIds,
                 'userId' => $userId,
                 'count' => $count,
@@ -186,10 +195,10 @@ class NotificationService
     /**
      * Đánh dấu tất cả thông báo của user đã đọc
      * 
-     * @param int $userId
+     * @param string $userId
      * @return int
      */
-    public function markAllAsRead(int $userId): int
+    public function markAllAsRead(string $userId): int
     {
         $count = Notification::where('user_id', $userId)
             ->whereNull('read_at')
@@ -197,7 +206,10 @@ class NotificationService
 
         if ($count > 0) {
             // Dispatch event
-            EventBus::dispatch('Notification.AllRead', [
+            EventBus::dispatch('Notification.Notification.AllRead', [
+                'entityId' => $userId,
+                'projectId' => 'system',
+                'actorId' => $userId,
                 'userId' => $userId,
                 'count' => $count,
                 'timestamp' => now()->toISOString()
@@ -211,12 +223,12 @@ class NotificationService
      * Xóa thông báo
      * 
      * @param string $notificationId
-     * @param int $userId
+     * @param string $userId
      * @return bool
      */
-    public function deleteNotification(string $notificationId, int $userId): bool
+    public function deleteNotification(string $notificationId, string $userId): bool
     {
-        $notification = Notification::where('ulid', $notificationId)
+        $notification = Notification::where('id', $notificationId)
             ->where('user_id', $userId)
             ->first();
 
@@ -227,11 +239,14 @@ class NotificationService
         $notification->delete();
 
         // Dispatch event
-        EventBus::dispatch('Notification.Deleted', [
-            'notificationId' => $notificationId,
-            'userId' => $userId,
-            'timestamp' => now()->toISOString()
-        ]);
+            EventBus::dispatch('Notification.Notification.Deleted', [
+                'entityId' => $notificationId,
+                'projectId' => $notification->project_id ?? 'system',
+                'actorId' => $userId,
+                'notificationId' => $notification->id,
+                'userId' => $userId,
+                'timestamp' => now()->toISOString()
+            ]);
 
         return true;
     }
@@ -239,10 +254,10 @@ class NotificationService
     /**
      * Lấy số lượng thông báo chưa đọc của user
      * 
-     * @param int $userId
+     * @param string $userId
      * @return int
      */
-    public function getUnreadCount(int $userId): int
+    public function getUnreadCount(string $userId): int
     {
         return Notification::where('user_id', $userId)
             ->whereNull('read_at')
@@ -252,10 +267,10 @@ class NotificationService
     /**
      * Lấy thống kê thông báo theo project
      * 
-     * @param int $projectId
+     * @param string $projectId
      * @return array
      */
-    public function getProjectNotificationStats(int $projectId): array
+    public function getProjectNotificationStats(string $projectId): array
     {
         $stats = Notification::where('project_id', $projectId)
             ->selectRaw('
@@ -306,7 +321,10 @@ class NotificationService
 
         if ($count > 0) {
             // Dispatch event
-            EventBus::dispatch('Notification.Cleanup', [
+            EventBus::dispatch('Notification.Notification.Cleanup', [
+                'entityId' => (string) $cutoffDate->timestamp,
+                'projectId' => null,
+                'actorId' => 'system',
                 'deletedCount' => $count,
                 'cutoffDate' => $cutoffDate->toISOString(),
                 'timestamp' => now()->toISOString()

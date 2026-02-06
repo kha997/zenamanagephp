@@ -15,7 +15,6 @@ use App\Models\Inspection;
 use App\Models\NCR;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
 
 class DashboardPerformanceTest extends TestCase
@@ -61,7 +60,7 @@ class DashboardPerformanceTest extends TestCase
         $this->createLargeDataset();
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createLargeDataset(): void
@@ -571,7 +570,7 @@ class DashboardPerformanceTest extends TestCase
                 'tenant_id' => $this->tenant->id
             ]);
 
-            Sanctum::actingAs($user);
+            $this->apiAs($user, $this->tenant);
 
             $startTime = microtime(true);
             

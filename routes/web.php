@@ -181,7 +181,7 @@ Route::get('/app/calendar', function() {
 // Admin Routes (System-wide with auth + rbac:admin middleware)
 Route::get('/admin/dashboard', function() {
     return view('admin.dashboard');
-})->middleware(['auth', 'rbac:admin'])->name('admin-dashboard');
+})->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->name('admin-dashboard');
 
 if (app()->environment(['local', 'testing'])) {
     // Test Routes (No middleware for testing)
@@ -236,12 +236,12 @@ Route::get('/admin/users', function() {
 
 
         // Admin Routes - System-wide with auth + rbac:admin middleware
-        Route::prefix('admin')->name('admin-')->middleware(['auth', 'rbac:admin'])->group(function () {
+        Route::prefix('admin')->name('admin-')->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->group(function () {
     Route::get('/', function() {
         return view('admin.dashboard-css-inline');
     })->name('dashboard');
     Route::get('/dashboard', function() {
-        return '<h1>Admin Dashboard</h1><p>Welcome to the admin panel!</p>';
+        return view('admin.dashboard');
     })->name('dashboard.page');
     Route::get('/users', function() {
         return view('admin.users');

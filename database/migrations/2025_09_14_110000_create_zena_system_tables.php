@@ -122,11 +122,13 @@ return new class extends Migration
             $table->ulid('reviewed_by')->nullable();
             $table->timestamp('reviewed_at')->nullable();
             $table->text('review_comments')->nullable();
+            $table->ulid('created_by');
             $table->timestamps();
 
             $table->foreign('project_id')->references('id')->on('zena_projects')->onDelete('cascade');
             $table->foreign('submitted_by')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('reviewed_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->index(['project_id', 'status']);
         });
 

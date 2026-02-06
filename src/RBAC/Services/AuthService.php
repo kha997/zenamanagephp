@@ -96,8 +96,11 @@ class AuthService
             DB::commit();
 
             return [
+                'success' => true,
                 'user' => $user->load('tenant'),
+                'tenant' => $tenant,
                 'access_token' => $token,
+                'token' => $token,
                 'token_type' => 'bearer',
                 'expires_in' => (int) config('jwt.ttl') * 60
             ];

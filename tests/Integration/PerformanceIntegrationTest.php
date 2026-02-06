@@ -13,7 +13,6 @@ use App\Models\Task;
 use App\Models\RFI;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 
@@ -60,7 +59,7 @@ class PerformanceIntegrationTest extends TestCase
         $this->createPerformanceTestData();
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createPerformanceTestData(): void

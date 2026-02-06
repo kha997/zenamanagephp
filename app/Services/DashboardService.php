@@ -432,7 +432,9 @@ class DashboardService
                 'size' => $widgetConfig['size'] ?? $widget->config['default_size'] ?? 'medium',
                 'position' => $position,
                 'config' => $widgetConfig,
-                'added_at' => now()->toISOString()
+                'is_customizable' => $widgetConfig['is_customizable'] ?? true,
+                'added_at' => now()->toISOString(),
+                'created_at' => now()->toISOString()
             ];
 
             $layout[] = $widgetInstance;

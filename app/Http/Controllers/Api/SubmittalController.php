@@ -255,7 +255,7 @@ class SubmittalController extends ApiBaseController
     /**
      * Remove the specified submittal.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -344,7 +344,14 @@ class SubmittalController extends ApiBaseController
 
             $submittal = $this->submittalForTenant($id);
 
-            $validator = Validator::make($request->all(), [
+            $reviewStatus = $request->input('review_status') ?? $request->input('status');
+            $reviewComments = $request->input('review_comments') ?? $request->input('review_notes');
+
+            $validator = Validator::make([
+                'review_status' => $reviewStatus,
+                'review_comments' => $reviewComments,
+                'review_notes' => $request->input('review_notes'),
+            ], [
                 'review_status' => 'required|in:approved,rejected,revised',
                 'review_comments' => 'required|string',
                 'review_notes' => 'nullable|string',
@@ -355,8 +362,8 @@ class SubmittalController extends ApiBaseController
             }
 
             $submittal->update([
-                'status' => $request->input('review_status'),
-                'review_comments' => $request->input('review_comments'),
+                'status' => $reviewStatus,
+                'review_comments' => $reviewComments,
                 'review_notes' => $request->input('review_notes'),
                 'reviewed_by' => $user->id,
                 'reviewed_at' => now(),
@@ -497,7 +504,7 @@ class SubmittalController extends ApiBaseController
         
         $sequence = $lastSubmittal ? (int)substr($lastSubmittal->submittal_number, -4) + 1 : 1;
         
-        return $projectCode . '-SUB-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return $projectCode . '-SUB-' . sprintf('%04d', $sequence);
     }
 
     private function projectForTenant(string $projectId): ?Project

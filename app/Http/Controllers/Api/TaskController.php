@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,9 +13,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
-class TaskController extends Controller
+class TaskController extends BaseApiController
 {
     use ZenaContractResponseTrait;
+
+    protected function error(string $message, int $statusCode = 400, $data = null): JsonResponse
+    {
+        return $this->errorResponse($message, $statusCode, $data);
+    }
 
     /**
      * Display a listing of the resource.
@@ -781,6 +786,7 @@ class TaskController extends Controller
             if ($dependencyId === $id) {
                 return response()->json([
                     'success' => false,
+                    'status' => 'error',
                     'message' => 'Task cannot depend on itself'
                 ], 400);
             }
@@ -789,6 +795,7 @@ class TaskController extends Controller
             if ($task->hasCircularDependency($dependencyId)) {
                 return response()->json([
                     'success' => false,
+                    'status' => 'error',
                     'message' => 'Circular dependency detected'
                 ], 400);
             }
@@ -803,6 +810,7 @@ class TaskController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
+                    'status' => 'error',
                     'message' => 'Dependency already exists'
                 ], 400);
             }
@@ -810,6 +818,7 @@ class TaskController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
+                'status' => 'error',
                 'message' => 'Validation failed',
                 'errors' => $e->errors()
             ], 422);
@@ -817,6 +826,7 @@ class TaskController extends Controller
             Log::error('Task add dependency error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
+                'status' => 'error',
                 'message' => 'Failed to add dependency',
                 'error' => $e->getMessage()
             ], 500);

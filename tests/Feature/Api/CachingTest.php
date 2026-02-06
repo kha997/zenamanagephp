@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 
 class CachingTest extends TestCase
@@ -16,11 +17,6 @@ class CachingTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
-        
-        // Ensure Redis is available
-        if (!Redis::ping()) {
-            $this->markTestSkipped('Redis is not available');
-        }
     }
 
     /**
@@ -28,13 +24,12 @@ class CachingTest extends TestCase
      */
     public function test_cache_stats_endpoint()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->getJson('/api/cache/stats', [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        $headers = $this->authHeaders($user, $token);
+
+        $response = $this->getJson('/api/cache/stats', $headers);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -63,13 +58,11 @@ class CachingTest extends TestCase
      */
     public function test_cache_config_endpoint()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->getJson('/api/cache/config', [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        $headers = $this->authHeaders($user, $token);
+        $response = $this->getJson('/api/cache/config', $headers);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -96,21 +89,20 @@ class CachingTest extends TestCase
      */
     public function test_cache_key_invalidation()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
+        $headers = $this->authHeaders($user, $token);
 
         // Set a cache key
         $cacheKey = 'test_key_' . uniqid();
-        Cache::put($cacheKey, 'test_value', 300);
-        $this->assertTrue(Cache::has($cacheKey));
+        $prefixedKey = $this->tenantCacheKey($cacheKey, $user);
+        Cache::put($prefixedKey, 'test_value', 300);
+        $this->assertTrue(Cache::has($prefixedKey));
 
         // Invalidate the key
         $response = $this->postJson('/api/cache/invalidate/key', [
             'key' => $cacheKey
-        ], [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        ], $headers);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -122,7 +114,7 @@ class CachingTest extends TestCase
         ]);
 
         // Verify key is invalidated
-        $this->assertFalse(Cache::has($cacheKey));
+        $this->assertFalse(Cache::has($prefixedKey));
     }
 
     /**
@@ -130,28 +122,29 @@ class CachingTest extends TestCase
      */
     public function test_cache_tags_invalidation()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
+        $headers = $this->authHeaders($user, $token);
 
         // Set cache keys with tags
         $tag1 = 'test_tag_1';
         $tag2 = 'test_tag_2';
+        $key1 = $this->tenantCacheKey('key1', $user);
+        $key2 = $this->tenantCacheKey('key2', $user);
+        $key3 = $this->tenantCacheKey('key3', $user);
         
-        Cache::tags([$tag1])->put('key1', 'value1', 300);
-        Cache::tags([$tag2])->put('key2', 'value2', 300);
-        Cache::tags([$tag1, $tag2])->put('key3', 'value3', 300);
+        Cache::tags([$tag1])->put($key1, 'value1', 300);
+        Cache::tags([$tag2])->put($key2, 'value2', 300);
+        Cache::tags([$tag1, $tag2])->put($key3, 'value3', 300);
 
-        $this->assertTrue(Cache::has('key1'));
-        $this->assertTrue(Cache::has('key2'));
-        $this->assertTrue(Cache::has('key3'));
+        $this->assertTrue(Cache::tags([$tag1])->has($key1));
+        $this->assertTrue(Cache::tags([$tag2])->has($key2));
+        $this->assertTrue(Cache::tags([$tag1, $tag2])->has($key3));
 
         // Invalidate by tag
         $response = $this->postJson('/api/cache/invalidate/tags', [
             'tags' => [$tag1]
-        ], [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        ], $headers);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -163,9 +156,9 @@ class CachingTest extends TestCase
         ]);
 
         // Verify keys with tag1 are invalidated
-        $this->assertFalse(Cache::has('key1'));
-        $this->assertTrue(Cache::has('key2')); // Different tag
-        $this->assertFalse(Cache::has('key3')); // Has tag1
+        $this->assertFalse(Cache::tags([$tag1])->has($key1));
+        $this->assertTrue(Cache::tags([$tag2])->has($key2)); // Different tag
+        $this->assertFalse(Cache::tags([$tag1, $tag2])->has($key3)); // Has tag1
     }
 
     /**
@@ -173,27 +166,30 @@ class CachingTest extends TestCase
      */
     public function test_cache_pattern_invalidation()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
+        $headers = $this->authHeaders($user, $token);
 
         // Set cache keys with pattern
-        Cache::put('user_123_profile', 'profile_data', 300);
-        Cache::put('user_123_settings', 'settings_data', 300);
-        Cache::put('user_456_profile', 'profile_data', 300);
-        Cache::put('other_data', 'other_value', 300);
+        $user123Profile = $this->tenantCacheKey('user_123_profile', $user);
+        $user123Settings = $this->tenantCacheKey('user_123_settings', $user);
+        $user456Profile = $this->tenantCacheKey('user_456_profile', $user);
+        $otherDataKey = $this->tenantCacheKey('other_data', $user);
 
-        $this->assertTrue(Cache::has('user_123_profile'));
-        $this->assertTrue(Cache::has('user_123_settings'));
-        $this->assertTrue(Cache::has('user_456_profile'));
-        $this->assertTrue(Cache::has('other_data'));
+        Cache::put($user123Profile, 'profile_data', 300);
+        Cache::put($user123Settings, 'settings_data', 300);
+        Cache::put($user456Profile, 'profile_data', 300);
+        Cache::put($otherDataKey, 'other_value', 300);
+
+        $this->assertTrue(Cache::has($user123Profile));
+        $this->assertTrue(Cache::has($user123Settings));
+        $this->assertTrue(Cache::has($user456Profile));
+        $this->assertTrue(Cache::has($otherDataKey));
 
         // Invalidate by pattern
         $response = $this->postJson('/api/cache/invalidate/pattern', [
             'pattern' => 'user_123_*'
-        ], [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        ], $headers);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -205,10 +201,10 @@ class CachingTest extends TestCase
         ]);
 
         // Verify pattern-based invalidation
-        $this->assertFalse(Cache::has('user_123_profile'));
-        $this->assertFalse(Cache::has('user_123_settings'));
-        $this->assertTrue(Cache::has('user_456_profile')); // Different pattern
-        $this->assertTrue(Cache::has('other_data')); // Different pattern
+        $this->assertFalse(Cache::has($user123Profile));
+        $this->assertFalse(Cache::has($user123Settings));
+        $this->assertTrue(Cache::has($user456Profile)); // Different pattern
+        $this->assertTrue(Cache::has($otherDataKey)); // Different pattern
     }
 
     /**
@@ -216,19 +212,18 @@ class CachingTest extends TestCase
      */
     public function test_cache_warmup()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
+        $headers = $this->authHeaders($user, $token);
 
         $response = $this->postJson('/api/cache/warmup', [
             'keys' => [
                 'dashboard_data',
                 'user_preferences',
                 'system_config'
-            ]
-        ], [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+            ],
+            'data_provider' => 'dashboard'
+        ], $headers);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -249,23 +244,25 @@ class CachingTest extends TestCase
      */
     public function test_cache_clear_all()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
+        $headers = $this->authHeaders($user, $token);
 
         // Set some cache data
-        Cache::put('test_key_1', 'value1', 300);
-        Cache::put('test_key_2', 'value2', 300);
-        Cache::put('test_key_3', 'value3', 300);
+        $prefixedKey1 = $this->tenantCacheKey('test_key_1', $user);
+        $prefixedKey2 = $this->tenantCacheKey('test_key_2', $user);
+        $prefixedKey3 = $this->tenantCacheKey('test_key_3', $user);
 
-        $this->assertTrue(Cache::has('test_key_1'));
-        $this->assertTrue(Cache::has('test_key_2'));
-        $this->assertTrue(Cache::has('test_key_3'));
+        Cache::put($prefixedKey1, 'value1', 300);
+        Cache::put($prefixedKey2, 'value2', 300);
+        Cache::put($prefixedKey3, 'value3', 300);
+
+        $this->assertTrue(Cache::has($prefixedKey1));
+        $this->assertTrue(Cache::has($prefixedKey2));
+        $this->assertTrue(Cache::has($prefixedKey3));
 
         // Clear all cache
-        $response = $this->postJson('/api/cache/clear', [], [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        $response = $this->postJson('/api/cache/clear', [], $headers);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -277,9 +274,9 @@ class CachingTest extends TestCase
         ]);
 
         // Verify all cache is cleared
-        $this->assertFalse(Cache::has('test_key_1'));
-        $this->assertFalse(Cache::has('test_key_2'));
-        $this->assertFalse(Cache::has('test_key_3'));
+        $this->assertFalse(Cache::has($prefixedKey1));
+        $this->assertFalse(Cache::has($prefixedKey2));
+        $this->assertFalse(Cache::has($prefixedKey3));
     }
 
     /**
@@ -287,13 +284,9 @@ class CachingTest extends TestCase
      */
     public function test_dashboard_caching_middleware()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-
-        $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ];
+        $headers = $this->authHeaders($user, $token);
 
         // First request - should not be cached
         $response1 = $this->getJson('/api/dashboard/data', $headers);
@@ -318,13 +311,11 @@ class CachingTest extends TestCase
      */
     public function test_cache_performance_metrics()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
+        $headers = $this->authHeaders($user, $token);
 
-        $response = $this->getJson('/api/cache/stats', [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        $response = $this->getJson('/api/cache/stats', $headers);
 
         $response->assertStatus(200);
         $data = $response->json('data');
@@ -348,16 +339,14 @@ class CachingTest extends TestCase
      */
     public function test_cache_error_handling()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = $this->createAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
+        $headers = $this->authHeaders($user, $token);
 
         // Test invalid key invalidation
         $response = $this->postJson('/api/cache/invalidate/key', [
             'key' => 'non_existent_key'
-        ], [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        ], $headers);
 
         $response->assertStatus(200);
         $data = $response->json('data');
@@ -366,10 +355,7 @@ class CachingTest extends TestCase
         // Test invalid pattern
         $response = $this->postJson('/api/cache/invalidate/pattern', [
             'pattern' => 'invalid_pattern['
-        ], [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json'
-        ]);
+        ], $headers);
 
         $response->assertStatus(400);
         $response->assertJsonStructure([
@@ -379,5 +365,32 @@ class CachingTest extends TestCase
                 'code'
             ]
         ]);
+    }
+
+    private function createAdminUser(): User
+    {
+        $role = Role::firstOrCreate(
+            ['name' => 'admin', 'scope' => Role::SCOPE_SYSTEM],
+            ['allow_override' => true, 'is_active' => true]
+        );
+
+        $user = User::factory()->create();
+        $user->roles()->syncWithoutDetaching([$role->id]);
+
+        return $user;
+    }
+
+    private function authHeaders(User $user, string $token): array
+    {
+        return [
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $user->tenant_id,
+        ];
+    }
+
+    private function tenantCacheKey(string $key, User $user): string
+    {
+        return sprintf('tenant:%s:%s', (string) $user->tenant_id, $key);
     }
 }

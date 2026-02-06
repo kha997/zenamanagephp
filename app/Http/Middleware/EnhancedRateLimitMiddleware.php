@@ -174,7 +174,7 @@ class EnhancedRateLimitMiddleware
         
         $retryAfter = $rateLimitResult['reset_time'] - time();
         
-        return response()->json([
+        $response = response()->json([
             'success' => false,
             'error' => 'Rate limit exceeded',
             'message' => 'Too many requests. Please try again later.',
@@ -187,6 +187,10 @@ class EnhancedRateLimitMiddleware
                 'reset_time' => $rateLimitResult['reset_time'],
             ]
         ], 429)->header('Retry-After', $retryAfter);
+
+        $this->addRateLimitHeaders($response, $rateLimitResult);
+
+        return $response;
     }
     
     /**

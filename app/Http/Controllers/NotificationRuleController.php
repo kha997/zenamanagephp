@@ -35,9 +35,9 @@ class NotificationRuleController
     /**
      * Lấy ID người dùng hiện tại một cách an toàn
      *
-     * @return int|null
+     * @return string|null
      */
-    private function getUserId(): ?int
+    private function getUserId(): ?string
     {
         try {
             if (AuthHelper::check()) {

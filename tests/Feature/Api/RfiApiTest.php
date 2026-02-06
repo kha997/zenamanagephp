@@ -8,29 +8,25 @@ use App\Models\ZenaProject;
 use App\Models\ZenaRfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\AuthenticationTestTrait;
 
 class RfiApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
 
-    protected $user;
-    protected $project;
-    protected $token;
+    protected User $user;
+    protected ZenaProject $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Create test user
-        $this->user = User::factory()->create();
-        
-        // Create test project
+
+        $this->apiActingAsTenantAdmin();
+        $this->user = $this->apiFeatureUser;
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->apiFeatureTenant->id,
         ]);
-        
-        // Generate JWT token
-        $this->token = $this->generateJwtToken($this->user);
     }
 
     /**
@@ -41,26 +37,32 @@ class RfiApiTest extends TestCase
         // Create test RFIs
         ZenaRfi::factory()->count(3)->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/rfis');
+        $response = $this->apiGet('/api/zena/rfis');
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
+                    'success',
                     'status',
                     'data' => [
-                        'data' => [
-                            '*' => [
-                                'id',
-                                'title',
-                                'description',
-                                'status',
-                                'priority',
-                                'created_at'
-                            ]
+                        '*' => [
+                            'id',
+                            'title',
+                            'description',
+                            'status',
+                            'priority',
+                            'created_at'
+                        ]
+                    ],
+                    'meta' => [
+                        'pagination' => [
+                            'page',
+                            'per_page',
+                            'total',
+                            'last_page'
                         ]
                     ]
                 ]);
@@ -81,9 +83,7 @@ class RfiApiTest extends TestCase
             'drawing_reference' => 'DW-001'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/rfis', $rfiData);
+        $response = $this->apiPost('/api/zena/rfis', $rfiData);
 
         $response->assertStatus(201)
                 ->assertJsonStructure([
@@ -108,12 +108,10 @@ class RfiApiTest extends TestCase
      */
     public function test_rfi_creation_requires_valid_data()
     {
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/rfis', []);
+        $response = $this->apiPost('/api/zena/rfis', []);
 
         $response->assertStatus(422)
-                ->assertJsonValidationErrors(['project_id', 'title', 'description']);
+                ->assertJsonValidationErrors(['project_id', 'title', 'description'], 'error.details.data');
     }
 
     /**
@@ -123,12 +121,11 @@ class RfiApiTest extends TestCase
     {
         $rfi = ZenaRfi::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/zena/rfis/{$rfi->id}");
+        $response = $this->apiGet("/api/zena/rfis/{$rfi->id}");
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -150,7 +147,8 @@ class RfiApiTest extends TestCase
     {
         $rfi = ZenaRfi::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
         ]);
 
         $updateData = [
@@ -159,9 +157,7 @@ class RfiApiTest extends TestCase
             'priority' => 'high'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/rfis/{$rfi->id}", $updateData);
+        $response = $this->apiPut("/api/zena/rfis/{$rfi->id}", $updateData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -187,7 +183,8 @@ class RfiApiTest extends TestCase
     {
         $rfi = ZenaRfi::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
         ]);
 
         $assignData = [
@@ -195,9 +192,7 @@ class RfiApiTest extends TestCase
             'assignment_notes' => 'Please review this RFI'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/rfis/{$rfi->id}/assign", $assignData);
+        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/assign", $assignData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -225,17 +220,17 @@ class RfiApiTest extends TestCase
         $rfi = ZenaRfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
             'status' => 'in_progress'
         ]);
 
         $responseData = [
             'response' => 'This is the response to the RFI',
-            'response_notes' => 'Additional notes'
+            'response_notes' => 'Additional notes',
+            'status' => 'answered'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/rfis/{$rfi->id}/respond", $responseData);
+        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/respond", $responseData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -262,6 +257,7 @@ class RfiApiTest extends TestCase
         $rfi = ZenaRfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
             'status' => 'in_progress'
         ]);
 
@@ -270,9 +266,7 @@ class RfiApiTest extends TestCase
             'escalation_reason' => 'Urgent issue requiring immediate attention'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/rfis/{$rfi->id}/escalate", $escalateData);
+        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/escalate", $escalateData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -300,12 +294,11 @@ class RfiApiTest extends TestCase
         $rfi = ZenaRfi::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
             'status' => 'answered'
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/rfis/{$rfi->id}/close");
+        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/close");
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -330,12 +323,11 @@ class RfiApiTest extends TestCase
     {
         $rfi = ZenaRfi::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->deleteJson("/api/zena/rfis/{$rfi->id}");
+        $response = $this->apiDelete("/api/zena/rfis/{$rfi->id}");
 
         $response->assertStatus(200);
 
@@ -353,13 +345,4 @@ class RfiApiTest extends TestCase
         $response->assertStatus(401);
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
-    {
-        // This would normally use your JWT service
-        // For testing, we'll create a simple token
-        return 'test-jwt-token-' . $user->id;
-    }
 }

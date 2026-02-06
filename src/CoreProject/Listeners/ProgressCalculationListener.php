@@ -37,7 +37,7 @@ class ProgressCalculationListener
      * Tính toán lại progress của project dựa trên weighted average
      * của các root components, sử dụng planned_cost làm weight
      */
-    private function recalculateProjectProgress(int $projectId): void
+    private function recalculateProjectProgress(string $projectId): void
     {
         $project = Project::find($projectId);
         if (!$project) {
@@ -79,7 +79,7 @@ class ProgressCalculationListener
      * Tính toán lại actual_cost của project
      * bằng tổng actual_cost của tất cả root components
      */
-    private function recalculateProjectCost(int $projectId): void
+    private function recalculateProjectCost(string $projectId): void
     {
         $project = Project::find($projectId);
         if (!$project) {

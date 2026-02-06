@@ -15,7 +15,6 @@ use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Support\Str;
-use Laravel\Sanctum\Sanctum;
 use Src\RBAC\Services\AuthService;
 use Tests\TestCase;
 
@@ -48,7 +47,6 @@ class ZenaRbacTenantSmokeTest extends TestCase
     public function test_authenticated_without_permission_gets_403(): void
     {
         [$tenant, $project, $user] = $this->newTenantContext();
-        Sanctum::actingAs($user, ['*'], 'sanctum');
         $token = $this->createAuthToken($user);
 
         $response = $this->zenaGet('/api/zena/rfis', $tenant, $token);
@@ -60,7 +58,6 @@ class ZenaRbacTenantSmokeTest extends TestCase
         [$tenant, $project, $user] = $this->newTenantContext();
         $this->assignSystemAdmin($user);
         $this->createRfi($tenant, $project, $user);
-        Sanctum::actingAs($user, ['*'], 'sanctum');
         $token = $this->createAuthToken($user);
 
         $response = $this->zenaGet('/api/zena/rfis', $tenant, $token);
@@ -80,7 +77,6 @@ class ZenaRbacTenantSmokeTest extends TestCase
             'title' => 'Tenant B RFI',
         ]);
 
-        Sanctum::actingAs($admin, ['*'], 'sanctum');
         $token = $this->createAuthToken($admin);
         $response = $this->zenaGet("/api/zena/rfis/{$tenantBRfi->id}", $tenantA, $token);
 
@@ -107,7 +103,6 @@ class ZenaRbacTenantSmokeTest extends TestCase
             'submittal_number' => 'SUB-TB-001',
         ]);
 
-        Sanctum::actingAs($admin, ['*'], 'sanctum');
         $token = $this->createAuthToken($admin);
         $response = $this->zenaGet("/api/zena/submittals/{$tenantBSubmittal->id}", $tenantA, $token);
 
@@ -132,7 +127,6 @@ class ZenaRbacTenantSmokeTest extends TestCase
             'title' => 'Tenant B Inspection',
         ]);
 
-        Sanctum::actingAs($admin, ['*'], 'sanctum');
         $token = $this->createAuthToken($admin);
         $response = $this->zenaGet("/api/zena/inspections/{$tenantBInspection->id}", $tenantA, $token);
 

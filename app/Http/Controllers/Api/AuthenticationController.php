@@ -53,8 +53,22 @@ class AuthenticationController extends Controller
         if (!$result['success']) {
             return response()->json($result, 401);
         }
-        
-        return response()->json($result, 200);
+
+        $userPayload = $result['user'];
+        $token = $result['token'];
+        $expiresAt = $result['expires_at'];
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user' => $userPayload,
+                'token' => $token,
+                'expires_at' => $expiresAt,
+            ],
+            'user' => $userPayload,
+            'token' => $token,
+            'expires_at' => $expiresAt,
+        ], 200);
     }
     
     /**
@@ -116,19 +130,23 @@ class AuthenticationController extends Controller
             ], 401);
         }
         
+        $userPayload = [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'tenant_id' => $user->tenant_id,
+            'avatar' => $user->avatar,
+            'preferences' => $user->preferences,
+            'last_login_at' => $user->last_login_at,
+            'last_activity_at' => $user->last_activity_at,
+            'is_active' => $user->is_active,
+            'created_at' => $user->created_at,
+        ];
+
         return response()->json([
             'success' => true,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'tenant_id' => $user->tenant_id,
-                'avatar' => $user->avatar,
-                'preferences' => $user->preferences,
-                'last_login_at' => $user->last_login_at,
-                'last_activity_at' => $user->last_activity_at,
-                'is_active' => $user->is_active
-            ]
+            'data' => $userPayload,
+            'user' => $userPayload,
         ]);
     }
     
@@ -191,6 +209,10 @@ class AuthenticationController extends Controller
         
         return response()->json([
             'success' => true,
+            'data' => [
+                'roles' => $roles,
+                'permissions' => $permissions
+            ],
             'roles' => $roles,
             'permissions' => $permissions
         ]);

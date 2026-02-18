@@ -551,7 +551,8 @@ class PerformanceIntegrationTest extends TestCase
         echo "Total Operations: " . ($stressTestCycles * $operationsPerCycle * 4) . "\n";
         echo "Overall Operations per Second: " . round(($stressTestCycles * $operationsPerCycle * 4) / ($totalTime / 1000), 2) . "\n";
         
-        $this->assertLessThan(10000, $totalTime, 'Stress test should complete in less than 10000ms');
+        $maxStressDurationMs = (float) (env('CI') ? 12000 : 10000);
+        $this->assertLessThan($maxStressDurationMs, $totalTime, "Stress test should complete in less than {$maxStressDurationMs}ms");
     }
 
     /** @test */

@@ -158,8 +158,9 @@ trait AuthenticationTrait
         ], $attributes), ['admin']);
 
         $role = Role::firstOrCreate(
-            ['name' => 'admin', 'scope' => Role::SCOPE_SYSTEM],
+            ['name' => 'admin'],
             [
+                'scope' => Role::SCOPE_SYSTEM,
                 'allow_override' => true,
                 'is_active' => true,
                 'description' => 'System Administrator',

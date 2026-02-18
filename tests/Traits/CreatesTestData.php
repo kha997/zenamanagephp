@@ -81,7 +81,7 @@ trait CreatesTestData
         }
         
         $adminRole = Role::factory()->create([
-            'name' => 'Admin',
+            'name' => 'Admin ' . Str::lower((string) Str::ulid()),
             'scope' => 'system'
         ]);
         
@@ -132,11 +132,14 @@ trait CreatesTestData
      */
     protected function createAdminUser(?Tenant $tenant = null): User
     {
-        $user = $this->createTestUser(['name' => 'Admin User', 'email' => 'admin@example.com'], $tenant);
+        $user = $this->createTestUser([
+            'name' => 'Admin User',
+            'email' => 'admin+' . Str::lower((string) Str::ulid()) . '@example.com',
+        ], $tenant);
         
         // Assign admin role
         $adminRole = Role::factory()->create([
-            'name' => 'Super Admin',
+            'name' => 'Super Admin ' . Str::lower((string) Str::ulid()),
             'scope' => 'system'
         ]);
         
@@ -240,7 +243,7 @@ trait CreatesTestData
     protected function createTestRole(array $permissions = [], array $attributes = []): Role
     {
         $role = Role::factory()->create(array_merge([
-            'name' => 'Test Role',
+            'name' => 'Test Role ' . Str::lower((string) Str::ulid()),
             'scope' => 'custom'
         ], $attributes));
 

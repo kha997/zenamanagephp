@@ -45,7 +45,9 @@ trait AuthenticationTestTrait
         foreach ($roles as $roleName) {
             $role = Role::firstOrCreate([
                 'name' => $roleName,
-                'scope' => 'system'
+            ], [
+                'scope' => 'system',
+                'is_active' => true,
             ]);
             $user->systemRoles()->attach($role->id);
         }
@@ -61,7 +63,9 @@ trait AuthenticationTestTrait
             // Create a temporary role for this permission if needed
             $tempRole = Role::firstOrCreate([
                 'name' => 'temp_' . $permissionCode,
-                'scope' => 'custom'
+            ], [
+                'scope' => 'custom',
+                'is_active' => true,
             ]);
             $tempRole->permissions()->syncWithoutDetaching($permission->id);
             $user->systemRoles()->syncWithoutDetaching($tempRole->id);

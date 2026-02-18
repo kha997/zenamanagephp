@@ -20,9 +20,12 @@ trait FixtureFactory
 
     protected function createTenant(array $attributes = []): Tenant
     {
+        $suffix = Str::lower((string) Str::ulid());
+
         return Tenant::factory()->create(array_merge([
             'name' => 'SSOT Tenant',
-            'domain' => 'ssot-' . Str::lower((string) Str::ulid()) . '.example.test',
+            'domain' => 'ssot-' . $suffix . '.example.test',
+            'slug' => 'ssot-' . $suffix,
             'status' => 'active',
             'is_active' => true,
         ], $attributes));
@@ -35,11 +38,17 @@ trait FixtureFactory
         array $permissions = [],
         array $userOverrides = []
     ): User {
-        $user = $this->createTenantUser($tenant, array_merge([
+        $baseAttributes = array_merge([
             'name' => 'SSOT User',
             'email' => 'ssot+' . Str::lower((string) Str::ulid()) . '@example.test',
             'role' => $appRole,
-        ], $userOverrides), [$rbacRole], $permissions);
+        ], $userOverrides);
+
+        if (isset($baseAttributes['email']) && is_string($baseAttributes['email'])) {
+            $baseAttributes['email'] = $this->uniqueFixtureEmail($baseAttributes['email']);
+        }
+
+        $user = $this->createTenantUser($tenant, $baseAttributes, [$rbacRole], $permissions);
 
         $role = Role::firstOrCreate(
             ['name' => $rbacRole],
@@ -157,5 +166,27 @@ trait FixtureFactory
             'file_size' => 1024,
             'file_hash' => md5((string) Str::ulid()),
         ], $attributes));
+    }
+
+    private function uniqueFixtureEmail(string $email): string
+    {
+        if (!str_contains($email, '@')) {
+            return $email;
+        }
+
+        [$local, $domain] = explode('@', $email, 2);
+        $placeholderLocals = ['test', 'admin', 'user', 'client', 'qc', 'ssot'];
+        $placeholderDomains = ['example.com', 'example.test', 'test.com'];
+
+        if (!in_array(Str::lower($local), $placeholderLocals, true) && !in_array(Str::lower($domain), $placeholderDomains, true)) {
+            return $email;
+        }
+
+        return sprintf(
+            '%s+%s@%s',
+            $local,
+            Str::lower((string) Str::ulid()),
+            $domain
+        );
     }
 }

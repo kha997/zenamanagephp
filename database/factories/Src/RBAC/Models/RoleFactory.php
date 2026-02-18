@@ -3,6 +3,7 @@
 namespace Database\Factories\Src\RBAC\Models;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 use Src\RBAC\Models\Role;
 
 /**
@@ -19,15 +20,17 @@ class RoleFactory extends Factory
      */
     public function definition(): array
     {
+        $uniqueSuffix = Str::lower((string) Str::ulid());
+
         return [
-            'name' => $this->faker->unique()->randomElement([
+            'name' => $this->faker->randomElement([
                 'Project Manager',
                 'Team Lead',
                 'Developer',
                 'QA Engineer',
                 'Client',
                 'Stakeholder'
-            ]),
+            ]) . '-' . $uniqueSuffix,
             'scope' => $this->faker->randomElement(['system', 'custom', 'project']),
             'description' => $this->faker->sentence(10),
             'created_at' => now(),
@@ -46,7 +49,7 @@ class RoleFactory extends Factory
                 'Super Admin',
                 'System Administrator',
                 'Global Manager'
-            ])
+            ]) . '-' . Str::lower((string) Str::ulid())
         ]);
     }
 
@@ -62,7 +65,7 @@ class RoleFactory extends Factory
                 'Project Manager',
                 'Team Member',
                 'Observer'
-            ])
+            ]) . '-' . Str::lower((string) Str::ulid())
         ]);
     }
 
@@ -73,7 +76,7 @@ class RoleFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'scope' => 'custom',
-            'name' => 'Custom ' . $this->faker->jobTitle
+            'name' => 'Custom ' . $this->faker->jobTitle . '-' . Str::lower((string) Str::ulid())
         ]);
     }
 }

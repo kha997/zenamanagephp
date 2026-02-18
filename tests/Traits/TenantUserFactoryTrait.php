@@ -39,6 +39,7 @@ trait TenantUserFactoryTrait
                 [
                     'scope' => 'system',
                     'description' => Str::title(str_replace('_', ' ', $roleName)),
+                    'is_active' => true,
                 ]
             );
 

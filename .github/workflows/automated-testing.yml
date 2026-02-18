@@ -638,7 +638,11 @@ jobs:
         mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
         php artisan migrate:fresh --env=testing --force
         php artisan db:seed --env=testing --force
-        php artisan optimize:clear
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan event:clear || true
+        php artisan route:clear
+        if [ -d "resources/views" ]; then php artisan view:clear; else echo "Skipping view:clear (resources/views not present)"; fi
         echo "::endgroup::"
 
     - name: 🧪 Fast API tests
@@ -756,7 +760,11 @@ jobs:
         mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
         php artisan migrate:fresh --env=testing --force
         php artisan db:seed --env=testing --force
-        php artisan optimize:clear
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan event:clear || true
+        php artisan route:clear
+        if [ -d "resources/views" ]; then php artisan view:clear; else echo "Skipping view:clear (resources/views not present)"; fi
         echo "::endgroup::"
 
     - name: Debug timeout environment (manual only)

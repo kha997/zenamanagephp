@@ -635,6 +635,7 @@ jobs:
         echo "::group::DB setup & migrations"
         cp .env.example .env
         php artisan key:generate
+        mkdir -p resources/views storage/framework/views bootstrap/cache
         mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
         php artisan migrate:fresh --env=testing --force
         php artisan db:seed --env=testing --force
@@ -757,6 +758,7 @@ jobs:
         echo "::group::DB setup & migrations"
         cp .env.example .env
         php artisan key:generate
+        mkdir -p resources/views storage/framework/views bootstrap/cache
         mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
         php artisan migrate:fresh --env=testing --force
         php artisan db:seed --env=testing --force

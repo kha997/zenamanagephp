@@ -7,6 +7,17 @@ $testingDirectory = dirname(__DIR__) . '/storage/framework/testing';
 if (!is_dir($testingDirectory)) {
     mkdir($testingDirectory, 0775, true);
 }
+foreach (
+    [
+        dirname(__DIR__) . '/resources/views',
+        dirname(__DIR__) . '/storage/framework/views',
+        dirname(__DIR__) . '/bootstrap/cache',
+    ] as $requiredDirectory
+) {
+    if (!is_dir($requiredDirectory)) {
+        mkdir($requiredDirectory, 0775, true);
+    }
+}
 
 $runToken = sprintf('%d_%s', getmypid(), str_replace('.', '', sprintf('%.6f', microtime(true))));
 $sqlitePath = $testingDirectory . '/phpunit_' . $runToken . '.sqlite';

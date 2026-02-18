@@ -19,13 +19,6 @@ foreach (
     }
 }
 
-$runToken = sprintf('%d_%s', getmypid(), str_replace('.', '', sprintf('%.6f', microtime(true))));
-$sqlitePath = $testingDirectory . '/phpunit_' . $runToken . '.sqlite';
-
-if (!file_exists($sqlitePath)) {
-    touch($sqlitePath);
-}
-
 $setEnv = static function (string $key, string $value): void {
     putenv($key . '=' . $value);
     $_ENV[$key] = $value;
@@ -33,11 +26,22 @@ $setEnv = static function (string $key, string $value): void {
 };
 
 $setEnv('APP_ENV', 'testing');
-$setEnv('DB_CONNECTION', 'sqlite');
-$setEnv('DB_DATABASE', $sqlitePath);
+$requestedConnection = strtolower((string) (getenv('DB_CONNECTION') ?: ($_ENV['DB_CONNECTION'] ?? $_SERVER['DB_CONNECTION'] ?? '')));
 
-register_shutdown_function(static function () use ($sqlitePath): void {
-    if (is_file($sqlitePath)) {
-        @unlink($sqlitePath);
+if ($requestedConnection === '' || $requestedConnection === 'sqlite') {
+    $runToken = sprintf('%d_%s', getmypid(), str_replace('.', '', sprintf('%.6f', microtime(true))));
+    $sqlitePath = $testingDirectory . '/phpunit_' . $runToken . '.sqlite';
+
+    if (!file_exists($sqlitePath)) {
+        touch($sqlitePath);
     }
-});
+
+    $setEnv('DB_CONNECTION', 'sqlite');
+    $setEnv('DB_DATABASE', $sqlitePath);
+
+    register_shutdown_function(static function () use ($sqlitePath): void {
+        if (is_file($sqlitePath)) {
+            @unlink($sqlitePath);
+        }
+    });
+}

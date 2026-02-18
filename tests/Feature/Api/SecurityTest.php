@@ -88,7 +88,7 @@ class SecurityTest extends TestCase
 
         $response = $this->apiGet($this->zena('projects.index', query: ['search' => $maliciousInput]));
 
-        $response->assertStatus(200);
+        $response->assertStatus(400);
         
         // Verify users table still exists
         $this->assertDatabaseHas('users', [

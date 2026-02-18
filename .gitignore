@@ -52,3 +52,6 @@ debug-rfis*
 zenamanage_test.sqlite
 server.php
 logs/events.log
+/database/smoke-staging.sqlite
+/smoke-report.md
+/smoke_server.log

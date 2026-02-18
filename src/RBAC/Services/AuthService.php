@@ -32,7 +32,7 @@ class AuthService
      */
     private function reloadJwtConfig(): void
     {
-        $this->jwtSecret = (string) (config('jwt.secret') ?: env('JWT_SECRET', 'default-secret-key'));
+        $this->jwtSecret = (string) (config('jwt.secret') ?: env('JWT_SECRET') ?: env('APP_KEY'));
         $this->jwtTtl = (int) (config('jwt.ttl') ?: env('JWT_TTL', 60)); // minutes
         $this->jwtRefreshTtl = (int) (config('jwt.refresh_ttl') ?: env('JWT_REFRESH_TTL', 1209600)); // 14 days
         $this->jwtAlgo = (string) (config('jwt.algo') ?: env('JWT_ALGO', 'HS256'));

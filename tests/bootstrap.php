@@ -26,9 +26,9 @@ $setEnv = static function (string $key, string $value): void {
 };
 
 $setEnv('APP_ENV', 'testing');
-$requestedConnection = strtolower((string) (getenv('DB_CONNECTION') ?: ($_ENV['DB_CONNECTION'] ?? $_SERVER['DB_CONNECTION'] ?? '')));
+$invariantsMode = strtolower((string) (getenv('ZENA_INVARIANTS_DB') ?: ($_ENV['ZENA_INVARIANTS_DB'] ?? $_SERVER['ZENA_INVARIANTS_DB'] ?? '')));
 
-if ($requestedConnection === '' || $requestedConnection === 'sqlite') {
+if ($invariantsMode !== 'mysql') {
     $runToken = sprintf('%d_%s', getmypid(), str_replace('.', '', sprintf('%.6f', microtime(true))));
     $sqlitePath = $testingDirectory . '/phpunit_' . $runToken . '.sqlite';
 

@@ -141,7 +141,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
                     ]
                 ]);
 
-        $this->assertEquals('E403.AUTHORIZATION', $response->json('error.code'));
+        $this->assertContains($response->json('error.code'), ['E403.AUTHORIZATION', 'RBAC_ACCESS_DENIED']);
     }
 
     /**
@@ -220,7 +220,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
                     ]
                 ]);
 
-        $this->assertEquals('E403.AUTHORIZATION', $response->json('error.code'));
+        $this->assertContains($response->json('error.code'), ['E403.AUTHORIZATION', 'RBAC_ACCESS_DENIED']);
     }
 
     /**

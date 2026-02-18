@@ -18,7 +18,12 @@ class PayloadTenantIgnoredSmokeTest extends TestCase
         $tenantA = Tenant::factory()->create();
         $tenantB = Tenant::factory()->create();
 
-        $user = $this->createRbacAdminUser($tenantA);
+        $user = $this->createTenantUser(
+            $tenantA,
+            ['role' => 'admin'],
+            ['admin'],
+            ['submittal.create', 'submittal.view']
+        );
 
         $project = Project::factory()->create([
             'tenant_id' => $tenantA->id,

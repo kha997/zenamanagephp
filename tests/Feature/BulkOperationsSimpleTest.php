@@ -11,6 +11,7 @@ use App\Models\Task;
 use App\Services\BulkOperationsService;
 use App\Services\SecureAuditService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class BulkOperationsSimpleTest extends TestCase
 {
@@ -30,13 +31,13 @@ class BulkOperationsSimpleTest extends TestCase
         // Create tenant and user
         $this->tenant = Tenant::factory()->create([
             'name' => 'Test Tenant',
-            'slug' => 'test-tenant',
+            'slug' => 'test-tenant-' . Str::lower((string) Str::ulid()),
             'status' => 'active'
         ]);
         
         $this->user = User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test+' . Str::lower((string) Str::ulid()) . '@example.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);

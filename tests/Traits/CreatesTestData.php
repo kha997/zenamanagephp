@@ -13,6 +13,7 @@ use Src\InteractionLogs\Models\InteractionLog;
 use Src\ChangeRequest\Models\ChangeRequest;
 use Src\Notification\Models\NotificationRule;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Trait để tạo test data chung cho các test cases
@@ -101,9 +102,11 @@ trait CreatesTestData
      */
     protected function createTestTenant(array $attributes = []): Tenant
     {
+        $suffix = Str::lower((string) Str::ulid());
+
         return Tenant::factory()->create(array_merge([
             'name' => 'Test Tenant',
-            'domain' => 'test-tenant.example.com',
+            'domain' => "test-tenant-{$suffix}.example.com",
             'status' => 'active'
         ], $attributes));
     }
@@ -114,10 +117,11 @@ trait CreatesTestData
     protected function createTestUser(array $attributes = [], ?Tenant $tenant = null): User
     {
         $tenant = $tenant ?? $this->createTestTenant();
+        $email = 'test+' . Str::lower((string) Str::ulid()) . '@example.com';
         
         return User::factory()->create(array_merge([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => $email,
             'password' => Hash::make('password'),
             'tenant_id' => $tenant->id
         ], $attributes));

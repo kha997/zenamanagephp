@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Support\SSOT\FixtureFactory;
 
 class BulkOperationsBasicTest extends TestCase
@@ -25,13 +26,13 @@ class BulkOperationsBasicTest extends TestCase
         // Create tenant and user
         $this->tenant = $this->createTenant([
             'name' => 'Test Tenant',
-            'slug' => 'test-tenant',
+            'slug' => 'test-tenant-' . Str::lower((string) Str::ulid()),
             'status' => 'active'
         ]);
         
         $this->user = $this->createTenantUserWithRbac($this->tenant, 'member', 'member', [], [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test+' . Str::lower((string) Str::ulid()) . '@example.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id,
         ]);

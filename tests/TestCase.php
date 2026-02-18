@@ -78,6 +78,7 @@ abstract class TestCase extends BaseTestCase
     {
         $this->prepareSqliteDatabaseFile();
         parent::setUp();
+        $this->withoutVite();
         $this->ensureTestingSchema();
         $this->registerArrayBindingWatch();
         $this->ensureSqliteSubmittalsTable();

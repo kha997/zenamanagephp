@@ -110,6 +110,8 @@ print_zena_config
 ensure_mysql_connection
 mysql_preflight_connection
 
+mkdir -p resources/views storage/framework/views storage/framework/cache bootstrap/cache
+
 php artisan optimize:clear
 php artisan migrate:fresh --force
 php artisan migrate:status

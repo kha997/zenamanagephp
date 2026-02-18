@@ -110,10 +110,12 @@ class DocumentManagementTest extends TestCase
             'name' => 'Test Document',
             'project_id' => $this->project->id,
         ]);
-        $this->assertDatabaseHas('documents', [
-            'project_id' => $this->project->id,
-            'metadata' => json_encode(['document_type' => 'drawing']),
-        ]);
+        $storedDocument = Document::query()
+            ->where('project_id', $this->project->id)
+            ->latest('created_at')
+            ->first();
+        $this->assertNotNull($storedDocument);
+        $this->assertSame('drawing', data_get($storedDocument->metadata, 'document_type'));
 
         // Assert file was stored
         Storage::disk('local')->assertExists('documents/' . $this->project->id . '/' . $response->json('data.file_name'));

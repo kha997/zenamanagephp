@@ -111,10 +111,8 @@ class SecurityTest extends TestCase
             'end_date' => '2024-12-31'
         ]);
 
-        $response->assertStatus(201);
-        
-        $project = $response->json('data');
-        $this->assertStringNotContainsString('<script>', $project['name']);
+        $response->assertStatus(400);
+        $this->assertDatabaseMissing('projects', ['name' => $xssPayload]);
     }
 
     /**

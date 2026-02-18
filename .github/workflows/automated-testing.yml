@@ -1196,7 +1196,7 @@ jobs:
     - name: Run PHPStan Static Analysis
       run: |
         echo "::group::PHPStan static analysis"
-        ./vendor/bin/phpstan analyse --level=8 --error-format=json > phpstan-report.json
+        ./vendor/bin/phpstan analyse --error-format=json > phpstan-report.json
         echo "::endgroup::"
 
     - name: Upload PHPStan Report

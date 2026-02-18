@@ -8,7 +8,7 @@ use App\Models\DashboardWidget;
 use App\Models\Inspection;
 use App\Models\NCR;
 use App\Models\Project;
-use App\Models\RFI;
+use App\Models\Rfi;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\UserDashboard;

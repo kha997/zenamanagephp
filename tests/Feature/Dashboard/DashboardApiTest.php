@@ -12,7 +12,7 @@ use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\RFI;
+use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class DashboardApiTest extends TestCase

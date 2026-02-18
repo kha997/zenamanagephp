@@ -69,6 +69,14 @@ class Document extends Model
     public const VISIBILITY_INTERNAL = 'internal';
     public const VISIBILITY_CLIENT = 'client';
 
+    /**
+     * Danh sách visibility hợp lệ
+     */
+    public const VALID_VISIBILITY = [
+        self::VISIBILITY_INTERNAL,
+        self::VISIBILITY_CLIENT,
+    ];
+
     protected $fillable = [
         'project_id',
         'title',

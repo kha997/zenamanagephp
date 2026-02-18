@@ -8,6 +8,7 @@ on:
 env:
   PHP_VERSION: '8.2'
   NODE_VERSION: '18'
+  COMPOSER_PROCESS_TIMEOUT: 0
 
 jobs:
   accessibility-tests:

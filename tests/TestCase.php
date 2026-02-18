@@ -2,25 +2,99 @@
 
 namespace Tests;
 
-use App\Models\Project;
+use App\Models\User;
+use Illuminate\Testing\TestResponse;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
-    private static ?int $projectCodeHookDispatcherId = null;
+
+    /**
+     * Automatically append CSRF tokens to HTTP form requests unless disabled.
+     *
+     * Allows tests to opt out when asserting CSRF failure scenarios.
+     *
+     * @var bool
+     */
+    protected bool $autoAppendCsrfToken = true;
+
+    /**
+     * Override the base call to inject CSRF tokens into supported requests.
+     */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        if ($this->shouldAutoAppendCsrfToken() && $this->shouldAppendCsrfToken($method, $server)) {
+            $parameters = $this->ensureCsrfToken($parameters);
+        }
+
+        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+    }
+
+    protected function shouldAutoAppendCsrfToken(): bool
+    {
+        return $this->autoAppendCsrfToken === true;
+    }
+
+    protected function shouldAppendCsrfToken(string $method, array $server): bool
+    {
+        $method = strtoupper($method);
+
+        if (! in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            return false;
+        }
+
+        $acceptHeader = strtolower($server['HTTP_ACCEPT'] ?? '');
+        $contentType = strtolower($server['CONTENT_TYPE'] ?? '');
+
+        if (str_contains($acceptHeader, 'application/json') || str_contains($contentType, 'application/json')) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function ensureCsrfToken(array $parameters): array
+    {
+        if (array_key_exists('_token', $parameters)) {
+            return $parameters;
+        }
+
+        $token = csrf_token();
+
+        if (!$token) {
+            return $parameters;
+        }
+
+        return ['_token' => $token] + $parameters;
+    }
 
     protected function setUp(): void
     {
         $this->prepareSqliteDatabaseFile();
         parent::setUp();
+        $this->ensureTestingSchema();
         $this->registerArrayBindingWatch();
-        $this->registerProjectCodeHook();
         $this->ensureSqliteSubmittalsTable();
+        $this->ensureSqliteDocumentsBackupTable();
+        $this->ensureInteractionLogsTable();
+        $this->ensureProjectPhasesTable();
+        $this->ensureProjectTasksTable();
+    }
+
+    private function ensureTestingSchema(): void
+    {
+        if (Schema::hasTable('tenants')) {
+            return;
+        }
+
+        RefreshDatabaseState::$migrated = false;
+        Artisan::call('migrate:fresh', ['--env' => 'testing']);
     }
 
     private function registerArrayBindingWatch(): void
@@ -49,33 +123,6 @@ abstract class TestCase extends BaseTestCase
                 }
             }
         });
-    }
-
-    private function registerProjectCodeHook(): void
-    {
-        if (!app()->environment('testing')) {
-            return;
-        }
-
-        $dispatcher = Project::getEventDispatcher();
-
-        if ($dispatcher === null) {
-            return;
-        }
-
-        $dispatcherId = spl_object_id($dispatcher);
-
-        if (self::$projectCodeHookDispatcherId === $dispatcherId) {
-            return;
-        }
-
-        Project::creating(function (Project $project) {
-            if (empty($project->code)) {
-                $project->code = 'PRJ-' . strtoupper(Str::random(8));
-            }
-        });
-
-        self::$projectCodeHookDispatcherId = $dispatcherId;
     }
 
     private function prepareSqliteDatabaseFile(): void
@@ -182,6 +229,141 @@ abstract class TestCase extends BaseTestCase
         });
     }
 
+    private function ensureSqliteDocumentsBackupTable(): void
+    {
+        if (env('DB_CONNECTION') !== 'sqlite') {
+            return;
+        }
+
+        if (Schema::hasTable('documents_backup')) {
+            return;
+        }
+
+        Schema::create('documents_backup', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->ulid('project_id')->nullable();
+            $table->ulid('uploaded_by');
+            $table->string('name');
+            $table->string('original_name');
+            $table->string('file_path');
+            $table->string('file_type');
+            $table->string('mime_type');
+            $table->bigInteger('file_size');
+            $table->string('file_hash');
+            $table->string('category')->default('general');
+            $table->text('description')->nullable();
+            $table->json('metadata')->nullable();
+            $table->string('status')->default('active');
+            $table->integer('version')->default(1);
+            $table->boolean('is_current_version')->default(true);
+            $table->ulid('parent_document_id')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+            $table->string('deprecated_notice')->nullable();
+            $table->ulid('tenant_id')->nullable();
+            $table->ulid('created_by')->nullable();
+            $table->ulid('updated_by')->nullable();
+        });
+    }
+
+    private function ensureInteractionLogsTable(): void
+    {
+        if (Schema::hasTable('interaction_logs')) {
+            return;
+        }
+
+        Schema::create('interaction_logs', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('tenant_id')->nullable();
+            $table->string('project_id');
+            $table->string('linked_task_id')->nullable();
+            $table->string('type');
+            $table->text('description');
+            $table->string('tag_path')->nullable();
+            $table->string('visibility');
+            $table->boolean('client_approved')->default(false);
+            $table->string('created_by');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureProjectPhasesTable(): void
+    {
+        if (Schema::hasTable('project_phases')) {
+            return;
+        }
+
+        Schema::create('project_phases', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->ulid('project_id');
+            $table->string('name');
+            $table->integer('order')->default(0);
+            $table->ulid('template_id')->nullable();
+            $table->ulid('template_phase_id')->nullable();
+            $table->ulid('created_by')->nullable();
+            $table->ulid('updated_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    private function ensureProjectTasksTable(): void
+    {
+        if (Schema::hasTable('project_tasks')) {
+            return;
+        }
+
+        Schema::create('project_tasks', function (Blueprint $table) {
+            $table->ulid('id')->primary();
+            $table->ulid('project_id');
+            $table->ulid('phase_id')->nullable();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->integer('duration_days')->default(0);
+            $table->float('progress_percent')->default(0.0);
+            $table->string('status')->default('pending');
+            $table->string('conditional_tag')->nullable();
+            $table->boolean('is_hidden')->default(false);
+            $table->ulid('template_id')->nullable();
+            $table->ulid('template_task_id')->nullable();
+            $table->ulid('created_by')->nullable();
+            $table->ulid('updated_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    protected function apiTenantHeaders(string $token, string $tenantId, array $extra = []): array
+    {
+        return array_merge([
+            'Authorization' => 'Bearer ' . $token,
+            'X-Tenant-ID' => $tenantId,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ], $extra);
+    }
+
+    protected function apiPostTenant(User $user, string $tenantId, string $uri, array $data, string $token, array $headers = []): TestResponse
+    {
+        return $this->postJson($uri, $data, $this->apiTenantHeaders($token, $tenantId, $headers));
+    }
+
+    protected function apiGetTenant(User $user, string $tenantId, string $uri, string $token, array $headers = []): TestResponse
+    {
+        return $this->getJson($uri, $this->apiTenantHeaders($token, $tenantId, $headers));
+    }
+
+    protected function apiPutTenant(User $user, string $tenantId, string $uri, array $data, string $token, array $headers = []): TestResponse
+    {
+        return $this->putJson($uri, $data, $this->apiTenantHeaders($token, $tenantId, $headers));
+    }
+
+    protected function apiDeleteTenant(User $user, string $tenantId, string $uri, string $token, array $headers = []): TestResponse
+    {
+        return $this->deleteJson($uri, [], $this->apiTenantHeaders($token, $tenantId, $headers));
+    }
+
     protected function assertStringContains(string $needle, string $haystack, string $message = ''): void
     {
         $this->assertStringContainsString($needle, $haystack, $message);
@@ -260,9 +442,15 @@ abstract class TestCase extends BaseTestCase
                 "Zena invariants must use the sqlite connection ($diag)."
             );
 
+            $usesFixedSqliteFile = str_ends_with($sqliteDatabase, 'zenamanage_test.sqlite');
+            $usesBootstrapSqliteFile = (bool) preg_match(
+                '#/storage/framework/testing/phpunit_[^/]+\.sqlite$#',
+                str_replace('\\', '/', $sqliteDatabase)
+            );
+
             $this->assertTrue(
-                str_ends_with($sqliteDatabase, 'zenamanage_test.sqlite'),
-                "Zena invariants must point to the sqlite test file ($diag)."
+                $usesFixedSqliteFile || $usesBootstrapSqliteFile,
+                "Zena invariants must point to a sqlite test file ($diag)."
             );
         }
     }

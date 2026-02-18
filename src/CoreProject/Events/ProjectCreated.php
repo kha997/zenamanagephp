@@ -2,8 +2,9 @@
 
 namespace Src\CoreProject\Events;
 
-use App\Models\Project;
+use App\Models\Project as AppProject;
 use App\Models\User;
+use Src\CoreProject\Models\Project as CoreProject;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
@@ -18,15 +19,19 @@ class ProjectCreated
     public const EVENT_NAME = 'Project.Project.Created';
 
     public readonly \DateTime $timestamp;
+    public readonly string $projectId;
+    public readonly ?string $actorId;
 
     public function __construct(
-        public readonly Project $project,
+        public readonly AppProject|CoreProject $project,
         public readonly ?User $user = null,
         public readonly ?int $templateId = null,
         public readonly array $projectData = [],
         ?\DateTime $timestamp = null
     ) {
         $this->timestamp = $timestamp ?? new \DateTime();
+        $this->projectId = $project->id;
+        $this->actorId = $this->user?->id;
     }
 
     /**

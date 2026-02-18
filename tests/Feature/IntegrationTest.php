@@ -4,12 +4,18 @@ namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTestTrait;
 use App\Models\User;
 use App\Models\Tenant;
+use RuntimeException;
 
 class IntegrationTest extends TestCase
 {
+    use AuthenticationTestTrait;
+
     use RefreshDatabase;
 
     protected User $user;
@@ -35,9 +41,9 @@ class IntegrationTest extends TestCase
             'description' => 'Test project for integration testing',
             'start_date' => now()->format('Y-m-d'),
             'end_date' => now()->addMonths(6)->format('Y-m-d'),
-            'status' => 'planning'
+            'status' => 'planning',
+            'code' => 'PRJ-' . strtoupper(Str::random(6))
         ]);
-        
         $projectResponse->assertStatus(201);
         $projectId = $projectResponse->json('data.project.id');
         
@@ -50,7 +56,7 @@ class IntegrationTest extends TestCase
             'end_date' => now()->addWeeks(2)->format('Y-m-d'),
             'status' => 'pending'
         ]);
-        
+
         $taskResponse->assertStatus(201);
         $taskId = $taskResponse->json('data.task.id');
         
@@ -62,7 +68,7 @@ class IntegrationTest extends TestCase
             'impact_days' => 3,
             'impact_cost' => 10000
         ]);
-        
+
         $crResponse->assertStatus(201);
         
         // 6. Verify data integrity
@@ -98,12 +104,58 @@ class IntegrationTest extends TestCase
         $otherToken = $this->extractLoginToken($otherLoginResponse);
         
         // Other user should not see the project
-        $unauthorizedResponse = $this->withHeaders([
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $otherTenant->id,
-            'Authorization' => 'Bearer ' . $otherToken
-        ])->getJson("/api/v1/projects/{$projectId}");
-        
-        $unauthorizedResponse->assertStatus(404);
+        $unauthorizedResponse = $this
+            ->flushHeaders()
+            ->flushSession()
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'X-Tenant-ID' => (string) $otherTenant->id,
+                'Authorization' => 'Bearer ' . $otherToken,
+            ])
+            ->getJson("/api/v1/projects/{$projectId}");
+
+
+        $unauthorizedResponse->assertStatus(403);
+        $unauthorizedResponse->assertJsonStructure([
+            'error' => ['id', 'code', 'message', 'details'],
+        ]);
+        $unauthorizedResponse->assertJsonPath('error.code', 'TENANT_INVALID');
+        $unauthorizedResponse->assertJsonPath('error.message', 'X-Tenant-ID does not match authenticated user');
+    }
+
+    protected function ensureRoleHasTenantPermissions(string $roleName): void
+    {
+        \App\Models\Role::firstOrCreate(
+            ['name' => $roleName],
+            [
+                'scope' => 'tenant',
+                'description' => ucfirst($roleName) . ' tenant role',
+                'is_active' => true,
+            ]
+        );
+    }
+
+    protected function extractLoginToken(TestResponse $response): string
+    {
+        $keys = [
+            'data.token',
+            'data.access_token',
+            'token',
+            'access_token',
+            'data.plainTextToken',
+            'data.data.token',
+        ];
+
+        $payload = $response->json();
+
+        foreach ($keys as $key) {
+            $value = data_get($payload, $key);
+
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        throw new RuntimeException('Unable to extract login token from response: ' . $response->getContent());
     }
 }

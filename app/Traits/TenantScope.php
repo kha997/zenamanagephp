@@ -22,10 +22,10 @@ trait TenantScope
 
             if (app()->has('tenant')) {
                 $tenantId = app('tenant')?->id;
-            }
-
-            if ($tenantId === null && request()->has('tenant_id')) {
-                $tenantId = request('tenant_id');
+            } elseif (app()->bound('current_tenant_id')) {
+                $tenantId = app('current_tenant_id');
+            } elseif (function_exists('request') && request()->attributes->has('tenant_id')) {
+                $tenantId = request()->attributes->get('tenant_id');
             }
 
             if ($tenantId) {
@@ -69,8 +69,10 @@ trait TenantScope
             $tenantId = app('tenant')?->id;
         }
 
-        if ($tenantId === null && request()->has('tenant_id')) {
-            $tenantId = request('tenant_id');
+        if ($tenantId === null && app()->bound('current_tenant_id')) {
+            $tenantId = app('current_tenant_id');
+        } elseif ($tenantId === null && function_exists('request') && request()->attributes->has('tenant_id')) {
+            $tenantId = request()->attributes->get('tenant_id');
         }
         
         if ($tenantId) {

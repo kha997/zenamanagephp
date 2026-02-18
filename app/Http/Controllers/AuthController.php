@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use App\Models\User;
 
 class AuthController extends Controller
@@ -21,10 +23,19 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
+        $throttleKey = $this->throttleKey($request);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            return back()
+                ->withErrors(['email' => 'Too many login attempts. Please try again in a minute.'])
+                ->setStatusCode(429);
+        }
+
         // Try to authenticate using Laravel's built-in auth
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
-            
+            RateLimiter::clear($throttleKey);
+
             $user = Auth::user();
             
             // Redirect based on user role
@@ -87,6 +98,8 @@ class AuthController extends Controller
             }
         }
 
+        RateLimiter::hit($throttleKey, 60);
+
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
         ])->onlyInput('email');
@@ -103,5 +116,11 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
         
         return redirect('/login')->with('success', 'You have been logged out successfully.');
+    }
+
+    protected function throttleKey(Request $request): string
+    {
+        $email = (string) ($request->input('email') ?? $request->input('username'));
+        return Str::lower($email) . '|' . $request->ip();
     }
 }

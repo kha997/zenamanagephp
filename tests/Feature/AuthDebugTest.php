@@ -29,7 +29,7 @@ class AuthDebugTest extends TestCase
             }
         
         // Test 3: Kiểm tra middleware auth:api
-        $response = $this->getJson('/api/v1/templates');
+        $response = $this->getJson('/api/v1/projects');
         $this->assertTrue(true); // Placeholder assertion
     }
     
@@ -51,7 +51,7 @@ class AuthDebugTest extends TestCase
             // Test request với token
             $response = $this->withHeaders([
                 'Authorization' => 'Bearer ' . $token
-            ])->getJson('/api/v1/templates');
+            ])->getJson('/api/v1/projects');
             
             if ($response->getStatusCode() !== 200) {
                 }

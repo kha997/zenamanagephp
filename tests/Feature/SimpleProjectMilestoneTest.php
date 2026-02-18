@@ -29,7 +29,7 @@ class SimpleProjectMilestoneTest extends TestCase
      */
     public function test_project_milestone_minimal_creation(): void
     {
-        $project = Project::create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'PRJ-TEST-001',
             'name' => 'Test Project',
@@ -56,7 +56,7 @@ class SimpleProjectMilestoneTest extends TestCase
      */
     public function test_project_milestone_full_creation(): void
     {
-        $project = Project::create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'PRJ-TEST-002',
             'name' => 'Test Project Full',

@@ -17,4 +17,6 @@ $event = new ComponentProgressUpdated(
     timestamp: new \DateTime()
 );
 
+$event->component = $component;
+
 event($event);

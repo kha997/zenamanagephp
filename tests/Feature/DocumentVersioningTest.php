@@ -12,6 +12,8 @@ use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Tests\Traits\TenantUserFactoryTrait;
 
 /**
  * Test Document Versioning và File Management
@@ -21,6 +23,7 @@ use Illuminate\Support\Facades\Storage;
 class DocumentVersioningTest extends TestCase
 {
     use RefreshDatabase;
+    use TenantUserFactoryTrait;
 
     private $tenant;
     private $project;
@@ -30,9 +33,7 @@ class DocumentVersioningTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -41,28 +42,21 @@ class DocumentVersioningTest extends TestCase
             'is_active' => true,
         ]);
 
-        // Tạo user
-        $this->user = User::create([
+        $this->user = $this->createTenantUser($this->tenant, [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => bcrypt('password'),
-            'tenant_id' => $this->tenant->id,
-            'is_active' => true,
             'profile_data' => '{}',
         ]);
 
-        // Tạo project
-        $this->project = Project::create([
-            'name' => 'Test Project',
+        $this->project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
             'code' => 'DOC-TEST-001',
+            'name' => 'Test Project',
             'description' => 'Test Description',
             'status' => 'active',
-            'tenant_id' => $this->tenant->id,
-            'created_by' => $this->user->id,
         ]);
 
-        // Tạo task
-        $this->task = Task::create([
+        $this->task = Task::factory()->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'name' => 'Test Task',
@@ -148,13 +142,12 @@ class DocumentVersioningTest extends TestCase
     public function test_can_create_new_version_for_document(): void
     {
         // Tạo document với version đầu tiên
-        $document = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'Test Document',
+        $document = Document::create($this->documentAttributes([
+            'name' => 'Test Document',
             'description' => 'Test Document Description',
             'visibility' => Document::VISIBILITY_INTERNAL,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         $version1 = DocumentVersion::create([
             'document_id' => $document->id,
@@ -209,13 +202,12 @@ class DocumentVersioningTest extends TestCase
     public function test_can_revert_to_previous_version(): void
     {
         // Tạo document với 3 versions
-        $document = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'Test Document',
+        $document = Document::create($this->documentAttributes([
+            'name' => 'Test Document',
             'description' => 'Test Document Description',
             'visibility' => Document::VISIBILITY_INTERNAL,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         $version1 = DocumentVersion::create([
             'document_id' => $document->id,
@@ -274,13 +266,12 @@ class DocumentVersioningTest extends TestCase
     public function test_can_upload_files_with_different_storage_drivers(): void
     {
         // Tạo document
-        $document = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'Test Document',
+        $document = Document::create($this->documentAttributes([
+            'name' => 'Test Document',
             'description' => 'Test Document Description',
             'visibility' => Document::VISIBILITY_INTERNAL,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         // Test local storage
         $localVersion = DocumentVersion::create([
@@ -344,34 +335,31 @@ class DocumentVersioningTest extends TestCase
     public function test_document_visibility_and_client_approval(): void
     {
         // Tạo internal document
-        $internalDocument = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'Internal Document',
+        $internalDocument = Document::create($this->documentAttributes([
+            'name' => 'Internal Document',
             'description' => 'Internal Document Description',
             'visibility' => Document::VISIBILITY_INTERNAL,
             'client_approved' => false,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         // Tạo client document (chưa approved)
-        $clientDocument = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'Client Document',
+        $clientDocument = Document::create($this->documentAttributes([
+            'name' => 'Client Document',
             'description' => 'Client Document Description',
             'visibility' => Document::VISIBILITY_CLIENT,
             'client_approved' => false,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         // Tạo client document (đã approved)
-        $approvedClientDocument = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'Approved Client Document',
+        $approvedClientDocument = Document::create($this->documentAttributes([
+            'name' => 'Approved Client Document',
             'description' => 'Approved Client Document Description',
             'visibility' => Document::VISIBILITY_CLIENT,
             'client_approved' => true,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         // Test visibility scopes
         $internalDocuments = Document::withVisibility(Document::VISIBILITY_INTERNAL)->get();
@@ -400,37 +388,34 @@ class DocumentVersioningTest extends TestCase
     public function test_document_linking_with_different_entities(): void
     {
         // Tạo document linked to task
-        $taskDocument = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'Task Document',
+        $taskDocument = Document::create($this->documentAttributes([
+            'name' => 'Task Document',
             'description' => 'Document linked to task',
             'linked_entity_type' => Document::ENTITY_TYPE_TASK,
             'linked_entity_id' => $this->task->id,
             'visibility' => Document::VISIBILITY_INTERNAL,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         // Tạo document linked to diary
-        $diaryDocument = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'Diary Document',
+        $diaryDocument = Document::create($this->documentAttributes([
+            'name' => 'Diary Document',
             'description' => 'Document linked to diary',
             'linked_entity_type' => Document::ENTITY_TYPE_DIARY,
             'linked_entity_id' => 'diary-123',
             'visibility' => Document::VISIBILITY_INTERNAL,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         // Tạo document linked to CR
-        $crDocument = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'CR Document',
+        $crDocument = Document::create($this->documentAttributes([
+            'name' => 'CR Document',
             'description' => 'Document linked to change request',
             'linked_entity_type' => Document::ENTITY_TYPE_CR,
             'linked_entity_id' => 'cr-456',
             'visibility' => Document::VISIBILITY_INTERNAL,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         // Test entity type scopes
         $taskDocuments = Document::forEntityType(Document::ENTITY_TYPE_TASK)->get();
@@ -458,15 +443,14 @@ class DocumentVersioningTest extends TestCase
     public function test_document_versioning_workflow_end_to_end(): void
     {
         // 1. Tạo document
-        $document = Document::create([
-            'project_id' => $this->project->id,
-            'title' => 'E2E Test Document',
+        $document = Document::create($this->documentAttributes([
+            'name' => 'E2E Test Document',
             'description' => 'End-to-end test document',
             'linked_entity_type' => Document::ENTITY_TYPE_TASK,
             'linked_entity_id' => $this->task->id,
             'visibility' => Document::VISIBILITY_INTERNAL,
             'created_by' => $this->user->id,
-        ]);
+        ]));
 
         // 2. Tạo version 1
         $version1 = DocumentVersion::create([
@@ -545,13 +529,12 @@ class DocumentVersioningTest extends TestCase
         // Tạo multiple documents
         $documents = [];
         for ($i = 1; $i <= 3; $i++) {
-            $documents[] = Document::create([
-                'project_id' => $this->project->id,
-                'title' => "Bulk Document {$i}",
+            $documents[] = Document::create($this->documentAttributes([
+                'name' => "Bulk Document {$i}",
                 'description' => "Bulk document {$i} description",
                 'visibility' => Document::VISIBILITY_INTERNAL,
                 'created_by' => $this->user->id,
-            ]);
+            ]));
         }
 
         // Tạo multiple versions cho mỗi document
@@ -594,5 +577,31 @@ class DocumentVersioningTest extends TestCase
         $this->assertDatabaseHas('document_versions', [
             'document_id' => $documents[0]->id,
         ]);
+    }
+
+    private function documentAttributes(array $overrides = []): array
+    {
+        $name = $overrides['name'] ?? 'Test Document';
+        $slug = Str::slug($name) ?: 'test-document';
+        $defaultFilePath = 'documents/' . $slug . '-' . Str::lower(Str::random(6)) . '.pdf';
+
+        return array_merge([
+            'project_id' => $this->project->id,
+            'tenant_id' => $this->tenant->id,
+            'uploaded_by' => $this->user->id,
+            'name' => $name,
+            'original_name' => $overrides['original_name'] ?? ($slug . '.pdf'),
+            'file_path' => $overrides['file_path'] ?? $defaultFilePath,
+            'file_type' => $overrides['file_type'] ?? 'pdf',
+            'mime_type' => $overrides['mime_type'] ?? 'application/pdf',
+            'file_size' => $overrides['file_size'] ?? 1024,
+            'file_hash' => $overrides['file_hash'] ?? Str::random(16),
+            'category' => $overrides['category'] ?? 'general',
+            'description' => $overrides['description'] ?? 'Test Document Description',
+            'metadata' => $overrides['metadata'] ?? ['tags' => ['test', 'document']],
+            'status' => $overrides['status'] ?? 'active',
+            'version' => $overrides['version'] ?? 1,
+            'is_current_version' => $overrides['is_current_version'] ?? true,
+        ], $overrides);
     }
 }

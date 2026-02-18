@@ -129,7 +129,7 @@ class DataRetentionTest extends TestCase
     {
         $tenant = Tenant::factory()->create(['name' => "Tenant {$suffix}"]);
 
-        $project = Project::create([
+        $project = Project::factory()->create([
             'tenant_id' => $tenant->id,
             'code' => strtoupper("PJ{$suffix}"),
             'name' => "Project {$suffix}",
@@ -138,7 +138,7 @@ class DataRetentionTest extends TestCase
             'budget_total' => 1000,
         ]);
 
-        $user = User::create([
+        $user = User::factory()->create([
             'tenant_id' => $tenant->id,
             'name' => "User {$suffix}",
             'email' => Str::lower("user.{$suffix}@example.com"),

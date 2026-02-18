@@ -13,10 +13,11 @@ use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Tests\Traits\AuthenticationTestTrait;
+use Tests\Traits\RouteNameTrait;
 
 class DocumentManagementTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     protected User $user;
     protected Project $project;
@@ -82,7 +83,7 @@ class DocumentManagementTest extends TestCase
     {
         $file = $this->createValidPdfUploadedFile('test-document.pdf');
 
-        $response = $this->apiPostMultipart('/api/v1/documents', [
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
             'project_id' => $this->project->id,
             'title' => 'Test Document',
             'description' => 'Test document description',
@@ -123,7 +124,7 @@ class DocumentManagementTest extends TestCase
      */
     public function test_document_upload_requires_valid_data()
     {
-        $response = $this->apiPost('/api/v1/documents', []);
+        $response = $this->apiPost($this->namedRoute('v1.documents.store'), []);
 
         $response->assertStatus(422)
                 ->assertJsonValidationErrors(['project_id', 'title', 'document_type', 'file']);
@@ -136,7 +137,7 @@ class DocumentManagementTest extends TestCase
     {
         $file = UploadedFile::fake()->create('test-file.exe', 1000, 'application/x-msdownload');
 
-        $response = $this->apiPostMultipart('/api/v1/documents', [
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
             'project_id' => $this->project->id,
             'title' => 'Test Document',
             'description' => 'Test document description',
@@ -155,7 +156,7 @@ class DocumentManagementTest extends TestCase
     {
         $file = $this->createLargePdfUploadedFile();
 
-        $response = $this->apiPostMultipart('/api/v1/documents', [
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
             'project_id' => $this->project->id,
             'title' => 'Test Document',
             'description' => 'Test document description',
@@ -183,7 +184,7 @@ class DocumentManagementTest extends TestCase
         // Create a fake file
         Storage::disk('local')->put('documents/test-file.pdf', 'fake file content');
 
-        $response = $this->apiGet("/api/v1/documents/{$document->id}/download");
+        $response = $this->apiGet($this->namedRoute('v1.documents.download', ['id' => $document->id]));
 
         $response->assertStatus(200);
     }
@@ -203,7 +204,7 @@ class DocumentManagementTest extends TestCase
 
         $file = $this->createValidPdfUploadedFile('updated-document.pdf');
 
-        $response = $this->apiPostMultipart("/api/v1/documents/{$document->id}/versions", [
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
             'file' => $file,
             'version' => 2,
             'change_notes' => 'Updated with new specifications'
@@ -252,7 +253,7 @@ class DocumentManagementTest extends TestCase
             'parent_document_id' => $document->id
         ]);
 
-        $response = $this->apiGet("/api/v1/documents/{$document->id}/versions");
+        $response = $this->apiGet($this->namedRoute('v1.documents.versions.index', ['id' => $document->id]));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -287,7 +288,7 @@ class DocumentManagementTest extends TestCase
             'tags' => ['updated', 'tag']
         ];
 
-        $response = $this->apiPatch("/api/v1/documents/{$document->id}", $updateData);
+        $response = $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), $updateData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -321,11 +322,11 @@ class DocumentManagementTest extends TestCase
         // Create a fake file
         Storage::disk('local')->put('documents/test-file.pdf', 'fake file content');
 
-        $response = $this->apiDelete("/api/v1/documents/{$document->id}");
+        $response = $this->apiDelete($this->namedRoute('v1.documents.destroy', ['id' => $document->id]));
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('documents', [
+        $this->assertSoftDeleted('documents', [
             'id' => $document->id
         ]);
 
@@ -354,7 +355,7 @@ class DocumentManagementTest extends TestCase
             'metadata' => ['document_type' => 'specification'],
         ]);
 
-        $response = $this->apiGet('/api/v1/documents?document_type=drawing');
+        $response = $this->apiGet($this->namedRoute('v1.documents.index', query: ['document_type' => 'drawing']));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -381,7 +382,7 @@ class DocumentManagementTest extends TestCase
      */
     public function test_unauthorized_access_returns_401()
     {
-        $response = $this->getJson('/api/v1/documents');
+        $response = $this->getJson($this->namedRoute('v1.documents.index'));
         $response->assertStatus(401);
     }
 

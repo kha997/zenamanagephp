@@ -30,12 +30,10 @@ class RoleBasedAccessControlMiddleware
         $user = Auth::user();
         
         if (!$user) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Unauthorized',
-                'message' => 'User not authenticated',
-                'code' => 'USER_NOT_AUTHENTICATED'
-            ], 401);
+            return ErrorEnvelopeService::authenticationError(
+                'User not authenticated',
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
         }
         
         $headerTenantId = trim((string) $request->header('X-Tenant-ID'));
@@ -83,12 +81,10 @@ class RoleBasedAccessControlMiddleware
                 'ip' => $request->ip()
             ]);
             
-            return response()->json([
-                'success' => false,
-                'error' => 'Access Denied',
-                'message' => 'You do not have permission to access this resource',
-                'code' => 'ACCESS_DENIED'
-            ], 403);
+            return ErrorEnvelopeService::authorizationError(
+                'You do not have permission to access this resource',
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
         }
         
         // Add access context to request
@@ -127,7 +123,7 @@ class RoleBasedAccessControlMiddleware
      */
     private function isRole(string $roleOrPermission): bool
     {
-        $roles = ['admin', 'project_manager', 'team_member', 'client', 'viewer'];
+        $roles = ['project_manager', 'team_member', 'client', 'viewer'];
         return in_array($roleOrPermission, $roles);
     }
     
@@ -190,6 +186,10 @@ class RoleBasedAccessControlMiddleware
         
         // Add more role logic based on your system
         if ($user->hasRole('project_manager')) {
+            $roles[] = 'project_manager';
+        }
+
+        if ($user->role === 'pm') {
             $roles[] = 'project_manager';
         }
         
@@ -268,12 +268,13 @@ class RoleBasedAccessControlMiddleware
                 'roles' => method_exists($user, 'getRoleNames') ? $user->getRoleNames() : []
             ]);
 
-            return response()->json([
-                'success' => false,
-                'error' => 'Access Denied',
-                'message' => 'You do not have sufficient RBAC assignments to access this resource',
-                'code' => 'RBAC_ACCESS_DENIED'
-            ], 403);
+            return ErrorEnvelopeService::error(
+                'RBAC_ACCESS_DENIED',
+                'You do not have sufficient RBAC assignments to access this resource',
+                [],
+                403,
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
         }
 
         $request->attributes->set('required_role_permission', 'rbac:authenticated');

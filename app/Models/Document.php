@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Project;
 
 /**
@@ -34,7 +35,7 @@ use App\Models\Project;
  */
 class Document extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids, HasFactory, TenantScope, SoftDeletes;
 
     protected $table = 'documents';
 
@@ -77,6 +78,7 @@ class Document extends Model
         'created_by',
         'updated_by',
         'name',
+        'title',
         'original_name',
         'file_path',
         'file_type',
@@ -84,11 +86,16 @@ class Document extends Model
         'file_size',
         'file_hash',
         'category',
+        'visibility',
+        'client_approved',
+        'linked_entity_type',
+        'linked_entity_id',
         'description',
         'metadata',
         'status',
         'version',
         'is_current_version',
+        'current_version_id',
         'parent_document_id',
     ];
 

@@ -3,6 +3,7 @@
 namespace Database\Factories\Src\WorkTemplate\Models;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\User;
 use Src\WorkTemplate\Models\TemplateVersion;
 use Src\WorkTemplate\Models\Template;
 
@@ -35,7 +36,7 @@ class TemplateVersionFactory extends Factory
             'version' => $this->faker->numberBetween(1, 10),
             'json_body' => $this->generateSampleJsonBody(),
             'note' => $this->faker->optional()->sentence(),
-            'created_by' => null,
+            'created_by' => User::factory(),
         ];
     }
 

@@ -17,7 +17,7 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/home';
+    public const HOME = '/app/dashboard';
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
@@ -69,6 +69,11 @@ class RouteServiceProvider extends ServiceProvider
         RateLimiter::for('zena-login', function (Request $request) {
             $identity = strtolower((string) ($request->input('email') ?? $request->input('username') ?? ''));
             return Limit::perMinute(20)->by($request->ip() . '|' . $identity);
+        });
+
+        RateLimiter::for('dashboards', function (Request $request) {
+            $key = $request->ip();
+            return Limit::perMinute(10)->by($key);
         });
     }
 }

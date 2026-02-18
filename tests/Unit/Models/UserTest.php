@@ -163,13 +163,16 @@ class UserTest extends TestCase
     {
         $fillable = [
             'tenant_id',
+            'status',
             'name',
             'email',
             'password',
+            'password_updated_at',
             'phone',
             'avatar',
             'preferences',
             'last_login_at',
+            'last_login_ip',
             'is_active',
             'oidc_provider',
             'oidc_subject_id',

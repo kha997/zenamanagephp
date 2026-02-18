@@ -132,6 +132,7 @@ return new class extends Migration
             $table->ulid('uploaded_by');
             $table->string('name');
             $table->string('original_name');
+            $table->string('title')->nullable();
             $table->string('file_path');
             $table->string('file_type');
             $table->string('mime_type');

@@ -249,7 +249,7 @@ class ProjectTest extends TestCase
                     'message' => 'Project deleted successfully'
                 ]);
 
-        $this->assertDatabaseMissing('projects', [
+        $this->assertSoftDeleted('projects', [
             'id' => $project->id
         ]);
     }

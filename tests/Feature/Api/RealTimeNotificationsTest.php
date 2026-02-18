@@ -8,10 +8,11 @@ use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\RouteNameTrait;
 
 class RealTimeNotificationsTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     protected $user;
     protected $tenantId;
@@ -40,7 +41,7 @@ class RealTimeNotificationsTest extends TestCase
             'data' => ['task_id' => '123']
         ];
 
-        $response = $this->apiPost('/api/zena/notifications', $notificationData);
+        $response = $this->apiPost($this->zena('notifications.store'), $notificationData);
 
         $response->assertStatus(201)
                 ->assertJsonStructure([
@@ -77,7 +78,7 @@ class RealTimeNotificationsTest extends TestCase
             'tenant_id' => $this->tenantId,
         ]);
 
-        $response = $this->apiGet('/api/zena/notifications');
+        $response = $this->apiGet($this->zena('notifications.index'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -106,7 +107,7 @@ class RealTimeNotificationsTest extends TestCase
     {
         $notification = ZenaNotification::factory()->create($this->notificationAttributes());
 
-        $response = $this->apiPut("/api/zena/notifications/{$notification->id}/read");
+        $response = $this->apiPut($this->zena('notifications.mark-read', ['id' => $notification->id]));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -137,7 +138,7 @@ class RealTimeNotificationsTest extends TestCase
     {
         ZenaNotification::factory()->count(3)->create($this->notificationAttributes());
 
-        $response = $this->apiPut('/api/zena/notifications/read-all');
+        $response = $this->apiPut($this->zena('notifications.mark-all-read'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -164,7 +165,7 @@ class RealTimeNotificationsTest extends TestCase
             'read_at' => now()
         ]));
 
-        $response = $this->apiGet('/api/zena/notifications/stats/count');
+        $response = $this->apiGet($this->zena('notifications.unread-count'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -194,7 +195,7 @@ class RealTimeNotificationsTest extends TestCase
             'read_at' => now()
         ]));
 
-        $response = $this->apiGet('/api/zena/notifications/stats/summary');
+        $response = $this->apiGet($this->zena('notifications.stats'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -231,7 +232,7 @@ class RealTimeNotificationsTest extends TestCase
             'type' => 'rfi_submitted'
         ]);
 
-        $response = $this->apiGet('/api/zena/notifications?type=task_assigned');
+        $response = $this->apiGet($this->zena('notifications.index', query: ['type' => 'task_assigned']));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -274,7 +275,7 @@ class RealTimeNotificationsTest extends TestCase
             'read_at' => now()
         ]);
 
-        $response = $this->apiGet('/api/zena/notifications?status=unread');
+        $response = $this->apiGet($this->zena('notifications.index', query: ['status' => 'unread']));
 
         $response->assertStatus(200);
 
@@ -293,7 +294,7 @@ class RealTimeNotificationsTest extends TestCase
     {
         $notification = ZenaNotification::factory()->create($this->notificationAttributes());
 
-        $response = $this->apiDelete("/api/zena/notifications/{$notification->id}");
+        $response = $this->apiDelete($this->zena('notifications.destroy', ['id' => $notification->id]));
 
         $response->assertStatus(200);
         $response->assertJsonStructure(['success']);
@@ -308,7 +309,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_notification_creation_requires_valid_data()
     {
-        $response = $this->apiPost('/api/zena/notifications', []);
+        $response = $this->apiPost($this->zena('notifications.store'), []);
 
         $response->assertStatus(422);
 
@@ -324,7 +325,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_notification_type_validation()
     {
-        $response = $this->apiPost('/api/zena/notifications', [
+        $response = $this->apiPost($this->zena('notifications.store'), [
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenantId,
             'type' => 'invalid_type',
@@ -344,7 +345,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_notification_priority_validation()
     {
-        $response = $this->apiPost('/api/zena/notifications', [
+        $response = $this->apiPost($this->zena('notifications.store'), [
             'user_id' => $this->user->id,
             'tenant_id' => $this->tenantId,
             'type' => 'task_assigned',
@@ -364,7 +365,7 @@ class RealTimeNotificationsTest extends TestCase
      */
     public function test_unauthorized_access_returns_401()
     {
-        $response = $this->withHeaders($this->tenantHeaders())->getJson('/api/zena/notifications');
+        $response = $this->withHeaders($this->tenantHeaders())->getJson($this->zena('notifications.index'));
         $response->assertStatus(401);
     }
 
@@ -377,7 +378,7 @@ class RealTimeNotificationsTest extends TestCase
             'metadata' => ['expires_at' => now()->subHour()->toISOString()]
         ]));
 
-        $response = $this->apiGet("/api/zena/notifications/{$notification->id}");
+        $response = $this->apiGet($this->zena('notifications.show', ['id' => $notification->id]));
 
         $response->assertStatus(200);
 

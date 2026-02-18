@@ -76,6 +76,8 @@ class Notification extends Model
         'channel',
         'type',
         'read_at',
+        'tenant_id',
+        'project_id',
     ];
 
     protected $casts = [

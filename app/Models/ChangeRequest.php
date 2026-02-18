@@ -55,6 +55,21 @@ class ChangeRequest extends Model
     ];
 
     /**
+     * Các mức độ ưu tiên change request
+     */
+    public const PRIORITY_LOW = 'low';
+    public const PRIORITY_MEDIUM = 'medium';
+    public const PRIORITY_HIGH = 'high';
+    public const PRIORITY_CRITICAL = 'critical';
+
+    public const PRIORITIES = [
+        self::PRIORITY_LOW,
+        self::PRIORITY_MEDIUM,
+        self::PRIORITY_HIGH,
+        self::PRIORITY_CRITICAL,
+    ];
+
+    /**
      * Các trạng thái có thể chuyển đổi
      */
     public const STATUS_TRANSITIONS = [
@@ -69,6 +84,7 @@ class ChangeRequest extends Model
         'project_id',
         'task_id',
         'change_number',
+        'code',
         'title',
         'description',
         'change_type',
@@ -78,6 +94,7 @@ class ChangeRequest extends Model
         'requested_by',
         'assigned_to',
         'approved_by',
+        'decided_by',
         'rejected_by',
         'requested_at',
         'due_date',
@@ -91,6 +108,10 @@ class ChangeRequest extends Model
         'approval_notes',
         'rejection_reason',
         'implementation_notes',
+        'impact_cost',
+        'impact_days',
+        'impact_kpi',
+        'created_by',
         'attachments',
         'impact_analysis',
         'risk_assessment',
@@ -101,6 +122,9 @@ class ChangeRequest extends Model
         'actual_cost' => 'decimal:2',
         'estimated_days' => 'integer',
         'actual_days' => 'integer',
+        'impact_cost' => 'decimal:2',
+        'impact_days' => 'integer',
+        'impact_kpi' => 'array',
         'requested_at' => 'datetime',
         'due_date' => 'date',
         'approved_at' => 'datetime',

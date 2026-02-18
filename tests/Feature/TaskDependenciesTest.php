@@ -30,7 +30,7 @@ class TaskDependenciesTest extends TestCase
         parent::setUp();
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -40,7 +40,7 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'DEP-TEST-001',
             'description' => 'Test Description',
@@ -50,7 +50,7 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         // Tạo Project Manager
-        $this->projectManager = User::create([
+        $this->projectManager = User::factory()->create([
             'name' => 'Project Manager',
             'email' => 'project.manager@test.com',
             'password' => bcrypt('password'),
@@ -60,7 +60,7 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         // Tạo Designer
-        $this->designer = User::create([
+        $this->designer = User::factory()->create([
             'name' => 'Designer',
             'email' => 'designer@test.com',
             'password' => bcrypt('password'),
@@ -70,7 +70,7 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         // Tạo Engineer
-        $this->engineer = User::create([
+        $this->engineer = User::factory()->create([
             'name' => 'Engineer',
             'email' => 'engineer@test.com',
             'password' => bcrypt('password'),

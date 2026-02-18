@@ -32,7 +32,7 @@ class InspectionNcrWorkflowTest extends TestCase
         parent::setUp();
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -42,7 +42,7 @@ class InspectionNcrWorkflowTest extends TestCase
         ]);
 
         // Tạo QC Inspector
-        $this->qcInspector = User::create([
+        $this->qcInspector = User::factory()->create([
             'name' => 'QC Inspector',
             'email' => 'qc.inspector@example.com',
             'password' => bcrypt('password'),
@@ -52,7 +52,7 @@ class InspectionNcrWorkflowTest extends TestCase
         ]);
 
         // Tạo Project Manager
-        $this->projectManager = User::create([
+        $this->projectManager = User::factory()->create([
             'name' => 'Project Manager',
             'email' => 'project.manager@example.com',
             'password' => bcrypt('password'),
@@ -62,7 +62,7 @@ class InspectionNcrWorkflowTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'INSP-TEST-001',
             'description' => 'Test Description',

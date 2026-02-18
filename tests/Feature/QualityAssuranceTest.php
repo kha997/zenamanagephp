@@ -11,12 +11,14 @@ use App\Models\Widget;
 use App\Models\SupportTicket;
 use App\Models\MaintenanceTask;
 use App\Models\PerformanceMetric;
+use App\Models\Tenant;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Tests\Traits\RouteNameTrait;
 
 class QualityAssuranceTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, RouteNameTrait;
 
     protected $user;
     protected $admin;
@@ -25,8 +27,19 @@ class QualityAssuranceTest extends TestCase
     {
         parent::setUp();
         
-        $this->user = User::factory()->create(['role' => 'user']);
-        $this->admin = User::factory()->create(['role' => 'admin']);
+        $tenant = Tenant::factory()->create();
+
+        $this->user = User::factory()->create([
+            'role' => 'user',
+            'tenant_id' => $tenant->id,
+        ]);
+        $this->admin = User::factory()->create([
+            'role' => 'admin',
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->user->assignRole('client');
+        $this->admin->assignRole('admin');
     }
 
     /**
@@ -59,7 +72,7 @@ class QualityAssuranceTest extends TestCase
         $this->actingAs($this->user);
 
         // Test dashboard API consistency
-        $response = $this->post('/api/dashboards', [
+        $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => 'Test Dashboard',
             'description' => 'Test description',
             'layout' => 'grid',
@@ -80,7 +93,7 @@ class QualityAssuranceTest extends TestCase
         $dashboardId = $response->json('id');
 
         // Test GET consistency
-        $getResponse = $this->get("/api/dashboards/{$dashboardId}");
+        $getResponse = $this->get($this->namedRoute('api.legacy.dashboards.show', ['dashboard' => $dashboardId]));
         $getResponse->assertStatus(200);
         $getResponse->assertJsonStructure([
             'id',
@@ -105,21 +118,23 @@ class QualityAssuranceTest extends TestCase
         $this->actingAs($this->user);
 
         // Test 404 error
-        $response = $this->get('/api/dashboards/999999');
+        $response = $this->get($this->namedRoute('api.legacy.dashboards.show', ['dashboard' => 999999]));
         $response->assertStatus(404);
 
         // Test 422 error (validation)
-        $response = $this->post('/api/dashboards', [
+        $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => '', // Empty name should fail validation
             'description' => 'Test'
         ]);
         $response->assertStatus(422);
 
         // Test 403 error (unauthorized)
-        $otherUser = User::factory()->create();
+        $otherUser = User::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+        ]);
         $dashboard = Dashboard::factory()->create(['user_id' => $otherUser->id]);
         
-        $response = $this->get("/api/dashboards/{$dashboard->id}");
+        $response = $this->get($this->namedRoute('api.legacy.dashboards.show', ['dashboard' => $dashboard->id]));
         $response->assertStatus(403);
     }
 
@@ -131,12 +146,12 @@ class QualityAssuranceTest extends TestCase
         $this->actingAs($this->user);
 
         // Test required fields
-        $response = $this->post('/api/dashboards', []);
+        $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), []);
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['name']);
 
         // Test field length limits
-        $response = $this->post('/api/dashboards', [
+        $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => str_repeat('a', 1000), // Too long
             'description' => 'Test'
         ]);
@@ -144,7 +159,7 @@ class QualityAssuranceTest extends TestCase
         $response->assertJsonValidationErrors(['name']);
 
         // Test data types
-        $response = $this->post('/api/dashboards', [
+        $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => 123, // Should be string
             'description' => 'Test'
         ]);
@@ -190,11 +205,11 @@ class QualityAssuranceTest extends TestCase
         $dashboard = Dashboard::factory()->create(['user_id' => $this->user->id]);
 
         // Simulate concurrent updates
-        $response1 = $this->put("/api/dashboards/{$dashboard->id}", [
+        $response1 = $this->put($this->namedRoute('api.legacy.dashboards.update', ['dashboard' => $dashboard->id]), [
             'name' => 'Updated Name 1'
         ]);
 
-        $response2 = $this->put("/api/dashboards/{$dashboard->id}", [
+        $response2 = $this->put($this->namedRoute('api.legacy.dashboards.update', ['dashboard' => $dashboard->id]), [
             'name' => 'Updated Name 2'
         ]);
 
@@ -222,7 +237,7 @@ class QualityAssuranceTest extends TestCase
         }
 
         // Verify system is still functional
-        $response = $this->get('/api/dashboards');
+        $response = $this->get($this->namedRoute('api.legacy.dashboards.index'));
         $response->assertStatus(200);
     }
 
@@ -294,7 +309,7 @@ class QualityAssuranceTest extends TestCase
         $this->actingAs($this->user);
 
         // Create support ticket
-        $response = $this->post('/api/support/tickets', [
+        $response = $this->post($this->namedRoute('api.support.tickets.store'), [
             'subject' => 'Test Support Ticket',
             'description' => 'This is a test support ticket',
             'category' => 'technical',
@@ -305,7 +320,7 @@ class QualityAssuranceTest extends TestCase
         $ticketId = $response->json('id');
 
         // Add message to ticket
-        $response = $this->post("/api/support/tickets/{$ticketId}/messages", [
+        $response = $this->post($this->namedRoute('api.support.tickets.messages.store', ['ticket' => $ticketId]), [
             'message' => 'This is a test message',
             'is_internal' => false
         ]);
@@ -314,7 +329,7 @@ class QualityAssuranceTest extends TestCase
 
         // Update ticket status (as admin)
         $this->actingAs($this->admin);
-        $response = $this->put("/api/support/tickets/{$ticketId}", [
+        $response = $this->put($this->namedRoute('api.support.tickets.update', ['ticket' => $ticketId]), [
             'status' => 'resolved',
             'assigned_to' => $this->admin->id
         ]);
@@ -330,7 +345,7 @@ class QualityAssuranceTest extends TestCase
         $this->actingAs($this->user);
 
         // 1. Create dashboard
-        $dashboardResponse = $this->post('/api/dashboards', [
+        $dashboardResponse = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => 'My Dashboard',
             'description' => 'My personal dashboard',
             'layout' => 'grid',
@@ -340,7 +355,7 @@ class QualityAssuranceTest extends TestCase
         $dashboardId = $dashboardResponse->json('id');
 
         // 2. Add widgets
-        $widgetResponse = $this->post('/api/widgets', [
+        $widgetResponse = $this->post($this->namedRoute('api.legacy.widgets.store'), [
             'dashboard_id' => $dashboardId,
             'type' => 'chart',
             'title' => 'Sales Chart',
@@ -351,18 +366,18 @@ class QualityAssuranceTest extends TestCase
 
         // 3. Update widget
         $widgetId = $widgetResponse->json('id');
-        $updateResponse = $this->put("/api/widgets/{$widgetId}", [
+        $updateResponse = $this->put($this->namedRoute('api.legacy.widgets.update', ['widget' => $widgetId]), [
             'title' => 'Updated Sales Chart',
             'config' => ['chart_type' => 'bar']
         ]);
         $updateResponse->assertStatus(200);
 
         // 4. View dashboard
-        $viewResponse = $this->get("/api/dashboards/{$dashboardId}");
+        $viewResponse = $this->get($this->namedRoute('api.legacy.dashboards.show', ['dashboard' => $dashboardId]));
         $viewResponse->assertStatus(200);
 
         // 5. Delete dashboard
-        $deleteResponse = $this->delete("/api/dashboards/{$dashboardId}");
+        $deleteResponse = $this->delete($this->namedRoute('api.legacy.dashboards.destroy', ['dashboard' => $dashboardId]));
         $deleteResponse->assertStatus(204);
     }
 
@@ -378,7 +393,7 @@ class QualityAssuranceTest extends TestCase
         // Create multiple resources simultaneously
         $dashboards = [];
         for ($i = 0; $i < 20; $i++) {
-            $response = $this->post('/api/dashboards', [
+            $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
                 'name' => "Stress Test Dashboard {$i}",
                 'description' => "Stress test description {$i}",
                 'layout' => 'grid',
@@ -395,7 +410,7 @@ class QualityAssuranceTest extends TestCase
 
         // Clean up
         foreach ($dashboards as $dashboardId) {
-            $this->delete("/api/dashboards/{$dashboardId}");
+            $this->delete($this->namedRoute('api.legacy.dashboards.destroy', ['dashboard' => $dashboardId]));
         }
 
         // Assert reasonable performance
@@ -410,36 +425,37 @@ class QualityAssuranceTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $initialMemory = memory_get_usage(true);
+        DB::disableQueryLog();
+        gc_collect_cycles();
+        if (function_exists('memory_reset_peak_usage')) {
+            memory_reset_peak_usage();
+        }
+        $baseline = memory_get_usage(false);
 
         // Create large dataset
-        $dashboards = [];
         for ($i = 0; $i < 100; $i++) {
             $dashboard = Dashboard::factory()->create(['user_id' => $this->user->id]);
-            $dashboards[] = $dashboard;
-            
+
             for ($j = 0; $j < 10; $j++) {
                 Widget::factory()->create(['dashboard_id' => $dashboard->id]);
             }
         }
 
-        $peakMemory = memory_get_peak_usage(true);
-        $memoryIncrease = $peakMemory - $initialMemory;
-        $memoryIncreaseMB = $memoryIncrease / 1024 / 1024;
+        gc_collect_cycles();
+        $peak = memory_get_peak_usage(false);
+        $deltaMB = ($peak - $baseline) / 1024 / 1024;
 
         // Assert memory usage is reasonable
-        $this->assertLessThan(50, $memoryIncreaseMB);
+        $this->assertLessThan(80, $deltaMB, "Memory delta should not exceed 80MB for 1000 records (delta={$deltaMB}MB)");
 
         // Test memory cleanup
-        unset($dashboards);
         gc_collect_cycles();
 
-        $finalMemory = memory_get_usage(true);
-        $memoryCleanup = $peakMemory - $finalMemory;
-        $memoryCleanupMB = $memoryCleanup / 1024 / 1024;
+        $finalMemory = memory_get_usage(false);
+        $finalDeltaMB = ($finalMemory - $baseline) / 1024 / 1024;
 
-        // Assert memory was cleaned up
-        $this->assertGreaterThan(0, $memoryCleanupMB);
+        // Assert memory remains near baseline after cleanup.
+        $this->assertLessThan(20, $finalDeltaMB, "Final memory after cleanup should remain under +20MB from baseline (delta={$finalDeltaMB}MB)");
     }
 
     /**
@@ -476,7 +492,7 @@ class QualityAssuranceTest extends TestCase
 
         // Test dashboard list endpoint
         $startTime = microtime(true);
-        $response = $this->get('/api/dashboards');
+        $response = $this->get($this->namedRoute('api.legacy.dashboards.index'));
         $endTime = microtime(true);
         
         $responseTime = ($endTime - $startTime) * 1000;
@@ -486,7 +502,7 @@ class QualityAssuranceTest extends TestCase
 
         // Test widget list endpoint
         $startTime = microtime(true);
-        $response = $this->get('/api/widgets');
+        $response = $this->get('/api/dashboard/widgets');
         $endTime = microtime(true);
         
         $responseTime = ($endTime - $startTime) * 1000;

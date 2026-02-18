@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Laravel\Sanctum\PersonalAccessToken;
 use Exception;
 
 /**
@@ -52,13 +53,26 @@ class AuthService
             if (!$user || !Hash::check($credentials['password'], $user->password)) {
                 return [
                     'success' => false,
-                    'message' => 'Email hoặc mật khẩu không đúng'
+                    'message' => 'Invalid credentials',
+                    'status' => 401
+                ];
+            }
+
+            if (!$user->is_active) {
+                return [
+                    'success' => false,
+                    'message' => 'Account is inactive',
+                    'status' => 403,
+                    'code' => 'E403.USER_INACTIVE',
                 ];
             }
 
             $token = $this->generateToken($user);
 
             return [
+                'success' => true,
+                'user' => $user,
+                'token' => $token,
                 'access_token' => $token,
                 'token_type' => 'bearer',
                 'expires_in' => (int) config('jwt.ttl') * 60
@@ -131,6 +145,11 @@ class AuthService
 
             $payload = $this->validateToken($token);
             if (!$payload) {
+                $sanctumUser = $this->getUserFromSanctumToken($token);
+                if ($sanctumUser) {
+                    return $sanctumUser->load('tenant');
+                }
+
                 return null;
             }
 
@@ -143,6 +162,27 @@ class AuthService
         } catch (Exception $e) {
             return null;
         }
+    }
+
+    private function getUserFromSanctumToken(?string $token): ?User
+    {
+        if (!$token) {
+            return null;
+        }
+
+        $personalAccessToken = PersonalAccessToken::findToken($token);
+
+        if (!$personalAccessToken) {
+            return null;
+        }
+
+        $user = $personalAccessToken->tokenable;
+
+        if (!$user instanceof User) {
+            return null;
+        }
+
+        return $user;
     }
 
     /**

@@ -1,0 +1,5 @@
+tests/Feature/Api/SupportTenantIsolationTest.php:107:        SupportDocumentation::create([
+tests/Feature/Api/SupportTenantIsolationTest.php:119:        SupportDocumentation::create([
+tests/Feature/Api/SupportTenantIsolationTest.php:49:        $ticket = SupportTicket::create([
+tests/Feature/Api/SupportTenantIsolationTest.php:76:        $ticket = SupportTicket::create([
+tests/Feature/Api/TaskDependenciesTest.php:327:        return TaskDependency::create([

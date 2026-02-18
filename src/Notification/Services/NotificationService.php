@@ -35,6 +35,7 @@ class NotificationService
             'body' => $data['body'],
             'link_url' => $data['link_url'] ?? null,
             'channel' => $data['channel'] ?? 'inapp',
+            'tenant_id' => $data['tenant_id'] ?? null,
             'metadata' => $data['metadata'] ?? null,
             'event_key' => $data['event_key'] ?? null,
             'project_id' => $data['project_id'] ?? null,

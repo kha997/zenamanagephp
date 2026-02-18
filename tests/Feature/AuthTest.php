@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Tests\Traits\AuthenticationTestTrait;
 
 /**
  * Feature tests for Authentication endpoints
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Password;
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
+    use AuthenticationTestTrait;
 
     /**
      * Test user registration

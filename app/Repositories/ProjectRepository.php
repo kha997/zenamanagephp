@@ -56,7 +56,7 @@ class ProjectRepository
         }
 
         if (isset($filters['manager_id'])) {
-            $query->where('manager_id', $filters['manager_id']);
+            $query->where('pm_id', $filters['manager_id']);
         }
 
         if (isset($filters['search'])) {
@@ -88,7 +88,7 @@ class ProjectRepository
     /**
      * Get project by ID with optional relations.
      */
-    public function getProjectById(string $id, array $with = []): ?Project
+    public function getProjectById(string $id, array $with = [], ?string $tenantId = null): ?Project
     {
         $query = $this->model->newQuery();
 
@@ -98,13 +98,19 @@ class ProjectRepository
             $query->with($this->defaultWith());
         }
 
-        return $query->find($id);
+        $query->where('id', $id);
+
+        if ($tenantId !== null) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        return $query->first();
     }
 
     /**
      * Get projects by tenant ID.
      */
-    public function getByTenantId(int $tenantId): Collection
+    public function getByTenantId(string $tenantId): Collection
     {
         return $this->model->where('tenant_id', $tenantId)
                           ->with($this->defaultWith())
@@ -114,9 +120,9 @@ class ProjectRepository
     /**
      * Get projects by manager ID.
      */
-    public function getByManagerId(int $managerId): Collection
+    public function getByManagerId(string $managerId): Collection
     {
-        return $this->model->where('manager_id', $managerId)
+        return $this->model->where('pm_id', $managerId)
                           ->with($this->defaultWith())
                           ->get();
     }
@@ -156,7 +162,7 @@ class ProjectRepository
     /**
      * Update project.
      */
-    public function update(int $id, array $data): ?Project
+    public function update(string $id, array $data): ?Project
     {
         $project = $this->model->find($id);
 
@@ -183,7 +189,7 @@ class ProjectRepository
     /**
      * Delete project.
      */
-    public function delete(int $id): bool
+    public function delete(string $id): bool
     {
         $project = $this->model->find($id);
 
@@ -205,7 +211,7 @@ class ProjectRepository
     /**
      * Soft delete project.
      */
-    public function softDelete(int $id): bool
+    public function softDelete(string $id): bool
     {
         $project = $this->model->find($id);
 
@@ -227,7 +233,7 @@ class ProjectRepository
     /**
      * Restore soft deleted project.
      */
-    public function restore(int $id): bool
+    public function restore(string $id): bool
     {
         $project = $this->model->withTrashed()->find($id);
 
@@ -308,7 +314,7 @@ class ProjectRepository
     /**
      * Update project status.
      */
-    public function updateStatus(int $id, string $status): bool
+    public function updateStatus(string $id, string $status): bool
     {
         $project = $this->model->find($id);
 
@@ -332,7 +338,7 @@ class ProjectRepository
     /**
      * Assign team to project.
      */
-    public function assignTeam(int $projectId, int $teamId, string $role = 'member'): bool
+    public function assignTeam(string $projectId, string $teamId, string $role = 'member'): bool
     {
         $project = $this->model->find($projectId);
 
@@ -356,7 +362,7 @@ class ProjectRepository
     /**
      * Remove team from project.
      */
-    public function removeTeam(int $projectId, int $teamId): bool
+    public function removeTeam(string $projectId, string $teamId): bool
     {
         $project = $this->model->find($projectId);
 
@@ -377,7 +383,7 @@ class ProjectRepository
     /**
      * Get project statistics.
      */
-    public function getStatistics(int $tenantId = null): array
+    public function getStatistics(?string $tenantId = null): array
     {
         $query = $this->model->query();
 
@@ -455,7 +461,7 @@ class ProjectRepository
     /**
      * Get project progress.
      */
-    public function getProgress(int $id): array
+    public function getProgress(string $id): array
     {
         $project = $this->model->with('tasks')->find($id);
 
@@ -502,7 +508,7 @@ class ProjectRepository
     /**
      * Get project timeline.
      */
-    public function getTimeline(int $id): array
+    public function getTimeline(string $id): array
     {
         $project = $this->model->with(['tasks' => function ($q) {
             $q->orderBy('due_date');

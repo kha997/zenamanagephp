@@ -1,0 +1,53 @@
+name: Staging Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - staging
+
+jobs:
+  staging-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      XDEBUG_MODE: off
+      PCOV_ENABLED: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          ini-values: opcache.enable_cli=0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Run staging smoke
+        env:
+          APP_HOST: 127.0.0.1
+          APP_PORT: 18080
+          SMOKE_REPORT_FILE: ${{ github.workspace }}/smoke-report.md
+        run: bash scripts/smoke_staging.sh
+
+      - name: Upload smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: smoke-report.md
+          if-no-files-found: warn

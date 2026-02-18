@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Src\RBAC\Models\Permission;
 use Src\RBAC\Models\Role;
 
@@ -28,7 +30,7 @@ class RBACController
     {
         try {
             $projectId = $request->get('project_id');
-            $tenantId = $request->get('tenant_id');
+            $tenantId = TenantContext::id($request);
             
             $effectivePermissions = $this->rbacManager->getUserEffectivePermissions(
                 $userId,
@@ -63,7 +65,7 @@ class RBACController
     {
         $permissionCode = $request->get('permission_code');
         $projectId = $request->get('project_id');
-        $tenantId = $request->get('tenant_id');
+        $tenantId = TenantContext::id($request);
         
         if (empty($permissionCode)) {
             return response()->json([
@@ -107,8 +109,7 @@ class RBACController
     public function getRolesByScope(Request $request): JsonResponse
     {
         $scope = $request->get('scope', 'all');
-        $tenantId = $request->get('tenant_id');
-        
+        $tenantId = TenantContext::id($request);
         $query = Role::query();
         
         if ($scope !== 'all') {

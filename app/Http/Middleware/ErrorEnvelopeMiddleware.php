@@ -25,7 +25,15 @@ class ErrorEnvelopeMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        $response = $next($request);
+        try {
+            $response = $next($request);
+        } catch (\Throwable $e) {
+            return ErrorEnvelopeService::serverError(
+                $e->getMessage(),
+                ['exception' => $e->getMessage()],
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
+        }
         
         // Only process JSON responses
         if (!$response instanceof \Illuminate\Http\JsonResponse) {
@@ -132,6 +140,10 @@ class ErrorEnvelopeMiddleware
     {
         // Try to get message from various possible locations
         if (isset($data['message'])) {
+            if ($statusCode === 401 && $data['message'] !== 'Invalid credentials') {
+                return 'Unauthorized';
+            }
+
             return $data['message'];
         }
         

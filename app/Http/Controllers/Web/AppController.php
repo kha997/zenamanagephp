@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use Illuminate\Http\Request;
+use App\Models\Project;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
@@ -16,7 +17,14 @@ class AppController extends Controller
     
     public function projects()
     {
-        return view('layouts.app-layout');
+        $tenantId = Auth::user()?->tenant_id;
+        $projects = [];
+
+        if ($tenantId !== null) {
+            $projects = Project::where('tenant_id', $tenantId)->get();
+        }
+
+        return view('layouts.app-layout', compact('projects'));
     }
     
     public function tasks()

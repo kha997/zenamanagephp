@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -93,27 +94,60 @@ Route::post('/v1/upload-document', function (Request $request) {
         if (!$request->hasFile('file')) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'No file uploaded - hasFile() returned false'
+                'message' => 'No file uploaded',
+                'code' => 'INVALID_FILE'
             ], 400);
         }
 
-        if (!$file) {
+        if (!$file instanceof UploadedFile) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'No file uploaded - file() returned null'
+                'message' => 'Invalid upload payload',
+                'code' => 'INVALID_FILE'
             ], 400);
         }
 
         if (!$file->isValid()) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'File upload failed - isValid() returned false. Error: ' . $file->getError()
+                'message' => 'File upload failed',
+                'code' => 'INVALID_FILE'
             ], 400);
         }
 
         $fileName = $file->getClientOriginalName();
         $fileSize = $file->getSize();
         $fileMimeType = $file->getMimeType();
+        $extension = strtolower($file->getClientOriginalExtension() ?: '');
+
+        $dangerousExtensions = [
+            'php', 'phtml', 'phar', 'jsp', 'asp', 'aspx',
+            'exe', 'sh', 'bat', 'cmd', 'com', 'scr', 'js', 'vbs', 'jar',
+        ];
+
+        if (in_array($extension, $dangerousExtensions, true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Suspicious file type detected',
+                'code' => 'SUSPICIOUS_INPUT'
+            ], 400);
+        }
+
+        if (!is_int($fileSize) || $fileSize <= 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid file payload',
+                'code' => 'INVALID_FILE'
+            ], 400);
+        }
+
+        if ($fileSize > (10 * 1024 * 1024)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'File exceeds size limit',
+                'code' => 'FILE_TOO_LARGE'
+            ], 400);
+        }
 
         if (empty($fileName)) {
             $fileName = $file->getFilename();
@@ -149,11 +183,14 @@ Route::post('/v1/upload-document', function (Request $request) {
             ]
         ]);
 
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
+        \Log::warning('Upload failed in debug endpoint', ['error' => $e->getMessage()]);
+
         return response()->json([
             'status' => 'error',
-            'message' => 'Upload failed: ' . $e->getMessage()
-        ], 500);
+            'message' => 'Invalid file upload request',
+            'code' => 'INVALID_FILE'
+        ], 400);
     }
 });
 

@@ -21,7 +21,11 @@ class InspectionController extends ApiBaseController
 
     private function tenantId(): string
     {
-        $tenantId = app('current_tenant_id') ?? request()->get('tenant_id');
+        $tenantId = request()->attributes->get('tenant_id');
+
+        if (!$tenantId && app()->bound('current_tenant_id')) {
+            $tenantId = app('current_tenant_id');
+        }
 
         if (!$tenantId) {
             throw new \RuntimeException('Tenant context missing');

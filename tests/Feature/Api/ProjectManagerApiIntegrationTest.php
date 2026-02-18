@@ -7,15 +7,16 @@ use App\Models\User;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
-use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Traits\AuthenticationTrait;
 use Tests\Traits\ApiTestTrait;
+use Tests\Traits\RouteNameTrait;
+use Tests\Support\SSOT\FixtureFactory;
 
 /** @group slow */
 class ProjectManagerApiIntegrationTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait, ApiTestTrait;
+    use RefreshDatabase, AuthenticationTrait, ApiTestTrait, RouteNameTrait, FixtureFactory;
 
     protected $user;
     protected $tenant;
@@ -26,31 +27,20 @@ class ProjectManagerApiIntegrationTest extends TestCase
         parent::setUp();
         
         // Create tenant
-        $this->tenant = Tenant::factory()->create();
+        $this->tenant = $this->createTenant();
         
         // Create user with project manager role
-        $this->user = User::factory()->create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'tenant_id' => $this->tenant->id,
-            'role' => 'project_manager'
+            'role' => 'project_manager',
         ]);
 
-        $projectManagerRole = Role::firstOrCreate(
-            ['name' => 'project_manager'],
-            [
-                'scope' => Role::SCOPE_SYSTEM,
-                'allow_override' => false,
-                'description' => 'Project Manager',
-                'is_active' => true,
-            ]
-        );
-        $this->user->roles()->syncWithoutDetaching($projectManagerRole->id);
-
         // Create project
-        $this->project = Project::factory()->create([
+        $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'tenant_id' => $this->tenant->id,
             'pm_id' => $this->user->id,
             'budget_planned' => 100000,
-            'budget_actual' => 75000
+            'budget_actual' => 75000,
         ]);
         
         // Create tasks
@@ -74,7 +64,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
     {
         $this->apiAs($this->user, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -112,7 +102,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_project_manager_dashboard_stats_endpoint_without_auth()
     {
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(401)
                 ->assertJsonStructure([
@@ -139,7 +129,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
 
         $this->apiAs($member, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(403)
                 ->assertJsonStructure([
@@ -161,7 +151,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
     {
         $this->apiAs($this->user, $this->tenant);
 
-        $response = $this->apiGet('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->apiGet($this->v1('project_manager.dashboard.timeline'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -191,7 +181,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_project_manager_dashboard_timeline_endpoint_without_auth()
     {
-        $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->getJson($this->v1('project_manager.dashboard.timeline'));
 
         $response->assertStatus(401)
                 ->assertJsonStructure([
@@ -218,7 +208,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
 
         $this->apiAs($member, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->getJson($this->v1('project_manager.dashboard.timeline'));
 
         $response->assertStatus(403)
                 ->assertJsonStructure([
@@ -238,7 +228,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_error_envelope_format_consistency()
     {
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(401)
                 ->assertJsonStructure([
@@ -279,7 +269,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
 
         $this->apiAs($this->user, $this->tenant);
 
-        $response = $this->apiGet('/api/v1/project-manager/dashboard/stats');
+        $response = $this->apiGet($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(200);
         
@@ -311,7 +301,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
 
         $startTime = microtime(true);
         
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
         
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
@@ -341,7 +331,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
 
         $startTime = microtime(true);
         
-        $response = $this->apiGet('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->apiGet($this->v1('project_manager.dashboard.timeline'));
         
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds

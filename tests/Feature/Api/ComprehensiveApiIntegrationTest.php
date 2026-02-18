@@ -7,11 +7,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTrait;
 use Laravel\Sanctum\Sanctum;
 
 class ComprehensiveApiIntegrationTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, AuthenticationTrait;
 
     protected function setUp(): void
     {
@@ -113,17 +114,9 @@ class ComprehensiveApiIntegrationTest extends TestCase
     public function test_dashboard_workflow_with_caching()
     {
         $tenant = Tenant::factory()->create();
-        $user = \App\Models\User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'role' => 'admin'
-        ]);
+        $user = $this->createRbacAdminUser($tenant);
         $token = $user->createToken('test-token')->plainTextToken;
-
-        $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant->id
-        ];
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Test dashboard data endpoint (should be cached)
         $response1 = $this->getJson('/api/dashboard/data', $headers);
@@ -185,17 +178,9 @@ class ComprehensiveApiIntegrationTest extends TestCase
     public function test_cache_management_workflow()
     {
         $tenant = Tenant::factory()->create();
-        $user = \App\Models\User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'role' => 'admin'
-        ]);
+        $user = $this->createRbacAdminUser($tenant);
         $token = $user->createToken('test-token')->plainTextToken;
-
-        $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant->id
-        ];
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Test cache stats
         $response = $this->getJson('/api/cache/stats', $headers);
@@ -232,18 +217,9 @@ class ComprehensiveApiIntegrationTest extends TestCase
      */
     public function test_websocket_workflow()
     {
-        $tenant = Tenant::factory()->create();
-        $user = \App\Models\User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'role' => 'admin'
-        ]);
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-
-        $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant->id
-        ];
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Test WebSocket info
         $response = $this->getJson('/api/websocket/info', $headers);
@@ -407,18 +383,9 @@ class ComprehensiveApiIntegrationTest extends TestCase
         ]);
 
         // Test validation errors
-        $tenant = Tenant::factory()->create();
-        $user = \App\Models\User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'role' => 'admin'
-        ]);
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-
-        $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant->id
-        ];
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Test invalid cache key
         $response = $this->postJson('/api/cache/invalidate/key', [
@@ -439,18 +406,9 @@ class ComprehensiveApiIntegrationTest extends TestCase
      */
     public function test_performance_across_endpoints()
     {
-        $tenant = Tenant::factory()->create();
-        $user = \App\Models\User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'role' => 'admin'
-        ]);
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-
-        $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant->id
-        ];
+        $headers = $this->authHeadersForUser($user, $token);
 
         $endpoints = [
             '/api/auth/me',
@@ -484,18 +442,9 @@ class ComprehensiveApiIntegrationTest extends TestCase
      */
     public function test_security_headers()
     {
-        $tenant = Tenant::factory()->create();
-        $user = \App\Models\User::factory()->create([
-            'tenant_id' => $tenant->id,
-            'role' => 'admin'
-        ]);
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-
-        $headers = [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant->id
-        ];
+        $headers = $this->authHeadersForUser($user, $token);
 
         $endpoints = [
             '/api/auth/me',

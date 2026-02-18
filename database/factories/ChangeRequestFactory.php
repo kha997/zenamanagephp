@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Tenant;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -24,7 +25,7 @@ class ChangeRequestFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
+            'id' => (string) Str::ulid(),
             'tenant_id' => Tenant::factory(),
             'project_id' => Project::factory(),
             'task_id' => null,
@@ -39,6 +40,7 @@ class ChangeRequestFactory extends Factory
             'assigned_to' => User::factory(),
             'approved_by' => null,
             'rejected_by' => null,
+            'created_by' => User::factory(),
             'requested_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
             'due_date' => $this->faker->dateTimeBetween('+1 week', '+1 month'),
             'approved_at' => null,
@@ -46,8 +48,10 @@ class ChangeRequestFactory extends Factory
             'implemented_at' => null,
             'estimated_cost' => $this->faker->randomFloat(2, 100, 50000),
             'actual_cost' => $this->faker->randomFloat(2, 0, 50000),
+            'impact_cost' => $this->faker->randomFloat(2, 10, 20000),
             'estimated_days' => $this->faker->numberBetween(1, 30),
             'actual_days' => $this->faker->numberBetween(0, 30),
+            'impact_days' => $this->faker->numberBetween(0, 30),
             'approval_notes' => null,
             'rejection_reason' => null,
             'implementation_notes' => null,
@@ -62,6 +66,9 @@ class ChangeRequestFactory extends Factory
                 'risk_level' => $this->faker->randomElement(['low', 'medium', 'high']),
                 'mitigation_plan' => $this->faker->paragraph(),
                 'contingency_plan' => $this->faker->paragraph(),
+            ],
+            'impact_kpi' => [
+                'quality' => '+' . $this->faker->numberBetween(5, 25) . '%'
             ],
         ];
     }

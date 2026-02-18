@@ -36,10 +36,9 @@ class DocumentPolicySimpleTest extends TestCase
             'email' => 'test@example-' . uniqid() . '.com'
         ]);
         
-        // Create document manually to avoid factory issues
-        $this->document = new Document([
-            'id' => \Illuminate\Support\Str::ulid(),
+        $this->document = Document::factory()->create([
             'tenant_id' => $this->tenant->id,
+            'uploaded_by' => $this->user->id,
             'name' => 'Test Document',
             'file_path' => '/test/document.pdf',
             'file_size' => 1024,
@@ -47,13 +46,11 @@ class DocumentPolicySimpleTest extends TestCase
             'version' => '1.0',
             'status' => 'draft'
         ]);
-        $this->document->save();
     }
 
     public function test_user_can_view_document_in_same_tenant()
     {
-        // Mock hasRole method
-        $this->user->shouldReceive('hasRole')->with(['super_admin', 'admin', 'pm', 'designer', 'engineer'])->andReturn(true);
+        $this->user->role = 'admin';
         
         $this->assertTrue($this->policy->view($this->user, $this->document));
     }
@@ -65,9 +62,9 @@ class DocumentPolicySimpleTest extends TestCase
             'name' => 'Other Tenant'
         ]);
         
-        $otherDocument = new Document([
-            'id' => \Illuminate\Support\Str::ulid(),
+        $otherDocument = Document::factory()->create([
             'tenant_id' => $otherTenant->id,
+            'uploaded_by' => $this->user->id,
             'name' => 'Other Document',
             'file_path' => '/test/other.pdf',
             'file_size' => 1024,
@@ -75,23 +72,20 @@ class DocumentPolicySimpleTest extends TestCase
             'version' => '1.0',
             'status' => 'draft'
         ]);
-        $otherDocument->save();
         
         $this->assertFalse($this->policy->view($this->user, $otherDocument));
     }
 
     public function test_user_can_create_document_with_proper_role()
     {
-        // Mock hasRole method
-        $this->user->shouldReceive('hasRole')->with(['super_admin', 'admin', 'pm', 'designer'])->andReturn(true);
+        $this->user->role = 'admin';
         
         $this->assertTrue($this->policy->create($this->user));
     }
 
     public function test_user_cannot_create_document_without_proper_role()
     {
-        // Mock hasRole method
-        $this->user->shouldReceive('hasRole')->with(['super_admin', 'admin', 'pm', 'designer'])->andReturn(false);
+        $this->user->role = 'viewer';
         
         $this->assertFalse($this->policy->create($this->user));
     }
@@ -103,9 +97,9 @@ class DocumentPolicySimpleTest extends TestCase
             'name' => 'Other Tenant'
         ]);
         
-        $otherDocument = new Document([
-            'id' => \Illuminate\Support\Str::ulid(),
+        $otherDocument = Document::factory()->create([
             'tenant_id' => $otherTenant->id,
+            'uploaded_by' => $this->user->id,
             'name' => 'Other Document',
             'file_path' => '/test/other.pdf',
             'file_size' => 1024,
@@ -113,10 +107,9 @@ class DocumentPolicySimpleTest extends TestCase
             'version' => '1.0',
             'status' => 'draft'
         ]);
-        $otherDocument->save();
         
         // Even with proper role, should be blocked by tenant isolation
-        $this->user->shouldReceive('hasRole')->with(['super_admin', 'admin', 'pm', 'designer', 'engineer'])->andReturn(true);
+        $this->user->role = 'admin';
         
         $this->assertFalse($this->policy->view($this->user, $otherDocument));
     }

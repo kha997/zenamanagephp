@@ -11,10 +11,11 @@ use App\Models\ZenaProject;
 use App\Models\ZenaTask;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\RouteNameTrait;
 
 class TaskDependenciesTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     protected User $user;
     protected ZenaProject $project;
@@ -48,7 +49,7 @@ class TaskDependenciesTest extends TestCase
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $response = $this->apiPost("/api/zena/tasks/{$task1->id}/dependencies", [
+        $response = $this->apiPost($this->zena('tasks.add-dependency', ['id' => $task1->id]), [
             'dependency_id' => $task2->id
         ]);
 
@@ -90,7 +91,7 @@ class TaskDependenciesTest extends TestCase
         $this->createTaskDependencyRecord($task1, $task2);
 
         $response = $this->withHeaders($this->resolveApiHeaders())
-                ->deleteJson("/api/zena/tasks/{$task1->id}/dependencies/{$task2->id}", [
+                ->deleteJson($this->zena('tasks.remove-dependency', ['id' => $task1->id, 'dependencyId' => $task2->id]), [
                     'dependency_id' => $task2->id
                 ]);
 
@@ -131,7 +132,7 @@ class TaskDependenciesTest extends TestCase
         $this->createTaskDependencyRecord($task2, $task1);
 
         // Try to create circular dependency: task1 -> task2 -> task1
-        $response = $this->apiPost("/api/zena/tasks/{$task1->id}/dependencies", [
+        $response = $this->apiPost($this->zena('tasks.add-dependency', ['id' => $task1->id]), [
             'dependency_id' => $task2->id
         ]);
 
@@ -151,7 +152,7 @@ class TaskDependenciesTest extends TestCase
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $response = $this->apiPost("/api/zena/tasks/{$task->id}/dependencies", [
+        $response = $this->apiPost($this->zena('tasks.add-dependency', ['id' => $task->id]), [
             'dependency_id' => $task->id
         ]);
 
@@ -187,7 +188,7 @@ class TaskDependenciesTest extends TestCase
         $this->createTaskDependencyRecord($task3, $task2);
 
         // Try to create circular dependency: task1 -> task2 -> task3 -> task1
-        $response = $this->apiPost("/api/zena/tasks/{$task3->id}/dependencies", [
+        $response = $this->apiPost($this->zena('tasks.add-dependency', ['id' => $task3->id]), [
             'dependency_id' => $task1->id
         ]);
 
@@ -218,7 +219,7 @@ class TaskDependenciesTest extends TestCase
         $this->createTaskDependencyRecord($task2, $task1);
 
         // Update task1 to completed
-        $response = $this->apiPatch("/api/zena/tasks/{$task1->id}/status", [
+        $response = $this->apiPatch($this->zena('tasks.update-status', ['id' => $task1->id]), [
             'status' => 'done'
         ]);
 
@@ -230,7 +231,7 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         // Now task2 should be able to start
-        $response = $this->apiPatch("/api/zena/tasks/{$task2->id}/status", [
+        $response = $this->apiPatch($this->zena('tasks.update-status', ['id' => $task2->id]), [
             'status' => 'in_progress'
         ]);
 
@@ -268,7 +269,7 @@ class TaskDependenciesTest extends TestCase
         $this->createTaskDependencyRecord($task3, $task1);
         $this->createTaskDependencyRecord($task3, $task2);
 
-        $response = $this->apiGet("/api/zena/tasks/{$task3->id}/dependencies");
+        $response = $this->apiGet($this->zena('tasks.dependencies', ['id' => $task3->id]));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -296,7 +297,7 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         // Test with non-existent task
-        $response = $this->apiPost("/api/zena/tasks/{$task->id}/dependencies", [
+        $response = $this->apiPost($this->zena('tasks.add-dependency', ['id' => $task->id]), [
             'dependency_id' => 'non-existent-id'
         ]);
 
@@ -314,7 +315,7 @@ class TaskDependenciesTest extends TestCase
             'created_by' => $this->user->id
         ]);
 
-        $response = $this->postJson("/api/zena/tasks/{$task->id}/dependencies", [
+        $response = $this->postJson($this->zena('tasks.add-dependency', ['id' => $task->id]), [
             'dependency_id' => 'some-id'
         ]);
 

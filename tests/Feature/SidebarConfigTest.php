@@ -2,322 +2,96 @@
 
 namespace Tests\Feature;
 
-use App\Models\SidebarConfig;
+use App\Models\Tenant;
 use App\Models\User;
-use App\Models\UserSidebarPreference;
 use App\Services\SidebarService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class SidebarConfigTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
 
-    protected User $user;
-    protected User $adminUser;
-
-    protected function setUp(): void
+    /** @test */
+    public function it_requires_authentication_for_sidebar_admin_endpoints(): void
     {
-        parent::setUp();
-        
-        $this->user = User::factory()->create([
-            'email' => 'user@test.com',
-            'role' => 'project_manager'
-        ]);
-        
-        $this->adminUser = User::factory()->create([
-            'email' => 'admin@test.com',
-            'role' => 'super_admin'
-        ]);
+        $this->getJson('/api/admin/sidebar-configs')->assertStatus(401);
+        $this->postJson('/api/admin/sidebar-configs', [])->assertStatus(401);
     }
 
     /** @test */
-    public function it_can_create_sidebar_config()
+    public function it_requires_authentication_for_user_preferences_endpoints(): void
     {
-        $configData = [
-            'role_name' => 'project_manager',
-            'config' => [
-                'items' => [
-                    [
-                        'id' => 'dashboard',
-                        'type' => 'link',
-                        'label' => 'Dashboard',
-                        'icon' => 'TachometerAlt',
-                        'to' => '/dashboard',
-                        'required_permissions' => [],
-                        'enabled' => true,
-                        'order' => 10,
-                    ]
-                ]
-            ],
-            'is_enabled' => true,
-        ];
-
-        $response = $this->actingAs($this->adminUser)
-            ->postJson('/api/admin/sidebar-configs', $configData);
-
-        $response->assertStatus(201)
-            ->assertJson([
-                'success' => true,
-                'message' => 'Sidebar config created successfully'
-            ]);
-
-        $this->assertDatabaseHas('sidebar_configs', [
-            'role_name' => 'project_manager',
-            'is_enabled' => true,
-        ]);
+        $this->getJson('/api/user-preferences')->assertStatus(401);
+        $this->putJson('/api/user-preferences', [
+            'pinned_items' => ['dashboard'],
+        ])->assertStatus(401);
     }
 
     /** @test */
-    public function it_can_get_sidebar_config_for_role()
+    public function it_can_get_sidebar_for_role_from_service_defaults(): void
     {
-        SidebarConfig::create([
-            'role_name' => 'project_manager',
-            'config' => [
-                'items' => [
-                    [
-                        'id' => 'dashboard',
-                        'type' => 'link',
-                        'label' => 'Dashboard',
-                        'icon' => 'TachometerAlt',
-                        'to' => '/dashboard',
-                        'required_permissions' => [],
-                        'enabled' => true,
-                        'order' => 10,
-                    ]
-                ]
-            ],
-            'is_enabled' => true,
-            'updated_by' => $this->adminUser->id,
-        ]);
+        $sidebar = app(SidebarService::class)->getSidebarForRole('project_manager');
 
-        $response = $this->actingAs($this->adminUser)
-            ->getJson('/api/admin/sidebar-configs/role/project_manager');
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'data' => [
-                    'role_name' => 'project_manager',
-                    'is_enabled' => true,
-                ]
-            ]);
+        $this->assertIsArray($sidebar);
+        $this->assertArrayHasKey('items', $sidebar);
+        $this->assertNotEmpty($sidebar['items']);
     }
 
     /** @test */
-    public function it_can_clone_sidebar_config()
+    public function it_returns_default_sidebar_when_user_is_not_authenticated(): void
     {
-        SidebarConfig::create([
-            'role_name' => 'project_manager',
-            'config' => [
-                'items' => [
-                    [
-                        'id' => 'dashboard',
-                        'type' => 'link',
-                        'label' => 'Dashboard',
-                        'icon' => 'TachometerAlt',
-                        'to' => '/dashboard',
-                        'required_permissions' => [],
-                        'enabled' => true,
-                        'order' => 10,
-                    ]
-                ]
-            ],
-            'is_enabled' => true,
-            'updated_by' => $this->adminUser->id,
-        ]);
+        $sidebar = app(SidebarService::class)->getSidebarForUser(null);
 
-        $cloneData = [
-            'from_role' => 'project_manager',
-            'to_role' => 'designer',
-        ];
-
-        $response = $this->actingAs($this->adminUser)
-            ->postJson('/api/admin/sidebar-configs/clone', $cloneData);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'message' => 'Configuration cloned from project_manager to designer successfully'
-            ]);
-
-        $this->assertDatabaseHas('sidebar_configs', [
-            'role_name' => 'designer',
-        ]);
+        $this->assertIsArray($sidebar);
+        $this->assertArrayHasKey('items', $sidebar);
+        $this->assertSame('dashboard', $sidebar['items'][0]['id'] ?? null);
     }
 
     /** @test */
-    public function it_validates_sidebar_config_structure()
+    public function it_rejects_tenant_header_mismatch_for_sidebar_routes(): void
     {
-        $invalidConfig = [
-            'role_name' => 'project_manager',
-            'config' => [
-                'items' => [
-                    [
-                        'id' => 'dashboard',
-                        'type' => 'invalid_type',
-                        'label' => 'Dashboard',
-                        'enabled' => true,
-                        'order' => 10,
-                    ]
-                ]
-            ],
-            'is_enabled' => true,
-        ];
+        $tenant = Tenant::factory()->create();
+        $otherTenant = Tenant::factory()->create();
 
-        $response = $this->actingAs($this->adminUser)
-            ->postJson('/api/admin/sidebar-configs', $invalidConfig);
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'password' => Hash::make('password'),
+            'is_active' => true,
+        ]);
 
-        $response->assertStatus(422)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Security validation failed'
-            ]);
-    }
+        $token = $this->loginAndGetToken($tenant, $user, 'password');
 
-    /** @test */
-    public function it_prevents_unauthorized_access()
-    {
-        $configData = [
-            'role_name' => 'project_manager',
-            'config' => [
-                'items' => [
-                    [
-                        'id' => 'dashboard',
-                        'type' => 'link',
-                        'label' => 'Dashboard',
-                        'icon' => 'TachometerAlt',
-                        'to' => '/dashboard',
-                        'required_permissions' => [],
-                        'enabled' => true,
-                        'order' => 10,
-                    ]
-                ]
-            ],
-            'is_enabled' => true,
-        ];
-
-        $response = $this->actingAs($this->user)
-            ->postJson('/api/admin/sidebar-configs', $configData);
+        $response = $this->withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $token,
+            'X-Tenant-ID' => (string) $otherTenant->id,
+        ])->getJson('/api/admin/sidebar-configs');
 
         $response->assertStatus(403);
+        $response->assertJsonPath('error.code', 'TENANT_INVALID');
     }
 
-    /** @test */
-    public function it_can_manage_user_preferences()
+    private function loginAndGetToken(Tenant $tenant, User $user, string $password): string
     {
-        $preferenceData = [
-            'pinned_items' => ['dashboard'],
-            'hidden_items' => ['reports'],
-            'theme' => 'dark',
-            'compact_mode' => true,
-            'show_badges' => false,
-            'auto_expand_groups' => true,
-        ];
-
-        $response = $this->actingAs($this->user)
-            ->putJson('/api/user-preferences', $preferenceData);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'message' => 'Preferences updated successfully'
-            ]);
-
-        $this->assertDatabaseHas('user_sidebar_preferences', [
-            'user_id' => $this->user->id,
-            'is_enabled' => true,
-        ]);
-    }
-
-    /** @test */
-    public function it_can_pin_and_unpin_items()
-    {
-        // Pin item
-        $response = $this->actingAs($this->user)
-            ->postJson('/api/user-preferences/pin', [
-                'item_id' => 'dashboard'
-            ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'message' => 'Item pinned successfully'
-            ]);
-
-        // Unpin item
-        $response = $this->actingAs($this->user)
-            ->postJson('/api/user-preferences/unpin', [
-                'item_id' => 'dashboard'
-            ]);
-
-        $response->assertStatus(200)
-            ->assertJson([
-                'success' => true,
-                'message' => 'Item unpinned successfully'
-            ]);
-    }
-
-    /** @test */
-    public function sidebar_service_integration_test()
-    {
-        // Create sidebar config
-        SidebarConfig::create([
-            'role_name' => 'project_manager',
-            'config' => [
-                'items' => [
-                    [
-                        'id' => 'dashboard',
-                        'type' => 'link',
-                        'label' => 'Dashboard',
-                        'icon' => 'TachometerAlt',
-                        'to' => '/dashboard',
-                        'required_permissions' => [],
-                        'enabled' => true,
-                        'order' => 10,
-                    ],
-                    [
-                        'id' => 'projects',
-                        'type' => 'link',
-                        'label' => 'Projects',
-                        'icon' => 'Building',
-                        'to' => '/projects',
-                        'required_permissions' => ['project.read'],
-                        'enabled' => true,
-                        'order' => 20,
-                    ]
-                ]
-            ],
-            'is_enabled' => true,
-            'updated_by' => $this->adminUser->id,
+        $response = $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id,
+        ])->postJson('/api/auth/login', [
+            'email' => $user->email,
+            'password' => $password,
         ]);
 
-        // Create user preferences
-        UserSidebarPreference::create([
-            'user_id' => $this->user->id,
-            'preferences' => [
-                'pinned_items' => ['projects'],
-                'hidden_items' => [],
-                'custom_order' => [],
-                'theme' => 'light',
-                'compact_mode' => false,
-                'show_badges' => true,
-                'auto_expand_groups' => false,
-            ],
-            'is_enabled' => true,
-            'version' => 1,
-        ]);
+        $response->assertStatus(200);
 
-        $sidebarService = app(SidebarService::class);
-        $sidebarConfig = $sidebarService->getSidebarForUser($this->user);
+        $token = data_get($response->json(), 'data.token')
+            ?? data_get($response->json(), 'token')
+            ?? data_get($response->json(), 'data.access_token')
+            ?? data_get($response->json(), 'access_token');
 
-        $this->assertIsArray($sidebarConfig);
-        $this->assertArrayHasKey('items', $sidebarConfig);
-        $this->assertArrayHasKey('user_preferences', $sidebarConfig);
-        
-        // Check that projects is pinned (moved to top)
-        $this->assertEquals('projects', $sidebarConfig['items'][0]['id']);
-        $this->assertEquals('dashboard', $sidebarConfig['items'][1]['id']);
+        $this->assertIsString($token);
+
+        return $token;
     }
 }

@@ -32,7 +32,7 @@ class RBACRolesPermissionsTest extends TestCase
         parent::setUp();
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -42,7 +42,7 @@ class RBACRolesPermissionsTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'RBAC-TEST-001',
             'description' => 'Test Description',
@@ -52,7 +52,7 @@ class RBACRolesPermissionsTest extends TestCase
         ]);
 
         // Tạo Project Manager
-        $this->projectManager = User::create([
+        $this->projectManager = User::factory()->create([
             'name' => 'Project Manager',
             'email' => 'project.manager@test.com',
             'password' => bcrypt('password'),
@@ -62,7 +62,7 @@ class RBACRolesPermissionsTest extends TestCase
         ]);
 
         // Tạo Designer
-        $this->designer = User::create([
+        $this->designer = User::factory()->create([
             'name' => 'Designer',
             'email' => 'designer@test.com',
             'password' => bcrypt('password'),
@@ -72,7 +72,7 @@ class RBACRolesPermissionsTest extends TestCase
         ]);
 
         // Tạo Engineer
-        $this->engineer = User::create([
+        $this->engineer = User::factory()->create([
             'name' => 'Engineer',
             'email' => 'engineer@test.com',
             'password' => bcrypt('password'),
@@ -82,7 +82,7 @@ class RBACRolesPermissionsTest extends TestCase
         ]);
 
         // Tạo Client Representative
-        $this->clientRep = User::create([
+        $this->clientRep = User::factory()->create([
             'name' => 'Client Representative',
             'email' => 'client.rep@test.com',
             'password' => bcrypt('password'),
@@ -101,7 +101,7 @@ class RBACRolesPermissionsTest extends TestCase
     public function test_can_create_roles_with_different_scopes(): void
     {
         // Tạo system role
-        $systemRole = Role::create([
+        $systemRole = Role::factory()->create([
             'name' => 'System Administrator',
             'scope' => Role::SCOPE_SYSTEM,
             'allow_override' => true,
@@ -111,7 +111,7 @@ class RBACRolesPermissionsTest extends TestCase
         ]);
 
         // Tạo custom role
-        $customRole = Role::create([
+        $customRole = Role::factory()->create([
             'name' => 'Senior Designer',
             'scope' => Role::SCOPE_CUSTOM,
             'allow_override' => false,
@@ -121,7 +121,7 @@ class RBACRolesPermissionsTest extends TestCase
         ]);
 
         // Tạo project role
-        $projectRole = Role::create([
+        $projectRole = Role::factory()->create([
             'name' => 'Project Lead',
             'scope' => Role::SCOPE_PROJECT,
             'allow_override' => true,
@@ -165,21 +165,21 @@ class RBACRolesPermissionsTest extends TestCase
     {
         // Tạo permissions cho different modules
         $taskPermissions = [
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'task.create',
                 'module' => 'task',
                 'action' => 'create',
                 'description' => 'Create tasks',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'task.edit',
                 'module' => 'task',
                 'action' => 'edit',
                 'description' => 'Edit tasks',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'task.delete',
                 'module' => 'task',
                 'action' => 'delete',
@@ -189,14 +189,14 @@ class RBACRolesPermissionsTest extends TestCase
         ];
 
         $projectPermissions = [
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'project.view',
                 'module' => 'project',
                 'action' => 'view',
                 'description' => 'View projects',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'project.edit',
                 'module' => 'project',
                 'action' => 'edit',
@@ -206,14 +206,14 @@ class RBACRolesPermissionsTest extends TestCase
         ];
 
         $userPermissions = [
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'user.view',
                 'module' => 'user',
                 'action' => 'view',
                 'description' => 'View users',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'user.edit',
                 'module' => 'user',
                 'action' => 'edit',
@@ -262,7 +262,7 @@ class RBACRolesPermissionsTest extends TestCase
     public function test_can_assign_permissions_to_roles(): void
     {
         // Tạo role
-        $projectManagerRole = Role::create([
+        $projectManagerRole = Role::factory()->create([
             'name' => 'Project Manager',
             'scope' => Role::SCOPE_SYSTEM,
             'allow_override' => true,
@@ -273,28 +273,28 @@ class RBACRolesPermissionsTest extends TestCase
 
         // Tạo permissions
         $permissions = [
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'project.view',
                 'module' => 'project',
                 'action' => 'view',
                 'description' => 'View projects',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'project.edit',
                 'module' => 'project',
                 'action' => 'edit',
                 'description' => 'Edit projects',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'task.create',
                 'module' => 'task',
                 'action' => 'create',
                 'description' => 'Create tasks',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'task.edit',
                 'module' => 'task',
                 'action' => 'edit',
@@ -348,7 +348,7 @@ class RBACRolesPermissionsTest extends TestCase
     public function test_can_assign_roles_to_users(): void
     {
         // Tạo roles
-        $projectManagerRole = Role::create([
+        $projectManagerRole = Role::factory()->create([
             'name' => 'Project Manager',
             'scope' => Role::SCOPE_SYSTEM,
             'allow_override' => true,
@@ -357,7 +357,7 @@ class RBACRolesPermissionsTest extends TestCase
             'tenant_id' => $this->tenant->id,
         ]);
 
-        $designerRole = Role::create([
+        $designerRole = Role::factory()->create([
             'name' => 'Designer',
             'scope' => Role::SCOPE_SYSTEM,
             'allow_override' => false,
@@ -399,7 +399,7 @@ class RBACRolesPermissionsTest extends TestCase
     public function test_permission_checking_logic(): void
     {
         // Tạo role và permissions
-        $projectManagerRole = Role::create([
+        $projectManagerRole = Role::factory()->create([
             'name' => 'Project Manager',
             'scope' => Role::SCOPE_SYSTEM,
             'allow_override' => true,
@@ -408,7 +408,7 @@ class RBACRolesPermissionsTest extends TestCase
             'tenant_id' => $this->tenant->id,
         ]);
 
-        $viewProjectPermission = Permission::create([
+        $viewProjectPermission = Permission::factory()->create([
             'code' => 'project.view',
             'module' => 'project',
             'action' => 'view',
@@ -416,7 +416,7 @@ class RBACRolesPermissionsTest extends TestCase
             'is_active' => true,
         ]);
 
-        $editProjectPermission = Permission::create([
+        $editProjectPermission = Permission::factory()->create([
             'code' => 'project.edit',
             'module' => 'project',
             'action' => 'edit',
@@ -424,7 +424,7 @@ class RBACRolesPermissionsTest extends TestCase
             'is_active' => true,
         ]);
 
-        $deleteProjectPermission = Permission::create([
+        $deleteProjectPermission = Permission::factory()->create([
             'code' => 'project.delete',
             'module' => 'project',
             'action' => 'delete',
@@ -462,7 +462,7 @@ class RBACRolesPermissionsTest extends TestCase
     public function test_role_hierarchy_and_scope_inheritance(): void
     {
         // Tạo system role với broad permissions
-        $systemRole = Role::create([
+        $systemRole = Role::factory()->create([
             'name' => 'System Administrator',
             'scope' => Role::SCOPE_SYSTEM,
             'allow_override' => true,
@@ -472,7 +472,7 @@ class RBACRolesPermissionsTest extends TestCase
         ]);
 
         // Tạo project-specific role với limited permissions
-        $projectRole = Role::create([
+        $projectRole = Role::factory()->create([
             'name' => 'Project Member',
             'scope' => Role::SCOPE_PROJECT,
             'allow_override' => false,
@@ -483,28 +483,28 @@ class RBACRolesPermissionsTest extends TestCase
 
         // Tạo permissions
         $allPermissions = [
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'project.view',
                 'module' => 'project',
                 'action' => 'view',
                 'description' => 'View projects',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'project.edit',
                 'module' => 'project',
                 'action' => 'edit',
                 'description' => 'Edit projects',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'user.view',
                 'module' => 'user',
                 'action' => 'view',
                 'description' => 'View users',
                 'is_active' => true,
             ]),
-            Permission::create([
+            Permission::factory()->create([
                 'code' => 'user.edit',
                 'module' => 'user',
                 'action' => 'edit',
@@ -561,7 +561,7 @@ class RBACRolesPermissionsTest extends TestCase
     {
         // 1. Tạo roles
         $roles = [
-            'admin' => Role::create([
+            'admin' => Role::factory()->create([
                 'name' => 'Administrator',
                 'scope' => Role::SCOPE_SYSTEM,
                 'allow_override' => true,
@@ -569,7 +569,7 @@ class RBACRolesPermissionsTest extends TestCase
                 'is_active' => true,
                 'tenant_id' => $this->tenant->id,
             ]),
-            'pm' => Role::create([
+            'pm' => Role::factory()->create([
                 'name' => 'Project Manager',
                 'scope' => Role::SCOPE_SYSTEM,
                 'allow_override' => true,
@@ -577,7 +577,7 @@ class RBACRolesPermissionsTest extends TestCase
                 'is_active' => true,
                 'tenant_id' => $this->tenant->id,
             ]),
-            'designer' => Role::create([
+            'designer' => Role::factory()->create([
                 'name' => 'Designer',
                 'scope' => Role::SCOPE_SYSTEM,
                 'allow_override' => false,
@@ -589,28 +589,28 @@ class RBACRolesPermissionsTest extends TestCase
 
         // 2. Tạo permissions
         $permissions = [
-            'project.view' => Permission::create([
+            'project.view' => Permission::factory()->create([
                 'code' => 'project.view',
                 'module' => 'project',
                 'action' => 'view',
                 'description' => 'View projects',
                 'is_active' => true,
             ]),
-            'project.edit' => Permission::create([
+            'project.edit' => Permission::factory()->create([
                 'code' => 'project.edit',
                 'module' => 'project',
                 'action' => 'edit',
                 'description' => 'Edit projects',
                 'is_active' => true,
             ]),
-            'task.create' => Permission::create([
+            'task.create' => Permission::factory()->create([
                 'code' => 'task.create',
                 'module' => 'task',
                 'action' => 'create',
                 'description' => 'Create tasks',
                 'is_active' => true,
             ]),
-            'task.edit' => Permission::create([
+            'task.edit' => Permission::factory()->create([
                 'code' => 'task.edit',
                 'module' => 'task',
                 'action' => 'edit',

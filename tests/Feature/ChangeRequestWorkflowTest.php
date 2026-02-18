@@ -28,7 +28,7 @@ class ChangeRequestWorkflowTest extends TestCase
         parent::setUp();
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -38,7 +38,7 @@ class ChangeRequestWorkflowTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'CR-TEST-001',
             'description' => 'Test Description',
@@ -48,7 +48,7 @@ class ChangeRequestWorkflowTest extends TestCase
         ]);
 
         // Tạo Project Manager
-        $this->projectManager = User::create([
+        $this->projectManager = User::factory()->create([
             'name' => 'Project Manager',
             'email' => 'project.manager@test.com',
             'password' => bcrypt('password'),
@@ -58,7 +58,7 @@ class ChangeRequestWorkflowTest extends TestCase
         ]);
 
         // Tạo Client Representative
-        $this->clientRep = User::create([
+        $this->clientRep = User::factory()->create([
             'name' => 'Client Representative',
             'email' => 'client.rep@test.com',
             'password' => bcrypt('password'),

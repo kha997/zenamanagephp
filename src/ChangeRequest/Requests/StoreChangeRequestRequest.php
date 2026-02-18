@@ -37,6 +37,11 @@ class StoreChangeRequestRequest extends FormRequest
                 'string',
                 'max:5000'
             ],
+            'project_id' => [
+                'required',
+                'string',
+                'exists:projects,id'
+            ],
             'impact_days' => [
                 'nullable',
                 'integer',
@@ -137,5 +142,10 @@ class StoreChangeRequestRequest extends FormRequest
         if ($this->has('impact_kpi') && !is_array($this->impact_kpi)) {
             $this->merge(['impact_kpi' => []]);
         }
+
+        $this->merge([
+            'priority' => $this->priority ?? ChangeRequest::PRIORITY_MEDIUM,
+            'visibility' => $this->visibility ?? 'internal'
+        ]);
     }
 }

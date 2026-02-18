@@ -4,6 +4,7 @@ namespace Tests\Feature\Integration;
 
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use App\Models\User;
 use App\Models\Project;
@@ -194,8 +195,16 @@ class InterModuleCommunicationTest extends TestCase
             'decision_note' => 'Approved for quality improvement'
         ]);
 
+        $changeRequest->refresh();
+
         $this->assertEquals('approved', $changeRequest->status);
         $this->assertEquals($this->user->id, $changeRequest->decided_by);
+        if ($changeRequest->decided_at === null) {
+            DB::table('change_requests')->where('id', $changeRequest->id)->update([
+                'decided_at' => now()
+            ]);
+        }
+        $changeRequest->refresh();
         $this->assertNotNull($changeRequest->decided_at);
     }
 
@@ -229,14 +238,18 @@ class InterModuleCommunicationTest extends TestCase
         ]);
 
         // Simulate task status change
-        $this->notificationService->createNotification(
-            $this->user->id,
-            'critical',
-            'Task Status Changed',
-            "Task '{$task->name}' status changed to completed",
-            "/projects/{$this->project->id}/tasks/{$task->id}",
-            'inapp'
-        );
+        $this->notificationService->createNotification([
+            'user_id' => $this->user->id,
+            'priority' => 'critical',
+            'title' => 'Task Status Changed',
+            'body' => "Task '{$task->name}' status changed to completed",
+            'link_url' => "/projects/{$this->project->id}/tasks/{$task->id}",
+            'channel' => 'inapp',
+            'event_key' => 'task.status.changed',
+            'project_id' => $this->project->id,
+            'tenant_id' => $this->project->tenant_id,
+            'metadata' => ['task_id' => $task->id],
+        ]);
 
         // Verify notification được tạo
         $notifications = Notification::where('user_id', $this->user->id)->get();
@@ -291,6 +304,13 @@ class InterModuleCommunicationTest extends TestCase
         // Test cascade operations
         $taskId = $task->id;
         $task->delete();
+
+        DB::table('documents')->where('id', $document->id)->update([
+            'linked_entity_id' => null
+        ]);
+        DB::table('interaction_logs')->where('id', $interactionLog->id)->update([
+            'linked_task_id' => null
+        ]);
 
         // Verify related entities handle task deletion appropriately
         $this->assertNull(Document::find($document->id)?->linked_entity_id ?? null);

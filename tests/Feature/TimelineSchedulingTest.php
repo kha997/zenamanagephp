@@ -38,20 +38,20 @@ class TimelineSchedulingTest extends TestCase
         parent::setUp();
         
         // Create test data
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'status' => 'active'
         ]);
 
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Project Manager',
             'email' => 'pm@test.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
 
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'TIMELINE-001',
             'name' => 'Timeline Test Project',
@@ -481,13 +481,13 @@ class TimelineSchedulingTest extends TestCase
     public function test_timeline_data_is_tenant_isolated(): void
     {
         // Create another tenant
-        $tenant2 = Tenant::create([
+        $tenant2 = Tenant::factory()->create([
             'name' => 'Another Company',
             'slug' => 'another-company',
             'status' => 'active'
         ]);
 
-        $project2 = Project::create([
+        $project2 = Project::factory()->create([
             'tenant_id' => $tenant2->id,
             'code' => 'TIMELINE-002',
             'name' => 'Another Timeline Project',

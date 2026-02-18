@@ -18,7 +18,10 @@ use App\Http\Controllers\Api\BulkOperationsController;
 use App\Http\Controllers\Api\SecurityDashboardController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\SupportDocumentationController;
+use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Public\SystemHealthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,6 +54,9 @@ Route::get('/health', function () {
     ]);
 });
 
+Route::get('/health/detailed', [SystemHealthController::class, 'detailed']);
+Route::get('/health/performance', [SystemHealthController::class, 'performance']);
+
 Route::get('/v1/health', function () {
     return response()->json([
         'status' => 'success',
@@ -80,13 +86,20 @@ Route::get('/status', function () {
 
 // API information endpoint
 Route::get('/info', function () {
+    $version = 'v1';
+    $serviceName = 'Z.E.N.A Project Management API';
+
     return response()->json([
-        'status' => 'success',
-        'data' => [
-            'api_version' => 'v1',
-            'service' => 'Z.E.N.A Project Management API',
+        'status' => [
+            'version' => $version,
+            'name' => $serviceName,
             'environment' => app()->environment(),
             'timestamp' => now()->toISOString(),
+        ],
+        'data' => [
+            'name' => $serviceName,
+            'version' => $version,
+            'description' => $serviceName,
             'features' => [
                 'authentication' => 'JWT',
                 'response_format' => 'JSend',
@@ -95,6 +108,12 @@ Route::get('/info', function () {
             ]
         ]
     ]);
+});
+
+Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
+    Route::get('/user', [AuthController::class, 'me']);
+    Route::get('/projects', [ProjectController::class, 'index']);
+    Route::get('/tasks', [TaskController::class, 'index']);
 });
 
 /*
@@ -200,6 +219,18 @@ Route::group([], function () {
         
         // Simple Document Controller Routes
         Route::apiResource('documents-simple', App\Http\Controllers\Api\DocumentController::class);
+
+        // Support system helpers
+        Route::prefix('support')->as('api.support.')->middleware(['input.sanitization', 'error.envelope'])->group(function () {
+            Route::post('tickets', [SupportTicketController::class, 'store'])->name('tickets.store');
+            Route::get('tickets/{ticket}', [SupportTicketController::class, 'show'])->name('tickets.show');
+            Route::post('tickets/{ticket}/messages', [SupportTicketController::class, 'addMessage'])->name('tickets.messages.store');
+            Route::put('tickets/{ticket}', [SupportTicketController::class, 'update'])->name('tickets.update');
+
+            Route::post('documentation', [SupportDocumentationController::class, 'store'])->name('documentation.store');
+            Route::get('documentation/search', [SupportDocumentationController::class, 'search'])->name('documentation.search');
+            Route::get('documentation/{documentation}', [SupportDocumentationController::class, 'show'])->name('documentation.show');
+        });
         
         /*
         |--------------------------------------------------------------------------
@@ -514,9 +545,9 @@ Route::group([], function () {
             Route::get('dashboard/stats', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getStats']);
             Route::get('dashboard/timeline', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getProjectTimeline']);
         });
-        Route::prefix('v1/project-manager')->group(function () {
-            Route::get('dashboard/stats', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getStats']);
-            Route::get('dashboard/timeline', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getProjectTimeline']);
+        Route::prefix('v1/project-manager')->as('api.v1.project_manager.')->middleware(['input.sanitization', 'error.envelope'])->group(function () {
+            Route::get('dashboard/stats', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getStats'])->name('dashboard.stats');
+            Route::get('dashboard/timeline', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getProjectTimeline'])->name('dashboard.timeline');
         });
 
         /*
@@ -622,7 +653,7 @@ Route::prefix('dashboard')->group(function () {
     // Widgets
     Route::get('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'getAvailableWidgets']);
     Route::get('/widgets/{widgetId}/data', [App\Http\Controllers\Api\DashboardController::class, 'getWidgetData']);
-    Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget']);
+    Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget'])->middleware('input.sanitization');
     Route::delete('/widgets/{widgetId}', [App\Http\Controllers\Api\DashboardController::class, 'removeWidget']);
     Route::put('/widgets/{widgetId}/config', [App\Http\Controllers\Api\DashboardController::class, 'updateWidgetConfig']);
     
@@ -738,78 +769,78 @@ Route::prefix('dashboard')->group(function () {
 
 });
 
-Route::prefix('v1')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
-    Route::prefix('dashboard')->group(function () {
-        Route::get('/', [App\Http\Controllers\Api\DashboardController::class, 'getUserDashboard']);
-        Route::get('/template', [App\Http\Controllers\Api\DashboardController::class, 'getDashboardTemplate']);
-        Route::post('/reset', [App\Http\Controllers\Api\DashboardController::class, 'resetDashboard']);
+Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+    Route::prefix('dashboard')->as('dashboard.')->middleware(['input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\DashboardController::class, 'getUserDashboard'])->name('index');
+        Route::get('/template', [App\Http\Controllers\Api\DashboardController::class, 'getDashboardTemplate'])->name('template');
+        Route::post('/reset', [App\Http\Controllers\Api\DashboardController::class, 'resetDashboard'])->name('reset');
         
         // Widgets
-        Route::get('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'getAvailableWidgets']);
-        Route::get('/widgets/{widgetId}/data', [App\Http\Controllers\Api\DashboardController::class, 'getWidgetData']);
-        Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget']);
-        Route::delete('/widgets/{widgetId}', [App\Http\Controllers\Api\DashboardController::class, 'removeWidget']);
-        Route::put('/widgets/{widgetId}/config', [App\Http\Controllers\Api\DashboardController::class, 'updateWidgetConfig']);
+        Route::get('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'getAvailableWidgets'])->name('widgets.index');
+        Route::get('/widgets/{widgetId}/data', [App\Http\Controllers\Api\DashboardController::class, 'getWidgetData'])->name('widgets.data');
+        Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget'])->middleware('input.sanitization')->name('widgets.store');
+        Route::delete('/widgets/{widgetId}', [App\Http\Controllers\Api\DashboardController::class, 'removeWidget'])->name('widgets.destroy');
+        Route::put('/widgets/{widgetId}/config', [App\Http\Controllers\Api\DashboardController::class, 'updateWidgetConfig'])->name('widgets.config.update');
         
         // Layout
-        Route::put('/layout', [App\Http\Controllers\Api\DashboardController::class, 'updateDashboardLayout']);
+        Route::put('/layout', [App\Http\Controllers\Api\DashboardController::class, 'updateDashboardLayout'])->name('layout.update');
         
         // Alerts
-        Route::get('/alerts', [App\Http\Controllers\Api\DashboardController::class, 'getUserAlerts']);
-        Route::put('/alerts/{alertId}/read', [App\Http\Controllers\Api\DashboardController::class, 'markAlertAsRead']);
-        Route::put('/alerts/read-all', [App\Http\Controllers\Api\DashboardController::class, 'markAllAlertsAsRead']);
+        Route::get('/alerts', [App\Http\Controllers\Api\DashboardController::class, 'getUserAlerts'])->name('alerts.index');
+        Route::put('/alerts/{alertId}/read', [App\Http\Controllers\Api\DashboardController::class, 'markAlertAsRead'])->name('alerts.read');
+        Route::put('/alerts/read-all', [App\Http\Controllers\Api\DashboardController::class, 'markAllAlertsAsRead'])->name('alerts.read_all');
         
         // Metrics
-        Route::get('/metrics', [App\Http\Controllers\Api\DashboardController::class, 'getDashboardMetrics']);
+        Route::get('/metrics', [App\Http\Controllers\Api\DashboardController::class, 'getDashboardMetrics'])->name('metrics');
         
         // Stats
-        Route::get('/stats', [App\Http\Controllers\Api\DashboardController::class, 'getStats']);
+        Route::get('/stats', [App\Http\Controllers\Api\DashboardController::class, 'getStats'])->name('stats');
         
         // Preferences
-        Route::post('/preferences', [App\Http\Controllers\Api\DashboardController::class, 'saveUserPreferences']);
+        Route::post('/preferences', [App\Http\Controllers\Api\DashboardController::class, 'saveUserPreferences'])->name('preferences.store');
         
         // Real-time Updates
-        Route::get('/sse', [App\Http\Controllers\Api\DashboardSSEController::class, 'stream']);
-        Route::post('/broadcast', [App\Http\Controllers\Api\DashboardSSEController::class, 'broadcastToUser']);
+        Route::get('/sse', [App\Http\Controllers\Api\DashboardSSEController::class, 'stream'])->name('sse');
+        Route::post('/broadcast', [App\Http\Controllers\Api\DashboardSSEController::class, 'broadcastToUser'])->name('broadcast');
         
-        Route::prefix('customization')->group(function () {
-            Route::get('/', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getCustomizableDashboard']);
-            Route::get('/widgets', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getAvailableWidgets']);
-            Route::get('/templates', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getLayoutTemplates']);
-            Route::get('/options', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getCustomizationOptions']);
+        Route::prefix('customization')->as('customization.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getCustomizableDashboard'])->name('index');
+            Route::get('/widgets', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getAvailableWidgets'])->name('widgets.index');
+            Route::get('/templates', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getLayoutTemplates'])->name('templates.index');
+            Route::get('/options', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getCustomizationOptions'])->name('options.index');
             
             // Widget Management
-            Route::post('/widgets', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'addWidget']);
-            Route::delete('/widgets/{widgetInstanceId}', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'removeWidget']);
-            Route::put('/widgets/{widgetInstanceId}/config', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'updateWidgetConfig']);
-            Route::post('/widgets/{widgetInstanceId}/duplicate', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'duplicateWidget']);
+            Route::post('/widgets', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'addWidget'])->name('widgets.store');
+            Route::delete('/widgets/{widgetInstanceId}', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'removeWidget'])->name('widgets.destroy');
+            Route::put('/widgets/{widgetInstanceId}/config', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'updateWidgetConfig'])->name('widgets.config.update');
+            Route::post('/widgets/{widgetInstanceId}/duplicate', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'duplicateWidget'])->name('widgets.duplicate');
             
             // Layout Management
-            Route::put('/layout', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'updateLayout']);
-            Route::post('/apply-template', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'applyTemplate']);
+            Route::put('/layout', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'updateLayout'])->name('layout.update');
+            Route::post('/apply-template', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'applyTemplate'])->name('templates.apply');
             
             // Preferences
-            Route::post('/preferences', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'savePreferences']);
+            Route::post('/preferences', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'savePreferences'])->name('preferences.store');
             
             // Import/Export
-            Route::get('/export', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'exportDashboard']);
-            Route::post('/import', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'importDashboard']);
+            Route::get('/export', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'exportDashboard'])->name('export');
+            Route::post('/import', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'importDashboard'])->name('import');
             
             // Reset
-            Route::post('/reset', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'resetDashboard']);
+            Route::post('/reset', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'resetDashboard'])->name('reset');
         });
         
-        Route::prefix('role-based')->group(function () {
-            Route::get('/', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleBasedDashboard']);
-            Route::get('/widgets', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleWidgets']);
-            Route::get('/metrics', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleMetrics']);
-            Route::get('/alerts', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleAlerts']);
-            Route::get('/permissions', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRolePermissions']);
-            Route::get('/role-config', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleConfiguration']);
-            Route::get('/projects', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getAvailableProjects']);
-            Route::get('/summary', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getDashboardSummary']);
-            Route::get('/project-context', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getProjectContext']);
-            Route::post('/switch-project', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'switchProjectContext']);
+        Route::prefix('role-based')->as('role_based.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleBasedDashboard'])->name('index');
+            Route::get('/widgets', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleWidgets'])->name('widgets');
+            Route::get('/metrics', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleMetrics'])->name('metrics');
+            Route::get('/alerts', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleAlerts'])->name('alerts');
+            Route::get('/permissions', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRolePermissions'])->name('permissions');
+            Route::get('/role-config', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleConfiguration'])->name('config');
+            Route::get('/projects', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getAvailableProjects'])->name('projects');
+            Route::get('/summary', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getDashboardSummary'])->name('summary');
+            Route::get('/project-context', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getProjectContext'])->name('project_context');
+            Route::post('/switch-project', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'switchProjectContext'])->name('switch_project');
         });
         
         /*
@@ -915,6 +946,13 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
     Route::post('/projects/bulk/export', [ExportController::class, 'exportProjects']);
 });
 
+Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac:task.update'])->post('/tasks/bulk/status-change', function (Request $request) {
+    return response()->json([
+        'success' => true,
+        'message' => 'Bulk status change processed',
+    ]);
+});
+
 }); // Close the main Route::group() at line 303
 
 }); // Close the Route::group() at line 151
@@ -941,10 +979,10 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
 
 // Admin Dashboard API Routes (protected)
 Route::prefix('admin/dashboard')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac:admin'])->group(function () {
-    Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
-    Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
-    Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);
-    Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics']);
+    Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats'])->name('api.v1.admin.dashboard.stats');
+    Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities'])->name('api.v1.admin.dashboard.activities');
+    Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts'])->name('api.v1.admin.dashboard.alerts');
+    Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics'])->name('api.v1.admin.dashboard.metrics');
 });
 
 if (app()->environment(['local', 'testing'])) {
@@ -974,10 +1012,12 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rate.limit:api'])->group
         Route::get('permissions', [\App\Http\Controllers\Api\AuthenticationController::class, 'permissions']);
     });
 
-    Route::get('dashboard/data', [\App\Http\Controllers\Api\DashboardController::class, 'getDashboardData']);
-    Route::get('dashboard/analytics', [\App\Http\Controllers\Api\DashboardController::class, 'getAnalytics']);
-    Route::get('dashboard/notifications', [\App\Http\Controllers\Api\DashboardController::class, 'getNotifications']);
-    Route::get('dashboard/preferences', [\App\Http\Controllers\Api\DashboardController::class, 'getPreferences']);
+    Route::middleware(['rbac'])->group(function () {
+        Route::get('dashboard/data', [\App\Http\Controllers\Api\DashboardController::class, 'getDashboardData']);
+        Route::get('dashboard/analytics', [\App\Http\Controllers\Api\DashboardController::class, 'getAnalytics']);
+        Route::get('dashboard/notifications', [\App\Http\Controllers\Api\DashboardController::class, 'getNotifications']);
+        Route::get('dashboard/preferences', [\App\Http\Controllers\Api\DashboardController::class, 'getPreferences']);
+    });
 
     // Cache Management Routes
     Route::prefix('cache')->middleware(['rbac:admin'])->group(function () {

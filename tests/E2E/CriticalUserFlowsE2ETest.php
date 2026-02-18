@@ -264,7 +264,7 @@ class CriticalUserFlowsE2ETest extends TestCase
         $this->apiAs($this->user, $this->tenant);
 
         // Test 404 error
-        $response = $this->getJson('/api/v1/nonexistent-endpoint');
+        $response = $this->getJson('/api/v1/nonexistent-endpoint'); // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
         $response->assertStatus(404);
         $response->assertJsonStructure([
             'error' => [

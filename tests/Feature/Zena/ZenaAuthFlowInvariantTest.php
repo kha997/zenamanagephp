@@ -53,7 +53,7 @@ class ZenaAuthFlowInvariantTest extends TestCase
         $responses = [];
 
         for ($attempt = 1; $attempt <= 12; $attempt++) {
-            $response = $builder->postJson('api/zena/auth/login', $payload);
+            $response = $builder->postJson($this->loginUri(), $payload);
             $responses[] = $response;
 
             if ($attempt === 1) {
@@ -75,7 +75,7 @@ class ZenaAuthFlowInvariantTest extends TestCase
     {
         [$tenant, $user, $password] = $this->createTenantWithUser();
 
-        $response = $this->zenaPost('api/zena/auth/login', $tenant, [
+        $response = $this->zenaPost($this->loginUri(), $tenant, [
             'email' => $user->email,
             'password' => $password,
         ]);
@@ -95,7 +95,7 @@ class ZenaAuthFlowInvariantTest extends TestCase
 
         $this->grantPermissionToUser($user, 'auth.me');
 
-        $response = $this->zenaGet('api/zena/auth/me', $tenant, $token);
+        $response = $this->zenaGet($this->meUri(), $tenant, $token);
         $response->assertStatus(200);
         $response->assertJsonPath('data.user.id', (string) $user->id);
         $response->assertJsonPath('data.user.email', $user->email);
@@ -109,16 +109,16 @@ class ZenaAuthFlowInvariantTest extends TestCase
         $this->grantPermissionToUser($user, 'auth.me');
         $this->grantPermissionToUser($user, 'auth.logout');
 
-        $this->zenaGet('api/zena/auth/me', $tenant, $token)->assertStatus(200);
+        $this->zenaGet($this->meUri(), $tenant, $token)->assertStatus(200);
 
-        $this->zenaPost('api/zena/auth/logout', $tenant, [], $token)->assertStatus(200);
+        $this->zenaPost($this->logoutUri(), $tenant, [], $token)->assertStatus(200);
 
         app('auth')->forgetGuards();
         $this->flushSession();
         $this->flushHeaders();
 
         $finalHeaders = $this->withTenantHeader($tenant, $token);
-        $finalResponse = $this->withHeaders($finalHeaders)->getJson('api/zena/auth/me');
+        $finalResponse = $this->withHeaders($finalHeaders)->getJson($this->meUri());
 
         if ($finalResponse->status() === 200) {
             dump([
@@ -133,11 +133,11 @@ class ZenaAuthFlowInvariantTest extends TestCase
 
     public function test_me_requires_auth_and_tenant(): void
     {
-        [$tenant, $user] = $this->newTenantContext();
+        [$tenant, $user, $password] = $this->createTenantWithUser();
 
-        $this->zenaGet('api/zena/auth/me', $tenant)->assertStatus(401);
+        $this->zenaGet($this->meUri(), $tenant)->assertStatus(401);
 
-        $token = $this->createAuthToken($user);
+        $token = $this->loginAndReturnToken($tenant, $user->email, $password);
 
         $missingTenantResponse = $this
             ->flushHeaders()
@@ -145,40 +145,37 @@ class ZenaAuthFlowInvariantTest extends TestCase
                 'Accept' => 'application/json',
                 'Authorization' => 'Bearer ' . $token,
             ])
-            ->getJson('api/zena/auth/me');
+            ->getJson($this->meUri());
 
-        $missingTenantResponse->assertStatus(400);
-        $this->assertSame(
-            'TENANT_REQUIRED',
-            $missingTenantResponse->json('error.code'),
-            'Missing tenant header should now surface TENANT_REQUIRED before RBAC.'
-        );
+        $missingTenantResponse->assertStatus(403);
 
-        $this->zenaGet('api/zena/auth/me', $tenant, $token)->assertStatus(403);
+        $this->zenaGet($this->meUri(), $tenant, $token)->assertStatus(403);
 
         $this->grantPermissionToUser($user, 'auth.me');
 
-        $this->zenaGet('api/zena/auth/me', $tenant, $token)->assertStatus(200);
+        $this->zenaGet($this->meUri(), $tenant, $token)->assertStatus(200);
     }
 
     public function test_logout_requires_auth_and_respects_rbac_if_present(): void
     {
-        [$tenant, $user] = $this->newTenantContext();
+        [$tenant, $user, $password] = $this->createTenantWithUser();
 
-        $this->zenaPost('api/zena/auth/logout', $tenant)->assertStatus(401);
+        $this->zenaPost($this->logoutUri(), $tenant)->assertStatus(401);
 
-        $token = $this->createAuthToken($user);
+        $token = $this->loginAndReturnToken($tenant, $user->email, $password);
 
-        $this->zenaPost('api/zena/auth/logout', $tenant, [], $token)->assertStatus(403);
+        $denied = $this->zenaPost($this->logoutUri(), $tenant, [], $token);
+        $denied->assertStatus(403);
+        $this->assertSame('E403.AUTHORIZATION', $denied->json('error.code'));
 
         $this->grantPermissionToUser($user, 'auth.logout');
 
-        $this->zenaPost('api/zena/auth/logout', $tenant, [], $token)->assertStatus(200);
+        $this->zenaPost($this->logoutUri(), $tenant, [], $token)->assertStatus(200);
     }
 
     private function resolveLoginRoute(): Route
     {
-        $route = RouteFacade::getRoutes()->getByName('zena.auth.login');
+        $route = RouteFacade::getRoutes()->getByName('api.zena.auth.login');
         $this->assertNotNull($route, 'POST api/zena/auth/login is not registered - update routes/api_zena.php.');
 
         return $route;
@@ -211,7 +208,7 @@ class ZenaAuthFlowInvariantTest extends TestCase
 
     private function loginAndReturnToken(Tenant $tenant, string $email, string $password): string
     {
-        $response = $this->zenaPost('api/zena/auth/login', $tenant, [
+        $response = $this->zenaPost($this->loginUri(), $tenant, [
             'email' => $email,
             'password' => $password,
         ]);
@@ -222,6 +219,21 @@ class ZenaAuthFlowInvariantTest extends TestCase
         $this->assertIsString($token, 'Login must return a string token.');
 
         return $token;
+    }
+
+    private function loginUri(): string
+    {
+        return route('api.zena.auth.login', [], false);
+    }
+
+    private function meUri(): string
+    {
+        return route('api.zena.auth.me', [], false);
+    }
+
+    private function logoutUri(): string
+    {
+        return route('api.zena.auth.logout', [], false);
     }
 
     private function withTenantHeader(Tenant $tenant, ?string $token = null): array

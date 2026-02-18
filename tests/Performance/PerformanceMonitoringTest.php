@@ -261,7 +261,7 @@ class PerformanceMonitoringTest extends TestCase
         $startTime = microtime(true);
         
         // Test error response performance
-        $response = $this->getJson('/api/v1/nonexistent-endpoint');
+        $response = $this->getJson('/api/v1/nonexistent-endpoint'); // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
         
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000;

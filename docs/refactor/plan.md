@@ -303,7 +303,8 @@ php artisan auth:clear-resets
 ### **Refactoring Commands**
 ```bash
 # Route Analysis
-php artisan route:list --columns=method,uri,name,middleware
+php artisan route:list --path=login
+php artisan route:list --path=login --json # if supported; else inspect routes/web.php
 php artisan route:list --path=admin
 php artisan route:list --path=app
 
@@ -400,3 +401,5 @@ php artisan tinker
 
 **Status:** ✅ Plan Complete  
 **Next Action:** Begin PR #1 - Route Normalization
+
+

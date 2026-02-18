@@ -32,7 +32,7 @@ class MultiTenantIsolationTest extends TestCase
         parent::setUp();
         
         // Tạo Tenant A
-        $this->tenantA = Tenant::create([
+        $this->tenantA = Tenant::factory()->create([
             'name' => 'Company A',
             'slug' => 'company-a',
             'domain' => 'companya.com',
@@ -42,7 +42,7 @@ class MultiTenantIsolationTest extends TestCase
         ]);
 
         // Tạo Tenant B
-        $this->tenantB = Tenant::create([
+        $this->tenantB = Tenant::factory()->create([
             'name' => 'Company B',
             'slug' => 'company-b',
             'domain' => 'companyb.com',
@@ -52,7 +52,7 @@ class MultiTenantIsolationTest extends TestCase
         ]);
 
         // Tạo Users cho Tenant A
-        $this->userA1 = User::create([
+        $this->userA1 = User::factory()->create([
             'name' => 'User A1',
             'email' => 'user.a1@companya.com',
             'password' => bcrypt('password'),
@@ -61,7 +61,7 @@ class MultiTenantIsolationTest extends TestCase
             'profile_data' => '{}',
         ]);
 
-        $this->userA2 = User::create([
+        $this->userA2 = User::factory()->create([
             'name' => 'User A2',
             'email' => 'user.a2@companya.com',
             'password' => bcrypt('password'),
@@ -71,7 +71,7 @@ class MultiTenantIsolationTest extends TestCase
         ]);
 
         // Tạo User cho Tenant B
-        $this->userB1 = User::create([
+        $this->userB1 = User::factory()->create([
             'name' => 'User B1',
             'email' => 'user.b1@companyb.com',
             'password' => bcrypt('password'),
@@ -81,7 +81,7 @@ class MultiTenantIsolationTest extends TestCase
         ]);
 
         // Tạo Projects cho mỗi tenant
-        $this->projectA = Project::create([
+        $this->projectA = Project::factory()->create([
             'name' => 'Project A',
             'code' => 'PROJ-A-001',
             'description' => 'Project for Company A',
@@ -90,7 +90,7 @@ class MultiTenantIsolationTest extends TestCase
             'created_by' => $this->userA1->id,
         ]);
 
-        $this->projectB = Project::create([
+        $this->projectB = Project::factory()->create([
             'name' => 'Project B',
             'code' => 'PROJ-B-001',
             'description' => 'Project for Company B',
@@ -159,7 +159,7 @@ class MultiTenantIsolationTest extends TestCase
     public function test_cross_tenant_access_prevention(): void
     {
         // User A1 không thể tạo project cho Tenant B
-        $crossTenantProject = Project::create([
+        $crossTenantProject = Project::factory()->create([
             'name' => 'Cross Tenant Project',
             'code' => 'CROSS-001',
             'description' => 'This should not be allowed',

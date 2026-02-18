@@ -3,6 +3,7 @@
 namespace Src\ChangeRequest\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Src\ChangeRequest\Models\ChangeRequest;
 use Src\CoreProject\Resources\ProjectResource;
 use Src\RBAC\Resources\UserResource;
 
@@ -111,5 +112,42 @@ class ChangeRequestResource extends JsonResource
         }
         
         return $this->decided_at->diffInDays(now());
+    }
+
+    private function canBeEdited(): bool
+    {
+        return $this->status === ChangeRequest::STATUS_DRAFT;
+    }
+
+    private function canBeSubmitted(): bool
+    {
+        return $this->status === ChangeRequest::STATUS_DRAFT;
+    }
+
+    private function canBeDecided(): bool
+    {
+        return $this->status === ChangeRequest::STATUS_AWAITING_APPROVAL;
+    }
+
+    private function isDecided(): bool
+    {
+        return in_array(
+            $this->status,
+            [
+                ChangeRequest::STATUS_APPROVED,
+                ChangeRequest::STATUS_REJECTED,
+            ],
+            true
+        );
+    }
+
+    private function isApproved(): bool
+    {
+        return $this->status === ChangeRequest::STATUS_APPROVED;
+    }
+
+    private function isRejected(): bool
+    {
+        return $this->status === ChangeRequest::STATUS_REJECTED;
     }
 }

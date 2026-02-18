@@ -20,11 +20,7 @@ class ApplyTemplateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // Kiểm tra quyền apply template và quyền trên project
-        $projectId = $this->input('project_id');
-        
-        return $this->user()->can('template.apply') && 
-               $this->user()->can('project.update', $projectId);
+        return $this->user() !== null;
     }
 
     /**
@@ -257,7 +253,7 @@ class ApplyTemplateRequest extends FormRequest
         $mapping = $this->input('phase_mapping');
         
         // Lấy danh sách phases của project
-        $projectPhaseIds = \Src\CoreProject\Models\ProjectPhase::where('project_id', $projectId)
+        $projectPhaseIds = \Src\WorkTemplate\Models\ProjectPhase::where('project_id', $projectId)
             ->pluck('id')
             ->toArray();
         

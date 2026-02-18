@@ -100,7 +100,7 @@ class ProjectTaskController extends Controller
             ->find($taskId);
         
         if (!$task) {
-            return JSendResponse::error('Task not found', 404);
+            return JSendResponse::error('Task không tồn tại trong project này', 404);
         }
         
         return JSendResponse::success(
@@ -121,7 +121,7 @@ class ProjectTaskController extends Controller
         $task = ProjectTask::byProject($projectId)->find($taskId);
         
         if (!$task) {
-            return JSendResponse::error('Task not found', 404);
+            return JSendResponse::error('Task không tồn tại trong project này', 404);
         }
         
         try {
@@ -155,21 +155,28 @@ class ProjectTaskController extends Controller
         $task = ProjectTask::byProject($projectId)->find($taskId);
         
         if (!$task) {
-            return JSendResponse::error('Task not found', 404);
+            return JSendResponse::error('Task không tồn tại trong project này', 404);
         }
         
         if (!$task->hasConditionalTag()) {
-            return JSendResponse::error('Task does not have conditional tag', 400);
+            return JSendResponse::error('Task này không có conditional tag', 400);
         }
         
         try {
-            $result = $this->taskService->toggleConditionalVisibility(
+            $isVisible = $request->has('is_visible')
+                ? $request->boolean('is_visible')
+                : $task->is_hidden;
+
+            $this->taskService->toggleConditionalVisibility(
                 $task,
-                $request->boolean('is_visible'),
+                $isVisible,
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
-            
-            return JSendResponse::success($result);
+
+            return JSendResponse::success([
+                'task' => new ProjectTaskResource($task->fresh()),
+                'message' => 'Conditional visibility updated'
+            ]);
         } catch (\Exception $e) {
             return JSendResponse::error(
                 'Failed to toggle task visibility: ' . $e->getMessage(),
@@ -235,6 +242,29 @@ class ProjectTaskController extends Controller
     }
 
     /**
+     * Lấy tasks có conditional tags và summary
+     */
+    public function conditionalTasks(string $projectId): JsonResponse
+    {
+        $tasks = ProjectTask::with('phase')
+            ->byProject($projectId)
+            ->whereNotNull('conditional_tag')
+            ->get();
+
+        $summary = [
+            'total_conditional_tasks' => $tasks->count(),
+            'hidden_tasks' => $tasks->where('is_hidden', true)->count(),
+            'visible_tasks' => $tasks->where('is_hidden', false)->count(),
+            'conditional_tags' => $tasks->pluck('conditional_tag')->filter()->unique()->values(),
+        ];
+
+        return $this->successResponse([
+            'tasks' => ProjectTaskResource::collection($tasks),
+            'summary' => $summary,
+        ], 'Conditional tasks retrieved successfully');
+    }
+
+    /**
      * Lấy statistics của tasks trong project
      * 
      * @param string $projectId
@@ -248,5 +278,13 @@ class ProjectTaskController extends Controller
             $stats,
             'Task statistics retrieved successfully'
         );
+    }
+
+    /**
+     * Convenience helper for success responses.
+     */
+    private function successResponse($data, string $message = 'Success'): JsonResponse
+    {
+        return JSendResponse::success($data, $message);
     }
 }

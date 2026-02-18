@@ -17,10 +17,11 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\Traits\AuthenticationTestTrait;
+use Tests\Traits\RouteNameTrait;
 
 class IntegrationTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     protected User $user;
     protected ZenaProject $project;
@@ -62,7 +63,7 @@ class IntegrationTest extends TestCase
             'location' => 'Test Location'
         ];
 
-        $response = $this->apiPost('/api/zena/projects', $projectData);
+        $response = $this->apiPost($this->zena('projects.store'), $projectData);
 
         $response->assertStatus(201);
         $project = $response->json('data');
@@ -79,7 +80,7 @@ class IntegrationTest extends TestCase
             'end_date' => '2024-01-31'
         ];
 
-        $response = $this->apiPost('/api/zena/tasks', $taskData);
+        $response = $this->apiPost($this->zena('tasks.store'), $taskData);
 
         $response->assertStatus(201);
         $task = $response->json('data');
@@ -94,7 +95,7 @@ class IntegrationTest extends TestCase
             'location' => 'Building A'
         ];
 
-        $response = $this->apiPost('/api/zena/rfis', $rfiData);
+        $response = $this->apiPost($this->zena('rfis.store'), $rfiData);
 
         $response->assertStatus(201);
         $rfi = $response->json('data');
@@ -109,7 +110,7 @@ class IntegrationTest extends TestCase
             'specification_section' => 'Section 1'
         ];
 
-        $response = $this->apiPost('/api/zena/submittals', $submittalData);
+        $response = $this->apiPost($this->zena('submittals.store'), $submittalData);
 
         $response->assertStatus(201);
         $submittal = $response->json('data');
@@ -128,7 +129,7 @@ class IntegrationTest extends TestCase
             'priority' => 'high'
         ];
 
-        $response = $this->apiPost('/api/zena/change-requests', $changeRequestData);
+        $response = $this->apiPost($this->zena('change-requests.store'), $changeRequestData);
 
         $response->assertStatus(201);
         $changeRequest = $response->json('data');
@@ -146,7 +147,7 @@ class IntegrationTest extends TestCase
             'file' => $file
         ];
 
-        $response = $this->apiPost('/api/zena/documents', $documentData);
+        $response = $this->apiPost($this->zena('documents.store'), $documentData);
 
         $response->assertStatus(201);
         $document = $response->json('data');
@@ -160,7 +161,7 @@ class IntegrationTest extends TestCase
             'priority' => 'normal'
         ];
 
-        $response = $this->apiPost('/api/zena/notifications', $notificationData);
+        $response = $this->apiPost($this->zena('notifications.store'), $notificationData);
 
         $response->assertStatus(201);
         $notification = $response->json('data');
@@ -189,7 +190,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Assign RFI
-        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/assign", [
+        $response = $this->apiPost($this->zena('rfis.assign', ['id' => $rfi->id]), [
             'assigned_to' => $this->user->id,
             'assignment_notes' => 'Please review this RFI'
         ]);
@@ -201,7 +202,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Respond to RFI
-        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/respond", [
+        $response = $this->apiPost($this->zena('rfis.respond', ['id' => $rfi->id]), [
             'response' => 'This is the response to the RFI',
             'response_notes' => 'Additional notes',
             'status' => 'answered'
@@ -214,7 +215,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Close RFI
-        $response = $this->apiPost("/api/zena/rfis/{$rfi->id}/close");
+        $response = $this->apiPost($this->zena('rfis.close', ['id' => $rfi->id]));
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('rfis', [
@@ -236,7 +237,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Submit Submittal
-        $response = $this->apiPost("/api/zena/submittals/{$submittal->id}/submit");
+        $response = $this->apiPost($this->zena('submittals.submit', ['id' => $submittal->id]));
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('submittals', [
@@ -245,7 +246,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Review Submittal
-        $response = $this->apiPost("/api/zena/submittals/{$submittal->id}/review", [
+        $response = $this->apiPost($this->zena('submittals.review', ['id' => $submittal->id]), [
             'review_notes' => 'This submittal looks good',
             'status' => 'approved'
         ]);
@@ -271,7 +272,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Submit Change Request
-        $response = $this->apiPost("/api/zena/change-requests/{$changeRequest->id}/submit");
+        $response = $this->apiPost($this->zena('change-requests.submit', ['id' => $changeRequest->id]));
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('change_requests', [
@@ -280,7 +281,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Approve Change Request
-        $response = $this->apiPost("/api/zena/change-requests/{$changeRequest->id}/approve", [
+        $response = $this->apiPost($this->zena('change-requests.approve', ['id' => $changeRequest->id]), [
             'approved_cost' => 75000,
             'approved_schedule_days' => 0,
             'approval_comments' => 'Approved with modifications'
@@ -293,7 +294,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Implement Change Request
-        $response = $this->apiPost("/api/zena/change-requests/{$changeRequest->id}/apply", [
+        $response = $this->apiPost($this->zena('change-requests.apply', ['id' => $changeRequest->id]), [
             'implementation_notes' => 'Change has been implemented successfully'
         ]);
 
@@ -325,7 +326,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Add dependency
-        $response = $this->apiPost("/api/zena/tasks/{$task2->id}/dependencies", [
+        $response = $this->apiPost($this->zena('tasks.add-dependency', ['id' => $task2->id]), [
             'dependency_id' => $task1->id
         ]);
 
@@ -337,14 +338,14 @@ class IntegrationTest extends TestCase
         ]);
 
         // Complete task1
-        $response = $this->apiPatch("/api/zena/tasks/{$task1->id}/status", [
+        $response = $this->apiPatch($this->zena('tasks.update-status', ['id' => $task1->id]), [
             'status' => 'done'
         ]);
 
         $response->assertStatus(200);
 
         // Start task2
-        $response = $this->apiPatch("/api/zena/tasks/{$task2->id}/status", [
+        $response = $this->apiPatch($this->zena('tasks.update-status', ['id' => $task2->id]), [
             'status' => 'in_progress'
         ]);
 
@@ -369,7 +370,7 @@ class IntegrationTest extends TestCase
             'file' => $file
         ];
 
-        $response = $this->apiPost('/api/zena/documents', $documentData);
+        $response = $this->apiPost($this->zena('documents.store'), $documentData);
 
         $response->assertStatus(201);
         $document = $response->json('data');
@@ -379,7 +380,7 @@ class IntegrationTest extends TestCase
             'updated-document.pdf',
             "%PDF-1.4\n%Updated version content for integration test.\n"
         );
-        $response = $this->apiPost("/api/v1/documents/{$document['id']}/versions", [
+        $response = $this->apiPost($this->namedRoute('v1.documents.versions.store', ['id' => $document['id']]), [
             'file' => $newFile,
             'version' => 2,
             'change_notes' => 'Updated with new specifications'
@@ -389,7 +390,7 @@ class IntegrationTest extends TestCase
         $version = $response->json('data');
 
         // Get versions
-        $response = $this->apiGet("/api/v1/documents/{$document['id']}/versions");
+        $response = $this->apiGet($this->namedRoute('v1.documents.versions.index', ['id' => $document['id']]));
 
         $response->assertStatus(200);
         $versions = $response->json('data');
@@ -408,14 +409,14 @@ class IntegrationTest extends TestCase
         ]);
 
         // Mark as read
-        $response = $this->apiPut("/api/zena/notifications/{$notification->id}/read");
+        $response = $this->apiPut($this->zena('notifications.mark-read', ['id' => $notification->id]));
 
         $response->assertStatus(200);
         $notification->refresh();
         $this->assertNotNull($notification->read_at);
 
         // Get unread count
-        $response = $this->apiGet('/api/zena/notifications/stats/count');
+        $response = $this->apiGet($this->zena('notifications.unread-count'));
 
         $response->assertStatus(200);
         $this->assertEquals(0, $response->json('data.count'));

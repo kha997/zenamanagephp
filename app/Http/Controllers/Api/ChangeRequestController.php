@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\ChangeRequest;
 use App\Models\Project;
+use App\Services\ErrorEnvelopeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +31,13 @@ class ChangeRequestController extends BaseApiController
 
             $tenantId = $this->resolveTenantId($request);
             if (!$tenantId) {
-                return $this->errorResponse('Tenant context missing', 400);
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
             }
 
             $query = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
@@ -86,7 +93,13 @@ class ChangeRequestController extends BaseApiController
 
             $tenantId = $this->resolveTenantId($request);
             if (!$tenantId) {
-                return $this->errorResponse('Tenant context missing', 400);
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
             }
 
             $validator = Validator::make($request->all(), [

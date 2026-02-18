@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\Notification\Models\NotificationRule;
 use Src\Notification\Models\Notification;
 use Src\CoreProject\Models\Project;
+use Illuminate\Support\Str;
 use App\Models\User;
 
 /**
@@ -20,7 +21,12 @@ class NotificationRuleFactory extends Factory
     public function definition(): array
     {
         return [
+            'id' => (string) Str::ulid(),
             'user_id' => User::factory(),
+            'tenant_id' => function (array $attributes) {
+                $user = User::find($attributes['user_id']);
+                return $user ? $user->tenant_id : null;
+            },
             'project_id' => $this->faker->optional(0.6)->randomElement([null, Project::factory()]),
             'event_key' => $this->faker->randomElement(NotificationRule::VALID_EVENT_KEYS),
             'min_priority' => $this->faker->randomElement(Notification::VALID_PRIORITIES),

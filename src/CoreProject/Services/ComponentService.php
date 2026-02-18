@@ -78,7 +78,7 @@ class ComponentService
             $tenantId = (string) (session('tenant_id') ?? 'system');
 
             // Dispatch event for component creation
-            Event::dispatch(new ComponentProgressUpdated(
+            $creationEvent = new ComponentProgressUpdated(
                 $component->id,
                 $projectId,
                 $this->resolveActorId(),
@@ -89,7 +89,9 @@ class ComponentService
                 $component->actual_cost, // new cost
                 ['progress_percent', 'actual_cost'], // changed fields
                 now()
-            ));
+            );
+            $creationEvent->component = $component;
+            Event::dispatch($creationEvent);
             
             return $component;
         });
@@ -130,7 +132,7 @@ class ComponentService
 
             // Dispatch event if progress or cost changed
             if (!empty($changedFields)) {
-                Event::dispatch(new ComponentProgressUpdated(
+                $updateEvent = new ComponentProgressUpdated(
                     $component->id,
                     $component->project_id,
                     $this->resolveActorId(),
@@ -141,7 +143,9 @@ class ComponentService
                     $component->actual_cost,
                     $changedFields,
                     now()
-                ));
+                );
+                $updateEvent->component = $component;
+                Event::dispatch($updateEvent);
             }
             
             return $component->fresh();
@@ -181,7 +185,7 @@ class ComponentService
             if ($deleted) {
                 $tenantId = (string) (session('tenant_id') ?? 'system');
 
-                Event::dispatch(new ComponentProgressUpdated(
+                $deleteEvent = new ComponentProgressUpdated(
                     $componentId,
                     $projectId,
                     $this->resolveActorId(), // Thay đổi từ auth()->id()
@@ -192,7 +196,9 @@ class ComponentService
                     0, // cost removed
                     ['deleted'],
                     now()
-                ));
+                );
+                $deleteEvent->component = $component;
+                Event::dispatch($deleteEvent);
             }
             
             return $deleted;
@@ -291,7 +297,7 @@ class ComponentService
             
             // Dispatch event if values changed
             if (!empty($changedFields)) {
-                Event::dispatch(new ComponentProgressUpdated(
+                $recalculateEvent = new ComponentProgressUpdated(
                     $component->id,
                     $component->project_id,
                     $this->resolveActorId(), // Thay đổi từ auth()->id()
@@ -302,7 +308,9 @@ class ComponentService
                     $component->actual_cost,
                     $changedFields,
                     now()
-                ));
+                );
+                $recalculateEvent->component = $component;
+                Event::dispatch($recalculateEvent);
             }
             
             return $component->fresh();
@@ -330,7 +338,7 @@ class ComponentService
                 ]);
                 
                 // Dispatch event
-                Event::dispatch(new ComponentProgressUpdated(
+                $bulkEvent = new ComponentProgressUpdated(
                     $component->id,
                     $component->project_id,
                     $this->resolveActorId(),
@@ -341,7 +349,9 @@ class ComponentService
                     $component->actual_cost,
                     ['progress_percent'],
                     now()
-                ));
+                );
+                $bulkEvent->component = $component;
+                Event::dispatch($bulkEvent);
                 
                 $updatedComponents[] = $component->fresh();
             }

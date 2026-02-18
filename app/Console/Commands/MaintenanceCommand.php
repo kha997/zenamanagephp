@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class MaintenanceCommand extends Command
 {
@@ -82,29 +83,20 @@ class MaintenanceCommand extends Command
     {
         $this->info('Clearing application cache...');
 
-        try {
-            $task = MaintenanceTask::create([
-                'task' => 'Clear application cache',
-                'level' => 'info',
-                'priority' => 'medium',
-                'status' => 'running',
-                'started_at' => now()
-            ]);
+        $task = $this->createMaintenanceTask('Clear application cache', 'info', 'medium');
 
-            // Clear Laravel caches
+        try {
             $this->call('cache:clear');
             $this->call('config:clear');
             $this->call('route:clear');
             $this->call('view:clear');
 
-            // Clear Redis cache
             Cache::flush();
 
-            $task->markAsCompleted(['caches_cleared' => ['laravel', 'redis']]);
-
+            $this->completeMaintenanceTask($task, ['caches_cleared' => ['laravel', 'redis']]);
             $this->info('✓ Cache cleared successfully');
         } catch (\Exception $e) {
-            $task->markAsFailed($e->getMessage());
+            $this->failMaintenanceTask($task, $e->getMessage());
             $this->error('✗ Failed to clear cache: ' . $e->getMessage());
         }
     }
@@ -116,36 +108,38 @@ class MaintenanceCommand extends Command
     {
         $this->info('Optimizing database...');
 
+        $task = $this->createMaintenanceTask('Optimize database', 'info', 'medium');
+        $optimizedTables = [];
+
         try {
-            $task = MaintenanceTask::create([
-                'task' => 'Optimize database',
-                'level' => 'info',
-                'priority' => 'medium',
-                'status' => 'running',
-                'started_at' => now()
-            ]);
+            $driver = DB::connection()->getDriverName();
 
-            // Get all tables
-            $tables = DB::select('SHOW TABLES');
-            $optimizedTables = [];
+            if ($driver === 'mysql') {
+                $tables = DB::select('SHOW TABLES');
 
-            foreach ($tables as $table) {
-                $tableName = array_values((array) $table)[0];
-                
-                // Optimize table
-                DB::statement("OPTIMIZE TABLE `{$tableName}`");
-                
-                // Analyze table
-                DB::statement("ANALYZE TABLE `{$tableName}`");
-                
-                $optimizedTables[] = $tableName;
+                foreach ($tables as $table) {
+                    $tableName = array_values((array) $table)[0];
+
+                    DB::statement("OPTIMIZE TABLE `{$tableName}`");
+                    DB::statement("ANALYZE TABLE `{$tableName}`");
+                    $optimizedTables[] = $tableName;
+                }
+            } elseif ($driver === 'sqlite') {
+                DB::statement('PRAGMA optimize');
+                DB::statement('PRAGMA integrity_check');
+                $rows = DB::select("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
+
+                foreach ($rows as $row) {
+                    $optimizedTables[] = $row->name;
+                }
+            } else {
+                $this->info("Database optimization is skipped for driver {$driver}");
             }
 
-            $task->markAsCompleted(['optimized_tables' => $optimizedTables]);
-
+            $this->completeMaintenanceTask($task, ['optimized_tables' => $optimizedTables]);
             $this->info('✓ Database optimized successfully (' . count($optimizedTables) . ' tables)');
         } catch (\Exception $e) {
-            $task->markAsFailed($e->getMessage());
+            $this->failMaintenanceTask($task, $e->getMessage());
             $this->error('✗ Failed to optimize database: ' . $e->getMessage());
         }
     }
@@ -157,25 +151,14 @@ class MaintenanceCommand extends Command
     {
         $this->info('Cleaning up old logs...');
 
+        $task = $this->createMaintenanceTask('Cleanup old logs', 'info', 'low');
+
         try {
-            $task = MaintenanceTask::create([
-                'task' => 'Cleanup old logs',
-                'level' => 'info',
-                'priority' => 'low',
-                'status' => 'running',
-                'started_at' => now()
-            ]);
-
-            // Clean up system logs older than 30 days
             $deletedLogs = SystemLog::where('created_at', '<', Carbon::now()->subDays(30))->delete();
-
-            // Clean up maintenance tasks older than 90 days
             $deletedTasks = MaintenanceTask::where('created_at', '<', Carbon::now()->subDays(90))->delete();
-
-            // Clean up performance metrics older than 180 days
             $deletedMetrics = PerformanceMetric::where('created_at', '<', Carbon::now()->subDays(180))->delete();
 
-            $task->markAsCompleted([
+            $this->completeMaintenanceTask($task, [
                 'deleted_logs' => $deletedLogs,
                 'deleted_tasks' => $deletedTasks,
                 'deleted_metrics' => $deletedMetrics
@@ -183,7 +166,7 @@ class MaintenanceCommand extends Command
 
             $this->info("✓ Cleaned up {$deletedLogs} logs, {$deletedTasks} tasks, {$deletedMetrics} metrics");
         } catch (\Exception $e) {
-            $task->markAsFailed($e->getMessage());
+            $this->failMaintenanceTask($task, $e->getMessage());
             $this->error('✗ Failed to cleanup logs: ' . $e->getMessage());
         }
     }
@@ -195,18 +178,10 @@ class MaintenanceCommand extends Command
     {
         $this->info('Collecting system metrics...');
 
+        $task = $this->createMaintenanceTask('Collect system metrics', 'info', 'low');
+        $recordedMetrics = [];
+
         try {
-            $task = MaintenanceTask::create([
-                'task' => 'Collect system metrics',
-                'level' => 'info',
-                'priority' => 'low',
-                'status' => 'running',
-                'started_at' => now()
-            ]);
-
-            $metrics = [];
-
-            // Memory usage
             $memoryUsage = memory_get_usage(true);
             $memoryLimit = ini_get('memory_limit');
             $memoryLimitBytes = $this->convertToBytes($memoryLimit);
@@ -214,8 +189,9 @@ class MaintenanceCommand extends Command
 
             PerformanceMetric::record('memory_usage', $memoryUsage, 'bytes', 'system');
             PerformanceMetric::record('memory_percentage', $memoryPercentage, 'percentage', 'system');
+            $recordedMetrics[] = 'memory_usage';
+            $recordedMetrics[] = 'memory_percentage';
 
-            // Disk usage
             $totalSpace = disk_total_space('/');
             $freeSpace = disk_free_space('/');
             $usedSpace = $totalSpace - $freeSpace;
@@ -223,29 +199,43 @@ class MaintenanceCommand extends Command
 
             PerformanceMetric::record('disk_usage', $usedSpace, 'bytes', 'system');
             PerformanceMetric::record('disk_percentage', $diskPercentage, 'percentage', 'system');
+            $recordedMetrics[] = 'disk_usage';
+            $recordedMetrics[] = 'disk_percentage';
 
-            // Database size
-            try {
-                $dbSize = DB::select("
-                    SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb
-                    FROM information_schema.tables 
-                    WHERE table_schema = DATABASE()
-                ")[0]->size_mb;
+            $driver = DB::connection()->getDriverName();
 
-                PerformanceMetric::record('database_size', $dbSize, 'MB', 'database');
-            } catch (\Exception $e) {
-                $this->warn('Could not collect database size: ' . $e->getMessage());
+            if ($driver === 'mysql') {
+                try {
+                    $dbSize = DB::select("
+                        SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS size_mb
+                        FROM information_schema.tables 
+                        WHERE table_schema = DATABASE()
+                    ")[0]->size_mb ?? 0;
+
+                    PerformanceMetric::record('database_size', $dbSize, 'MB', 'database');
+                    $recordedMetrics[] = 'database_size';
+                } catch (\Exception $e) {
+                    $this->warn('Could not collect database size: ' . $e->getMessage());
+                }
+
+                try {
+                    $connections = DB::select("SHOW STATUS LIKE 'Threads_connected'")[0]->Value ?? 0;
+                    PerformanceMetric::record('database_connections', $connections, 'connections', 'database');
+                    $recordedMetrics[] = 'database_connections';
+                } catch (\Exception $e) {
+                    $this->warn('Could not collect database connections: ' . $e->getMessage());
+                }
+            } elseif ($driver === 'sqlite') {
+                try {
+                    $tableCount = DB::select("SELECT COUNT(*) as count FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
+                    $countValue = (int) ($tableCount[0]->count ?? 0);
+                    PerformanceMetric::record('database_table_count', $countValue, 'tables', 'database');
+                    $recordedMetrics[] = 'database_table_count';
+                } catch (\Exception $e) {
+                    $this->warn('Could not count SQLite tables: ' . $e->getMessage());
+                }
             }
 
-            // Database connections
-            try {
-                $connections = DB::select("SHOW STATUS LIKE 'Threads_connected'")[0]->Value;
-                PerformanceMetric::record('database_connections', $connections, 'connections', 'database');
-            } catch (\Exception $e) {
-                $this->warn('Could not collect database connections: ' . $e->getMessage());
-            }
-
-            // Cache hit rate (if Redis is available)
             try {
                 $redisInfo = Cache::store('redis')->getRedis()->info();
                 $hits = $redisInfo['keyspace_hits'] ?? 0;
@@ -254,15 +244,15 @@ class MaintenanceCommand extends Command
                 $hitRate = $total > 0 ? ($hits / $total) * 100 : 0;
 
                 PerformanceMetric::record('cache_hit_rate', $hitRate, 'percentage', 'cache');
+                $recordedMetrics[] = 'cache_hit_rate';
             } catch (\Exception $e) {
                 $this->warn('Could not collect cache metrics: ' . $e->getMessage());
             }
 
-            $task->markAsCompleted(['metrics_collected' => count($metrics)]);
-
+            $this->completeMaintenanceTask($task, ['metrics_collected' => count($recordedMetrics), 'metrics' => $recordedMetrics]);
             $this->info('✓ System metrics collected successfully');
         } catch (\Exception $e) {
-            $task->markAsFailed($e->getMessage());
+            $this->failMaintenanceTask($task, $e->getMessage());
             $this->error('✗ Failed to collect metrics: ' . $e->getMessage());
         }
     }
@@ -274,52 +264,112 @@ class MaintenanceCommand extends Command
     {
         $this->info('Creating system backup...');
 
-        try {
-            $task = MaintenanceTask::create([
-                'task' => 'Create system backup',
-                'level' => 'info',
-                'priority' => 'high',
-                'status' => 'running',
-                'started_at' => now()
-            ]);
+        $task = $this->createMaintenanceTask('Create system backup', 'info', 'high');
 
+        try {
             $filename = 'backup_' . date('Y-m-d_H-i-s') . '.sql';
             $path = storage_path('backups/' . $filename);
 
-            // Create backup directory if it doesn't exist
             if (!file_exists(dirname($path))) {
                 mkdir(dirname($path), 0755, true);
             }
 
-            // Run mysqldump
-            $command = sprintf(
-                'mysqldump --user=%s --password=%s --host=%s %s > %s',
-                config('database.connections.mysql.username'),
-                config('database.connections.mysql.password'),
-                config('database.connections.mysql.host'),
-                config('database.connections.mysql.database'),
-                $path
-            );
+            $driver = DB::connection()->getDriverName();
 
-            exec($command, $output, $returnCode);
+            if ($driver === 'mysql') {
+                $config = config('database.connections.mysql', []);
 
-            if ($returnCode === 0) {
-                $fileSize = filesize($path);
-                
-                $task->markAsCompleted([
-                    'filename' => $filename,
-                    'file_size' => $fileSize,
-                    'backup_path' => $path
-                ]);
+                if (empty($config['host']) || empty($config['database'])) {
+                    throw new \RuntimeException('MySQL backup configuration is incomplete');
+                }
 
-                $this->info("✓ Backup created successfully: {$filename} (" . $this->formatBytes($fileSize) . ")");
+                $command = sprintf(
+                    'mysqldump --user=%s --password=%s --host=%s --port=%s --single-transaction --routines --triggers %s > %s',
+                    $config['username'] ?? '',
+                    $config['password'] ?? '',
+                    $config['host'],
+                    $config['port'] ?? 3306,
+                    $config['database'],
+                    $path
+                );
+
+                exec($command, $output, $returnCode);
+
+                if ($returnCode !== 0) {
+                    throw new \RuntimeException('mysqldump command failed with return code: ' . $returnCode);
+                }
+
+                if (!file_exists($path) || filesize($path) === 0) {
+                    throw new \RuntimeException('Database backup file is empty or missing');
+                }
             } else {
-                throw new \Exception('mysqldump command failed with return code: ' . $returnCode);
+                file_put_contents($path, $this->buildFallbackBackupContent($driver));
             }
+
+            $fileSize = file_exists($path) ? filesize($path) : 0;
+
+            $this->completeMaintenanceTask($task, [
+                'filename' => $filename,
+                'file_size' => $fileSize,
+                'backup_path' => $path,
+                'driver' => $driver
+            ]);
+
+            $this->info("✓ Backup created successfully: {$filename} (" . $this->formatBytes($fileSize) . ")");
         } catch (\Exception $e) {
-            $task->markAsFailed($e->getMessage());
+            $this->failMaintenanceTask($task, $e->getMessage());
             $this->error('✗ Failed to create backup: ' . $e->getMessage());
         }
+    }
+
+    private function createMaintenanceTask(string $name, string $level = 'info', string $priority = 'medium', array $metadata = []): ?MaintenanceTask
+    {
+        if (!Schema::hasTable('maintenance_tasks')) {
+            $this->warn("maintenance_tasks table is missing; skipping log for {$name}");
+            return null;
+        }
+
+        return MaintenanceTask::create([
+            'task' => $name,
+            'level' => $level,
+            'priority' => $priority,
+            'status' => 'running',
+            'started_at' => now(),
+            'metadata' => $metadata,
+            'tenant_id' => app()->has('tenant') ? app('tenant')->id : null,
+        ]);
+    }
+
+    private function completeMaintenanceTask(?MaintenanceTask $task, array $payload = []): void
+    {
+        if ($task) {
+            $task->markAsCompleted($payload ?: null);
+        }
+    }
+
+    private function failMaintenanceTask(?MaintenanceTask $task, string $message): void
+    {
+        if ($task) {
+            $task->markAsFailed($message);
+        }
+    }
+
+    private function buildFallbackBackupContent(string $driver): string
+    {
+        $tables = [];
+
+        if ($driver === 'sqlite') {
+            $rows = DB::select("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
+            $tables = array_map(fn ($row) => $row->name, $rows);
+        }
+
+        $payload = [
+            'driver' => $driver,
+            'tables' => $tables,
+            'timestamp' => now()->toIso8601String(),
+        ];
+
+        return "-- Backup placeholder for {$driver}\n" . json_encode($payload, JSON_PRETTY_PRINT) . "\n";
     }
 
     /**

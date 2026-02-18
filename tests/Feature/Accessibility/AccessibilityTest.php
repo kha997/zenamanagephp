@@ -5,6 +5,8 @@ namespace Tests\Feature\Accessibility;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Tenant;
+use App\Models\Role;
+use App\Models\Permission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 
@@ -173,8 +175,36 @@ class AccessibilityTest extends TestCase
     {
         $admin = User::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'role' => 'admin'
+            'role' => 'super_admin'
         ]);
+
+        $adminRole = Role::firstOrCreate(
+            ['name' => 'super_admin'],
+            [
+                'scope' => 'system',
+                'tenant_id' => $this->tenant->id,
+                'allow_override' => true,
+                'is_active' => true,
+                'description' => 'System super administrator'
+            ]
+        );
+
+        if ($adminRole->tenant_id !== $this->tenant->id) {
+            $adminRole->fill(['tenant_id' => $this->tenant->id])->save();
+        }
+
+        $adminPermission = Permission::firstOrCreate(
+            ['code' => 'admin'],
+            [
+                'name' => 'admin',
+                'module' => 'admin',
+                'action' => 'access',
+                'description' => 'Full admin access'
+            ]
+        );
+
+        $adminRole->permissions()->syncWithoutDetaching($adminPermission->id);
+        $admin->roles()->syncWithoutDetaching($adminRole->id);
 
         $response = $this->actingAs($admin)
             ->withSession(['tenant_id' => (string) $admin->tenant_id])

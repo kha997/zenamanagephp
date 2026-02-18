@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Support\Facades\DB;
 use Tests\Traits\AuthenticationTestTrait;
+use Tests\Traits\RouteNameTrait;
 use Tests\TestCase;
 
 /**
@@ -22,7 +23,7 @@ use Tests\TestCase;
  */
 class PerformanceTest extends TestCase
 {
-    use LazilyRefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use LazilyRefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     private const PROJECT_LISTING_COUNT = 35;
     private const TASK_LISTING_COUNT = 120;
@@ -93,7 +94,7 @@ class PerformanceTest extends TestCase
         ]);
 
         $data = $this->assertPaginatedResponse(
-            $this->apiGet('/api/zena/projects'),
+            $this->apiGet($this->zena('projects.index')),
             self::PROJECT_LISTING_COUNT + 1
         );
 
@@ -109,7 +110,7 @@ class PerformanceTest extends TestCase
         ]);
 
         $data = $this->assertPaginatedResponse(
-            $this->apiGet('/api/zena/tasks'),
+            $this->apiGet($this->zena('tasks.index')),
             self::TASK_LISTING_COUNT
         );
 
@@ -126,7 +127,7 @@ class PerformanceTest extends TestCase
         ]);
 
         $data = $this->assertPaginatedResponse(
-            $this->apiGet('/api/zena/rfis'),
+            $this->apiGet($this->zena('rfis.index')),
             self::RFI_LISTING_COUNT
         );
 
@@ -143,7 +144,7 @@ class PerformanceTest extends TestCase
         ]);
 
         $data = $this->assertPaginatedResponse(
-            $this->apiGet('/api/zena/submittals'),
+            $this->apiGet($this->zena('submittals.index')),
             self::SUBMITTAL_LISTING_COUNT
         );
 
@@ -160,7 +161,7 @@ class PerformanceTest extends TestCase
         ]);
 
         $data = $this->assertPaginatedResponse(
-            $this->apiGet('/api/zena/change-requests'),
+            $this->apiGet($this->zena('change-requests.index')),
             self::CHANGE_REQUEST_LISTING_COUNT
         );
 
@@ -185,7 +186,7 @@ class PerformanceTest extends TestCase
             ]);
         }
 
-        $response = $this->apiGet($this->buildApiUri('/api/zena/tasks', ['search' => 'Performance Search 1']));
+        $response = $this->apiGet($this->zena('tasks.index', query: ['search' => 'Performance Search 1']));
 
         $data = $this->assertPaginatedResponse($response, 1);
 
@@ -208,7 +209,7 @@ class PerformanceTest extends TestCase
 
         $expectedTodos = intdiv(self::TASK_STATUS_COUNT, $statusCount) + (self::TASK_STATUS_COUNT % $statusCount > 0 ? 1 : 0);
 
-        $response = $this->apiGet($this->buildApiUri('/api/zena/tasks', ['status' => 'todo']));
+        $response = $this->apiGet($this->zena('tasks.index', query: ['status' => 'todo']));
 
         $data = $this->assertPaginatedResponse($response, $expectedTodos);
 
@@ -224,7 +225,7 @@ class PerformanceTest extends TestCase
             'created_by' => $this->user->id,
         ]);
 
-        $response = $this->apiGet($this->buildApiUri('/api/zena/tasks', [
+        $response = $this->apiGet($this->zena('tasks.index', query: [
             'per_page' => 25,
             'page' => 2,
         ]));
@@ -251,7 +252,7 @@ class PerformanceTest extends TestCase
         }
 
         $data = $this->assertPaginatedResponse(
-            $this->apiGet($this->buildApiUri('/api/zena/tasks', ['with_dependencies' => 'true'])),
+            $this->apiGet($this->zena('tasks.index', query: ['with_dependencies' => 'true'])),
             self::COMPLEX_DEPENDENCY_COUNT
         );
 
@@ -267,7 +268,7 @@ class PerformanceTest extends TestCase
         ]);
 
         collect(range(1, self::CONCURRENT_REQUEST_COUNT))
-            ->map(fn () => $this->apiGet('/api/zena/tasks'))
+            ->map(fn () => $this->apiGet($this->zena('tasks.index')))
             ->each(fn (TestResponse $response) => $response->assertStatus(200));
     }
 
@@ -281,7 +282,7 @@ class PerformanceTest extends TestCase
             'created_by' => $this->user->id,
         ]);
 
-        $response = $this->apiGet('/api/zena/tasks');
+        $response = $this->apiGet($this->zena('tasks.index'));
 
         $memoryUsed = memory_get_usage() - $initialMemory;
 
@@ -301,7 +302,7 @@ class PerformanceTest extends TestCase
         DB::flushQueryLog();
         DB::enableQueryLog();
 
-        $this->apiGet('/api/zena/tasks');
+        $this->apiGet($this->zena('tasks.index'));
 
         $queries = DB::getQueryLog();
         DB::disableQueryLog();
@@ -336,14 +337,4 @@ class PerformanceTest extends TestCase
         return $response->json('data', []);
     }
 
-    private function buildApiUri(string $path, array $params = []): string
-    {
-        if (empty($params)) {
-            return $path;
-        }
-
-        $query = http_build_query($params);
-
-        return $query ? "{$path}?{$query}" : $path;
-    }
 }

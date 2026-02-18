@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Tests\Support\SSOT\FixtureFactory;
 
 /**
  * Test Dashboard & Analytics System (Simplified)
@@ -23,7 +24,7 @@ use Carbon\Carbon;
  */
 class DashboardAnalyticsSimpleTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, FixtureFactory;
 
     private $tenant;
     private $user;
@@ -44,7 +45,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         \DB::statement('PRAGMA foreign_keys=OFF;');
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = $this->createTenant([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -54,7 +55,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         ]);
 
         // Tạo user
-        $this->user = User::create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password123'),
@@ -63,7 +64,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Test Project',
             'code' => 'DASH-TEST-001',
             'description' => 'Test Description',
@@ -92,7 +93,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     {
         // Create additional projects and tasks for aggregation
         for ($i = 1; $i <= 5; $i++) {
-            Project::create([
+            Project::factory()->create([
                 'name' => "Project {$i}",
                 'code' => "PROJ-{$i}",
                 'description' => "Description {$i}",
@@ -141,7 +142,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         $totalProjects = $activeProjects + $completedProjects;
 
         for ($i = 1; $i <= $activeProjects; $i++) {
-            Project::create([
+            Project::factory()->create([
                 'name' => "Active Project {$i}",
                 'code' => "ACT-{$i}",
                 'status' => 'active',
@@ -151,7 +152,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         }
 
         for ($i = 1; $i <= $completedProjects; $i++) {
-            Project::create([
+            Project::factory()->create([
                 'name' => "Completed Project {$i}",
                 'code' => "COMP-{$i}",
                 'status' => 'completed',
@@ -342,7 +343,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         // Create additional users
         $users = [];
         for ($i = 1; $i <= 5; $i++) {
-            $users[] = User::create([
+            $users[] = User::factory()->create([
                 'name' => "User {$i}",
                 'email' => "user{$i}@example.com",
                 'password' => Hash::make('password123'),
@@ -384,7 +385,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
             $count = $statusCounts[$status];
             
             for ($i = 1; $i <= $count; $i++) {
-                Project::create([
+                Project::factory()->create([
                     'name' => "{$status} Project {$i}",
                     'code' => strtoupper(substr($status, 0, 3)) . "-{$i}",
                     'description' => "Project with status {$status}",
@@ -422,7 +423,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         // Create additional users for assignment testing
         $users = [];
         for ($i = 1; $i <= 3; $i++) {
-            $users[] = User::create([
+            $users[] = User::factory()->create([
                 'name' => "Assignee {$i}",
                 'email' => "assignee{$i}@example.com",
                 'password' => Hash::make('password123'),
@@ -476,7 +477,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
     public function test_dashboard_multi_tenant_isolation(): void
     {
         // Create another tenant
-        $anotherTenant = Tenant::create([
+        $anotherTenant = Tenant::factory()->create([
             'name' => 'Another Company',
             'slug' => 'another-company',
             'domain' => 'another.com',
@@ -485,7 +486,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         ]);
 
         // Create projects for both tenants
-        Project::create([
+        Project::factory()->create([
             'name' => 'Tenant 1 Project',
             'code' => 'T1-PROJ',
             'description' => 'Project for tenant 1',
@@ -494,7 +495,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
             'created_by' => $this->user->id,
         ]);
 
-        Project::create([
+        Project::factory()->create([
             'name' => 'Tenant 2 Project',
             'code' => 'T2-PROJ',
             'description' => 'Project for tenant 2',
@@ -527,7 +528,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         $yesterday = Carbon::parse('2025-09-19 15:00:00');
         $lastWeek = Carbon::parse('2025-09-13 15:00:00');
 
-        $todayProject = Project::create([
+        $todayProject = Project::factory()->create([
             'name' => 'Today Project',
             'code' => 'TODAY',
             'description' => 'Project created today',
@@ -537,7 +538,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         ]);
         DB::table('projects')->where('id', $todayProject->id)->update(['created_at' => $today]);
 
-        $yesterdayProject = Project::create([
+        $yesterdayProject = Project::factory()->create([
             'name' => 'Yesterday Project',
             'code' => 'YEST',
             'description' => 'Project created yesterday',
@@ -547,7 +548,7 @@ class DashboardAnalyticsSimpleTest extends TestCase
         ]);
         DB::table('projects')->where('id', $yesterdayProject->id)->update(['created_at' => $yesterday]);
 
-        $lastWeekProject = Project::create([
+        $lastWeekProject = Project::factory()->create([
             'name' => 'Last Week Project',
             'code' => 'WEEK',
             'description' => 'Project created last week',

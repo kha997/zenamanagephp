@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Src\RBAC\Services\RBACManager;
 use Src\RBAC\Models\Role;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Controller quản lý việc gán role cho user
@@ -195,6 +196,63 @@ class AssignmentController
                 'effective_permissions' => $permissions,
                 'permission_count' => count($permissions)
             ]
+        ]);
+    }
+
+    /**
+     * Backward-compatible endpoint for assigning a system role to user.
+     * POST /api/v1/rbac/user-roles
+     */
+    public function assignUserRoles(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|string',
+            'role_id' => 'required|string',
+            'scope' => 'nullable|string',
+        ]);
+
+        if (($validated['scope'] ?? 'system') !== 'system') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Scope không được hỗ trợ',
+            ], 400);
+        }
+
+        DB::table('system_user_roles')->updateOrInsert(
+            [
+                'user_id' => $validated['user_id'],
+                'role_id' => $validated['role_id'],
+            ],
+            [
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'message' => 'Vai trò đã được gán thành công',
+            ],
+        ]);
+    }
+
+    /**
+     * Backward-compatible endpoint for removing a system role from user.
+     * DELETE /api/v1/rbac/user-roles/{user}/{role}
+     */
+    public function removeUserRole(string $userId, string $roleId): JsonResponse
+    {
+        DB::table('system_user_roles')
+            ->where('user_id', $userId)
+            ->where('role_id', $roleId)
+            ->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'message' => 'Vai trò đã được gỡ bỏ thành công',
+            ],
         ]);
     }
 }

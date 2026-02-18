@@ -2,6 +2,7 @@
 
 namespace Src\WorkTemplate\Services;
 
+use Src\WorkTemplate\Events\TaskConditionalToggled;
 use Src\WorkTemplate\Models\ProjectTask;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -74,15 +75,15 @@ class ProjectTaskService
                 'updated_by' => $userId
             ]);
             
-            // Dispatch event
-            Event::dispatch('task.visibility.toggled', [
-                'task_id' => $task->id,
-                'project_id' => $task->project_id,
-                'conditional_tag' => $task->conditional_tag,
-                'old_visibility' => $oldVisibility,
-                'new_visibility' => $isVisible,
-                'updated_by' => $userId
-            ]);
+            $task->refresh()->loadMissing('project');
+
+            Event::dispatch(new TaskConditionalToggled(
+                $task,
+                $task->project,
+                $task->conditional_tag,
+                $oldVisibility,
+                $isVisible
+            ));
             
             return [
                 'task_id' => $task->id,

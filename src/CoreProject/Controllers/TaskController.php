@@ -132,12 +132,12 @@ class TaskController
      * Tạo task mới sử dụng TaskService
      *
      * @param StoreTaskRequest $request
-     * @param string $projectId
      * @return JsonResponse
      */
-    public function store(StoreTaskRequest $request, string $projectId): JsonResponse
+    public function store(StoreTaskRequest $request): JsonResponse
     {
         try {
+            $projectId = $request->input('project_id');
             $data = $request->validated();
             $data['project_id'] = $projectId;
 
@@ -150,7 +150,7 @@ class TaskController
             return JSendResponse::success([
                 'task' => new TaskResource($task),
                 'message' => 'Task đã được tạo thành công'
-            ]);
+            ], 201);
         } catch (InvalidArgumentException $e) {
             return JSendResponse::error($e->getMessage(), 400);
         } catch (\Exception $e) {

@@ -12,6 +12,7 @@ use Src\InteractionLogs\Resources\InteractionLogResource;
 use Src\InteractionLogs\Resources\InteractionLogCollection;
 use Src\InteractionLogs\Services\InteractionLogService; // Sửa từ App\ thành Src\
 use Src\Foundation\Utils\JSendResponse;
+use Src\Foundation\Helpers\AuthHelper;
 
 /**
  * Controller quản lý Interaction Logs
@@ -69,7 +70,8 @@ class InteractionLogController extends Controller
 
             $logs = $this->interactionLogService->getProjectLogs(
                 $projectId,
-                $filters,
+                $filters['type'] ?? null,
+                $filters['visibility'] ?? InteractionLog::VISIBILITY_INTERNAL,
                 $perPage
             );
 
@@ -118,6 +120,15 @@ class InteractionLogController extends Controller
     public function show(InteractionLog $interactionLog): JsonResponse
     {
         try {
+            $tenantId = \Src\Foundation\Helpers\AuthHelper::user()?->tenant_id;
+
+            if ($tenantId && $interactionLog->tenant_id !== $tenantId) {
+                return JSendResponse::error(
+                    'Interaction log not found',
+                    404
+                );
+            }
+
             return JSendResponse::success(
                 new InteractionLogResource($interactionLog->load(['project', 'linkedTask', 'creator'])),
                 'Chi tiết interaction log được tải thành công'

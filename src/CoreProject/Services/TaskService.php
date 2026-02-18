@@ -92,13 +92,18 @@ class TaskService
             $this->checkConditionalVisibility($task);
             
             // Dispatch event
-            EventBus::dispatch('Task.Created', [
-                'task_id' => $task->ulid,
-                'project_id' => $project->ulid,
-                'component_id' => $task->component?->ulid,
-                'actor_id' => $this->resolveActorId(),
+            $actorId = $this->resolveActorId();
+            $eventPayload = [
+                'entityId' => $task->id,
+                'task_id' => $task->id,
+                'projectId' => $project->id,
+                'project_id' => $project->id,
+                'component_id' => $task->component?->id,
+                'actorId' => $actorId,
+                'actor_id' => $actorId,
                 'task_data' => $task->toArray()
-            ]);
+            ];
+            EventBus::dispatch('Project.Task.Created', $eventPayload);
             
             return $task->load(['project', 'component', 'assignments.user']);
         });
@@ -148,11 +153,15 @@ class TaskService
             }
             
             // Dispatch event
-            EventBus::dispatch('Task.Updated', [
-                'task_id' => $task->ulid,
-                'project_id' => $task->project->ulid,
-                'component_id' => $task->component?->ulid,
-                'actor_id' => $this->resolveActorId(),
+            $actorId = $this->resolveActorId();
+            EventBus::dispatch('Project.Task.Updated', [
+                'entityId' => $task->id,
+                'task_id' => $task->id,
+                'projectId' => $task->project->id,
+                'project_id' => $task->project->id,
+                'component_id' => $task->component?->id,
+                'actorId' => $actorId,
+                'actor_id' => $actorId,
                 'old_data' => $oldData,
                 'new_data' => $task->fresh()->toArray(),
                 'changed_fields' => array_keys($updateFields)
@@ -185,11 +194,15 @@ class TaskService
             $task->assignments()->delete();
             
             // Dispatch event trước khi xóa
-            EventBus::dispatch('Task.Deleted', [
-                'task_id' => $task->ulid,
-                'project_id' => $task->project->ulid,
-                'component_id' => $task->component?->ulid,
-                'actor_id' => $this->resolveActorId(),
+            $actorId = $this->resolveActorId();
+            EventBus::dispatch('Project.Task.Deleted', [
+                'entityId' => $task->id,
+                'task_id' => $task->id,
+                'projectId' => $task->project->id,
+                'project_id' => $task->project->id,
+                'component_id' => $task->component?->id,
+                'actorId' => $actorId,
+                'actor_id' => $actorId,
                 'task_data' => $taskData
             ]);
             
@@ -289,13 +302,17 @@ class TaskService
         }
         
         // Dispatch event
-        EventBus::dispatch('Task.Status.Changed', [
-            'task_id' => $task->ulid,
-            'project_id' => $task->project->ulid,
-            'component_id' => $task->component?->ulid,
+        $actorId = $this->resolveActorId();
+        EventBus::dispatch('Project.Task.StatusChanged', [
+            'entityId' => $task->id,
+            'task_id' => $task->id,
+            'projectId' => $task->project->id,
+            'project_id' => $task->project->id,
+            'component_id' => $task->component?->id,
             'old_status' => $oldStatus,
             'new_status' => $status,
-            'actor_id' => $this->resolveActorId()
+            'actorId' => $actorId,
+            'actor_id' => $actorId
         ]);
         
         return $task->fresh();

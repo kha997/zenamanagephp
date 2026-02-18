@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Project;
 use App\Repositories\ProjectRepository;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Event;
 
@@ -112,6 +113,11 @@ class ProjectService
         }
 
         return $deleted;
+    }
+
+    public function getProjectsList(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->projectRepository->getAll($filters, $perPage);
     }
     
     /**

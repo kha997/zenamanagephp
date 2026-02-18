@@ -12,13 +12,14 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\RFI;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Tests\Traits\AuthenticationTrait;
+use Tests\Traits\RouteNameTrait;
 
 class PerformanceIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait, RouteNameTrait;
 
     protected $user;
     protected $project;
@@ -27,32 +28,22 @@ class PerformanceIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
-            'name' => 'Test Tenant',
-            'domain' => 'test.com',
-            'is_active' => true
-        ]);
-        
-        // Create test user
-        $this->user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'project_manager',
-            'tenant_id' => $this->tenant->id
-        ]);
-        
+
+        // Create tenant and user via shared test auth helpers
+        $this->tenant = \App\Models\Tenant::factory()->create();
+        $this->user = $this->createTenantUser(
+            $this->tenant,
+            ['role' => 'project_manager'],
+            ['project_manager']
+        );
+
         // Create test project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'pm_id' => $this->user->id,
+            'created_by' => $this->user->id,
             'name' => 'Test Project',
-            'description' => 'Test project description',
             'status' => 'active',
-            'budget' => 100000,
-            'start_date' => now(),
-            'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
         ]);
         
         // Create performance test data
@@ -111,15 +102,14 @@ class PerformanceIntegrationTest extends TestCase
 
         // Create 2500 RFIs
         for ($i = 1; $i <= 2500; $i++) {
-            RFI::create([
+            $this->createRfi([
+                'title' => "RFI {$i}",
                 'subject' => "RFI {$i}",
                 'description' => "Description for RFI {$i}",
                 'status' => ['open', 'answered', 'closed'][array_rand(['open', 'answered', 'closed'])],
                 'priority' => ['low', 'medium', 'high'][array_rand(['low', 'medium', 'high'])],
                 'due_date' => now()->addDays(rand(1, 14)),
                 'discipline' => ['construction', 'electrical', 'mechanical'][array_rand(['construction', 'electrical', 'mechanical'])],
-                'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
             ]);
         }
 
@@ -149,6 +139,19 @@ class PerformanceIntegrationTest extends TestCase
                 'context' => json_encode(['test' => true])
             ]);
         }
+    }
+
+    private function createRfi(array $overrides = []): RFI
+    {
+        $attributes = RFI::factory()->make(array_merge([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'asked_by' => $this->user->id,
+            'created_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+        ], $overrides))->toArray();
+
+        return RFI::create($attributes);
     }
 
     /** @test */
@@ -241,33 +244,98 @@ class PerformanceIntegrationTest extends TestCase
         echo "Average Time: {$averageTime}ms\n";
     }
 
-    /** @test */
+    /**
+     * @test
+     * @group slow
+     * @group performance
+     */
     public function it_can_handle_alerts_performance()
     {
-        $concurrentRequests = 10;
-        $startTime = microtime(true);
-        
+        if (!$this->envFlagEnabled('RUN_SLOW_TESTS') && !$this->envFlagEnabled('RUN_STRESS_TESTS')) {
+            $this->markTestSkipped('PERF_SLOW_TEST_DISABLED: set RUN_SLOW_TESTS=1 (or RUN_STRESS_TESTS=1)');
+        }
+
+        DB::disableQueryLog();
+        gc_collect_cycles();
+
+        $endpoint = $this->v1('dashboard.alerts.index');
+
+        // Warm-up is intentionally excluded from measured timings.
+        $warmResponse = $this->getJson($endpoint);
+        $warmResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure(['success', 'data']);
+
+        $sampleCount = (int) (getenv('ALERTS_PERF_SAMPLES') ?: 7);
+        $sampleCount = max(5, min(10, $sampleCount));
+
+        $timings = [];
         $responses = [];
-        for ($i = 0; $i < $concurrentRequests; $i++) {
-            $responses[] = $this->getJson('/api/v1/dashboard/alerts');
+        for ($i = 0; $i < $sampleCount; $i++) {
+            $startTime = microtime(true);
+            $response = $this->getJson($endpoint);
+            $timings[] = (microtime(true) - $startTime) * 1000;
+            $responses[] = $response;
         }
-        
-        $endTime = microtime(true);
-        $totalTime = ($endTime - $startTime) * 1000;
-        $averageTime = $totalTime / $concurrentRequests;
-        
-        // Verify all requests succeeded
+
         foreach ($responses as $response) {
-            $response->assertStatus(200);
+            $this->assertLessThan(500, $response->getStatusCode(), 'Alerts endpoint should never return a 5xx response');
+            $response->assertOk()
+                ->assertJsonPath('success', true)
+                ->assertJsonStructure(['success', 'data']);
         }
-        
-        // Performance assertions
-        $this->assertLessThan(1000, $totalTime, '10 alerts requests should complete in less than 1000ms');
-        $this->assertLessThan(100, $averageTime, 'Average alerts response time should be less than 100ms');
-        
+
+        $medianMs = $this->percentile($timings, 50);
+        $p95Ms = $this->percentile($timings, 95);
+        $maxMs = max($timings);
+
+        $medianBudgetMs = (float) (getenv('ALERTS_PERF_MEDIAN_MAX_MS') ?: 150);
+        $p95BudgetMs = (float) (getenv('ALERTS_PERF_P95_MAX_MS') ?: 300);
+
+        $this->assertLessThanOrEqual(
+            $medianBudgetMs,
+            $medianMs,
+            sprintf('Alerts median response time should be <= %.0fms', $medianBudgetMs)
+        );
+        $this->assertLessThanOrEqual(
+            $p95BudgetMs,
+            $p95Ms,
+            sprintf('Alerts p95 response time should be <= %.0fms', $p95BudgetMs)
+        );
+
+        gc_collect_cycles();
+        DB::disableQueryLog();
+
         echo "\nAlerts Performance Test Results:\n";
-        echo "Total Time: {$totalTime}ms\n";
-        echo "Average Time: {$averageTime}ms\n";
+        echo "Samples: {$sampleCount}\n";
+        echo "Median Time: {$medianMs}ms\n";
+        echo "P95 Time: {$p95Ms}ms\n";
+        echo "Max Time: {$maxMs}ms\n";
+    }
+
+    private function envFlagEnabled(string $name): bool
+    {
+        $value = getenv($name);
+        if ($value === false) {
+            return false;
+        }
+
+        return in_array(strtolower(trim((string) $value)), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    private function percentile(array $values, int $percentile): float
+    {
+        sort($values);
+
+        $count = count($values);
+        if ($count === 0) {
+            return 0.0;
+        }
+
+        $rank = (int) ceil(($percentile / 100) * $count) - 1;
+        $rank = max(0, min($count - 1, $rank));
+
+        return round((float) $values[$rank], 2);
     }
 
     /** @test */

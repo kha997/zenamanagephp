@@ -78,6 +78,7 @@ class Task extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
+        'completed_at' => 'datetime',
         'dependencies_json' => 'array',
         'watchers' => 'array',
         'is_hidden' => 'boolean',
@@ -93,7 +94,10 @@ class Task extends Model
     public function setTitleAttribute(?string $value): void
     {
         $this->attributes['title'] = $value;
-        $this->attributes['name'] = $value;
+
+        if ($value !== null) {
+            $this->attributes['name'] = $value;
+        }
     }
 
     public function getTitleAttribute(): ?string
@@ -146,6 +150,19 @@ class Task extends Model
         self::PRIORITY_HIGH,
         self::PRIORITY_CRITICAL,
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $task): void {
+            if (
+                $task->status === self::STATUS_COMPLETED &&
+                $task->getOriginal('status') !== self::STATUS_COMPLETED &&
+                $task->completed_at === null
+            ) {
+                $task->completed_at = now();
+            }
+        });
+    }
 
     /**
      * Relationship: Task thuộc về tenant

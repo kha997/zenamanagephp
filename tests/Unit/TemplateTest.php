@@ -4,6 +4,9 @@ namespace Tests\Unit;
 
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
+use App\Models\Tenant;
+use Illuminate\Support\Str;
 use Src\WorkTemplate\Models\Template;
 use Src\WorkTemplate\Models\TemplateVersion;
 use Database\Factories\TemplateFactory;
@@ -163,10 +166,21 @@ class TemplateTest extends TestCase
             ],
         ];
 
+        $tenant = Tenant::factory()->create();
+
+        $user = User::factory()
+            ->forTenant($tenant->id)
+            ->create([
+                'name' => 'Template Updater',
+                'email' => 'template-updater-' . Str::ulid() . '@example.com',
+                'password' => bcrypt('password'),
+            ]);
+        $userId = $user->id;
+
         $templateVersion = $template->createNewVersion(
             $newJsonBody,
             'Updated template with new requirements',
-            'user123'
+            $userId
         );
 
         // Kiểm tra template version được tạo
@@ -174,13 +188,13 @@ class TemplateTest extends TestCase
         $this->assertEquals(2, $templateVersion->version);
         $this->assertEquals($newJsonBody, $templateVersion->json_body);
         $this->assertEquals('Updated template with new requirements', $templateVersion->note);
-        $this->assertEquals('user123', $templateVersion->created_by);
+        $this->assertEquals($userId, $templateVersion->created_by);
 
         // Kiểm tra template được cập nhật
         $template->refresh();
         $this->assertEquals(2, $template->version);
         $this->assertEquals($newJsonBody, $template->json_body);
-        $this->assertEquals('user123', $template->updated_by);
+        $this->assertEquals($userId, $template->updated_by);
     }
 
     /**

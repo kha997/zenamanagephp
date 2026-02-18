@@ -16,13 +16,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Tests\TestCase;
+use Tests\Traits\ApiTestTrait;
+use Tests\Traits\RouteNameTrait;
 
 /**
  * @group zena-invariants
  */
 class ZenaApiContractPhase2InvariantTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, ApiTestTrait, RouteNameTrait;
+
+    protected array $apiHeaders = [];
 
     protected function setUp(): void
     {
@@ -43,7 +47,7 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
 
         $response = $this->withHeaders(
             $this->contractHeaders($tenantA, $tokenA, (string) $tenantB->id)
-        )->getJson("/api/zena/documents/{$documentB->id}");
+        )->getJson($this->zena('documents.show', ['id' => $documentB->id]));
 
         $response->assertStatus(403);
         $this->assertSame('TENANT_INVALID', $response->json('error.code'));
@@ -60,7 +64,7 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
         $this->grantPermissionToUser($userA, 'document.view');
 
         $response = $this->withHeaders($this->contractHeaders($tenantA, $tokenA))
-            ->getJson("/api/zena/documents/{$documentB->id}");
+            ->getJson($this->zena('documents.show', ['id' => $documentB->id]));
 
         $response->assertStatus(404);
         $this->assertSame('E404.NOT_FOUND', $response->json('error.code'));
@@ -80,7 +84,7 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
         $this->createDocumentForTenant($tenantB, $userB);
 
         $response = $this->withHeaders($this->contractHeaders($tenantA, $tokenA))
-            ->getJson('/api/zena/documents');
+            ->getJson($this->zena('documents.index'));
 
         $response->assertStatus(200);
         $this->assertTrue($response->json('success'));
@@ -101,7 +105,7 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
 
         $mismatchResponse = $this->withHeaders(
             $this->contractHeaders($tenantA, $tokenA, (string) $tenantB->id)
-        )->getJson('/api/zena/documents');
+        )->getJson($this->zena('documents.index'));
 
         $mismatchResponse->assertStatus(403);
         $this->assertSame('TENANT_INVALID', $mismatchResponse->json('error.code'));
@@ -146,7 +150,7 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
         $headers = $this->contractHeaders($tenantA, $tokenA);
 
         $this->apiHeaders = $headers;
-        $response = $this->apiPostMultipart('/api/zena/documents', $payload);
+        $response = $this->apiPostMultipart($this->zena('documents.store'), $payload);
         $this->apiHeaders = [];
 
         $response->assertStatus(201);
@@ -157,7 +161,7 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
         $documentId = $response->json('data.id');
 
         $mismatchResponse = $this->withHeaders($this->contractHeaders($tenantB, $tokenA))
-            ->getJson("/api/zena/documents/{$documentId}");
+            ->getJson($this->zena('documents.show', ['id' => $documentId]));
 
         $mismatchResponse->assertStatus(403);
         $this->assertSame('TENANT_INVALID', $mismatchResponse->json('error.code'));
@@ -165,7 +169,7 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
         $foreignDocument = $this->createDocumentForTenant($tenantB, $userB);
 
         $crossTenantResponse = $this->withHeaders($this->contractHeaders($tenantA, $tokenA))
-            ->getJson("/api/zena/documents/{$foreignDocument->id}");
+            ->getJson($this->zena('documents.show', ['id' => $foreignDocument->id]));
 
         $crossTenantResponse->assertStatus(404);
         $this->assertSame('E404.NOT_FOUND', $crossTenantResponse->json('error.code'));
@@ -203,23 +207,28 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
 
     private function createDocumentForTenant(Tenant $tenant, User $creator, array $attributes = []): Document
     {
-        $projectId = Str::ulid();
-
-        DB::table('zena_projects')->insert([
-            'id' => $projectId,
+        $project = Project::factory()->create([
             'tenant_id' => $tenant->id,
-            'code' => 'ZP-' . Str::upper(Str::random(8)),
-            'name' => 'Contract Project',
-            'description' => 'Backfill project for contract tests',
             'status' => 'planning',
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
+
+        DB::table('zena_projects')->updateOrInsert(
+            ['id' => $project->id],
+            [
+                'tenant_id' => $project->tenant_id,
+                'code' => $project->code ?? 'ZP-' . Str::upper(Str::random(8)),
+                'name' => $project->name ?? 'Contract Project',
+                'description' => $project->description ?? 'Backfill project for contract tests',
+                'status' => $project->status ?? 'planning',
+                'created_at' => $project->created_at,
+                'updated_at' => $project->updated_at,
+            ]
+        );
 
         $defaults = [
             'id' => Str::ulid(),
             'tenant_id' => $tenant->id,
-            'project_id' => $projectId,
+            'project_id' => $project->id,
             'uploaded_by' => $creator->id,
             'name' => 'Contract Document',
             'original_name' => 'Contract Document',
@@ -262,7 +271,7 @@ class ZenaApiContractPhase2InvariantTest extends TestCase
     {
         Auth::shouldUse('web');
 
-        $response = $this->zenaPost('api/zena/auth/login', $tenant, [
+        $response = $this->zenaPost($this->zena('auth.login'), $tenant, [
             'email' => $email,
             'password' => $password,
         ]);

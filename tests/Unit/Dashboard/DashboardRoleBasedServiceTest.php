@@ -13,17 +13,19 @@ use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\RFI;
+use App\Models\Rfi;
 use App\Models\Inspection;
 use App\Models\NCR;
 use App\Models\Role;
 use App\Models\UserRoleProject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Mockery;
+use Tests\Support\SSOT\FixtureFactory;
 
 class DashboardRoleBasedServiceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, FixtureFactory;
 
     protected $roleBasedService;
     protected $aggregationService;
@@ -37,30 +39,30 @@ class DashboardRoleBasedServiceTest extends TestCase
         parent::setUp();
         
         // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
+        $this->tenant = $this->createTenant([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
             'is_active' => true
         ]);
         
         // Create test user
-        $this->user = User::create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test+' . Str::ulid() . '@example.com',
             'password' => bcrypt('password'),
             'role' => 'project_manager',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         // Create test project
-        $this->project = Project::create([
+        $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
             'budget' => 100000,
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         $this->assignProjectRole();
         
@@ -142,7 +144,7 @@ class DashboardRoleBasedServiceTest extends TestCase
         ]);
 
         // Create test RFIs
-        RFI::create([
+        Rfi::create([
             'subject' => 'Test RFI 1',
             'title' => 'Test RFI 1 Title',
             'description' => 'Test RFI description',
@@ -514,18 +516,18 @@ class DashboardRoleBasedServiceTest extends TestCase
     public function it_calculates_budget_variance_correctly()
     {
         // Create projects with different budget scenarios
-        $project1 = Project::create([
+        $project1 = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Project 1',
             'budget' => 100000,
             'spent_amount' => 120000, // Over budget
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
-        $project2 = Project::create([
+        $project2 = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Project 2',
             'budget' => 200000,
             'spent_amount' => 150000, // Under budget
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         $projects = collect([$project1, $project2]);
@@ -546,7 +548,7 @@ class DashboardRoleBasedServiceTest extends TestCase
     public function it_calculates_average_response_time_correctly()
     {
         // Create RFIs with different response times
-        $rfi1 = RFI::create([
+        $rfi1 = Rfi::create([
             'subject' => 'RFI 1',
             'title' => 'RFI 1 Title',
             'description' => 'Response time check',
@@ -561,7 +563,7 @@ class DashboardRoleBasedServiceTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
         
-        $rfi2 = RFI::create([
+        $rfi2 = Rfi::create([
             'subject' => 'RFI 2',
             'title' => 'RFI 2 Title',
             'description' => 'Response time check',
@@ -586,11 +588,11 @@ class DashboardRoleBasedServiceTest extends TestCase
     public function it_generates_budget_alerts_correctly()
     {
         // Create project with high budget utilization
-        $project = Project::create([
+        $project = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'High Budget Project',
             'budget' => 100000,
             'spent_amount' => 95000, // 95% utilization
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         $projects = collect([$project]);

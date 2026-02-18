@@ -15,7 +15,6 @@ use Src\ChangeRequest\Requests\SubmitChangeRequestRequest;
 use Src\ChangeRequest\Requests\DecideChangeRequestRequest;
 use Src\ChangeRequest\Resources\ChangeRequestResource;
 use Src\ChangeRequest\Resources\ChangeRequestCollection;
-use Src\RBAC\Middleware\RBACMiddleware;
 use Src\Foundation\Utils\JSendResponse;
 use Exception;
 
@@ -36,7 +35,6 @@ class ChangeRequestController extends Controller
      */
     public function __construct(ChangeRequestService $changeRequestService)
     {
-        $this->middleware(RBACMiddleware::class);
         $this->changeRequestService = $changeRequestService;
     }
 
@@ -68,17 +66,15 @@ class ChangeRequestController extends Controller
 
     /**
      * Tạo change request mới
-     * POST /api/v1/projects/{project_id}/cr
+     * POST /api/v1/change-requests
      *
      * @param StoreChangeRequestRequest $request
-     * @param string $projectId
      * @return JsonResponse
      */
-    public function store(StoreChangeRequestRequest $request, string $projectId): JsonResponse
+    public function store(StoreChangeRequestRequest $request): JsonResponse
     {
         try {
             $changeRequest = $this->changeRequestService->createChangeRequest(
-                $projectId,
                 $request->validated(),
                 $this->resolveActorId()
             );

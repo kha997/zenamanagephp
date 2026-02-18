@@ -155,6 +155,26 @@ trait AuthenticationTestTrait
     }
 
     /**
+     * Prepare headers for a tenant-authenticated request using an existing token.
+     *
+     * @param User $user
+     * @param string $tenantId
+     * @param string $token
+     * @return static
+     */
+    protected function actingAsTenantUser(User $user, string $tenantId, string $token): static
+    {
+        $headers = array_merge(
+            $this->apiHeadersForTenant($tenantId),
+            ['Authorization' => 'Bearer ' . $token]
+        );
+
+        $this->apiHeaders = $headers;
+
+        return $this->withHeaders($headers);
+    }
+
+    /**
      * Build headers that only include tenant context (no authentication)
      * 
      * @param array $headers

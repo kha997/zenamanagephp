@@ -60,6 +60,21 @@ class ChangeRequest extends Model
     ];
 
     /**
+     * Các mức độ ưu tiên change request
+     */
+    public const PRIORITY_LOW = 'low';
+    public const PRIORITY_MEDIUM = 'medium';
+    public const PRIORITY_HIGH = 'high';
+    public const PRIORITY_CRITICAL = 'critical';
+
+    public const PRIORITIES = [
+        self::PRIORITY_LOW,
+        self::PRIORITY_MEDIUM,
+        self::PRIORITY_HIGH,
+        self::PRIORITY_CRITICAL,
+    ];
+
+    /**
      * Các trạng thái có thể chuyển đổi
      */
     public const STATUS_TRANSITIONS = [
@@ -70,18 +85,39 @@ class ChangeRequest extends Model
     ];
 
     protected $fillable = [
+        'tenant_id',
         'project_id',
+        'task_id',
+        'change_number',
         'code',
         'title',
         'description',
+        'change_type',
+        'priority',
         'status',
+        'impact_level',
         'impact_days',
         'impact_cost',
         'impact_kpi',
+        'requested_by',
+        'assigned_to',
+        'approved_by',
+        'rejected_by',
         'created_by',
+        'requested_at',
         'decided_by',
         'decided_at',
         'decision_note',
+        'estimated_cost',
+        'actual_cost',
+        'estimated_days',
+        'actual_days',
+        'approval_notes',
+        'rejection_reason',
+        'implementation_notes',
+        'attachments',
+        'impact_analysis',
+        'risk_assessment',
     ];
 
     protected $casts = [

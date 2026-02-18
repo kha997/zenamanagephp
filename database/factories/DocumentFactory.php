@@ -53,6 +53,7 @@ class DocumentFactory extends Factory
             'tenant_id' => $tenant,
             'uploaded_by' => $uploader,
             'name' => $this->faker->words(3, true),
+            'title' => $this->faker->sentence(),
             'original_name' => $this->faker->word() . '.pdf',
             'description' => $this->faker->sentence(),
             'file_path' => '/documents/' . $this->faker->uuid() . '.pdf',
@@ -70,6 +71,8 @@ class DocumentFactory extends Factory
     public function configure(): self
     {
         return $this->afterMaking(function (Document $document) {
+            $this->ensureTenantExists($document);
+            $this->ensureUploaderMatchesTenant($document);
             $this->ensureZenaProjectEntry($document);
         })->afterCreating(function (Document $document) {
             if ($document->created_by !== null && $document->updated_by !== null) {
@@ -89,6 +92,43 @@ class DocumentFactory extends Factory
                 'updated_by' => $document->updated_by ?? $creatorId,
             ]);
         });
+    }
+
+    private function ensureTenantExists(Document $document): void
+    {
+        $tenantId = $document->tenant_id;
+
+        if (!$tenantId || !is_scalar($tenantId)) {
+            return;
+        }
+
+        $tenantId = (string) $tenantId;
+
+        if (Tenant::where('id', $tenantId)->exists()) {
+            return;
+        }
+
+        Tenant::factory()->create(['id' => $tenantId]);
+    }
+
+    private function ensureUploaderMatchesTenant(Document $document): void
+    {
+        if (!$document->tenant_id) {
+            return;
+        }
+
+        $tenantId = (string) $document->tenant_id;
+        $uploader = User::find($document->uploaded_by);
+
+        if ($uploader && $uploader->tenant_id === $tenantId) {
+            return;
+        }
+
+        $uploader = User::factory()->create([
+            'tenant_id' => $tenantId,
+        ]);
+
+        $document->uploaded_by = $uploader->id;
     }
 
     private function ensureZenaProjectEntry(Document $document): void

@@ -3,6 +3,8 @@
 namespace Tests\Feature\Dashboard;
 
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTrait;
+use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
@@ -12,11 +14,10 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\RFI;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 
 class DashboardApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait;
 
     protected $user;
     protected $project;
@@ -27,7 +28,7 @@ class DashboardApiTest extends TestCase
         parent::setUp();
         
         // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
+        $this->tenant = \App\Models\Tenant::factory()->create([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
             'is_active' => true
@@ -41,7 +42,7 @@ class DashboardApiTest extends TestCase
         ]);
         
         // Create test project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
@@ -878,7 +879,7 @@ class DashboardApiTest extends TestCase
     public function it_validates_widget_permissions()
     {
         // Create QC Inspector user
-        $qcUser = User::create([
+        $qcUser = User::factory()->create([
             'name' => 'QC Inspector',
             'email' => 'qc@example.com',
             'password' => Hash::make('password'),
@@ -919,7 +920,7 @@ class DashboardApiTest extends TestCase
     public function it_handles_unauthorized_access()
     {
         // Create user without project access
-        $unauthorizedUser = User::create([
+        $unauthorizedUser = User::factory()->create([
             'name' => 'Unauthorized User',
             'email' => 'unauthorized@example.com',
             'password' => Hash::make('password'),

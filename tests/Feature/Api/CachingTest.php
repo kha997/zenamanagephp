@@ -2,16 +2,16 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTrait;
 
 class CachingTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, AuthenticationTrait;
 
     protected function setUp(): void
     {
@@ -24,10 +24,10 @@ class CachingTest extends TestCase
      */
     public function test_cache_stats_endpoint()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         $response = $this->getJson('/api/cache/stats', $headers);
 
@@ -58,10 +58,10 @@ class CachingTest extends TestCase
      */
     public function test_cache_config_endpoint()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
         $response = $this->getJson('/api/cache/config', $headers);
 
         $response->assertStatus(200);
@@ -89,9 +89,9 @@ class CachingTest extends TestCase
      */
     public function test_cache_key_invalidation()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Set a cache key
         $cacheKey = 'test_key_' . uniqid();
@@ -122,9 +122,9 @@ class CachingTest extends TestCase
      */
     public function test_cache_tags_invalidation()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Set cache keys with tags
         $tag1 = 'test_tag_1';
@@ -166,9 +166,9 @@ class CachingTest extends TestCase
      */
     public function test_cache_pattern_invalidation()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Set cache keys with pattern
         $user123Profile = $this->tenantCacheKey('user_123_profile', $user);
@@ -212,9 +212,9 @@ class CachingTest extends TestCase
      */
     public function test_cache_warmup()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         $response = $this->postJson('/api/cache/warmup', [
             'keys' => [
@@ -244,9 +244,9 @@ class CachingTest extends TestCase
      */
     public function test_cache_clear_all()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Set some cache data
         $prefixedKey1 = $this->tenantCacheKey('test_key_1', $user);
@@ -284,9 +284,9 @@ class CachingTest extends TestCase
      */
     public function test_dashboard_caching_middleware()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         // First request - should not be cached
         $response1 = $this->getJson('/api/dashboard/data', $headers);
@@ -311,9 +311,9 @@ class CachingTest extends TestCase
      */
     public function test_cache_performance_metrics()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         $response = $this->getJson('/api/cache/stats', $headers);
 
@@ -339,9 +339,9 @@ class CachingTest extends TestCase
      */
     public function test_cache_error_handling()
     {
-        $user = $this->createAdminUser();
+        $user = $this->createRbacAdminUser();
         $token = $user->createToken('test-token')->plainTextToken;
-        $headers = $this->authHeaders($user, $token);
+        $headers = $this->authHeadersForUser($user, $token);
 
         // Test invalid key invalidation
         $response = $this->postJson('/api/cache/invalidate/key', [
@@ -365,28 +365,6 @@ class CachingTest extends TestCase
                 'code'
             ]
         ]);
-    }
-
-    private function createAdminUser(): User
-    {
-        $role = Role::firstOrCreate(
-            ['name' => 'admin', 'scope' => Role::SCOPE_SYSTEM],
-            ['allow_override' => true, 'is_active' => true]
-        );
-
-        $user = User::factory()->create();
-        $user->roles()->syncWithoutDetaching([$role->id]);
-
-        return $user;
-    }
-
-    private function authHeaders(User $user, string $token): array
-    {
-        return [
-            'Authorization' => 'Bearer ' . $token,
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $user->tenant_id,
-        ];
     }
 
     private function tenantCacheKey(string $key, User $user): string

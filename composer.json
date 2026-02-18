@@ -64,6 +64,45 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
+        ],
+        "ssot:guard-baselines": [
+            "bash scripts/ci/verify-ssot-baselines.sh"
+        ],
+        "ssot:lint": [
+            "Composer\\Config::disableProcessTimeout",
+            "@ssot:guard-baselines",
+            "php artisan optimize:clear >/dev/null",
+            "bash scripts/ssot/dump_routes.sh",
+            "php scripts/ssot/find_orphan_test_routes.php",
+            "bash scripts/ssot/lint_tests.sh",
+            "@lint:domain-ownership"
+        ],
+        "lint:domain-ownership": [
+            "php scripts/ci/lint-domain-ownership.php"
+        ],
+        "test:fast": [
+            "Composer\\Config::disableProcessTimeout",
+            "php -d pcov.enabled=0 ./vendor/bin/phpunit --exclude-group slow,load,stress,redis"
+        ],
+        "test:slow": [
+            "Composer\\Config::disableProcessTimeout",
+            "RUN_SLOW_TESTS=1 php -d pcov.enabled=0 ./vendor/bin/phpunit --group slow"
+        ],
+        "test:load": [
+            "Composer\\Config::disableProcessTimeout",
+            "RUN_LOAD_TESTS=1 php -d pcov.enabled=0 ./vendor/bin/phpunit --group load"
+        ],
+        "test:stress": [
+            "Composer\\Config::disableProcessTimeout",
+            "RUN_STRESS_TESTS=1 php -d pcov.enabled=0 ./vendor/bin/phpunit --group stress"
+        ],
+        "test:redis": [
+            "Composer\\Config::disableProcessTimeout",
+            "php -d pcov.enabled=0 ./vendor/bin/phpunit --group redis"
+        ],
+        "test:nightly": [
+            "Composer\\Config::disableProcessTimeout",
+            "bash scripts/test/nightly_matrix.sh"
         ]
     },
     "extra": {
@@ -77,6 +116,7 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "process-timeout": 0,
         "allow-plugins": {
             "pestphp/pest-plugin": true
         },

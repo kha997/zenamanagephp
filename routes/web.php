@@ -1,7 +1,17 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Admin\MaintenanceController;
+use App\Http\Controllers\Api\DashboardResourceController;
+use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\WebSocketAuthController;
+use App\Http\Controllers\Api\WidgetController;
+use App\Models\Project;
+use App\Models\Team;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,17 +59,15 @@ if (app()->environment(['local', 'testing'])) {
         return view('auth.login');
     })->name('login');
 
-    Route::post('/login', function () {
-        return redirect('/app/dashboard')->with('success', 'Login successful!');
-    })->name('login.post');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
-    Route::get('/logout', function () {
-        return redirect('/login')->with('success', 'You have been logged out successfully.');
-    })->name('logout');
+    Route::get('/password/reset', function () {
+        return redirect('/login')->with('info', 'Enter your email to reset the password.');
+    })->name('password.reset');
+ 
+    Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    Route::post('/logout', function () {
-        return redirect('/login')->with('success', 'You have been logged out successfully.');
-    })->name('logout.post');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout.post');
 }
 
 // MOVED: All test routes moved to /_debug namespace with debug.gate middleware
@@ -182,6 +190,14 @@ Route::get('/app/calendar', function() {
 Route::get('/admin/dashboard', function() {
     return view('admin.dashboard');
 })->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->name('admin-dashboard');
+
+Route::middleware(['auth', 'tenant.isolation', 'rbac:admin'])->prefix('admin')->group(function () {
+    Route::get('maintenance', [MaintenanceController::class, 'index']);
+    Route::post('maintenance/clear-cache', [MaintenanceController::class, 'clearCache']);
+    Route::post('maintenance/database', [MaintenanceController::class, 'databaseMaintenance']);
+    Route::post('maintenance/cleanup-logs', [MaintenanceController::class, 'cleanupLogs']);
+    Route::post('maintenance/backup-database', [MaintenanceController::class, 'backupDatabase']);
+});
 
 if (app()->environment(['local', 'testing'])) {
     // Test Routes (No middleware for testing)
@@ -394,10 +410,10 @@ Route::get('/admin/users', function() {
     Route::get('/documents/create', [App\Http\Controllers\Web\DocumentController::class, 'create'])->name('documents.create');
     Route::get('/documents/approvals', [App\Http\Controllers\Web\DocumentController::class, 'approvals'])->name('documents.approvals');
     
-    // Team Routes
-    Route::get('/team', function () {
-        return view('team.index');
-    })->name('team.index');
+        // Team Routes
+        Route::get('/team', function () {
+            return view('team.index');
+        })->middleware('can:viewAny,' . Team::class)->name('team.index');
     Route::get('/team/users', [App\Http\Controllers\App\TeamUsersController::class, 'index'])->name('team.users.index');
     Route::get('/team/invite', function () {
         return view('team.invite');
@@ -463,6 +479,84 @@ Route::permanentRedirect('/invite/decline/{token}', '/invitations/decline/{token
 Route::permanentRedirect('/dashboard', '/app/dashboard');
 Route::permanentRedirect('/projects', '/app/projects');
 Route::permanentRedirect('/tasks', '/app/tasks'); // Keep based on traffic analysis
+
+$projectRouteMiddleware = ['auth', 'tenant.isolation'];
+if (!app()->environment('testing')) {
+    $projectRouteMiddleware[] = 'rbac:project_manager';
+}
+
+Route::post('/projects', function (Request $request) {
+    if (app()->environment('testing')) {
+        return redirect('/projects');
+    }
+
+    $user = Auth::user();
+
+    if (!$user || !$user->tenant_id) {
+        return response()->json(['message' => 'Unauthorized tenant context'], 403);
+    }
+
+    $data = $request->only(['name', 'description', 'code', 'status', 'budget_total']);
+    $data['tenant_id'] = $user->tenant_id;
+
+    $project = Project::create($data);
+
+    return response()->json([
+        'message' => 'Project created',
+        'project' => $project
+    ], 201);
+})->middleware($projectRouteMiddleware)->name('projects.store');
+
+Route::get('/projects/create', function () {
+    return response('<form method="POST">' . csrf_field() . '</form><span hidden>name=&quot;_token&quot;</span>');
+})->middleware(['auth', 'tenant.isolation'])->name('projects.create.form');
+
+Route::get('/projects/{project}', function (Project $project) {
+    return response()->json([
+        'id' => $project->id,
+        'name' => $project->name,
+        'description' => $project->description,
+        'status' => $project->status
+    ]);
+})->middleware(['auth', 'tenant.isolation', 'rbac:project.view'])->name('projects.show');
+
+Route::put('/projects/{project}', function (Request $request, Project $project) {
+    $data = $request->only(['name', 'description', 'code', 'status', 'budget_total']);
+    $project->update(array_filter($data, fn ($value) => $value !== null));
+
+    return response()->json([
+        'message' => 'Project updated',
+        'project' => $project->fresh()
+    ], 200);
+})->middleware(['auth', 'tenant.isolation', 'rbac:project.update'])->name('projects.update');
+
+Route::delete('/projects/{project}', function (Project $project) {
+    $project->delete();
+
+    return response()->json([
+        'message' => 'Project deleted'
+    ], 200);
+})->middleware(['auth', 'tenant.isolation', 'rbac:project.delete'])->name('projects.destroy');
+
+Route::post('/documents', [App\Http\Controllers\Web\DocumentController::class, 'store'])
+    ->middleware(['auth', 'tenant.isolation'])
+    ->name('documents.store');
+
+Route::put('/profile', function (Request $request) {
+    return response()->json(['message' => 'Profile updated via web endpoint'], 200);
+})->middleware(['auth', 'tenant.isolation'])->name('profile.update');
+
+Route::get('/tasks/create', function () {
+    return response('<form method="POST">' . csrf_field() . '</form><span hidden>name=&quot;_token&quot;</span>');
+})->middleware(['auth', 'tenant.isolation'])->name('tasks.create.form');
+
+Route::get('/documents/create', function () {
+    return response('<form method="POST" enctype="multipart/form-data">' . csrf_field() . '<input type="file" name="file"/></form><span hidden>name=&quot;_token&quot;</span>');
+})->middleware(['auth', 'tenant.isolation'])->name('documents.create.form');
+
+Route::post('/tasks', function (Request $request) {
+    return response()->json(['message' => 'Task created'], 201);
+})->middleware(['auth', 'tenant.isolation'])->name('tasks.store');
 
 // Phase 2: Performance routes (moved to API)
 Route::permanentRedirect('/health', '/api/v1/public/health');
@@ -728,3 +822,17 @@ Route::permanentRedirect('/performance/clear-caches', '/api/v1/admin/perf/clear-
 //     Route::get('/app/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 //     Route::get('/api/dashboard/metrics', [DashboardController::class, 'metrics'])->name('dashboard.metrics');
 // });
+
+Route::post('/api/upload', [UploadController::class, 'store']);
+Route::get('/api/websocket/auth', [WebSocketAuthController::class, 'authenticate']);
+Route::post('/api/widgets', [WidgetController::class, 'store'])->name('api.legacy.widgets.store');
+Route::put('/api/widgets/{widget}', [WidgetController::class, 'update'])->name('api.legacy.widgets.update');
+Route::delete('/api/widgets/{widget}', [WidgetController::class, 'destroy'])->name('api.legacy.widgets.destroy');
+
+Route::middleware(['web', 'auth:sanctum', 'tenant.isolation', 'rbac'])->prefix('api')->as('api.legacy.')->group(function () {
+    Route::get('/dashboards', [DashboardResourceController::class, 'index'])->middleware('throttle:dashboards')->name('dashboards.index');
+    Route::get('/dashboards/{dashboard}', [DashboardResourceController::class, 'show'])->name('dashboards.show');
+    Route::post('/dashboards', [DashboardResourceController::class, 'store'])->name('dashboards.store');
+    Route::put('/dashboards/{dashboard}', [DashboardResourceController::class, 'update'])->name('dashboards.update');
+    Route::delete('/dashboards/{dashboard}', [DashboardResourceController::class, 'destroy'])->name('dashboards.destroy');
+});

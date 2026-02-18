@@ -33,6 +33,13 @@ class StoreProjectRequest extends BaseApiRequest
                 Rule::unique('projects')
                     ->where('tenant_id', $this->user()->tenant_id ?? 1)
             ],
+            'code' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('projects')
+                    ->where('tenant_id', $this->user()->tenant_id ?? 1)
+            ],
             'description' => [
                 'nullable',
                 'string',
@@ -51,7 +58,7 @@ class StoreProjectRequest extends BaseApiRequest
             'status' => [
                 'nullable',
                 'string',
-                'in:' . implode(',', array_keys(\Src\CoreProject\Models\Project::STATUSES))
+                'in:' . implode(',', \Src\CoreProject\Models\Project::VALID_STATUSES)
             ],
             'planned_cost' => [
                 'nullable',

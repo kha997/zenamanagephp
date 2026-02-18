@@ -25,7 +25,7 @@ class TaskController extends BaseApiController
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ?string $projectId = null): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -47,8 +47,9 @@ class TaskController extends BaseApiController
             }
 
             // Apply filters
-            if ($request->filled('project_id')) {
-                $query->byProject($request->input('project_id'));
+            $effectiveProjectId = $projectId ?: $request->input('project_id');
+            if (!empty($effectiveProjectId)) {
+                $query->where('project_id', $effectiveProjectId);
             }
 
             if ($request->filled('status')) {

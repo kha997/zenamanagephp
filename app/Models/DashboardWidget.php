@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Model DashboardWidget - Quản lý các widget có sẵn trong hệ thống
@@ -124,11 +125,29 @@ class DashboardWidget extends Model
      */
     public function scopeForRole($query, string $role)
     {
+        if ($this->supportsJsonContains()) {
+            return $query->where(function ($query) use ($role) {
+                $query->whereNull('permissions')
+                    ->orWhereJsonContains('permissions->roles', $role)
+                    ->orWhereJsonContains('permissions', $role);
+            });
+        }
+
         return $query->where(function ($query) use ($role) {
             $query->whereNull('permissions')
-                ->orWhereJsonContains('permissions->roles', $role)
-                ->orWhereJsonContains('permissions', $role);
+                ->orWhere('permissions', 'like', $this->sqlitePermissionPattern($role));
         });
+    }
+
+    private function supportsJsonContains(): bool
+    {
+        return DB::connection()->getDriverName() !== 'sqlite';
+    }
+
+    private function sqlitePermissionPattern(string $role): string
+    {
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $role);
+        return '%"' . $escaped . '"%';
     }
 
     /**

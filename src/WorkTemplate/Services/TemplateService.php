@@ -8,8 +8,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Src\CoreProject\Models\Project;
-use Src\CoreProject\Models\ProjectPhase;
-use Src\CoreProject\Models\ProjectTask;
+use Src\WorkTemplate\Models\ProjectPhase;
+use Src\WorkTemplate\Models\ProjectTask;
 use Src\WorkTemplate\Models\Template;
 
 /**
@@ -17,6 +17,91 @@ use Src\WorkTemplate\Models\Template;
  */
 class TemplateService
 {
+    public function createTemplate(array $data, string $userId): Template
+    {
+        $templateName = $data['name'];
+        $jsonBody = [
+            'template_name' => $templateName,
+            'phases' => $data['phases'] ?? [],
+        ];
+
+        $template = Template::create([
+            'template_name' => $templateName,
+            'category' => $this->normalizeCategory($data['category']),
+            'json_body' => $jsonBody,
+            'version' => 1,
+            'is_active' => (bool) ($data['is_active'] ?? true),
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ]);
+
+        $template->versions()->create([
+            'version' => 1,
+            'json_body' => $jsonBody,
+            'note' => $data['version_note'] ?? 'Initial version',
+            'created_by' => $userId,
+        ]);
+
+        return $template;
+    }
+
+    public function updateTemplate(Template $template, array $data, string $userId): Template
+    {
+        $templateName = $data['name'] ?? $template->template_name;
+        $nextJsonBody = array_merge($template->json_body ?? [], [
+            'template_name' => $templateName,
+        ]);
+
+        if (array_key_exists('phases', $data)) {
+            $nextJsonBody['phases'] = $data['phases'];
+        }
+
+        $updates = [
+            'template_name' => $templateName,
+            'updated_by' => $userId,
+        ];
+
+        if (array_key_exists('category', $data)) {
+            $updates['category'] = $this->normalizeCategory($data['category']);
+        }
+
+        if (array_key_exists('is_active', $data)) {
+            $updates['is_active'] = (bool) $data['is_active'];
+        }
+
+        $shouldCreateVersion = (bool) ($data['create_new_version'] ?? false);
+        if ($shouldCreateVersion || array_key_exists('phases', $data)) {
+            $updates['json_body'] = $nextJsonBody;
+        }
+
+        if ($shouldCreateVersion) {
+            $newVersion = (int) $template->version + 1;
+            $template->versions()->create([
+                'version' => $newVersion,
+                'json_body' => $nextJsonBody,
+                'note' => $data['version_note'] ?? null,
+                'created_by' => $userId,
+            ]);
+            $updates['version'] = $newVersion;
+        }
+
+        $template->update($updates);
+
+        return $template->fresh();
+    }
+
+    private function normalizeCategory(string $category): string
+    {
+        $map = [
+            'design' => 'Design',
+            'construction' => 'Construction',
+            'qc' => 'QC',
+            'inspection' => 'Inspection',
+        ];
+
+        return $map[strtolower($category)] ?? $category;
+    }
+
     /**
      * Apply a template to a project
      *
@@ -36,7 +121,7 @@ class TemplateService
             ? Carbon::parse($options['start_date']) 
             : Carbon::now();
         
-        $templateData = $template->template_data;
+        $templateData = $template->json_body ?? $template->template_data ?? [];
         
         if (!isset($templateData['phases']) || !is_array($templateData['phases'])) {
             throw new \InvalidArgumentException('Template data must contain phases array');
@@ -389,6 +474,26 @@ class TemplateService
             'tasks_hidden' => count(array_filter($result['tasks'], fn($task) => $task->is_hidden)),
             'conditional_tags' => $conditionalTags
         ];
+    }
+
+    public function applyTemplateToProject(
+        Template $template,
+        string $projectId,
+        string $mode,
+        array $conditionalTags = [],
+        ?array $phaseMapping = null,
+        ?array $selectedItems = null,
+        string $userId = 'system'
+    ): array {
+        return $this->applyToProject(
+            $template,
+            $projectId,
+            $mode,
+            $conditionalTags,
+            $phaseMapping,
+            $selectedItems,
+            $userId
+        );
     }
     
     /**

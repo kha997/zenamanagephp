@@ -1,0 +1,5 @@
+# Intentional negative probe paths for SSOT orphan lint.
+# Format: <path>|reason=<TOKEN>
+/api/v1/nonexistent-endpoint|reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT
+/api/v1/auth/oidc|reason=NEGATIVE_PROBE_SECURITY_TRAVERSAL
+/api/v1/documents/non-existent-document/revert|reason=NEGATIVE_PROBE_UNSUPPORTED_ENDPOINT

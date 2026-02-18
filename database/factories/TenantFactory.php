@@ -20,11 +20,13 @@ class TenantFactory extends Factory
      */
     public function definition(): array
     {
+        $companyName = $this->faker->unique()->company();
+
         return [
-            'id' => (string) \Illuminate\Support\Str::ulid(),
-            'name' => $this->faker->company(),
+            'id' => (string) Str::ulid(),
+            'name' => $companyName,
             'domain' => $this->faker->domainName(),
-            'slug' => Str::slug($this->faker->unique()->company()),
+            'slug' => Str::slug($companyName . '-' . Str::ulid()),
             'settings' => json_encode([
                 'timezone' => 'Asia/Ho_Chi_Minh',
                 'currency' => 'VND'

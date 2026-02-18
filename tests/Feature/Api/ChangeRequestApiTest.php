@@ -9,12 +9,14 @@ use App\Models\ZenaProject;
 use App\Models\ZenaChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\RouteNameTrait;
 use Tests\Traits\SchemaAwareChangeRequestAssertions;
 
 class ChangeRequestApiTest extends TestCase
 {
     use RefreshDatabase, WithFaker;
     use SchemaAwareChangeRequestAssertions;
+    use RouteNameTrait;
 
     protected $user;
     protected $project;
@@ -63,7 +65,7 @@ class ChangeRequestApiTest extends TestCase
         ]);
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->getJson('/api/zena/change-requests');
+            ->getJson($this->zena('change-requests.index'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -107,7 +109,7 @@ class ChangeRequestApiTest extends TestCase
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->postJson('/api/zena/change-requests', $changeRequestData);
+            ->postJson($this->zena('change-requests.store'), $changeRequestData);
 
         $response->assertStatus(201)
                 ->assertJsonStructure([
@@ -140,7 +142,7 @@ class ChangeRequestApiTest extends TestCase
         ]);
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->postJson("/api/zena/change-requests/{$changeRequest->id}/submit");
+            ->postJson($this->zena('change-requests.submit', ['id' => $changeRequest->id]));
 
         $response->assertStatus(200);
         $this->assertChangeRequestResponse($response, ['submitted_at']);
@@ -170,7 +172,7 @@ class ChangeRequestApiTest extends TestCase
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->postJson("/api/zena/change-requests/{$changeRequest->id}/approve", $approvalData);
+            ->postJson($this->zena('change-requests.approve', ['id' => $changeRequest->id]), $approvalData);
 
         $response->assertStatus(200);
         $this->assertChangeRequestResponse($response, ['approved_at', 'approved_by', 'approval_notes']);
@@ -201,7 +203,7 @@ class ChangeRequestApiTest extends TestCase
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->postJson("/api/zena/change-requests/{$changeRequest->id}/reject", $rejectionData);
+            ->postJson($this->zena('change-requests.reject', ['id' => $changeRequest->id]), $rejectionData);
 
         $response->assertStatus(200);
         $this->assertChangeRequestResponse($response, ['rejection_reason', 'rejected_at', 'rejected_by']);
@@ -231,7 +233,7 @@ class ChangeRequestApiTest extends TestCase
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->postJson("/api/zena/change-requests/{$changeRequest->id}/apply", $implementationData);
+            ->postJson($this->zena('change-requests.apply', ['id' => $changeRequest->id]), $implementationData);
 
         $response->assertStatus(200);
         $this->assertChangeRequestResponse($response, ['implementation_notes', 'implemented_at', 'implemented_by']);
@@ -261,7 +263,7 @@ class ChangeRequestApiTest extends TestCase
         ];
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->putJson("/api/zena/change-requests/{$changeRequest->id}", $updateData);
+            ->putJson($this->zena('change-requests.update', ['id' => $changeRequest->id]), $updateData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -292,7 +294,7 @@ class ChangeRequestApiTest extends TestCase
         ]);
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->deleteJson("/api/zena/change-requests/{$changeRequest->id}");
+            ->deleteJson($this->zena('change-requests.destroy', ['id' => $changeRequest->id]));
 
         $response->assertStatus(200);
 
@@ -307,7 +309,7 @@ class ChangeRequestApiTest extends TestCase
     public function test_change_request_creation_requires_valid_data()
     {
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->postJson('/api/zena/change-requests', []);
+            ->postJson($this->zena('change-requests.store'), []);
 
         $response->assertStatus(422);
 
@@ -329,7 +331,7 @@ class ChangeRequestApiTest extends TestCase
         ]);
 
         $response = $this->withHeaders($this->getAuthHeaders())
-            ->getJson("/api/zena/change-requests/{$changeRequest->id}");
+            ->getJson($this->zena('change-requests.show', ['id' => $changeRequest->id]));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -349,7 +351,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_unauthorized_access_returns_401()
     {
-        $response = $this->getJson('/api/zena/change-requests');
+        $response = $this->getJson($this->zena('change-requests.index'));
         $response->assertStatus(401);
     }
 

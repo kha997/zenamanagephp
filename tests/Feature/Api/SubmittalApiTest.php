@@ -10,10 +10,11 @@ use App\Models\ZenaSubmittal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Tests\Traits\RouteNameTrait;
 
 class SubmittalApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, RouteNameTrait;
 
     protected $user;
     protected $project;
@@ -46,7 +47,7 @@ class SubmittalApiTest extends TestCase
             'created_by' => $this->user->id
         ]);
 
-        $response = $this->withZenaAuth()->getJson('/api/zena/submittals');
+        $response = $this->withZenaAuth()->getJson($this->zena('submittals.index'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -88,7 +89,7 @@ class SubmittalApiTest extends TestCase
             'manufacturer' => 'Test Manufacturer'
         ];
 
-        $response = $this->withZenaAuth()->postJson('/api/zena/submittals', $submittalData);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.store'), $submittalData);
 
         $response->assertStatus(201)
                 ->assertJsonStructure([
@@ -120,11 +121,11 @@ class SubmittalApiTest extends TestCase
             'submittal_type' => 'shop_drawing'
         ];
 
-        $createResponse = $this->withZenaAuth()->postJson('/api/zena/submittals', $submittalData);
+        $createResponse = $this->withZenaAuth()->postJson($this->zena('submittals.store'), $submittalData);
         $createResponse->assertStatus(201);
         $submittalId = $createResponse->json('data.id');
 
-        $response = $this->withZenaAuth()->postJson("/api/zena/submittals/{$submittalId}/submit");
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $submittalId]));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -158,7 +159,7 @@ class SubmittalApiTest extends TestCase
             'status' => 'approved'
         ];
 
-        $response = $this->withZenaAuth()->postJson("/api/zena/submittals/{$submittal->id}/review", $reviewData);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.review', ['id' => $submittal->id]), $reviewData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -192,7 +193,7 @@ class SubmittalApiTest extends TestCase
             'approval_comments' => 'Approved with minor comments'
         ];
 
-        $response = $this->withZenaAuth()->postJson("/api/zena/submittals/{$submittal->id}/approve", $approvalData);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.approve', ['id' => $submittal->id]), $approvalData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -228,7 +229,7 @@ class SubmittalApiTest extends TestCase
             'rejection_comments' => 'Please revise and resubmit'
         ];
 
-        $response = $this->withZenaAuth()->postJson("/api/zena/submittals/{$submittal->id}/reject", $rejectionData);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.reject', ['id' => $submittal->id]), $rejectionData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -264,7 +265,7 @@ class SubmittalApiTest extends TestCase
             'description' => 'Updated description'
         ];
 
-        $response = $this->withZenaAuth()->putJson("/api/zena/submittals/{$submittal->id}", $updateData);
+        $response = $this->withZenaAuth()->putJson($this->zena('submittals.update', ['id' => $submittal->id]), $updateData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -292,7 +293,7 @@ class SubmittalApiTest extends TestCase
             'created_by' => $this->user->id
         ]);
 
-        $response = $this->withZenaAuth()->deleteJson("/api/zena/submittals/{$submittal->id}");
+        $response = $this->withZenaAuth()->deleteJson($this->zena('submittals.destroy', ['id' => $submittal->id]));
 
         $response->assertStatus(200);
 
@@ -306,7 +307,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_submittal_creation_requires_valid_data()
     {
-        $response = $this->withZenaAuth()->postJson('/api/zena/submittals', []);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.store'), []);
 
         $response->assertStatus(422);
 
@@ -321,7 +322,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_unauthorized_access_returns_401()
     {
-        $response = $this->getJson('/api/zena/submittals');
+        $response = $this->getJson($this->zena('submittals.index'));
         $response->assertStatus(400);
         $response->assertJsonPath('message', 'X-Tenant-ID header is required');
         $response->assertJsonPath('error.code', 'TENANT_REQUIRED');
@@ -343,7 +344,7 @@ class SubmittalApiTest extends TestCase
 
     private function loginZenaUser(User $user): string
     {
-        $response = $this->postJson('/api/zena/auth/login', [
+        $response = $this->postJson($this->zena('auth.login'), [
             'email' => $user->email,
             'password' => 'password',
         ]);

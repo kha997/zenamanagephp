@@ -2,11 +2,13 @@
 
 namespace Src\Notification\Services;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Src\Notification\Models\NotificationRule;
-use Src\Foundation\EventBus;
 use InvalidArgumentException;
+use Src\Foundation\EventBus;
+use Src\Foundation\Helpers\AuthHelper;
+use Src\Notification\Models\NotificationRule;
 
 /**
  * Service xử lý business logic cho Notification Rules
@@ -37,6 +39,7 @@ class NotificationRuleService
 
         $rule = NotificationRule::create([
             'user_id' => $data['user_id'],
+            'tenant_id' => $this->resolveTenantId($data),
             'project_id' => $data['project_id'] ?? null,
             'event_key' => $data['event_key'],
             'min_priority' => $data['min_priority'] ?? 'normal',
@@ -348,5 +351,27 @@ class NotificationRuleService
         ];
 
         return $levels[$priority] ?? 2;
+    }
+
+    /**
+     * Resolve tenant ID from input or current user
+     */
+    private function resolveTenantId(array $data): ?string
+    {
+        if (!empty($data['tenant_id'])) {
+            return (string) $data['tenant_id'];
+        }
+
+        $tenant = AuthHelper::user()?->tenant_id;
+        if ($tenant) {
+            return (string) $tenant;
+        }
+
+        if (!empty($data['user_id'])) {
+            $user = User::find($data['user_id']);
+            return $user ? (string) $user->tenant_id : null;
+        }
+
+        return null;
     }
 }

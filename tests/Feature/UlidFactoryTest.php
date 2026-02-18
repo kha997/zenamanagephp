@@ -71,7 +71,7 @@ class UlidFactoryTest extends TestCase
         
         // Test Project factory states
         $planningProject = Project::factory()
-            ->forTenant($tenant->id)
+            ->for($tenant, 'tenant')
             ->planning()
             ->create();
             
@@ -79,7 +79,7 @@ class UlidFactoryTest extends TestCase
         $this->assertEquals($tenant->id, $planningProject->tenant_id);
         
         $activeProject = Project::factory()
-            ->forTenant($tenant->id)
+            ->for($tenant, 'tenant')
             ->active()
             ->create();
             

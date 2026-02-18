@@ -10,11 +10,12 @@ use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\Traits\AuthenticationTestTrait;
+use Tests\Traits\RouteNameTrait;
 use Laravel\Sanctum\Sanctum;
 
 class SecurityTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     protected User $user;
     protected ZenaProject $project;
@@ -40,7 +41,7 @@ class SecurityTest extends TestCase
      */
     public function test_jwt_authentication_works()
     {
-        $response = $this->apiGet('/api/zena/projects');
+        $response = $this->apiGet($this->zena('projects.index'));
 
         $response->assertStatus(200);
     }
@@ -52,7 +53,7 @@ class SecurityTest extends TestCase
     {
         $response = $this->withHeaders(array_merge($this->apiHeaders, [
             'Authorization' => 'Bearer invalid-token',
-        ]))->getJson('/api/zena/projects');
+        ]))->getJson($this->zena('projects.index'));
 
         $response->assertStatus(401);
     }
@@ -62,7 +63,7 @@ class SecurityTest extends TestCase
      */
     public function test_missing_jwt_token_returns_401()
     {
-        $response = $this->withHeaders($this->tenantHeaders())->getJson('/api/zena/projects');
+        $response = $this->withHeaders($this->tenantHeaders())->getJson($this->zena('projects.index'));
         $response->assertStatus(401);
     }
 
@@ -73,7 +74,7 @@ class SecurityTest extends TestCase
     {
         $response = $this->withHeaders(array_merge($this->apiHeaders, [
             'Authorization' => 'Invalid ' . $this->apiHeaders['Authorization'],
-        ]))->getJson('/api/zena/projects');
+        ]))->getJson($this->zena('projects.index'));
 
         $response->assertStatus(401);
     }
@@ -85,7 +86,7 @@ class SecurityTest extends TestCase
     {
         $maliciousInput = "'; DROP TABLE users; --";
 
-        $response = $this->apiGet('/api/zena/projects', ['search' => $maliciousInput]);
+        $response = $this->apiGet($this->zena('projects.index', query: ['search' => $maliciousInput]));
 
         $response->assertStatus(200);
         
@@ -102,7 +103,7 @@ class SecurityTest extends TestCase
     {
         $xssPayload = '<script>alert("XSS")</script>';
 
-        $response = $this->apiPost('/api/zena/projects', [
+        $response = $this->apiPost($this->zena('projects.store'), [
             'name' => $xssPayload,
             'description' => 'Test project',
             'status' => 'planning',
@@ -123,7 +124,7 @@ class SecurityTest extends TestCase
     {
         // CSRF protection is typically handled by middleware
         // This test verifies that the API endpoints are protected
-        $response = $this->withHeaders($this->tenantHeaders())->postJson('/api/zena/projects', [
+        $response = $this->withHeaders($this->tenantHeaders())->postJson($this->zena('projects.store'), [
             'name' => 'Test Project',
             'description' => 'Test description',
             'status' => 'planning',
@@ -141,7 +142,7 @@ class SecurityTest extends TestCase
     {
         // Make multiple requests quickly
             for ($i = 0; $i < 100; $i++) {
-            $response = $this->apiGet('/api/zena/projects');
+            $response = $this->apiGet($this->zena('projects.index'));
             
             if ($response->status() === 429) {
                 $this->assertEquals(429, $response->status());
@@ -158,7 +159,7 @@ class SecurityTest extends TestCase
      */
     public function test_input_validation()
     {
-        $response = $this->apiPost('/api/zena/projects', [
+        $response = $this->apiPost($this->zena('projects.store'), [
             'name' => '', // Empty name
             'description' => str_repeat('a', 10000), // Too long description
             'status' => 'invalid_status', // Invalid status
@@ -184,7 +185,7 @@ class SecurityTest extends TestCase
             'error' => 0
         ];
 
-        $response = $this->apiPost('/api/zena/documents', [
+        $response = $this->apiPost($this->zena('documents.store'), [
             'project_id' => $this->project->id,
             'title' => 'Test Document',
             'description' => 'Test description',
@@ -209,7 +210,7 @@ class SecurityTest extends TestCase
         $headers = array_merge($this->tenantHeaders(), [
             'Authorization' => 'Bearer ' . $this->token,
         ]);
-        $response = $this->withHeaders($headers)->getJson("/api/zena/projects/{$otherProject->id}");
+        $response = $this->withHeaders($headers)->getJson($this->zena('projects.show', ['id' => $otherProject->id]));
 
         // Should return 404 or 403 depending on implementation
         $this->assertContains($response->status(), [403, 404]);
@@ -250,7 +251,7 @@ class SecurityTest extends TestCase
         $unauthenticatedResponse = $this->withHeaders([
             'Accept' => 'application/json',
             'X-Tenant-ID' => (string) $tenant1User->tenant_id,
-        ])->getJson("/api/zena/projects/{$tenant2Project->id}");
+        ])->getJson($this->zena('projects.show', ['id' => $tenant2Project->id]));
 
         $unauthenticatedResponse->assertStatus(401);
         $unauthenticatedResponse->assertJsonStructure([
@@ -264,7 +265,7 @@ class SecurityTest extends TestCase
         Sanctum::actingAs($tenant1User, [], 'sanctum');
         $tenantMismatchResponse = $this->withHeaders(array_merge($tenant1Headers, [
             'X-Tenant-ID' => (string) $tenant2User->tenant_id,
-        ]))->getJson("/api/zena/projects/{$tenant1Project->id}");
+        ]))->getJson($this->zena('projects.show', ['id' => $tenant1Project->id]));
 
         $tenantMismatchResponse->assertStatus(403);
         $this->assertSame('TENANT_INVALID', $tenantMismatchResponse->json('error.code'));
@@ -272,12 +273,12 @@ class SecurityTest extends TestCase
 
         // Authenticated cross-tenant access should be indistinguishable from not found
         Sanctum::actingAs($tenant1User, [], 'sanctum');
-        $crossTenantResponse = $this->withHeaders($tenant1Headers)->getJson("/api/zena/projects/{$tenant2Project->id}");
+        $crossTenantResponse = $this->withHeaders($tenant1Headers)->getJson($this->zena('projects.show', ['id' => $tenant2Project->id]));
         $crossTenantResponse->assertStatus(404);
         $this->assertSame('E404.NOT_FOUND', $crossTenantResponse->json('error.code'));
 
         Sanctum::actingAs($tenant2User, [], 'sanctum');
-        $reverseCrossTenantResponse = $this->withHeaders($tenant2Headers)->getJson("/api/zena/projects/{$tenant1Project->id}");
+        $reverseCrossTenantResponse = $this->withHeaders($tenant2Headers)->getJson($this->zena('projects.show', ['id' => $tenant1Project->id]));
         $reverseCrossTenantResponse->assertStatus(404);
         $this->assertSame('E404.NOT_FOUND', $reverseCrossTenantResponse->json('error.code'));
     }
@@ -295,12 +296,12 @@ class SecurityTest extends TestCase
         $authHeaders = array_merge($this->tenantHeaders(), [
             'Authorization' => 'Bearer ' . $this->token,
         ]);
-        $response = $this->withHeaders($authHeaders)->getJson('/api/zena/projects/invalid-ulid');
+        $response = $this->withHeaders($authHeaders)->getJson($this->zena('projects.show', ['id' => 'invalid-ulid']));
 
         $response->assertStatus(404);
 
         // Test with sequential ID (should fail)
-        $response = $this->withHeaders($authHeaders)->getJson('/api/zena/projects/1');
+        $response = $this->withHeaders($authHeaders)->getJson($this->zena('projects.show', ['id' => '1']));
 
         $response->assertStatus(404);
     }
@@ -320,7 +321,7 @@ class SecurityTest extends TestCase
 
         $response = $this->withHeaders(array_merge($this->tenantHeaders(), [
             'Authorization' => 'Bearer ' . $this->token,
-        ]))->postJson('/api/zena/projects', $maliciousData);
+        ]))->postJson($this->zena('projects.store'), $maliciousData);
 
         $response->assertStatus(201);
         
@@ -338,7 +339,7 @@ class SecurityTest extends TestCase
             'Authorization' => 'Bearer ' . $this->token,
         ]);
 
-        $response = $this->withHeaders($authHeaders)->getJson('/api/zena/projects/non-existent-id');
+        $response = $this->withHeaders($authHeaders)->getJson($this->zena('projects.show', ['id' => 'non-existent-id']));
 
         $response->assertStatus(404);
         

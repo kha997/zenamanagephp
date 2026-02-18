@@ -444,9 +444,8 @@ php artisan make:seeder            # Generate seeder
 php artisan make:test              # Generate test
 
 # Code Analysis
-php artisan route:list --compact   # Compact route list
-php artisan route:list --json      # JSON route list
-php artisan route:list --columns=uri,name,action # Specific columns
+php artisan route:list --path=login                    # Always supported for this repo
+php artisan route:list --path=login --json             # Inspect middleware when Artisan supports --json; otherwise read routes/web.php
 ```
 
 ## 🚨 **EMERGENCY COMMANDS**

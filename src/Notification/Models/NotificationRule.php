@@ -2,13 +2,14 @@
 
 namespace Src\Notification\Models;
 
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Src\CoreProject\Models\Project;
-use App\Models\User;
 use Src\Notification\Models\Notification;
 
 /**
@@ -16,6 +17,7 @@ use Src\Notification\Models\Notification;
  * 
  * @property string $id
  * @property string $user_id
+ * @property string $tenant_id
  * @property string|null $project_id
  * @property string $event_key
  * @property string $min_priority
@@ -62,6 +64,7 @@ class NotificationRule extends Model
 
     protected $fillable = [
         'user_id',
+        'tenant_id',
         'project_id',
         'event_key',
         'min_priority',
@@ -90,6 +93,11 @@ class NotificationRule extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
     }
 
     /**

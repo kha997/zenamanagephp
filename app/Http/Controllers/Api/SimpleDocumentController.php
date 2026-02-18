@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
-use App\Models\Document;
-use App\Models\Project;
+use Src\CoreProject\Models\LegacyProjectAdapter as Project;
 use App\Services\ErrorEnvelopeService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -14,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Src\DocumentManagement\Models\LegacyDocumentAdapter as Document;
 use Src\Foundation\Services\FileStorageService;
 use Throwable;
 

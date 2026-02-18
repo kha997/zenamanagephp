@@ -78,7 +78,7 @@ class ProjectCalculationListener
      * @param int $actorId
      * @return void
      */
-    protected function recalculateProjectProgress(int $projectId, int $actorId): void
+    protected function recalculateProjectProgress(string $projectId, string $actorId): void
     {
         $project = Project::findOrFail($projectId);
         $oldProgress = $project->progress;
@@ -132,7 +132,7 @@ class ProjectCalculationListener
      * @param int $actorId
      * @return void
      */
-    protected function recalculateProjectCost(int $projectId, int $actorId): void
+    protected function recalculateProjectCost(string $projectId, string $actorId): void
     {
         $project = Project::findOrFail($projectId);
         $oldCost = $project->actual_cost;
@@ -144,7 +144,10 @@ class ProjectCalculationListener
         
         // Cập nhật nếu có thay đổi
         if ($oldCost !== $newCost) {
-            $project->update(['actual_cost' => $newCost]);
+            $project->forceFill([
+                'budget_actual' => $newCost,
+                'actual_cost' => $newCost,
+            ])->save();
             
             // Dispatch ProjectCostUpdated event
             $this->eventBus->publish('Project.Cost.Updated', [

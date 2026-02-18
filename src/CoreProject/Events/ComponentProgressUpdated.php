@@ -15,6 +15,8 @@ class ComponentProgressUpdated
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public readonly \DateTime $timestamp;
+    public ?object $component = null;
+    public readonly string $entityId;
 
     /**
      * @param string $componentId ID của component
@@ -39,9 +41,10 @@ class ComponentProgressUpdated
         public readonly ?float $newCost,
         public readonly array $changedFields,
         ?\DateTime $timestamp = null
-    ) {
-        $this->timestamp = $timestamp ?? new \DateTime();
-    }
+        ) {
+            $this->timestamp = $timestamp ?? new \DateTime();
+            $this->entityId = $this->componentId;
+        }
 
     /**
      * Lấy tên event theo convention Domain.Entity.Action
@@ -57,10 +60,15 @@ class ComponentProgressUpdated
     public function getPayload(): array
     {
         return [
+            'entityId' => $this->componentId,
             'component_id' => $this->componentId,
+            'componentId' => $this->componentId,
             'project_id' => $this->projectId,
+            'projectId' => $this->projectId,
             'actor_id' => $this->actorId,
+            'actorId' => $this->actorId,
             'tenant_id' => $this->tenantId,
+            'tenantId' => $this->tenantId,
             'old_progress' => $this->oldProgress,
             'new_progress' => $this->newProgress,
             'old_cost' => $this->oldCost,

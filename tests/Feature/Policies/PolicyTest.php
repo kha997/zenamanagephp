@@ -9,6 +9,7 @@ use App\Models\Component;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Rfi;
+use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class PolicyTest extends TestCase
@@ -21,25 +22,33 @@ class PolicyTest extends TestCase
     protected $designer;
     protected $engineer;
     protected $regularUser;
+    protected $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->tenant = Tenant::factory()->create([
+            'id' => '1',
+            'name' => 'Policy Tenant',
+            'slug' => 'policy-tenant',
+            'domain' => 'policy-tenant.local',
+            'settings' => json_encode(['timezone' => 'UTC', 'currency' => 'USD']),
+            'is_active' => true,
+        ]);
         
         // Create test users with different roles
-        $this->superAdmin = User::factory()->create(['role' => 'super_admin']);
-        $this->admin = User::factory()->create(['role' => 'admin']);
-        $this->pm = User::factory()->create(['role' => 'pm']);
-        $this->designer = User::factory()->create(['role' => 'designer']);
-        $this->engineer = User::factory()->create(['role' => 'engineer']);
-        $this->regularUser = User::factory()->create(['role' => 'user']);
+        $this->superAdmin = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'super_admin']);
+        $this->admin = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'admin']);
+        $this->pm = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'pm']);
+        $this->designer = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'designer']);
+        $this->engineer = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'engineer']);
+        $this->regularUser = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'user']);
     }
 
     /** @test */
     public function document_policy_allows_proper_access()
     {
-        $document = Document::factory()->create(['tenant_id' => 1]);
-        
+        $document = Document::factory()->for($this->tenant, 'tenant')->create();
         // Super admin can do everything
         $this->assertTrue($this->superAdmin->can('view', $document));
         $this->assertTrue($this->superAdmin->can('create', Document::class));
@@ -80,7 +89,7 @@ class PolicyTest extends TestCase
     /** @test */
     public function component_policy_allows_proper_access()
     {
-        $component = Component::factory()->create(['tenant_id' => 1]);
+        $component = Component::factory()->for($this->tenant, 'tenant')->create();
         
         // Super admin can do everything
         $this->assertTrue($this->superAdmin->can('view', $component));
@@ -148,11 +157,20 @@ class PolicyTest extends TestCase
     /** @test */
     public function tenant_isolation_prevents_cross_tenant_access()
     {
-        $document1 = Document::factory()->create(['tenant_id' => 1]);
-        $document2 = Document::factory()->create(['tenant_id' => 2]);
+        $tenant2 = Tenant::factory()->create([
+            'id' => '2',
+            'name' => 'Policy Tenant 2',
+            'slug' => 'policy-tenant-2',
+            'domain' => 'policy-tenant-2.local',
+            'settings' => json_encode(['timezone' => 'UTC', 'currency' => 'USD']),
+            'is_active' => true,
+        ]);
+
+        $document1 = Document::factory()->for($this->tenant, 'tenant')->create();
+        $document2 = Document::factory()->for($tenant2, 'tenant')->create();
         
-        $user1 = User::factory()->create(['tenant_id' => 1, 'role' => 'admin']);
-        $user2 = User::factory()->create(['tenant_id' => 2, 'role' => 'admin']);
+        $user1 = User::factory()->for($this->tenant, 'tenant')->create(['role' => 'admin']);
+        $user2 = User::factory()->for($tenant2, 'tenant')->create(['role' => 'admin']);
         
         // User 1 can access tenant 1 documents
         $this->assertTrue($user1->can('view', $document1));
@@ -174,7 +192,7 @@ class PolicyTest extends TestCase
     /** @test */
     public function rfi_policy_allows_proper_access()
     {
-        $rfi = Rfi::factory()->create(['tenant_id' => 1, 'created_by' => $this->pm->id]);
+        $rfi = Rfi::factory()->create(['tenant_id' => $this->tenant->id, 'created_by' => $this->pm->id]);
         
         // Creator can update and delete
         $this->assertTrue($this->pm->can('update', $rfi));

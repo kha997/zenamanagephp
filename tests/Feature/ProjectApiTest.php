@@ -282,7 +282,7 @@ class ProjectApiTest extends TestCase
                      'data' => []
                  ]);
 
-        $this->assertDatabaseMissing('projects', [
+        $this->assertSoftDeleted('projects', [
             'id' => $project->id
         ]);
     }

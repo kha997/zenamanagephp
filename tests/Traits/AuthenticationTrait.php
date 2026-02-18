@@ -15,6 +15,8 @@ use RuntimeException;
  */
 trait AuthenticationTrait
 {
+    use TenantUserFactoryTrait;
+
     protected array $apiHeaders = [];
 
     protected function apiHeadersForTenant(string $tenantId, array $headers = []): array
@@ -48,18 +50,6 @@ trait AuthenticationTrait
         return $user;
     }
 
-    protected function createTenantUser(Tenant $tenant, array $attributes = [], ?array $roles = null): User
-    {
-        $user = User::factory()->create(array_merge([
-            'tenant_id' => $tenant->id,
-            'password' => Hash::make('password')
-        ], $attributes));
-
-        $this->assignApiRoles($user, $roles ?? ['super_admin', 'Admin']);
-
-        return $user;
-    }
-    
     /**
      * Tạo và authenticate user trong một bước
      *
@@ -158,42 +148,48 @@ trait AuthenticationTrait
         return $tenant;
     }
 
-    private function assignApiRoles(User $user, array $roles = []): void
+    protected function createRbacAdminUser(?Tenant $tenant = null, array $attributes = []): User
     {
-        if (empty($roles)) {
-            return;
-        }
+        $tenant = $tenant ?? Tenant::factory()->create();
 
-        foreach ($roles as $roleName) {
-            $role = Role::firstOrCreate([
-                'name' => $roleName,
-            ], [
-                'scope' => 'system',
-                'description' => Str::title(str_replace('_', ' ', $roleName)),
-            ]);
+        $user = $this->createTenantUser($tenant, array_merge([
+            'name' => 'System Admin',
+            'email' => 'admin+' . Str::random(6) . '@example.com',
+        ], $attributes), ['admin']);
 
-            $user->roles()->syncWithoutDetaching($role->id);
-            $this->ensurePermissionAttached($role, 'project.read');
-            $this->ensurePermissionAttached($role, 'project.write');
+        $role = Role::firstOrCreate(
+            ['name' => 'admin', 'scope' => Role::SCOPE_SYSTEM],
+            [
+                'allow_override' => true,
+                'is_active' => true,
+                'description' => 'System Administrator',
+            ]
+        );
 
-            if (method_exists($user, 'systemRoles')) {
-                $user->systemRoles()->syncWithoutDetaching($role->id);
-            }
-        }
-    }
-
-    private function ensurePermissionAttached(Role $role, string $permissionName): void
-    {
-        $parts = explode('.', $permissionName);
-        $permission = Permission::firstOrCreate([
-            'name' => $permissionName,
-        ], [
-            'code' => $permissionName,
-            'module' => $parts[0] ?? $permissionName,
-            'action' => $parts[1] ?? '*',
-            'description' => ucfirst(str_replace('.', ' ', $permissionName)),
-        ]);
+        $permission = Permission::firstOrCreate(
+            ['code' => 'admin'],
+            [
+                'name' => 'admin',
+                'module' => 'admin',
+                'action' => 'access',
+                'description' => 'System admin access',
+            ]
+        );
 
         $role->permissions()->syncWithoutDetaching($permission->id);
+        $user->roles()->syncWithoutDetaching($role->id);
+
+        return $user;
+    }
+
+    protected function authHeadersForUser(User $user, string $token, array $extra = []): array
+    {
+        return array_merge(
+            $this->apiHeadersForTenant((string) $user->tenant_id),
+            [
+                'Authorization' => 'Bearer ' . $token,
+            ],
+            $extra
+        );
     }
 }

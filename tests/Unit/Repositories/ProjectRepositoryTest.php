@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\User;
 use App\Models\Tenant;
 use App\Models\Team;
+use App\Services\TenancyService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,6 +31,8 @@ class ProjectRepositoryTest extends TestCase
         // Create test tenant
         $this->tenant = Tenant::factory()->create();
         
+        app(TenancyService::class)->setTenantContext($this->tenant->id, $this->tenant);
+        
         // Create test user
         $this->user = User::factory()->create([
             'tenant_id' => $this->tenant->id
@@ -38,7 +41,8 @@ class ProjectRepositoryTest extends TestCase
         // Create test project
         $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'manager_id' => $this->user->id
+            'manager_id' => $this->user->id,
+            'status' => Project::STATUS_PLANNING
         ]);
     }
 
@@ -69,13 +73,32 @@ class ProjectRepositoryTest extends TestCase
     /** @test */
     public function it_can_filter_projects_by_status()
     {
-        // Create projects with different statuses
-        Project::factory()->create(['status' => 'active', 'tenant_id' => $this->tenant->id]);
-        Project::factory()->create(['status' => 'completed', 'tenant_id' => $this->tenant->id]);
+        app(TenancyService::class)->setTenantContext($this->tenant->id, $this->tenant);
+
+        $activeProjects = Project::factory()->count(2)->create([
+            'status' => Project::STATUS_ACTIVE,
+            'tenant_id' => $this->tenant->id,
+            'pm_id' => $this->user->id,
+        ]);
+
+        Project::factory()->create([
+            'status' => Project::STATUS_COMPLETED,
+            'tenant_id' => $this->tenant->id,
+            'pm_id' => $this->user->id,
+        ]);
+
+        $filters = [
+            'tenant_id' => $this->tenant->id,
+            'status' => Project::STATUS_ACTIVE,
+        ];
+
+        $result = $this->projectRepository->getAll($filters, 10);
         
-        $result = $this->projectRepository->getAll(['status' => 'active'], 10);
-        
-        $this->assertEquals(2, $result->total()); // 1 original + 1 new
+        $this->assertEquals(2, $result->total());
+        $this->assertEqualsCanonicalizing(
+            $activeProjects->pluck('id')->toArray(),
+            $result->getCollection()->pluck('id')->toArray()
+        );
     }
 
     /** @test */

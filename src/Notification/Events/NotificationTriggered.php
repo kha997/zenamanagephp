@@ -24,7 +24,7 @@ class NotificationTriggered
         public readonly array $channels,
         public readonly string $sourceEvent,
         public readonly array $sourcePayload,
-        public readonly \DateTime $timestamp
+        ?\DateTime $timestamp = null
     ) {
         $this->timestamp = $timestamp ?? new \DateTime();
     }

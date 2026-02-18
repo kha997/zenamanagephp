@@ -16,6 +16,7 @@ use Src\Foundation\Traits\HasAuditLog;
 use Src\Foundation\Events\EventBus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Auth\AuthenticationException;
+use Database\Factories\Src\CoreProject\Models\ProjectFactory;
 
 /**
  * Model Project - Quản lý dự án
@@ -262,7 +263,7 @@ class Project extends Model
      */
     protected static function newFactory()
     {
-        return \Database\Factories\ProjectFactory::new();
+        return ProjectFactory::new();
     }
 
     /**

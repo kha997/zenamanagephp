@@ -53,6 +53,8 @@ class BasicAuditServiceTest extends TestCase
         $tenant = \App\Models\Tenant::factory()->create();
         $user = \App\Models\User::factory()->create(['tenant_id' => $tenant->id]);
         
+        AuditLog::query()->delete();
+
         $auditLog = AuditLog::create([
             'user_id' => $user->id,
             'action' => 'test.created',
@@ -87,6 +89,8 @@ class BasicAuditServiceTest extends TestCase
         $tenant = \App\Models\Tenant::factory()->create();
         $user = \App\Models\User::factory()->create(['tenant_id' => $tenant->id]);
         
+        AuditLog::query()->delete();
+
         // Create multiple audit logs manually
         AuditLog::create([
             'user_id' => $user->id,

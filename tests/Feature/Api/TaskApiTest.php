@@ -8,6 +8,7 @@ use App\Models\User;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 use Tests\Traits\DatabaseTrait;
+use Tests\Traits\RouteNameTrait;
 
 /**
  * Feature tests cho Task API endpoints
@@ -16,6 +17,7 @@ class TaskApiTest extends TestCase
 {
     use DatabaseTrait;
     use AuthenticationTestTrait;
+    use RouteNameTrait;
 
     protected User $user;
     protected string $tenantId;
@@ -44,7 +46,7 @@ class TaskApiTest extends TestCase
             'tenant_id' => $this->tenantId
         ]);
         
-        $response = $this->apiGet('/api/zena/tasks', ['project_id' => $project->id]);
+        $response = $this->apiGet($this->zena('tasks.index', query: ['project_id' => $project->id]));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -89,7 +91,7 @@ class TaskApiTest extends TestCase
             'dependencies' => [$task1->id, $task2->id]
         ];
         
-        $response = $this->apiPost('/api/zena/tasks', $taskData);
+        $response = $this->apiPost($this->zena('tasks.store'), $taskData);
 
         
         $response->assertStatus(201)
@@ -122,7 +124,7 @@ class TaskApiTest extends TestCase
             'status' => 'in_progress'
         ];
         
-        $response = $this->apiPut("/api/zena/tasks/{$task->id}", $updateData);
+        $response = $this->apiPut($this->zena('tasks.update', ['id' => $task->id]), $updateData);
         
         $response->assertStatus(200)
                 ->assertJson([

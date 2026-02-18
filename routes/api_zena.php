@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\AuthController;
 |--------------------------------------------------------------------------
 */
 
-Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
+Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
 
     // Main API info route
     Route::get('/', function () {
@@ -63,7 +63,7 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
         ]);
     })->name('api.health');
 
-    Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
+    Route::middleware(['auth:sanctum', 'tenant.isolation', 'input.sanitization', 'error.envelope'])->group(function () {
 
         Route::prefix('auth')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout'])->middleware('rbac:auth.logout')->name('auth.logout');
@@ -210,7 +210,7 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
         });
     });
 
-    Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
+    Route::middleware(['auth:sanctum', 'tenant.isolation', 'input.sanitization', 'error.envelope'])->group(function () {
         // Project Management routes
         Route::group(['prefix' => 'projects'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ProjectController::class, 'index'])->middleware('rbac:project.view')->name('projects.index');

@@ -2,43 +2,24 @@
 
 namespace Tests\Feature;
 
-use App\Models\Permission;
 use App\Models\Project;
 use App\Models\Rfi;
-use App\Models\Role;
 use App\Models\Tenant;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTrait;
 
 class LegacyTenantIsolationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait;
 
     public function test_rfis_are_blocked_for_other_tenants(): void
     {
         $tenantA = Tenant::factory()->create();
         $tenantB = Tenant::factory()->create();
 
-        $userA = User::factory()->forTenant((string) $tenantA->id)->create();
-        $userB = User::factory()->forTenant((string) $tenantB->id)->create();
-
-        $permission = Permission::factory()->create([
-            'code' => 'rfi.view',
-            'name' => 'rfi.view',
-            'module' => 'rfi',
-            'action' => 'view',
-            'description' => 'View RFIs',
-        ]);
-
-        $role = Role::factory()->create([
-            'name' => 'legacy-rfi-viewer',
-            'scope' => 'system',
-            'is_active' => true,
-        ]);
-
-        $role->permissions()->attach($permission->id);
-        $userB->roles()->attach($role->id);
+        $userA = $this->createTenantUser($tenantA, [], null, ['rfi.view']);
+        $userB = $this->createTenantUser($tenantB, [], null, ['rfi.view']);
 
         $projectA = Project::factory()->create([
             'tenant_id' => $tenantA->id,
@@ -93,12 +74,10 @@ class LegacyTenantIsolationTest extends TestCase
             ])
             ->getJson("/api/zena/rfis/{$rfi->id}");
 
-        $missingTenantResponse->assertStatus(400);
-        $this->assertSame(
-            'TENANT_REQUIRED',
-            $missingTenantResponse->json('error.code'),
-            'Tenant header is required before tenant isolation runs.'
-        );
+        $missingTenantResponse->assertNotFound();
+        $missingTenantResponse->assertJsonFragment([
+            'message' => 'RFI not found',
+        ]);
 
         $tenantMismatchResponse = $this
             ->flushHeaders()

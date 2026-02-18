@@ -7,6 +7,7 @@ use App\Services\LegacyRouteMonitoringService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use OpenApi\Annotations as OA;
 
 /**
@@ -429,7 +430,24 @@ class LegacyRouteMonitoringController extends Controller
                 ], 403);
             }
 
-            $daysToKeep = $request->input('days_to_keep', 30);
+            $validator = Validator::make($request->all(), [
+                'days_to_keep' => 'nullable|integer|min:0'
+            ]);
+    
+            if ($validator->fails()) {
+                return response()->json([
+                    'error' => [
+                        'id' => 'req_' . substr(md5(uniqid()), 0, 8),
+                        'code' => 'E422.VALIDATION',
+                        'message' => 'Validation failed',
+                        'details' => [
+                            'validation' => $validator->errors()->toArray()
+                        ]
+                    ]
+                ], 422);
+            }
+
+            $daysToKeep = (int) $request->input('days_to_keep', 30);
             $clearedEntries = $this->monitoringService->clearOldData($daysToKeep);
 
             return response()->json([

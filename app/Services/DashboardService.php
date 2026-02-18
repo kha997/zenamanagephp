@@ -9,6 +9,7 @@ use App\Models\DashboardWidgetDataCache;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\UserDashboard;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
@@ -409,7 +410,7 @@ class DashboardService
         }
 
         if (!$widget->isAvailableForRole($this->getUserRole($user))) {
-            throw new \Exception('User does not have permission to access this widget');
+            throw new AuthorizationException('User does not have permission to access this widget');
         }
 
         DB::beginTransaction();

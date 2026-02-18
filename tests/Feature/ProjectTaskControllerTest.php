@@ -7,7 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use App\Models\User;
 use App\Models\Tenant;
-use Src\CoreProject\Models\Project;
+use Src\CoreProject\Models\Project as CoreProjectProject;
 use Src\WorkTemplate\Models\ProjectPhase;
 use Src\WorkTemplate\Models\ProjectTask;
 use Illuminate\Support\Facades\Hash;
@@ -19,15 +19,16 @@ class ProjectTaskControllerTest extends TestCase
     use RefreshDatabase, WithFaker;
 
     private User $user;
+    private Tenant $tenant;
     private string $token;
-    private Project $project;
+    private CoreProjectProject $project;
 
     protected function setUp(): void
     {
         parent::setUp();
         
         // Tạo tenant mặc định
-        Tenant::factory()->create([
+        $this->tenant = Tenant::factory()->create([
             'id' => 1,
             'name' => 'Test Company',
             'domain' => 'test.com'
@@ -36,22 +37,23 @@ class ProjectTaskControllerTest extends TestCase
         // Tạo user và login
         $this->user = User::factory()->create([
             'password' => Hash::make('password123'),
+            'tenant_id' => $this->tenant->id,
         ]);
 
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $this->user->email,
-            'password' => 'password123',
-        ]);
+        $this->user->assignRole('super_admin');
 
-        $this->token = $loginResponse->json('data.token');
+        $this->token = $this->user->createToken('project-task-test')->plainTextToken;
         
         // Tạo project cho test
-        $this->project = Project::factory()->create();
+        $this->project = CoreProjectProject::factory()->create([
+            'tenant_id' => $this->tenant->id,
+        ]);
     }
 
     private function authenticatedJson(string $method, string $uri, array $data = [], array $headers = [])
     {
         $headers['Authorization'] = 'Bearer ' . $this->token;
+        $headers['X-Tenant-ID'] = (string) $this->tenant->id;
         return $this->json($method, $uri, $data, $headers);
     }
 
@@ -73,10 +75,15 @@ class ProjectTaskControllerTest extends TestCase
             'is_hidden' => true,
         ]);
 
+
         $response = $this->authenticatedJson(
             'POST',
-            "/api/v1/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional"
+            "/api/v1/work-template/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional"
         );
+
+        if ($response->status() !== 200) {
+            dump($response->json());
+        }
 
         $response->assertStatus(200)
                  ->assertJsonStructure([
@@ -122,7 +129,7 @@ class ProjectTaskControllerTest extends TestCase
 
         $response = $this->authenticatedJson(
             'POST',
-            "/api/v1/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional"
+            "/api/v1/work-template/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional"
         );
 
         $response->assertStatus(400)
@@ -137,7 +144,7 @@ class ProjectTaskControllerTest extends TestCase
      */
     public function test_toggle_task_not_in_project(): void
     {
-        $otherProject = Project::factory()->create();
+        $otherProject = CoreProjectProject::factory()->create();
         $phase = ProjectPhase::factory()->create([
             'project_id' => $otherProject->id,
         ]);
@@ -150,7 +157,7 @@ class ProjectTaskControllerTest extends TestCase
 
         $response = $this->authenticatedJson(
             'POST',
-            "/api/v1/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional"
+            "/api/v1/work-template/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional"
         );
 
         $response->assertStatus(404)
@@ -193,7 +200,7 @@ class ProjectTaskControllerTest extends TestCase
 
         $response = $this->authenticatedJson(
             'GET',
-            "/api/v1/projects/{$this->project->id}/tasks/conditional"
+            "/api/v1/work-template/projects/{$this->project->id}/tasks/conditional"
         );
 
         $response->assertStatus(200)
@@ -234,10 +241,10 @@ class ProjectTaskControllerTest extends TestCase
     {
         $task = ProjectTask::factory()->create();
         
-        $response = $this->postJson("/api/v1/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional");
+        $response = $this->postJson("/api/v1/work-template/projects/{$this->project->id}/tasks/{$task->id}/toggle-conditional");
         $response->assertStatus(401);
         
-        $response = $this->getJson("/api/v1/projects/{$this->project->id}/tasks/conditional");
+        $response = $this->getJson("/api/v1/work-template/projects/{$this->project->id}/tasks/conditional");
         $response->assertStatus(401);
     }
 }

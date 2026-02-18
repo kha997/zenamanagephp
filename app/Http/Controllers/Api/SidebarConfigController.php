@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\SidebarConfig;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class SidebarConfigController extends Controller
@@ -24,8 +26,9 @@ class SidebarConfigController extends Controller
         }
 
         // Filter by tenant if provided
-        if ($request->has('tenant_id')) {
-            $query->forTenant($request->get('tenant_id'));
+        $tenantId = $this->resolveTenantId($request);
+        if ($tenantId !== null) {
+            $query->forTenant($tenantId);
         }
 
         // Only enabled configs by default
@@ -70,6 +73,8 @@ class SidebarConfigController extends Controller
 
         // Sanitize config
         $validated['config'] = $this->securityGuardService->sanitizeConfig($validated['config']);
+
+        $validated['tenant_id'] = $this->resolveTenantId($request, $validated['tenant_id'] ?? null);
 
         // Set updated_by to current user
         $validated['updated_by'] = Auth::id();
@@ -158,7 +163,7 @@ class SidebarConfigController extends Controller
     {
         $this->authorize('viewAny', SidebarConfig::class);
 
-        $tenantId = $request->get('tenant_id');
+        $tenantId = $this->resolveTenantId($request);
 
         // Try to find tenant-specific config first
         $config = SidebarConfig::forRole($role)
@@ -201,12 +206,13 @@ class SidebarConfigController extends Controller
             'to_role' => 'required|string|in:' . implode(',', SidebarConfig::VALID_ROLES),
             'tenant_id' => 'nullable|ulid|exists:tenants,id',
         ]);
+        $tenantId = $this->resolveTenantId($request, $validated['tenant_id'] ?? null);
 
         // Get source config
         $sourceConfig = SidebarConfig::forRole($validated['from_role'])
             ->enabled()
-            ->when($validated['tenant_id'], function ($query) use ($validated) {
-                return $query->forTenant($validated['tenant_id']);
+            ->when($tenantId, function ($query) use ($tenantId) {
+                return $query->forTenant($tenantId);
             }, function ($query) {
                 return $query->global();
             })
@@ -221,8 +227,8 @@ class SidebarConfigController extends Controller
 
         // Check if target config already exists
         $existingConfig = SidebarConfig::forRole($validated['to_role'])
-            ->when($validated['tenant_id'], function ($query) use ($validated) {
-                return $query->forTenant($validated['tenant_id']);
+            ->when($tenantId, function ($query) use ($tenantId) {
+                return $query->forTenant($tenantId);
             }, function ($query) {
                 return $query->global();
             })
@@ -239,7 +245,7 @@ class SidebarConfigController extends Controller
         $newConfig = SidebarConfig::create([
             'role_name' => $validated['to_role'],
             'config' => $sourceConfig->config,
-            'tenant_id' => $validated['tenant_id'],
+            'tenant_id' => $tenantId,
             'updated_by' => Auth::id(),
         ]);
 
@@ -257,7 +263,7 @@ class SidebarConfigController extends Controller
     {
         $this->authorize('update', SidebarConfig::class);
 
-        $tenantId = $request->get('tenant_id');
+        $tenantId = $this->resolveTenantId($request);
 
         // Find existing config
         $config = SidebarConfig::forRole($role)
@@ -287,6 +293,17 @@ class SidebarConfigController extends Controller
             'message' => 'Config reset to default successfully',
             'data' => $config->load(['tenant', 'updater']),
         ]);
+    }
+
+    private function resolveTenantId(Request $request, ?string $explicitTenantId = null): ?string
+    {
+        $tenantId = TenantContext::id($request);
+
+        if ($tenantId !== null) {
+            return $tenantId;
+        }
+
+        return $explicitTenantId;
     }
 
     /**

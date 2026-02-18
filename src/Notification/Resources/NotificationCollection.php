@@ -3,6 +3,7 @@
 namespace Src\Notification\Resources;
 
 use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Notification Collection Resource
@@ -52,12 +53,21 @@ class NotificationCollection extends ResourceCollection
      */
     public function with($request): array
     {
-        return [
-            'meta' => [
-                'version' => '1.0',
-                'timestamp' => now()->toISOString(),
-                'collection_type' => 'notifications',
-            ],
+        $meta = [
+            'version' => '1.0',
+            'timestamp' => now()->toISOString(),
+            'collection_type' => 'notifications',
         ];
+
+        if ($this->resource instanceof LengthAwarePaginator) {
+            $meta['pagination'] = [
+                'page' => $this->resource->currentPage(),
+                'per_page' => $this->resource->perPage(),
+                'total' => $this->resource->total(),
+                'last_page' => $this->resource->lastPage(),
+            ];
+        }
+
+        return ['meta' => $meta];
     }
 }

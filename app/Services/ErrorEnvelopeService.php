@@ -51,6 +51,7 @@ class ErrorEnvelopeService
         ];
         
         $responseBody = [
+            'status' => 'error',
             'success' => false,
             'message' => $translatedMessage,
             'error' => $error

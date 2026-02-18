@@ -14,9 +14,16 @@ class WebSocketTest extends TestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
+       parent::setUp();
         Cache::flush();
-        $this->apiActingAsTenantAdmin();
+        $user = $this->createRbacAdminUser();
+        $tenant = $this->resolveTenantForUser($user);
+        $token = $this->apiLoginToken($user, $tenant);
+
+        $this->apiFeatureUser = $user;
+        $this->apiFeatureTenant = $tenant;
+        $this->apiFeatureToken = $token;
+        $this->apiHeaders = $this->authHeadersForUser($user, $token);
         Cache::flush();
     }
 

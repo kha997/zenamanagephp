@@ -169,7 +169,9 @@ class BulkOperationsBasicTest extends TestCase
             $this->assertDatabaseHas('users', ['email' => 'transaction@example.com']);
             
         } catch (\Exception $e) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             throw $e;
         }
     }
@@ -196,7 +198,9 @@ class BulkOperationsBasicTest extends TestCase
             $this->assertDatabaseMissing('users', ['email' => 'rollback@example.com']);
             
         } catch (\Exception $e) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             throw $e;
         }
     }

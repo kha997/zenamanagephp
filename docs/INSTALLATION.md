@@ -69,7 +69,7 @@ php artisan jwt:secret
 #### Create Database
 ```sql
 CREATE DATABASE zena_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'zena_user'@'localhost' IDENTIFIED BY 'secure_password';
+CREATE USER 'zena_user'@'localhost' IDENTIFIED BY 'your_db_password_here';
 GRANT ALL PRIVILEGES ON zena_project.* TO 'zena_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
@@ -82,7 +82,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=zena_project
 DB_USERNAME=zena_user
-DB_PASSWORD=secure_password
+DB_PASSWORD=your_db_password_here
 ```
 
 #### Run Migrations
@@ -270,7 +270,7 @@ php artisan tinker
 $user = new App\Models\User();
 $user->name = 'Admin User';
 $user->email = 'admin@example.com';
-$user->password = Hash::make('secure_password');
+$user->password = Hash::make('your_db_password_here');
 $user->tenant_id = 1; // Assuming tenant exists
 $user->save();
 
@@ -323,7 +323,7 @@ services:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: zena_project
       MYSQL_USER: zena_user
-      MYSQL_PASSWORD: secure_password
+      MYSQL_PASSWORD: your_db_password_here
     volumes:
       - mysql_data:/var/lib/mysql
       

@@ -295,7 +295,7 @@ npm run build:prod
 CREATE DATABASE zenamanage_production;
 
 -- Create user with appropriate permissions
-CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'secure_password';
+CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'your_db_password_here';
 GRANT ALL PRIVILEGES ON zenamanage_production.* TO 'zenamanage_user'@'localhost';
 FLUSH PRIVILEGES;
 ```

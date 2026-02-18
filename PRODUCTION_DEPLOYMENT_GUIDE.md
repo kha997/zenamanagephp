@@ -53,7 +53,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=zenamanage_production
 DB_USERNAME=your_db_user
-DB_PASSWORD=your_secure_password
+DB_PASSWORD=your_db_password_here
 
 # Mail Configuration
 MAIL_MAILER=smtp
@@ -88,7 +88,7 @@ php artisan key:generate
 ### 1. Create Database
 ```sql
 CREATE DATABASE zenamanage_production CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'secure_password';
+CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'your_db_password_here';
 GRANT ALL PRIVILEGES ON zenamanage_production.* TO 'zenamanage_user'@'localhost';
 FLUSH PRIVILEGES;
 ```

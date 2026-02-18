@@ -71,7 +71,7 @@ mysql -u root -p
 CREATE DATABASE zena_production CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Tạo user
-CREATE USER 'zena_user'@'localhost' IDENTIFIED BY 'your_secure_password';
+CREATE USER 'zena_user'@'localhost' IDENTIFIED BY 'your_db_password_here';
 GRANT ALL PRIVILEGES ON zena_production.* TO 'zena_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
@@ -102,7 +102,7 @@ DB_HOST=mysql
 DB_PORT=3306
 DB_DATABASE=zena_production
 DB_USERNAME=zena_user
-DB_PASSWORD=your_secure_password
+DB_PASSWORD=your_db_password_here
 
 REDIS_HOST=redis
 REDIS_PASSWORD=null

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="/Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SQLITE_DB="/tmp/zenamanage_test.sqlite"
 
-cd "$REPO_ROOT"
+cd "$ROOT_DIR"
 
 export APP_ENV=testing
 export DB_CONNECTION=sqlite

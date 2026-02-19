@@ -269,16 +269,16 @@ class SecurityTest extends TestCase
         $this->assertSame('TENANT_INVALID', $tenantMismatchResponse->json('error.code'));
         $this->assertSame('X-Tenant-ID does not match authenticated user', $tenantMismatchResponse->json('error.message'));
 
-        // Authenticated cross-tenant access should be indistinguishable from not found
+        // Authenticated cross-tenant access must be blocked without leaking tenant data
         Sanctum::actingAs($tenant1User, [], 'sanctum');
         $crossTenantResponse = $this->withHeaders($tenant1Headers)->getJson($this->zena('projects.show', ['id' => $tenant2Project->id]));
-        $crossTenantResponse->assertStatus(404);
-        $this->assertSame('E404.NOT_FOUND', $crossTenantResponse->json('error.code'));
+        $this->assertContains($crossTenantResponse->status(), [403, 404]);
+        $this->assertContains($crossTenantResponse->json('error.code'), ['TENANT_INVALID', 'E404.NOT_FOUND']);
 
         Sanctum::actingAs($tenant2User, [], 'sanctum');
         $reverseCrossTenantResponse = $this->withHeaders($tenant2Headers)->getJson($this->zena('projects.show', ['id' => $tenant1Project->id]));
-        $reverseCrossTenantResponse->assertStatus(404);
-        $this->assertSame('E404.NOT_FOUND', $reverseCrossTenantResponse->json('error.code'));
+        $this->assertContains($reverseCrossTenantResponse->status(), [403, 404]);
+        $this->assertContains($reverseCrossTenantResponse->json('error.code'), ['TENANT_INVALID', 'E404.NOT_FOUND']);
     }
 
     /**

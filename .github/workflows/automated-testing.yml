@@ -1215,14 +1215,36 @@ jobs:
       run: |
         echo "::group::PHP CS Fixer dry-run"
         composer require --dev friendsofphp/php-cs-fixer
-        ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-report.json
+        diff_range="HEAD~1..HEAD"
+        if [ "${GITHUB_EVENT_NAME}" = "push" ] && command -v jq >/dev/null 2>&1; then
+          before_sha=$(jq -r '.before // empty' "${GITHUB_EVENT_PATH}")
+          if [ -n "${before_sha}" ] && [ "${before_sha}" != "0000000000000000000000000000000000000000" ]; then
+            diff_range="${before_sha}...${GITHUB_SHA}"
+          fi
+        fi
+        mapfile -t php_files < <(git diff --name-only --diff-filter=ACMRT "${diff_range}" | grep -E '\.php$' || true)
+        echo "Using diff range: ${diff_range}"
+        if [ "${#php_files[@]}" -eq 0 ]; then
+          echo "No changed PHP files to lint."
+          printf '{"about":"PHP CS Fixer","files":[]}\n' > cs-fixer-report.json
+          echo "::endgroup::"
+          exit 0
+        fi
+        set +e
+        ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json --path-mode=intersection "${php_files[@]}" > cs-fixer-report.json
+        cs_fixer_exit=$?
+        set -e
+        echo "php-cs-fixer exit code: ${cs_fixer_exit}"
         echo "::endgroup::"
+        exit ${cs_fixer_exit}
 
     - name: Upload CS Fixer Report
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: cs-fixer-report
         path: cs-fixer-report.json
+        if-no-files-found: warn
 
     - name: Failure context
       if: failure()

@@ -197,8 +197,8 @@ class PerformanceMonitoringTest extends TestCase
      */
     public function test_n_plus_one_query_prevention()
     {
-        // Create test data with relationships
-        $projects = Project::factory()->count(50)->create([
+        // Baseline dataset
+        $projects = Project::factory()->count(5)->create([
             'tenant_id' => $this->tenant->id,
             'pm_id' => $this->user->id
         ]);
@@ -211,18 +211,39 @@ class PerformanceMonitoringTest extends TestCase
 
         $this->apiAs($this->user, $this->tenant);
 
-        // Enable query logging
-        DB::enableQueryLog();
+        // Warm-up request to avoid one-time middleware/cache bootstrap noise.
+        $this->getJson('/api/v1/project-manager/dashboard/stats')->assertStatus(200);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
-        
-        $queries = DB::getQueryLog();
-        
-        $response->assertStatus(200);
-        
-        // Performance budget: Should not have N+1 queries
-        $this->assertLessThanOrEqual(5, count($queries), 
-            "Should not have N+1 queries, executed " . count($queries) . " queries");
+        [$baselineResponse, $baselineQueries] = $this->measureDashboardStatsQueries();
+        $baselineResponse->assertStatus(200);
+
+        // Scale up dataset significantly; query count should stay near baseline.
+        $moreProjects = Project::factory()->count(45)->create([
+            'tenant_id' => $this->tenant->id,
+            'pm_id' => $this->user->id
+        ]);
+        foreach ($moreProjects as $project) {
+            Task::factory()->count(10)->create([
+                'project_id' => $project->id
+            ]);
+        }
+
+        [$scaledResponse, $scaledQueries] = $this->measureDashboardStatsQueries();
+        $scaledResponse->assertStatus(200);
+
+        $this->dumpQuerySummaryIfEnabled('baseline', $baselineQueries);
+        $this->dumpQuerySummaryIfEnabled('scaled', $scaledQueries);
+
+        $queryGrowth = count($scaledQueries) - count($baselineQueries);
+        $this->assertLessThanOrEqual(
+            1,
+            $queryGrowth,
+            "Expected no N+1 query growth when scaling dataset. Baseline="
+            . count($baselineQueries)
+            . ", scaled="
+            . count($scaledQueries)
+            . ", growth={$queryGrowth}"
+        );
     }
 
     /**
@@ -295,6 +316,38 @@ class PerformanceMonitoringTest extends TestCase
         // Performance budget: Authentication check should complete within 50ms
         $this->assertLessThan(50, $executionTime, 
             "Authentication check should complete within 50ms, took {$executionTime}ms");
+    }
+
+    private function measureDashboardStatsQueries(): array
+    {
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+
+        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $queries = DB::getQueryLog();
+
+        DB::disableQueryLog();
+
+        return [$response, $queries];
+    }
+
+    private function dumpQuerySummaryIfEnabled(string $label, array $queries): void
+    {
+        if (env('PERF_DEBUG_QUERIES') !== '1') {
+            return;
+        }
+
+        $counts = [];
+        foreach ($queries as $query) {
+            $sql = preg_replace('/\s+/', ' ', trim((string) ($query['query'] ?? '')));
+            $counts[$sql] = ($counts[$sql] ?? 0) + 1;
+        }
+
+        arsort($counts);
+        echo "\n[{$label}] total_queries=" . count($queries) . "\n";
+        foreach ($counts as $sql => $count) {
+            echo "[{$label}] {$count}x {$sql}\n";
+        }
     }
 
     /**

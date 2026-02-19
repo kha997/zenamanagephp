@@ -112,6 +112,7 @@ class DashboardPerformanceTest extends TestCase
         // Create 500 RFIs
         for ($i = 1; $i <= 500; $i++) {
             RFI::create([
+                'title' => "RFI {$i}",
                 'subject' => "RFI {$i}",
                 'description' => "RFI {$i} description",
                 'status' => ['open', 'answered', 'closed'][array_rand(['open', 'answered', 'closed'])],

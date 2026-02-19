@@ -111,16 +111,18 @@ class DashboardPerformanceTest extends TestCase
 
         // Create 500 RFIs
         for ($i = 1; $i <= 500; $i++) {
-            RFI::create([
+            Rfi::factory()->create([
                 'title' => "RFI {$i}",
                 'subject' => "RFI {$i}",
                 'description' => "RFI {$i} description",
                 'status' => ['open', 'answered', 'closed'][array_rand(['open', 'answered', 'closed'])],
                 'priority' => ['low', 'medium', 'high'][array_rand(['low', 'medium', 'high'])],
                 'due_date' => now()->addDays(rand(1, 14)),
-                'discipline' => ['construction', 'electrical', 'mechanical'][array_rand(['construction', 'electrical', 'mechanical'])],
                 'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
+                'asked_by' => $this->user->id,
+                'created_by' => $this->user->id,
+                'assigned_to' => $this->user->id,
             ]);
         }
 

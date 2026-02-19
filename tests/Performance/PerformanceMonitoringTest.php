@@ -9,10 +9,11 @@ use App\Models\Task;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Traits\AuthenticationTrait;
 
 class PerformanceMonitoringTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait;
 
     protected $user;
     protected $tenant;

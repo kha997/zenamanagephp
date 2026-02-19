@@ -18,10 +18,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\SSOT\FixtureFactory;
+use Tests\Traits\AuthenticationTrait;
 
 class DashboardPerformanceTest extends TestCase
 {
-    use RefreshDatabase, FixtureFactory;
+    use RefreshDatabase, FixtureFactory, AuthenticationTrait;
 
     protected $user;
     protected $project;

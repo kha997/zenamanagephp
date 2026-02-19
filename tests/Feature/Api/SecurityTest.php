@@ -2,24 +2,30 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\ZenaProject;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
+use App\Models\ZenaProject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 use Tests\Traits\RouteNameTrait;
-use Laravel\Sanctum\Sanctum;
 
 class SecurityTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTestTrait;
+    use RouteNameTrait;
 
     protected User $user;
+
     protected ZenaProject $project;
+
     protected string $token;
+
     protected string $tenantId;
 
     protected function setUp(): void
@@ -31,13 +37,13 @@ class SecurityTest extends TestCase
         $this->tenantId = $this->apiFeatureTenant->id;
         $this->project = ZenaProject::factory()->create([
             'created_by' => $this->user->id,
-            'tenant_id' => $this->tenantId
+            'tenant_id' => $this->tenantId,
         ]);
         $this->token = $this->apiFeatureToken;
     }
 
     /**
-     * Test JWT authentication
+     * Test JWT authentication.
      */
     public function test_jwt_authentication_works()
     {
@@ -47,7 +53,7 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test invalid JWT token
+     * Test invalid JWT token.
      */
     public function test_invalid_jwt_token_returns_401()
     {
@@ -59,7 +65,7 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test missing JWT token
+     * Test missing JWT token.
      */
     public function test_missing_jwt_token_returns_401()
     {
@@ -68,7 +74,7 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test malformed authorization header
+     * Test malformed authorization header.
      */
     public function test_malformed_authorization_header_returns_401()
     {
@@ -80,7 +86,7 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test SQL injection prevention
+     * Test SQL injection prevention.
      */
     public function test_sql_injection_prevention()
     {
@@ -89,15 +95,15 @@ class SecurityTest extends TestCase
         $response = $this->apiGet($this->zena('projects.index', query: ['search' => $maliciousInput]));
 
         $response->assertStatus(400);
-        
+
         // Verify users table still exists
         $this->assertDatabaseHas('users', [
-            'id' => $this->user->id
+            'id' => $this->user->id,
         ]);
     }
 
     /**
-     * Test XSS prevention
+     * Test XSS prevention.
      */
     public function test_xss_prevention()
     {
@@ -108,7 +114,7 @@ class SecurityTest extends TestCase
             'description' => 'Test project',
             'status' => 'planning',
             'start_date' => '2024-01-01',
-            'end_date' => '2024-12-31'
+            'end_date' => '2024-12-31',
         ]);
 
         $response->assertStatus(400);
@@ -116,7 +122,7 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test CSRF protection
+     * Test CSRF protection.
      */
     public function test_csrf_protection()
     {
@@ -127,33 +133,34 @@ class SecurityTest extends TestCase
             'description' => 'Test description',
             'status' => 'planning',
             'start_date' => '2024-01-01',
-            'end_date' => '2024-12-31'
+            'end_date' => '2024-12-31',
         ]);
 
         $response->assertStatus(401); // Should require authentication
     }
 
     /**
-     * Test rate limiting
+     * Test rate limiting.
      */
     public function test_rate_limiting()
     {
         // Make multiple requests quickly
-            for ($i = 0; $i < 100; $i++) {
+        for ($i = 0; $i < 100; $i++) {
             $response = $this->apiGet($this->zena('projects.index'));
-            
+
             if ($response->status() === 429) {
                 $this->assertEquals(429, $response->status());
+
                 return;
             }
         }
-        
+
         // If we get here, rate limiting might not be configured
         $this->assertTrue(true);
     }
 
     /**
-     * Test input validation
+     * Test input validation.
      */
     public function test_input_validation()
     {
@@ -162,7 +169,7 @@ class SecurityTest extends TestCase
             'description' => str_repeat('a', 10000), // Too long description
             'status' => 'invalid_status', // Invalid status
             'start_date' => 'invalid-date', // Invalid date
-            'end_date' => '2024-01-01' // End date before start date
+            'end_date' => '2024-01-01', // End date before start date
         ]);
 
         $response->assertStatus(422)
@@ -170,7 +177,7 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test file upload security
+     * Test file upload security.
      */
     public function test_file_upload_security()
     {
@@ -180,7 +187,7 @@ class SecurityTest extends TestCase
             'type' => 'application/x-php',
             'size' => 1000,
             'tmp_name' => '/tmp/malicious.php',
-            'error' => 0
+            'error' => 0,
         ];
 
         $response = $this->apiPost($this->zena('documents.store'), [
@@ -188,7 +195,7 @@ class SecurityTest extends TestCase
             'title' => 'Test Document',
             'description' => 'Test description',
             'document_type' => 'drawing',
-            'file' => $maliciousFile
+            'file' => $maliciousFile,
         ]);
 
         $response->assertStatus(422)
@@ -196,13 +203,13 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test authorization - user can only access their own data
+     * Test authorization - user can only access their own data.
      */
     public function test_user_can_only_access_own_data()
     {
         $otherUser = User::factory()->create();
         $otherProject = ZenaProject::factory()->create([
-            'created_by' => $otherUser->id
+            'created_by' => $otherUser->id,
         ]);
 
         $headers = array_merge($this->tenantHeaders(), [
@@ -215,21 +222,21 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test multi-tenant isolation
+     * Test multi-tenant isolation.
      */
     public function test_multi_tenant_isolation()
     {
         $tenant1User = User::factory()->create(['tenant_id' => 1]);
         $tenant2User = User::factory()->create(['tenant_id' => 2]);
-        
+
         $tenant1Project = ZenaProject::factory()->create([
             'created_by' => $tenant1User->id,
-            'tenant_id' => 1
+            'tenant_id' => 1,
         ]);
-        
+
         $tenant2Project = ZenaProject::factory()->create([
             'created_by' => $tenant2User->id,
-            'tenant_id' => 2
+            'tenant_id' => 2,
         ]);
 
         $tenant1Headers = [
@@ -255,7 +262,7 @@ class SecurityTest extends TestCase
         $unauthenticatedResponse->assertJsonStructure([
             'success',
             'message',
-            'error' => ['id', 'code', 'message', 'details']
+            'error' => ['id', 'code', 'message', 'details'],
         ]);
         $this->assertSame('E401.AUTHENTICATION', $unauthenticatedResponse->json('error.code'));
 
@@ -282,12 +289,12 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test ULID security
+     * Test ULID security.
      */
     public function test_ulid_security()
     {
         $project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         // Test with invalid ULID
@@ -305,7 +312,7 @@ class SecurityTest extends TestCase
     }
 
     /**
-     * Test data sanitization
+     * Test data sanitization.
      */
     public function test_data_sanitization()
     {
@@ -314,22 +321,27 @@ class SecurityTest extends TestCase
             'description' => 'Test description with <img src=x onerror=alert("XSS")>',
             'status' => 'planning',
             'start_date' => '2024-01-01',
-            'end_date' => '2024-12-31'
+            'end_date' => '2024-12-31',
         ];
 
         $response = $this->withHeaders(array_merge($this->tenantHeaders(), [
             'Authorization' => 'Bearer ' . $this->token,
         ]))->postJson($this->zena('projects.store'), $maliciousData);
 
-        $response->assertStatus(201);
-        
-        $project = $response->json('data');
-        $this->assertStringNotContainsString('<script>', $project['name']);
-        $this->assertStringNotContainsString('<img', $project['description']);
+        $response->assertStatus(400)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'error' => ['id', 'code', 'message', 'details'],
+            ]);
+
+        $this->assertDatabaseMissing('projects', [
+            'name' => $maliciousData['name'],
+        ]);
     }
 
     /**
-     * Test error message security
+     * Test error message security.
      */
     public function test_error_message_security()
     {
@@ -340,7 +352,7 @@ class SecurityTest extends TestCase
         $response = $this->withHeaders($authHeaders)->getJson($this->zena('projects.show', ['id' => 'non-existent-id']));
 
         $response->assertStatus(404);
-        
+
         // Error message should not expose sensitive information
         $errorMessage = $response->json('message');
         $this->assertStringNotContainsString('database', strtolower($errorMessage));

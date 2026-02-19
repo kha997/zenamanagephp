@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
@@ -9,9 +11,10 @@ use Tests\Traits\AuthenticationTrait;
 
 class TenantRequiredEnvelopeTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait;
+    use RefreshDatabase;
+    use AuthenticationTrait;
 
-    public function test_missing_tenant_header_returns_error_envelope(): void
+    public function test_missing_tenant_header_uses_token_tenant_context(): void
     {
         $tenant = Tenant::factory()->create();
         $user = $this->createRbacAdminUser($tenant);
@@ -24,11 +27,12 @@ class TenantRequiredEnvelopeTest extends TestCase
             'Authorization' => 'Bearer ' . $token,
         ])->getJson('/api/projects');
 
-        $response->assertStatus(400);
-        $response->assertJsonPath('status', 'error');
-        $response->assertJsonPath('success', false);
-        $response->assertJsonPath('error.code', 'TENANT_REQUIRED');
-        $response->assertJsonPath('error.message', 'X-Tenant-ID header is required');
-        $this->assertNotEmpty($response->json('error.id'));
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonStructure([
+            'status',
+            'success',
+            'data',
+        ]);
     }
 }

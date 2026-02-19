@@ -66,7 +66,8 @@ class PerformanceMonitoringTest extends TestCase
         // Create test data
         $this->createTestData(50, 200);
 
-        $this->apiAs($this->user, $this->tenant);
+        $this->actingAs($this->user)
+            ->withHeaders($this->apiHeadersForTenant((string) $this->tenant->id));
 
         // Test dashboard page performance
         $startTime = microtime(true);

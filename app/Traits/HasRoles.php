@@ -2,13 +2,19 @@
 
 namespace App\Traits;
 
+use App\Models\Role;
+
 trait HasRoles
 {
     /**
      * Check if user has a specific role
      */
-    public function hasRole(string $roleName): bool
+    public function hasRole(string|array $roleName): bool
     {
+        if (is_array($roleName)) {
+            return $this->hasAnyRole($roleName);
+        }
+
         return $this->roles()->where('name', $roleName)->exists();
     }
 
@@ -76,6 +82,29 @@ trait HasRoles
     public function getRoleNames(): array
     {
         return $this->roles()->pluck('name')->toArray();
+    }
+
+    /**
+     * Assign a role to the user.
+     */
+    public function assignRole(string $roleName, string $scope = Role::SCOPE_SYSTEM): Role
+    {
+        $role = Role::firstOrCreate(
+            ['name' => $roleName, 'scope' => $scope],
+            [
+                'allow_override' => true,
+                'is_active' => true,
+                'description' => ucfirst(str_replace(['-', '_'], ' ', $roleName)),
+            ]
+        );
+
+        $this->roles()->syncWithoutDetaching($role->id);
+
+        if (method_exists($this, 'systemRoles')) {
+            $this->systemRoles()->syncWithoutDetaching($role->id);
+        }
+
+        return $role;
     }
 
     /**

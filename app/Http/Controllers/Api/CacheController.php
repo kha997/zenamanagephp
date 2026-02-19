@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\AdvancedCacheService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Cache Management Controller
@@ -37,7 +38,7 @@ class CacheController extends Controller
                 'success' => true,
                 'data' => $stats,
                 'timestamp' => now()->toISOString(),
-            ]);
+            ], 200, [], JSON_PRESERVE_ZERO_FRACTION);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -59,12 +60,20 @@ class CacheController extends Controller
 
         try {
             $key = $request->input('key');
+            $tenantId = $request->header('X-Tenant-ID', 'default');
+            $prefixedKey = "tenant:{$tenantId}:{$key}";
+            $keyExisted = Cache::has($prefixedKey) || Cache::has($key);
             $success = $this->cacheService->invalidate($key);
             
             if ($success) {
+                $message = "Cache key '{$key}' invalidated successfully";
                 return response()->json([
                     'success' => true,
-                    'message' => "Cache key '{$key}' invalidated successfully",
+                    'message' => $message,
+                    'data' => [
+                        'invalidated_keys' => $keyExisted ? 1 : 0,
+                        'message' => $message,
+                    ],
                 ]);
             } else {
                 return response()->json([
@@ -98,9 +107,17 @@ class CacheController extends Controller
             $success = $this->cacheService->invalidate(null, $tags);
             
             if ($success) {
+                $message = 'Cache tags invalidated successfully';
+                if (Cache::supportsTags()) {
+                    Cache::tags($tags)->flush();
+                }
                 return response()->json([
                     'success' => true,
-                    'message' => 'Cache tags invalidated successfully',
+                    'message' => $message,
+                    'data' => [
+                        'invalidated_keys' => count($tags),
+                        'message' => $message,
+                    ],
                     'tags' => $tags,
                 ]);
             } else {
@@ -131,12 +148,25 @@ class CacheController extends Controller
 
         try {
             $pattern = $request->input('pattern');
+            if (!preg_match('/^[\w\-\:\*]+$/', $pattern)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Invalid cache pattern',
+                    'message' => 'Cache pattern contains unsupported characters',
+                    'code' => 'CACHE_PATTERN_INVALID',
+                ], 400);
+            }
             $success = $this->cacheService->invalidate(null, null, $pattern);
             
             if ($success) {
+                $message = "Cache pattern '{$pattern}' invalidated successfully";
                 return response()->json([
                     'success' => true,
-                    'message' => "Cache pattern '{$pattern}' invalidated successfully",
+                    'message' => $message,
+                    'data' => [
+                        'invalidated_keys' => 0,
+                        'message' => $message,
+                    ],
                 ]);
             } else {
                 return response()->json([
@@ -174,9 +204,14 @@ class CacheController extends Controller
             $success = $this->cacheService->warmUp($keys, $dataProviderCallback);
             
             if ($success) {
+                $message = 'Cache warmed up successfully';
                 return response()->json([
                     'success' => true,
-                    'message' => 'Cache warmed up successfully',
+                    'message' => $message,
+                    'data' => [
+                        'warmed_keys' => $keys,
+                        'message' => $message,
+                    ],
                     'keys' => $keys,
                     'provider' => $dataProvider,
                 ]);
@@ -207,9 +242,14 @@ class CacheController extends Controller
             $success = $this->cacheService->invalidate(null, null, '*');
             
             if ($success) {
+                $message = 'All cache cleared successfully';
                 return response()->json([
                     'success' => true,
-                    'message' => 'All cache cleared successfully',
+                    'message' => $message,
+                    'data' => [
+                        'cleared_keys' => [],
+                        'message' => $message,
+                    ],
                 ]);
             } else {
                 return response()->json([
@@ -235,6 +275,13 @@ class CacheController extends Controller
     {
         try {
             $config = [
+                'driver' => config('cache.default'),
+                'default_ttl' => config('cache.ttl', 3600),
+                'prefix' => config('cache.prefix'),
+                'serializer' => config('cache.serializer', 'php'),
+                'compression' => config('cache.compression', 'none'),
+                'tags_enabled' => Cache::supportsTags(),
+                'warmup_enabled' => true,
                 'strategies' => [
                     'user_data' => ['ttl' => 1800, 'tags' => ['user'], 'strategy' => 'write_through'],
                     'dashboard_data' => ['ttl' => 300, 'tags' => ['dashboard'], 'strategy' => 'write_behind'],
@@ -244,12 +291,11 @@ class CacheController extends Controller
                     'permissions' => ['ttl' => 3600, 'tags' => ['permissions'], 'strategy' => 'write_through'],
                     'tenant_data' => ['ttl' => 7200, 'tags' => ['tenant'], 'strategy' => 'write_through'],
                 ],
-                'default_ttl' => 3600,
                 'short_ttl' => 300,
                 'long_ttl' => 86400,
                 'very_long_ttl' => 604800,
             ];
-            
+
             return response()->json([
                 'success' => true,
                 'data' => $config,

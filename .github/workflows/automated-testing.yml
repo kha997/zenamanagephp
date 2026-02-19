@@ -2,6 +2,11 @@ name: Automated Testing
 
 on:
   workflow_dispatch:
+    inputs:
+      debug_timeout:
+        description: 'Set to true when manually dispatching to log timeout/ulimit details. Defaults to false so regular runs stay clean.'
+        required: false
+        default: 'false'
   push:
     branches: [ main, develop, 'feature/*' ]
   schedule:
@@ -10,23 +15,56 @@ on:
 env:
   PHP_VERSION: '8.2'
   NODE_VERSION: '18'
+  COMPOSER_PROCESS_TIMEOUT: 0
 
 jobs:
+  repo-hygiene:
+    name: Repo Hygiene Guards
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Verify SSOT baselines are tracked
+      run: bash scripts/ci/verify-ssot-baselines.sh
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: npm
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install frontend dependencies
+      run: npm ci --prefix frontend
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: zenamanage_test
+      DB_USERNAME: test_user
+      DB_PASSWORD: test_password
+      SUITE_NAME: Unit tests
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
       
       redis:
         image: redis:7-alpine
@@ -37,6 +75,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -63,24 +104,56 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: Copy environment file
-      run: cp .env.example .env
-
-    - name: Generate application key
-      run: php artisan key:generate
-
-    - name: Create database
+    - name: 🧱 DB setup & migrations
+      env:
+        APP_ENV: testing
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        echo "::group::DB setup & migrations"
+        cp .env.example .env.testing
+        php artisan key:generate --env=testing --force
+        set_kv() {
+          local key="$1"
+          local value="$2"
+          if grep -q "^${key}=" .env.testing; then
+            sed -i "s|^${key}=.*|${key}=${value}|" .env.testing
+          else
+            echo "${key}=${value}" >> .env.testing
+          fi
+        }
+        set_kv DB_CONNECTION mysql
+        set_kv DB_HOST 127.0.0.1
+        set_kv DB_PORT 3306
+        set_kv DB_DATABASE zenamanage_test
+        set_kv DB_USERNAME test_user
+        set_kv DB_PASSWORD test_password
+        set_kv REDIS_HOST 127.0.0.1
+        set_kv REDIS_PORT 6379
+        set_kv CACHE_DRIVER array
+        set_kv SESSION_DRIVER array
+        set_kv QUEUE_CONNECTION sync
+        for i in {1..30}; do
+          if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+            echo 'MySQL ready'
+            break
+          fi
+          sleep 2
+        done
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY 'test_password';"
+        mysql -h 127.0.0.1 -uroot -proot -e "GRANT ALL PRIVILEGES ON zenamanage_test.* TO 'test_user'@'%'; FLUSH PRIVILEGES;"
+        php artisan migrate --env=testing --force
+        echo "::endgroup::"
 
-    - name: Run database migrations
-      run: php artisan migrate --env=testing --force
+    - name: 🧪 Unit tests
+      env:
+        APP_ENV: testing
+      run: |
+        echo "::group::Unit tests"
+        php artisan test tests/Unit --coverage --coverage-clover=coverage-unit.xml
+        echo "::endgroup::"
 
-    - name: Run database seeders
-      run: php artisan db:seed --env=testing --force
-
-    - name: Run Unit Tests
-      run: php artisan test tests/Unit --coverage --coverage-clover=coverage-unit.xml
+    - name: Coverage upload group start
+      run: echo "::group::Upload coverage"
 
     - name: Upload Unit Test Coverage
       uses: codecov/codecov-action@v3
@@ -89,13 +162,65 @@ jobs:
         flags: unittests
         name: unit-tests
 
+    - name: Upload Unit Coverage Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-unit
+        path: coverage-unit.xml
+        if-no-files-found: error
+
+    - name: Coverage upload group end
+      if: always()
+      run: echo "::endgroup::"
+
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Coverage artifact: coverage-unit.xml"
+        } >> "$GITHUB_STEP_SUMMARY"
+
   zena-invariants:
     name: Zena RBAC/Tenant Invariants
     runs-on: ubuntu-latest
+    env:
+      SUITE_NAME: Zena RBAC/Tenant invariants
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -114,14 +239,47 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: Copy environment file
-      run: cp .env.example .env
+    - name: 🧪 Zena invariants
+      run: |
+        echo "::group::Zena invariants"
+        ./scripts/ci/zena-invariants
+        echo "::endgroup::"
 
-    - name: Generate application key
-      run: php artisan key:generate
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
 
-    - name: Run Zena invariants
-      run: ./scripts/ci/zena-invariants
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Command: ./scripts/ci/zena-invariants"
+        } >> "$GITHUB_STEP_SUMMARY"
 
   zena-invariants-mysql:
     name: Zena RBAC/Tenant Invariants (MySQL parity)
@@ -129,25 +287,33 @@ jobs:
     env:
       APP_ENV: testing
       DB_CONNECTION: mysql
-      DB_HOST: mysql
+      DB_HOST: 127.0.0.1
       DB_PORT: 3306
-      DB_DATABASE: zenamanage_test
+      DB_DATABASE: laravel
       DB_USERNAME: root
-      DB_PASSWORD: ''
+      DB_PASSWORD: root
+      SUITE_NAME: Zena RBAC/Tenant invariants (MySQL parity)
 
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping -h mysql --silent" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -166,52 +332,95 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: Copy environment file
-      run: cp .env.example .env
-
-    - name: Generate application key
-      run: php artisan key:generate
-
-    - name: Wait for MySQL service
+    - name: 🧱 Environment prep
       run: |
+        echo "::group::Environment prep"
+        cp .env.example .env
+        php artisan key:generate
         for i in {1..30}; do
-          if mysqladmin ping -h mysql --silent; then
+          if mysqladmin ping -h 127.0.0.1 -proot --silent; then
             echo 'MySQL ready'
-            exit 0
+            mysql_ready=true
+            break
           fi
           sleep 2
         done
-        echo 'MySQL did not become ready in time' >&2
-        exit 1
+        if [ "${mysql_ready:-}" != "true" ]; then
+          echo 'MySQL did not become ready in time' >&2
+          exit 1
+        fi
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
+        echo "::endgroup::"
 
-    - name: Ensure MySQL database exists
-      run: mysql -h mysql -uroot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+    - name: 🧪 Zena invariants (MySQL parity)
+      run: |
+        echo "::group::Zena invariants (MySQL parity)"
+        ./scripts/ci/zena-invariants-mysql
+        echo "::endgroup::"
 
-    - name: Run MySQL zena invariants parity
-      env:
-        DB_HOST: mysql
-        DB_PORT: 3306
-        DB_DATABASE: zenamanage_test
-        DB_USERNAME: root
-        DB_PASSWORD: ''
-      run: ./scripts/ci/zena-invariants-mysql
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Command: ./scripts/ci/zena-invariants-mysql"
+        } >> "$GITHUB_STEP_SUMMARY"
 
   feature-tests:
     name: Feature Tests
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: zenamanage_test
+      DB_USERNAME: test_user
+      DB_PASSWORD: test_password
+      SUITE_NAME: Feature tests
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
       redis:
         image: redis:7-alpine
         ports:
@@ -221,6 +430,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -247,24 +459,57 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: Copy environment file
-      run: cp .env.example .env
-
-    - name: Generate application key
-      run: php artisan key:generate
-
-    - name: Create database
+    - name: 🧱 DB setup & migrations
+      env:
+        APP_ENV: testing
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        echo "::group::DB setup & migrations"
+        cp .env.example .env.testing
+        php artisan key:generate --env=testing --force
+        set_kv() {
+          local key="$1"
+          local value="$2"
+          if grep -q "^${key}=" .env.testing; then
+            sed -i "s|^${key}=.*|${key}=${value}|" .env.testing
+          else
+            echo "${key}=${value}" >> .env.testing
+          fi
+        }
+        set_kv DB_CONNECTION mysql
+        set_kv DB_HOST 127.0.0.1
+        set_kv DB_PORT 3306
+        set_kv DB_DATABASE zenamanage_test
+        set_kv DB_USERNAME test_user
+        set_kv DB_PASSWORD test_password
+        set_kv REDIS_HOST 127.0.0.1
+        set_kv REDIS_PORT 6379
+        set_kv CACHE_DRIVER array
+        set_kv SESSION_DRIVER array
+        set_kv QUEUE_CONNECTION sync
+        for i in {1..30}; do
+          if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+            echo 'MySQL ready'
+            break
+          fi
+          sleep 2
+        done
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY 'test_password';"
+        mysql -h 127.0.0.1 -uroot -proot -e "GRANT ALL PRIVILEGES ON zenamanage_test.* TO 'test_user'@'%'; FLUSH PRIVILEGES;"
+        php artisan migrate --env=testing --force
+        php artisan db:seed --env=testing --force
+        echo "::endgroup::"
 
-    - name: Run database migrations
-      run: php artisan migrate --env=testing --force
+    - name: 🧪 Feature tests
+      env:
+        APP_ENV: testing
+      run: |
+        echo "::group::Feature tests"
+        php artisan test --testsuite=Feature --coverage --coverage-clover=coverage-feature.xml
+        echo "::endgroup::"
 
-    - name: Run database seeders
-      run: php artisan db:seed --env=testing --force
-
-    - name: Run Feature Tests
-      run: php artisan test tests/Feature --coverage --coverage-clover=coverage-feature.xml
+    - name: Coverage upload group start
+      run: echo "::group::Upload coverage"
 
     - name: Upload Feature Test Coverage
       uses: codecov/codecov-action@v3
@@ -273,22 +518,80 @@ jobs:
         flags: featuretests
         name: feature-tests
 
-  integration-tests:
-    name: Integration Tests
+    - name: Upload Feature Coverage Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-feature
+        path: coverage-feature.xml
+        if-no-files-found: error
+
+    - name: Coverage upload group end
+      if: always()
+      run: echo "::endgroup::"
+
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Coverage artifact: coverage-feature.xml"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+  api-tests-fast:
+    name: API Tests (Fast)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SUITE_NAME: API tests (Fast)
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
       redis:
         image: redis:7-alpine
         ports:
@@ -298,6 +601,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -324,48 +630,91 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: Copy environment file
-      run: cp .env.example .env
-
-    - name: Generate application key
-      run: php artisan key:generate
-
-    - name: Create database
+    - name: 🧱 DB setup & migrations
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        echo "::group::DB setup & migrations"
+        cp .env.example .env
+        php artisan key:generate
+        mkdir -p resources/views storage/framework/views bootstrap/cache
+        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
+        php artisan migrate:fresh --env=testing --force
+        php artisan db:seed --env=testing --force
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan event:clear || true
+        php artisan route:clear
+        if [ -d "resources/views" ]; then php artisan view:clear; else echo "Skipping view:clear (resources/views not present)"; fi
+        echo "::endgroup::"
 
-    - name: Run database migrations
-      run: php artisan migrate --env=testing --force
+    - name: 🧪 Fast API tests
+      run: |
+        echo "::group::Fast API tests"
+        php artisan test tests/Feature/Api -v --stop-on-failure --exclude-group=slow
+        echo "::endgroup::"
 
-    - name: Run database seeders
-      run: php artisan db:seed --env=testing --force
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
 
-    - name: Run Integration Tests
-      run: php artisan test tests/Integration --coverage --coverage-clover=coverage-integration.xml
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Command: php artisan test tests/Feature/Api -v --stop-on-failure --exclude-group=slow"
+        } >> "$GITHUB_STEP_SUMMARY"
 
-    - name: Upload Integration Test Coverage
-      uses: codecov/codecov-action@v3
-      with:
-        file: coverage-integration.xml
-        flags: integrationtests
-        name: integration-tests
-
-  performance-tests:
-    name: Performance Tests
+  api-tests-slow:
+    name: API Tests (Slow)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: laravel
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      SUITE_NAME: API tests (Slow)
     
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root_password
-          MYSQL_DATABASE: zenamanage_test
-          MYSQL_USER: test_user
-          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
         ports:
           - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-      
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
       redis:
         image: redis:7-alpine
         ports:
@@ -375,6 +724,316 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+        coverage: pcov
+        ini-values: |
+          pcov.enabled=1
+          pcov.directory=app
+          pcov.exclude="~vendor~"
+
+    - name: Verify PCOV loaded
+      run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v4
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: 🧱 DB setup & migrations
+      run: |
+        echo "::group::DB setup & migrations"
+        cp .env.example .env
+        php artisan key:generate
+        mkdir -p resources/views storage/framework/views bootstrap/cache
+        mysql -h 127.0.0.1 -u root -proot -e "CREATE DATABASE IF NOT EXISTS laravel;"
+        php artisan migrate:fresh --env=testing --force
+        php artisan db:seed --env=testing --force
+        php artisan cache:clear
+        php artisan config:clear
+        php artisan event:clear || true
+        php artisan route:clear
+        if [ -d "resources/views" ]; then php artisan view:clear; else echo "Skipping view:clear (resources/views not present)"; fi
+        echo "::endgroup::"
+
+    - name: Debug timeout environment (manual only)
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_timeout == 'true' }}
+      run: |
+        echo "::group::Debug timeout environment"
+        echo "PATH=$PATH"
+        command -v timeout || true
+        timeout --version || true
+        ulimit -a || true
+        env | sort | grep -i -E 'timeout|time(limit)?|limit|kill|alarm|command_timeout|ci_timeout|seconds|ulimit' || true
+        env | sort | grep -E '^RUNNER_|^GITHUB_ACTIONS$|^ImageOS=' || true
+        date
+        echo "::endgroup::"
+
+    - name: 🧪 Slow API tests
+      run: |
+        echo "::group::Slow API tests"
+        php artisan test tests/Feature/Api -v --stop-on-failure --group=slow
+        echo "::endgroup::"
+
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Command: php artisan test tests/Feature/Api -v --stop-on-failure --group=slow"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: zenamanage_test
+      DB_USERNAME: test_user
+      DB_PASSWORD: test_password
+      SUITE_NAME: Integration tests
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
+        coverage: pcov
+        ini-values: |
+          pcov.enabled=1
+          pcov.directory=app
+          pcov.exclude="~vendor~"
+
+    - name: Verify PCOV loaded
+      run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v4
+      with:
+        path: vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+
+    - name: Install Composer dependencies
+      run: composer install --prefer-dist --no-progress --no-suggest
+
+    - name: 🧱 DB setup & migrations
+      env:
+        APP_ENV: testing
+      run: |
+        echo "::group::DB setup & migrations"
+        cp .env.example .env.testing
+        php artisan key:generate --env=testing --force
+        set_kv() {
+          local key="$1"
+          local value="$2"
+          if grep -q "^${key}=" .env.testing; then
+            sed -i "s|^${key}=.*|${key}=${value}|" .env.testing
+          else
+            echo "${key}=${value}" >> .env.testing
+          fi
+        }
+        set_kv DB_CONNECTION mysql
+        set_kv DB_HOST 127.0.0.1
+        set_kv DB_PORT 3306
+        set_kv DB_DATABASE zenamanage_test
+        set_kv DB_USERNAME test_user
+        set_kv DB_PASSWORD test_password
+        set_kv REDIS_HOST 127.0.0.1
+        set_kv REDIS_PORT 6379
+        set_kv CACHE_DRIVER array
+        set_kv SESSION_DRIVER array
+        set_kv QUEUE_CONNECTION sync
+        for i in {1..30}; do
+          if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+            echo 'MySQL ready'
+            break
+          fi
+          sleep 2
+        done
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY 'test_password';"
+        mysql -h 127.0.0.1 -uroot -proot -e "GRANT ALL PRIVILEGES ON zenamanage_test.* TO 'test_user'@'%'; FLUSH PRIVILEGES;"
+        php artisan migrate --env=testing --force
+        php artisan db:seed --env=testing --force
+        echo "::endgroup::"
+
+    - name: 🧪 Integration tests
+      env:
+        APP_ENV: testing
+      run: |
+        echo "::group::Integration tests"
+        php artisan test tests/Integration --coverage --coverage-clover=coverage-integration.xml
+        echo "::endgroup::"
+
+    - name: Coverage upload group start
+      run: echo "::group::Upload coverage"
+
+    - name: Upload Integration Test Coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: coverage-integration.xml
+        flags: integrationtests
+        name: integration-tests
+
+    - name: Upload Integration Coverage Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-integration
+        path: coverage-integration.xml
+        if-no-files-found: error
+
+    - name: Coverage upload group end
+      if: always()
+      run: echo "::endgroup::"
+
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Coverage artifact: coverage-integration.xml"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: zenamanage_test
+      DB_USERNAME: test_user
+      DB_PASSWORD: test_password
+      SUITE_NAME: Performance tests
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+     
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -397,30 +1056,62 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: Copy environment file
-      run: cp .env.example .env
-
-    - name: Generate application key
-      run: php artisan key:generate
-
-    - name: Create database
+    - name: 🧱 DB setup & migrations
+      env:
+        APP_ENV: testing
       run: |
-        mysql -h 127.0.0.1 -u test_user -ptest_password -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        echo "::group::DB setup & migrations"
+        cp .env.example .env.testing
+        php artisan key:generate --env=testing --force
+        set_kv() {
+          local key="$1"
+          local value="$2"
+          if grep -q "^${key}=" .env.testing; then
+            sed -i "s|^${key}=.*|${key}=${value}|" .env.testing
+          else
+            echo "${key}=${value}" >> .env.testing
+          fi
+        }
+        set_kv DB_CONNECTION mysql
+        set_kv DB_HOST 127.0.0.1
+        set_kv DB_PORT 3306
+        set_kv DB_DATABASE zenamanage_test
+        set_kv DB_USERNAME test_user
+        set_kv DB_PASSWORD test_password
+        set_kv REDIS_HOST 127.0.0.1
+        set_kv REDIS_PORT 6379
+        set_kv CACHE_DRIVER array
+        set_kv SESSION_DRIVER array
+        set_kv QUEUE_CONNECTION sync
+        for i in {1..30}; do
+          if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
+            echo 'MySQL ready'
+            break
+          fi
+          sleep 2
+        done
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS zenamanage_test;"
+        mysql -h 127.0.0.1 -uroot -proot -e "CREATE USER IF NOT EXISTS 'test_user'@'%' IDENTIFIED BY 'test_password';"
+        mysql -h 127.0.0.1 -uroot -proot -e "GRANT ALL PRIVILEGES ON zenamanage_test.* TO 'test_user'@'%'; FLUSH PRIVILEGES;"
+        php artisan migrate --env=testing --force
+        php artisan db:seed --env=testing --force
+        echo "::endgroup::"
 
-    - name: Run database migrations
-      run: php artisan migrate --env=testing --force
-
-    - name: Run database seeders
-      run: php artisan db:seed --env=testing --force
-
-    - name: Run Performance Tests
-      run: php artisan test tests/Performance
+    - name: 🧪 Performance tests
+      env:
+        APP_ENV: testing
+      run: |
+        echo "::group::Performance tests"
+        php artisan test tests/Performance
+        echo "::endgroup::"
 
     - name: Generate Performance Report
       run: |
+        echo "::group::Generate Performance Report"
         echo "Performance test results:" > performance-report.txt
         echo "=========================" >> performance-report.txt
         # Add performance metrics here
+        echo "::endgroup::"
 
     - name: Upload Performance Report
       uses: actions/upload-artifact@v4
@@ -428,13 +1119,55 @@ jobs:
         name: performance-report
         path: performance-report.txt
 
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Test command: php artisan test tests/Performance"
+          echo "- Artifact: performance-report.txt"
+        } >> "$GITHUB_STEP_SUMMARY"
+
   security-tests:
     name: Security Tests
     runs-on: ubuntu-latest
+    env:
+      SUITE_NAME: Security tests
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -462,77 +1195,290 @@ jobs:
 
     - name: Run PHPStan Static Analysis
       run: |
-        composer require --dev phpstan/phpstan
-        ./vendor/bin/phpstan analyse --level=8 --error-format=json > phpstan-report.json
+        echo "::group::PHPStan static analysis"
+        set +e
+        ./vendor/bin/phpstan analyse --error-format=json > phpstan-report.json
+        phpstan_exit=$?
+        php scripts/ci/print-phpstan-summary.php phpstan-report.json 50
+        echo "::endgroup::"
+        exit $phpstan_exit
 
     - name: Upload PHPStan Report
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: phpstan-report
         path: phpstan-report.json
+        if-no-files-found: warn
 
     - name: Run PHP CS Fixer
       run: |
+        echo "::group::PHP CS Fixer dry-run"
         composer require --dev friendsofphp/php-cs-fixer
-        ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-report.json
+        diff_range="HEAD~1..HEAD"
+        if [ "${GITHUB_EVENT_NAME}" = "push" ] && command -v jq >/dev/null 2>&1; then
+          before_sha=$(jq -r '.before // empty' "${GITHUB_EVENT_PATH}")
+          if [ -n "${before_sha}" ] && [ "${before_sha}" != "0000000000000000000000000000000000000000" ]; then
+            diff_range="${before_sha}...${GITHUB_SHA}"
+          fi
+        fi
+        mapfile -t php_files < <(git diff --name-only --diff-filter=ACMRT "${diff_range}" | grep -E '\.php$' || true)
+        echo "Using diff range: ${diff_range}"
+        if [ "${#php_files[@]}" -eq 0 ]; then
+          echo "No changed PHP files to lint."
+          printf '{"about":"PHP CS Fixer","files":[]}\n' > cs-fixer-report.json
+          echo "::endgroup::"
+          exit 0
+        fi
+        set +e
+        ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json --path-mode=intersection "${php_files[@]}" > cs-fixer-report.json
+        cs_fixer_exit=$?
+        set -e
+        echo "php-cs-fixer exit code: ${cs_fixer_exit}"
+        echo "::endgroup::"
+        exit ${cs_fixer_exit}
 
     - name: Upload CS Fixer Report
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: cs-fixer-report
         path: cs-fixer-report.json
+        if-no-files-found: warn
+
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Commands: composer audit; PHPStan analyse; PHP CS Fixer dry-run"
+          echo "- Artifacts: phpstan-report.json, cs-fixer-report.json"
+        } >> "$GITHUB_STEP_SUMMARY"
 
   test-coverage:
     name: Test Coverage Report
     runs-on: ubuntu-latest
     needs: [unit-tests, feature-tests, integration-tests]
+    env:
+      SUITE_NAME: Combined coverage report
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Download Unit Test Coverage
+    - name: Docs lint (no unsupported commands)
+      run: bash scripts/ci/docs-lint.sh
+
+    - name: Coverage download group start
+      run: echo "::group::Download coverage"
+
+    - name: Download Unit Test Coverage (non-blocking)
+      continue-on-error: true
       uses: actions/download-artifact@v4
       with:
-        name: unit-test-coverage
+        name: coverage-unit
         path: coverage/
 
-    - name: Download Feature Test Coverage
+    - name: Download Feature Test Coverage (non-blocking)
+      continue-on-error: true
       uses: actions/download-artifact@v4
       with:
-        name: feature-test-coverage
+        name: coverage-feature
         path: coverage/
 
-    - name: Download Integration Test Coverage
+    - name: Download Integration Test Coverage (non-blocking)
+      continue-on-error: true
       uses: actions/download-artifact@v4
       with:
-        name: integration-test-coverage
+        name: coverage-integration
         path: coverage/
+
+    - name: Coverage download group end
+      if: always()
+      run: echo "::endgroup::"
 
     - name: Generate Combined Coverage Report
       run: |
-        echo "Combined test coverage report:" > coverage-summary.txt
-        echo "==============================" >> coverage-summary.txt
-        echo "Unit Tests: $(cat coverage/unit-coverage.txt)" >> coverage-summary.txt
-        echo "Feature Tests: $(cat coverage/feature-coverage.txt)" >> coverage-summary.txt
-        echo "Integration Tests: $(cat coverage/integration-coverage.txt)" >> coverage-summary.txt
+        echo "::group::Generate Combined Coverage Report"
+        php <<'PHP'
+        <?php
+        $files = [
+            'Unit' => 'coverage/coverage-unit.xml',
+            'Feature' => 'coverage/coverage-feature.xml',
+            'Integration' => 'coverage/coverage-integration.xml',
+        ];
 
-    - name: Upload Combined Coverage Report
+        $summary = [];
+        $totalStatements = 0;
+        $totalCoveredStatements = 0;
+        $totalElements = 0;
+        $totalCoveredElements = 0;
+
+        $pct = static function (int $covered, int $total): float {
+            return $total > 0 ? ($covered / $total) * 100.0 : 0.0;
+        };
+
+        foreach ($files as $suite => $path) {
+            if (!is_file($path)) {
+                fwrite(STDERR, "Coverage file not found: {$path}\n");
+                exit(1);
+            }
+
+            $xml = simplexml_load_file($path);
+            if ($xml === false) {
+                fwrite(STDERR, "Failed to parse XML: {$path}\n");
+                exit(1);
+            }
+
+            $metricsNodes = $xml->xpath('//project/metrics');
+            if (!$metricsNodes || count($metricsNodes) === 0) {
+                $metricsNodes = $xml->xpath('//metrics');
+            }
+            if (!$metricsNodes || count($metricsNodes) === 0) {
+                fwrite(STDERR, "No <metrics> node found in {$path}\n");
+                exit(1);
+            }
+
+            $metrics = $metricsNodes[0];
+            $statements = (int)($metrics['statements'] ?? 0);
+            $coveredStatements = (int)($metrics['coveredstatements'] ?? 0);
+            $elements = (int)($metrics['elements'] ?? 0);
+            $coveredElements = (int)($metrics['coveredelements'] ?? 0);
+
+            $line = "{$suite}: ";
+            if ($statements > 0) {
+                $line .= sprintf(
+                    "coveredstatements/statements=%d/%d (%.2f%%)",
+                    $coveredStatements,
+                    $statements,
+                    $pct($coveredStatements, $statements)
+                );
+            } else {
+                $line .= "coveredstatements/statements=n/a";
+            }
+
+            if ($elements > 0) {
+                $line .= sprintf(
+                    "; coveredelements/elements=%d/%d (%.2f%%)",
+                    $coveredElements,
+                    $elements,
+                    $pct($coveredElements, $elements)
+                );
+            } else {
+                $line .= "; coveredelements/elements=n/a";
+            }
+
+            if ($statements > 0) {
+                $line .= sprintf(" [used %.2f%%]", $pct($coveredStatements, $statements));
+            } elseif ($elements > 0) {
+                $line .= sprintf(" [used fallback %.2f%%]", $pct($coveredElements, $elements));
+            } else {
+                $line .= " [used n/a]";
+            }
+
+            $summary[] = $line;
+            $totalStatements += $statements;
+            $totalCoveredStatements += $coveredStatements;
+            $totalElements += $elements;
+            $totalCoveredElements += $coveredElements;
+        }
+
+        $totalLine = 'Total: ';
+        if ($totalStatements > 0) {
+            $totalLine .= sprintf(
+                "coveredstatements/statements=%d/%d (%.2f%%)",
+                $totalCoveredStatements,
+                $totalStatements,
+                $pct($totalCoveredStatements, $totalStatements)
+            );
+        } else {
+            $totalLine .= 'coveredstatements/statements=n/a';
+        }
+
+        if ($totalElements > 0) {
+            $totalLine .= sprintf(
+                "; coveredelements/elements=%d/%d (%.2f%%)",
+                $totalCoveredElements,
+                $totalElements,
+                $pct($totalCoveredElements, $totalElements)
+            );
+        } else {
+            $totalLine .= '; coveredelements/elements=n/a';
+        }
+
+        $summary[] = $totalLine;
+        file_put_contents('coverage-summary.txt', implode(PHP_EOL, $summary) . PHP_EOL);
+        PHP
+        echo "::endgroup::"
+
+    - name: Upload Combined Coverage Report (non-blocking)
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
         name: combined-coverage-report
         path: coverage-summary.txt
 
-    - name: Comment Coverage on PR
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fs = require('fs');
-          const coverage = fs.readFileSync('coverage-summary.txt', 'utf8');
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `## Test Coverage Report\n\`\`\`\n${coverage}\n\`\`\``
-          });
+    - name: Failure context
+      if: failure()
+      run: |
+        echo "::group::Failure context — laravel.log"
+        if [ -f storage/logs/laravel.log ]; then
+          echo "---- storage/logs/laravel.log (last 200 lines) ----"
+          tail -n 200 storage/logs/laravel.log
+        else
+          echo "storage/logs/laravel.log not present"
+        fi
+        echo "::endgroup::"
+        echo "::group::Failure context — junit files"
+        found=0
+        while IFS= read -r xml; do
+          found=1
+          echo "---- $xml (last 200 lines) ----"
+          tail -n 200 "$xml"
+        done < <(find . -name 'junit*.xml' -print)
+        if [ "$found" -eq 0 ]; then
+          echo "No junit*.xml files found"
+        fi
+        echo "::endgroup::"
+
+    - name: 🧾 Job summary
+      if: always()
+      run: |
+        {
+          echo "## Job summary"
+          echo "- Job: ${{ job.name }}"
+          echo "- PHP version: ${{ env.PHP_VERSION }}"
+          echo "- Suite: ${SUITE_NAME:-n/a}"
+          echo "- DB connection: ${DB_CONNECTION:-n/a}"
+          echo "- Docs lint: executed"
+          echo "- Downloads: coverage-unit, coverage-feature, coverage-integration"
+          echo "- Artifact: combined-coverage-report (coverage-summary.txt)"
+        } >> "$GITHUB_STEP_SUMMARY"

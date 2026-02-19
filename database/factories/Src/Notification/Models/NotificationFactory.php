@@ -24,6 +24,10 @@ class NotificationFactory extends Factory
             'body' => $this->faker->paragraph(2),
             'link_url' => $this->faker->optional(0.6)->url(),
             'channel' => $this->faker->randomElement(Notification::VALID_CHANNELS),
+            'tenant_id' => function (array $attributes) {
+                return User::find($attributes['user_id'])->tenant_id;
+            },
+            'type' => Notification::TYPE_SYSTEM,
             'read_at' => $this->faker->optional(0.4)->dateTimeBetween('-1 week', 'now'),
         ];
     }

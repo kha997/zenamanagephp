@@ -43,7 +43,7 @@ class NotificationController
      *
      * @return int|null
      */
-    private function getUserId(): ?int
+    private function getUserId(): ?string
     {
         try {
             if (AuthHelper::check()) {
@@ -76,11 +76,25 @@ class NotificationController
                 'limit' => $request->get('limit', 20)
             ];
 
-            $notifications = $this->notificationService->getUserNotifications($userId, $filters);
+            if ($request->boolean('unread_only')) {
+                $filters['is_read'] = false;
+            }
 
-            return JSendResponse::success(
-                new NotificationCollection($notifications)
-            );
+            $notifications = $this->notificationService->getUserNotifications($userId, $filters);
+            if ($request->boolean('unread_only')) {
+                $filters['is_read'] = false;
+            }
+
+            $resource = new NotificationCollection($notifications);
+            $payload = $resource->toArray($request);
+            $meta = $resource->with($request)['meta'] ?? [];
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $payload['data'] ?? [],
+                'summary' => $payload['summary'] ?? [],
+                'meta' => $meta,
+            ], 200);
         } catch (Exception $e) {
             return JSendResponse::error('Không thể lấy danh sách thông báo: ' . $e->getMessage());
         }
@@ -193,10 +207,12 @@ class NotificationController
 
             $notification = $this->notificationService->markAsRead($ulid, $currentUserId);
 
-            return JSendResponse::success(
-                new NotificationResource($notification),
-                'Thông báo đã được đánh dấu đã đọc'
-            );
+            return response()->json([
+                'status' => 'success',
+                'data' => [
+                    'message' => 'Notification marked as read'
+                ]
+            ], 200);
         } catch (Exception $e) {
             return JSendResponse::error('Không thể đánh dấu thông báo: ' . $e->getMessage());
         }

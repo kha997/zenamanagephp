@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Str;
-use HTMLPurifier;
-use HTMLPurifier_Config;
 
 /**
  * Input Sanitization Service
@@ -13,17 +11,19 @@ use HTMLPurifier_Config;
  */
 class InputSanitizationService
 {
-    private HTMLPurifier $htmlPurifier;
+    private mixed $htmlPurifier = null;
     
     public function __construct()
     {
-        $config = HTMLPurifier_Config::createDefault();
-        $config->set('HTML.Allowed', 'p,br,strong,em,u,ol,ul,li,a[href],h1,h2,h3,h4,h5,h6');
-        $config->set('HTML.AllowedAttributes', 'href,title');
-        $config->set('AutoFormat.AutoParagraph', true);
-        $config->set('AutoFormat.RemoveEmpty', true);
-        
-        $this->htmlPurifier = new HTMLPurifier($config);
+        if (class_exists('HTMLPurifier_Config') && class_exists('HTMLPurifier')) {
+            $config = \HTMLPurifier_Config::createDefault();
+            $config->set('HTML.Allowed', 'p,br,strong,em,u,ol,ul,li,a[href],h1,h2,h3,h4,h5,h6');
+            $config->set('HTML.AllowedAttributes', 'href,title');
+            $config->set('AutoFormat.AutoParagraph', true);
+            $config->set('AutoFormat.RemoveEmpty', true);
+
+            $this->htmlPurifier = new \HTMLPurifier($config);
+        }
     }
 
     /**
@@ -42,8 +42,13 @@ class InputSanitizationService
         $input = trim($input);
         
         if ($allowHtml) {
-            // Use HTMLPurifier for HTML content
-            return $this->htmlPurifier->purify($input);
+            if ($this->htmlPurifier !== null) {
+                // Use HTMLPurifier for HTML content when available.
+                return $this->htmlPurifier->purify($input);
+            }
+
+            // Fallback in environments without HTMLPurifier.
+            return strip_tags($input);
         }
         
         // Escape HTML entities for plain text
@@ -58,7 +63,7 @@ class InputSanitizationService
         $sanitized = [];
         
         foreach ($input as $key => $value) {
-            $sanitizedKey = $this->sanitizeString($key, false);
+            $sanitizedKey = is_string($key) ? $this->sanitizeString($key, false) : $key;
             
             if (is_array($value)) {
                 $sanitized[$sanitizedKey] = $this->sanitizeArray($value, $allowHtml);

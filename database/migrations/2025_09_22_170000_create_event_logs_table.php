@@ -12,20 +12,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('event_logs', function (Blueprint $table) {
-            $table->id();
+            $table->ulid('id')->primary();
             $table->string('event_id')->nullable();
             $table->string('event_name')->index();
+            $table->string('event_type')->nullable()->index();
             $table->string('event_class')->nullable();
             $table->string('entity_id')->nullable();
             $table->string('project_id')->nullable();
             $table->string('actor_id')->nullable()->index();
             $table->string('tenant_id')->nullable();
             $table->json('payload')->nullable();
+            $table->json('event_data')->nullable();
             $table->json('changed_fields')->nullable();
             $table->string('source_module')->nullable();
             $table->string('severity', 20)->default('info');
             $table->timestamp('event_timestamp')->nullable();
             $table->timestamps();
+            $table->index('tenant_id');
+            $table->index('project_id');
         });
     }
 

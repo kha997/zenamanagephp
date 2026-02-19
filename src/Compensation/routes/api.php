@@ -13,7 +13,7 @@ use Src\Compensation\Controllers\CompensationController;
 |
 */
 
-Route::prefix('api/v1/compensation')
+Route::prefix('v1/compensation')
     ->middleware(['auth:api'])
     ->group(function () {
         

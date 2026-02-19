@@ -2,39 +2,53 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Tenant;
+use App\Models\User;
 use Src\Notification\Models\Notification;
-use Src\Notification\Models\NotificationRule;
 use Tests\TestCase;
 use Tests\Traits\DatabaseTrait;
 use Tests\Traits\AuthenticationTrait;
+use Tests\Traits\RouteNameTrait;
 
 /**
  * Feature tests cho Notification API endpoints
  */
 class NotificationApiTest extends TestCase
 {
-    use DatabaseTrait, AuthenticationTrait;
+    use DatabaseTrait, AuthenticationTrait, RouteNameTrait;
+
+    protected User $user;
+    protected Tenant $tenant;
+    protected array $authHeaders = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->tenant = Tenant::factory()->create();
+        $this->user = $this->createTenantUser($this->tenant);
+        $token = $this->apiLoginToken($this->user, $this->tenant);
+        $this->authHeaders = $this->authHeadersForUser($this->user, $token);
+    }
     
     /**
      * Test get user notifications
      */
     public function test_can_get_user_notifications(): void
     {
-        $user = $this->actingAsUser();
-        
-        // Tạo notifications cho user
         Notification::factory()->count(3)->create([
-            'user_id' => $user->id,
+            'user_id' => $this->user->id,
+            'tenant_id' => $this->tenant->id,
             'read_at' => null
         ]);
-        
-        // Tạo read notifications
+
         Notification::factory()->count(2)->create([
-            'user_id' => $user->id,
+            'user_id' => $this->user->id,
+            'tenant_id' => $this->tenant->id,
             'read_at' => now()
         ]);
-        
-        $response = $this->getJson('/api/v1/notifications');
+
+        $response = $this->withHeaders($this->authHeaders)->getJson($this->namedRoute('notifications.index'));
         
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -60,19 +74,19 @@ class NotificationApiTest extends TestCase
      */
     public function test_can_get_unread_notifications_only(): void
     {
-        $user = $this->actingAsUser();
-        
         Notification::factory()->count(3)->create([
-            'user_id' => $user->id,
+            'user_id' => $this->user->id,
+            'tenant_id' => $this->tenant->id,
             'read_at' => null
         ]);
-        
+
         Notification::factory()->count(2)->create([
-            'user_id' => $user->id,
+            'user_id' => $this->user->id,
+            'tenant_id' => $this->tenant->id,
             'read_at' => now()
         ]);
-        
-        $response = $this->getJson('/api/v1/notifications?unread_only=true');
+
+        $response = $this->withHeaders($this->authHeaders)->getJson($this->namedRoute('notifications.index', query: ['unread_only' => 'true']));
         
         $response->assertStatus(200);
         
@@ -89,14 +103,13 @@ class NotificationApiTest extends TestCase
      */
     public function test_can_mark_notification_as_read(): void
     {
-        $user = $this->actingAsUser();
-        
         $notification = Notification::factory()->create([
-            'user_id' => $user->id,
+            'user_id' => $this->user->id,
+            'tenant_id' => $this->tenant->id,
             'read_at' => null
         ]);
-        
-        $response = $this->putJson("/api/v1/notifications/{$notification->id}/read");
+
+        $response = $this->withHeaders($this->authHeaders)->putJson($this->namedRoute('notifications.mark-read', ['id' => $notification->id]));
         
         $response->assertStatus(200)
                 ->assertJson([
@@ -118,30 +131,29 @@ class NotificationApiTest extends TestCase
      */
     public function test_can_create_notification_rule(): void
     {
-        $user = $this->actingAsUser();
-        
         $ruleData = [
             'event_key' => 'task.status.updated',
             'min_priority' => 'normal',
             'channels' => ['inapp', 'email'],
-            'is_enabled' => true
+            'is_enabled' => true,
+            'tenant_id' => $this->tenant->id
         ];
-        
-        $response = $this->postJson('/api/v1/notification-rules', $ruleData);
-        
+
+        $response = $this->withHeaders($this->authHeaders)->postJson($this->namedRoute('notification-rules.store'), $ruleData);
+
         $response->assertStatus(201)
                 ->assertJson([
                     'status' => 'success',
                     'data' => [
                         'event_key' => 'task.status.updated',
-                        'user_id' => $user->id,
+                        'user_id' => $this->user->id,
                         'is_enabled' => true
                     ]
                 ]);
         
         $this->assertDatabaseHas('notification_rules', [
-            'user_id' => $user->id,
-            'event_key' => 'task.status.updated'
+            'user_id' => $this->user->id,
+            'event_key' => 'task.status.updated',
         ]);
     }
 }

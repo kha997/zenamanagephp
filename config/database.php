@@ -131,60 +131,53 @@ return [
         ],
     ],
 
-    /*
     'redis' => [
-        'client' => env('REDIS_CLIENT', 'predis'), // Thay đổi từ 'phpredis' thành 'predis'
-        
+        'client' => env('REDIS_CLIENT', 'phpredis'),
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
             'prefix' => env('REDIS_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_database_'),
         ],
-        
         'default' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
-            'password' => env('REDIS_PASSWORD'),
+            'password' => env('REDIS_PASSWORD', null),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
             'timeout' => env('REDIS_TIMEOUT', 5),
             'read_timeout' => env('REDIS_READ_TIMEOUT', 60),
-            'persistent' => env('REDIS_PERSISTENT', true),
+            'persistent' => env('REDIS_PERSISTENT', false),
         ],
-        
         'cache' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
-            'password' => env('REDIS_PASSWORD'),
+            'password' => env('REDIS_PASSWORD', null),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
             'timeout' => env('REDIS_TIMEOUT', 5),
             'read_timeout' => env('REDIS_READ_TIMEOUT', 60),
-            'persistent' => env('REDIS_PERSISTENT', true),
+            'persistent' => env('REDIS_PERSISTENT', false),
         ],
-        
         'session' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
-            'password' => env('REDIS_PASSWORD'),
+            'password' => env('REDIS_PASSWORD', null),
             'port' => env('REDIS_PORT', '6379'),
-            'database' => env('REDIS_SESSION_DB', '2'),
+            'database' => env('REDIS_SESSION_DB', env('REDIS_DB', '2')),
             'timeout' => env('REDIS_TIMEOUT', 5),
             'read_timeout' => env('REDIS_READ_TIMEOUT', 60),
-            'persistent' => env('REDIS_PERSISTENT', true),
+            'persistent' => env('REDIS_PERSISTENT', false),
         ],
-        
         'queue' => [
             'url' => env('REDIS_URL'),
             'host' => env('REDIS_HOST', '127.0.0.1'),
-            'password' => env('REDIS_PASSWORD'),
+            'password' => env('REDIS_PASSWORD', null),
             'port' => env('REDIS_PORT', '6379'),
-            'database' => env('REDIS_QUEUE_DB', '3'),
+            'database' => env('REDIS_QUEUE_DB', env('REDIS_DB', '3')),
             'timeout' => env('REDIS_TIMEOUT', 5),
             'read_timeout' => env('REDIS_READ_TIMEOUT', 60),
-            'persistent' => env('REDIS_PERSISTENT', true),
+            'persistent' => env('REDIS_PERSISTENT', false),
         ],
     ],
-    */
 
     /*
     |--------------------------------------------------------------------------

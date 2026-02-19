@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserRoleProject extends Model
 {
+    use HasUlids;
+
 
     protected $table = 'project_user_roles';
     

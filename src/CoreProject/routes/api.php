@@ -8,8 +8,8 @@ use Src\CoreProject\Controllers\WorkTemplateController;
 use Src\CoreProject\Controllers\TaskAssignmentController;
 use Src\CoreProject\Controllers\BaselineController;
 
-Route::prefix('api/v1')
-    ->middleware(['auth:api'])
+Route::prefix('v1')
+    ->middleware(['auth:api', 'tenant.isolation'])
     ->group(function () {
         // Project routes với RBAC permissions
         Route::get('projects', [ProjectController::class, 'index'])->middleware('rbac:project.view');
@@ -20,16 +20,22 @@ Route::prefix('api/v1')
         Route::delete('projects/{project}', [ProjectController::class, 'destroy'])->middleware('rbac:project.delete');
         
         // Project-specific component routes theo yêu cầu
-        Route::prefix('projects/{project_id}')
+        Route::prefix('projects/{projectId}')
             ->group(function () {
-                // POST /projects/{project_id}/components
-                Route::post('components', [ComponentController::class, 'store'])->middleware('rbac:component.create');
-                
-                // GET /projects/{project_id}/components/tree
-                Route::get('components/tree', [ComponentController::class, 'tree'])->middleware('rbac:component.view');
-                
-                // GET /projects/{project_id}/components (list components)
-                Route::get('components', [ComponentController::class, 'index'])->middleware('rbac:component.view');
+                // POST /projects/{projectId}/components
+                Route::post('components', [ComponentController::class, 'store'])
+                    ->middleware('rbac:component.create')
+                    ->name('api.v1.projects.components.store');
+
+                // GET /projects/{projectId}/components/tree
+                Route::get('components/tree', [ComponentController::class, 'tree'])
+                    ->middleware('rbac:component.view')
+                    ->name('api.v1.projects.components.tree');
+
+                // GET /projects/{projectId}/components (list components)
+                Route::get('components', [ComponentController::class, 'index'])
+                    ->middleware('rbac:component.view')
+                    ->name('api.v1.projects.components.index');
                 
                 // Baseline routes cho project
                 // GET /projects/{project_id}/baselines
@@ -53,9 +59,15 @@ Route::prefix('api/v1')
         
         // Component routes không phụ thuộc project
         // PATCH /components/{id}
-        Route::patch('components/{id}', [ComponentController::class, 'update'])->middleware('rbac:component.edit');
-        Route::get('components/{id}', [ComponentController::class, 'show'])->middleware('rbac:component.view');
-        Route::delete('components/{id}', [ComponentController::class, 'destroy'])->middleware('rbac:component.delete');
+        Route::patch('components/{id}', [ComponentController::class, 'update'])
+            ->middleware('rbac:component.edit')
+            ->name('api.v1.components.update');
+        Route::get('components/{id}', [ComponentController::class, 'show'])
+            ->middleware('rbac:component.view')
+            ->name('api.v1.components.show');
+        Route::delete('components/{id}', [ComponentController::class, 'destroy'])
+            ->middleware('rbac:component.delete')
+            ->name('api.v1.components.destroy');
         
         // Baseline routes không phụ thuộc project
         // GET /baselines/{id}

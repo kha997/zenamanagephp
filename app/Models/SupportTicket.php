@@ -2,15 +2,21 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class SupportTicket extends Model
 {
+    use HasFactory, HasUlids, SoftDeletes, TenantScope;
 
     protected $fillable = [
+        'tenant_id',
         'ticket_number',
         'subject',
         'description',
@@ -27,6 +33,10 @@ class SupportTicket extends Model
     ];
 
     protected $casts = [
+        'tenant_id' => 'string',
+        'user_id' => 'string',
+        'assigned_to' => 'string',
+        'closed_by' => 'string',
         'due_date' => 'datetime',
         'closed_at' => 'datetime',
         'attachments' => 'array',
@@ -62,7 +72,7 @@ class SupportTicket extends Model
      */
     public function messages(): HasMany
     {
-        return $this->hasMany(SupportTicketMessage::class);
+        return $this->hasMany(SupportTicketMessage::class, 'ticket_id');
     }
 
     /**
@@ -389,8 +399,16 @@ class SupportTicket extends Model
         parent::boot();
 
         static::creating(function ($ticket) {
+            $tenantId = $ticket->tenant_id;
+
+            if (!$tenantId && app()->bound('current_tenant_id')) {
+                $tenantId = app('current_tenant_id');
+            }
+
+            $ticket->tenant_id = $tenantId;
+
             if (!$ticket->ticket_number) {
-                $ticket->ticket_number = static::generateTicketNumber();
+                $ticket->ticket_number = static::generateTicketNumber($tenantId);
             }
         });
     }
@@ -398,11 +416,20 @@ class SupportTicket extends Model
     /**
      * Generate unique ticket number
      */
-    public static function generateTicketNumber()
+    public static function generateTicketNumber(?string $tenantId = null): string
     {
+        if (!$tenantId && app()->bound('current_tenant_id')) {
+            $tenantId = app('current_tenant_id');
+        }
+
         do {
-            $number = 'TKT-' . date('Y') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
-        } while (static::where('ticket_number', $number)->exists());
+            $number = 'TCK-' . Str::upper(Str::random(8));
+            $query = static::where('ticket_number', $number);
+
+            if ($tenantId) {
+                $query->where('tenant_id', $tenantId);
+            }
+        } while ($query->exists());
 
         return $number;
     }

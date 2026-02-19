@@ -45,6 +45,11 @@ class Notification extends Model
     public const CHANNEL_WEBHOOK = 'webhook';
 
     /**
+     * Loại notification mặc định khi không cung cấp
+     */
+    public const TYPE_SYSTEM = 'system';
+
+    /**
      * Danh sách các mức độ ưu tiên hợp lệ
      */
     public const VALID_PRIORITIES = [
@@ -69,7 +74,10 @@ class Notification extends Model
         'body',
         'link_url',
         'channel',
+        'type',
         'read_at',
+        'tenant_id',
+        'project_id',
     ];
 
     protected $casts = [
@@ -139,7 +147,14 @@ class Notification extends Model
      */
     public function scopeOrderByPriority(Builder $query): Builder
     {
-        return $query->orderByRaw("FIELD(priority, 'critical', 'normal', 'low')");
+        return $query->orderByRaw(
+            'CASE priority WHEN ? THEN 1 WHEN ? THEN 2 WHEN ? THEN 3 ELSE 4 END',
+            [
+                self::PRIORITY_CRITICAL,
+                self::PRIORITY_NORMAL,
+                self::PRIORITY_LOW,
+            ]
+        );
     }
 
     /**
@@ -187,6 +202,7 @@ class Notification extends Model
     {
         return static::create([
             'user_id' => $data['user_id'],
+            'type' => $data['type'] ?? self::TYPE_SYSTEM,
             'priority' => $data['priority'] ?? self::PRIORITY_NORMAL,
             'title' => $data['title'],
             'body' => $data['body'],

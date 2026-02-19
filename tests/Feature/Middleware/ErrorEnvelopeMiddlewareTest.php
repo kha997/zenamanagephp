@@ -68,13 +68,16 @@ class ErrorEnvelopeMiddlewareTest extends TestCase
     {
         $request = Request::create('/test', 'POST');
         
-        $response = $this->middleware->handle($request, function ($req) {
+        $validationErrors = [
+            'email' => ['The email field is required.'],
+            'password' => ['The password field is required.']
+        ];
+
+        $response = $this->middleware->handle($request, function ($req) use ($validationErrors) {
             return response()->json([
-                'error' => 'Validation failed',
-                'validation' => [
-                    'email' => ['The email field is required.'],
-                    'password' => ['The password field is required.']
-                ]
+                'success' => false,
+                'message' => 'The given data was invalid.',
+                'errors' => $validationErrors
             ], 422);
         });
 
@@ -82,10 +85,16 @@ class ErrorEnvelopeMiddlewareTest extends TestCase
         $this->assertEquals(422, $response->getStatusCode());
         
         $data = $response->getData(true);
+        $this->assertEquals('error', $data['status']);
+        $this->assertFalse($data['success']);
         $this->assertArrayHasKey('error', $data);
         $this->assertEquals('E422.VALIDATION', $data['error']['code']);
-        $this->assertEquals('Validation failed', $data['error']['message']);
+        $this->assertArrayHasKey('details', $data['error']);
         $this->assertArrayHasKey('validation', $data['error']['details']);
+        $this->assertSame($validationErrors, $data['error']['details']['validation']);
+        $this->assertArrayHasKey('errors', $data);
+        $this->assertSame($validationErrors, $data['errors']);
+        $this->assertSame($data['error']['message'], $data['message']);
     }
 
     /**
@@ -260,7 +269,8 @@ class ErrorEnvelopeMiddlewareTest extends TestCase
         });
 
         $this->assertEquals(302, $response->getStatusCode());
-        $this->assertEquals('/dashboard', $response->headers->get('Location'));
+        $location = $response->headers->get('Location');
+        $this->assertEquals('/dashboard', parse_url($location, PHP_URL_PATH));
     }
 
     /**

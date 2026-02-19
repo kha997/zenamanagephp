@@ -3,6 +3,8 @@
 namespace Tests\Feature\Dashboard;
 
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTrait;
+use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
@@ -10,14 +12,12 @@ use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\RFI;
+use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 
 class DashboardApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait;
 
     protected $user;
     protected $project;
@@ -28,23 +28,21 @@ class DashboardApiTest extends TestCase
         parent::setUp();
         
         // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
+        $this->tenant = \App\Models\Tenant::factory()->create([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
             'is_active' => true
         ]);
         
         // Create test user
-        $this->user = User::create([
+        $this->user = $this->createTenantUser($this->tenant, [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'project_manager',
-            'tenant_id' => $this->tenant->id
+            'role' => 'project_manager'
         ]);
         
         // Create test project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
@@ -64,7 +62,7 @@ class DashboardApiTest extends TestCase
         $this->createTestData();
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createTestWidgets(): void
@@ -158,10 +156,15 @@ class DashboardApiTest extends TestCase
 
         // Create test RFIs
         RFI::create([
+            'title' => 'Test RFI 1',
             'subject' => 'Test RFI 1',
             'description' => 'Test RFI description',
             'status' => 'open',
             'priority' => 'high',
+            'question' => 'Test RFI question',
+            'rfi_number' => 'RFI-TEST-001',
+            'created_by' => $this->user->id,
+            'asked_by' => $this->user->id,
             'due_date' => now()->addDays(3),
             'discipline' => 'construction',
             'project_id' => $this->project->id,
@@ -281,7 +284,7 @@ class DashboardApiTest extends TestCase
 
         // Then remove it
         $response = $this->deleteJson("/api/v1/dashboard/widgets/{$widgetInstanceId}");
-
+        
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'success',
@@ -876,7 +879,7 @@ class DashboardApiTest extends TestCase
     public function it_validates_widget_permissions()
     {
         // Create QC Inspector user
-        $qcUser = User::create([
+        $qcUser = User::factory()->create([
             'name' => 'QC Inspector',
             'email' => 'qc@example.com',
             'password' => Hash::make('password'),
@@ -884,14 +887,13 @@ class DashboardApiTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($qcUser);
+        $this->apiAs($qcUser, $this->tenant);
 
         $widget = DashboardWidget::where('code', 'project_overview')->first();
         
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id
         ]);
-
         $response->assertStatus(500)
                 ->assertJsonStructure([
                     'success',
@@ -918,7 +920,7 @@ class DashboardApiTest extends TestCase
     public function it_handles_unauthorized_access()
     {
         // Create user without project access
-        $unauthorizedUser = User::create([
+        $unauthorizedUser = User::factory()->create([
             'name' => 'Unauthorized User',
             'email' => 'unauthorized@example.com',
             'password' => Hash::make('password'),
@@ -926,7 +928,7 @@ class DashboardApiTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($unauthorizedUser);
+        $this->apiAs($unauthorizedUser, $this->tenant);
 
         $response = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
             'project_id' => $this->project->id
@@ -989,7 +991,8 @@ class DashboardApiTest extends TestCase
     public function it_requires_authentication()
     {
         // Clear authentication
-        Sanctum::actingAs(null);
+        $this->flushHeaders();
+        $this->withHeaders($this->apiHeadersForTenant((string) $this->tenant->id));
 
         $response = $this->getJson('/api/v1/dashboard');
 

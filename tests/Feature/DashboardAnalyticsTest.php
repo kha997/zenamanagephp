@@ -37,7 +37,7 @@ class DashboardAnalyticsTest extends TestCase
         \DB::statement('PRAGMA foreign_keys=OFF;');
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -47,7 +47,7 @@ class DashboardAnalyticsTest extends TestCase
         ]);
 
         // Tạo user
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password123'),
@@ -56,7 +56,7 @@ class DashboardAnalyticsTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'DASH-TEST-001',
             'description' => 'Test Description',
@@ -225,7 +225,7 @@ class DashboardAnalyticsTest extends TestCase
     {
         // Create additional projects and tasks for aggregation
         for ($i = 1; $i <= 5; $i++) {
-            Project::create([
+            Project::factory()->create([
                 'name' => "Project {$i}",
                 'code' => "PROJ-{$i}",
                 'description' => "Description {$i}",
@@ -294,13 +294,13 @@ class DashboardAnalyticsTest extends TestCase
         ]);
 
         // Test role-based filtering
-        $adminWidgets = DashboardWidget::whereJsonContains('permissions', 'admin')->get();
+        $adminWidgets = DashboardWidget::all()->filter(fn ($widget) => $widget->isAvailableForRole('admin'));
         $this->assertCount(2, $adminWidgets); // adminWidget + generalWidget
 
-        $pmWidgets = DashboardWidget::whereJsonContains('permissions', 'project_manager')->get();
+        $pmWidgets = DashboardWidget::all()->filter(fn ($widget) => $widget->isAvailableForRole('project_manager'));
         $this->assertCount(2, $pmWidgets); // pmWidget + generalWidget
 
-        $generalWidgets = DashboardWidget::whereJsonContains('permissions', 'user')->get();
+        $generalWidgets = DashboardWidget::all()->filter(fn ($widget) => $widget->isAvailableForRole('user'));
         $this->assertCount(1, $generalWidgets); // generalWidget only
     }
 
@@ -365,7 +365,7 @@ class DashboardAnalyticsTest extends TestCase
         $totalProjects = $activeProjects + $completedProjects;
 
         for ($i = 1; $i <= $activeProjects; $i++) {
-            Project::create([
+            Project::factory()->create([
                 'name' => "Active Project {$i}",
                 'code' => "ACT-{$i}",
                 'status' => 'active',
@@ -375,7 +375,7 @@ class DashboardAnalyticsTest extends TestCase
         }
 
         for ($i = 1; $i <= $completedProjects; $i++) {
-            Project::create([
+            Project::factory()->create([
                 'name' => "Completed Project {$i}",
                 'code' => "COMP-{$i}",
                 'status' => 'completed',
@@ -519,7 +519,7 @@ class DashboardAnalyticsTest extends TestCase
     public function test_dashboard_multi_tenant_isolation(): void
     {
         // Create another tenant
-        $anotherTenant = Tenant::create([
+        $anotherTenant = Tenant::factory()->create([
             'name' => 'Another Company',
             'slug' => 'another-company',
             'domain' => 'another.com',

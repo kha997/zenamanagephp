@@ -5,6 +5,9 @@ on:
   push:
     branches: [ main, develop ]
 
+env:
+  COMPOSER_PROCESS_TIMEOUT: 0
+
 jobs:
   test:
     runs-on: ubuntu-latest

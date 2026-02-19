@@ -88,6 +88,14 @@ class Rfi extends Model
     }
 
     /**
+     * Alias to keep backwards compatibility.
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->createdBy();
+    }
+
+    /**
      * Get the user assigned to answer the RFI.
      */
     public function assignedTo(): BelongsTo

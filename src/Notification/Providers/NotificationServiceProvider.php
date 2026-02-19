@@ -31,7 +31,6 @@ class NotificationServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Comment để tránh duplicate routes với file routes/api.php chính
-        // $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
     }
 }

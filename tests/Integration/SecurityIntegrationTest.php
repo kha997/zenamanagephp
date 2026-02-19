@@ -8,17 +8,20 @@ use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
 use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
+use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\RFI;
+use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Tests\Support\SSOT\FixtureFactory;
+use Tests\Traits\AuthenticationTrait;
 
 class SecurityIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait, FixtureFactory;
 
     protected $user;
     protected $project;
@@ -29,30 +32,30 @@ class SecurityIntegrationTest extends TestCase
         parent::setUp();
         
         // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
+        $this->tenant = $this->createTenant([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
             'is_active' => true
         ]);
         
         // Create test user
-        $this->user = User::create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password'),
             'role' => 'project_manager',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         // Create test project
-        $this->project = Project::create([
+        $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
             'budget' => 100000,
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         // Create test data
@@ -111,15 +114,13 @@ class SecurityIntegrationTest extends TestCase
         ]);
 
         // Create RFIs
-        RFI::create([
+        $this->createRfiFor($this->tenant, $this->project, $this->user, [
+            'title' => 'Test RFI',
             'subject' => 'Test RFI',
             'description' => 'Test RFI description',
             'status' => 'open',
             'priority' => 'medium',
             'due_date' => now()->addDays(3),
-            'discipline' => 'construction',
-            'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
         ]);
 
         // Create alerts
@@ -160,7 +161,7 @@ class SecurityIntegrationTest extends TestCase
     public function it_validates_user_permissions_for_widgets()
     {
         // Create QC Inspector user
-        $qcUser = User::create([
+        $qcUser = User::factory()->create([
             'name' => 'QC Inspector',
             'email' => 'qc@example.com',
             'password' => Hash::make('password'),
@@ -168,7 +169,7 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($qcUser);
+        $this->apiAs($qcUser, $this->tenant);
 
         // QC Inspector should not be able to access project_manager widget
         $projectManagerWidget = DashboardWidget::where('code', 'project_overview')->first();
@@ -177,8 +178,15 @@ class SecurityIntegrationTest extends TestCase
             'widget_id' => $projectManagerWidget->id
         ]);
         
-        $response->assertStatus(500);
-        $this->assertStringContains('permission', $response->json('message'));
+        $response->assertStatus(403);
+        $response->assertJsonPath('error.code', 'E403.AUTHORIZATION');
+        $response->assertJsonStructure([
+            'status',
+            'success',
+            'message',
+            'error' => ['id', 'code', 'message', 'details'],
+        ]);
+        $this->assertStringContains('permission', strtolower((string) $response->json('error.message')));
 
         // QC Inspector should be able to access qc_inspector widget
         $qcWidget = DashboardWidget::where('code', 'qc_inspector_widget')->first();
@@ -193,16 +201,20 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_user_permissions_for_metrics()
     {
-        // Create Client Representative user
-        $clientUser = User::create([
+        // Create Client Representative user with RBAC assignment via SSOT helper
+        $clientUser = $this->createTenantUser(
+            $this->tenant,
+            [
             'name' => 'Client Representative',
             'email' => 'client@example.com',
-            'password' => Hash::make('password'),
             'role' => 'client_rep',
             'tenant_id' => $this->tenant->id
-        ]);
+            ],
+            ['client'],
+            ['dashboard.view']
+        );
 
-        Sanctum::actingAs($clientUser);
+        $this->apiAs($clientUser, $this->tenant);
 
         // Client Rep should not see project_manager specific metrics
         $response = $this->getJson('/api/v1/dashboard/metrics');
@@ -222,13 +234,13 @@ class SecurityIntegrationTest extends TestCase
     public function it_validates_project_access_permissions()
     {
         // Create another tenant and project
-        $otherTenant = \App\Models\Tenant::create([
+        $otherTenant = \App\Models\Tenant::factory()->create([
             'name' => 'Other Tenant',
             'domain' => 'other.com',
             'is_active' => true
         ]);
 
-        $otherProject = Project::create([
+        $otherProject = Project::factory()->create([
             'name' => 'Other Project',
             'description' => 'Other project description',
             'status' => 'active',
@@ -238,78 +250,109 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $otherTenant->id
         ]);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // User should not be able to access other tenant's project
         $response = $this->postJson('/api/v1/dashboard/role-based/switch-project', [
             'project_id' => $otherProject->id
         ]);
         
-        $response->assertStatus(422);
+        $response->assertStatus(404);
+        $response->assertJsonPath('error.code', 'E404.NOT_FOUND');
         $this->assertStringContains('not found', $response->json('message'));
     }
 
     /** @test */
     public function it_validates_tenant_isolation()
     {
-        // Create another tenant and user
-        $otherTenant = \App\Models\Tenant::create([
-            'name' => 'Other Tenant',
-            'domain' => 'other.com',
-            'is_active' => true
-        ]);
+        $tenantA = $this->tenant;
+        $userA = $this->createTenantUser(
+            $tenantA,
+            [
+                'name' => 'Tenant A User',
+                'email' => 'tenant-a+' . Str::lower((string) Str::ulid()) . '@example.com',
+                'role' => 'project_manager',
+            ],
+            ['project_manager']
+        );
 
-        $otherUser = User::create([
-            'name' => 'Other User',
-            'email' => 'other@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'project_manager',
-            'tenant_id' => $otherTenant->id
-        ]);
+        $tenantB = Tenant::factory()->create();
+        $token = $this->apiLoginToken($userA, $tenantA);
 
-        Sanctum::actingAs($otherUser);
+        // Positive control: matching tenant header is accepted
+        $positiveResponse = $this->withHeaders($this->authHeadersForUser($userA, $token))
+            ->getJson('/api/v1/dashboard/role-based');
+        $positiveResponse->assertStatus(200);
 
-        // Other user should not see this tenant's data
-        $response = $this->getJson('/api/v1/dashboard/role-based');
-        $response->assertStatus(200);
-        
-        $data = $response->json('data');
-        
-        // Verify no data from other tenant is returned
-        $this->assertEmpty($data['widgets']);
-        $this->assertEmpty($data['metrics']);
-        $this->assertEmpty($data['alerts']);
+        // Mismatch control: token tenant != X-Tenant-ID should be denied/hidden
+        $mismatchResponse = $this->withHeaders($this->authHeadersForUser($userA, $token, [
+            'X-Tenant-ID' => (string) $tenantB->id,
+        ]))->getJson('/api/v1/dashboard/role-based');
+
+        $this->assertContains($mismatchResponse->status(), [403, 404]);
+
+        if ($mismatchResponse->status() === 403) {
+            $mismatchResponse->assertJsonPath('error.code', 'TENANT_INVALID');
+        }
+
+        if ($mismatchResponse->status() === 404 && !is_null($mismatchResponse->json('error.code'))) {
+            $mismatchResponse->assertJsonPath('error.code', 'E404.NOT_FOUND');
+        }
     }
 
     /** @test */
     public function it_validates_input_sanitization()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $widget = DashboardWidget::first();
 
-        // Test XSS prevention
+        // Positive control: clean payload should pass
+        $safeResponse = $this->postJson('/api/v1/dashboard/widgets', [
+            'widget_id' => $widget->id,
+            'config' => [
+                'title' => 'Operations Overview',
+                'size' => 'medium',
+            ],
+        ]);
+        $safeResponse->assertStatus(200);
+        $safeResponse->assertJsonPath('success', true);
+
+        // Reject control: obvious XSS payload must be blocked
         $maliciousInput = '<script>alert("XSS")</script>';
         
         $response = $this->postJson('/api/v1/dashboard/widgets', [
             'widget_id' => $widget->id,
             'config' => [
                 'title' => $maliciousInput,
-                'size' => 'medium'
-            ]
+                'size' => 'medium',
+            ],
         ]);
-        
-        $response->assertStatus(200);
-        
-        // Verify input is sanitized
-        $widgetInstance = $response->json('data.widget_instance');
-        $this->assertStringNotContains('<script>', $widgetInstance['config']['title']);
+
+        $statusCode = $response->getStatusCode();
+        $this->assertContains($statusCode, [400, 422], 'Malicious payload must be rejected');
+        $response->assertJsonPath('status', 'error');
+
+        if ($statusCode === 400) {
+            $response->assertJsonPath('error.code', 'SUSPICIOUS_INPUT');
+        } else {
+            $response->assertJsonPath('error.code', 'E422.VALIDATION');
+            $this->assertNotEmpty(
+                data_get($response->json(), 'errors.config.title')
+                ?? data_get($response->json(), 'errors.config')
+                ?? data_get($response->json(), 'errors.title')
+                ?? data_get($response->json(), 'data.validation_errors.config.title')
+                ?? data_get($response->json(), 'data.validation_errors.config')
+                ?? data_get($response->json(), 'data.validation_errors.title'),
+                'Validation errors should include offending field'
+            );
+        }
     }
 
     /** @test */
     public function it_validates_sql_injection_prevention()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test SQL injection in widget ID
         $maliciousWidgetId = "1'; DROP TABLE users; --";
@@ -317,8 +360,16 @@ class SecurityIntegrationTest extends TestCase
         $response = $this->postJson('/api/v1/dashboard/widgets', [
             'widget_id' => $maliciousWidgetId
         ]);
-        
-        $response->assertStatus(422);
+
+        $statusCode = $response->getStatusCode();
+        $this->assertContains($statusCode, [400, 422], 'SQL injection payload must be rejected');
+        $response->assertJsonPath('status', 'error');
+
+        if ($statusCode === 400) {
+            $response->assertJsonPath('error.code', 'SUSPICIOUS_INPUT');
+        } else {
+            $response->assertJsonPath('error.code', 'E422.VALIDATION');
+        }
         
         // Verify users table still exists
         $userCount = User::count();
@@ -326,8 +377,57 @@ class SecurityIntegrationTest extends TestCase
     }
 
     /** @test */
+    public function it_allows_benign_prose_that_contains_select_keyword()
+    {
+        $this->apiAs($this->user, $this->tenant);
+
+        $widget = DashboardWidget::where('code', 'project_overview')->firstOrFail();
+
+        $response = $this->postJson('/api/v1/dashboard/widgets', [
+            'widget_id' => $widget->id,
+            'config' => [
+                'title' => 'Please select the weekly report you want to review.',
+                'size' => 'medium',
+            ],
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertNotSame('SUSPICIOUS_INPUT', $response->json('error.code'));
+    }
+
+    /** @test */
+    public function it_rejects_sql_structure_and_nosql_operator_payloads()
+    {
+        $this->apiAs($this->user, $this->tenant);
+
+        $widget = DashboardWidget::where('code', 'project_overview')->firstOrFail();
+
+        $payloads = [
+            'SELECT * FROM users',
+            'UNION SELECT email FROM users',
+            'DROP TABLE users',
+            '{"$ne": null}',
+        ];
+
+        foreach ($payloads as $payload) {
+            $response = $this->postJson('/api/v1/dashboard/widgets', [
+                'widget_id' => $widget->id,
+                'config' => [
+                    'title' => $payload,
+                    'size' => 'medium',
+                ],
+            ]);
+
+            $response->assertStatus(400);
+            $response->assertJsonPath('error.code', 'SUSPICIOUS_INPUT');
+        }
+    }
+
+    /** @test */
     public function it_validates_csrf_protection()
     {
+        $this->apiAs($this->user, $this->tenant);
+
         // Test CSRF protection for state-changing operations
         $widget = DashboardWidget::first();
 
@@ -344,7 +444,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_rate_limiting()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Make many requests quickly
         for ($i = 0; $i < 100; $i++) {
@@ -363,7 +463,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_data_encryption()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $widget = DashboardWidget::first();
 
@@ -387,7 +487,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_session_security()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test session handling
         $response = $this->getJson('/api/v1/dashboard/role-based');
@@ -401,7 +501,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_file_upload_security()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test file upload validation (if applicable)
         $maliciousFile = 'malicious.php';
@@ -444,7 +544,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_security_headers()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $response = $this->getJson('/api/v1/dashboard/role-based');
         $response->assertStatus(200);
@@ -459,7 +559,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_audit_logging()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $widget = DashboardWidget::first();
 
@@ -477,7 +577,7 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_data_validation()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test invalid widget configuration
         $response = $this->postJson('/api/v1/dashboard/widgets', [
@@ -495,7 +595,7 @@ class SecurityIntegrationTest extends TestCase
     public function it_validates_permission_escalation_prevention()
     {
         // Create low-privilege user
-        $lowPrivilegeUser = User::create([
+        $lowPrivilegeUser = User::factory()->create([
             'name' => 'Low Privilege User',
             'email' => 'low@example.com',
             'password' => Hash::make('password'),
@@ -503,53 +603,65 @@ class SecurityIntegrationTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($lowPrivilegeUser);
+        $this->apiAs($lowPrivilegeUser, $this->tenant);
 
         // Try to access high-privilege operations
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => 'any-widget-id'
         ]);
         
-        $response->assertStatus(500);
-        $this->assertStringContains('permission', $response->json('message'));
+        $response->assertStatus(403);
+        $response->assertJsonPath('error.code', 'RBAC_ACCESS_DENIED');
+        $errorMessage = strtolower((string) $response->json('error.message'));
+        $this->assertTrue(
+            str_contains($errorMessage, 'permission')
+            || str_contains($errorMessage, 'rbac')
+            || str_contains($errorMessage, 'assignment'),
+            'Authorization error message should indicate access control failure.'
+        );
     }
 
     /** @test */
     public function it_validates_data_leakage_prevention()
     {
-        // Create user from different tenant
-        $otherTenant = \App\Models\Tenant::create([
-            'name' => 'Other Tenant',
-            'domain' => 'other.com',
-            'is_active' => true
-        ]);
+        $endpoint = '/api/v1/dashboard/role-based';
 
-        $otherUser = User::create([
-            'name' => 'Other User',
-            'email' => 'other@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'project_manager',
-            'tenant_id' => $otherTenant->id
-        ]);
+        // Positive control: authorized user in the same tenant can access.
+        $authorizedUser = $this->createTenantUser(
+            $this->tenant,
+            [
+                'name' => 'Authorized Dashboard User',
+                'email' => 'authorized+' . Str::lower((string) Str::ulid()) . '@example.com',
+                'role' => 'project_manager',
+            ],
+            ['project_manager'],
+            ['dashboard.view']
+        );
+        $authorizedToken = $this->apiLoginToken($authorizedUser, $this->tenant);
+        $positiveResponse = $this->withHeaders($this->authHeadersForUser($authorizedUser, $authorizedToken))
+            ->getJson($endpoint);
+        $positiveResponse->assertStatus(200);
 
-        Sanctum::actingAs($otherUser);
+        // Negative control 1: cross-tenant header mismatch must be denied/hidden.
+        $otherTenant = Tenant::factory()->create();
+        $crossTenantResponse = $this->withHeaders($this->authHeadersForUser($authorizedUser, $authorizedToken, [
+            'X-Tenant-ID' => (string) $otherTenant->id,
+        ]))->getJson($endpoint);
 
-        // Try to access data from different tenant
-        $response = $this->getJson('/api/v1/dashboard/role-based');
-        $response->assertStatus(200);
-        
-        $data = $response->json('data');
-        
-        // Verify no data from other tenant is leaked
-        $this->assertEmpty($data['widgets']);
-        $this->assertEmpty($data['metrics']);
-        $this->assertEmpty($data['alerts']);
+        $this->assertContains($crossTenantResponse->status(), [403, 404]);
+        if ($crossTenantResponse->status() === 403) {
+            $crossTenantResponse->assertJsonPath('error.code', 'TENANT_INVALID');
+        }
+        if ($crossTenantResponse->status() === 404 && !is_null($crossTenantResponse->json('error.code'))) {
+            $crossTenantResponse->assertJsonPath('error.code', 'E404.NOT_FOUND');
+        }
+
     }
 
     /** @test */
     public function it_validates_injection_attack_prevention()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test NoSQL injection
         $maliciousInput = '{"$ne": null}';
@@ -558,11 +670,8 @@ class SecurityIntegrationTest extends TestCase
             'filter' => $maliciousInput
         ]));
         
-        $response->assertStatus(200);
-        
-        // Verify injection was prevented
-        $alerts = $response->json('data');
-        $this->assertIsArray($alerts);
+        $response->assertStatus(400);
+        $response->assertJsonPath('error.code', 'SUSPICIOUS_INPUT');
     }
 
     /** @test */
@@ -585,20 +694,25 @@ class SecurityIntegrationTest extends TestCase
     /** @test */
     public function it_validates_privilege_escalation_prevention()
     {
-        // Create user with limited permissions
-        $limitedUser = User::create([
-            'name' => 'Limited User',
-            'email' => 'limited@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'client_rep',
-            'tenant_id' => $this->tenant->id
-        ]);
+        // Create user with limited app role but valid RBAC assignment.
+        $limitedUser = $this->createTenantUser(
+            $this->tenant,
+            [
+                'name' => 'Limited User',
+                'email' => 'limited+' . Str::lower((string) Str::ulid()) . '@example.com',
+                'role' => 'client_rep',
+                'tenant_id' => $this->tenant->id,
+            ],
+            ['client'],
+            ['dashboard.view']
+        );
 
-        Sanctum::actingAs($limitedUser);
+        $this->apiAs($limitedUser, $this->tenant);
 
-        // Try to perform admin operations
+        // Read effective permissions and ensure no admin escalation.
         $response = $this->getJson('/api/v1/dashboard/role-based/permissions');
         $response->assertStatus(200);
+        $response->assertJsonPath('data.user_role', 'client_rep');
         
         $permissions = $response->json('data.permissions');
         

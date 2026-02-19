@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Services\InputSanitizationService;
+use App\Services\ErrorEnvelopeService;
 
 /**
  * Input Sanitization Middleware
@@ -42,11 +43,13 @@ class InputSanitizationMiddleware
                 'method' => $request->method()
             ]);
             
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Invalid input detected',
-                'code' => 'SUSPICIOUS_INPUT'
-            ], 400);
+            return ErrorEnvelopeService::error(
+                'SUSPICIOUS_INPUT',
+                'Invalid input detected',
+                [],
+                400,
+                ErrorEnvelopeService::getCurrentRequestId()
+            );
         }
 
         return $next($request);
@@ -79,7 +82,7 @@ class InputSanitizationMiddleware
     {
         $suspiciousPatterns = [
             // SQL Injection patterns
-            '/(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)/i',
+            '/(\b(SELECT\s+.+\s+FROM|INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM|DROP\s+TABLE|CREATE\s+TABLE|ALTER\s+TABLE|UNION\s+SELECT|EXEC\s*\()\b)/i',
             '/(\b(OR|AND)\s+\d+\s*=\s*\d+)/i',
             '/(\b(OR|AND)\s+\'\s*=\s*\')/i',
             '/(\b(OR|AND)\s+\"\s*=\s*\")/i',
@@ -94,7 +97,7 @@ class InputSanitizationMiddleware
             
             // Command injection patterns
             '/[;&|`$()]/',
-            '/\b(cat|ls|pwd|whoami|id|uname|ps|netstat|ifconfig)\b/i',
+            '/\b(cat|ls|pwd|whoami|uname|ps|netstat|ifconfig)\b/i',
             
             // Path traversal patterns
             '/\.\.\//',
@@ -115,12 +118,15 @@ class InputSanitizationMiddleware
 
         $allInput = array_merge(
             $request->query->all(),
-            $request->request->all(),
-            $request->headers->all()
+            $request->request->all()
         );
 
         foreach ($allInput as $key => $value) {
-            $inputString = is_array($value) ? json_encode($value) : (string)$value;
+            $inputString = $this->normalizeInputForInspection($value);
+
+            if ($inputString === null) {
+                continue;
+            }
             
             foreach ($suspiciousPatterns as $pattern) {
                 if (preg_match($pattern, $inputString)) {
@@ -130,5 +136,24 @@ class InputSanitizationMiddleware
         }
 
         return false;
+    }
+
+    /**
+     * Convert request input to a safe string representation for pattern checks.
+     */
+    private function normalizeInputForInspection(mixed $value): ?string
+    {
+        if (is_array($value)) {
+            $encoded = json_encode($value);
+
+            return is_string($encoded) ? $encoded : null;
+        }
+
+        if (is_scalar($value) || $value === null) {
+            return (string) $value;
+        }
+
+        // Skip objects/resources (e.g. UploadedFile) to avoid casting crashes.
+        return null;
     }
 }

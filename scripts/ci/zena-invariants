@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="/Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden"
-SQLITE_DB="/tmp/zenamanage_test.sqlite"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RUN_TOKEN="${GITHUB_RUN_ID:-local}_${GITHUB_JOB:-job}_$$"
+SQLITE_DB="${RUNNER_TEMP:-/tmp}/zenamanage_test_${RUN_TOKEN}.sqlite"
 
-cd "$REPO_ROOT"
+cd "$ROOT_DIR"
 
 export APP_ENV=testing
 export DB_CONNECTION=sqlite
@@ -51,6 +52,7 @@ ensure_sqlite_connection
 mkdir -p "$(dirname "$DB_DATABASE")"
 rm -f "$DB_DATABASE"
 touch "$DB_DATABASE"
+trap 'rm -f "$DB_DATABASE"' EXIT
 
 php artisan migrate:fresh --force
 php artisan test --group=zena-invariants -v

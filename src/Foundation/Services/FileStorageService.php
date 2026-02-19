@@ -14,13 +14,11 @@ use Src\Foundation\Services\EnhancedMimeValidationService;
  */
 class FileStorageService
 {
-    private string $defaultDisk;
     private array $allowedMimes;
     private int $maxFileSize;
     
     public function __construct()
     {
-        $this->defaultDisk = config('filesystems.default', 'local');
         $this->allowedMimes = config('app.allowed_file_types', [
             'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
             'jpg', 'jpeg', 'png', 'gif', 'svg',
@@ -42,7 +40,7 @@ class FileStorageService
             // Validate file
             $this->validateFile($file);
             
-            $disk = $disk ?? $this->defaultDisk;
+            $disk = $this->resolveDisk($disk);
             $directory = $directory ?? 'uploads';
             $filename = $filename ?? $this->generateUniqueFilename($file);
             $path = $directory . '/' . $filename;
@@ -133,7 +131,7 @@ class FileStorageService
     public function deleteFile(string $path, ?string $disk = null): bool
     {
         try {
-            $disk = $disk ?? $this->defaultDisk;
+            $disk = $this->resolveDisk($disk);
             
             if (Storage::disk($disk)->exists($path)) {
                 $deleted = Storage::disk($disk)->delete($path);
@@ -165,7 +163,7 @@ class FileStorageService
     public function getFileUrl(string $path, ?string $disk = null): string
     {
         try {
-            $disk = $disk ?? $this->defaultDisk;
+            $disk = $this->resolveDisk($disk);
             
             if ($disk === 'local') {
                 return Storage::disk($disk)->url($path);
@@ -189,7 +187,7 @@ class FileStorageService
     public function fileExists(string $path, ?string $disk = null): bool
     {
         try {
-            $disk = $disk ?? $this->defaultDisk;
+            $disk = $this->resolveDisk($disk);
             return Storage::disk($disk)->exists($path);
         } catch (\Exception $e) {
             return false;
@@ -202,7 +200,7 @@ class FileStorageService
     public function getFileInfo(string $path, ?string $disk = null): ?array
     {
         try {
-            $disk = $disk ?? $this->defaultDisk;
+            $disk = $this->resolveDisk($disk);
             
             if (!Storage::disk($disk)->exists($path)) {
                 return null;
@@ -263,5 +261,10 @@ class FileStorageService
         $basename = Str::slug($basename); // Remove special characters
         
         return $basename . '_' . time() . '_' . Str::random(8) . '.' . $extension;
+    }
+
+    private function resolveDisk(?string $disk): string
+    {
+        return $disk ?? config('filesystems.default', 'local');
     }
 }

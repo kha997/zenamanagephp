@@ -30,21 +30,61 @@ class DashboardMetric extends Model
     public $incrementing = false;
     
     protected $fillable = [
+        'code',
         'metric_code',
         'category',
         'name',
+        'description',
         'unit',
+        'type',
+        'is_active',
+        'permissions',
+        'tenant_id',
+        'project_id',
         'calculation_config',
         'display_config',
-        'is_active',
-        'description'
+        'config',
+        'metadata',
+        'value'
     ];
 
     protected $casts = [
         'calculation_config' => 'array',
         'display_config' => 'array',
+        'config' => 'array',
+        'metadata' => 'array',
+        'permissions' => 'array',
         'is_active' => 'boolean',
+        'value' => 'float',
     ];
+
+    public function setCodeAttribute(?string $value): void
+    {
+        $this->attributes['code'] = $value;
+
+        if (!is_null($value)) {
+            $this->attributes['metric_code'] = $value;
+        }
+    }
+
+    public function setMetricCodeAttribute(?string $value): void
+    {
+        $this->attributes['metric_code'] = $value;
+
+        if (!is_null($value)) {
+            $this->attributes['code'] = $value;
+        }
+    }
+
+    public function getMetricCodeAttribute(): ?string
+    {
+        return $this->attributes['metric_code'] ?? $this->attributes['code'] ?? null;
+    }
+
+    public function getCodeAttribute(): ?string
+    {
+        return $this->attributes['code'] ?? $this->attributes['metric_code'] ?? null;
+    }
 
     /**
      * Các danh mục metric hợp lệ

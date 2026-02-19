@@ -34,6 +34,7 @@ class NotificationResource extends JsonResource
             // Computed fields
             'is_read' => $this->isRead(),
             'is_unread' => $this->isUnread(),
+            'is_expired' => $this->is_expired,
             'is_critical' => $this->isCritical(),
             'age_in_hours' => $this->getAgeInHours(),
             

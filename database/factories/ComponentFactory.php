@@ -3,13 +3,14 @@
 namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Src\CoreProject\Models\Component;
-use Src\CoreProject\Models\Project;
+use Illuminate\Support\Str;
+use App\Models\Component;
+use App\Models\Project;
 
 /**
  * Factory cho Component model
  * 
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\Src\CoreProject\Models\Component>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Component>
  */
 class ComponentFactory extends Factory
 {
@@ -28,6 +29,7 @@ class ComponentFactory extends Factory
     public function definition(): array
     {
         return [
+            'id' => Str::ulid(),
             'project_id' => Project::factory(),
             'parent_component_id' => null,
             'name' => $this->faker->words(3, true),

@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProjectFormRequest;
-use App\Models\Project;
+use Src\CoreProject\Models\LegacyProjectAdapter as Project;
 use App\Repositories\ProjectRepository;
-use App\Services\ProjectService;
+use Src\CoreProject\Services\LegacyProjectServiceAdapter as ProjectService;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -63,22 +64,39 @@ class ProjectController extends Controller
     /**
      * Get a specific project by ID
      */
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
         try {
+            $tenantId = TenantContext::id($request);
+
+            if ($tenantId === null) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Project not found'
+                ], 404);
+            }
+
             $user = Auth::user();
-            
             $project = $this->projectRepository->getProjectById($id, [
                 'client', 'projectManager', 'teamMembers', 'tasks', 'documents'
-            ]);
-            
+            ], $tenantId);
+
             if (!$project) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Project not found'
                 ], 404);
             }
-            
+
+            $routeTenantId = trim((string) $request->attributes->get('tenant_id', ''));
+
+            if ($routeTenantId !== '' && $routeTenantId !== $project->tenant_id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Project not found'
+                ], 404);
+            }
+
             // Check tenant isolation
             if ($project->tenant_id !== $user->tenant_id) {
                 return response()->json([
@@ -97,7 +115,7 @@ class ProjectController extends Controller
             }
             
             // Get project metrics
-            $metrics = $this->projectService->getProjectMetrics($project);
+            $metrics = $this->projectService->getProjectMetrics($project->id, $user->id, $user->tenant_id);
             
             return $this->zenaSuccessResponse([
                 'project' => $project,

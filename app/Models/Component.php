@@ -2,7 +2,7 @@
 
 namespace App\Models;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Event;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory; // Thêm import
@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Log;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
+use Src\CoreProject\Events\ComponentProgressUpdated;
+use Src\CoreProject\Events\ComponentCostUpdated;
 
 /**
  * Model Component - Quản lý thành phần dự án
@@ -76,6 +78,74 @@ class Component extends Model
     ];
 
     /**
+     * Override update to fire ComponentProgressUpdated for manual progress/as cost changes
+     */
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $oldProgress = $this->progress_percent;
+        $oldActualCost = $this->actual_cost;
+
+        $result = parent::update($attributes, $options);
+
+        if (!$result) {
+            return false;
+        }
+
+        $changedFields = [];
+        if ($oldProgress !== $this->progress_percent) {
+            $progressValue = $this->progress_percent;
+            if (is_float($progressValue) && floor($progressValue) == $progressValue) {
+                $progressValue = (int) $progressValue;
+            }
+            $changedFields['progress_percent'] = $progressValue;
+        }
+
+        if ($oldActualCost !== $this->actual_cost) {
+            $changedFields['actual_cost'] = $this->actual_cost;
+        }
+
+        if (empty($changedFields)) {
+            return true;
+        }
+
+        $progressEvent = new ComponentProgressUpdated(
+            (string) $this->id,
+            (string) $this->project_id,
+            AuthHelper::idOrSystem(),
+            $this->tenant_id ? (string) $this->tenant_id : 'system',
+            $oldProgress,
+            $this->progress_percent,
+            $oldActualCost,
+            $this->actual_cost,
+            $changedFields,
+            now()
+        );
+        $progressEvent->component = $this;
+
+        Event::dispatch($progressEvent);
+        EventBus::publish($progressEvent->getEventName(), $progressEvent);
+
+        if ($oldActualCost !== $this->actual_cost) {
+            $costEvent = new ComponentCostUpdated(
+                (string) $this->id,
+                (string) $this->project_id,
+                AuthHelper::idOrSystem(),
+                $this->tenant_id ? (string) $this->tenant_id : 'system',
+                $oldActualCost,
+                $this->actual_cost,
+                ['actual_cost' => $this->actual_cost],
+                now()
+            );
+            $costEvent->component = $this;
+
+            Event::dispatch($costEvent);
+            EventBus::publish($costEvent->getEventName(), $costEvent);
+        }
+
+        return $result;
+    }
+
+    /**
      * Relationship: Component thuộc về tenant
      */
     public function tenant(): BelongsTo
@@ -113,6 +183,14 @@ class Component extends Model
     public function children(): HasMany
     {
         return $this->hasMany(Component::class, 'parent_component_id');
+    }
+
+    /**
+     * Relationship alias for children components
+     */
+    public function childComponents(): HasMany
+    {
+        return $this->children();
     }
 
     /**

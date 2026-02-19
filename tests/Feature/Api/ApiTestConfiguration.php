@@ -12,6 +12,8 @@ class ApiTestConfiguration extends TestCase
 
     /**
      * Test that all required services are available
+     *
+     * @group redis
      */
     public function test_required_services_available()
     {
@@ -20,7 +22,9 @@ class ApiTestConfiguration extends TestCase
             \Illuminate\Support\Facades\Redis::ping();
             $this->assertTrue(true, 'Redis is available');
         } catch (\Exception $e) {
-            $this->markTestSkipped('Redis is not available: ' . $e->getMessage());
+            $this->markTestSkipped(
+                'Redis dependency unavailable for @group redis tests; configure REDIS_HOST/REDIS_PORT. Error: ' . $e->getMessage()
+            );
         }
 
         // Test Cache availability
@@ -89,8 +93,12 @@ class ApiTestConfiguration extends TestCase
         ];
 
         foreach ($requiredRoutes as $route) {
+            $routeRegistered = collect($routes)->contains(
+                fn ($registeredRoute) => trim($registeredRoute->uri(), '/') === trim($route, '/')
+            );
+
             $this->assertTrue(
-                $routes->match(\Illuminate\Http\Request::create($route, 'GET')) !== null,
+                $routeRegistered,
                 "Route {$route} is not registered"
             );
         }
@@ -138,6 +146,8 @@ class ApiTestConfiguration extends TestCase
 
     /**
      * Test Redis configuration
+     *
+     * @group redis
      */
     public function test_redis_configuration()
     {
@@ -151,7 +161,9 @@ class ApiTestConfiguration extends TestCase
             $this->assertEquals('test_value', $value);
             $redis->del('test_key');
         } catch (\Exception $e) {
-            $this->markTestSkipped('Redis is not properly configured: ' . $e->getMessage());
+            $this->markTestSkipped(
+                'Redis dependency unavailable for @group redis tests; configure REDIS_HOST/REDIS_PORT. Error: ' . $e->getMessage()
+            );
         }
     }
 
@@ -200,7 +212,7 @@ class ApiTestConfiguration extends TestCase
         ]);
 
         // Test 404 error
-        $response = $this->getJson('/api/non-existent-endpoint');
+        $response = $this->getJson('/api/v1/nonexistent-endpoint'); // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT) ssot-allow-hardcode
         $response->assertStatus(404);
     }
 

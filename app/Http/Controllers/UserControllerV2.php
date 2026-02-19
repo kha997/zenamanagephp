@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -35,7 +37,7 @@ class UserControllerV2 extends Controller
             $query = User::with(['tenant']);
 
             // Filter theo tenant (multi-tenancy)
-            $tenantId = $request->get('tenant_context');
+            $tenantId = TenantContext::id($request);
             if ($tenantId) {
                 $query->where('tenant_id', $tenantId);
             }
@@ -92,18 +94,23 @@ class UserControllerV2 extends Controller
                 'name' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email',
                 'password' => 'required|string|min:8|confirmed',
-                'tenant_id' => 'required|exists:tenants,id'
             ]);
 
             if ($validator->fails()) {
                 return JSendResponse::fail($validator->errors(), 422);
             }
 
+            $storeTenantId = TenantContext::id($request);
+
+            if (!$storeTenantId) {
+                return JSendResponse::error('Tenant context missing', 400);
+            }
+
             $user = User::create([
                 'name' => $request->input('name'),
                 'email' => $request->input('email'),
                 'password' => bcrypt($request->input('password')),
-                'tenant_id' => $request->input('tenant_id'),
+                'tenant_id' => $storeTenantId,
                 'status' => 'active'
             ]);
 
@@ -131,7 +138,7 @@ class UserControllerV2 extends Controller
             $user = User::with(['tenant'])->findOrFail($id);
 
             // Kiểm tra tenant access
-            $tenantId = $request->get('tenant_context');
+            $tenantId = TenantContext::id($request);
             if ($tenantId && $user->tenant_id !== $tenantId) {
                 return JSendResponse::error('Không có quyền truy cập user này', 403);
             }
@@ -159,7 +166,7 @@ class UserControllerV2 extends Controller
             $user = User::findOrFail($id);
 
             // Kiểm tra tenant access
-            $tenantId = $request->get('tenant_context');
+            $tenantId = TenantContext::id($request);
             if ($tenantId && $user->tenant_id !== $tenantId) {
                 return JSendResponse::error('Không có quyền cập nhật user này', 403);
             }
@@ -207,7 +214,7 @@ class UserControllerV2 extends Controller
             $user = User::findOrFail($id);
 
             // Kiểm tra tenant access
-            $tenantId = $request->get('tenant_context');
+            $tenantId = TenantContext::id($request);
             if ($tenantId && $user->tenant_id !== $tenantId) {
                 return JSendResponse::error('Không có quyền xóa user này', 403);
             }

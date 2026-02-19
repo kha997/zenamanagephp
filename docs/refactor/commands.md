@@ -156,10 +156,11 @@ php artisan make:request LoginRequest # Create form request
 ```bash
 # Route Inspection
 php artisan route:list              # List all routes
+php artisan route:list --path=login # Focused view for login routes (always supported)
+php artisan route:list --path=login --json # View middleware if --json works; else read routes/web.php
 php artisan route:list --path=admin # Filter by path
 php artisan route:list --method=GET # Filter by method
 php artisan route:list --name=admin # Filter by name
-php artisan route:list --columns=method,uri,name,middleware # Custom columns
 
 # Route Caching
 php artisan route:cache             # Cache routes
@@ -170,14 +171,14 @@ php artisan route:list --cached    # Show cached routes
 ### **Code Analysis**
 ```bash
 # Find Duplicates
-rg "class.*Controller" app/Http/Controllers/ # Find controller classes
-rg "function.*Data" resources/views/ # Find data functions
-rg "Route::" routes/ # Find route definitions
+command -v rg >/dev/null && rg "class.*Controller" app/Http/Controllers/ || grep -RniE "class.*Controller" app/Http/Controllers/ # Find controller classes
+command -v rg >/dev/null && rg "function.*Data" resources/views/ || grep -RniE "function.*Data" resources/views/ # Find data functions
+command -v rg >/dev/null && rg "Route::" routes/ || grep -RniE "Route::" routes/ # Find route definitions
 
 # Search Patterns
-rg "middleware.*auth" routes/ # Find auth middleware usage
-rg "POST.*projects" routes/ # Find POST project routes
-rg "dashboard.*blade" resources/views/ # Find dashboard views
+command -v rg >/dev/null && rg "middleware.*auth" routes/ || grep -RniE "middleware.*auth" routes/ # Find auth middleware usage
+command -v rg >/dev/null && rg "POST.*projects" routes/ || grep -RniE "POST.*projects" routes/ # Find POST project routes
+command -v rg >/dev/null && rg "dashboard.*blade" resources/views/ || grep -RniE "dashboard.*blade" resources/views/ # Find dashboard views
 ```
 
 ### **File Analysis**
@@ -251,7 +252,7 @@ php artisan route:list --path=admin | grep -v "rbac" # Find admin routes without
 ```bash
 # Find Duplicate Controllers
 find app/Http/Controllers -name "*Controller.php" | sort
-rg "class.*Controller" app/Http/Controllers/ | sort
+(command -v rg >/dev/null && rg "class.*Controller" app/Http/Controllers/ || grep -RniE "class.*Controller" app/Http/Controllers/) | sort
 
 # Move Controllers
 mkdir -p app/Http/Controllers/Web
@@ -266,8 +267,8 @@ find resources/views -name "*dashboard*" -type f
 find resources/views -name "*project*" -type f
 
 # Analyze View Usage
-rg "dashboard-content" resources/views/ # Find dashboard references
-rg "projects-enhanced" resources/views/ # Find project references
+command -v rg >/dev/null && rg "dashboard-content" resources/views/ || grep -RniE "dashboard-content" resources/views/ # Find dashboard references
+command -v rg >/dev/null && rg "projects-enhanced" resources/views/ || grep -RniE "projects-enhanced" resources/views/ # Find project references
 ```
 
 ---

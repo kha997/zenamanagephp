@@ -104,10 +104,12 @@ class RoleController
 
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.created', [
+            'entityId' => $role->id,
+            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $role->id,
             'name' => $role->name,
             'scope' => $role->scope,
-            'actorId' => $request->get('user_id'), // Từ JWT middleware
             'timestamp' => now()->toISOString()
         ]);
 
@@ -184,10 +186,12 @@ class RoleController
 
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.updated', [
+            'entityId' => $role->id,
+            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $role->id,
             'oldData' => $oldData,
             'newData' => $role->fresh()->toArray(),
-            'actorId' => $request->get('user_id'),
             'timestamp' => now()->toISOString()
         ]);
 
@@ -213,9 +217,15 @@ class RoleController
         }
 
         // Kiểm tra role có đang được sử dụng không
-        $inUse = $role->systemUsers()->exists() || 
-                 $role->customUsers()->exists() || 
-                 $role->projectUsers()->exists();
+        $inUse = $role->systemUsers()->exists();
+
+        if (method_exists($role, 'customUsers')) {
+            $inUse = $inUse || $role->customUsers()->exists();
+        }
+
+        if (method_exists($role, 'projectUsers')) {
+            $inUse = $inUse || $role->projectUsers()->exists();
+        }
         
         if ($inUse) {
             return response()->json([
@@ -229,15 +239,19 @@ class RoleController
 
         // Phát sự kiện
         $this->eventBus->publish('rbac.role.deleted', [
+            'entityId' => $id,
+            'projectId' => (string) ($request->attributes->get('tenant_id') ?? 'system'),
+            'actorId' => (string) ($request->user()?->id ?? 'system'),
             'roleId' => $id,
             'roleData' => $roleData,
-            'actorId' => $request->get('user_id'),
             'timestamp' => now()->toISOString()
         ]);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Role đã được xóa'
+            'data' => [
+                'message' => 'Vai trò đã được xóa thành công'
+            ]
         ]);
     }
 

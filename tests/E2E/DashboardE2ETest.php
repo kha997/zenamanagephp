@@ -10,14 +10,14 @@ use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\RFI;
+use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
+use Tests\Support\SSOT\FixtureFactory;
 
 class DashboardE2ETest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, FixtureFactory;
 
     protected $user;
     protected $project;
@@ -28,30 +28,30 @@ class DashboardE2ETest extends TestCase
         parent::setUp();
         
         // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
+        $this->tenant = $this->createTenant([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
             'is_active' => true
         ]);
         
         // Create test user
-        $this->user = User::create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password'),
             'role' => 'project_manager',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         // Create test project
-        $this->project = Project::create([
+        $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
             'budget' => 100000,
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         // Create test widgets
@@ -64,7 +64,7 @@ class DashboardE2ETest extends TestCase
         $this->createTestData();
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createTestWidgets(): void
@@ -645,7 +645,7 @@ class DashboardE2ETest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($qcUser);
+        $this->apiAs($qcUser, $this->tenant);
 
         // Get role-based dashboard for QC Inspector
         $roleBasedResponse = $this->getJson('/api/v1/dashboard/role-based');
@@ -671,7 +671,7 @@ class DashboardE2ETest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($clientUser);
+        $this->apiAs($clientUser, $this->tenant);
 
         $clientRoleBasedResponse = $this->getJson('/api/v1/dashboard/role-based');
         $clientRoleBasedResponse->assertStatus(200);
@@ -700,7 +700,7 @@ class DashboardE2ETest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        Sanctum::actingAs($qcUser);
+        $this->apiAs($qcUser, $this->tenant);
 
         // Try to add widget that QC Inspector doesn't have permission for
         $projectOverviewWidget = DashboardWidget::where('code', 'project_overview')->first();
@@ -757,7 +757,8 @@ class DashboardE2ETest extends TestCase
     public function it_can_handle_unauthorized_access()
     {
         // Clear authentication
-        Sanctum::actingAs(null);
+        $this->flushHeaders();
+        $this->withHeaders($this->apiHeadersForTenant((string) $this->tenant->id));
 
         $response = $this->getJson('/api/v1/dashboard');
         $response->assertStatus(401);

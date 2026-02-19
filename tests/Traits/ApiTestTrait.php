@@ -14,6 +14,18 @@ use Illuminate\Testing\TestResponse;
  */
 trait ApiTestTrait
 {
+    protected function resolveApiHeaders(array $headers = []): array
+    {
+        $baseHeaders = [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+
+        $existingHeaders = property_exists($this, 'apiHeaders') ? $this->apiHeaders : [];
+
+        return array_merge($baseHeaders, $existingHeaders, $headers);
+    }
+
     /**
      * Assert JSend success response
      * 
@@ -139,6 +151,39 @@ trait ApiTestTrait
         ]);
     }
 
+    protected function apiGet(string $uri, array $headers = []): TestResponse
+    {
+        return $this->withHeaders($this->resolveApiHeaders($headers))->getJson($uri);
+    }
+
+    protected function apiPost(string $uri, array $data = [], array $headers = []): TestResponse
+    {
+        return $this->withHeaders($this->resolveApiHeaders($headers))->postJson($uri, $data);
+    }
+
+    protected function apiPostMultipart(string $uri, array $data = [], array $headers = []): TestResponse
+    {
+        $multipartHeaders = $this->resolveApiHeaders($headers);
+        $multipartHeaders['Content-Type'] = 'multipart/form-data';
+
+        return $this->withHeaders($multipartHeaders)->post($uri, $data);
+    }
+
+    protected function apiPut(string $uri, array $data = [], array $headers = []): TestResponse
+    {
+        return $this->withHeaders($this->resolveApiHeaders($headers))->putJson($uri, $data);
+    }
+
+    protected function apiPatch(string $uri, array $data = [], array $headers = []): TestResponse
+    {
+        return $this->withHeaders($this->resolveApiHeaders($headers))->patchJson($uri, $data);
+    }
+
+    protected function apiDelete(string $uri, array $headers = []): TestResponse
+    {
+        return $this->withHeaders($this->resolveApiHeaders($headers))->deleteJson($uri);
+    }
+
     /**
      * Make authenticated API request
      * 
@@ -157,6 +202,6 @@ trait ApiTestTrait
 
         $headers = array_merge($defaultHeaders, $headers);
 
-        return $this->json($method, '/api/v1' . $uri, $data, $headers);
+        return $this->json($method, $uri, $data, $headers);
     }
 }

@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Traits\HasRoles;
+use App\Models\NotificationRule;
 
 /**
  * Model User - Quản lý người dùng với RBAC và Multi-tenancy
@@ -20,6 +23,7 @@ use App\Traits\HasRoles;
  * @property string $email Email
  * @property \Carbon\Carbon|null $email_verified_at Thời gian xác thực email
  * @property string $password Mật khẩu đã hash
+ * @property \Carbon\Carbon|null $password_updated_at Thời gian đổi mật khẩu gần nhất
  * @property bool $is_active Trạng thái hoạt động
  * @property array|null $profile_data Dữ liệu profile bổ sung
  * @property string|null $remember_token Token ghi nhớ
@@ -29,7 +33,7 @@ use App\Traits\HasRoles;
  */
 class User extends Authenticatable
 {
-    use HasUlids, HasFactory, HasApiTokens, HasRoles;
+    use HasUlids, HasFactory, HasApiTokens, SoftDeletes, HasRoles, Notifiable;
 
     /**
      * Cấu hình ULID primary key
@@ -39,13 +43,16 @@ class User extends Authenticatable
 
     protected $fillable = [
         'tenant_id',
+        'status',
         'name',
         'email',
         'password',
+        'password_updated_at',
         'phone',
         'avatar',
         'preferences',
         'last_login_at',
+        'last_login_ip',
         'is_active',
         'oidc_provider',
         'oidc_subject_id',
@@ -58,6 +65,7 @@ class User extends Authenticatable
         'department',
         'job_title',
         'manager',
+        'role',
     ];
 
     protected $hidden = [
@@ -68,6 +76,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
+        'password_updated_at' => 'datetime',
         'is_active' => 'boolean',
         'preferences' => 'array',
         'oidc_data' => 'array',
@@ -85,6 +94,15 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id')
             ->using(UserRole::class)
+            ->withTimestamps();
+    }
+
+    /**
+     * Relationship: User có nhiều system roles (RBAC)
+     */
+    public function systemRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class, 'system_user_roles', 'user_id', 'role_id')
             ->withTimestamps();
     }
 
@@ -107,8 +125,12 @@ class User extends Authenticatable
     /**
      * Check if user has role.
      */
-    public function hasRole(string $role): bool
+    public function hasRole(string|array $role): bool
     {
+        if (is_array($role)) {
+            return $this->hasAnyRole($role);
+        }
+
         return $this->roles()->where('name', $role)->exists();
     }
 
@@ -147,10 +169,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Relationship: User manages many projects
+     */
+    public function projects(): HasMany
+    {
+        return $this->hasMany(Project::class, 'pm_id');
+    }
+
+    /**
      * Check if user has any of the given roles.
      */
     public function hasAnyRole(array $roles): bool
     {
+        if ($this->role && in_array($this->role, $roles, true)) {
+            return true;
+        }
+
         return $this->roles()->whereIn('name', $roles)->exists();
     }
 
@@ -228,6 +262,11 @@ class User extends Authenticatable
     public function canManageInvitations(): bool
     {
         return $this->isAdmin();
+    }
+
+    public function notificationRules(): HasMany
+    {
+        return $this->hasMany(NotificationRule::class);
     }
 
 }

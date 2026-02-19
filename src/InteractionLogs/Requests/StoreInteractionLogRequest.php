@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace App\InteractionLogs\Requests;
+namespace Src\InteractionLogs\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use App\InteractionLogs\Models\InteractionLog;
+use Src\InteractionLogs\Models\InteractionLog;
 
 /**
  * Form Request cho việc tạo Interaction Log mới
@@ -24,12 +24,12 @@ class StoreInteractionLogRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'project_id' => 'required|integer|exists:projects,id',
-            'linked_task_id' => 'nullable|integer|exists:tasks,id',
-            'type' => 'required|string|in:' . implode(',', array_keys(InteractionLog::TYPES)),
+            'project_id' => 'required|string|size:26',
+            'linked_task_id' => 'nullable|string|size:26',
+            'type' => 'required|string|in:' . implode(',', InteractionLog::VALID_TYPES),
             'description' => 'required|string|max:65535',
             'tag_path' => 'nullable|string|max:255',
-            'visibility' => 'required|string|in:internal,client',
+            'visibility' => 'required|string|in:' . implode(',', InteractionLog::VALID_VISIBILITIES),
             'client_approved' => 'boolean'
         ];
     }

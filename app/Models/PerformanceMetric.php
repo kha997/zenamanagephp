@@ -3,12 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PerformanceMetric extends Model
 {
+    use HasFactory, HasUlids, SoftDeletes;
+
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
+        'tenant_id',
         'metric_name',
         'metric_value',
         'metric_unit',
@@ -18,7 +25,8 @@ class PerformanceMetric extends Model
 
     protected $casts = [
         'metric_value' => 'float',
-        'metadata' => 'array'
+        'metadata' => 'array',
+        'deleted_at' => 'datetime'
     ];
 
     /**

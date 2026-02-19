@@ -132,12 +132,12 @@ class TaskController
      * Tạo task mới sử dụng TaskService
      *
      * @param StoreTaskRequest $request
-     * @param string $projectId
      * @return JsonResponse
      */
-    public function store(StoreTaskRequest $request, string $projectId): JsonResponse
+    public function store(StoreTaskRequest $request): JsonResponse
     {
         try {
+            $projectId = $request->input('project_id');
             $data = $request->validated();
             $data['project_id'] = $projectId;
 
@@ -150,7 +150,7 @@ class TaskController
             return JSendResponse::success([
                 'task' => new TaskResource($task),
                 'message' => 'Task đã được tạo thành công'
-            ]);
+            ], 201);
         } catch (InvalidArgumentException $e) {
             return JSendResponse::error($e->getMessage(), 400);
         } catch (\Exception $e) {
@@ -240,7 +240,7 @@ class TaskController
 
             // Kiểm tra dependencies từ tasks khác
             $dependentTasks = Task::where('project_id', $projectId)
-                ->whereJsonContains('dependencies', $taskId)
+                ->whereJsonContains('dependencies_json', $taskId)
                 ->exists();
 
             if ($dependentTasks) {
@@ -270,7 +270,7 @@ class TaskController
         try {
             $tasks = Task::where('project_id', $projectId)
                 ->where('is_hidden', false)
-                ->select(['id', 'name', 'status', 'dependencies'])
+                ->select(['id', 'name', 'status', 'dependencies_json'])
                 ->get();
 
             $graph = $tasks->map(function ($task) {
@@ -278,7 +278,7 @@ class TaskController
                     'id' => $task->id,
                     'name' => $task->name,
                     'status' => $task->status,
-                    'dependencies' => $task->dependencies ?? []
+                    'dependencies' => $task->dependencies_json ?? []
                 ];
             });
 
@@ -560,9 +560,9 @@ class TaskController
                 ]
             ]);
 
-            $task->update([
-                'dependencies' => $request->dependencies
-            ]);
+                $task->update([
+                    'dependencies_json' => $request->dependencies
+                ]);
 
             $task->load(['component', 'assignments.user', 'project']);
 

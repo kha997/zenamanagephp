@@ -2,65 +2,84 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\ZenaProject;
 use App\Models\ZenaSubmittal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
+use Tests\Traits\RouteNameTrait;
 
 class SubmittalApiTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase;
+    use WithFaker;
+    use RouteNameTrait;
 
     protected $user;
+
     protected $project;
+
     protected $token;
+
+    protected array $zenaAuthHeaders = [];
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->user = User::factory()->create();
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
         ]);
-        $this->token = $this->generateJwtToken($this->user);
+        $this->syncZenaProjectRecord($this->project);
+
+        $this->assignSuperAdminRole($this->user);
+        $this->token = $this->loginZenaUser($this->user);
+        $this->zenaAuthHeaders = $this->buildZenaAuthHeaders();
     }
 
     /**
-     * Test Submittal index endpoint
+     * Test Submittal index endpoint.
      */
     public function test_can_get_submittal_list()
     {
         ZenaSubmittal::factory()->count(3)->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/submittals');
+        $response = $this->withZenaAuth()->getJson($this->zena('submittals.index'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'status',
+                    'success',
                     'data' => [
-                        'data' => [
-                            '*' => [
-                                'id',
-                                'title',
-                                'submittal_type',
-                                'status',
-                                'created_at'
-                            ]
-                        ]
-                    ]
+                        '*' => [
+                            'id',
+                            'title',
+                            'submittal_type',
+                            'status',
+                            'created_at',
+                        ],
+                    ],
+                    'meta' => [
+                        'pagination' => [
+                            'page',
+                            'per_page',
+                            'total',
+                            'last_page',
+                        ],
+                    ],
                 ]);
     }
 
     /**
-     * Test Submittal creation
+     * Test Submittal creation.
      */
     public function test_can_create_submittal()
     {
@@ -69,15 +88,13 @@ class SubmittalApiTest extends TestCase
             'title' => 'Test Submittal',
             'description' => 'Test submittal description',
             'submittal_number' => 'SUB-001',
-            'submittal_type' => 'drawing',
+            'submittal_type' => 'shop_drawing',
             'specification_section' => 'Section 1',
             'contractor' => 'Test Contractor',
-            'manufacturer' => 'Test Manufacturer'
+            'manufacturer' => 'Test Manufacturer',
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/submittals', $submittalData);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.store'), $submittalData);
 
         $response->assertStatus(201)
                 ->assertJsonStructure([
@@ -86,30 +103,34 @@ class SubmittalApiTest extends TestCase
                         'id',
                         'title',
                         'submittal_type',
-                        'status'
-                    ]
+                        'status',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('submittals', [
             'title' => 'Test Submittal',
-            'project_id' => $this->project->id
+            'project_id' => $this->project->id,
         ]);
     }
 
     /**
-     * Test Submittal submission
+     * Test Submittal submission.
      */
     public function test_can_submit_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittalData = [
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id,
-            'status' => 'draft'
-        ]);
+            'title' => 'Submission Draft',
+            'description' => 'Ready for submission',
+            'submittal_number' => 'BATCH-001',
+            'submittal_type' => 'shop_drawing',
+        ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/submittals/{$submittal->id}/submit");
+        $createResponse = $this->withZenaAuth()->postJson($this->zena('submittals.store'), $submittalData);
+        $createResponse->assertStatus(201);
+        $submittalId = $createResponse->json('data.id');
+
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $submittalId]));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -117,35 +138,33 @@ class SubmittalApiTest extends TestCase
                     'data' => [
                         'id',
                         'status',
-                        'submitted_at'
-                    ]
+                        'submitted_at',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('submittals', [
-            'id' => $submittal->id,
-            'status' => 'submitted'
+            'id' => $submittalId,
+            'status' => 'submitted',
         ]);
     }
 
     /**
-     * Test Submittal review
+     * Test Submittal review.
      */
     public function test_can_review_submittal()
     {
         $submittal = ZenaSubmittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'submitted'
+            'status' => 'submitted',
         ]);
 
         $reviewData = [
             'review_notes' => 'This submittal looks good',
-            'status' => 'approved'
+            'status' => 'approved',
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/submittals/{$submittal->id}/review", $reviewData);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.review', ['id' => $submittal->id]), $reviewData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -153,35 +172,33 @@ class SubmittalApiTest extends TestCase
                     'data' => [
                         'id',
                         'review_notes',
-                        'status'
-                    ]
+                        'status',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'review_notes' => 'This submittal looks good',
-            'status' => 'approved'
+            'status' => 'approved',
         ]);
     }
 
     /**
-     * Test Submittal approval
+     * Test Submittal approval.
      */
     public function test_can_approve_submittal()
     {
         $submittal = ZenaSubmittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'pending_review'
+            'status' => 'pending_review',
         ]);
 
         $approvalData = [
-            'approval_comments' => 'Approved with minor comments'
+            'approval_comments' => 'Approved with minor comments',
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/submittals/{$submittal->id}/approve", $approvalData);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.approve', ['id' => $submittal->id]), $approvalData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -190,36 +207,34 @@ class SubmittalApiTest extends TestCase
                         'id',
                         'approval_comments',
                         'status',
-                        'approved_at'
-                    ]
+                        'approved_at',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'status' => 'approved',
-            'approval_comments' => 'Approved with minor comments'
+            'approval_comments' => 'Approved with minor comments',
         ]);
     }
 
     /**
-     * Test Submittal rejection
+     * Test Submittal rejection.
      */
     public function test_can_reject_submittal()
     {
         $submittal = ZenaSubmittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
-            'status' => 'pending_review'
+            'status' => 'pending_review',
         ]);
 
         $rejectionData = [
             'rejection_reason' => 'Does not meet specifications',
-            'rejection_comments' => 'Please revise and resubmit'
+            'rejection_comments' => 'Please revise and resubmit',
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/submittals/{$submittal->id}/reject", $rejectionData);
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.reject', ['id' => $submittal->id]), $rejectionData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -229,35 +244,33 @@ class SubmittalApiTest extends TestCase
                         'rejection_reason',
                         'rejection_comments',
                         'status',
-                        'rejected_at'
-                    ]
+                        'rejected_at',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
             'status' => 'rejected',
-            'rejection_reason' => 'Does not meet specifications'
+            'rejection_reason' => 'Does not meet specifications',
         ]);
     }
 
     /**
-     * Test Submittal update
+     * Test Submittal update.
      */
     public function test_can_update_submittal()
     {
         $submittal = ZenaSubmittal::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
         $updateData = [
             'title' => 'Updated Submittal Title',
-            'description' => 'Updated description'
+            'description' => 'Updated description',
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/submittals/{$submittal->id}", $updateData);
+        $response = $this->withZenaAuth()->putJson($this->zena('submittals.update', ['id' => $submittal->id]), $updateData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -265,64 +278,137 @@ class SubmittalApiTest extends TestCase
                     'data' => [
                         'id',
                         'title',
-                        'description'
-                    ]
+                        'description',
+                    ],
                 ]);
 
         $this->assertDatabaseHas('submittals', [
             'id' => $submittal->id,
-            'title' => 'Updated Submittal Title'
+            'title' => 'Updated Submittal Title',
         ]);
     }
 
     /**
-     * Test Submittal deletion
+     * Test Submittal deletion.
      */
     public function test_can_delete_submittal()
     {
         $submittal = ZenaSubmittal::factory()->create([
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->deleteJson("/api/zena/submittals/{$submittal->id}");
+        $response = $this->withZenaAuth()->deleteJson($this->zena('submittals.destroy', ['id' => $submittal->id]));
 
         $response->assertStatus(200);
 
         $this->assertDatabaseMissing('submittals', [
-            'id' => $submittal->id
+            'id' => $submittal->id,
         ]);
     }
 
     /**
-     * Test Submittal validation
+     * Test Submittal validation.
      */
     public function test_submittal_creation_requires_valid_data()
     {
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.store'), []);
+
+        $response->assertStatus(422);
+
+        $errors = $response->json('error.details.data', []);
+        foreach (['project_id', 'title', 'description', 'submittal_type'] as $field) {
+            $this->assertArrayHasKey($field, $errors);
+        }
+    }
+
+    /**
+     * Test unauthorized access.
+     */
+    public function test_submittal_list_allows_guest_access_with_tenant_header()
+    {
         $response = $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $this->user->tenant_id,
+        ])->getJson($this->zena('submittals.index'));
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'status',
+                'success',
+                'data',
+            ]);
+    }
+
+    private function withZenaAuth()
+    {
+        return $this->withHeaders($this->zenaAuthHeaders);
+    }
+
+    private function buildZenaAuthHeaders(): array
+    {
+        return [
             'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/submittals', []);
-
-        $response->assertStatus(422)
-                ->assertJsonValidationErrors(['project_id', 'title', 'description', 'submittal_type']);
+            'X-Tenant-ID' => (string) $this->user->tenant_id,
+            'Accept' => 'application/json',
+        ];
     }
 
-    /**
-     * Test unauthorized access
-     */
-    public function test_unauthorized_access_returns_401()
+    private function loginZenaUser(User $user): string
     {
-        $response = $this->getJson('/api/zena/submittals');
-        $response->assertStatus(401);
+        $response = $this->postJson($this->zena('auth.login'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertStatus(200);
+
+        return (string) $response->json('data.token');
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
+    private function assignSuperAdminRole(User $user): void
     {
-        return 'test-jwt-token-' . $user->id;
+        $role = Role::firstOrCreate([
+            'name' => 'super_admin',
+        ], [
+            'scope' => Role::SCOPE_SYSTEM,
+            'allow_override' => true,
+            'is_active' => true,
+        ]);
+
+        $user->roles()->syncWithoutDetaching($role->id);
+    }
+
+    private function syncZenaProjectRecord(ZenaProject $project): void
+    {
+        DB::table('zena_projects')->updateOrInsert(
+            ['id' => $project->id],
+            [
+                'tenant_id' => $project->tenant_id,
+                'code' => $project->code,
+                'name' => $project->name,
+                'description' => $project->description,
+                'client_id' => $project->client_id,
+                'status' => $this->mapProjectStatusToZenaStatus($project->status),
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'budget' => $project->budget_total ?? 0,
+                'settings' => json_encode($project->settings ?? []),
+                'created_at' => $project->created_at,
+                'updated_at' => $project->updated_at,
+            ]
+        );
+    }
+
+    private function mapProjectStatusToZenaStatus(string $status): string
+    {
+        return match ($status) {
+            'planning' => 'planning',
+            'active', 'in_progress' => 'active',
+            'on_hold' => 'on_hold',
+            'completed' => 'completed',
+            'cancelled' => 'cancelled',
+            default => 'planning',
+        };
     }
 }

@@ -7,7 +7,7 @@ services:
     container_name: kong-database
     environment:
       POSTGRES_USER: kong
-      POSTGRES_PASSWORD: kong_password
+      POSTGRES_PASSWORD: ${KONG_PG_PASSWORD:?Set KONG_PG_PASSWORD}
       POSTGRES_DB: kong
     volumes:
       - kong_data:/var/lib/postgresql/data
@@ -29,7 +29,7 @@ services:
       KONG_PG_HOST: kong-db
       KONG_PG_DATABASE: kong
       KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kong_password
+      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:?Set KONG_PG_PASSWORD}
     command: kong migrations bootstrap
     depends_on:
       kong-db:
@@ -47,7 +47,7 @@ services:
       KONG_PG_HOST: kong-db
       KONG_PG_DATABASE: kong
       KONG_PG_USER: kong
-      KONG_PG_PASSWORD: kong_password
+      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD:?Set KONG_PG_PASSWORD}
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_ADMIN_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr

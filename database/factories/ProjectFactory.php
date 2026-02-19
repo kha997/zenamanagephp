@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Project>
@@ -22,7 +23,7 @@ class ProjectFactory extends Factory
     public function definition(): array
     {
         return [
-            'id' => $this->faker->unique()->regexify('[0-9A-Za-z]{26}'),
+            'id' => (string) Str::ulid(),
             'tenant_id' => Tenant::factory(),
             'code' => 'PRJ-' . strtoupper($this->faker->unique()->regexify('[A-Z0-9]{8}')),
             'name' => $this->faker->company() . ' Project',

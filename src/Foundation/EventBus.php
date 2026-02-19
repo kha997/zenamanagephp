@@ -58,7 +58,7 @@ class EventBus {
             
             // Tạo callable từ array
             $callback = function($payload) use ($callback) {
-                $instance = new $callback[0]();
+                $instance = app()->make($callback[0]);
                 return call_user_func([$instance, $callback[1]], $payload);
             };
         } elseif (!is_callable($callback)) {
@@ -84,16 +84,19 @@ class EventBus {
      * Phát sự kiện với payload chuẩn
      * 
      * @param string $eventName Tên sự kiện
-     * @param array $payload Dữ liệu sự kiện (phải chứa: entityId, projectId, actorId)
+     * @param mixed $payload Dữ liệu sự kiện hoặc event object
      * @return array Kết quả xử lý từ các listeners
      * @throws Exception
      */
-    public static function publish(string $eventName, array $payload): array {
+    public static function publish(string $eventName, $payload): array {
         self::validateEventName($eventName);
-        self::validatePayload($payload);
+
+        $isEventObject = is_object($payload) && method_exists($payload, 'getPayload');
+        $payloadArray = $isEventObject ? $payload->getPayload() : (array) $payload;
+        self::validatePayload($payloadArray);
         
         // Chuẩn hóa payload
-        $standardPayload = self::standardizePayload($eventName, $payload);
+        $standardPayload = self::standardizePayload($eventName, $payloadArray);
         
         // Audit logging
         if (self::$auditEnabled) {
@@ -111,7 +114,8 @@ class EventBus {
         if (isset(self::$listeners[$eventName])) {
             foreach (self::$listeners[$eventName] as $listenerData) {
                 try {
-                    $result = call_user_func($listenerData['callback'], $standardPayload);
+                    $listenerPayload = $isEventObject ? $payload : $standardPayload;
+                    $result = call_user_func($listenerData['callback'], $listenerPayload);
                     $results[] = [
                         'success' => true,
                         'result' => $result,
@@ -134,7 +138,7 @@ class EventBus {
         if ($eventName !== '*' && isset(self::$listeners['*'])) {
             foreach (self::$listeners['*'] as $listenerData) {
                 try {
-                    call_user_func($listenerData['callback'], $standardPayload);
+                    call_user_func($listenerData['callback'], $eventName, $standardPayload);
                 } catch (Throwable $e) {
                     error_log("EventBus Wildcard Listener Error: " . $e->getMessage());
                 }

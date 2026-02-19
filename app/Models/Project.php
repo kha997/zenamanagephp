@@ -9,9 +9,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
+use App\Models\ProjectMilestone;
+use App\Models\UserRoleProject;
+use App\Models\User;
 
 /**
  * Model Project - Quản lý dự án
@@ -28,7 +33,7 @@ use Src\Foundation\Helpers\AuthHelper;
  */
 class Project extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids, HasFactory, SoftDeletes, TenantScope;
 
     protected $table = 'projects';
     
@@ -41,11 +46,19 @@ class Project extends Model
         'code',
         'name',
         'description',
+        'pm_id',
+        'created_by',
+        'manager_id',
         'start_date',
         'end_date',
         'status',
+        'priority',
         'progress',
-        'budget_total'
+        'actual_cost',
+        'budget_total',
+        'budget_actual',
+        'budget',
+        'spent_amount'
     ];
 
     protected $casts = [
@@ -64,6 +77,48 @@ class Project extends Model
         'progress' => 0.0,
         'budget_total' => 0.0
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $project): void {
+            if (!empty($project->code)) {
+                return;
+            }
+
+            $project->code = self::generateCode();
+        });
+    }
+
+    public function getBudgetAttribute(): float
+    {
+        return (float) ($this->attributes['budget_total'] ?? 0.0);
+    }
+
+    public function setBudgetAttribute($value): void
+    {
+        $this->attributes['budget_total'] = $value;
+    }
+
+    public function getActualCostAttribute(): float
+    {
+        return (float) ($this->attributes['actual_cost'] ?? $this->attributes['budget_actual'] ?? 0.0);
+    }
+
+    public function setActualCostAttribute($value): void
+    {
+        $this->attributes['budget_actual'] = $value;
+        $this->attributes['actual_cost'] = $value;
+    }
+
+    public function getSpentAmountAttribute(): float
+    {
+        return (float) ($this->attributes['budget_actual'] ?? 0.0);
+    }
+
+    public function setSpentAmountAttribute($value): void
+    {
+        $this->attributes['budget_actual'] = $value;
+    }
 
     /**
      * Các trạng thái hợp lệ
@@ -89,12 +144,74 @@ class Project extends Model
         'urgent',
     ];
 
+    public function setNameAttribute(?string $value): void
+    {
+        $sanitized = static::sanitizeText($value);
+
+        $this->attributes['name'] = $sanitized === null ? '' : $sanitized;
+    }
+
+    public function setDescriptionAttribute(?string $value): void
+    {
+        $this->attributes['description'] = static::sanitizeText($value);
+    }
+
+    private static function sanitizeText(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $withoutScripts = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $value);
+        $cleaned = strip_tags($withoutScripts);
+        $cleaned = html_entity_decode($cleaned, ENT_QUOTES, 'UTF-8');
+
+        return Str::squish($cleaned);
+    }
+
+    private static function generateCode(): string
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $candidate = 'PRJ-' . strtoupper(Str::random(8));
+            if (!self::query()->where('code', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return 'PRJ-' . strtoupper((string) Str::ulid());
+    }
+
     /**
      * Relationship: Project thuộc về tenant
      */
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Tenant::class);
+    }
+
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pm_id');
+    }
+
+    public function projectManager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pm_id');
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'client_id');
+    }
+
+    public function getManagerIdAttribute(): ?string
+    {
+        return $this->attributes['pm_id'] ?? null;
+    }
+
+    public function setManagerIdAttribute(?string $value): void
+    {
+        $this->attributes['pm_id'] = $value;
     }
 
     /**
@@ -131,6 +248,14 @@ class Project extends Model
     }
 
     /**
+     * Relationship: Project có nhiều bản ghi project-user cụ thể
+     */
+    public function projectUsers(): HasMany
+    {
+        return $this->hasMany(UserRoleProject::class, 'project_id');
+    }
+
+    /**
      * Relationship: Project có nhiều users thông qua roles
      */
     public function users(): BelongsToMany
@@ -142,6 +267,19 @@ class Project extends Model
             'user_id'
         )->withPivot(['role_id'])
           ->withTimestamps();
+    }
+
+    public function teamMembers(): BelongsToMany
+    {
+        return $this->users();
+    }
+
+    /**
+     * Relationship: Project có nhiều milestones
+     */
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(ProjectMilestone::class);
     }
 
     /**
@@ -228,6 +366,24 @@ class Project extends Model
                 ]
             ]
         ]);
+    }
+
+    /**
+     * Tính toán tiến độ dựa trên milestones
+     */
+    public function calculateProgress(): int
+    {
+        $totalMilestones = $this->milestones()->count();
+
+        if ($totalMilestones === 0) {
+            return 0;
+        }
+
+        $completedMilestones = $this->milestones()
+            ->where('status', 'completed')
+            ->count();
+
+        return (int) round(($completedMilestones / $totalMilestones) * 100);
     }
     
     /**

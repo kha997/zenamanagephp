@@ -1,0 +1,4 @@
+# Baseline allowlist paths used by SSOT_STRICT=1.
+api/v1/nonexistent-endpoint
+api/v1/auth/oidc
+api/v1/documents/non-existent-document/revert

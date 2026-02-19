@@ -10,6 +10,7 @@ use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Str;
 
 /**
  * Test Realtime Sync & WebSocket Events (Simplified)
@@ -30,7 +31,7 @@ class RealtimeSyncWebSocketSimpleTest extends TestCase
         parent::setUp();
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -40,7 +41,7 @@ class RealtimeSyncWebSocketSimpleTest extends TestCase
         ]);
 
         // Tạo users
-        $this->user1 = User::create([
+        $this->user1 = User::factory()->create([
             'name' => 'User 1',
             'email' => 'user1@example.com',
             'password' => bcrypt('password'),
@@ -49,7 +50,7 @@ class RealtimeSyncWebSocketSimpleTest extends TestCase
             'profile_data' => '{}',
         ]);
 
-        $this->user2 = User::create([
+        $this->user2 = User::factory()->create([
             'name' => 'User 2',
             'email' => 'user2@example.com',
             'password' => bcrypt('password'),
@@ -59,7 +60,7 @@ class RealtimeSyncWebSocketSimpleTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'REALTIME-TEST-001',
             'description' => 'Test Description',
@@ -155,7 +156,7 @@ class RealtimeSyncWebSocketSimpleTest extends TestCase
         $initialUserCount = User::where('tenant_id', $this->tenant->id)->count();
 
         // Create new project
-        $newProject = Project::create([
+        $newProject = Project::factory()->create([
             'name' => 'New Project',
             'code' => 'REALTIME-TEST-002',
             'description' => 'New Test Description',
@@ -189,6 +190,7 @@ class RealtimeSyncWebSocketSimpleTest extends TestCase
         $projects = [];
         for ($i = 1; $i <= 5; $i++) {
             $projects[] = [
+                'id' => (string) Str::ulid(),
                 'name' => "Bulk Project {$i}",
                 'code' => "BULK-{$i}",
                 'description' => "Bulk test project {$i}",

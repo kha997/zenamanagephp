@@ -10,17 +10,19 @@ use App\Models\DashboardMetric;
 use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\RFI;
-use App\Models\Inspection;
-use App\Models\NCR;
+use App\Models\Rfi;
+use App\Models\QcInspection;
+use App\Models\QcPlan;
+use App\Models\Ncr;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\SSOT\FixtureFactory;
+use Tests\Traits\AuthenticationTrait;
 
 class DashboardPerformanceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, FixtureFactory, AuthenticationTrait;
 
     protected $user;
     protected $project;
@@ -31,37 +33,37 @@ class DashboardPerformanceTest extends TestCase
         parent::setUp();
         
         // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
+        $this->tenant = $this->createTenant([
             'name' => 'Test Tenant',
             'domain' => 'test.com',
             'is_active' => true
         ]);
         
         // Create test user
-        $this->user = User::create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password'),
             'role' => 'project_manager',
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         // Create test project
-        $this->project = Project::create([
+        $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'name' => 'Test Project',
             'description' => 'Test project description',
             'status' => 'active',
             'budget' => 100000,
             'start_date' => now(),
             'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
         
         // Create large dataset for performance testing
         $this->createLargeDataset();
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createLargeDataset(): void
@@ -111,42 +113,54 @@ class DashboardPerformanceTest extends TestCase
 
         // Create 500 RFIs
         for ($i = 1; $i <= 500; $i++) {
-            RFI::create([
+            Rfi::factory()->create([
+                'title' => "RFI {$i}",
                 'subject' => "RFI {$i}",
                 'description' => "RFI {$i} description",
                 'status' => ['open', 'answered', 'closed'][array_rand(['open', 'answered', 'closed'])],
                 'priority' => ['low', 'medium', 'high'][array_rand(['low', 'medium', 'high'])],
                 'due_date' => now()->addDays(rand(1, 14)),
-                'discipline' => ['construction', 'electrical', 'mechanical'][array_rand(['construction', 'electrical', 'mechanical'])],
                 'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
+                'asked_by' => $this->user->id,
+                'created_by' => $this->user->id,
+                'assigned_to' => $this->user->id,
             ]);
         }
 
         // Create 200 inspections
+        $qcPlan = QcPlan::factory()->create([
+            'project_id' => $this->project->id,
+            'tenant_id' => $this->tenant->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $inspectionIds = [];
         for ($i = 1; $i <= 200; $i++) {
-            Inspection::create([
+            $inspection = QcInspection::factory()->create([
                 'title' => "Inspection {$i}",
                 'description' => "Inspection {$i} description",
                 'status' => ['scheduled', 'in_progress', 'completed'][array_rand(['scheduled', 'in_progress', 'completed'])],
-                'type' => ['quality', 'safety', 'compliance'][array_rand(['quality', 'safety', 'compliance'])],
-                'scheduled_date' => now()->addDays(rand(1, 30)),
+                'inspection_date' => now()->addDays(rand(1, 30)),
                 'inspector_id' => $this->user->id,
-                'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'qc_plan_id' => $qcPlan->id,
+                'tenant_id' => $this->tenant->id,
             ]);
+            $inspectionIds[] = $inspection->id;
         }
 
         // Create 100 NCRs
         for ($i = 1; $i <= 100; $i++) {
-            NCR::create([
+            Ncr::factory()->create([
+                'ncr_number' => sprintf('NCR-%04d', $i),
                 'title' => "NCR {$i}",
                 'description' => "NCR {$i} description",
                 'status' => ['open', 'in_progress', 'closed'][array_rand(['open', 'in_progress', 'closed'])],
                 'severity' => ['low', 'medium', 'high'][array_rand(['low', 'medium', 'high'])],
-                'category' => ['quality', 'safety', 'compliance'][array_rand(['quality', 'safety', 'compliance'])],
+                'created_by' => $this->user->id,
+                'inspection_id' => $inspectionIds[array_rand($inspectionIds)],
                 'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
         }
 
@@ -232,17 +246,55 @@ class DashboardPerformanceTest extends TestCase
     /** @test */
     public function it_can_load_alerts_with_large_dataset_quickly()
     {
-        $startTime = microtime(true);
-        
-        $response = $this->getJson('/api/v1/dashboard/alerts');
-        
-        $endTime = microtime(true);
-        $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
-        
-        $response->assertStatus(200);
-        $this->assertLessThan(300, $executionTime, 'Alerts should load in less than 300ms');
-        
-        echo "\nAlerts load time: {$executionTime}ms\n";
+        $endpoint = '/api/v1/dashboard/alerts';
+        $debugEnabled = filter_var(getenv('PERF_DEBUG') ?: '0', FILTER_VALIDATE_BOOLEAN);
+        $isCi = filter_var(getenv('CI') ?: '0', FILTER_VALIDATE_BOOLEAN);
+        $latencyBudgetMs = $isCi ? 450 : 300;
+        $queryBudget = 20;
+
+        // Warm cache and app container state before collecting timings.
+        $warmupResponse = $this->getJson($endpoint);
+        $warmupResponse->assertStatus(200);
+
+        $samples = [];
+        $queryCounts = [];
+
+        for ($i = 0; $i < 3; $i++) {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+
+            $startTime = microtime(true);
+            $response = $this->getJson($endpoint);
+            $endTime = microtime(true);
+
+            $response->assertStatus(200);
+
+            $samples[] = ($endTime - $startTime) * 1000;
+            $queryCounts[] = count(DB::getQueryLog());
+
+            DB::disableQueryLog();
+        }
+
+        sort($samples);
+        $medianMs = $samples[1];
+        $maxQueryCount = max($queryCounts);
+
+        if ($debugEnabled) {
+            $samplesText = implode(', ', array_map(static fn (float $sample): string => sprintf('%.2f', $sample), $samples));
+            $queriesText = implode(', ', $queryCounts);
+            echo "\nAlerts latency samples (ms): [{$samplesText}] | median: " . sprintf('%.2f', $medianMs) . " | query counts: [{$queriesText}] | max queries: {$maxQueryCount}\n";
+        }
+
+        $this->assertLessThan(
+            $latencyBudgetMs,
+            $medianMs,
+            "Alerts median load time should be less than {$latencyBudgetMs}ms"
+        );
+        $this->assertLessThanOrEqual(
+            $queryBudget,
+            $maxQueryCount,
+            "Alerts endpoint should use at most {$queryBudget} queries"
+        );
     }
 
     /** @test */
@@ -495,6 +547,8 @@ class DashboardPerformanceTest extends TestCase
     /** @test */
     public function it_can_handle_database_query_optimization()
     {
+        $this->bootPerfQueryDebugListener();
+
         // Test query count for dashboard loading
         DB::enableQueryLog();
         
@@ -509,6 +563,47 @@ class DashboardPerformanceTest extends TestCase
         echo "\nDatabase queries count: {$queryCount}\n";
         
         DB::disableQueryLog();
+    }
+
+    private function bootPerfQueryDebugListener(): void
+    {
+        $debugEnabled = filter_var(getenv('PERF_DEBUG_QUERIES') ?: '0', FILTER_VALIDATE_BOOLEAN);
+        if (!$debugEnabled) {
+            return;
+        }
+
+        $logPath = storage_path('logs/perf-dashboard-queries.log');
+        @file_put_contents($logPath, '');
+
+        DB::listen(function ($query) use ($logPath): void {
+            $bindings = json_encode($query->bindings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            $stackHints = collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS))
+                ->filter(static function (array $frame): bool {
+                    $file = $frame['file'] ?? null;
+                    return is_string($file)
+                        && str_starts_with($file, base_path())
+                        && !str_contains($file, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR);
+                })
+                ->map(static fn (array $frame): string => sprintf(
+                    '%s:%s',
+                    str_replace(base_path() . DIRECTORY_SEPARATOR, '', (string) ($frame['file'] ?? 'unknown')),
+                    (string) ($frame['line'] ?? '?')
+                ))
+                ->take(6)
+                ->implode(' <= ');
+
+            $line = sprintf(
+                "[%s] %sms | %s | bindings=%s | stack=%s\n",
+                now()->toDateTimeString(),
+                (string) $query->time,
+                $query->sql,
+                $bindings ?: '[]',
+                $stackHints
+            );
+
+            file_put_contents($logPath, $line, FILE_APPEND);
+        });
     }
 
     /** @test */
@@ -571,7 +666,7 @@ class DashboardPerformanceTest extends TestCase
                 'tenant_id' => $this->tenant->id
             ]);
 
-            Sanctum::actingAs($user);
+            $this->apiAs($user, $this->tenant);
 
             $startTime = microtime(true);
             

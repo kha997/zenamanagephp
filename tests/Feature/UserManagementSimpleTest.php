@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Tests\Support\SSOT\FixtureFactory;
 
 /**
  * Test User Management & Authentication System (Simplified)
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Hash;
  */
 class UserManagementSimpleTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, FixtureFactory;
 
     private $tenant;
     private $user;
@@ -28,7 +29,7 @@ class UserManagementSimpleTest extends TestCase
         \DB::statement('PRAGMA foreign_keys=OFF;');
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = $this->createTenant([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -38,7 +39,7 @@ class UserManagementSimpleTest extends TestCase
         ]);
 
         // Tạo user
-        $this->user = User::create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'member', 'member', [], [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password123'),
@@ -62,7 +63,7 @@ class UserManagementSimpleTest extends TestCase
             'profile_data' => json_encode(['department' => 'HR']),
         ];
 
-        $user = User::create($userData);
+        $user = User::factory()->create($userData);
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
@@ -198,7 +199,7 @@ class UserManagementSimpleTest extends TestCase
         // Create multiple users
         $users = [];
         for ($i = 1; $i <= 5; $i++) {
-            $users[] = User::create([
+            $users[] = User::factory()->create([
                 'name' => "Bulk User {$i}",
                 'email' => "bulk{$i}@example.com",
                 'password' => Hash::make('password123'),
@@ -232,7 +233,7 @@ class UserManagementSimpleTest extends TestCase
     public function test_user_email_validation(): void
     {
         // Test valid email
-        $validUser = User::create([
+        $validUser = User::factory()->create([
             'name' => 'Valid User',
             'email' => 'valid@example.com',
             'password' => Hash::make('password123'),
@@ -273,7 +274,7 @@ class UserManagementSimpleTest extends TestCase
     public function test_can_search_users(): void
     {
         // Create additional users for search testing
-        User::create([
+        User::factory()->create([
             'name' => 'John Doe',
             'email' => 'john@example.com',
             'password' => Hash::make('password123'),
@@ -281,7 +282,7 @@ class UserManagementSimpleTest extends TestCase
             'is_active' => true,
         ]);
 
-        User::create([
+        User::factory()->create([
             'name' => 'Jane Smith',
             'email' => 'jane@example.com',
             'password' => Hash::make('password123'),
@@ -309,27 +310,43 @@ class UserManagementSimpleTest extends TestCase
      */
     public function test_can_paginate_users(): void
     {
+        $baselineTenantUsers = User::where('tenant_id', $this->tenant->id)->count();
+
         // Create multiple users
+        $createdEmails = [];
         for ($i = 1; $i <= 15; $i++) {
-            User::create([
+            $email = "user{$i}@example.com";
+            User::factory()->create([
                 'name' => "User {$i}",
-                'email' => "user{$i}@example.com",
+                'email' => $email,
                 'password' => Hash::make('password123'),
                 'tenant_id' => $this->tenant->id,
                 'is_active' => true,
             ]);
+            $createdEmails[] = $email;
         }
 
-        // Test pagination with simple count instead of paginate() method
-        $totalUsers = User::count();
-        $this->assertEquals(16, $totalUsers); // 15 new + 1 original
+        // Test pagination with tenant-scoped deterministic query.
+        $tenantUsersQuery = User::where('tenant_id', $this->tenant->id)->orderBy('email');
+        $totalUsers = $tenantUsersQuery->count();
+        $expectedTotalUsers = $baselineTenantUsers + 15;
+        $this->assertEquals($expectedTotalUsers, $totalUsers);
 
         // Test getting users in chunks
-        $firstChunk = User::take(10)->get();
-        $this->assertCount(10, $firstChunk);
+        $firstChunk = (clone $tenantUsersQuery)->take(10)->get();
+        $this->assertCount(min(10, $expectedTotalUsers), $firstChunk);
 
-        $secondChunk = User::skip(10)->take(10)->get();
-        $this->assertCount(6, $secondChunk); // Remaining users
+        $secondChunk = (clone $tenantUsersQuery)->skip(10)->take(10)->get();
+        $this->assertCount(max(0, $expectedTotalUsers - 10), $secondChunk);
+
+        $allRows = $firstChunk->concat($secondChunk);
+        $this->assertEquals($expectedTotalUsers, $allRows->count());
+        $this->assertTrue($allRows->every(fn (User $user) => $user->tenant_id === $this->tenant->id));
+
+        $returnedEmails = $allRows->pluck('email')->all();
+        foreach ($createdEmails as $email) {
+            $this->assertContains($email, $returnedEmails);
+        }
     }
 
     /**
@@ -338,7 +355,7 @@ class UserManagementSimpleTest extends TestCase
     public function test_can_filter_users(): void
     {
         // Create users with different statuses
-        User::create([
+        User::factory()->create([
             'name' => 'Active User',
             'email' => 'active@example.com',
             'password' => Hash::make('password123'),
@@ -346,7 +363,7 @@ class UserManagementSimpleTest extends TestCase
             'is_active' => true,
         ]);
 
-        User::create([
+        User::factory()->create([
             'name' => 'Inactive User',
             'email' => 'inactive@example.com',
             'password' => Hash::make('password123'),

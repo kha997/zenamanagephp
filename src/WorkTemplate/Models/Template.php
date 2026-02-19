@@ -5,6 +5,7 @@ namespace Src\WorkTemplate\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Src\Foundation\Traits\HasAuditFields;
@@ -74,6 +75,11 @@ class Template extends Model
     {
         return $this->hasMany(TemplateVersion::class, 'template_id')
                     ->orderBy('version', 'desc');
+    }
+
+    public function latestVersion(): HasOne
+    {
+        return $this->hasOne(TemplateVersion::class, 'template_id')->latestOfMany('version');
     }
 
     /**

@@ -34,6 +34,20 @@ class TaskConditionalToggled
     public Project $project;
 
     /**
+     * Shortcut to expose task ID
+     *
+     * @var string
+     */
+    public string $taskId;
+
+    /**
+     * Shortcut to expose project ID
+     *
+     * @var string
+     */
+    public string $projectId;
+
+    /**
      * The conditional tag that was toggled
      *
      * @var string
@@ -55,11 +69,18 @@ class TaskConditionalToggled
     public bool $newVisibility;
 
     /**
+     * Whether the task is now hidden
+     *
+     * @var bool
+     */
+    public bool $isHidden;
+
+    /**
      * User who performed the toggle
      *
-     * @var int|null
+     * @var string|int|null
      */
-    public ?int $actorId;
+    public string|int|null $actorId;
 
     /**
      * Timestamp when the event occurred
@@ -101,6 +122,9 @@ class TaskConditionalToggled
         $this->affectedTasksCount = $affectedTasksCount;
         $this->actorId = $this->resolveActorId();
         $this->timestamp = Carbon::now();
+        $this->taskId = $task->id;
+        $this->projectId = $project->id;
+        $this->isHidden = !$newVisibility;
     }
     
     /**

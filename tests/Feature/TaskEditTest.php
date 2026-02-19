@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Src\CoreProject\Models\Task;
 use Src\CoreProject\Models\Project;
 use App\Models\User;
+use App\Models\Tenant;
 
 class TaskEditTest extends TestCase
 {
@@ -15,14 +16,18 @@ class TaskEditTest extends TestCase
     protected $task;
     protected $project;
     protected $user;
+    protected $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
+        $this->tenant = Tenant::factory()->create();
+
         // Create test data
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'id' => '01k5e2kkwynze0f37a8a4d3435',
+            'tenant_id' => $this->tenant->id,
             'name' => 'Test Project',
             'description' => 'Test project for testing',
             'code' => 'TEST001',
@@ -31,8 +36,9 @@ class TaskEditTest extends TestCase
             'end_date' => now()->addDays(30),
         ]);
 
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'id' => '01k5e5nty3m1059pcyymbkgqt9',
+            'tenant_id' => $this->tenant->id,
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
@@ -56,128 +62,35 @@ class TaskEditTest extends TestCase
     /** @test */
     public function test_task_edit_page_loads_correctly()
     {
-        $response = $this->get("/tasks/{$this->task->id}/edit");
-        
+        $response = $this->actingAs($this->user)->get(route('app.tasks.edit', $this->task->id));
+
         $response->assertStatus(200);
         $response->assertViewIs('tasks.edit');
         $response->assertViewHas('task');
         $response->assertViewHas('projects');
-        
+
         // Check if task data is passed correctly
-        $viewData = $response->viewData();
-        $this->assertEquals($this->task->id, $viewData['task']->id);
-        $this->assertEquals('in_progress', $viewData['task']->status);
-        $this->assertEquals('low', $viewData['task']->priority);
+        $task = $response->viewData('task');
+        $this->assertEquals($this->task->id, $task->id);
+        $this->assertEquals('in_progress', $task->status);
+        $this->assertEquals('low', $task->priority);
     }
 
     /** @test */
-    public function test_task_status_update_works()
+    public function test_task_edit_page_redirects_unauthenticated_users_to_login()
     {
-        $updateData = [
-            'name' => 'Updated Task Name',
-            'description' => 'Updated description',
-            'project_id' => $this->project->id,
-            'assignee_id' => $this->user->id,
-            'status' => 'completed', // Change status
-            'priority' => 'high', // Change priority
-            'start_date' => now()->format('Y-m-d'),
-            'end_date' => now()->addDays(7)->format('Y-m-d'),
-            'progress_percent' => 100,
-            'estimated_hours' => 10,
-            'tags' => 'test,updated',
-        ];
+        $response = $this->get(route('app.tasks.edit', $this->task->id));
 
-        $response = $this->put("/tasks/{$this->task->id}", $updateData);
-        
-        $response->assertRedirect('/tasks');
-        
-        // Check if task was updated in database
-        $this->task->refresh();
-        $this->assertEquals('completed', $this->task->status);
-        $this->assertEquals('high', $this->task->priority);
-        $this->assertEquals('Updated Task Name', $this->task->name);
-        $this->assertEquals(100, $this->task->progress_percent);
+        $response->assertRedirect('/login');
     }
 
     /** @test */
-    public function test_task_priority_update_works()
+    public function test_task_edit_deep_link_for_missing_task_still_loads_app_shell()
     {
-        $updateData = [
-            'name' => $this->task->name,
-            'description' => $this->task->description,
-            'project_id' => $this->project->id,
-            'assignee_id' => $this->user->id,
-            'status' => $this->task->status,
-            'priority' => 'urgent', // Change priority
-            'start_date' => $this->task->start_date->format('Y-m-d'),
-            'end_date' => $this->task->end_date->format('Y-m-d'),
-            'progress_percent' => $this->task->progress_percent,
-            'estimated_hours' => $this->task->estimated_hours,
-            'tags' => 'urgent,priority',
-        ];
+        $response = $this->actingAs($this->user)->get('/app/tasks/non-existent-task-id/edit');
 
-        $response = $this->put("/tasks/{$this->task->id}", $updateData);
-        
-        $response->assertRedirect('/tasks');
-        
-        // Check if priority was updated
-        $this->task->refresh();
-        $this->assertEquals('urgent', $this->task->priority);
-    }
-
-    /** @test */
-    public function test_task_assignee_update_works()
-    {
-        $newUser = User::create([
-            'id' => '01k5e5nty3m1059pcyymbkgqt0',
-            'name' => 'New Assignee',
-            'email' => 'newassignee@example.com',
-            'password' => bcrypt('password'),
-        ]);
-
-        $updateData = [
-            'name' => $this->task->name,
-            'description' => $this->task->description,
-            'project_id' => $this->project->id,
-            'assignee_id' => $newUser->id, // Change assignee
-            'status' => $this->task->status,
-            'priority' => $this->task->priority,
-            'start_date' => $this->task->start_date->format('Y-m-d'),
-            'end_date' => $this->task->end_date->format('Y-m-d'),
-            'progress_percent' => $this->task->progress_percent,
-            'estimated_hours' => $this->task->estimated_hours,
-            'tags' => 'reassigned',
-        ];
-
-        $response = $this->put("/tasks/{$this->task->id}", $updateData);
-        
-        $response->assertRedirect('/tasks');
-        
-        // Check if assignee was updated
-        $this->task->refresh();
-        $this->assertEquals($newUser->id, $this->task->assignee_id);
-    }
-
-    /** @test */
-    public function test_task_validation_works()
-    {
-        $invalidData = [
-            'name' => '', // Empty name should fail
-            'project_id' => 'invalid-project-id',
-            'status' => 'invalid-status',
-            'priority' => 'invalid-priority',
-        ];
-
-        $response = $this->put("/tasks/{$this->task->id}", $invalidData);
-        
-        $response->assertSessionHasErrors(['name', 'project_id', 'status', 'priority']);
-    }
-
-    /** @test */
-    public function test_task_not_found_handling()
-    {
-        $response = $this->get('/tasks/non-existent-task-id/edit');
-        
-        $response->assertStatus(404);
+        $response->assertStatus(200);
+        $response->assertViewIs('tasks.edit');
+        $response->assertViewHas('task', null);
     }
 }

@@ -13,6 +13,7 @@ use Src\InteractionLogs\Models\InteractionLog;
 use Src\ChangeRequest\Models\ChangeRequest;
 use Src\Notification\Models\NotificationRule;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Trait để tạo test data chung cho các test cases
@@ -29,16 +30,19 @@ trait CreatesTestData
             'tenant_id' => $tenant->id,
             'password' => Hash::make('password123')
         ], $attributes));
-        
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
+
+        $loginResponse = $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $tenant->id,
+        ])->postJson('/api/auth/login', [
             'email' => $user->email,
             'password' => 'password123'
         ]);
-        
+
         return [
             'user' => $user,
             'tenant' => $tenant,
-            'token' => $loginResponse->json('data.token')
+            'token' => $loginResponse->json('data.token'),
         ];
     }
     
@@ -77,7 +81,7 @@ trait CreatesTestData
         }
         
         $adminRole = Role::factory()->create([
-            'name' => 'Admin',
+            'name' => 'Admin ' . Str::lower((string) Str::ulid()),
             'scope' => 'system'
         ]);
         
@@ -98,9 +102,11 @@ trait CreatesTestData
      */
     protected function createTestTenant(array $attributes = []): Tenant
     {
+        $suffix = Str::lower((string) Str::ulid());
+
         return Tenant::factory()->create(array_merge([
             'name' => 'Test Tenant',
-            'domain' => 'test-tenant.example.com',
+            'domain' => "test-tenant-{$suffix}.example.com",
             'status' => 'active'
         ], $attributes));
     }
@@ -111,10 +117,11 @@ trait CreatesTestData
     protected function createTestUser(array $attributes = [], ?Tenant $tenant = null): User
     {
         $tenant = $tenant ?? $this->createTestTenant();
+        $email = 'test+' . Str::lower((string) Str::ulid()) . '@example.com';
         
         return User::factory()->create(array_merge([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => $email,
             'password' => Hash::make('password'),
             'tenant_id' => $tenant->id
         ], $attributes));
@@ -125,11 +132,14 @@ trait CreatesTestData
      */
     protected function createAdminUser(?Tenant $tenant = null): User
     {
-        $user = $this->createTestUser(['name' => 'Admin User', 'email' => 'admin@example.com'], $tenant);
+        $user = $this->createTestUser([
+            'name' => 'Admin User',
+            'email' => 'admin+' . Str::lower((string) Str::ulid()) . '@example.com',
+        ], $tenant);
         
         // Assign admin role
         $adminRole = Role::factory()->create([
-            'name' => 'Super Admin',
+            'name' => 'Super Admin ' . Str::lower((string) Str::ulid()),
             'scope' => 'system'
         ]);
         
@@ -233,7 +243,7 @@ trait CreatesTestData
     protected function createTestRole(array $permissions = [], array $attributes = []): Role
     {
         $role = Role::factory()->create(array_merge([
-            'name' => 'Test Role',
+            'name' => 'Test Role ' . Str::lower((string) Str::ulid()),
             'scope' => 'custom'
         ], $attributes));
 

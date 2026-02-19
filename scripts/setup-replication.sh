@@ -11,7 +11,7 @@ SLAVE_HOST=${SLAVE_HOST:-"mysql_read"}
 MASTER_USER=${MASTER_USER:-"root"}
 MASTER_PASSWORD=${MASTER_PASSWORD:-"password"}
 REPLICATION_USER=${REPLICATION_USER:-"replicator"}
-REPLICATION_PASSWORD=${REPLICATION_PASSWORD:-"replicator_password"}
+: "${REPLICATION_PASSWORD:?Set REPLICATION_PASSWORD (do NOT use defaults)}"
 DATABASE=${DATABASE:-"zenamanage"}
 
 echo "Setting up MySQL replication..."

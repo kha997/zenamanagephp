@@ -15,5 +15,15 @@ class VerifyCsrfToken extends Middleware
         'test-api-*',
         'api/*',
         'app/api/*',
+        'admin/maintenance',
+        'admin/maintenance/*',
     ];
+
+    /**
+     * Always enforce CSRF verification during testing so middleware can't be bypassed.
+     */
+    protected function runningUnitTests()
+    {
+        return false;
+    }
 }

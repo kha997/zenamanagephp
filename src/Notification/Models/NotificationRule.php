@@ -2,19 +2,22 @@
 
 namespace Src\Notification\Models;
 
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Src\CoreProject\Models\Project;
-use App\Models\User;
+use Src\Notification\Models\Notification;
 
 /**
  * Model NotificationRule để quản lý quy tắc thông báo
  * 
  * @property string $id
  * @property string $user_id
+ * @property string $tenant_id
  * @property string|null $project_id
  * @property string $event_key
  * @property string $min_priority
@@ -61,6 +64,7 @@ class NotificationRule extends Model
 
     protected $fillable = [
         'user_id',
+        'tenant_id',
         'project_id',
         'event_key',
         'min_priority',
@@ -89,6 +93,11 @@ class NotificationRule extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
     }
 
     /**
@@ -196,6 +205,97 @@ class NotificationRule extends Model
     {
         $this->is_enabled = false;
         return $this->save();
+    }
+
+    /**
+     * Split the event key into its segments
+     */
+    public function getEventKeyParts(): array
+    {
+        if (empty($this->event_key)) {
+            return [];
+        }
+
+        return explode('.', $this->event_key);
+    }
+
+    /**
+     * Get a human-friendly label for the minimum priority
+     */
+    public function getMinPriorityLabel(): string
+    {
+        return ucfirst($this->min_priority ?? Notification::PRIORITY_NORMAL);
+    }
+
+    /**
+     * Map each channel to a friendly label
+     */
+    public function getChannelsLabels(): array
+    {
+        $labels = [
+            Notification::CHANNEL_INAPP => 'In-App',
+            Notification::CHANNEL_EMAIL => 'Email',
+            Notification::CHANNEL_WEBHOOK => 'Webhook',
+        ];
+
+        $channels = $this->channels ?? [];
+        if (!is_array($channels)) {
+            return [];
+        }
+
+        return array_map(fn ($channel) => $labels[$channel] ?? ucfirst($channel), $channels);
+    }
+
+    /**
+     * Summarize the conditions for display
+     */
+    public function getConditionsSummary(): array
+    {
+        $conditions = $this->conditions;
+
+        if (empty($conditions) || !is_array($conditions)) {
+            return [];
+        }
+
+        $summary = [];
+        foreach ($conditions as $condition) {
+            $field = $condition['field'] ?? '';
+            $operator = $condition['operator'] ?? '';
+            $value = $condition['value'] ?? '';
+            $summary[] = trim("{$field} {$operator} {$value}");
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Describe the scope of the rule
+     */
+    public function getScope(): string
+    {
+        return $this->isGlobal() ? 'global' : 'project';
+    }
+
+    /**
+     * Check if rule targets a specific project
+     */
+    public function isProjectSpecific(): bool
+    {
+        return !is_null($this->project_id);
+    }
+
+    /**
+     * Build a short description of the rule
+     */
+    public function getRuleDescription(): string
+    {
+        $parts = $this->getEventKeyParts();
+
+        if (empty($parts)) {
+            return 'Notification rule';
+        }
+
+        return 'Notify on ' . implode(' > ', $parts);
     }
 
     /**

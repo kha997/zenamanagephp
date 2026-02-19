@@ -3,11 +3,16 @@
 namespace Src\WorkTemplate\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Src\Foundation\Traits\HasAuditFields;
+use Src\CoreProject\Models\Project;
+use Src\WorkTemplate\Models\ProjectPhase;
+use Src\WorkTemplate\Models\Template;
+use Database\Factories\Src\WorkTemplate\Models\ProjectTaskFactory;
 
 /**
  * ProjectTask Model
@@ -33,7 +38,7 @@ use Src\Foundation\Traits\HasAuditFields;
  */
 class ProjectTask extends Model
 {
-    use HasUlids, HasAuditFields, SoftDeletes;
+    use HasFactory, HasUlids, HasAuditFields, SoftDeletes;
 
     protected $table = 'project_tasks';
     protected $keyType = 'string';
@@ -143,6 +148,11 @@ class ProjectTask extends Model
         return $query->where('conditional_tag', $tag);
     }
 
+    protected static function newFactory()
+    {
+        return ProjectTaskFactory::new();
+    }
+
     /**
      * Kiểm tra xem task có được tạo từ template không
      */
@@ -218,13 +228,4 @@ class ProjectTask extends Model
         $this->save();
     }
 
-    /**
-     * Tạo factory instance mới cho model
-     * 
-     * @return \Database\Factories\Src\WorkTemplate\Models\ProjectTaskFactory
-     */
-    protected static function newFactory()
-    {
-        return \Database\Factories\Src\WorkTemplate\Models\ProjectTaskFactory::new();
-    }
 }

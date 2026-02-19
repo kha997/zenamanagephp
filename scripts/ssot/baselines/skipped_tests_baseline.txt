@@ -1,0 +1,12 @@
+ApiTestConfiguration::test_redis_configuration|group=redis|reason=REDIS_
+ApiTestConfiguration::test_required_services_available|group=redis|reason=REDIS_
+BulkOperationsTest::skipUnlessSlowTestsEnabled|group=slow|reason=RUN_SLOW_TESTS
+FinalSystemTest::skipUnlessStressTestsEnabled|group=stress|reason=RUN_STRESS_TESTS
+FinalSystemTest::test_documentation_system|group=slow|reason=dependency:
+FinalSystemTest::test_support_ticket_system|group=slow|reason=dependency:
+FinalSystemTest::test_system_health_monitoring|group=slow|reason=dependency:
+LoadTest::setUp|group=load|reason=RUN_LOAD_TESTS
+LoadTest::skipIfAppIsUnreachable|group=slow|reason=dependency:
+PerformanceIntegrationTest::it_can_handle_alerts_performance|group=slow|reason=RUN_SLOW_TESTS
+PerformanceTest::skipUnlessSlowTestsEnabled|group=slow|reason=RUN_SLOW_TESTS
+ServiceUnitTest::skipUnlessRedisAvailable|group=redis|reason=REDIS_

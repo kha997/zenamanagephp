@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
+use Illuminate\Support\Facades\DB;
+use Tests\Traits\AuthenticationTrait;
 
 /**
  * Feature tests for Task management endpoints
@@ -15,6 +17,7 @@ use App\Models\Task;
 class TaskTest extends TestCase
 {
     use RefreshDatabase;
+    use AuthenticationTrait;
 
     private User $user;
     private Tenant $tenant;
@@ -26,8 +29,14 @@ class TaskTest extends TestCase
         parent::setUp();
         
         $this->tenant = Tenant::factory()->create();
-        $this->user = User::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->user = $this->createTenantUser(
+            $this->tenant,
+            [],
+            ['admin'],
+            ['task.view', 'task.create', 'task.edit', 'task.delete']
+        );
         $this->project = Project::factory()->create(['tenant_id' => $this->tenant->id]);
+        $this->apiAs($this->user, $this->tenant);
         $this->token = $this->user->createToken('test-token')->plainTextToken;
     }
 
@@ -38,40 +47,46 @@ class TaskTest extends TestCase
     {
         $taskData = [
             'project_id' => $this->project->id,
-            'title' => 'Test Task',
+            'name' => 'Test Task',
             'description' => 'A test task for unit testing',
             'status' => 'pending',
             'priority' => 'medium',
             'estimated_hours' => 8,
             'start_date' => '2025-01-01',
-            'due_date' => '2025-01-15'
+            'end_date' => '2025-01-15'
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson('/api/tasks', $taskData);
+        $response = $this->postJson('/api/v1/tasks', $taskData);
 
         $response->assertStatus(201)
+                ->assertJsonPath('status', 'success')
                 ->assertJsonStructure([
+                    'status',
                     'data' => [
-                        'id',
-                        'project_id',
-                        'title',
-                        'description',
-                        'status',
-                        'priority',
-                        'estimated_hours',
-                        'start_date',
-                        'due_date',
-                        'tenant_id'
+                        'task' => [
+                            'id',
+                            'project_id',
+                            'name',
+                            'description',
+                            'status',
+                            'priority',
+                            'estimated_hours',
+                            'start_date',
+                            'end_date'
+                        ]
                     ]
                 ]);
 
         $this->assertDatabaseHas('tasks', [
-            'title' => 'Test Task',
+            'name' => 'Test Task',
             'project_id' => $this->project->id,
-            'tenant_id' => $this->tenant->id
         ]);
+
+        $taskProjectTenantId = DB::table('tasks')
+            ->join('projects', 'projects.id', '=', 'tasks.project_id')
+            ->where('tasks.name', 'Test Task')
+            ->value('projects.tenant_id');
+        $this->assertSame((string) $this->tenant->id, (string) $taskProjectTenantId);
     }
 
     /**
@@ -172,7 +187,7 @@ class TaskTest extends TestCase
         ]);
 
         $updateData = [
-            'title' => 'Updated Task Title',
+            'name' => 'Updated Task Name',
             'description' => 'Updated task description',
             'status' => 'in_progress',
             'priority' => 'high',
@@ -184,19 +199,16 @@ class TaskTest extends TestCase
         ])->putJson("/api/tasks/{$task->id}", $updateData);
 
         $response->assertStatus(200)
-                ->assertJson([
-                    'data' => [
-                        'title' => 'Updated Task Title',
-                        'description' => 'Updated task description',
-                        'status' => 'in_progress',
-                        'priority' => 'high',
-                        'estimated_hours' => 16
-                    ]
-                ]);
+                ->assertJsonPath('status', 'success')
+                ->assertJsonPath('data.name', 'Updated Task Name')
+                ->assertJsonPath('data.description', 'Updated task description')
+                ->assertJsonPath('data.status', 'in_progress')
+                ->assertJsonPath('data.priority', 'high')
+                ->assertJsonPath('data.estimated_hours', 16);
 
         $this->assertDatabaseHas('tasks', [
             'id' => $task->id,
-            'title' => 'Updated Task Title',
+            'name' => 'Updated Task Name',
             'status' => 'in_progress'
         ]);
     }
@@ -230,12 +242,22 @@ class TaskTest extends TestCase
      */
     public function test_create_task_validation(): void
     {
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->postJson('/api/tasks', []);
+        $response = $this->postJson('/api/v1/tasks', []);
 
         $response->assertStatus(422)
-                ->assertJsonValidationErrors(['title', 'project_id']);
+                ->assertJsonPath('error.code', 'E422.VALIDATION')
+                ->assertJsonStructure([
+                    'error' => [
+                        'details' => [
+                            'data' => [
+                                'validation_errors' => [
+                                    'name',
+                                    'project_id',
+                                ],
+                            ],
+                        ],
+                    ],
+                ]);
     }
 
     /**
@@ -243,7 +265,10 @@ class TaskTest extends TestCase
      */
     public function test_access_task_without_auth(): void
     {
-        $response = $this->getJson('/api/tasks');
+        $this->flushHeaders();
+        app('auth')->forgetGuards();
+
+        $response = $this->getJson('/api/v1/tasks');
 
         $response->assertStatus(401);
     }

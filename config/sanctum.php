@@ -50,6 +50,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Update Last Used Timestamp
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, Sanctum will persist the "last_used_at" timestamp on the
+    | related personal access token for each incoming request.
+    |
+    */
+
+    'update_last_used_at' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Token Prefix
     |--------------------------------------------------------------------------
     |

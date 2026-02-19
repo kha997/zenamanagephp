@@ -6,6 +6,7 @@ use App\Services\RateLimitService;
 use App\Services\AdvancedCacheService;
 use App\Services\WebSocketService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
@@ -18,6 +19,14 @@ class ServiceUnitTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
+
+        if (!Cache::hasMacro('expire')) {
+            Cache::macro('expire', function (string $key, int $seconds) {
+                $value = Cache::get($key);
+                Cache::put($key, $value, $seconds);
+                return true;
+            });
+        }
     }
 
     /**
@@ -26,81 +35,79 @@ class ServiceUnitTest extends TestCase
     public function test_rate_limit_service()
     {
         $service = new RateLimitService();
-        
-        // Test getting configuration
-        $config = $service->getConfig('auth');
-        $this->assertIsArray($config);
-        $this->assertArrayHasKey('requests_per_minute', $config);
-        $this->assertArrayHasKey('burst_limit', $config);
-        $this->assertArrayHasKey('window_size', $config);
-        
-        // Test different rate limit types
-        $authConfig = $service->getConfig('auth');
-        $apiConfig = $service->getConfig('api');
-        $defaultConfig = $service->getConfig('default');
-        
-        $this->assertNotEquals($authConfig, $apiConfig);
-        $this->assertNotEquals($apiConfig, $defaultConfig);
-        
-        // Test identifier generation
-        $identifier = $service->getIdentifier(request());
-        $this->assertIsString($identifier);
-        $this->assertNotEmpty($identifier);
+        $request = Request::create('/api/test', 'GET', [], [], [], ['REMOTE_ADDR' => '203.0.113.5']);
+
+        $defaultConfig = $service->getRateLimitConfig($request);
+        $authConfig = $service->getRateLimitConfig($request, 'auth/login');
+        $uploadConfig = $service->getRateLimitConfig($request, 'upload');
+
+        $this->assertIsArray($defaultConfig);
+        $this->assertArrayHasKey('requests_per_minute', $defaultConfig);
+        $this->assertArrayHasKey('burst_limit', $defaultConfig);
+        $this->assertArrayHasKey('daily_limit', $defaultConfig);
+
+        $this->assertNotEquals($defaultConfig, $authConfig);
+        $this->assertNotEquals($authConfig, $uploadConfig);
+
+        $result = $service->isRequestAllowed($request, 'auth/login');
+        $this->assertTrue($result['allowed']);
+        $this->assertArrayHasKey('minute_limit', $result);
+        $this->assertArrayHasKey('daily_limit', $result);
+        $this->assertArrayHasKey('burst_limit', $result);
+        $this->assertSame($authConfig, $result['config']);
+
+        $identifier = 'ip:' . $request->ip();
+        $stats = $service->getRateLimitStats($identifier);
+        $this->assertArrayHasKey('minute', $stats);
+        $this->assertArrayHasKey('daily', $stats);
+        $this->assertArrayHasKey('burst', $stats);
     }
 
     /**
      * Test AdvancedCacheService functionality
+     *
+     * @group redis
      */
     public function test_advanced_cache_service()
     {
-        if (!Redis::ping()) {
-            $this->markTestSkipped('Redis is not available');
-        }
+        $this->skipUnlessRedisAvailable();
 
         $service = new AdvancedCacheService();
+
+        $expectedPublicMethods = ['get', 'set', 'invalidate', 'warmUp', 'getStats'];
+        foreach ($expectedPublicMethods as $method) {
+            $this->assertTrue(
+                method_exists($service, $method),
+                "AdvancedCacheService should expose {$method}() as part of its public API"
+            );
+        }
         
         // Test cache stats
         $stats = $service->getStats();
         $this->assertIsArray($stats);
-        $this->assertArrayHasKey('hit_rate', $stats);
-        $this->assertArrayHasKey('miss_rate', $stats);
-        $this->assertArrayHasKey('total_keys', $stats);
-        $this->assertArrayHasKey('memory_usage', $stats);
-        
-        // Test cache config
-        $config = $service->getConfig();
-        $this->assertIsArray($config);
-        $this->assertArrayHasKey('driver', $config);
-        $this->assertArrayHasKey('default_ttl', $config);
-        $this->assertArrayHasKey('prefix', $config);
-        
-        // Test cache operations
-        $testKey = 'test_key_' . uniqid();
-        $testValue = 'test_value_' . uniqid();
-        
-        // Test put and get
-        $service->put($testKey, $testValue, 300);
-        $retrievedValue = $service->get($testKey);
-        $this->assertEquals($testValue, $retrievedValue);
-        
-        // Test has
-        $this->assertTrue($service->has($testKey));
-        
-        // Test forget
-        $service->forget($testKey);
-        $this->assertFalse($service->has($testKey));
-        
-        // Test tags
-        $taggedKey = 'tagged_key_' . uniqid();
-        $taggedValue = 'tagged_value_' . uniqid();
-        $tag = 'test_tag';
-        
-        $service->tags([$tag])->put($taggedKey, $taggedValue, 300);
-        $this->assertTrue($service->tags([$tag])->has($taggedKey));
-        
-        // Test tag invalidation
-        $service->tags([$tag])->flush();
-        $this->assertFalse($service->tags([$tag])->has($taggedKey));
+        foreach (['hit_rate', 'miss_rate', 'total_keys', 'memory_usage', 'redis_version'] as $key) {
+            $this->assertArrayHasKey($key, $stats, "AdvancedCacheService stats should include {$key}");
+        }
+        $this->assertArrayHasKey('redis', $stats, 'Stats should include redis diagnostics');
+        $this->assertIsArray($stats['redis']);
+        $this->assertArrayHasKey('cache_size', $stats);
+        $this->assertIsInt($stats['cache_size']);
+        $this->assertArrayHasKey('connected_clients', $stats);
+        $this->assertIsInt($stats['connected_clients']);
+
+        $testKey = 'advanced_cache_test_' . uniqid();
+        $testValue = ['value' => 'cache-data'];
+
+        $this->assertTrue($service->set($testKey, $testValue, ['ttl' => 300]));
+        $this->assertSame($testValue, $service->get($testKey));
+
+        $this->assertTrue($service->invalidate($testKey), 'invalidate should return true when deleting the key');
+        $this->assertNull($service->get($testKey));
+
+        $warmValue = ['warmed' => true];
+        $warmUpResult = $service->warmUp([$testKey], fn (string $key) => $warmValue);
+        $this->assertTrue($warmUpResult, 'warmUp should return true when it completes');
+        $this->assertSame($warmValue, $service->get($testKey));
     }
 
     /**
@@ -109,75 +116,35 @@ class ServiceUnitTest extends TestCase
     public function test_websocket_service()
     {
         $service = new WebSocketService();
-        
-        // Test connection info
-        $info = $service->getConnectionInfo();
-        $this->assertIsArray($info);
-        $this->assertArrayHasKey('server_url', $info);
-        $this->assertArrayHasKey('port', $info);
-        $this->assertArrayHasKey('protocol', $info);
-        $this->assertArrayHasKey('secure', $info);
-        
-        // Test stats
-        $stats = $service->getStats();
-        $this->assertIsArray($stats);
-        $this->assertArrayHasKey('total_connections', $stats);
-        $this->assertArrayHasKey('active_connections', $stats);
-        $this->assertArrayHasKey('total_messages_sent', $stats);
-        $this->assertArrayHasKey('total_messages_received', $stats);
-        
-        // Test channels
+
         $channels = $service->getChannels();
-        $this->assertIsArray($channels);
-        
-        // Test connection test
-        $testResult = $service->testConnection();
-        $this->assertIsArray($testResult);
-        $this->assertArrayHasKey('connection_status', $testResult);
-        $this->assertArrayHasKey('response_time', $testResult);
-        
-        // Test user online/offline
-        $userId = 1;
-        $connectionId = 'test_connection_' . uniqid();
-        
-        $result = $service->markUserOnline($userId, $connectionId, [
-            'browser' => 'Chrome',
-            'os' => 'macOS'
-        ]);
-        $this->assertIsArray($result);
-        $this->assertEquals($userId, $result['user_id']);
-        $this->assertEquals('online', $result['status']);
-        
-        $result = $service->markUserOffline($userId, $connectionId, 'user_disconnect');
-        $this->assertIsArray($result);
-        $this->assertEquals($userId, $result['user_id']);
-        $this->assertEquals('offline', $result['status']);
-        
-        // Test activity update
-        $activityResult = $service->updateActivity($userId, 'page_view', [
-            'page' => '/dashboard',
-            'duration' => 30
-        ]);
-        $this->assertIsArray($activityResult);
-        $this->assertEquals($userId, $activityResult['user_id']);
-        $this->assertEquals('page_view', $activityResult['activity_type']);
-        
-        // Test broadcasting
-        $broadcastResult = $service->broadcast('notifications', 'system_notification', [
-            'title' => 'Test Notification',
-            'message' => 'This is a test'
-        ], [$userId]);
-        $this->assertIsArray($broadcastResult);
-        $this->assertEquals('notifications', $broadcastResult['channel']);
-        $this->assertEquals('system_notification', $broadcastResult['event']);
-        
-        // Test notification sending
-        $notificationResult = $service->sendNotification($userId, 'task_assigned', 'New Task', 'You have a new task', [
-            'task_id' => 123
-        ], 'normal');
-        $this->assertIsArray($notificationResult);
-        $this->assertEquals($userId, $notificationResult['user_id']);
-        $this->assertEquals('task_assigned', $notificationResult['type']);
+        $this->assertArrayHasKey('dashboard', $channels);
+
+        $this->assertTrue($service->isValidEvent('dashboard', 'widget_refresh'));
+        $this->assertFalse($service->isValidEvent('dashboard', 'nonexistent_event'));
+
+        $this->assertTrue($service->broadcast('dashboard', 'widget_refresh', ['payload' => 'value']));
+        $this->assertTrue($service->broadcastToUser('user-1', 'user_activity', ['event' => 'ping']));
+        $this->assertTrue($service->broadcastToTenant('tenant-1', 'notifications', 'system_alert', ['message' => 'test']));
+        $this->assertTrue($service->broadcastToUsers(['user-1', 'user-2'], 'system_broadcast', ['message' => 'hello']));
+        $this->assertTrue($service->sendNotification('user-1', ['title' => 'alert', 'message' => 'hello']));
+
+        $this->assertTrue($service->broadcastDashboardUpdate('kpi_change', ['value' => 42]));
+        $this->assertTrue($service->broadcastProjectUpdate(123, 'project_updated', ['status' => 'ok']));
+        $this->assertTrue($service->broadcastTaskUpdate(456, 'task_assigned', ['assignee' => 'Alice']));
+
+        $this->assertTrue($service->markUserOnline('user-1'));
+        $this->assertTrue($service->markUserOffline('user-1'));
+        $this->assertTrue($service->updateUserActivity('user-1', 'page_view'));
+
+        $stats = $service->getStats();
+        $this->assertArrayHasKey('total_connections', $stats);
+        $this->assertArrayHasKey('total_messages_sent', $stats);
+        $this->assertArrayHasKey('online_users', $stats);
+        $this->assertArrayHasKey('redis_connected', $stats);
+
+        $eventTypes = $service->getEventTypes('dashboard');
+        $this->assertContains('kpi_change', $eventTypes);
     }
 
     /**
@@ -190,9 +157,11 @@ class ServiceUnitTest extends TestCase
         $websocketService = new WebSocketService();
         
         // Test invalid rate limit type
-        $config = $rateLimitService->getConfig('invalid_type');
+        $configRequest = Request::create('/nonexistent', 'GET', [], [], [], ['REMOTE_ADDR' => '198.51.100.7']);
+        $config = $rateLimitService->getRateLimitConfig($configRequest, 'invalid_type');
         $this->assertIsArray($config);
-        $this->assertArrayHasKey('requests_per_minute', $config); // Should return default
+        $this->assertArrayHasKey('requests_per_minute', $config);
+        $this->assertArrayHasKey('daily_limit', $config);
         
         // Test cache service with invalid operations
         try {
@@ -204,8 +173,8 @@ class ServiceUnitTest extends TestCase
         
         // Test WebSocket service with invalid data
         try {
-            $websocketService->markUserOnline(0, '', []);
-            $this->assertTrue(true); // Should handle invalid data gracefully
+            $this->assertTrue($websocketService->markUserOnline(''));
+            $this->assertTrue($websocketService->markUserOffline(''));
         } catch (\Exception $e) {
             $this->fail('WebSocket service should handle invalid data gracefully');
         }
@@ -219,18 +188,25 @@ class ServiceUnitTest extends TestCase
         $rateLimitService = new RateLimitService();
         $cacheService = new AdvancedCacheService();
         $websocketService = new WebSocketService();
+        $performanceRequest = Request::create('/performance', 'GET', [], [], [], ['REMOTE_ADDR' => '192.0.2.1']);
         
         // Test rate limit service performance
         $startTime = microtime(true);
         for ($i = 0; $i < 100; $i++) {
-            $rateLimitService->getConfig('auth');
+            $rateLimitService->getRateLimitConfig($performanceRequest, 'auth/login');
         }
         $endTime = microtime(true);
         $rateLimitTime = ($endTime - $startTime) * 1000;
         $this->assertLessThan(100, $rateLimitTime, 'Rate limit service should be fast');
         
         // Test cache service performance
-        if (Redis::ping()) {
+        try {
+            $redisAvailable = Redis::ping();
+        } catch (\Throwable $e) {
+            $redisAvailable = false;
+        }
+
+        if ($redisAvailable) {
             $startTime = microtime(true);
             for ($i = 0; $i < 100; $i++) {
                 $cacheService->getStats();
@@ -288,5 +264,19 @@ class ServiceUnitTest extends TestCase
         $this->assertGreaterThanOrEqual(0, $stats['uptime']);
         $this->assertGreaterThanOrEqual(0, $stats['cpu_usage']);
         $this->assertLessThanOrEqual(100, $stats['cpu_usage']);
+    }
+
+    /**
+     * @group redis
+     */
+    private function skipUnlessRedisAvailable(): void
+    {
+        try {
+            Redis::connection()->ping();
+        } catch (\Throwable $e) {
+            $this->markTestSkipped(
+                'Redis dependency unavailable for @group redis tests; configure REDIS_HOST/REDIS_PORT. Error: ' . $e->getMessage()
+            );
+        }
     }
 }

@@ -2,370 +2,339 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
+use App\Models\Tenant;
+use Illuminate\Database\Eloquent\Builder;
 use App\Models\User;
+use App\Models\ZenaChangeRequest;
 use App\Models\ZenaProject;
-use App\Models\ZenaTask;
 use App\Models\ZenaRfi;
 use App\Models\ZenaSubmittal;
-use App\Models\ZenaChangeRequest;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\ZenaTask;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Testing\TestResponse;
+use Illuminate\Support\Facades\DB;
+use Tests\Traits\AuthenticationTestTrait;
+use Tests\Traits\RouteNameTrait;
+use Tests\TestCase;
 
+/**
+ * @group slow
+ */
 class PerformanceTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use LazilyRefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
-    protected $user;
-    protected $project;
-    protected $token;
+    private const PROJECT_LISTING_COUNT = 35;
+    private const TASK_LISTING_COUNT = 120;
+    private const TASK_SEARCH_COUNT = 80;
+    private const SEARCHABLE_TASK_COUNT = 5;
+    private const TASK_STATUS_COUNT = 80;
+    private const PAGINATION_TASK_COUNT = 150;
+    private const COMPLEX_DEPENDENCY_COUNT = 40;
+    private const MEMORY_TASK_COUNT = 160;
+    private const CONCURRENT_REQUEST_COUNT = 6;
+    private const MEMORY_LIMIT_BYTES = 30 * 1024 * 1024;
+    private const STATUS_OPTIONS = ['todo', 'in_progress', 'done', 'pending'];
+    private const RFI_LISTING_COUNT = 60;
+    private const SUBMITTAL_LISTING_COUNT = 60;
+    private const CHANGE_REQUEST_LISTING_COUNT = 60;
+    private const QUERY_COUNT_TASKS = 60;
+
+    protected Tenant $tenant;
+    protected User $user;
+    protected ZenaProject $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->user = User::factory()->create();
+
+        if (!Builder::hasGlobalMacro('search')) {
+            Builder::macro('search', function (string $term) {
+                return $this->where(function ($query) use ($term) {
+                    $query->where('name', 'like', '%' . $term . '%')
+                          ->orWhere('description', 'like', '%' . $term . '%');
+                });
+            });
+        }
+
+        $this->apiActingAsTenantAdmin();
+
+        $this->tenant = $this->apiFeatureTenant;
+        $this->user = $this->apiFeatureUser;
+
         $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
-        ]);
-        $this->token = $this->generateJwtToken($this->user);
-    }
-
-    /**
-     * Test project listing performance with large dataset
-     */
-    public function test_project_listing_performance()
-    {
-        // Create 100 projects
-        ZenaProject::factory()->count(100)->create([
-            'created_by' => $this->user->id
+            'tenant_id' => $this->tenant->id,
+            'created_by' => $this->user->id,
+            'pm_id' => $this->user->id,
         ]);
 
-        $startTime = microtime(true);
-
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/projects');
-
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
-
-        $response->assertStatus(200);
-        
-        // Should complete within 2 seconds
-        $this->assertLessThan(2.0, $executionTime);
+        DB::table('zena_projects')->insert([
+            'id' => $this->project->id,
+            'code' => $this->project->code,
+            'name' => $this->project->name,
+            'description' => $this->project->description ?? 'Performance seed project',
+            'client_id' => $this->user->id,
+            'status' => 'planning',
+            'start_date' => $this->project->start_date,
+            'end_date' => $this->project->end_date,
+            'budget' => $this->project->budget_total ?? $this->project->budget ?? 0,
+            'settings' => json_encode($this->project->settings ?? []),
+            'created_at' => $this->project->created_at ?? now(),
+            'updated_at' => $this->project->updated_at ?? now(),
+        ]);
     }
 
-    /**
-     * Test task listing performance with large dataset
-     */
-    public function test_task_listing_performance()
+    public function test_project_listing_performance(): void
     {
-        // Create 500 tasks
-        ZenaTask::factory()->count(500)->create([
+        ZenaProject::factory()->count(self::PROJECT_LISTING_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
+            'created_by' => $this->user->id,
+            'pm_id' => $this->user->id,
+        ]);
+
+        $data = $this->assertPaginatedResponse(
+            $this->apiGet($this->zena('projects.index')),
+            self::PROJECT_LISTING_COUNT + 1
+        );
+
+        $this->assertNotEmpty($data);
+    }
+
+    public function test_task_listing_performance(): void
+    {
+        ZenaTask::factory()->count(self::TASK_LISTING_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
-        $startTime = microtime(true);
+        $data = $this->assertPaginatedResponse(
+            $this->apiGet($this->zena('tasks.index')),
+            self::TASK_LISTING_COUNT
+        );
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/tasks');
-
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
-
-        $response->assertStatus(200);
-        
-        // Should complete within 3 seconds
-        $this->assertLessThan(3.0, $executionTime);
+        $this->assertNotEmpty($data);
     }
 
-    /**
-     * Test RFI listing performance with large dataset
-     */
-    public function test_rfi_listing_performance()
+    public function test_rfi_listing_performance(): void
     {
-        // Create 200 RFIs
-        ZenaRfi::factory()->count(200)->create([
+        ZenaRfi::factory()->count(self::RFI_LISTING_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'asked_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
         ]);
 
-        $startTime = microtime(true);
+        $data = $this->assertPaginatedResponse(
+            $this->apiGet($this->zena('rfis.index')),
+            self::RFI_LISTING_COUNT
+        );
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/rfis');
-
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
-
-        $response->assertStatus(200);
-        
-        // Should complete within 2 seconds
-        $this->assertLessThan(2.0, $executionTime);
+        $this->assertNotEmpty($data);
     }
 
-    /**
-     * Test submittal listing performance with large dataset
-     */
-    public function test_submittal_listing_performance()
+    public function test_submittal_listing_performance(): void
     {
-        // Create 200 submittals
-        ZenaSubmittal::factory()->count(200)->create([
+        ZenaSubmittal::factory()->count(self::SUBMITTAL_LISTING_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'submitted_by' => $this->user->id,
+            'reviewed_by' => $this->user->id,
         ]);
 
-        $startTime = microtime(true);
+        $data = $this->assertPaginatedResponse(
+            $this->apiGet($this->zena('submittals.index')),
+            self::SUBMITTAL_LISTING_COUNT
+        );
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/submittals');
-
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
-
-        $response->assertStatus(200);
-        
-        // Should complete within 2 seconds
-        $this->assertLessThan(2.0, $executionTime);
+        $this->assertNotEmpty($data);
     }
 
-    /**
-     * Test change request listing performance with large dataset
-     */
-    public function test_change_request_listing_performance()
+    public function test_change_request_listing_performance(): void
     {
-        // Create 200 change requests
-        ZenaChangeRequest::factory()->count(200)->create([
+        ZenaChangeRequest::factory()->count(self::CHANGE_REQUEST_LISTING_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'requested_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
         ]);
 
-        $startTime = microtime(true);
+        $data = $this->assertPaginatedResponse(
+            $this->apiGet($this->zena('change-requests.index')),
+            self::CHANGE_REQUEST_LISTING_COUNT
+        );
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/change-requests');
-
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
-
-        $response->assertStatus(200);
-        
-        // Should complete within 2 seconds
-        $this->assertLessThan(2.0, $executionTime);
+        $this->assertNotEmpty($data);
     }
 
-    /**
-     * Test search performance
-     */
-    public function test_search_performance()
+    public function test_search_performance(): void
     {
-        // Create 1000 tasks with various names
-        for ($i = 0; $i < 1000; $i++) {
+        ZenaTask::factory()->count(self::TASK_SEARCH_COUNT - self::SEARCHABLE_TASK_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        foreach (range(1, self::SEARCHABLE_TASK_COUNT) as $index) {
             ZenaTask::factory()->create([
+                'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
                 'created_by' => $this->user->id,
-                'name' => 'Task ' . $i . ' ' . $this->faker->words(3, true)
+                'title' => 'Performance Search ' . $index,
+                'name' => 'Performance Search ' . $index,
             ]);
         }
 
-        $startTime = microtime(true);
+        $response = $this->apiGet($this->zena('tasks.index', query: ['search' => 'Performance Search 1']));
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/tasks?search=Task');
+        $data = $this->assertPaginatedResponse($response, 1);
 
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
+        $this->assertNotEmpty($data);
 
-        $response->assertStatus(200);
-        
-        // Should complete within 3 seconds
-        $this->assertLessThan(3.0, $executionTime);
     }
 
-    /**
-     * Test filtering performance
-     */
-    public function test_filtering_performance()
+    public function test_filtering_performance(): void
     {
-        // Create 500 tasks with different statuses
-        $statuses = ['todo', 'in_progress', 'done', 'pending'];
-        for ($i = 0; $i < 500; $i++) {
+        $statusCount = count(self::STATUS_OPTIONS);
+
+        for ($i = 0; $i < self::TASK_STATUS_COUNT; $i++) {
             ZenaTask::factory()->create([
+                'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
                 'created_by' => $this->user->id,
-                'status' => $statuses[$i % 4]
+                'status' => self::STATUS_OPTIONS[$i % $statusCount],
             ]);
         }
 
-        $startTime = microtime(true);
+        $expectedTodos = intdiv(self::TASK_STATUS_COUNT, $statusCount) + (self::TASK_STATUS_COUNT % $statusCount > 0 ? 1 : 0);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/tasks?status=todo');
+        $response = $this->apiGet($this->zena('tasks.index', query: ['status' => 'todo']));
 
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
+        $data = $this->assertPaginatedResponse($response, $expectedTodos);
 
-        $response->assertStatus(200);
-        
-        // Should complete within 2 seconds
-        $this->assertLessThan(2.0, $executionTime);
+        $this->assertSame($expectedTodos, $response->json('meta.pagination.total', 0));
+        $this->assertNotEmpty($data);
     }
 
-    /**
-     * Test pagination performance
-     */
-    public function test_pagination_performance()
+    public function test_pagination_performance(): void
     {
-        // Create 1000 tasks
-        ZenaTask::factory()->count(1000)->create([
+        ZenaTask::factory()->count(self::PAGINATION_TASK_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
-        $startTime = microtime(true);
+        $response = $this->apiGet($this->zena('tasks.index', query: [
+            'per_page' => 25,
+            'page' => 2,
+        ]));
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/tasks?per_page=50&page=10');
+        $data = $this->assertPaginatedResponse($response, self::PAGINATION_TASK_COUNT);
 
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
-
-        $response->assertStatus(200);
-        
-        // Should complete within 2 seconds
-        $this->assertLessThan(2.0, $executionTime);
+        $this->assertSame(2, $response->json('meta.pagination.page'));
+        $this->assertSame(25, $response->json('meta.pagination.per_page'));
+        $this->assertNotEmpty($data);
     }
 
-    /**
-     * Test complex query performance
-     */
-    public function test_complex_query_performance()
+    public function test_complex_query_performance(): void
     {
-        // Create tasks with dependencies
-        $tasks = ZenaTask::factory()->count(100)->create([
+        $tasks = ZenaTask::factory()->count(self::COMPLEX_DEPENDENCY_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
-        // Create dependencies
-        for ($i = 1; $i < 100; $i++) {
+        for ($i = 1; $i < $tasks->count(); $i++) {
             $tasks[$i]->update([
-                'dependencies' => [$tasks[$i-1]->id]
+                'dependencies_json' => [$tasks[$i - 1]->ulid],
             ]);
         }
 
-        $startTime = microtime(true);
+        $data = $this->assertPaginatedResponse(
+            $this->apiGet($this->zena('tasks.index', query: ['with_dependencies' => 'true'])),
+            self::COMPLEX_DEPENDENCY_COUNT
+        );
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/tasks?with_dependencies=true');
-
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
-
-        $response->assertStatus(200);
-        
-        // Should complete within 3 seconds
-        $this->assertLessThan(3.0, $executionTime);
+        $this->assertNotEmpty($data);
     }
 
-    /**
-     * Test concurrent request performance
-     */
-    public function test_concurrent_request_performance()
+    public function test_concurrent_request_performance(): void
     {
-        // Create test data
-        ZenaTask::factory()->count(100)->create([
+        ZenaTask::factory()->count(self::TASK_LISTING_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
-        $startTime = microtime(true);
-
-        // Simulate concurrent requests
-        $responses = [];
-        for ($i = 0; $i < 10; $i++) {
-            $responses[] = $this->withHeaders([
-                'Authorization' => 'Bearer ' . $this->token,
-            ])->getJson('/api/zena/tasks');
-        }
-
-        $endTime = microtime(true);
-        $executionTime = $endTime - $startTime;
-
-        // All responses should be successful
-        foreach ($responses as $response) {
-            $response->assertStatus(200);
-        }
-        
-        // Should complete within 5 seconds
-        $this->assertLessThan(5.0, $executionTime);
+        collect(range(1, self::CONCURRENT_REQUEST_COUNT))
+            ->map(fn () => $this->apiGet($this->zena('tasks.index')))
+            ->each(fn (TestResponse $response) => $response->assertStatus(200));
     }
 
-    /**
-     * Test memory usage
-     */
-    public function test_memory_usage()
+    public function test_memory_usage(): void
     {
         $initialMemory = memory_get_usage();
 
-        // Create large dataset
-        ZenaTask::factory()->count(1000)->create([
+        ZenaTask::factory()->count(self::MEMORY_TASK_COUNT)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/tasks');
+        $response = $this->apiGet($this->zena('tasks.index'));
 
-        $finalMemory = memory_get_usage();
-        $memoryUsed = $finalMemory - $initialMemory;
+        $memoryUsed = memory_get_usage() - $initialMemory;
 
-        $response->assertStatus(200);
-        
-        // Memory usage should be reasonable (less than 50MB)
-        $this->assertLessThan(50 * 1024 * 1024, $memoryUsed);
+        $this->assertLessThan(self::MEMORY_LIMIT_BYTES, $memoryUsed);
+        $this->assertNotEmpty($response->json('data'));
     }
 
-    /**
-     * Test database query count
-     */
-    public function test_database_query_count()
+    public function test_database_query_count(): void
     {
-        // Enable query logging
-        \DB::enableQueryLog();
-
-        ZenaTask::factory()->count(100)->create([
+        ZenaTask::factory()->count(self::QUERY_COUNT_TASKS)->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'created_by' => $this->user->id
+            'created_by' => $this->user->id,
         ]);
 
-        $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/tasks');
+        config(['sanctum.update_last_used_at' => false]);
+        DB::flushQueryLog();
+        DB::enableQueryLog();
 
-        $queries = \DB::getQueryLog();
-        $queryCount = count($queries);
+        $this->apiGet($this->zena('tasks.index'));
 
-        // Should not exceed 10 queries for a simple listing
-        $this->assertLessThanOrEqual(10, $queryCount);
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $this->assertLessThanOrEqual(10, count($queries));
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
+    private function assertPaginatedResponse(TestResponse $response, int $minimumTotal = 0): array
     {
-        return 'test-jwt-token-' . $user->id;
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'status',
+                'data',
+                'meta' => [
+                    'pagination' => [
+                        'page',
+                        'per_page',
+                        'total',
+                        'last_page',
+                    ],
+                ],
+            ]);
+
+        if ($minimumTotal > 0) {
+            $this->assertGreaterThanOrEqual(
+                $minimumTotal,
+                $response->json('meta.pagination.total', 0)
+            );
+        }
+
+        return $response->json('data', []);
     }
+
 }

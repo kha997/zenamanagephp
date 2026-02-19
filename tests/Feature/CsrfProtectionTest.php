@@ -8,6 +8,8 @@ use App\Models\User;
 
 class CsrfProtectionTest extends TestCase
 {
+    protected bool $autoAppendCsrfToken = false;
+
     use RefreshDatabase;
 
     protected User $user;

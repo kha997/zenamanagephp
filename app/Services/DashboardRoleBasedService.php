@@ -2,14 +2,18 @@
 
 namespace App\Services;
 
+use App\Models\DashboardAlert;
+use App\Models\DashboardMetric;
 use App\Models\DashboardWidget;
 use App\Models\Inspection;
 use App\Models\NCR;
 use App\Models\Project;
-use App\Models\RFI;
+use App\Models\Rfi;
 use App\Models\Task;
+use App\Models\User;
 use App\Models\UserDashboard;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 
 class DashboardRoleBasedService
 {
@@ -75,7 +79,7 @@ class DashboardRoleBasedService
     /**
      * Get role-specific configuration
      */
-    protected function getRoleConfiguration(string $role): array
+    public function getRoleConfiguration(string $role): array
     {
         $configurations = [
             'system_admin' => [
@@ -216,11 +220,21 @@ class DashboardRoleBasedService
             ]);
         }
 
+        $layout = $dashboard->layout;
+        if (!is_array($layout)) {
+            $layout = json_decode($layout, true) ?? [];
+        }
+
+        $preferences = $dashboard->preferences;
+        if (!is_array($preferences)) {
+            $preferences = json_decode($preferences, true) ?? [];
+        }
+
         return [
             'id' => $dashboard->id,
             'name' => $dashboard->name,
-            'layout' => json_decode($dashboard->layout, true) ?? [],
-            'preferences' => json_decode($dashboard->preferences, true) ?? [],
+            'layout' => $layout,
+            'preferences' => $preferences,
             'is_default' => $dashboard->is_default,
             'created_at' => $dashboard->created_at,
             'updated_at' => $dashboard->updated_at
@@ -230,7 +244,7 @@ class DashboardRoleBasedService
     /**
      * Get role-based widgets with data
      */
-    protected function getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null): array
+    public function getRoleBasedWidgets(User $user, array $roleConfig, ?string $projectId = null): array
     {
         $widgets = [];
         $availableWidgets = DashboardWidget::where('is_active', true)
@@ -314,7 +328,7 @@ class DashboardRoleBasedService
     /**
      * Get project overview data based on role
      */
-    protected function getProjectOverviewData(User $user, ?string $projectId = null): array
+    public function getProjectOverviewData(User $user, ?string $projectId = null): array
     {
         $role = $user->role;
         $tenantId = $user->tenant_id;
@@ -379,7 +393,7 @@ class DashboardRoleBasedService
     /**
      * Get task progress data based on role
      */
-    protected function getTaskProgressData(User $user, ?string $projectId = null): array
+    public function getTaskProgressData(User $user, ?string $projectId = null): array
     {
         $role = $user->role;
         $tenantId = $user->tenant_id;
@@ -444,7 +458,7 @@ class DashboardRoleBasedService
     /**
      * Get RFI status data based on role
      */
-    protected function getRFIStatusData(User $user, ?string $projectId = null): array
+    public function getRFIStatusData(User $user, ?string $projectId = null): array
     {
         $role = $user->role;
         $tenantId = $user->tenant_id;
@@ -499,7 +513,7 @@ class DashboardRoleBasedService
     /**
      * Get budget tracking data based on role
      */
-    protected function getBudgetTrackingData(User $user, ?string $projectId = null): array
+    public function getBudgetTrackingData(User $user, ?string $projectId = null): array
     {
         $role = $user->role;
         $tenantId = $user->tenant_id;
@@ -537,7 +551,7 @@ class DashboardRoleBasedService
     /**
      * Get role-based metrics
      */
-    protected function getRoleBasedMetrics(User $user, ?string $projectId = null): array
+    public function getRoleBasedMetrics(User $user, ?string $projectId = null): array
     {
         $role = $user->role;
         $roleConfig = $this->getRoleConfiguration($role);
@@ -567,7 +581,7 @@ class DashboardRoleBasedService
     /**
      * Get role-based alerts
      */
-    protected function getRoleBasedAlerts(User $user, ?string $projectId = null): array
+    public function getRoleBasedAlerts(User $user, ?string $projectId = null): array
     {
         $role = $user->role;
         $roleConfig = $this->getRoleConfiguration($role);
@@ -588,6 +602,7 @@ class DashboardRoleBasedService
                 'id' => $alert->id,
                 'type' => $alert->type,
                 'severity' => $alert->severity,
+                'is_read' => $alert->is_read,
                 'message' => $alert->message,
                 'context' => $alert->context,
                 'triggered_at' => $alert->triggered_at,
@@ -600,7 +615,7 @@ class DashboardRoleBasedService
     /**
      * Get role permissions
      */
-    protected function getRolePermissions(string $role): array
+    public function getRolePermissions(string $role): array
     {
         $permissions = [
             'system_admin' => [
@@ -667,7 +682,7 @@ class DashboardRoleBasedService
     /**
      * Check if user can access widget
      */
-    protected function userCanAccessWidget(User $user, DashboardWidget $widget): bool
+    public function userCanAccessWidget(User $user, DashboardWidget $widget): bool
     {
         $permissions = json_decode($widget->permissions, true) ?? [];
         
@@ -681,7 +696,7 @@ class DashboardRoleBasedService
     /**
      * Get widget permissions for user
      */
-    protected function getWidgetPermissions(User $user, DashboardWidget $widget): array
+    public function getWidgetPermissions(User $user, DashboardWidget $widget): array
     {
         $rolePermissions = $this->getRolePermissions($user->role);
         $widgetPermissions = json_decode($widget->permissions, true) ?? [];
@@ -702,12 +717,17 @@ class DashboardRoleBasedService
     {
         $layout = [];
         $y = 0;
+        $defaultWidgetCodes = $roleConfig['default_widgets'] ?? [];
 
-        foreach ($roleConfig['default_widgets'] as $index => $widgetCode) {
-            $widget = DashboardWidget::where('code', $widgetCode)
-                ->where('tenant_id', $user->tenant_id)
-                ->where('is_active', true)
-                ->first();
+        $widgetsByCode = DashboardWidget::query()
+            ->where('tenant_id', $user->tenant_id)
+            ->where('is_active', true)
+            ->whereIn('code', $defaultWidgetCodes)
+            ->get()
+            ->keyBy('code');
+
+        foreach ($defaultWidgetCodes as $index => $widgetCode) {
+            $widget = $widgetsByCode->get($widgetCode);
 
             if ($widget && $this->userCanAccessWidget($user, $widget)) {
                 $layout[] = [
@@ -814,7 +834,7 @@ class DashboardRoleBasedService
     /**
      * Get project context for user
      */
-    protected function getProjectContext(User $user, ?string $projectId = null): array
+    public function getProjectContext(User $user, ?string $projectId = null): array
     {
         if (!$projectId) {
             return ['current_project' => null, 'available_projects' => []];
@@ -858,7 +878,7 @@ class DashboardRoleBasedService
     /**
      * Helper methods for data calculations
      */
-    protected function calculateAverageResponseTime(Collection $rfis): float
+    public function calculateAverageResponseTime(Collection $rfis): float
     {
         $responseTimes = $rfis->where('status', 'closed')
             ->map(function ($rfi) {
@@ -871,7 +891,7 @@ class DashboardRoleBasedService
         return $responseTimes->count() > 0 ? $responseTimes->avg() : 0;
     }
 
-    protected function calculateBudgetVariance(Collection $projects): array
+    public function calculateBudgetVariance(Collection $projects): array
     {
         $variances = $projects->map(function ($project) {
             $planned = $project->budget;
@@ -917,7 +937,7 @@ class DashboardRoleBasedService
         ];
     }
 
-    protected function getBudgetAlerts(Collection $projects): array
+    public function getBudgetAlerts(Collection $projects): array
     {
         $alerts = [];
         
@@ -925,15 +945,7 @@ class DashboardRoleBasedService
             $utilization = $project->budget > 0 ? 
                 ($project->spent_amount / $project->budget) * 100 : 0;
             
-            if ($utilization > 90) {
-                $alerts[] = [
-                    'project_id' => $project->id,
-                    'project_name' => $project->name,
-                    'type' => 'budget_exceeded',
-                    'message' => 'Budget utilization exceeds 90%',
-                    'severity' => 'high'
-                ];
-            } elseif ($utilization > 80) {
+            if ($utilization > 80) {
                 $alerts[] = [
                     'project_id' => $project->id,
                     'project_name' => $project->name,

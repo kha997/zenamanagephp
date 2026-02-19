@@ -13,18 +13,20 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Testing\TestResponse;
 use Illuminate\Support\Str;
-use Laravel\Sanctum\Sanctum;
-use Src\RBAC\Services\AuthService;
 use Tests\TestCase;
+use Tests\Traits\RouteNameTrait;
 
 /**
  * @group zena-invariants
  */
 class ZenaRbacTenantSmokeTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, RouteNameTrait;
+
+    private const DEFAULT_PASSWORD = 'Secret123!';
 
     protected function setUp(): void
     {
@@ -40,7 +42,7 @@ class ZenaRbacTenantSmokeTest extends TestCase
     {
         [$tenant] = $this->newTenantContext();
 
-        $response = $this->zenaGet('/api/zena/rfis', $tenant);
+        $response = $this->zenaGet($this->zena('rfis.index'), $tenant);
 
         $response->assertStatus(401);
     }
@@ -48,11 +50,11 @@ class ZenaRbacTenantSmokeTest extends TestCase
     public function test_authenticated_without_permission_gets_403(): void
     {
         [$tenant, $project, $user] = $this->newTenantContext();
-        Sanctum::actingAs($user, ['*'], 'sanctum');
-        $token = $this->createAuthToken($user);
+        $token = $this->loginAndReturnToken($tenant, $user);
 
-        $response = $this->zenaGet('/api/zena/rfis', $tenant, $token);
-        $this->assertSmokeStatus($response, 403);
+        $response = $this->zenaGet($this->zena('rfis.index'), $tenant, $token);
+        $response->assertStatus(403);
+        $response->assertJsonPath('error.code', 'E403.AUTHORIZATION');
     }
 
     public function test_admin_with_permission_sees_rfis(): void
@@ -60,10 +62,9 @@ class ZenaRbacTenantSmokeTest extends TestCase
         [$tenant, $project, $user] = $this->newTenantContext();
         $this->assignSystemAdmin($user);
         $this->createRfi($tenant, $project, $user);
-        Sanctum::actingAs($user, ['*'], 'sanctum');
-        $token = $this->createAuthToken($user);
+        $token = $this->loginAndReturnToken($tenant, $user);
 
-        $response = $this->zenaGet('/api/zena/rfis', $tenant, $token);
+        $response = $this->zenaGet($this->zena('rfis.index'), $tenant, $token);
 
         $this->assertSsotListShape($response);
         $response->assertJsonPath('data.0.title', 'Initial RFI');
@@ -80,14 +81,13 @@ class ZenaRbacTenantSmokeTest extends TestCase
             'title' => 'Tenant B RFI',
         ]);
 
-        Sanctum::actingAs($admin, ['*'], 'sanctum');
-        $token = $this->createAuthToken($admin);
-        $response = $this->zenaGet("/api/zena/rfis/{$tenantBRfi->id}", $tenantA, $token);
+        $token = $this->loginAndReturnToken($tenantA, $admin);
+        $response = $this->zenaGet($this->zena('rfis.show', ['id' => $tenantBRfi->id]), $tenantA, $token);
 
         $this->assertSmokeStatus($response, 404);
         $this->assertZenaErrorEnvelope($response, 'E404.NOT_FOUND');
 
-        $indexResponse = $this->zenaGet('/api/zena/rfis', $tenantA, $token);
+        $indexResponse = $this->zenaGet($this->zena('rfis.index'), $tenantA, $token);
 
         $this->assertSsotListShape($indexResponse);
         $ids = array_column($indexResponse->json('data', []), 'id');
@@ -107,14 +107,13 @@ class ZenaRbacTenantSmokeTest extends TestCase
             'submittal_number' => 'SUB-TB-001',
         ]);
 
-        Sanctum::actingAs($admin, ['*'], 'sanctum');
-        $token = $this->createAuthToken($admin);
-        $response = $this->zenaGet("/api/zena/submittals/{$tenantBSubmittal->id}", $tenantA, $token);
+        $token = $this->loginAndReturnToken($tenantA, $admin);
+        $response = $this->zenaGet($this->zena('submittals.show', ['id' => $tenantBSubmittal->id]), $tenantA, $token);
 
         $this->assertSmokeStatus($response, 404);
         $this->assertZenaErrorEnvelope($response, 'E404.NOT_FOUND');
 
-        $indexResponse = $this->zenaGet('/api/zena/submittals', $tenantA, $token);
+        $indexResponse = $this->zenaGet($this->zena('submittals.index'), $tenantA, $token);
 
         $this->assertSsotListShape($indexResponse);
         $ids = array_column($indexResponse->json('data', []), 'id');
@@ -132,14 +131,13 @@ class ZenaRbacTenantSmokeTest extends TestCase
             'title' => 'Tenant B Inspection',
         ]);
 
-        Sanctum::actingAs($admin, ['*'], 'sanctum');
-        $token = $this->createAuthToken($admin);
-        $response = $this->zenaGet("/api/zena/inspections/{$tenantBInspection->id}", $tenantA, $token);
+        $token = $this->loginAndReturnToken($tenantA, $admin);
+        $response = $this->zenaGet($this->zena('inspections.show', ['id' => $tenantBInspection->id]), $tenantA, $token);
 
         $this->assertSmokeStatus($response, 404);
         $this->assertZenaErrorEnvelope($response, 'E404.NOT_FOUND');
 
-        $indexResponse = $this->zenaGet('/api/zena/inspections', $tenantA, $token);
+        $indexResponse = $this->zenaGet($this->zena('inspections.index'), $tenantA, $token);
 
         $this->assertSsotListShape($indexResponse);
         $ids = array_column($indexResponse->json('data', []), 'id');
@@ -191,7 +189,10 @@ class ZenaRbacTenantSmokeTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $project = Project::factory()->create(['tenant_id' => $tenant->id]);
-        $user = User::factory()->create(['tenant_id' => $tenant->id]);
+        $user = User::factory()->create([
+            'tenant_id' => $tenant->id,
+            'password' => Hash::make(self::DEFAULT_PASSWORD),
+        ]);
         return [$tenant, $project, $user];
     }
 
@@ -219,9 +220,19 @@ class ZenaRbacTenantSmokeTest extends TestCase
         return $this->withHeaders($this->withTenantHeader($tenant, $token))->postJson($uri, $payload);
     }
 
-    private function createAuthToken(User $user): string
+    private function loginAndReturnToken(Tenant $tenant, User $user): string
     {
-        return app(AuthService::class)->createTokenForUser($user);
+        $response = $this->zenaPost($this->zena('auth.login'), $tenant, [
+            'email' => $user->email,
+            'password' => self::DEFAULT_PASSWORD,
+        ]);
+
+        $response->assertStatus(200);
+
+        $token = $response->json('data.token');
+        $this->assertIsString($token, 'Login must return a string token.');
+
+        return $token;
     }
 
     private function assertSmokeStatus(TestResponse $response, int $expected): void

@@ -9,7 +9,7 @@ use App\Http\Controllers\Api\AuthController;
 |--------------------------------------------------------------------------
 */
 
-Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
+Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
 
     // Main API info route
     Route::get('/', function () {
@@ -63,7 +63,7 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
         ]);
     })->name('api.health');
 
-    Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
+    Route::middleware(['auth:sanctum', 'tenant.isolation', 'input.sanitization', 'error.envelope'])->group(function () {
 
         Route::prefix('auth')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout'])->middleware('rbac:auth.logout')->name('auth.logout');
@@ -208,7 +208,9 @@ Route::group(['prefix' => 'zena', 'as' => 'zena.'], function () {
             Route::get('/safety', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getSiteSafetyStatus'])->middleware('rbac:site-engineer.safety')->name('site-engineer.safety');
             Route::get('/daily-report', [\App\Http\Controllers\Api\SiteEngineerDashboardController::class, 'getDailySiteReport'])->middleware('rbac:site-engineer.daily-report')->name('site-engineer.daily-report');
         });
+    });
 
+    Route::middleware(['auth:sanctum', 'tenant.isolation', 'input.sanitization', 'error.envelope'])->group(function () {
         // Project Management routes
         Route::group(['prefix' => 'projects'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ProjectController::class, 'index'])->middleware('rbac:project.view')->name('projects.index');

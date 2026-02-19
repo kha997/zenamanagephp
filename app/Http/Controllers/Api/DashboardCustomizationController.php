@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Services\nService;
+use App\Models\User;
+use App\Services\DashboardCustomizationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -86,11 +88,12 @@ class DashboardCustomizationController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return response()->json([
+            $payload = [
                 'success' => false,
                 'message' => 'Failed to add widget to dashboard',
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
-            ], 500);
+            ];
+            return response()->json($payload, 500);
         }
     }
 
@@ -175,8 +178,11 @@ class DashboardCustomizationController extends Controller
      */
     public function updateLayout(Request $request): JsonResponse
     {
+        $user = Auth::user();
+        $rawLayout = $request->get('layout', []);
+        $normalizedLayout = $this->normalizeLayoutPayload($user, $rawLayout);
         try {
-            $validator = Validator::make($request->all(), [
+            $validator = Validator::make(['layout' => $normalizedLayout], [
                 'layout' => 'required|array',
                 'layout.*.id' => 'required|string',
                 'layout.*.position' => 'required|array',
@@ -193,8 +199,7 @@ class DashboardCustomizationController extends Controller
                 ], 422);
             }
 
-            $user = Auth::user();
-            $result = $this->customizationService->updateDashboardLayout($user, $request->layout);
+            $result = $this->customizationService->updateDashboardLayout($user, $normalizedLayout);
 
             return response()->json($result);
 
@@ -210,6 +215,37 @@ class DashboardCustomizationController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : 'Internal server error'
             ], 500);
         }
+    }
+
+    /**
+     * Enrich layout payload with existing metadata so validation can succeed.
+     */
+    protected function normalizeLayoutPayload(User $user, array $layout): array
+    {
+        $dashboardData = $this->customizationService->getUserCustomizableDashboard($user);
+        $dashboard = $dashboardData['dashboard'] ?? null;
+        $currentLayout = $dashboard ? ($dashboard->layout ?? []) : [];
+        $normalizedLayout = [];
+
+        foreach ($layout as $index => $entry) {
+            $entry = is_array($entry) ? $entry : (array) $entry;
+
+            if (!isset($entry['id']) && isset($currentLayout[$index]['id'])) {
+                $entry['id'] = $currentLayout[$index]['id'];
+            }
+
+            if (!isset($entry['position'])) {
+                $entry['position'] = $currentLayout[$index]['position'] ?? ['x' => 0, 'y' => 0];
+            }
+
+            if (!isset($entry['size']) && isset($currentLayout[$index]['size'])) {
+                $entry['size'] = $currentLayout[$index]['size'];
+            }
+
+            $normalizedLayout[] = $entry;
+        }
+
+        return $normalizedLayout;
     }
 
     /**
@@ -535,16 +571,16 @@ class DashboardCustomizationController extends Controller
                 'dashboard_config' => 'required|array',
                 'dashboard_config.version' => 'required|string',
                 'dashboard_config.dashboard' => 'required|array',
-                'dashboard_config.dashboard.layout' => 'required|array'
+                'dashboard_config.dashboard.layout' => 'present|array'
             ]);
 
             if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed',
-                    'errors' => $validator->errors()
-                ], 422);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
 
             $user = Auth::user();
             $config = $request->dashboard_config;

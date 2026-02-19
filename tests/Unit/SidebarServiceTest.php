@@ -2,45 +2,36 @@
 
 namespace Tests\Unit;
 
-use App\Models\SidebarConfig;
-use App\Models\User;
-use App\Models\UserSidebarPreference;
-use App\Services\SidebarService;
-use App\Services\PermissionService;
 use App\Services\ConditionalDisplayService;
+use App\Services\PermissionService;
 use App\Services\SecurityGuardService;
+use App\Services\SidebarService;
 use App\Services\UserPreferenceService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use Mockery;
+use Tests\TestCase;
 
 class SidebarServiceTest extends TestCase
 {
-    use RefreshDatabase;
-
     protected SidebarService $sidebarService;
-    protected User $user;
+    protected PermissionService $permissionService;
+    protected ConditionalDisplayService $conditionalDisplayService;
+    protected SecurityGuardService $securityGuardService;
+    protected UserPreferenceService $userPreferenceService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->user = User::factory()->create([
-            'email' => 'user@test.com',
-            'role' => 'project_manager'
-        ]);
 
-        // Mock dependencies
-        $permissionService = Mockery::mock(PermissionService::class);
-        $conditionalDisplayService = Mockery::mock(ConditionalDisplayService::class);
-        $securityGuardService = Mockery::mock(SecurityGuardService::class);
-        $userPreferenceService = Mockery::mock(UserPreferenceService::class);
+        $this->permissionService = Mockery::mock(PermissionService::class);
+        $this->conditionalDisplayService = Mockery::mock(ConditionalDisplayService::class);
+        $this->securityGuardService = Mockery::mock(SecurityGuardService::class);
+        $this->userPreferenceService = Mockery::mock(UserPreferenceService::class);
 
         $this->sidebarService = new SidebarService(
-            $permissionService,
-            $conditionalDisplayService,
-            $securityGuardService,
-            $userPreferenceService
+            $this->permissionService,
+            $this->conditionalDisplayService,
+            $this->securityGuardService,
+            $this->userPreferenceService
         );
     }
 
@@ -53,127 +44,127 @@ class SidebarServiceTest extends TestCase
     /** @test */
     public function it_can_get_default_sidebar_config()
     {
-        $this->markTestSkipped('Auth setup issue in test environment');
+        $sidebarConfig = $this->sidebarService->getSidebarForUser(null);
+
+        $this->assertIsArray($sidebarConfig);
+        $this->assertArrayHasKey('items', $sidebarConfig);
+        $this->assertSame('dashboard', $sidebarConfig['items'][0]['id'] ?? null);
     }
 
     /** @test */
     public function it_can_build_sidebar_for_role()
     {
-        $role = 'project_manager';
-        $sidebarConfig = $this->sidebarService->getSidebarForRole($role);
+        $sidebarConfig = $this->sidebarService->getSidebarForRole('project_manager');
 
         $this->assertIsArray($sidebarConfig);
         $this->assertArrayHasKey('items', $sidebarConfig);
     }
 
     /** @test */
-    public function it_can_merge_configurations()
+    public function it_merges_tenant_configuration_over_default_for_role()
     {
-        $userPrefs = [
+        $service = $this->serviceWithTenantConfig([
             'items' => [
-                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Dashboard', 'enabled' => true, 'order' => 10]
-            ]
-        ];
+                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Tenant Dashboard', 'enabled' => true, 'order' => 10],
+                ['id' => 'tenant-reports', 'type' => 'link', 'label' => 'Tenant Reports', 'enabled' => true, 'order' => 15],
+            ],
+        ]);
 
-        $tenantConfig = [
-            'items' => [
-                ['id' => 'projects', 'type' => 'link', 'label' => 'Projects', 'enabled' => true, 'order' => 20]
-            ]
-        ];
+        $sidebarConfig = $service->getSidebarForRole('project_manager', 'tenant-1');
+        $itemsById = collect($sidebarConfig['items'] ?? [])->keyBy('id');
 
-        $defaultConfig = [
-            'items' => [
-                ['id' => 'tasks', 'type' => 'link', 'label' => 'Tasks', 'enabled' => true, 'order' => 30]
-            ]
-        ];
-
-        $this->markTestSkipped('Protected method test - using public method instead');
+        $this->assertSame('Tenant Dashboard', $itemsById->get('dashboard')['label'] ?? null);
+        $this->assertTrue($itemsById->has('tenant-reports'));
+        $this->assertTrue($itemsById->has('tasks'));
     }
 
     /** @test */
-    public function it_handles_empty_configurations()
+    public function it_falls_back_to_default_when_tenant_config_has_no_items()
     {
-        $emptyConfig = [];
-        $defaultConfig = [
-            'items' => [
-                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Dashboard', 'enabled' => true, 'order' => 10]
-            ]
-        ];
+        $service = $this->serviceWithTenantConfig([
+            'metadata' => ['source' => 'tenant-override-without-items'],
+        ]);
 
-        $this->markTestSkipped('Protected method test - using public method instead');
+        $sidebarConfig = $service->getSidebarForRole('project_manager', 'tenant-1');
+        $itemsById = collect($sidebarConfig['items'] ?? [])->keyBy('id');
+
+        $this->assertSame('Dashboard', $itemsById->get('dashboard')['label'] ?? null);
+        $this->assertTrue($itemsById->has('tasks'));
     }
 
     /** @test */
-    public function it_prioritizes_user_preferences_over_tenant_config()
+    public function it_handles_configuration_ordering_after_merge()
     {
-        $userPrefs = [
+        $service = $this->serviceWithTenantConfig([
             'items' => [
-                ['id' => 'dashboard', 'type' => 'link', 'label' => 'My Dashboard', 'enabled' => true, 'order' => 10]
-            ]
-        ];
+                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Dashboard', 'enabled' => true, 'order' => 50],
+                ['id' => 'tenant-first', 'type' => 'link', 'label' => 'Tenant First', 'enabled' => true, 'order' => 5],
+            ],
+        ]);
 
-        $tenantConfig = [
-            'items' => [
-                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Tenant Dashboard', 'enabled' => true, 'order' => 10]
-            ]
-        ];
+        $sidebarConfig = $service->getSidebarForRole('project_manager', 'tenant-1');
+        $items = $sidebarConfig['items'] ?? [];
 
-        $defaultConfig = [
-            'items' => [
-                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Default Dashboard', 'enabled' => true, 'order' => 10]
-            ]
-        ];
-
-        $this->markTestSkipped('Protected method test - using public method instead');
+        $this->assertNotEmpty($items);
+        $this->assertSame('tenant-first', $items[0]['id']);
     }
 
     /** @test */
-    public function it_prioritizes_tenant_config_over_default()
+    public function it_supports_nested_group_items_from_overrides()
     {
-        $userPrefs = [];
-        $tenantConfig = [
+        $service = $this->serviceWithTenantConfig([
             'items' => [
-                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Tenant Dashboard', 'enabled' => true, 'order' => 10]
-            ]
-        ];
+                [
+                    'id' => 'grp-custom',
+                    'type' => 'group',
+                    'label' => 'Custom Group',
+                    'children' => [
+                        ['id' => 'child-link', 'type' => 'link', 'label' => 'Child', 'enabled' => true, 'order' => 1],
+                    ],
+                    'enabled' => true,
+                    'order' => 25,
+                ],
+            ],
+        ]);
 
-        $defaultConfig = [
+        $sidebarConfig = $service->getSidebarForRole('project_manager', 'tenant-1');
+        $itemsById = collect($sidebarConfig['items'] ?? [])->keyBy('id');
+
+        $this->assertTrue($itemsById->has('grp-custom'));
+        $this->assertIsArray($itemsById->get('grp-custom')['children'] ?? null);
+    }
+
+    /** @test */
+    public function it_keeps_disabled_items_when_provided_by_configuration()
+    {
+        $service = $this->serviceWithTenantConfig([
             'items' => [
-                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Default Dashboard', 'enabled' => true, 'order' => 10]
+                ['id' => 'disabled-item', 'type' => 'link', 'label' => 'Disabled Item', 'enabled' => false, 'order' => 12],
+            ],
+        ]);
+
+        $sidebarConfig = $service->getSidebarForRole('project_manager', 'tenant-1');
+        $itemsById = collect($sidebarConfig['items'] ?? [])->keyBy('id');
+
+        $this->assertTrue($itemsById->has('disabled-item'));
+        $this->assertFalse($itemsById->get('disabled-item')['enabled']);
+    }
+
+    private function serviceWithTenantConfig(array $tenantConfig): SidebarService
+    {
+        $service = Mockery::mock(
+            SidebarService::class,
+            [
+                $this->permissionService,
+                $this->conditionalDisplayService,
+                $this->securityGuardService,
+                $this->userPreferenceService,
             ]
-        ];
+        )->makePartial();
 
-        $this->markTestSkipped('Protected method test - using public method instead');
-    }
+        $service->shouldAllowMockingProtectedMethods();
+        $service->shouldReceive('getTenantConfig')->andReturn($tenantConfig);
 
-    /** @test */
-    public function it_handles_missing_items_key()
-    {
-        $configWithoutItems = ['some_other_key' => 'value'];
-        $defaultConfig = [
-            'items' => [
-                ['id' => 'dashboard', 'type' => 'link', 'label' => 'Dashboard', 'enabled' => true, 'order' => 10]
-            ]
-        ];
-
-        $this->markTestSkipped('Protected method test - using public method instead');
-    }
-
-    /** @test */
-    public function it_can_apply_permission_filtering()
-    {
-        $this->markTestSkipped('Protected method test - using public method instead');
-    }
-
-    /** @test */
-    public function it_handles_nested_group_items()
-    {
-        $this->markTestSkipped('Protected method test - using public method instead');
-    }
-
-    /** @test */
-    public function it_handles_disabled_items()
-    {
-        $this->markTestSkipped('Protected method test - using public method instead');
+        return $service;
     }
 }

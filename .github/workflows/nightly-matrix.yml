@@ -1,0 +1,120 @@
+name: Nightly Test Matrix
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: read
+
+env:
+  PHP_VERSION: '8.2'
+  APP_ENV: testing
+  APP_URL: http://127.0.0.1:8000
+  DB_CONNECTION: sqlite
+  DB_DATABASE: /tmp/zenamanage_test.sqlite
+  CACHE_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  REDIS_HOST: 127.0.0.1
+  REDIS_PORT: 6379
+  RUN_SLOW_TESTS: '1'
+  RUN_LOAD_TESTS: '1'
+  RUN_STRESS_TESTS: '1'
+  RUN_REDIS_TESTS: '1'
+  WEBSOCKET_HOST: 127.0.0.1
+  WEBSOCKET_PORT: 8080
+  COMPOSER_PROCESS_TIMEOUT: 0
+
+jobs:
+  nightly:
+    name: Nightly Matrix (slow/load/stress/redis)
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite3, redis, gd, zip, bcmath, opcache
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Prepare application env
+        run: |
+          cp .env.testing .env
+          php artisan key:generate --force
+          touch "${DB_DATABASE}"
+          php artisan migrate:fresh --force
+
+      - name: Start local app server
+        run: |
+          nohup php artisan serve --host=127.0.0.1 --port=8000 >/tmp/laravel-serve.log 2>&1 &
+          echo $! > /tmp/laravel-serve.pid
+
+      - name: Wait for app and Redis readiness
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "${APP_URL}/api/csrf-token" >/dev/null 2>&1; then
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "App server did not become ready in time"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          php -r '
+            $errno = 0;
+            $errstr = "";
+            $fp = @fsockopen(getenv("REDIS_HOST"), (int) getenv("REDIS_PORT"), $errno, $errstr, 2);
+            if ($fp === false) {
+              fwrite(STDERR, "Redis is not reachable: " . $errstr . PHP_EOL);
+              exit(1);
+            }
+            fclose($fp);
+            echo "Redis reachable" . PHP_EOL;
+          '
+
+      - name: Start websocket server (best effort)
+        run: |
+          if php artisan list --raw | grep -q '^websocket:serve$'; then
+            nohup php artisan websocket:serve --host="${WEBSOCKET_HOST}" --port="${WEBSOCKET_PORT}" --workers=1 >/tmp/websocket.log 2>&1 &
+            echo $! > /tmp/websocket.pid
+          else
+            echo "websocket:serve command not found; continuing"
+          fi
+
+      - name: Run nightly matrix
+        run: composer test:nightly
+
+      - name: Upload nightly report artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-matrix-report
+          path: |
+            storage/app/nightly/nightly-report.md
+            storage/app/nightly/*.xml
+            storage/app/nightly/*.log
+            storage/app/nightly/summary.tsv
+            /tmp/laravel-serve.log
+            /tmp/websocket.log
+          if-no-files-found: warn

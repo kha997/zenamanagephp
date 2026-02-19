@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Project;
 
 /**
@@ -34,7 +35,7 @@ use App\Models\Project;
  */
 class Document extends Model
 {
-    use HasUlids, HasFactory, TenantScope;
+    use HasUlids, HasFactory, TenantScope, SoftDeletes;
 
     protected $table = 'documents';
 
@@ -74,7 +75,10 @@ class Document extends Model
         'project_id',
         'tenant_id',
         'uploaded_by',
+        'created_by',
+        'updated_by',
         'name',
+        'title',
         'original_name',
         'file_path',
         'file_type',
@@ -82,11 +86,16 @@ class Document extends Model
         'file_size',
         'file_hash',
         'category',
+        'visibility',
+        'client_approved',
+        'linked_entity_type',
+        'linked_entity_id',
         'description',
         'metadata',
         'status',
         'version',
         'is_current_version',
+        'current_version_id',
         'parent_document_id',
     ];
 
@@ -98,6 +107,14 @@ class Document extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
+    ];
+
+    protected $appends = [
+        'title',
+        'document_type',
+        'file_name',
+        'change_notes',
+        'tags',
     ];
 
     /**
@@ -114,6 +131,22 @@ class Document extends Model
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * Quan hệ với User (người tạo)
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Quan hệ với User (người cập nhật gần nhất)
+     */
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     /**
@@ -269,5 +302,61 @@ class Document extends Model
     public function getTagsAsString(): string
     {
         return $this->tags ? implode(', ', $this->tags) : '';
+    }
+
+    /**
+     * Title attribute (fallback to name)
+     */
+    public function getTitleAttribute(): ?string
+    {
+        return $this->attributes['title'] ?? $this->attributes['name'] ?? null;
+    }
+
+    /**
+     * Document type attribute (metadata preference)
+     */
+    public function getDocumentTypeAttribute(): ?string
+    {
+        if (!empty($this->attributes['document_type'])) {
+            return $this->attributes['document_type'];
+        }
+
+        if (!empty($this->metadata['document_type'])) {
+            return $this->metadata['document_type'];
+        }
+
+        return $this->attributes['category'] ?? null;
+    }
+
+    /**
+     * File name attribute for API consumers
+     */
+    public function getFileNameAttribute(): ?string
+    {
+        if (!empty($this->attributes['file_name'])) {
+            return $this->attributes['file_name'];
+        }
+
+        if (!empty($this->attributes['file_path'])) {
+            return basename($this->attributes['file_path']);
+        }
+
+        return $this->attributes['original_name'] ?? null;
+    }
+
+    /**
+     * Change notes accessor (stored in metadata)
+     */
+    public function getChangeNotesAttribute(): ?string
+    {
+        return $this->metadata['change_notes'] ?? null;
+    }
+
+    /**
+     * Tags attribute derived from metadata
+     */
+    public function getTagsAttribute(): array
+    {
+        return $this->metadata['tags'] ?? [];
     }
 }

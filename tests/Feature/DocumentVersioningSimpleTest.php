@@ -9,6 +9,7 @@ use App\Models\DocumentVersion;
 use App\Models\Tenant;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Traits\TenantUserFactoryTrait;
 
 /**
  * Test Document Versioning và File Management - Simplified Version
@@ -18,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 class DocumentVersioningSimpleTest extends TestCase
 {
     use RefreshDatabase;
+    use TenantUserFactoryTrait;
 
     private $tenant;
     private $project;
@@ -26,9 +28,7 @@ class DocumentVersioningSimpleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -37,24 +37,18 @@ class DocumentVersioningSimpleTest extends TestCase
             'is_active' => true,
         ]);
 
-        // Tạo user
-        $this->user = User::create([
+        $this->user = $this->createTenantUser($this->tenant, [
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'password' => bcrypt('password'),
-            'tenant_id' => $this->tenant->id,
-            'is_active' => true,
             'profile_data' => '{}',
         ]);
 
-        // Tạo project
-        $this->project = Project::create([
-            'name' => 'Test Project',
+        $this->project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
             'code' => 'DOC-TEST-001',
+            'name' => 'Test Project',
             'description' => 'Test Description',
             'status' => 'active',
-            'tenant_id' => $this->tenant->id,
-            'created_by' => $this->user->id,
         ]);
     }
 

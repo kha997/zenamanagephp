@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 use Src\Compensation\Models\TaskCompensation;
 use Src\Foundation\EventBus;
 use Src\Foundation\Helpers\AuthHelper;
+use App\Models\TaskDependency;
+use App\Services\TaskDependencyService;
 
 /**
  * Model Task - Quản lý công việc
@@ -27,7 +29,7 @@ use Src\Foundation\Helpers\AuthHelper;
  * @property \Carbon\Carbon|null $end_date Ngày kết thúc
  * @property string $status Trạng thái
  * @property string $priority Độ ưu tiên
- * @property array|null $dependencies Mảng task_ids phụ thuộc
+ * @property array|null $dependencies_json Mảng task_ids phụ thuộc
  * @property string|null $conditional_tag Tag điều kiện
  * @property bool $is_hidden Ẩn task
  * @property float $estimated_hours Số giờ ước tính
@@ -50,12 +52,13 @@ class Task extends Model
         'component_id',
         'phase_id',
         'name',
+        'title',
         'description',
         'start_date',
         'end_date',
         'status',
         'priority',
-        'dependencies',
+        'dependencies_json',
         'conditional_tag',
         'is_hidden',
         'estimated_hours',
@@ -75,7 +78,8 @@ class Task extends Model
     protected $casts = [
         'start_date' => 'datetime',
         'end_date' => 'datetime',
-        'dependencies' => 'array',
+        'completed_at' => 'datetime',
+        'dependencies_json' => 'array',
         'watchers' => 'array',
         'is_hidden' => 'boolean',
         'estimated_hours' => 'float',
@@ -86,6 +90,20 @@ class Task extends Model
         'tags' => 'array',
         'client_approved' => 'boolean'
     ];
+
+    public function setTitleAttribute(?string $value): void
+    {
+        $this->attributes['title'] = $value;
+
+        if ($value !== null) {
+            $this->attributes['name'] = $value;
+        }
+    }
+
+    public function getTitleAttribute(): ?string
+    {
+        return $this->attributes['title'] ?? $this->attributes['name'] ?? null;
+    }
 
     protected $attributes = [
         'status' => 'pending',
@@ -133,6 +151,19 @@ class Task extends Model
         self::PRIORITY_CRITICAL,
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $task): void {
+            if (
+                $task->status === self::STATUS_COMPLETED &&
+                $task->getOriginal('status') !== self::STATUS_COMPLETED &&
+                $task->completed_at === null
+            ) {
+                $task->completed_at = now();
+            }
+        });
+    }
+
     /**
      * Relationship: Task thuộc về tenant
      */
@@ -155,6 +186,16 @@ class Task extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function getAssigneeIdAttribute(): ?string
+    {
+        return $this->attributes['assigned_to'] ?? null;
+    }
+
+    public function setAssigneeIdAttribute(?string $value): void
+    {
+        $this->attributes['assigned_to'] = $value;
     }
 
     /**
@@ -209,6 +250,96 @@ class Task extends Model
     }
 
     /**
+     * Relationship: Task depends on other tasks
+     */
+    public function dependencies(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            'task_dependencies',
+            'task_id',
+            'dependency_id'
+        )->withTimestamps();
+    }
+
+    /**
+     * Relationship: Tasks that depend on this task
+     */
+    public function dependents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            self::class,
+            'task_dependencies',
+            'dependency_id',
+            'task_id'
+        )->withTimestamps();
+    }
+
+    public function addDependency(string $dependencyId): bool
+    {
+        $service = app(TaskDependencyService::class);
+        return $service->addDependency($this->id, $dependencyId, $this->tenant_id)['success'];
+    }
+
+    public function removeDependency(string $dependencyId): bool
+    {
+        $service = app(TaskDependencyService::class);
+        return $service->removeDependency($this->id, $dependencyId, $this->tenant_id)['success'];
+    }
+
+    /**
+     * Detect if adding dependency would create a circular reference.
+     */
+    public function hasCircularDependency(string $dependencyId): bool
+    {
+        if ($this->id === $dependencyId) {
+            return true;
+        }
+
+        return $this->hasPath($dependencyId, $this->id) || $this->hasPath($this->id, $dependencyId);
+    }
+
+    /**
+     * Depth-first search to check if there is a path between two tasks.
+     */
+    protected function hasPath(string $sourceTaskId, string $targetTaskId): bool
+    {
+        if ($sourceTaskId === $targetTaskId) {
+            return true;
+        }
+
+        $visited = [];
+        $stack = [$sourceTaskId];
+
+        while (!empty($stack)) {
+            $currentTaskId = array_pop($stack);
+
+            if ($currentTaskId === $targetTaskId) {
+                return true;
+            }
+
+            if (isset($visited[$currentTaskId])) {
+                continue;
+            }
+
+            $visited[$currentTaskId] = true;
+
+            $dependents = TaskDependency::where('dependency_id', $currentTaskId)
+                ->where('tenant_id', $this->tenant_id)
+                ->pluck('task_id')
+                ->toArray();
+
+            foreach ($dependents as $dependentId) {
+                if (!isset($visited[$dependentId])) {
+                    $stack[] = $dependentId;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Relationship: Task có nhiều interaction logs
      */
     public function interactionLogs(): HasMany
@@ -255,11 +386,11 @@ class Task extends Model
      */
     public function canStart(): bool
     {
-        if (empty($this->dependencies)) {
+        if (empty($this->dependencies_json)) {
             return true;
         }
         
-        $dependentTasks = Task::whereIn('ulid', $this->dependencies)->get();
+        $dependentTasks = Task::whereIn('ulid', $this->dependencies_json)->get();
         
         return $dependentTasks->every(function ($task) {
             return $task->status === self::STATUS_COMPLETED;
@@ -272,7 +403,7 @@ class Task extends Model
     public function getDependentTasks()
     {
         return Task::where('project_id', $this->project_id)
-                   ->whereJsonContains('dependencies', $this->ulid)
+                   ->whereJsonContains('dependencies_json', $this->ulid)
                    ->get();
     }
 
@@ -323,8 +454,8 @@ class Task extends Model
     {
         return $query->where('status', self::STATUS_PENDING)
                     ->where(function($q) {
-                        $q->whereNull('dependencies')
-                          ->orWhereJsonLength('dependencies', 0);
+                        $q->whereNull('dependencies_json')
+                          ->orWhereJsonLength('dependencies_json', 0);
                     });
     }
 

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Src\DocumentManagement\Models\Document;
 use Src\CoreProject\Models\Project;
 use App\Models\User;
+use App\Models\Tenant;
+use Illuminate\Support\Str;
 
 /**
  * Factory cho Document model
@@ -19,48 +21,28 @@ class DocumentFactory extends Factory
     public function definition(): array
     {
         return [
+            'id' => Str::ulid(),
+            'tenant_id' => Tenant::factory(),
             'project_id' => Project::factory(),
-            'title' => $this->faker->sentence(3),
-            'description' => $this->faker->paragraph(2),
-            'linked_entity_type' => $this->faker->randomElement(Document::VALID_ENTITY_TYPES),
-            'linked_entity_id' => $this->faker->uuid(),
-            'current_version_id' => null, // Will be set after DocumentVersion is created
-            'tags' => $this->faker->randomElements(['contract', 'design', 'specification', 'report'], $this->faker->numberBetween(0, 2)),
-            'visibility' => $this->faker->randomElement(Document::VALID_VISIBILITY),
-            'client_approved' => $this->faker->boolean(30),
+            'uploaded_by' => User::factory(),
+            'name' => $this->faker->sentence(3),
+            'original_name' => Str::slug($this->faker->word) . '.pdf',
+            'file_path' => 'documents/' . Str::random(10) . '/' . Str::slug($this->faker->word) . '.pdf',
+            'file_type' => 'pdf',
+            'mime_type' => 'application/pdf',
+            'file_size' => $this->faker->numberBetween(1000, 100000),
+            'file_hash' => Str::ulid(),
+            'category' => 'drawing',
+            'description' => $this->faker->paragraph(),
+            'metadata' => json_encode(['document_type' => 'drawing']),
+            'status' => 'active',
+            'version' => 1,
+            'is_current_version' => true,
+            'parent_document_id' => null,
             'created_by' => User::factory(),
             'updated_by' => User::factory(),
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
-    }
-
-    /**
-     * State: Client visible document
-     */
-    public function clientVisible(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'visibility' => Document::VISIBILITY_CLIENT,
-            'client_approved' => true,
-        ]);
-    }
-
-    /**
-     * State: Internal document
-     */
-    public function internal(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'visibility' => Document::VISIBILITY_INTERNAL,
-        ]);
-    }
-
-    /**
-     * State: Linked to task
-     */
-    public function linkedToTask(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'linked_entity_type' => Document::ENTITY_TYPE_TASK,
-        ]);
     }
 }

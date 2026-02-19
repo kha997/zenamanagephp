@@ -30,7 +30,7 @@ class RfiWorkflowTest extends TestCase
         parent::setUp();
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -40,7 +40,7 @@ class RfiWorkflowTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'RFI-TEST-001',
             'description' => 'Test Description',
@@ -50,7 +50,7 @@ class RfiWorkflowTest extends TestCase
         ]);
 
         // Tạo Site Engineer
-        $this->siteEngineer = User::create([
+        $this->siteEngineer = User::factory()->create([
             'name' => 'Site Engineer',
             'email' => 'site.engineer@test.com',
             'password' => bcrypt('password'),
@@ -60,7 +60,7 @@ class RfiWorkflowTest extends TestCase
         ]);
 
         // Tạo Design Lead
-        $this->designLead = User::create([
+        $this->designLead = User::factory()->create([
             'name' => 'Design Lead',
             'email' => 'design.lead@test.com',
             'password' => bcrypt('password'),
@@ -70,7 +70,7 @@ class RfiWorkflowTest extends TestCase
         ]);
 
         // Tạo Project Manager
-        $this->projectManager = User::create([
+        $this->projectManager = User::factory()->create([
             'name' => 'Project Manager',
             'email' => 'project.manager@test.com',
             'password' => bcrypt('password'),

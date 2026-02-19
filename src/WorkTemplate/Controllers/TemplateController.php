@@ -43,7 +43,7 @@ class TemplateController extends Controller
      * @param Request $request
      * @return int|null
      */
-    protected function getUserId(Request $request): ?int
+    protected function getUserId(Request $request): ?string
     {
         $user = $request->user('api');
         return $user ? $user->id : null;
@@ -71,7 +71,7 @@ class TemplateController extends Controller
         
         // Search theo name nếu có
         if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->get('search') . '%');
+            $query->where('template_name', 'like', '%' . $request->get('search') . '%');
         }
         
         // Sắp xếp
@@ -228,7 +228,10 @@ class TemplateController extends Controller
             $result = $this->templateService->applyTemplateToProject(
                 $template,
                 $request->get('project_id'),
+                $request->get('mode', 'full'),
                 $request->get('conditional_tags', []),
+                null,
+                null,
                 $request->user('api')->id  // Sửa từ $request->user()->id
             );
             
@@ -259,7 +262,7 @@ class TemplateController extends Controller
         }
         
         $versions = $template->versions()
-            ->orderBy('version_number', 'desc')
+            ->orderBy('version', 'desc')
             ->get();
         
         return JSendResponse::success(

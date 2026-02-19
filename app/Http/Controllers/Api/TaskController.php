@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\BaseApiController;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,14 +13,19 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
-class TaskController extends Controller
+class TaskController extends BaseApiController
 {
     use ZenaContractResponseTrait;
+
+    protected function error(string $message, int $statusCode = 400, $data = null): JsonResponse
+    {
+        return $this->errorResponse($message, $statusCode, $data);
+    }
 
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ?string $projectId = null): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -42,8 +47,9 @@ class TaskController extends Controller
             }
 
             // Apply filters
-            if ($request->filled('project_id')) {
-                $query->byProject($request->input('project_id'));
+            $effectiveProjectId = $projectId ?: $request->input('project_id');
+            if (!empty($effectiveProjectId)) {
+                $query->where('project_id', $effectiveProjectId);
             }
 
             if ($request->filled('status')) {
@@ -160,7 +166,7 @@ class TaskController extends Controller
                 'spent_hours' => $request->input('spent_hours'),
                 'parent_id' => $request->input('parent_id'),
                 'order' => $request->input('order', 0),
-                'dependencies' => $dependencies,
+                'dependencies_json' => $dependencies,
                 'watchers' => $request->input('watchers', []),
                 'tags' => $request->input('tags', []),
                 'is_hidden' => $request->input('is_hidden', false),
@@ -265,10 +271,11 @@ class TaskController extends Controller
                 'name', 'description', 'status', 'priority', 'start_date', 'end_date',
                 'estimated_hours', 'actual_hours', 'dependencies'
             ]);
+            $requestedDependencies = $updateData['dependencies'] ?? null;
 
             // Check for circular dependency if updating dependencies
-            if (isset($updateData['dependencies']) && is_array($updateData['dependencies'])) {
-                foreach ($updateData['dependencies'] as $depId) {
+            if (is_array($requestedDependencies)) {
+                foreach ($requestedDependencies as $depId) {
                     if ($depId === $id) {
                         return $this->error('Task cannot depend on itself', 400);
                     }
@@ -276,6 +283,11 @@ class TaskController extends Controller
                         return $this->error('Updating dependencies would create a circular dependency', 400);
                     }
                 }
+            }
+
+            if (array_key_exists('dependencies', $updateData)) {
+                $updateData['dependencies_json'] = $updateData['dependencies'];
+                unset($updateData['dependencies']);
             }
 
             $task->update($updateData);
@@ -775,6 +787,7 @@ class TaskController extends Controller
             if ($dependencyId === $id) {
                 return response()->json([
                     'success' => false,
+                    'status' => 'error',
                     'message' => 'Task cannot depend on itself'
                 ], 400);
             }
@@ -783,6 +796,7 @@ class TaskController extends Controller
             if ($task->hasCircularDependency($dependencyId)) {
                 return response()->json([
                     'success' => false,
+                    'status' => 'error',
                     'message' => 'Circular dependency detected'
                 ], 400);
             }
@@ -797,6 +811,7 @@ class TaskController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
+                    'status' => 'error',
                     'message' => 'Dependency already exists'
                 ], 400);
             }
@@ -804,6 +819,7 @@ class TaskController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
+                'status' => 'error',
                 'message' => 'Validation failed',
                 'errors' => $e->errors()
             ], 422);
@@ -811,6 +827,7 @@ class TaskController extends Controller
             Log::error('Task add dependency error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
+                'status' => 'error',
                 'message' => 'Failed to add dependency',
                 'error' => $e->getMessage()
             ], 500);

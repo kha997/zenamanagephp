@@ -9,10 +9,12 @@ use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Tests\Support\SSOT\FixtureFactory;
 
 class BulkOperationsBasicTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, FixtureFactory;
 
     protected $tenant;
     protected $user;
@@ -22,17 +24,17 @@ class BulkOperationsBasicTest extends TestCase
         parent::setUp();
         
         // Create tenant and user
-        $this->tenant = Tenant::create([
+        $this->tenant = $this->createTenant([
             'name' => 'Test Tenant',
-            'slug' => 'test-tenant',
+            'slug' => 'test-tenant-' . Str::lower((string) Str::ulid()),
             'status' => 'active'
         ]);
         
-        $this->user = User::create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'member', 'member', [], [
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test+' . Str::lower((string) Str::ulid()) . '@example.com',
             'password' => bcrypt('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
     }
 
@@ -55,7 +57,7 @@ class BulkOperationsBasicTest extends TestCase
 
         $createdUsers = [];
         foreach ($userData as $data) {
-            $user = User::create($data);
+            $user = User::factory()->create($data);
             $createdUsers[] = $user;
         }
 
@@ -89,7 +91,7 @@ class BulkOperationsBasicTest extends TestCase
 
         $createdProjects = [];
         foreach ($projectData as $data) {
-            $project = Project::create($data);
+            $project = Project::factory()->create($data);
             $createdProjects[] = $project;
         }
 
@@ -103,7 +105,7 @@ class BulkOperationsBasicTest extends TestCase
     public function test_can_create_multiple_tasks()
     {
         // Create a project first
-        $project = Project::create([
+        $project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'TEST-001',
             'description' => 'Test project',
@@ -152,7 +154,7 @@ class BulkOperationsBasicTest extends TestCase
         
         try {
             // Create a user
-            $user = User::create([
+            $user = User::factory()->create([
                 'name' => 'Transaction User',
                 'email' => 'transaction@example.com',
                 'password' => bcrypt('password'),
@@ -167,7 +169,9 @@ class BulkOperationsBasicTest extends TestCase
             $this->assertDatabaseHas('users', ['email' => 'transaction@example.com']);
             
         } catch (\Exception $e) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             throw $e;
         }
     }
@@ -178,7 +182,7 @@ class BulkOperationsBasicTest extends TestCase
         
         try {
             // Create a user
-            $user = User::create([
+            $user = User::factory()->create([
                 'name' => 'Rollback User',
                 'email' => 'rollback@example.com',
                 'password' => bcrypt('password'),
@@ -194,7 +198,9 @@ class BulkOperationsBasicTest extends TestCase
             $this->assertDatabaseMissing('users', ['email' => 'rollback@example.com']);
             
         } catch (\Exception $e) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             throw $e;
         }
     }
@@ -205,7 +211,7 @@ class BulkOperationsBasicTest extends TestCase
         // Let's test with a more obvious constraint violation
         $this->expectException(\Illuminate\Database\QueryException::class);
         
-        User::create([
+        User::factory()->create([
             'name' => 'Test User',
             'email' => null, // NULL email should fail
             'password' => bcrypt('password'),
@@ -216,7 +222,7 @@ class BulkOperationsBasicTest extends TestCase
     public function test_can_handle_duplicate_emails()
     {
         // Create first user
-        User::create([
+        User::factory()->create([
             'name' => 'First User',
             'email' => 'duplicate@example.com',
             'password' => bcrypt('password'),
@@ -226,7 +232,7 @@ class BulkOperationsBasicTest extends TestCase
         // Try to create second user with same email
         $this->expectException(\Illuminate\Database\QueryException::class);
         
-        User::create([
+        User::factory()->create([
             'name' => 'Second User',
             'email' => 'duplicate@example.com', // Duplicate email
             'password' => bcrypt('password'),
@@ -241,7 +247,7 @@ class BulkOperationsBasicTest extends TestCase
         // Create 10 users
         $users = [];
         for ($i = 1; $i <= 10; $i++) {
-            $users[] = User::create([
+            $users[] = User::factory()->create([
                 'name' => "User {$i}",
                 'email' => "user{$i}@example.com",
                 'password' => bcrypt('password123'),
@@ -261,14 +267,14 @@ class BulkOperationsBasicTest extends TestCase
     public function test_can_handle_tenant_isolation()
     {
         // Create another tenant
-        $otherTenant = Tenant::create([
+        $otherTenant = Tenant::factory()->create([
             'name' => 'Other Tenant',
             'slug' => 'other-tenant',
             'status' => 'active'
         ]);
 
         // Create user for other tenant
-        $otherUser = User::create([
+        $otherUser = User::factory()->create([
             'name' => 'Other User',
             'email' => 'other@example.com',
             'password' => bcrypt('password'),

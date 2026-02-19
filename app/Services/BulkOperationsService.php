@@ -11,6 +11,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\QueryException;
 
 /**
  * Bulk Operations Service
@@ -41,14 +43,20 @@ class BulkOperationsService
      */
     public function bulkCreateUsers(array $userData, string $tenantId = null): array
     {
-        $this->validateBulkOperation(count($userData), 'create_users');
+        $totalOperations = count($userData);
+        $this->validateBulkOperation($totalOperations, 'create_users');
 
         $results = [
             'success' => 0,
             'failed' => 0,
+            'created' => 0,
             'errors' => [],
-            'created_users' => []
+            'created_users' => [],
+            'results' => []
         ];
+
+        $fatalError = false;
+        $fatalException = null;
 
         try {
             DB::beginTransaction();
@@ -56,8 +64,26 @@ class BulkOperationsService
             foreach (array_chunk($userData, $this->batchSize) as $batch) {
                 foreach ($batch as $index => $data) {
                     try {
+                        $rules = [
+                            'name' => ['required', 'string'],
+                            'email' => ['required', 'email'],
+                            'password' => ['required', 'string', 'min:6'],
+                        ];
+
+                        if ($tenantId !== null) {
+                            $rules['tenant_id'] = ['nullable', 'string'];
+                        } else {
+                            $rules['tenant_id'] = ['required', 'string'];
+                        }
+
+                        $validation = Validator::make($data, $rules);
+
+                        if ($validation->fails()) {
+                            throw new \Exception('Validation failed: ' . $validation->errors()->first());
+                        }
+
                         $user = $this->createUser($data, $tenantId);
-                        $results['created_users'][] = $user;
+                        $results['created_users'][] = $user->id;
                         $results['success']++;
 
                         // Log creation
@@ -75,17 +101,38 @@ class BulkOperationsService
                             'data' => $data,
                             'error' => $e->getMessage()
                         ];
+
+                        if ($e instanceof QueryException) {
+                            $fatalError = true;
+                            $fatalException = $e;
+                            break 2;
+                        }
                     }
                 }
+            }
+
+            if ($fatalError) {
+                DB::rollBack();
+                $results['created_users'] = [];
+                $results['created'] = 0;
+                $results['failed'] = $totalOperations;
+                $results['success'] = 0;
+                $results['results'] = [];
+
+                return $results;
             }
 
             DB::commit();
 
             Log::info('Bulk user creation completed', [
-                'total' => count($userData),
+                'total' => $totalOperations,
                 'success' => $results['success'],
                 'failed' => $results['failed']
             ]);
+
+            $results['created'] = count($results['created_users']);
+            $results['failed'] = max($results['failed'], count($results['errors']));
+            $results['results'] = $results['created_users'];
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -118,7 +165,8 @@ class BulkOperationsService
                         $user = User::findOrFail($update['id']);
                         $oldData = $user->toArray();
                         
-                        $user->update($update['data']);
+                        $user->forceFill($update['data']);
+                        $user->save();
                         $results['updated_users'][] = $user;
                         $results['success']++;
 
@@ -239,6 +287,7 @@ class BulkOperationsService
         $results = [
             'success' => 0,
             'failed' => 0,
+            'created' => 0,
             'errors' => [],
             'created_projects' => []
         ];
@@ -250,7 +299,7 @@ class BulkOperationsService
                 foreach ($batch as $index => $data) {
                     try {
                         $project = $this->createProject($data, $tenantId);
-                        $results['created_projects'][] = $project;
+                        $results['created_projects'][] = $project->id;
                         $results['success']++;
 
                         // Log creation
@@ -273,6 +322,9 @@ class BulkOperationsService
             }
 
             DB::commit();
+
+            $results['created'] = count($results['created_projects']);
+            $results['failed'] = max($results['failed'], count($results['errors']));
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -348,13 +400,14 @@ class BulkOperationsService
     /**
      * Bulk create tasks
      */
-    public function bulkCreateTasks(array $taskData, string $projectId, string $tenantId = null): array
+    public function bulkCreateTasks(array $taskData, string $projectId = null, string $tenantId = null): array
     {
         $this->validateBulkOperation(count($taskData), 'create_tasks');
 
         $results = [
             'success' => 0,
             'failed' => 0,
+            'created' => 0,
             'errors' => [],
             'created_tasks' => []
         ];
@@ -365,9 +418,9 @@ class BulkOperationsService
             foreach (array_chunk($taskData, $this->batchSize) as $batch) {
                 foreach ($batch as $index => $data) {
                     try {
-                        $data['project_id'] = $projectId;
+                        $data['project_id'] = $projectId ?? $data['project_id'] ?? null;
                         $task = $this->createTask($data, $tenantId);
-                        $results['created_tasks'][] = $task;
+                        $results['created_tasks'][] = $task->id;
                         $results['success']++;
 
                         // Log creation
@@ -391,6 +444,9 @@ class BulkOperationsService
             }
 
             DB::commit();
+
+            $results['created'] = count($results['created_tasks']);
+            $results['failed'] = max($results['failed'], count($results['errors']));
 
         } catch (\Exception $e) {
             DB::rollBack();

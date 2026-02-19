@@ -20,7 +20,7 @@ class UserPolicy
         }
 
         // Project Managers can view users
-        if ($user->hasRole('project_manager')) {
+        if ($user->hasRole(['project_manager', 'pm'])) {
             return true;
         }
 
@@ -43,7 +43,7 @@ class UserPolicy
         }
 
         // Project Managers can view users
-        if ($user->hasRole('project_manager')) {
+        if ($user->hasRole(['project_manager', 'pm'])) {
             return true;
         }
 
@@ -56,7 +56,7 @@ class UserPolicy
     public function create(User $user)
     {
         // Only SuperAdmin, Admin, and Project Managers can create users
-        return $user->hasRole(['super_admin', 'admin', 'project_manager']);
+        return $user->hasRole(['super_admin', 'admin', 'project_manager', 'pm']);
     }
 
     /**
@@ -75,7 +75,7 @@ class UserPolicy
         }
 
         // Project Managers can update users
-        if ($user->hasRole('project_manager')) {
+        if ($user->hasRole(['project_manager', 'pm'])) {
             return true;
         }
 

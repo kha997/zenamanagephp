@@ -6,6 +6,7 @@ use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Tenant;
 use Src\RBAC\Services\AuthService;
@@ -292,6 +293,7 @@ class AuthServiceTest extends TestCase
         // Gán role cho user
         $this->user->roles()->attach($role->id);
         
+        Auth::login($this->user);
         $hasPermission = $this->authService->checkPermission('task.create');
         
         $this->assertTrue($hasPermission);

@@ -39,20 +39,20 @@ class TeamCollaborationTest extends TestCase
         parent::setUp();
         
         // Create test data
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
             'status' => 'active'
         ]);
 
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Team Manager',
             'email' => 'manager@test-' . uniqid() . '.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
 
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'TEAM-' . uniqid(),
             'name' => 'Team Collaboration Project',
@@ -107,14 +107,14 @@ class TeamCollaborationTest extends TestCase
     public function test_can_manage_team_members(): void
     {
         // Create additional users
-        $member1 = User::create([
+        $member1 = User::factory()->create([
             'name' => 'Developer 1',
             'email' => 'dev1@test.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
 
-        $member2 = User::create([
+        $member2 = User::factory()->create([
             'name' => 'Developer 2',
             'email' => 'dev2@test.com',
             'password' => bcrypt('password'),
@@ -157,14 +157,14 @@ class TeamCollaborationTest extends TestCase
     public function test_can_assign_tasks_to_teams_and_users(): void
     {
         // Create users and tasks
-        $user1 = User::create([
+        $user1 = User::factory()->create([
             'name' => 'User 1',
             'email' => 'user1@test.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
 
-        $user2 = User::create([
+        $user2 = User::factory()->create([
             'name' => 'User 2',
             'email' => 'user2@test.com',
             'password' => bcrypt('password'),
@@ -208,6 +208,7 @@ class TeamCollaborationTest extends TestCase
 
         $teamAssignment = TaskAssignment::create([
             'task_id' => $task2->id,
+            'user_id' => $this->user->id,
             'team_id' => $this->team->id,
             'assignment_type' => TaskAssignment::TYPE_TEAM,
             'role' => TaskAssignment::ROLE_ASSIGNEE,
@@ -256,7 +257,7 @@ class TeamCollaborationTest extends TestCase
      */
     public function test_can_manage_task_assignment_status(): void
     {
-        $user = User::create([
+        $user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@test.com',
             'password' => bcrypt('password'),
@@ -362,14 +363,14 @@ class TeamCollaborationTest extends TestCase
      */
     public function test_can_manage_task_watching(): void
     {
-        $watcher1 = User::create([
+        $watcher1 = User::factory()->create([
             'name' => 'Watcher 1',
             'email' => 'watcher1@test.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
 
-        $watcher2 = User::create([
+        $watcher2 = User::factory()->create([
             'name' => 'Watcher 2',
             'email' => 'watcher2@test.com',
             'password' => bcrypt('password'),
@@ -422,14 +423,14 @@ class TeamCollaborationTest extends TestCase
      */
     public function test_can_enforce_team_based_permissions(): void
     {
-        $teamMember = User::create([
+        $teamMember = User::factory()->create([
             'name' => 'Team Member',
             'email' => 'member@test.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
 
-        $nonMember = User::create([
+        $nonMember = User::factory()->create([
             'name' => 'Non Member',
             'email' => 'nonmember@test.com',
             'password' => bcrypt('password'),
@@ -450,10 +451,12 @@ class TeamCollaborationTest extends TestCase
         // Assign task to team
         $assignment = TaskAssignment::create([
             'task_id' => $task->id,
+            'user_id' => $this->user->id,
             'team_id' => $this->team->id,
             'assignment_type' => TaskAssignment::TYPE_TEAM,
             'role' => TaskAssignment::ROLE_ASSIGNEE,
             'status' => TaskAssignment::STATUS_ASSIGNED,
+            'assigned_at' => now(),
             'created_by' => $this->user->id
         ]);
 
@@ -479,7 +482,7 @@ class TeamCollaborationTest extends TestCase
         // Create team members
         $members = [];
         for ($i = 1; $i <= 5; $i++) {
-            $members[] = User::create([
+            $members[] = User::factory()->create([
                 'name' => "Member {$i}",
                 'email' => "member{$i}@test.com",
                 'password' => bcrypt('password'),
@@ -509,23 +512,27 @@ class TeamCollaborationTest extends TestCase
         // Create assignments
         TaskAssignment::create([
             'task_id' => $tasks[0]->id,
+            'user_id' => $this->user->id,
             'team_id' => $this->team->id,
             'assignment_type' => TaskAssignment::TYPE_TEAM,
             'role' => TaskAssignment::ROLE_ASSIGNEE,
             'assigned_hours' => 8.0,
             'actual_hours' => 6.0,
             'status' => TaskAssignment::STATUS_IN_PROGRESS,
+            'assigned_at' => now(),
             'created_by' => $this->user->id
         ]);
 
         TaskAssignment::create([
             'task_id' => $tasks[1]->id,
+            'user_id' => $this->user->id,
             'team_id' => $this->team->id,
             'assignment_type' => TaskAssignment::TYPE_TEAM,
             'role' => TaskAssignment::ROLE_ASSIGNEE,
             'assigned_hours' => 12.0,
             'actual_hours' => 12.0,
             'status' => TaskAssignment::STATUS_COMPLETED,
+            'assigned_at' => now(),
             'created_by' => $this->user->id
         ]);
 
@@ -553,13 +560,13 @@ class TeamCollaborationTest extends TestCase
     public function test_team_data_is_tenant_isolated(): void
     {
         // Create another tenant
-        $tenant2 = Tenant::create([
+        $tenant2 = Tenant::factory()->create([
             'name' => 'Another Company',
             'slug' => 'another-company',
             'status' => 'active'
         ]);
 
-        $user2 = User::create([
+        $user2 = User::factory()->create([
             'name' => 'User 2',
             'email' => 'user2@another.com',
             'password' => bcrypt('password'),
@@ -661,14 +668,14 @@ class TeamCollaborationTest extends TestCase
     public function test_team_collaboration_workflow_end_to_end(): void
     {
         // Create team members
-        $developer = User::create([
+        $developer = User::factory()->create([
             'name' => 'Developer',
             'email' => 'dev@test.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
 
-        $reviewer = User::create([
+        $reviewer = User::factory()->create([
             'name' => 'Reviewer',
             'email' => 'reviewer@test.com',
             'password' => bcrypt('password'),
@@ -698,11 +705,13 @@ class TeamCollaborationTest extends TestCase
         // Assign task to team
         $teamAssignment = TaskAssignment::create([
             'task_id' => $task->id,
+            'user_id' => $this->user->id,
             'team_id' => $this->team->id,
             'assignment_type' => TaskAssignment::TYPE_TEAM,
             'role' => TaskAssignment::ROLE_ASSIGNEE,
             'assigned_hours' => 16.0,
             'status' => TaskAssignment::STATUS_ASSIGNED,
+            'assigned_at' => now(),
             'created_by' => $this->user->id
         ]);
 
@@ -714,6 +723,7 @@ class TeamCollaborationTest extends TestCase
             'role' => TaskAssignment::ROLE_REVIEWER,
             'assigned_hours' => 4.0,
             'status' => TaskAssignment::STATUS_ASSIGNED,
+            'assigned_at' => now(),
             'created_by' => $this->user->id
         ]);
 

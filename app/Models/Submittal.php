@@ -6,10 +6,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Traits\TenantScope;
+use Illuminate\Support\Str;
 
 class Submittal extends Model
 {
     use HasFactory, TenantScope;
+
+    public $incrementing = false;
+    protected $keyType = 'string';
+
+    protected static function booted(): void
+    {
+        static::creating(function (Submittal $submittal) {
+            if (empty($submittal->id)) {
+                $submittal->id = (string) Str::ulid();
+            }
+        });
+    }
 
     protected $fillable = [
         'id',
@@ -39,6 +52,7 @@ class Submittal extends Model
         'rejected_at',
         'rejection_reason',
         'rejection_comments',
+        'created_by',
         'attachments',
     ];
 

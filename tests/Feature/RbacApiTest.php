@@ -7,9 +7,12 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Tenant;
+use App\Models\Role as AppRole;
+use App\Models\Permission as AppPermission;
 use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
 
 class RbacApiTest extends TestCase
 {
@@ -26,9 +29,6 @@ class RbacApiTest extends TestCase
     {
         parent::setUp();
         
-        // Đảm bảo middleware được đăng ký trong test
-        $this->app['router']->aliasMiddleware('rbac', \Src\RBAC\Middleware\RBACMiddleware::class);
-        
         $this->tenant = Tenant::factory()->create([
             'id' => 1,
             'name' => 'Test Company',
@@ -41,13 +41,9 @@ class RbacApiTest extends TestCase
         ]);
         
         $this->createRolesAndPermissions();
-        
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $this->user->email,
-            'password' => 'password123',
-        ]);
-        
-        $this->token = $loginResponse->json('data.token');
+        $this->grantAppRbacPermissions();
+
+        $this->token = $this->user->createToken('rbac-api-test')->plainTextToken;
     }
 
     /**
@@ -65,7 +61,7 @@ class RbacApiTest extends TestCase
         ];
         
         foreach ($permissions as $permissionCode) {
-            Permission::create([
+            Permission::factory()->create([
                 'code' => $permissionCode,
                 'module' => explode('.', $permissionCode)[0],
                 'action' => explode('.', $permissionCode)[1],
@@ -73,7 +69,7 @@ class RbacApiTest extends TestCase
             ]);
         }
         
-        $adminRole = Role::create([
+        $adminRole = Role::factory()->create([
             'name' => 'Admin',
             'scope' => 'system',
             'description' => 'System Administrator'
@@ -87,10 +83,49 @@ class RbacApiTest extends TestCase
     }
 
     /**
+     * Grant app-level RBAC permissions used by route middleware.
+     */
+    private function grantAppRbacPermissions(): void
+    {
+        $permissionCodes = [
+            'role.view',
+            'role.create',
+            'role.edit',
+            'role.delete',
+            'permission.view',
+            'role.assign',
+        ];
+
+        $permissionIds = collect($permissionCodes)->map(function (string $code) {
+            [$module, $action] = explode('.', $code, 2);
+
+            return AppPermission::firstOrCreate(
+                ['code' => $code],
+                [
+                    'name' => $code,
+                    'module' => $module,
+                    'action' => $action,
+                    'description' => 'Permission for ' . $code,
+                ]
+            )->id;
+        })->all();
+
+        $appRole = AppRole::firstOrCreate(
+            ['name' => 'rbac_test_admin', 'scope' => 'system'],
+            ['description' => 'RBAC test admin role', 'allow_override' => true]
+        );
+
+        $appRole->permissions()->syncWithoutDetaching($permissionIds);
+        $this->user->roles()->syncWithoutDetaching([$appRole->id]);
+    }
+
+    /**
      * Test get all roles
      */
     public function test_can_get_all_roles()
     {
+        Sanctum::actingAs($this->user);
+
         Role::factory()->count(3)->create();
 
         $response = $this->withHeaders([
@@ -102,14 +137,17 @@ class RbacApiTest extends TestCase
                      'status',
                      'data' => [
                          'roles' => [
-                             '*' => [
-                                 'id',
-                                 'name',
-                                 'scope',
-                                 'description',
-                                 'created_at',
-                                 'updated_at'
-                             ]
+                             'data' => [
+                                 '*' => [
+                                     'id',
+                                     'name',
+                                     'scope',
+                                     'description',
+                                     'created_at',
+                                     'updated_at'
+                                 ]
+                             ],
+                             'meta'
                          ],
                          'pagination'
                      ]
@@ -121,6 +159,8 @@ class RbacApiTest extends TestCase
      */
     public function test_can_create_role()
     {
+        Sanctum::actingAs($this->user);
+
         $roleData = [
             'name' => 'Project Manager',
             'scope' => 'custom',
@@ -147,7 +187,7 @@ class RbacApiTest extends TestCase
                      ]
                  ]);
 
-        $this->assertDatabaseHas('roles', [
+        $this->assertDatabaseHas('zena_roles', [
             'name' => 'Project Manager',
             'scope' => 'custom'
         ]);
@@ -158,6 +198,8 @@ class RbacApiTest extends TestCase
      */
     public function test_can_update_role()
     {
+        Sanctum::actingAs($this->user);
+
         $role = Role::factory()->create([
             'scope' => 'custom'
         ]);
@@ -182,7 +224,7 @@ class RbacApiTest extends TestCase
                      ]
                  ]);
 
-        $this->assertDatabaseHas('roles', [
+        $this->assertDatabaseHas('zena_roles', [
             'id' => $role->id,
             'name' => 'Updated Role Name'
         ]);
@@ -193,6 +235,8 @@ class RbacApiTest extends TestCase
      */
     public function test_can_delete_role()
     {
+        Sanctum::actingAs($this->user);
+
         $role = Role::factory()->create([
             'scope' => 'custom'
         ]);
@@ -209,7 +253,7 @@ class RbacApiTest extends TestCase
                      ]
                  ]);
 
-        $this->assertDatabaseMissing('roles', [
+        $this->assertDatabaseMissing('zena_roles', [
             'id' => $role->id
         ]);
     }
@@ -219,6 +263,8 @@ class RbacApiTest extends TestCase
      */
     public function test_can_get_all_permissions()
     {
+        Sanctum::actingAs($this->user);
+
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
         ])->getJson('/api/v1/rbac/permissions');
@@ -247,6 +293,8 @@ class RbacApiTest extends TestCase
      */
     public function test_can_assign_role_to_user()
     {
+        Sanctum::actingAs($this->user);
+
         $targetUser = User::factory()->create([
             'tenant_id' => $this->tenant->id
         ]);
@@ -280,6 +328,8 @@ class RbacApiTest extends TestCase
      */
     public function test_can_remove_role_from_user()
     {
+        Sanctum::actingAs($this->user);
+
         $targetUser = User::factory()->create([
             'tenant_id' => $this->tenant->id
         ]);
@@ -325,16 +375,9 @@ class RbacApiTest extends TestCase
             'password' => Hash::make('password123')
         ]);
         
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $userWithoutPermissions->email,
-            'password' => 'password123',
-        ]);
-        
-        $tokenWithoutPermissions = $loginResponse->json('data.token');
+        Sanctum::actingAs($userWithoutPermissions);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $tokenWithoutPermissions,
-        ])->postJson('/api/v1/rbac/roles', [
+        $response = $this->postJson('/api/v1/rbac/roles', [
             'name' => 'Test Role',
             'scope' => 'custom',
             'description' => 'Test Description'

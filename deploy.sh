@@ -14,7 +14,7 @@ APP_URL="https://zenamanage.com"
 DB_HOST="localhost"
 DB_DATABASE="zenamanage_production"
 DB_USERNAME="zenamanage_user"
-DB_PASSWORD="secure_password"
+: "${DB_PASSWORD:?Set DB_PASSWORD (do NOT hardcode in repo)}"
 
 # Colors for output
 RED='\033[0;31m'

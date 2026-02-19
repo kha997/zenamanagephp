@@ -253,7 +253,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=zenamanage_production
 DB_USERNAME=zenamanage_user
-DB_PASSWORD=secure_password
+DB_PASSWORD=your_db_password_here
 
 # Cache configuration
 CACHE_DRIVER=redis
@@ -295,7 +295,7 @@ php artisan optimize
 CREATE DATABASE zenamanage CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Create user
-CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'secure_password';
+CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'your_db_password_here';
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON zenamanage.* TO 'zenamanage_user'@'localhost';
@@ -372,7 +372,7 @@ DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/var/backups/zenamanage"
 DB_NAME="zenamanage"
 DB_USER="zenamanage_user"
-DB_PASS="secure_password"
+DB_PASS="your_db_password_here"
 
 mkdir -p $BACKUP_DIR
 

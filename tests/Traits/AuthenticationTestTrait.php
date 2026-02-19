@@ -2,6 +2,7 @@
 
 namespace Tests\Traits;
 
+use App\Models\Tenant;
 use App\Models\User;
 use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
@@ -18,7 +19,11 @@ use Illuminate\Foundation\Testing\WithFaker;
  */
 trait AuthenticationTestTrait
 {
-    use WithFaker;
+    use AuthenticationTrait, ApiTestTrait, WithFaker;
+
+    protected ?User $apiFeatureUser = null;
+    protected ?Tenant $apiFeatureTenant = null;
+    protected ?string $apiFeatureToken = null;
 
     /**
      * Create a test user with specified roles and permissions
@@ -40,7 +45,9 @@ trait AuthenticationTestTrait
         foreach ($roles as $roleName) {
             $role = Role::firstOrCreate([
                 'name' => $roleName,
-                'scope' => 'system'
+            ], [
+                'scope' => 'system',
+                'is_active' => true,
             ]);
             $user->systemRoles()->attach($role->id);
         }
@@ -56,7 +63,9 @@ trait AuthenticationTestTrait
             // Create a temporary role for this permission if needed
             $tempRole = Role::firstOrCreate([
                 'name' => 'temp_' . $permissionCode,
-                'scope' => 'custom'
+            ], [
+                'scope' => 'custom',
+                'is_active' => true,
             ]);
             $tempRole->permissions()->syncWithoutDetaching($permission->id);
             $user->systemRoles()->syncWithoutDetaching($tempRole->id);
@@ -135,18 +144,62 @@ trait AuthenticationTestTrait
     }
 
     /**
-     * Act as a specific user for subsequent requests
+     * Act as an existing user instance for subsequent requests
      * 
      * @param User $user
      * @return $this
      */
-    protected function actingAsUser(User $user)
+    protected function actingAsExistingUser(User $user)
     {
         $token = $this->generateJwtToken($user);
         return $this->withHeaders([
             'Authorization' => 'Bearer ' . $token,
             'Accept' => 'application/json'
         ]);
+    }
+
+    /**
+     * Prepare headers for a tenant-authenticated request using an existing token.
+     *
+     * @param User $user
+     * @param string $tenantId
+     * @param string $token
+     * @return static
+     */
+    protected function actingAsTenantUser(User $user, string $tenantId, string $token): static
+    {
+        $headers = array_merge(
+            $this->apiHeadersForTenant($tenantId),
+            ['Authorization' => 'Bearer ' . $token]
+        );
+
+        $this->apiHeaders = $headers;
+
+        return $this->withHeaders($headers);
+    }
+
+    /**
+     * Build headers that only include tenant context (no authentication)
+     * 
+     * @param array $headers
+     * @return array
+     */
+    protected function tenantHeaders(array $headers = []): array
+    {
+        $tenantId = $this->apiFeatureTenant?->id ?? null;
+
+        if ($tenantId === null && property_exists($this, 'tenantId')) {
+            $tenantId = $this->tenantId;
+        }
+
+        if ($tenantId !== null) {
+            return $this->apiHeadersForTenant((string) $tenantId, $headers);
+        }
+
+        return array_merge([
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ], $headers);
     }
 
     /**
@@ -181,5 +234,30 @@ trait AuthenticationTestTrait
     {
         $authService = app(AuthService::class);
         return $authService->validateToken($token);
+    }
+    
+    /**
+     * Authenticate as a tenant administrator for API requests.
+     *
+     * @param array $attributes
+     * @param Tenant|null $tenant
+     * @return User
+     */
+    protected function apiActingAsTenantAdmin(array $attributes = [], ?Tenant $tenant = null): User
+    {
+        $tenant = $tenant ?? Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, $attributes);
+
+        $token = $this->apiLoginToken($user, $tenant);
+
+        $this->apiFeatureTenant = $tenant;
+        $this->apiFeatureUser = $user;
+        $this->apiFeatureToken = $token;
+        $this->apiHeaders = array_merge(
+            $this->apiHeadersForTenant((string) $tenant->id),
+            ['Authorization' => 'Bearer ' . $token]
+        );
+
+        return $user;
     }
 }

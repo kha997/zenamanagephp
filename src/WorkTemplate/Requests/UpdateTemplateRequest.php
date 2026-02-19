@@ -18,7 +18,7 @@ class UpdateTemplateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->can('template.update');
+        return $this->user() !== null;
     }
 
     /**

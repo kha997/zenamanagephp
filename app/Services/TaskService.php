@@ -21,7 +21,7 @@ class TaskService
     /**
      * Create a new task with business logic
      */
-    public function createTask(array $data, int $userId, int $tenantId): Task
+    public function createTask(array $data, string $userId, string $tenantId): Task
     {
         // Business logic validation
         $this->validateTaskCreation($data, $userId, $tenantId);
@@ -110,7 +110,7 @@ class TaskService
     /**
      * Get tasks with business logic filters
      */
-    public function getTasks(array $filters, int $userId, int $tenantId): array
+    public function getTasks(array $filters, string $userId, string $tenantId): array
     {
         // Apply business logic filters
         $query = $this->taskRepository->getQuery();
@@ -144,7 +144,7 @@ class TaskService
     /**
      * Validate task creation
      */
-    private function validateTaskCreation(array $data, int $userId, int $tenantId): void
+    private function validateTaskCreation(array $data, string $userId, string $tenantId): void
     {
         // Business rules validation
         if (empty($data['title'])) {
@@ -204,7 +204,7 @@ class TaskService
     /**
      * Check if user can create tasks
      */
-    private function canUserCreateTasks(int $userId, int $tenantId): bool
+    private function canUserCreateTasks(string $userId, string $tenantId): bool
     {
         // Business logic to check user permissions
         return true; // Simplified for demo
@@ -240,7 +240,7 @@ class TaskService
     /**
      * Validate project access
      */
-    private function validateProjectAccess(int $projectId, int $userId, int $tenantId): void
+    private function validateProjectAccess(string $projectId, string $userId, string $tenantId): void
     {
         // Business logic to validate project access
         // This would check if user has access to the project

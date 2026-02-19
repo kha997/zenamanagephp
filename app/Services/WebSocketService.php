@@ -37,6 +37,7 @@ class WebSocketService
             'new_notification',
             'notification_read',
             'notification_cleared',
+            'system_notification',
         ],
         'projects' => [
             'project_created',
@@ -69,6 +70,16 @@ class WebSocketService
      */
     public function broadcast(string $channel, string $event, array $data, string $tenantId = null): bool
     {
+        if (!$this->usesRedis()) {
+            Log::info('Skipping WebSocket broadcast in non-Redis context', [
+                'channel' => $channel,
+                'event' => $event,
+                'tenant_id' => $tenantId,
+            ]);
+
+            return true;
+        }
+
         try {
             $fullChannel = $this->buildChannelName($channel, $tenantId);
             $message = $this->buildMessage($event, $data);
@@ -99,7 +110,7 @@ class WebSocketService
     /**
      * Broadcast to user-specific channel
      */
-    public function broadcastToUser(int $userId, string $event, array $data, string $tenantId = null): bool
+    public function broadcastToUser(string $userId, string $event, array $data, string $tenantId = null): bool
     {
         $channel = "user:{$userId}";
         return $this->broadcast($channel, $event, $data, $tenantId);
@@ -152,6 +163,10 @@ class WebSocketService
      */
     public function getOnlineUsersCount(string $tenantId = null): int
     {
+        if (!$this->usesRedis()) {
+            return 0;
+        }
+
         try {
             $pattern = $tenantId ? "online_users:{$tenantId}:*" : "online_users:*";
             $keys = Redis::keys($pattern);
@@ -168,25 +183,27 @@ class WebSocketService
     /**
      * Mark user as online
      */
-    public function markUserOnline(int $userId, string $tenantId = null): bool
+    public function markUserOnline(string $userId, string $tenantId = null): bool
     {
         try {
-            $key = $this->buildOnlineUserKey($userId, $tenantId);
-            $data = [
-                'user_id' => $userId,
-                'tenant_id' => $tenantId,
-                'online_at' => time(),
-                'last_seen' => time(),
-            ];
-            
-            Redis::setex($key, 300, json_encode($data)); // 5 minutes TTL
-            
+            if ($this->usesRedis()) {
+                $key = $this->buildOnlineUserKey($userId, $tenantId);
+                $data = [
+                    'user_id' => $userId,
+                    'tenant_id' => $tenantId,
+                    'online_at' => time(),
+                    'last_seen' => time(),
+                ];
+                
+                Redis::setex($key, 300, json_encode($data)); // 5 minutes TTL
+            }
+
             // Broadcast user online event
             $this->broadcast('users', 'user_online', [
                 'user_id' => $userId,
-                'online_at' => $data['online_at'],
+                'online_at' => time(),
             ], $tenantId);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to mark user online', [
@@ -201,18 +218,20 @@ class WebSocketService
     /**
      * Mark user as offline
      */
-    public function markUserOffline(int $userId, string $tenantId = null): bool
+    public function markUserOffline(string $userId, string $tenantId = null): bool
     {
         try {
-            $key = $this->buildOnlineUserKey($userId, $tenantId);
-            Redis::del($key);
-            
+            if ($this->usesRedis()) {
+                $key = $this->buildOnlineUserKey($userId, $tenantId);
+                Redis::del($key);
+            }
+
             // Broadcast user offline event
             $this->broadcast('users', 'user_offline', [
                 'user_id' => $userId,
                 'offline_at' => time(),
             ], $tenantId);
-            
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to mark user offline', [
@@ -227,29 +246,31 @@ class WebSocketService
     /**
      * Update user activity
      */
-    public function updateUserActivity(int $userId, string $activity, array $metadata = [], string $tenantId = null): bool
+    public function updateUserActivity(string $userId, string $activity, array $metadata = [], string $tenantId = null): bool
     {
         try {
-            $key = $this->buildOnlineUserKey($userId, $tenantId);
-            $existingData = Redis::get($key);
-            
-            if ($existingData) {
-                $data = json_decode($existingData, true);
-                $data['last_seen'] = time();
-                $data['last_activity'] = $activity;
-                $data['activity_metadata'] = $metadata;
-                
-                Redis::setex($key, 300, json_encode($data));
-                
-                // Broadcast user activity
-                $this->broadcast('users', 'user_activity', [
-                    'user_id' => $userId,
-                    'activity' => $activity,
-                    'metadata' => $metadata,
-                    'timestamp' => time(),
-                ], $tenantId);
+            if ($this->usesRedis()) {
+                $key = $this->buildOnlineUserKey($userId, $tenantId);
+                $existingData = Redis::get($key);
+
+                if ($existingData) {
+                    $data = json_decode($existingData, true);
+                    $data['last_seen'] = time();
+                    $data['last_activity'] = $activity;
+                    $data['activity_metadata'] = $metadata;
+
+                    Redis::setex($key, 300, json_encode($data));
+                }
             }
-            
+
+            // Broadcast user activity
+            $this->broadcast('users', 'user_activity', [
+                'user_id' => $userId,
+                'activity' => $activity,
+                'metadata' => $metadata,
+                'timestamp' => time(),
+            ], $tenantId);
+
             return true;
         } catch (\Exception $e) {
             Log::error('Failed to update user activity', [
@@ -265,7 +286,7 @@ class WebSocketService
     /**
      * Send notification via WebSocket
      */
-    public function sendNotification(int $userId, array $notification, string $tenantId = null): bool
+    public function sendNotification(string $userId, array $notification, string $tenantId = null): bool
     {
         try {
             $event = 'new_notification';
@@ -318,6 +339,12 @@ class WebSocketService
     {
         try {
             $stats = [
+                'total_connections' => $this->getTotalConnections(),
+                'active_connections' => $this->getActiveConnections(),
+                'total_messages_sent' => $this->getTotalMessagesSent(),
+                'total_messages_received' => $this->getTotalMessagesReceived(),
+                'uptime' => $this->getUptime(),
+                'cpu_usage' => $this->getCpuUsage(),
                 'online_users' => $this->getOnlineUsersCount(),
                 'channels' => array_keys($this->channels),
                 'event_types' => $this->eventTypes,
@@ -331,6 +358,37 @@ class WebSocketService
             ]);
             return [];
         }
+    }
+
+    private function getTotalConnections(): int
+    {
+        // Could be replaced with actual telemetry backing store
+        return 0;
+    }
+
+    private function getActiveConnections(): int
+    {
+        return 0;
+    }
+
+    private function getTotalMessagesSent(): int
+    {
+        return 0;
+    }
+
+    private function getTotalMessagesReceived(): int
+    {
+        return 0;
+    }
+
+    private function getUptime(): int
+    {
+        return 0;
+    }
+
+    private function getCpuUsage(): float
+    {
+        return 0.0;
     }
 
     /**
@@ -363,7 +421,7 @@ class WebSocketService
     /**
      * Build online user key
      */
-    private function buildOnlineUserKey(int $userId, string $tenantId = null): string
+    private function buildOnlineUserKey(string $userId, string $tenantId = null): string
     {
         if ($tenantId) {
             return "online_users:{$tenantId}:{$userId}";
@@ -377,12 +435,25 @@ class WebSocketService
      */
     private function isRedisConnected(): bool
     {
+        if (!$this->usesRedis()) {
+            return false;
+        }
+
         try {
             Redis::ping();
             return true;
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    private function usesRedis(): bool
+    {
+        if (app()->environment('testing')) {
+            return false;
+        }
+
+        return config('websocket.use_redis', true);
     }
 
     /**

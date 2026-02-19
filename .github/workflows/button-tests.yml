@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: '0 2 * * *' # Daily at 2 AM
 
+env:
+  COMPOSER_PROCESS_TIMEOUT: 0
+
 jobs:
   button-inventory-check:
     runs-on: ubuntu-latest

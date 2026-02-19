@@ -29,12 +29,12 @@ class StoreNotificationRuleRequest extends FormRequest
         return [
             'user_id' => [
                 'required',
-                'integer',
+                'string',
                 'exists:users,id'
             ],
             'project_id' => [
                 'nullable',
-                'integer',
+                'string',
                 'exists:projects,id'
             ],
             'event_key' => [
@@ -109,7 +109,7 @@ class StoreNotificationRuleRequest extends FormRequest
      * 
      * @return int|null
      */
-    private function getUserId(): ?int
+    private function getUserId(): ?string
     {
         try {
             if (AuthHelper::check()) {

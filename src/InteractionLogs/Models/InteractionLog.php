@@ -68,6 +68,7 @@ class InteractionLog extends Model
     ];
 
     protected $fillable = [
+        'tenant_id',
         'project_id',
         'linked_task_id',
         'type',

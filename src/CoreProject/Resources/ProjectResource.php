@@ -10,6 +10,14 @@ use App\Http\Resources\BaseApiResource;
  */
 class ProjectResource extends BaseApiResource
 {
+    private const STATUSES = [
+        'planning' => 'Planning',
+        'active' => 'Active',
+        'on_hold' => 'On Hold',
+        'completed' => 'Completed',
+        'cancelled' => 'Cancelled',
+    ];
+
     /**
      * Transform the resource into an array.
      *
@@ -58,6 +66,16 @@ class ProjectResource extends BaseApiResource
     private function getStatusLabel(): string
     {
         return static::STATUSES[$this->status] ?? $this->status;
+    }
+
+    private function isActive(): bool
+    {
+        return $this->status !== 'cancelled';
+    }
+
+    private function isCompleted(): bool
+    {
+        return $this->status === 'completed';
     }
     
     /**

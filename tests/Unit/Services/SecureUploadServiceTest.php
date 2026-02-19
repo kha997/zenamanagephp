@@ -5,6 +5,7 @@ namespace Tests\Unit\Services;
 use Tests\TestCase;
 use App\Models\User;
 use App\Models\Tenant;
+use App\Models\Document;
 use App\Services\SecureUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -231,16 +232,28 @@ class SecureUploadServiceTest extends TestCase
     /** @test */
     public function it_can_create_file_version()
     {
-        $originalFile = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
+        $originalFile = UploadedFile::fake()
+            ->createWithContent('document.pdf', $this->fakePdfContent('Original Document'))
+            ->mimeType('application/pdf');
         
         // Upload original file
         $originalResult = $this->service->uploadFile($originalFile, $this->user->id, $this->tenant->id);
+
+        $this->assertTrue($originalResult['success'] ?? false, 'Original upload must succeed before creating a version: ' . ($originalResult['message'] ?? ''));
+        $this->assertArrayHasKey('file_path', $originalResult, 'Original upload must expose file_path for persistence lookups');
+
+        $fileId = Document::where('tenant_id', $this->tenant->id)
+            ->where('file_path', $originalResult['file_path'])
+            ->value('id');
+        $this->assertNotEmpty($fileId, 'Original upload did not persist a Document record.');
         
-        $newFile = UploadedFile::fake()->create('document_v2.pdf', 150, 'application/pdf');
+        $newFile = UploadedFile::fake()
+            ->createWithContent('document_v2.pdf', $this->fakePdfContent('Updated Document'))
+            ->mimeType('application/pdf');
         
         // Create new version
         $versionResult = $this->service->createFileVersion(
-            $originalResult['file_id'],
+            $fileId,
             $newFile,
             $this->user->id,
             $this->tenant->id,
@@ -254,22 +267,33 @@ class SecureUploadServiceTest extends TestCase
     /** @test */
     public function it_can_get_file_versions()
     {
-        $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
+        $file = UploadedFile::fake()
+            ->createWithContent('document.pdf', $this->fakePdfContent('Initial Version'))
+            ->mimeType('application/pdf');
         
         // Upload file
         $uploadResult = $this->service->uploadFile($file, $this->user->id, $this->tenant->id);
+        $this->assertTrue($uploadResult['success'] ?? false, 'Original upload must succeed before fetching versions: ' . ($uploadResult['message'] ?? ''));
+        $this->assertArrayHasKey('file_path', $uploadResult, 'Upload result must expose file_path for locating the persisted document.');
+
+        $fileId = Document::where('tenant_id', $this->tenant->id)
+            ->where('file_path', $uploadResult['file_path'])
+            ->value('id');
+        $this->assertNotEmpty($fileId, 'Original upload did not persist a Document record for version retrieval.');
         
         // Create version
-        $newFile = UploadedFile::fake()->create('document_v2.pdf', 150, 'application/pdf');
+        $newFile = UploadedFile::fake()
+            ->createWithContent('document_v2.pdf', $this->fakePdfContent('Second Version'))
+            ->mimeType('application/pdf');
         $this->service->createFileVersion(
-            $uploadResult['file_id'],
+            $fileId,
             $newFile,
             $this->user->id,
             $this->tenant->id,
             'Updated document'
         );
 
-        $versions = $this->service->getFileVersions($uploadResult['file_id'], $this->tenant->id);
+        $versions = $this->service->getFileVersions($fileId, $this->tenant->id);
 
         $this->assertCount(2, $versions);
     }
@@ -341,5 +365,39 @@ class SecureUploadServiceTest extends TestCase
         
         $this->assertInstanceOf(UploadedFile::class, $strippedFile);
         $this->assertNotEquals($file->getPathname(), $strippedFile->getPathname());
+    }
+
+    private function fakePdfContent(string $title): string
+    {
+        return <<<PDF
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 44 >>
+stream
+BT /F1 24 Tf 100 700 Td ({$title}) Tj ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f 
+0000000010 00000 n 
+0000000069 00000 n 
+0000000134 00000 n 
+0000000229 00000 n 
+trailer
+<< /Size 5 /Root 1 0 R >>
+startxref
+347
+%%EOF
+PDF;
     }
 }

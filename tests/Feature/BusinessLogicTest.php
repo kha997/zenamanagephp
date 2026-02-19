@@ -9,21 +9,18 @@ use App\Models\Component;
 use App\Models\Tenant;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\SSOT\FixtureFactory;
 
 /**
  * Test chức năng nghiệp vụ cơ bản của hệ thống
  */
 class BusinessLogicTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, FixtureFactory;
 
-    /**
-     * Test tạo và quản lý project cơ bản
-     */
-    public function test_can_create_and_manage_project(): void
+    private function createCoreFixtureSet(): array
     {
-        // Tạo tenant
-        $tenant = Tenant::create([
+        $tenant = $this->createTenant([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -32,8 +29,7 @@ class BusinessLogicTest extends TestCase
             'is_active' => true,
         ]);
 
-        // Tạo user
-        $user = User::create([
+        $user = $this->createTenantUserWithRbac($tenant, 'member', 'member', [], [
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
@@ -42,8 +38,7 @@ class BusinessLogicTest extends TestCase
             'profile_data' => '{}',
         ]);
 
-        // Tạo project
-        $project = Project::create([
+        $project = $this->createProjectForTenant($tenant, $user, [
             'name' => 'Test Project',
             'code' => 'TEST-001',
             'description' => 'Test Description',
@@ -51,6 +46,16 @@ class BusinessLogicTest extends TestCase
             'tenant_id' => $tenant->id,
             'created_by' => $user->id,
         ]);
+
+        return ['tenant' => $tenant, 'user' => $user, 'project' => $project];
+    }
+
+    /**
+     * Test tạo và quản lý project cơ bản
+     */
+    public function test_can_create_and_manage_project(): void
+    {
+        ['tenant' => $tenant, 'project' => $project] = $this->createCoreFixtureSet();
 
         // Kiểm tra project được tạo
         $this->assertDatabaseHas('projects', [
@@ -73,35 +78,7 @@ class BusinessLogicTest extends TestCase
      */
     public function test_can_create_and_manage_task(): void
     {
-        // Tạo tenant
-        $tenant = Tenant::create([
-            'name' => 'Test Company',
-            'slug' => 'test-company',
-            'domain' => 'test.com',
-            'settings' => json_encode(['timezone' => 'Asia/Ho_Chi_Minh']),
-            'status' => 'trial',
-            'is_active' => true,
-        ]);
-
-        // Tạo user
-        $user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => bcrypt('password'),
-            'tenant_id' => $tenant->id,
-            'is_active' => true,
-            'profile_data' => '{}',
-        ]);
-
-        // Tạo project
-        $project = Project::create([
-            'name' => 'Test Project',
-            'code' => 'TEST-001',
-            'description' => 'Test Description',
-            'status' => 'planning',
-            'tenant_id' => $tenant->id,
-            'created_by' => $user->id,
-        ]);
+        ['tenant' => $tenant, 'user' => $user, 'project' => $project] = $this->createCoreFixtureSet();
 
         // Tạo task
         $task = Task::create([
@@ -137,35 +114,7 @@ class BusinessLogicTest extends TestCase
      */
     public function test_can_create_and_manage_component(): void
     {
-        // Tạo tenant
-        $tenant = Tenant::create([
-            'name' => 'Test Company',
-            'slug' => 'test-company',
-            'domain' => 'test.com',
-            'settings' => json_encode(['timezone' => 'Asia/Ho_Chi_Minh']),
-            'status' => 'trial',
-            'is_active' => true,
-        ]);
-
-        // Tạo user
-        $user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => bcrypt('password'),
-            'tenant_id' => $tenant->id,
-            'is_active' => true,
-            'profile_data' => '{}',
-        ]);
-
-        // Tạo project
-        $project = Project::create([
-            'name' => 'Test Project',
-            'code' => 'TEST-001',
-            'description' => 'Test Description',
-            'status' => 'planning',
-            'tenant_id' => $tenant->id,
-            'created_by' => $user->id,
-        ]);
+        ['tenant' => $tenant, 'user' => $user, 'project' => $project] = $this->createCoreFixtureSet();
 
         // Tạo component
         $component = Component::create([
@@ -201,35 +150,7 @@ class BusinessLogicTest extends TestCase
      */
     public function test_entity_relationships(): void
     {
-        // Tạo tenant
-        $tenant = Tenant::create([
-            'name' => 'Test Company',
-            'slug' => 'test-company',
-            'domain' => 'test.com',
-            'settings' => json_encode(['timezone' => 'Asia/Ho_Chi_Minh']),
-            'status' => 'trial',
-            'is_active' => true,
-        ]);
-
-        // Tạo user
-        $user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => bcrypt('password'),
-            'tenant_id' => $tenant->id,
-            'is_active' => true,
-            'profile_data' => '{}',
-        ]);
-
-        // Tạo project
-        $project = Project::create([
-            'name' => 'Test Project',
-            'code' => 'TEST-001',
-            'description' => 'Test Description',
-            'status' => 'planning',
-            'tenant_id' => $tenant->id,
-            'created_by' => $user->id,
-        ]);
+        ['tenant' => $tenant, 'user' => $user, 'project' => $project] = $this->createCoreFixtureSet();
 
         // Tạo task
         $task = Task::create([

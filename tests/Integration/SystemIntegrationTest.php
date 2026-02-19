@@ -7,18 +7,20 @@ use App\Models\User;
 use App\Models\UserDashboard;
 use App\Models\DashboardWidget;
 use App\Models\DashboardMetric;
+use App\Models\DashboardMetricValue;
 use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\RFI;
+use App\Models\Rfi;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Laravel\Sanctum\Sanctum;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Tests\Traits\AuthenticationTrait;
 
 class SystemIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait;
 
     protected $user;
     protected $project;
@@ -27,39 +29,41 @@ class SystemIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Create test tenant
-        $this->tenant = \App\Models\Tenant::create([
-            'name' => 'Test Tenant',
-            'domain' => 'test.com',
-            'is_active' => true
-        ]);
-        
-        // Create test user
-        $this->user = User::create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'password' => Hash::make('password'),
-            'role' => 'project_manager',
-            'tenant_id' => $this->tenant->id
-        ]);
-        
+
+        // Create tenant and user via shared test auth helpers
+        $this->tenant = \App\Models\Tenant::factory()->create();
+        $this->user = $this->createTenantUser(
+            $this->tenant,
+            ['role' => 'project_manager'],
+            ['project_manager']
+        );
+
         // Create test project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'pm_id' => $this->user->id,
+            'created_by' => $this->user->id,
             'name' => 'Test Project',
-            'description' => 'Test project description',
             'status' => 'active',
-            'budget' => 100000,
-            'start_date' => now(),
-            'end_date' => now()->addMonths(6),
-            'tenant_id' => $this->tenant->id
         ]);
         
         // Create comprehensive test data
         $this->createComprehensiveTestData();
+
+        // Seed a canonical dashboard so all dashboard endpoints operate on one record.
+        UserDashboard::create([
+            'user_id' => $this->user->id,
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Default Dashboard',
+            'layout_config' => ['columns' => 4, 'rows' => 3, 'gap' => 16],
+            'widgets' => [],
+            'preferences' => ['theme' => 'light'],
+            'is_default' => true,
+            'is_active' => true,
+        ]);
         
         // Authenticate user
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
     }
 
     protected function createComprehensiveTestData(): void
@@ -233,7 +237,7 @@ class SystemIntegrationTest extends TestCase
     protected function createAllMetricTypes(): void
     {
         // Gauge metrics
-        DashboardMetric::create([
+        $projectProgressMetric = DashboardMetric::create([
             'name' => 'Project Progress',
             'code' => 'project_progress',
             'description' => 'Overall project progress percentage',
@@ -242,6 +246,14 @@ class SystemIntegrationTest extends TestCase
             'is_active' => true,
             'permissions' => json_encode(['project_manager', 'site_engineer', 'client_rep']),
             'tenant_id' => $this->tenant->id
+        ]);
+
+        DashboardMetricValue::create([
+            'metric_id' => $projectProgressMetric->id,
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'value' => 65.0,
+            'recorded_at' => now(),
         ]);
 
         DashboardMetric::create([
@@ -318,7 +330,7 @@ class SystemIntegrationTest extends TestCase
     {
         // Create tasks with different statuses
         $taskStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
-        $priorities = ['low', 'medium', 'high', 'critical'];
+        $priorities = ['low', 'medium', 'high', 'urgent'];
         
         for ($i = 1; $i <= 50; $i++) {
             Task::create([
@@ -339,12 +351,17 @@ class SystemIntegrationTest extends TestCase
         
         for ($i = 1; $i <= 25; $i++) {
             RFI::create([
+                'title' => "RFI {$i}",
                 'subject' => "RFI {$i}",
                 'description' => "Description for RFI {$i}",
+                'question' => "Question for RFI {$i}",
+                'rfi_number' => (string) \Illuminate\Support\Str::ulid(),
                 'status' => $rfiStatuses[array_rand($rfiStatuses)],
                 'priority' => $priorities[array_rand($priorities)],
                 'due_date' => now()->addDays(rand(1, 14)),
                 'discipline' => $disciplines[array_rand($disciplines)],
+                'asked_by' => $this->user->id,
+                'created_by' => $this->user->id,
                 'project_id' => $this->project->id,
                 'tenant_id' => $this->tenant->id
             ]);
@@ -419,6 +436,7 @@ class SystemIntegrationTest extends TestCase
         // Step 4: Update dashboard layout
         $dashboardResponse = $this->getJson('/api/v1/dashboard');
         $layout = $dashboardResponse->json('data.layout');
+        $this->assertCount(5, $layout);
 
         // Arrange widgets in a grid
         foreach ($layout as $index => $widgetInstance) {
@@ -429,7 +447,8 @@ class SystemIntegrationTest extends TestCase
         }
 
         $layoutResponse = $this->putJson('/api/v1/dashboard/layout', [
-            'layout' => $layout
+            'layout' => $layout,
+            'widgets' => $layout,
         ]);
         
         $layoutResponse->assertStatus(200);
@@ -466,7 +485,7 @@ class SystemIntegrationTest extends TestCase
         });
 
         if (count($unreadAlerts) > 0) {
-            $firstAlert = $unreadAlerts[0];
+            $firstAlert = array_values($unreadAlerts)[0];
             
             $markReadResponse = $this->putJson("/api/v1/dashboard/alerts/{$firstAlert['id']}/read");
             $markReadResponse->assertStatus(200);
@@ -522,7 +541,9 @@ class SystemIntegrationTest extends TestCase
         $widgetTypes = ['card', 'chart', 'table', 'alert', 'timeline', 'progress'];
         
         foreach ($widgetTypes as $type) {
-            $widget = DashboardWidget::where('type', $type)->first();
+            $widget = DashboardWidget::where('type', $type)
+                ->get()
+                ->first(fn (DashboardWidget $candidate) => $candidate->isAvailableForRole($this->user->role));
             
             if ($widget) {
                 // Add widget
@@ -565,21 +586,29 @@ class SystemIntegrationTest extends TestCase
     public function it_can_handle_all_metric_types()
     {
         $metricTypes = ['gauge', 'counter', 'histogram', 'summary'];
-        
+        $seededMetrics = [];
+
         foreach ($metricTypes as $type) {
-            $metric = DashboardMetric::where('type', $type)->first();
-            
-            if ($metric) {
-                // Create metric value
-                \App\Models\DashboardMetricValue::create([
-                    'metric_id' => $metric->id,
-                    'tenant_id' => $this->tenant->id,
-                    'project_id' => $this->project->id,
-                    'value' => rand(1, 100),
-                    'timestamp' => now(),
-                    'context' => json_encode(['test' => true])
-                ]);
-            }
+            $metric = DashboardMetric::create([
+                'name' => 'Integration Metric ' . $type,
+                'code' => 'integration_metric_' . $type . '_' . Str::lower((string) Str::ulid()),
+                'description' => 'Deterministic metric for ' . $type . ' assertion',
+                'unit' => 'count',
+                'type' => $type,
+                'is_active' => true,
+                'permissions' => json_encode(['project_manager']),
+                'tenant_id' => $this->tenant->id,
+            ]);
+
+            DashboardMetricValue::create([
+                'metric_id' => $metric->id,
+                'tenant_id' => $this->tenant->id,
+                'project_id' => $this->project->id,
+                'value' => rand(1, 100),
+                'recorded_at' => now(),
+            ]);
+
+            $seededMetrics[$type] = $metric;
         }
 
         // Test metrics endpoint
@@ -588,11 +617,23 @@ class SystemIntegrationTest extends TestCase
         
         $metrics = $metricsResponse->json('data');
         $this->assertIsArray($metrics);
-        
-        // Verify all metric types are present
-        $presentTypes = array_unique(array_column($metrics, 'type'));
+
+        // Ensure the API includes each seeded metric id (DashboardService skips metrics without values)
+        $returnedMetricIds = array_values(array_filter(array_column($metrics, 'id')));
+        foreach ($seededMetrics as $type => $metric) {
+            $this->assertContains($metric->id, $returnedMetricIds, "Seeded {$type} metric id was not returned by API");
+        }
+
+        // API payload does not include "type", derive returned types from returned metric records.
+        $returnedTypes = DashboardMetric::query()
+            ->whereIn('id', $returnedMetricIds)
+            ->pluck('type')
+            ->unique()
+            ->values()
+            ->all();
+
         foreach ($metricTypes as $type) {
-            $this->assertContains($type, $presentTypes);
+            $this->assertContains($type, $returnedTypes);
         }
     }
 
@@ -648,7 +689,7 @@ class SystemIntegrationTest extends TestCase
         
         foreach ($roles as $role) {
             // Create user with specific role
-            $user = User::create([
+            $user = User::factory()->create([
                 'name' => "Test {$role}",
                 'email' => "{$role}@example.com",
                 'password' => Hash::make('password'),
@@ -656,7 +697,7 @@ class SystemIntegrationTest extends TestCase
                 'tenant_id' => $this->tenant->id
             ]);
 
-            Sanctum::actingAs($user);
+            $this->apiAs($user, $this->tenant);
 
             // Test role-based dashboard
             $roleBasedResponse = $this->getJson('/api/v1/dashboard/role-based');
@@ -746,12 +787,17 @@ class SystemIntegrationTest extends TestCase
         // Create large number of RFIs
         for ($i = 1; $i <= 500; $i++) {
             RFI::create([
+                'title' => "RFI {$i}",
                 'subject' => "RFI {$i}",
                 'description' => "Description for RFI {$i}",
+                'question' => "Question for RFI {$i}",
+                'rfi_number' => (string) \Illuminate\Support\Str::ulid(),
                 'status' => 'open',
                 'priority' => 'medium',
                 'due_date' => now()->addDays(rand(1, 14)),
                 'discipline' => 'construction',
+                'asked_by' => $this->user->id,
+                'created_by' => $this->user->id,
                 'project_id' => $this->project->id,
                 'tenant_id' => $this->tenant->id
             ]);
@@ -785,22 +831,30 @@ class SystemIntegrationTest extends TestCase
     /** @test */
     public function it_can_handle_database_transactions()
     {
-        // Test transaction rollback on error
-        DB::shouldReceive('beginTransaction')->once();
-        DB::shouldReceive('rollBack')->once();
-        
-        // Mock service to throw exception
-        $this->mock(\App\Services\DashboardService::class, function ($mock) {
-            $mock->shouldReceive('addWidget')->andThrow(new \Exception('Database error'));
+        $widget = DashboardWidget::firstOrFail();
+        $dashboard = UserDashboard::forUser($this->user->id)
+            ->default()
+            ->active()
+            ->firstOrFail();
+        $initialWidgets = $dashboard->widgets ?? [];
+
+        // Force an exception during layout persistence inside addWidget transaction.
+        $failingDashboard = \Mockery::mock(UserDashboard::class)->makePartial();
+        $failingDashboard->widgets = $initialWidgets;
+        $failingDashboard->layout_config = $dashboard->layout_config;
+        $failingDashboard->shouldReceive('update')->once()->andThrow(new \RuntimeException('Database error'));
+
+        $this->partialMock(\App\Services\DashboardService::class, function ($mock) use ($failingDashboard) {
+            $mock->shouldReceive('getUserDashboard')->once()->andReturn($failingDashboard);
         });
 
-        $widget = DashboardWidget::first();
-        
         $response = $this->postJson('/api/v1/dashboard/widgets', [
             'widget_id' => $widget->id
         ]);
 
         $response->assertStatus(500);
+
+        $this->assertEquals($initialWidgets, $dashboard->fresh()->widgets);
     }
 
     /** @test */

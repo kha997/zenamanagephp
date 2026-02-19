@@ -22,7 +22,7 @@ class TaskDependencyService
      */
     public function addDependency(Task $task, int $dependencyTaskId): void
     {
-        $dependencies = $task->dependencies ?? [];
+        $dependencies = $task->dependencies_json ?? [];
         
         if (!in_array($dependencyTaskId, $dependencies)) {
             $dependencies[] = $dependencyTaskId;
@@ -30,7 +30,7 @@ class TaskDependencyService
             // Validate trước khi save
             $this->validateDependencies($dependencies, $task->project_id, $task->id);
             
-            $task->dependencies = $dependencies;
+            $task->dependencies_json = $dependencies;
             $task->save();
         }
     }
@@ -40,10 +40,10 @@ class TaskDependencyService
      */
     public function removeDependency(Task $task, int $dependencyTaskId): void
     {
-        $dependencies = $task->dependencies ?? [];
+        $dependencies = $task->dependencies_json ?? [];
         $dependencies = array_values(array_filter($dependencies, fn($id) => $id !== $dependencyTaskId));
         
-        $task->dependencies = $dependencies;
+        $task->dependencies_json = $dependencies;
         $task->save();
     }
     
@@ -54,21 +54,21 @@ class TaskDependencyService
     {
         $tasks = Task::where('project_id', $projectId)
             ->where('is_hidden', false)
-            ->get(['id', 'name', 'dependencies']);
+            ->get(['id', 'name', 'dependencies_json']);
             
         $graph = [];
         
         foreach ($tasks as $task) {
             $graph[$task->id] = [
                 'name' => $task->name,
-                'dependencies' => $task->dependencies ?? [],
+                'dependencies' => $task->dependencies_json ?? [],
                 'dependents' => []
             ];
         }
         
         // Tính toán dependents (tasks phụ thuộc vào task này)
         foreach ($tasks as $task) {
-            foreach ($task->dependencies ?? [] as $depId) {
+            foreach ($task->dependencies_json ?? [] as $depId) {
                 if (isset($graph[$depId])) {
                     $graph[$depId]['dependents'][] = $task->id;
                 }
@@ -85,14 +85,14 @@ class TaskDependencyService
     {
         $tasks = Task::where('project_id', $projectId)
             ->where('is_hidden', false)
-            ->get(['id', 'dependencies']);
+            ->get(['id', 'dependencies_json']);
             
         $graph = [];
         $inDegree = [];
         
         // Khởi tạo graph và in-degree
         foreach ($tasks as $task) {
-            $graph[$task->id] = $task->dependencies ?? [];
+            $graph[$task->id] = $task->dependencies_json ?? [];
             $inDegree[$task->id] = 0;
         }
         
@@ -173,12 +173,12 @@ class TaskDependencyService
         
         // Tạo adjacency list
         $allTasks = Task::where('project_id', $projectId)
-            ->whereNotNull('dependencies')
-            ->get(['id', 'dependencies']);
+            ->whereNotNull('dependencies_json')
+            ->get(['id', 'dependencies_json']);
             
         $adjacencyList = [];
         foreach ($allTasks as $task) {
-            $adjacencyList[$task->id] = $task->dependencies ?? [];
+            $adjacencyList[$task->id] = $task->dependencies_json ?? [];
         }
         
         $adjacencyList[$taskId] = $newDependencies;
@@ -260,7 +260,7 @@ class TaskDependencyService
             ->where('is_hidden', false)
             ->get()
             ->filter(function ($task) use ($taskId) {
-                return in_array($taskId, $task->dependencies ?? []);
+                return in_array($taskId, $task->dependencies_json ?? []);
             });
             
         foreach ($dependentTasks as $dependentTask) {

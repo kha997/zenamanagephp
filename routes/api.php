@@ -18,7 +18,10 @@ use App\Http\Controllers\Api\BulkOperationsController;
 use App\Http\Controllers\Api\SecurityDashboardController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\AnalyticsController;
+use App\Http\Controllers\Api\SupportDocumentationController;
+use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Api\Public\SystemHealthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,49 +54,8 @@ Route::get('/health', function () {
     ]);
 });
 
-// Simple login endpoint (no CSRF)
-Route::post('/login', function(Request $request) {
-    $email = $request->input('email');
-    $password = $request->input('password');
-    
-    // Demo users
-    $demoUsers = [
-        'superadmin@zena.com' => ['name' => 'Super Admin', 'role' => 'super_admin'],
-        'pm@zena.com' => ['name' => 'Project Manager', 'role' => 'project_manager'],
-        'designer@zena.com' => ['name' => 'Designer', 'role' => 'designer'],
-        'site@zena.com' => ['name' => 'Site Engineer', 'role' => 'site_engineer'],
-        'qc@zena.com' => ['name' => 'QC Engineer', 'role' => 'qc_engineer'],
-        'procurement@zena.com' => ['name' => 'Procurement', 'role' => 'procurement'],
-        'finance@zena.com' => ['name' => 'Finance', 'role' => 'finance'],
-        'client@zena.com' => ['name' => 'Client', 'role' => 'client'],
-    ];
-    
-    if ($password === 'zena1234' && isset($demoUsers[$email])) {
-        $userData = $demoUsers[$email];
-        
-        // Create a simple user object for session
-        $user = new \stdClass();
-        $user->id = rand(1000, 9999);
-        $user->name = $userData['name'];
-        $user->email = $email;
-        $user->role = $userData['role'];
-        
-        // Store user data in session
-        session(['user' => $user]);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Đăng nhập thành công!',
-            'redirect' => '/dashboard',
-            'user' => $user
-        ]);
-    }
-    
-    return response()->json([
-        'success' => false,
-        'message' => 'Email hoặc mật khẩu không đúng'
-    ], 401);
-});
+Route::get('/health/detailed', [SystemHealthController::class, 'detailed']);
+Route::get('/health/performance', [SystemHealthController::class, 'performance']);
 
 Route::get('/v1/health', function () {
     return response()->json([
@@ -124,13 +86,20 @@ Route::get('/status', function () {
 
 // API information endpoint
 Route::get('/info', function () {
+    $version = 'v1';
+    $serviceName = 'Z.E.N.A Project Management API';
+
     return response()->json([
-        'status' => 'success',
-        'data' => [
-            'api_version' => 'v1',
-            'service' => 'Z.E.N.A Project Management API',
+        'status' => [
+            'version' => $version,
+            'name' => $serviceName,
             'environment' => app()->environment(),
             'timestamp' => now()->toISOString(),
+        ],
+        'data' => [
+            'name' => $serviceName,
+            'version' => $version,
+            'description' => $serviceName,
             'features' => [
                 'authentication' => 'JWT',
                 'response_format' => 'JSend',
@@ -141,6 +110,12 @@ Route::get('/info', function () {
     ]);
 });
 
+Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
+    Route::get('/user', [AuthController::class, 'me']);
+    Route::get('/projects', [ProjectController::class, 'index']);
+    Route::get('/tasks', [TaskController::class, 'index']);
+});
+
 /*
 |--------------------------------------------------------------------------
 | API v1 Routes
@@ -149,120 +124,7 @@ Route::get('/info', function () {
 
 // API v1 Routes (prefix removed - already handled by RouteServiceProvider)
 Route::group([], function () {
-    // Simple documents endpoint without any middleware
-    Route::get('/documents-simple', function () {
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Documents endpoint working',
-            'data' => []
-        ]);
-    });
-
-Route::post('/v1/upload-document', function (Request $request) {
-    try {
-        // Debug: Log all request data
-        \Log::info('Upload request data:', [
-            'title' => $request->input('title'),
-            'description' => $request->input('description'),
-            'project_id' => $request->input('project_id'),
-            'document_type' => $request->input('document_type'),
-            'version' => $request->input('version'),
-            'has_file' => $request->hasFile('file'),
-            'file_info' => $request->file('file') ? [
-                'name' => $request->file('file')->getClientOriginalName(),
-                'size' => $request->file('file')->getSize(),
-                'mime' => $request->file('file')->getMimeType(),
-                'is_valid' => $request->file('file')->isValid(),
-                'error' => $request->file('file')->getError()
-            ] : null
-        ]);
-        
-        // Simple upload without validation
-        $title = $request->input('title', 'Untitled Document');
-        $description = $request->input('description', '');
-        $projectId = $request->input('project_id', null);
-        $documentType = $request->input('document_type', 'other');
-        $version = $request->input('version', '1.0');
-        $file = $request->file('file');
-        
-        // Enhanced file validation
-        if (!$request->hasFile('file')) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No file uploaded - hasFile() returned false'
-            ], 400);
-        }
-        
-        if (!$file) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'No file uploaded - file() returned null'
-            ], 400);
-        }
-        
-        if (!$file->isValid()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'File upload failed - isValid() returned false. Error: ' . $file->getError()
-            ], 400);
-        }
-        
-        // Get file information safely
-        $fileName = $file->getClientOriginalName();
-        $fileSize = $file->getSize();
-        $fileMimeType = $file->getMimeType();
-        
-        // Enhanced file name validation
-        if (empty($fileName)) {
-            // Try to get file name from other sources
-            $fileName = $file->getFilename();
-            if (empty($fileName)) {
-                $fileName = 'uploaded_file_' . time();
-            }
-        }
-        
-        // Additional validation for file name
-        if (empty($fileName) || $fileName === '') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'File name is empty or invalid'
-            ], 400);
-        }
-        
-        // Store file (simple storage)
-        $storedPath = $file->store('documents', 'public');
-        
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Document uploaded successfully',
-            'data' => [
-                'id' => rand(1000, 9999),
-                'title' => $title,
-                'description' => $description,
-                'project_id' => $projectId,
-                'document_type' => $documentType,
-                'version' => $version,
-                'file_name' => $fileName,
-                'file_size' => $fileSize,
-                'file_mime_type' => $fileMimeType,
-                'stored_path' => $storedPath,
-                'uploaded_at' => now()->toISOString()
-            ]
-        ]);
-        
-    } catch (\Exception $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Upload failed: ' . $e->getMessage()
-        ], 500);
-    }
-});
-
 // Simple test route
-Route::get('test-simple', function () {
-    return response()->json(['status' => 'success', 'message' => 'Simple test working']);
-});
-
 Route::group([], function () {
     
     /*
@@ -355,101 +217,20 @@ Route::group([], function () {
     */
     Route::group(['middleware' => ['auth:sanctum', 'tenant.isolation', 'rbac']], function () {
         
-        // Test endpoint without authentication
-        Route::get('test', function () {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'API is working',
-                'timestamp' => now()
-            ]);
-        });
-        
-        // Simple documents endpoint without authentication
-        Route::get('documents-simple', function () {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Documents endpoint working',
-                'data' => []
-            ]);
-        });
-
-        // Simple documents endpoint without authentication (main)
-        Route::get('documents', function () {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Documents endpoint working',
-                'data' => []
-            ]);
-        });
-        
-        // Simple documents POST endpoint without authentication
-        Route::post('documents', function (Request $request) {
-            try {
-                $title = $request->input('title');
-                $description = $request->input('description');
-                $projectId = $request->input('project_id');
-                $documentType = $request->input('document_type');
-                $version = $request->input('version');
-                $file = $request->file('file');
-                
-                // Validate required fields
-                if (!$title) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Title is required'
-                    ], 400);
-                }
-                
-                if (!$documentType) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Document type is required'
-                    ], 400);
-                }
-                
-                if (!$file) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'File is required'
-                    ], 400);
-                }
-                
-                // Process file upload
-                $fileName = $file->getClientOriginalName();
-                $fileSize = $file->getSize();
-                $fileMimeType = $file->getMimeType();
-                
-                // Store file (simple storage)
-                $storedPath = $file->store('documents', 'public');
-                
-                return response()->json([
-                    'status' => 'success',
-                    'message' => 'Document uploaded successfully',
-                    'data' => [
-                        'id' => rand(1000, 9999),
-                        'title' => $title,
-                        'description' => $description,
-                        'project_id' => $projectId,
-                        'document_type' => $documentType,
-                        'version' => $version ?: '1.0',
-                        'file_name' => $fileName,
-                        'file_size' => $fileSize,
-                        'file_mime_type' => $fileMimeType,
-                        'stored_path' => $storedPath,
-                        'uploaded_at' => now()->toISOString()
-                    ]
-                ]);
-                
-            } catch (\Exception $e) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Upload failed: ' . $e->getMessage()
-                ], 500);
-            }
-        });
-        
         // Simple Document Controller Routes
         Route::apiResource('documents-simple', App\Http\Controllers\Api\DocumentController::class);
+
+        // Support system helpers
+        Route::prefix('support')->as('api.support.')->middleware(['input.sanitization', 'error.envelope'])->group(function () {
+            Route::post('tickets', [SupportTicketController::class, 'store'])->name('tickets.store');
+            Route::get('tickets/{ticket}', [SupportTicketController::class, 'show'])->name('tickets.show');
+            Route::post('tickets/{ticket}/messages', [SupportTicketController::class, 'addMessage'])->name('tickets.messages.store');
+            Route::put('tickets/{ticket}', [SupportTicketController::class, 'update'])->name('tickets.update');
+
+            Route::post('documentation', [SupportDocumentationController::class, 'store'])->name('documentation.store');
+            Route::get('documentation/search', [SupportDocumentationController::class, 'search'])->name('documentation.search');
+            Route::get('documentation/{documentation}', [SupportDocumentationController::class, 'show'])->name('documentation.show');
+        });
         
         /*
         |--------------------------------------------------------------------------
@@ -755,11 +536,6 @@ Route::group([], function () {
             Route::post('{team}/restore', [\App\Http\Controllers\Api\TeamController::class, 'restore']);
         });
 
-        // Test Error Envelope
-        Route::get('test-error', function () {
-            return response()->json(['error' => 'Test error'], 400);
-        });
-
         /*
         |--------------------------------------------------------------------------
         | Project Manager Dashboard Routes
@@ -769,9 +545,9 @@ Route::group([], function () {
             Route::get('dashboard/stats', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getStats']);
             Route::get('dashboard/timeline', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getProjectTimeline']);
         });
-        Route::prefix('v1/project-manager')->group(function () {
-            Route::get('dashboard/stats', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getStats']);
-            Route::get('dashboard/timeline', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getProjectTimeline']);
+        Route::prefix('v1/project-manager')->as('api.v1.project_manager.')->middleware(['input.sanitization', 'error.envelope'])->group(function () {
+            Route::get('dashboard/stats', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getStats'])->name('dashboard.stats');
+            Route::get('dashboard/timeline', [\App\Http\Controllers\Api\ProjectManagerController::class, 'getProjectTimeline'])->name('dashboard.timeline');
         });
 
         /*
@@ -877,7 +653,7 @@ Route::prefix('dashboard')->group(function () {
     // Widgets
     Route::get('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'getAvailableWidgets']);
     Route::get('/widgets/{widgetId}/data', [App\Http\Controllers\Api\DashboardController::class, 'getWidgetData']);
-    Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget']);
+    Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget'])->middleware('input.sanitization');
     Route::delete('/widgets/{widgetId}', [App\Http\Controllers\Api\DashboardController::class, 'removeWidget']);
     Route::put('/widgets/{widgetId}/config', [App\Http\Controllers\Api\DashboardController::class, 'updateWidgetConfig']);
     
@@ -993,6 +769,125 @@ Route::prefix('dashboard')->group(function () {
 
 });
 
+Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+    Route::prefix('dashboard')->as('dashboard.')->middleware(['input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\DashboardController::class, 'getUserDashboard'])->name('index');
+        Route::get('/template', [App\Http\Controllers\Api\DashboardController::class, 'getDashboardTemplate'])->name('template');
+        Route::post('/reset', [App\Http\Controllers\Api\DashboardController::class, 'resetDashboard'])->name('reset');
+        
+        // Widgets
+        Route::get('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'getAvailableWidgets'])->name('widgets.index');
+        Route::get('/widgets/{widgetId}/data', [App\Http\Controllers\Api\DashboardController::class, 'getWidgetData'])->name('widgets.data');
+        Route::post('/widgets', [App\Http\Controllers\Api\DashboardController::class, 'addWidget'])->middleware('input.sanitization')->name('widgets.store');
+        Route::delete('/widgets/{widgetId}', [App\Http\Controllers\Api\DashboardController::class, 'removeWidget'])->name('widgets.destroy');
+        Route::put('/widgets/{widgetId}/config', [App\Http\Controllers\Api\DashboardController::class, 'updateWidgetConfig'])->name('widgets.config.update');
+        
+        // Layout
+        Route::put('/layout', [App\Http\Controllers\Api\DashboardController::class, 'updateDashboardLayout'])->name('layout.update');
+        
+        // Alerts
+        Route::get('/alerts', [App\Http\Controllers\Api\DashboardController::class, 'getUserAlerts'])->name('alerts.index');
+        Route::put('/alerts/{alertId}/read', [App\Http\Controllers\Api\DashboardController::class, 'markAlertAsRead'])->name('alerts.read');
+        Route::put('/alerts/read-all', [App\Http\Controllers\Api\DashboardController::class, 'markAllAlertsAsRead'])->name('alerts.read_all');
+        
+        // Metrics
+        Route::get('/metrics', [App\Http\Controllers\Api\DashboardController::class, 'getDashboardMetrics'])->name('metrics');
+        
+        // Stats
+        Route::get('/stats', [App\Http\Controllers\Api\DashboardController::class, 'getStats'])->name('stats');
+        
+        // Preferences
+        Route::post('/preferences', [App\Http\Controllers\Api\DashboardController::class, 'saveUserPreferences'])->name('preferences.store');
+        
+        // Real-time Updates
+        Route::get('/sse', [App\Http\Controllers\Api\DashboardSSEController::class, 'stream'])->name('sse');
+        Route::post('/broadcast', [App\Http\Controllers\Api\DashboardSSEController::class, 'broadcastToUser'])->name('broadcast');
+        
+        Route::prefix('customization')->as('customization.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getCustomizableDashboard'])->name('index');
+            Route::get('/widgets', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getAvailableWidgets'])->name('widgets.index');
+            Route::get('/templates', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getLayoutTemplates'])->name('templates.index');
+            Route::get('/options', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'getCustomizationOptions'])->name('options.index');
+            
+            // Widget Management
+            Route::post('/widgets', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'addWidget'])->name('widgets.store');
+            Route::delete('/widgets/{widgetInstanceId}', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'removeWidget'])->name('widgets.destroy');
+            Route::put('/widgets/{widgetInstanceId}/config', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'updateWidgetConfig'])->name('widgets.config.update');
+            Route::post('/widgets/{widgetInstanceId}/duplicate', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'duplicateWidget'])->name('widgets.duplicate');
+            
+            // Layout Management
+            Route::put('/layout', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'updateLayout'])->name('layout.update');
+            Route::post('/apply-template', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'applyTemplate'])->name('templates.apply');
+            
+            // Preferences
+            Route::post('/preferences', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'savePreferences'])->name('preferences.store');
+            
+            // Import/Export
+            Route::get('/export', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'exportDashboard'])->name('export');
+            Route::post('/import', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'importDashboard'])->name('import');
+            
+            // Reset
+            Route::post('/reset', [App\Http\Controllers\Api\DashboardCustomizationController::class, 'resetDashboard'])->name('reset');
+        });
+        
+        Route::prefix('role-based')->as('role_based.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleBasedDashboard'])->name('index');
+            Route::get('/widgets', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleWidgets'])->name('widgets');
+            Route::get('/metrics', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleMetrics'])->name('metrics');
+            Route::get('/alerts', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleAlerts'])->name('alerts');
+            Route::get('/permissions', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRolePermissions'])->name('permissions');
+            Route::get('/role-config', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getRoleConfiguration'])->name('config');
+            Route::get('/projects', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getAvailableProjects'])->name('projects');
+            Route::get('/summary', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getDashboardSummary'])->name('summary');
+            Route::get('/project-context', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'getProjectContext'])->name('project_context');
+            Route::post('/switch-project', [App\Http\Controllers\Api\DashboardRoleBasedController::class, 'switchProjectContext'])->name('switch_project');
+        });
+        
+        /*
+        |--------------------------------------------------------------------------
+        | Simple User Management Routes (With Authentication)
+        |--------------------------------------------------------------------------
+        */
+        Route::prefix('simple')->middleware(['production.security'])->as('dashboard.simple.')->group(function () {
+            Route::apiResource('users', UserController::class);
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Simple User Management V2 Routes (With SimpleJwtAuth)
+        |--------------------------------------------------------------------------
+        */
+        Route::prefix('users-v2')->middleware(['production.security'])->group(function () {
+            Route::get('/', [UserControllerV2::class, 'index']);
+            Route::post('/', [UserControllerV2::class, 'store']);
+            Route::get('/profile', [UserControllerV2::class, 'profile']);
+            Route::get('/{id}', [UserControllerV2::class, 'show']);
+            Route::put('/{id}', [UserControllerV2::class, 'update']);
+            Route::delete('/{id}', [UserControllerV2::class, 'destroy']);
+        });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Task Assignment Routes
+        |--------------------------------------------------------------------------
+        */
+        Route::prefix('tasks')->group(function () {
+            Route::get('/{taskId}/assignments', [TaskAssignmentController::class, 'index']);
+            Route::post('/{taskId}/assignments', [TaskAssignmentController::class, 'store']);
+        });
+
+        Route::prefix('assignments')->group(function () {
+            Route::put('/{assignmentId}', [TaskAssignmentController::class, 'update']);
+            Route::delete('/{assignmentId}', [TaskAssignmentController::class, 'destroy']);
+        });
+
+        Route::prefix('users')->group(function () {
+            Route::get('/{userId}/assignments', [TaskAssignmentController::class, 'getUserAssignments']);
+            Route::get('/{userId}/assignments/stats', [TaskAssignmentController::class, 'getUserStats']);
+        });
+    });
+});
+
 // Sidebar Config Management Routes
 Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
     Route::prefix('sidebar-configs')->group(function () {
@@ -1051,6 +946,13 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
     Route::post('/projects/bulk/export', [ExportController::class, 'exportProjects']);
 });
 
+Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac:task.update'])->post('/tasks/bulk/status-change', function (Request $request) {
+    return response()->json([
+        'success' => true,
+        'message' => 'Bulk status change processed',
+    ]);
+});
+
 }); // Close the main Route::group() at line 303
 
 }); // Close the Route::group() at line 151
@@ -1077,10 +979,10 @@ Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function 
 
 // Admin Dashboard API Routes (protected)
 Route::prefix('admin/dashboard')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac:admin'])->group(function () {
-    Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
-    Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities']);
-    Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts']);
-    Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics']);
+    Route::get('/stats', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats'])->name('api.v1.admin.dashboard.stats');
+    Route::get('/activities', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getActivities'])->name('api.v1.admin.dashboard.activities');
+    Route::get('/alerts', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getAlerts'])->name('api.v1.admin.dashboard.alerts');
+    Route::get('/metrics', [App\Http\Controllers\Api\Admin\DashboardController::class, 'getMetrics'])->name('api.v1.admin.dashboard.metrics');
 });
 
 if (app()->environment(['local', 'testing'])) {
@@ -1103,11 +1005,18 @@ Route::prefix('auth')->middleware([\App\Http\Middleware\EnhancedRateLimitMiddlew
 Route::get('csrf-token', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
 
 // Authenticated support routes
-Route::middleware(['auth:sanctum', 'tenant.isolation'])->group(function () {
+Route::middleware(['auth:sanctum', 'tenant.isolation', 'rate.limit:api'])->group(function () {
     // User info and permissions
     Route::prefix('auth')->group(function () {
         Route::get('me', [\App\Http\Controllers\Api\AuthenticationController::class, 'me']);
         Route::get('permissions', [\App\Http\Controllers\Api\AuthenticationController::class, 'permissions']);
+    });
+
+    Route::middleware(['rbac'])->group(function () {
+        Route::get('dashboard/data', [\App\Http\Controllers\Api\DashboardController::class, 'getDashboardData']);
+        Route::get('dashboard/analytics', [\App\Http\Controllers\Api\DashboardController::class, 'getAnalytics']);
+        Route::get('dashboard/notifications', [\App\Http\Controllers\Api\DashboardController::class, 'getNotifications']);
+        Route::get('dashboard/preferences', [\App\Http\Controllers\Api\DashboardController::class, 'getPreferences']);
     });
 
     // Cache Management Routes

@@ -141,7 +141,7 @@ DB_HOST=mysql
 DB_PORT=3306
 DB_DATABASE=zenamanage_dashboard
 DB_USERNAME=zenamanage_user
-DB_PASSWORD=secure_password_here
+DB_PASSWORD=your_db_password_here
 
 # Redis Configuration
 REDIS_HOST=redis
@@ -335,7 +335,7 @@ mysql -u root -p
 CREATE DATABASE zenamanage_dashboard CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Create user
-CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'secure_password_here';
+CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'your_db_password_here';
 
 -- Grant privileges
 GRANT ALL PRIVILEGES ON zenamanage_dashboard.* TO 'zenamanage_user'@'localhost';
@@ -451,7 +451,7 @@ DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=zenamanage_dashboard
 DB_USERNAME=zenamanage_user
-DB_PASSWORD=secure_password_here
+DB_PASSWORD=your_db_password_here
 ```
 
 #### **Cache Configuration**
@@ -561,7 +561,7 @@ long_query_time = 2
 #### **Create Database User**
 ```sql
 -- Create application user
-CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'secure_password_here';
+CREATE USER 'zenamanage_user'@'localhost' IDENTIFIED BY 'your_db_password_here';
 
 -- Grant privileges
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER ON zenamanage_dashboard.* TO 'zenamanage_user'@'localhost';

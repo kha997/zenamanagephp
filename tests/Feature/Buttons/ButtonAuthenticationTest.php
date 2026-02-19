@@ -6,9 +6,12 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Providers\RouteServiceProvider;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Button Authentication Test
@@ -27,7 +30,7 @@ class ButtonAuthenticationTest extends TestCase
         parent::setUp();
         
         // Create test tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
             'status' => 'active'
@@ -37,13 +40,16 @@ class ButtonAuthenticationTest extends TestCase
         $roles = ['super_admin', 'admin', 'pm', 'designer', 'engineer', 'guest'];
         
         foreach ($roles as $role) {
-            $this->users[$role] = User::create([
+            $this->users[$role] = User::factory()->create([
                 'name' => ucfirst($role) . ' User',
                 'email' => $role . '@test-' . uniqid() . '.com',
                 'password' => Hash::make('password'),
                 'tenant_id' => $this->tenant->id
             ]);
         }
+
+        // Seed a login page request to generate a CSRF token for subsequent POSTs.
+        $this->get('/login');
     }
 
     /**
@@ -56,7 +62,8 @@ class ButtonAuthenticationTest extends TestCase
             'password' => 'password'
         ]);
 
-        $response->assertRedirect('/dashboard');
+        $expected = config('fortify.home') ?? RouteServiceProvider::HOME;
+        $response->assertRedirect($expected);
     }
 
     /**
@@ -67,8 +74,8 @@ class ButtonAuthenticationTest extends TestCase
         $this->actingAs($this->users['pm']);
         
         $response = $this->post('/logout');
-        
-        $response->assertRedirect('/');
+        $loginPath = Route::has('login') ? route('login', [], false) : '/login';
+        $response->assertRedirect($loginPath);
         $this->assertGuest();
     }
 
@@ -78,16 +85,17 @@ class ButtonAuthenticationTest extends TestCase
     public function test_protected_routes_require_authentication(): void
     {
         $protectedRoutes = [
-            '/projects',
-            '/tasks',
-            '/documents',
-            '/team',
-            '/admin'
+            '/app/projects',
+            '/app/tasks',
+            '/app/calendar',
+            '/admin/dashboard',
         ];
+
+        $loginPath = Route::has('login') ? route('login', [], false) : '/login';
 
         foreach ($protectedRoutes as $route) {
             $response = $this->get($route);
-            $response->assertRedirect('/login');
+            $response->assertRedirect($loginPath);
         }
     }
 
@@ -96,16 +104,25 @@ class ButtonAuthenticationTest extends TestCase
      */
     public function test_api_authentication(): void
     {
-        $response = $this->postJson('/api/login', [
+        $response = $this->postJson('/api/auth/login', [
             'email' => $this->users['pm']->email,
             'password' => 'password'
         ]);
 
         $response->assertStatus(200)
+                ->assertJson([
+                    'success' => true,
+                ])
                 ->assertJsonStructure([
                     'success',
-                    'message',
-                    'user'
+                    'data' => [
+                        'user',
+                        'token',
+                        'expires_at',
+                    ],
+                    'user',
+                    'token',
+                    'expires_at',
                 ]);
     }
 
@@ -116,15 +133,18 @@ class ButtonAuthenticationTest extends TestCase
     {
         $this->actingAs($this->users['pm']);
         
+        $loginPath = Route::has('login') ? route('login', [], false) : '/login';
+
         // Test session persistence
-        $response = $this->get('/dashboard');
+        $response = $this->get('/app/dashboard');
         $response->assertStatus(200);
         
         // Test session timeout (simulate)
         $this->app['session']->flush();
+        Auth::logout();
         
-        $response = $this->get('/dashboard');
-        $response->assertRedirect('/login');
+        $response = $this->get('/app/dashboard');
+        $response->assertRedirect($loginPath);
     }
 
     /**

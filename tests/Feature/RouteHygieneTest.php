@@ -21,7 +21,7 @@ class RouteHygieneTest extends TestCase
         'api/documents',
         'api/v1/change-requests',
         'api/v1/interaction-logs',
-        'api/analytics',
+        'api/analytics/dashboard',
         'api/dashboard',
     ];
 

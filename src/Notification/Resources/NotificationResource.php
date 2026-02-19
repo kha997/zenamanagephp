@@ -3,6 +3,7 @@
 namespace Src\Notification\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
+use Src\Notification\Models\Notification;
 use Src\RBAC\Resources\UserResource;
 
 /**
@@ -60,5 +61,49 @@ class NotificationResource extends JsonResource
                 'timestamp' => now()->toISOString(),
             ],
         ];
+    }
+
+    private function getPriorityLabel(): string
+    {
+        return match ($this->priority) {
+            Notification::PRIORITY_CRITICAL => 'Critical',
+            Notification::PRIORITY_NORMAL => 'Normal',
+            Notification::PRIORITY_LOW => 'Low',
+            default => ucfirst($this->priority ?? ''),
+        };
+    }
+
+    private function getChannelLabel(): string
+    {
+        return match ($this->channel) {
+            Notification::CHANNEL_INAPP => 'In-App',
+            Notification::CHANNEL_EMAIL => 'Email',
+            Notification::CHANNEL_WEBHOOK => 'Webhook',
+            default => ucfirst($this->channel ?? ''),
+        };
+    }
+
+    private function getTimeAgo(): ?string
+    {
+        if (!$this->created_at) {
+            return null;
+        }
+
+        return $this->created_at->diffForHumans();
+    }
+
+    private function isUrgent(): bool
+    {
+        return $this->priority === Notification::PRIORITY_CRITICAL;
+    }
+
+    private function getDisplayPriority(): string
+    {
+        return match ($this->priority) {
+            Notification::PRIORITY_CRITICAL => 'high',
+            Notification::PRIORITY_NORMAL => 'medium',
+            Notification::PRIORITY_LOW => 'low',
+            default => $this->priority ?? 'unknown',
+        };
     }
 }

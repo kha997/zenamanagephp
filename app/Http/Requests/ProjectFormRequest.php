@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Requests;
-use Illuminate\Support\Facades\Auth;
 
-
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 /**
@@ -77,6 +77,20 @@ class ProjectFormRequest extends FormRequest
             'tags.*.max' => 'Mỗi tag không được vượt quá 50 ký tự.',
             'settings.array' => 'Settings phải là một mảng.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function () use ($validator) {
+            if (
+                $this->filled('start_date') &&
+                $this->filled('end_date') &&
+                !strtotime($this->input('start_date')) &&
+                !$validator->errors()->has('end_date')
+            ) {
+                $validator->errors()->add('end_date', 'Ngày kết thúc phải sau ngày bắt đầu.');
+            }
+        });
     }
 
     /**

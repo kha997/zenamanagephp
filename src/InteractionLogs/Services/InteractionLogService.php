@@ -53,6 +53,7 @@ class InteractionLogService
                 'tag_path' => $data['tag_path'] ?? null,
                 'visibility' => $data['visibility'] ?? InteractionLog::VISIBILITY_INTERNAL,
                 'client_approved' => false, // Mặc định chưa approve
+                'tenant_id' => $data['tenant_id'] ?? AuthHelper::user()?->tenant_id,
                 'created_by' => AuthHelper::id() ?? $data['created_by']
             ];
             
@@ -60,8 +61,9 @@ class InteractionLogService
             $log = InteractionLog::create($logData);
             
             // Dispatch event
-            EventBus::dispatch('InteractionLog.Created', [
+            EventBus::dispatch('InteractionLogs.Log.Created', [
                 'log_id' => $log->id,
+                'entityId' => $log->id,
                 'project_id' => $log->project_id,
                 'linked_task_id' => $log->linked_task_id,
                 'type' => $log->type,
@@ -126,8 +128,9 @@ class InteractionLogService
             
             // Dispatch event nếu có thay đổi
             if (!empty($updateData)) {
-                EventBus::dispatch('InteractionLog.Updated', [
+                EventBus::dispatch('InteractionLogs.Log.Updated', [
                     'log_id' => $log->id,
+                    'entityId' => $log->id,
                     'project_id' => $log->project_id,
                     'linked_task_id' => $log->linked_task_id,
                     'changed_fields' => array_keys($updateData),
@@ -167,8 +170,9 @@ class InteractionLogService
         DB::beginTransaction();
         try {
             // Dispatch event trước khi xóa
-            EventBus::dispatch('InteractionLog.Deleted', [
+            EventBus::dispatch('InteractionLogs.Log.Deleted', [
                 'log_id' => $log->id,
+                'entityId' => $log->id,
                 'project_id' => $log->project_id,
                 'linked_task_id' => $log->linked_task_id,
                 'type' => $log->type,
@@ -334,13 +338,13 @@ class InteractionLogService
     /**
      * Lấy danh sách interaction logs của project với phân trang
      * 
-     * @param int $projectId ID của project
+     * @param string $projectId ID của project
      * @param string|null $type Loại interaction log
      * @param string $visibility Mức độ hiển thị (internal/client)
      * @param int $perPage Số lượng items per page
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function getProjectLogs(int $projectId, ?string $type = null, string $visibility = 'internal', int $perPage = 15)
+    public function getProjectLogs(string $projectId, ?string $type = null, string $visibility = 'internal', int $perPage = 15)
     {
         $query = InteractionLog::query()
             ->with(['linkedTask', 'creator'])
@@ -366,12 +370,12 @@ class InteractionLogService
     /**
      * Lấy danh sách logs theo tag path với phân trang
      * 
-     * @param int $projectId ID của project
+     * @param string $projectId ID của project
      * @param string $tagPath Tag path để filter
      * @param int $perPage Số lượng items per page
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function getLogsByTagPath(int $projectId, string $tagPath, int $perPage = 15)
+    public function getLogsByTagPath(string $projectId, string $tagPath, int $perPage = 15)
     {
         return InteractionLog::query()
             ->with(['linkedTask', 'creator'])
@@ -384,12 +388,12 @@ class InteractionLogService
     /**
      * Autocomplete cho tag_path trong project
      * 
-     * @param int $projectId ID của project
+     * @param string $projectId ID của project
      * @param string $query Từ khóa tìm kiếm
      * @param int $limit Số lượng gợi ý tối đa
      * @return array
      */
-    public function autocompleteTagPath(int $projectId, string $query = '', int $limit = 10): array
+    public function autocompleteTagPath(string $projectId, string $query = '', int $limit = 10): array
     {
         $queryBuilder = InteractionLog::query()
             ->select('tag_path')
@@ -535,8 +539,9 @@ class InteractionLogService
             
             // Dispatch event nếu có thay đổi
             if (!empty($updateData)) {
-                EventBus::dispatch('InteractionLog.Updated', [
+                EventBus::dispatch('InteractionLogs.Log.Updated', [
                     'log_id' => $log->id,
+                    'entityId' => $log->id,
                     'project_id' => $log->project_id,
                     'linked_task_id' => $log->linked_task_id,
                     'changed_fields' => array_keys($updateData),
@@ -573,8 +578,9 @@ class InteractionLogService
         DB::beginTransaction();
         try {
             // Dispatch event trước khi xóa
-            EventBus::dispatch('InteractionLog.Deleted', [
+            EventBus::dispatch('InteractionLogs.Log.Deleted', [
                 'log_id' => $log->id,
+                'entityId' => $log->id,
                 'project_id' => $log->project_id,
                 'linked_task_id' => $log->linked_task_id,
                 'type' => $log->type,

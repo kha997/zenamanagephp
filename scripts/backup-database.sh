@@ -12,7 +12,7 @@ DATE=$(date +"%Y%m%d_%H%M%S")
 DB_CONTAINER="zena_mysql"
 DB_NAME="zena_db"
 DB_USER="zena_user"
-DB_PASSWORD="secure_password"
+: "${DB_PASSWORD:?Set DB_PASSWORD (do NOT hardcode in repo)}"
 RETENTION_DAYS=30
 
 # Colors

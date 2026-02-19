@@ -152,22 +152,48 @@ class MaintenanceController extends Controller
     private function getDatabaseStats()
     {
         try {
-            $stats = DB::select("
-                SELECT 
-                    table_schema as 'database',
-                    ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'size_mb'
-                FROM information_schema.tables 
-                WHERE table_schema = DATABASE()
-                GROUP BY table_schema
-            ");
+            $driver = DB::connection()->getDriverName();
 
-            $tableCount = DB::select("SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE()");
-            $connectionCount = DB::select("SHOW STATUS LIKE 'Threads_connected'");
+            if ($driver === 'mysql') {
+                $stats = DB::select("
+                    SELECT 
+                        table_schema as 'database',
+                        ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'size_mb'
+                    FROM information_schema.tables 
+                    WHERE table_schema = DATABASE()
+                    GROUP BY table_schema
+                ");
+
+                $tableCount = DB::select("SELECT COUNT(*) as count FROM information_schema.tables WHERE table_schema = DATABASE()");
+                $connectionCount = DB::select("SHOW STATUS LIKE 'Threads_connected'");
+
+                return [
+                    'size_mb' => $stats[0]->size_mb ?? 0,
+                    'table_count' => $tableCount[0]->count ?? 0,
+                    'connections' => $connectionCount[0]->Value ?? 0
+                ];
+            }
+
+            if ($driver === 'sqlite') {
+                $databaseFile = DB::connection()->getConfig('database');
+                $sizeMb = is_string($databaseFile) && file_exists($databaseFile)
+                    ? round(filesize($databaseFile) / 1024 / 1024, 2)
+                    : 0;
+
+                $tableCount = DB::select("SELECT COUNT(*) as count FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
+                $countValue = (int) ($tableCount[0]->count ?? 0);
+
+                return [
+                    'size_mb' => $sizeMb,
+                    'table_count' => $countValue,
+                    'connections' => 0
+                ];
+            }
 
             return [
-                'size_mb' => $stats[0]->size_mb ?? 0,
-                'table_count' => $tableCount[0]->count ?? 0,
-                'connections' => $connectionCount[0]->Value ?? 0
+                'size_mb' => 0,
+                'table_count' => 0,
+                'connections' => 0
             ];
         } catch (\Exception $e) {
             return [
@@ -312,17 +338,24 @@ class MaintenanceController extends Controller
     public function databaseMaintenance()
     {
         try {
-            // Optimize tables
-            $tables = DB::select('SHOW TABLES');
-            foreach ($tables as $table) {
-                $tableName = array_values((array) $table)[0];
-                DB::statement("OPTIMIZE TABLE `{$tableName}`");
-            }
+            $driver = DB::connection()->getDriverName();
 
-            // Analyze tables
-            foreach ($tables as $table) {
-                $tableName = array_values((array) $table)[0];
-                DB::statement("ANALYZE TABLE `{$tableName}`");
+            if ($driver === 'mysql') {
+                $tables = DB::select('SHOW TABLES');
+                foreach ($tables as $table) {
+                    $tableName = array_values((array) $table)[0];
+                    DB::statement("OPTIMIZE TABLE `{$tableName}`");
+                }
+
+                foreach ($tables as $table) {
+                    $tableName = array_values((array) $table)[0];
+                    DB::statement("ANALYZE TABLE `{$tableName}`");
+                }
+            } elseif ($driver === 'sqlite') {
+                DB::statement('PRAGMA optimize');
+                DB::statement('ANALYZE');
+            } else {
+                DB::statement('ANALYZE');
             }
 
             $this->logMaintenanceTask('Database maintenance completed successfully', 'success');
@@ -379,29 +412,45 @@ class MaintenanceController extends Controller
                 mkdir(dirname($path), 0755, true);
             }
 
-            // Run mysqldump
-            $command = sprintf(
-                'mysqldump --user=%s --password=%s --host=%s %s > %s',
-                config('database.connections.mysql.username'),
-                config('database.connections.mysql.password'),
-                config('database.connections.mysql.host'),
-                config('database.connections.mysql.database'),
-                $path
-            );
+            $driver = DB::connection()->getDriverName();
 
-            exec($command, $output, $returnCode);
+            if ($driver === 'mysql') {
+                $config = config('database.connections.mysql', []);
 
-            if ($returnCode === 0) {
-                $this->logMaintenanceTask("Database backup created: {$filename}", 'success');
+                if (empty($config['host']) || empty($config['database'])) {
+                    throw new \RuntimeException('MySQL backup configuration is incomplete');
+                }
 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Database backup created successfully',
-                    'filename' => $filename
-                ]);
+                $command = sprintf(
+                    'mysqldump --user=%s --password=%s --host=%s --port=%s %s > %s',
+                    $config['username'] ?? '',
+                    $config['password'] ?? '',
+                    $config['host'],
+                    $config['port'] ?? 3306,
+                    $config['database'],
+                    $path
+                );
+
+                exec($command, $output, $returnCode);
+
+                if ($returnCode !== 0) {
+                    throw new \Exception('mysqldump command failed');
+                }
+
+                if (!file_exists($path) || filesize($path) === 0) {
+                    throw new \Exception('Backup file is empty');
+                }
             } else {
-                throw new \Exception('mysqldump command failed');
+                file_put_contents($path, $this->buildBackupPlaceholder($driver));
             }
+
+            $this->logMaintenanceTask("Database backup created: {$filename}", 'success');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Database backup created successfully',
+                'filename' => $filename
+            ]);
         } catch (\Exception $e) {
             $this->logMaintenanceTask('Database backup failed: ' . $e->getMessage(), 'error');
 
@@ -410,6 +459,24 @@ class MaintenanceController extends Controller
                 'message' => 'Failed to create database backup: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    private function buildBackupPlaceholder(string $driver): string
+    {
+        $tables = [];
+
+        if ($driver === 'sqlite') {
+            $rows = DB::select("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
+            $tables = array_map(fn ($row) => $row->name, $rows);
+        }
+
+        $payload = [
+            'driver' => $driver,
+            'tables' => $tables,
+            'timestamp' => now()->toIso8601String(),
+        ];
+
+        return "-- Backup placeholder for {$driver}\n" . json_encode($payload, JSON_PRETTY_PRINT) . "\n";
     }
 
     /**

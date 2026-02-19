@@ -8,7 +8,6 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 
 class CriticalUserFlowsE2ETest extends TestCase
 {
@@ -75,7 +74,8 @@ class CriticalUserFlowsE2ETest extends TestCase
      */
     public function test_complete_project_management_flow()
     {
-        Sanctum::actingAs($this->user);
+        $this->actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test project listing
         $response = $this->get('/app/projects');
@@ -134,7 +134,8 @@ class CriticalUserFlowsE2ETest extends TestCase
      */
     public function test_complete_task_management_flow()
     {
-        Sanctum::actingAs($this->user);
+        $this->actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test task listing
         $response = $this->get('/app/tasks');
@@ -208,7 +209,8 @@ class CriticalUserFlowsE2ETest extends TestCase
      */
     public function test_complete_dashboard_flow()
     {
-        Sanctum::actingAs($this->user);
+        $this->actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test dashboard access
         $response = $this->get('/app/dashboard');
@@ -258,10 +260,11 @@ class CriticalUserFlowsE2ETest extends TestCase
      */
     public function test_complete_error_handling_flow()
     {
-        Sanctum::actingAs($this->user);
+        $this->actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test 404 error
-        $response = $this->getJson('/api/v1/nonexistent-endpoint');
+        $response = $this->getJson('/api/v1/nonexistent-endpoint'); // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
         $response->assertStatus(404);
         $response->assertJsonStructure([
             'error' => [
@@ -294,7 +297,8 @@ class CriticalUserFlowsE2ETest extends TestCase
             'role' => 'member'
         ]);
 
-        Sanctum::actingAs($member);
+        $this->actingAs($member);
+        $this->apiAs($member, $this->tenant);
 
         $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
         $response->assertStatus(403);
@@ -326,7 +330,8 @@ class CriticalUserFlowsE2ETest extends TestCase
             'pm_id' => $otherUser->id
         ]);
 
-        Sanctum::actingAs($this->user);
+        $this->actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test that user cannot access other tenant's data
         $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
@@ -366,7 +371,8 @@ class CriticalUserFlowsE2ETest extends TestCase
      */
     public function test_complete_performance_flow()
     {
-        Sanctum::actingAs($this->user);
+        $this->actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test dashboard performance
         $startTime = microtime(true);
@@ -394,7 +400,8 @@ class CriticalUserFlowsE2ETest extends TestCase
      */
     public function test_complete_accessibility_flow()
     {
-        Sanctum::actingAs($this->user);
+        $this->actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         // Test dashboard accessibility
         $response = $this->get('/app/dashboard');

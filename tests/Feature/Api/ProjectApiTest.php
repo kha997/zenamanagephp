@@ -3,10 +3,11 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Project;
+use App\Models\Tenant;
 use App\Models\User;
 use Tests\TestCase;
-use Tests\Traits\DatabaseTrait;
 use Tests\Traits\AuthenticationTrait;
+use Tests\Traits\DatabaseTrait;
 use Illuminate\Foundation\Testing\WithFaker;
 
 /**
@@ -16,12 +17,24 @@ class ProjectApiTest extends TestCase
 {
     use DatabaseTrait, AuthenticationTrait, WithFaker;
     
+    private Tenant $tenant;
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->tenant = Tenant::factory()->create();
+        $this->user = $this->createTenantUser($this->tenant);
+        $this->apiAs($this->user, $this->tenant);
+    }
+    
     /**
      * Test get projects list
      */
     public function test_can_get_projects_list(): void
     {
-        $user = $this->actingAsUser();
+        $user = $this->user;
         
         // Tạo test projects cho tenant của user
         Project::factory()->count(3)->create([
@@ -31,7 +44,7 @@ class ProjectApiTest extends TestCase
         // Tạo projects cho tenant khác (không được trả về)
         Project::factory()->count(2)->create();
         
-        $response = $this->getJson('/api/v1/projects');
+        $response = $this->getJson('/api/projects');
         
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -44,8 +57,8 @@ class ProjectApiTest extends TestCase
                             'start_date',
                             'end_date',
                             'status',
-                            'progress',
-                            'actual_cost'
+            'progress',
+            'budget_actual'
                         ]
                     ]
                 ])
@@ -62,7 +75,7 @@ class ProjectApiTest extends TestCase
      */
     public function test_can_create_new_project(): void
     {
-        $user = $this->actingAsUser();
+        $user = $this->user;
         
         $projectData = [
             'name' => 'New Test Project',
@@ -72,7 +85,7 @@ class ProjectApiTest extends TestCase
             'status' => 'planning'
         ];
         
-        $response = $this->postJson('/api/v1/projects', $projectData);
+        $response = $this->postJson('/api/projects', $projectData);
         
         $response->assertStatus(201)
                 ->assertJsonStructure([
@@ -106,24 +119,27 @@ class ProjectApiTest extends TestCase
      */
     public function test_cannot_create_project_with_invalid_data(): void
     {
-        $this->actingAsUser();
-        
         $invalidData = [
             'name' => '', // Required field empty
             'start_date' => 'invalid-date',
             'status' => 'invalid-status'
         ];
         
-        $response = $this->postJson('/api/v1/projects', $invalidData);
+        $response = $this->postJson('/api/projects', $invalidData);
         
         $response->assertStatus(422)
                 ->assertJsonStructure([
-                    'status',
-                    'message',
-                    'errors'
+                    'error' => [
+                        'id',
+                        'code',
+                        'message',
+                        'details',
+                    ]
                 ])
                 ->assertJson([
-                    'status' => 'error'
+                    'error' => [
+                        'code' => 'E422.VALIDATION',
+                    ]
                 ]);
     }
     
@@ -132,24 +148,39 @@ class ProjectApiTest extends TestCase
      */
     public function test_can_get_specific_project(): void
     {
-        $user = $this->actingAsUser();
+        $user = $this->user;
         
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id,
             'name' => 'Specific Test Project'
         ]);
         
-        $response = $this->getJson("/api/v1/projects/{$project->id}");
-        
+        $response = $this->getJson("/api/projects/{$project->id}");
+
         $response->assertStatus(200)
-                ->assertJson([
-                    'status' => 'success',
+                ->assertJsonStructure([
+                    'status',
                     'data' => [
-                        'id' => $project->id,
-                        'name' => 'Specific Test Project',
-                        'tenant_id' => $user->tenant_id
-                    ]
-                ]);
+                        'project' => [
+                            'id',
+                            'name',
+                            'tenant_id',
+                        ],
+                        'metrics' => [
+                            'project_id',
+                            'progress',
+                            'tasks' => [
+                                'total',
+                                'completed',
+                                'pending',
+                            ],
+                            'status',
+                        ],
+                    ],
+                ])
+                ->assertJsonPath('data.project.id', $project->id)
+                ->assertJsonPath('data.project.name', 'Specific Test Project')
+                ->assertJsonPath('data.project.tenant_id', $user->tenant_id);
     }
     
     /**
@@ -157,18 +188,21 @@ class ProjectApiTest extends TestCase
      */
     public function test_cannot_access_project_from_different_tenant(): void
     {
-        $this->actingAsUser();
-        
         // Tạo project cho tenant khác
         $otherProject = Project::factory()->create();
         
-        $response = $this->getJson("/api/v1/projects/{$otherProject->id}");
-        
+        $response = $this->getJson("/api/projects/{$otherProject->id}");
+
         $response->assertStatus(404)
-                ->assertJson([
-                    'status' => 'error',
-                    'message' => 'Project not found'
-                ]);
+                ->assertJsonStructure([
+                    'error' => [
+                        'id',
+                        'code',
+                        'message',
+                        'details',
+                    ]
+                ])
+                ->assertJsonPath('error.message', 'Project not found');
     }
     
     /**
@@ -176,7 +210,7 @@ class ProjectApiTest extends TestCase
      */
     public function test_can_update_project(): void
     {
-        $user = $this->actingAsUser();
+        $user = $this->user;
         
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id,
@@ -185,10 +219,12 @@ class ProjectApiTest extends TestCase
         
         $updateData = [
             'name' => 'Updated Project Name',
-            'status' => 'active'
+            'status' => 'active',
+            'start_date' => $project->start_date->format('Y-m-d'),
+            'end_date' => $project->end_date->format('Y-m-d'),
         ];
         
-        $response = $this->putJson("/api/v1/projects/{$project->id}", $updateData);
+        $response = $this->putJson("/api/projects/{$project->id}", $updateData);
         
         $response->assertStatus(200)
                 ->assertJson([
@@ -213,23 +249,27 @@ class ProjectApiTest extends TestCase
      */
     public function test_can_delete_project(): void
     {
-        $user = $this->actingAsUser();
+        $user = $this->user;
         
         $project = Project::factory()->create([
             'tenant_id' => $user->tenant_id
         ]);
         
-        $response = $this->deleteJson("/api/v1/projects/{$project->id}");
+        $response = $this->deleteJson("/api/projects/{$project->id}");
         
         $response->assertStatus(200)
+                ->assertJsonStructure([
+                    'status',
+                    'message',
+                    'data'
+                ])
                 ->assertJson([
                     'status' => 'success',
-                    'data' => [
-                        'message' => 'Project deleted successfully'
-                    ]
+                    'message' => 'Project deleted successfully',
+                    'data' => []
                 ]);
-        
-        // Verify soft delete
+
+        // Verify project soft deleted
         $this->assertSoftDeleted('projects', ['id' => $project->id]);
     }
 }

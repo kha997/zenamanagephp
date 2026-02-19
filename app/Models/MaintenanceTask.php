@@ -3,18 +3,25 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MaintenanceTask extends Model
 {
+    use HasUlids, SoftDeletes;
+
+    protected $keyType = 'string';
+    public $incrementing = false;
 
     protected $fillable = [
+        'tenant_id',
+        'user_id',
         'task',
         'level',
         'priority',
         'status',
-        'user_id',
         'started_at',
         'completed_at',
         'error_message',
@@ -24,7 +31,8 @@ class MaintenanceTask extends Model
     protected $casts = [
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
-        'metadata' => 'array'
+        'metadata' => 'array',
+        'deleted_at' => 'datetime'
     ];
 
     /**

@@ -4,32 +4,76 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaDocument;
+use App\Models\Project;
+use App\Models\Document;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Filesystem\FilesystemManager;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
+use Tests\Traits\AuthenticationTestTrait;
+use Tests\Traits\RouteNameTrait;
 
 class DocumentManagementTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
-    protected $user;
-    protected $project;
-    protected $token;
+    protected User $user;
+    protected Project $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
-            'created_by' => $this->user->id
+
+        Config::set('filesystems.default', 'local');
+        Config::set('filesystems.cloud', 'local');
+
+        $this->app->forgetInstance('filesystem');
+        $this->app->forgetInstance(FilesystemManager::class);
+
+        $disks = array_unique(array_filter([
+            'local',
+            'public',
+            Config::get('filesystems.default'),
+            Config::get('filesystems.cloud'),
+            Config::get('documents.disk'),
+            Config::get('uploads.disk'),
+            Config::get('zena.documents.disk'),
+        ]));
+
+        foreach ($disks as $disk) {
+            if (!Config::has("filesystems.disks.$disk")) {
+                continue;
+            }
+
+            Storage::fake($disk);
+        }
+
+        $this->forgetCachedStorageServices();
+
+        $this->apiActingAsTenantAdmin();
+        $this->user = $this->apiFeatureUser;
+        $this->project = Project::factory()->create([
+            'tenant_id' => $this->apiFeatureTenant->id,
+            'created_by' => $this->user->id,
         ]);
-        $this->token = $this->generateJwtToken($this->user);
-        
-        Storage::fake('local');
+    }
+
+    private function forgetCachedStorageServices(): void
+    {
+        $services = [
+            \App\Services\FileStorageService::class,
+            \App\Services\EnhancedMimeValidationService::class,
+            \Src\Foundation\Services\FileStorageService::class,
+            \Src\Foundation\Services\EnhancedMimeValidationService::class,
+        ];
+
+        foreach ($services as $service) {
+            if ($this->app->bound($service)) {
+                $this->app->forgetInstance($service);
+            }
+        }
     }
 
     /**
@@ -37,17 +81,15 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_upload_document()
     {
-        $file = UploadedFile::fake()->create('test-document.pdf', 1000);
+        $file = $this->createValidPdfUploadedFile('test-document.pdf');
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/documents', [
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
             'project_id' => $this->project->id,
             'title' => 'Test Document',
             'description' => 'Test document description',
             'document_type' => 'drawing',
             'file' => $file,
-            'version' => '1.0',
+            'version' => 1,
             'tags' => ['test', 'drawing']
         ]);
 
@@ -65,10 +107,15 @@ class DocumentManagementTest extends TestCase
                 ]);
 
         $this->assertDatabaseHas('documents', [
-            'title' => 'Test Document',
+            'name' => 'Test Document',
             'project_id' => $this->project->id,
-            'document_type' => 'drawing'
         ]);
+        $storedDocument = Document::query()
+            ->where('project_id', $this->project->id)
+            ->latest('created_at')
+            ->first();
+        $this->assertNotNull($storedDocument);
+        $this->assertSame('drawing', data_get($storedDocument->metadata, 'document_type'));
 
         // Assert file was stored
         Storage::disk('local')->assertExists('documents/' . $this->project->id . '/' . $response->json('data.file_name'));
@@ -79,9 +126,7 @@ class DocumentManagementTest extends TestCase
      */
     public function test_document_upload_requires_valid_data()
     {
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/documents', []);
+        $response = $this->apiPost($this->namedRoute('v1.documents.store'), []);
 
         $response->assertStatus(422)
                 ->assertJsonValidationErrors(['project_id', 'title', 'document_type', 'file']);
@@ -92,11 +137,9 @@ class DocumentManagementTest extends TestCase
      */
     public function test_document_upload_validates_file_types()
     {
-        $file = UploadedFile::fake()->create('test-file.exe', 1000);
+        $file = UploadedFile::fake()->create('test-file.exe', 1000, 'application/x-msdownload');
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/documents', [
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
             'project_id' => $this->project->id,
             'title' => 'Test Document',
             'description' => 'Test document description',
@@ -113,11 +156,9 @@ class DocumentManagementTest extends TestCase
      */
     public function test_document_upload_validates_file_size()
     {
-        $file = UploadedFile::fake()->create('large-file.pdf', 15000); // 15MB
+        $file = $this->createLargePdfUploadedFile();
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/zena/documents', [
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.store'), [
             'project_id' => $this->project->id,
             'title' => 'Test Document',
             'description' => 'Test document description',
@@ -134,18 +175,18 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_download_document()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
-            'file_path' => 'documents/test-file.pdf'
+            'tenant_id' => $this->project->tenant_id,
+            'file_path' => 'documents/test-file.pdf',
+            'original_name' => 'test-file.pdf'
         ]);
 
         // Create a fake file
         Storage::disk('local')->put('documents/test-file.pdf', 'fake file content');
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/zena/documents/{$document->id}/download");
+        $response = $this->apiGet($this->namedRoute('v1.documents.download', ['id' => $document->id]));
 
         $response->assertStatus(200);
     }
@@ -155,18 +196,19 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_create_document_version()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
-            'uploaded_by' => $this->user->id
+            'uploaded_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
+            'metadata' => ['document_type' => 'drawing']
         ]);
+        $document->updateQuietly(['tenant_id' => $this->project->tenant_id]);
 
-        $file = UploadedFile::fake()->create('updated-document.pdf', 1000);
+        $file = $this->createValidPdfUploadedFile('updated-document.pdf');
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson("/api/zena/documents/{$document->id}/version", [
+        $response = $this->apiPostMultipart($this->namedRoute('v1.documents.versions.store', ['id' => $document->id]), [
             'file' => $file,
-            'version' => '2.0',
+            'version' => 2,
             'change_notes' => 'Updated with new specifications'
         ]);
 
@@ -183,8 +225,14 @@ class DocumentManagementTest extends TestCase
 
         $this->assertDatabaseHas('documents', [
             'parent_document_id' => $document->id,
-            'version' => '2.0',
-            'change_notes' => 'Updated with new specifications'
+            'version' => 2,
+        ]);
+        $this->assertDatabaseHas('documents', [
+            'parent_document_id' => $document->id,
+            'metadata' => json_encode([
+                'document_type' => 'drawing',
+                'change_notes' => 'Updated with new specifications'
+            ]),
         ]);
     }
 
@@ -193,21 +241,21 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_get_document_versions()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
-            'uploaded_by' => $this->user->id
+            'uploaded_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id
         ]);
 
         // Create versions
-        ZenaDocument::factory()->count(2)->create([
+        Document::factory()->count(2)->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
             'parent_document_id' => $document->id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/zena/documents/{$document->id}/versions");
+        $response = $this->apiGet($this->namedRoute('v1.documents.versions.index', ['id' => $document->id]));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -230,9 +278,10 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_update_document()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
-            'uploaded_by' => $this->user->id
+            'uploaded_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
         ]);
 
         $updateData = [
@@ -241,9 +290,7 @@ class DocumentManagementTest extends TestCase
             'tags' => ['updated', 'tag']
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/zena/documents/{$document->id}", $updateData);
+        $response = $this->apiPatch($this->namedRoute('v1.documents.update.patch', ['id' => $document->id]), $updateData);
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -258,7 +305,7 @@ class DocumentManagementTest extends TestCase
 
         $this->assertDatabaseHas('documents', [
             'id' => $document->id,
-            'title' => 'Updated Document Title'
+            'name' => 'Updated Document Title'
         ]);
     }
 
@@ -267,22 +314,21 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_delete_document()
     {
-        $document = ZenaDocument::factory()->create([
+        $document = Document::factory()->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
             'file_path' => 'documents/test-file.pdf'
         ]);
 
         // Create a fake file
         Storage::disk('local')->put('documents/test-file.pdf', 'fake file content');
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->deleteJson("/api/zena/documents/{$document->id}");
+        $response = $this->apiDelete($this->namedRoute('v1.documents.destroy', ['id' => $document->id]));
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('documents', [
+        $this->assertSoftDeleted('documents', [
             'id' => $document->id
         ]);
 
@@ -295,37 +341,37 @@ class DocumentManagementTest extends TestCase
      */
     public function test_can_filter_documents()
     {
-        ZenaDocument::factory()->count(3)->create([
+        Document::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
-            'document_type' => 'drawing'
+            'tenant_id' => $this->project->tenant_id,
+            'category' => 'drawing',
+            'metadata' => ['document_type' => 'drawing'],
         ]);
 
-        ZenaDocument::factory()->count(2)->create([
+        Document::factory()->count(2)->create([
             'project_id' => $this->project->id,
             'uploaded_by' => $this->user->id,
-            'document_type' => 'specification'
+            'tenant_id' => $this->project->tenant_id,
+            'category' => 'specification',
+            'metadata' => ['document_type' => 'specification'],
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/zena/documents?document_type=drawing');
+        $response = $this->apiGet($this->namedRoute('v1.documents.index', query: ['document_type' => 'drawing']));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
                     'status',
                     'data' => [
-                        'data' => [
-                            '*' => [
-                                'id',
-                                'title',
-                                'document_type'
-                            ]
+                        '*' => [
+                            'id',
+                            'title',
+                            'document_type'
                         ]
                     ]
                 ]);
 
-        $documents = $response->json('data.data');
+        $documents = $response->json('data');
         $this->assertCount(3, $documents);
         
         foreach ($documents as $document) {
@@ -338,15 +384,27 @@ class DocumentManagementTest extends TestCase
      */
     public function test_unauthorized_access_returns_401()
     {
-        $response = $this->getJson('/api/zena/documents');
+        $response = $this->getJson($this->namedRoute('v1.documents.index'));
         $response->assertStatus(401);
     }
 
-    /**
-     * Generate JWT token for testing
-     */
-    private function generateJwtToken(User $user): string
+    private function createValidPdfUploadedFile(string $name = 'test-document.pdf', int $paddingBytes = 0): UploadedFile
     {
-        return 'test-jwt-token-' . $user->id;
+        $padding = max(0, $paddingBytes);
+        $content = "%PDF-1.4\n1 0 obj<<>>endobj\n";
+
+        if ($padding > 0) {
+            $content .= str_repeat('0', $padding) . "\n";
+        }
+
+        $content .= "trailer<<>>\n%%EOF\n";
+
+        return UploadedFile::fake()->createWithContent($name, $content, 'application/pdf');
+    }
+
+    private function createLargePdfUploadedFile(): UploadedFile
+    {
+        $minSize = config('app.max_file_size', 10485760) + 2048;
+        return $this->createValidPdfUploadedFile('large-file.pdf', $minSize);
     }
 }

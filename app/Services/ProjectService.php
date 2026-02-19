@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Project;
+use App\Repositories\ProjectRepository;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Event;
 
@@ -64,13 +66,66 @@ class ProjectService
         
         return $project;
     }
+
+    public function updateProject(Project $project, array $data, string|int $userId): Project
+    {
+        $project->update($data);
+
+        Event::dispatch('project.updated', $project);
+
+        try {
+            $this->auditService->logCrudOperation('update', 'project', $project->id, [
+                'tenant_id' => $project->tenant_id,
+                'user_id' => $userId,
+                'project_id' => $project->id,
+                'project_name' => $project->name,
+                'project_code' => $project->code,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to log project update', [
+                'project_id' => $project->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return $project->refresh();
+    }
+
+    public function deleteProject(Project $project, string|int $userId): bool
+    {
+        $deleted = $project->delete();
+
+        Event::dispatch('project.deleted', $project);
+
+        try {
+            $this->auditService->logCrudOperation('delete', 'project', $project->id, [
+                'tenant_id' => $project->tenant_id,
+                'user_id' => $userId,
+                'project_id' => $project->id,
+                'project_name' => $project->name,
+                'project_code' => $project->code,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to log project deletion', [
+                'project_id' => $project->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return $deleted;
+    }
+
+    public function getProjectsList(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        return $this->projectRepository->getAll($filters, $perPage);
+    }
     
     /**
      * Get project metrics
      */
-    public function getProjectMetrics(int $projectId, int $userId, int $tenantId): array
+    public function getProjectMetrics(string $projectId, string $userId, string $tenantId): array
     {
-        $project = $this->projectRepository->findById($projectId);
+        $project = $this->projectRepository->getById($projectId);
         
         // Validate access
         $this->validateProjectAccess($project, $userId, $tenantId);

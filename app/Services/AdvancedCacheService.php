@@ -196,23 +196,55 @@ class AdvancedCacheService
      */
     public function getStats(): array
     {
+        $defaultStats = [
+            'redis' => [
+                'memory_used' => '0 B',
+                'connected_clients' => 0,
+                'total_commands_processed' => 0,
+                'keyspace_hits' => 0,
+                'keyspace_misses' => 0,
+            ],
+            'hit_rate' => 0.0,
+            'miss_rate' => 0.0,
+            'total_keys' => 0,
+            'memory_usage' => '0 B',
+            'uptime' => 1,
+            'connected_clients' => 0,
+            'used_memory_human' => '0 B',
+            'redis_version' => 'unknown',
+            'cache_size' => 0,
+        ];
+
         try {
             $redisInfo = Redis::info();
-            
+            $totalKeys = $this->getCacheSize();
+            $memoryUsage = $redisInfo['used_memory_human'] ?? '0 B';
+            $uptime = (int) ($redisInfo['uptime_in_seconds'] ?? 0);
+            if ($uptime <= 0) {
+                $uptime = 1;
+            }
+
             return [
                 'redis' => [
-                    'memory_used' => $redisInfo['used_memory_human'] ?? 'N/A',
+                    'memory_used' => $memoryUsage,
                     'connected_clients' => $redisInfo['connected_clients'] ?? 0,
                     'total_commands_processed' => $redisInfo['total_commands_processed'] ?? 0,
                     'keyspace_hits' => $redisInfo['keyspace_hits'] ?? 0,
                     'keyspace_misses' => $redisInfo['keyspace_misses'] ?? 0,
                 ],
-                'hit_rate' => $this->calculateHitRate(),
-                'cache_size' => $this->getCacheSize(),
+                'hit_rate' => $this->calculateHitRate($redisInfo),
+                'miss_rate' => $this->calculateMissRate($redisInfo),
+                'total_keys' => $totalKeys,
+                'memory_usage' => $memoryUsage,
+                'uptime' => $uptime,
+                'connected_clients' => $redisInfo['connected_clients'] ?? 0,
+                'used_memory_human' => $memoryUsage,
+                'redis_version' => $redisInfo['redis_version'] ?? 'unknown',
+                'cache_size' => $totalKeys,
             ];
         } catch (\Exception $e) {
             Log::error('Cache stats error', ['error' => $e->getMessage()]);
-            return [];
+            return $defaultStats;
         }
     }
 
@@ -332,11 +364,27 @@ class AdvancedCacheService
     {
         foreach ($tags as $tag) {
             $tagKey = "tag:{$tag}:{$tenantId}";
-            $keys = Redis::smembers($tagKey);
-            
+            try {
+                $keys = Redis::smembers($tagKey);
+            } catch (\Exception $e) {
+                Log::warning('Redis smembers error', [
+                    'tag_key' => $tagKey,
+                    'error' => $e->getMessage(),
+                ]);
+                continue;
+            }
+
             if (!empty($keys)) {
-                Redis::del($keys);
-                Redis::del($tagKey);
+                try {
+                    Redis::del($keys);
+                    Redis::del($tagKey);
+                } catch (\Exception $e) {
+                    Log::warning('Redis delete error', [
+                        'keys' => $keys,
+                        'tag_key' => $tagKey,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
     }
@@ -347,10 +395,62 @@ class AdvancedCacheService
     private function invalidateByPattern(string $pattern, string $tenantId): void
     {
         $fullPattern = $this->buildKey($pattern, $tenantId);
-        $keys = Redis::keys($fullPattern);
-        
+        $keys = [];
+
+        try {
+            $keys = Redis::keys($fullPattern);
+        } catch (\Exception $e) {
+            Log::warning('Redis keys error', [
+                'pattern' => $fullPattern,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         if (!empty($keys)) {
-            Redis::del($keys);
+            try {
+                Redis::del($keys);
+            } catch (\Exception $e) {
+                Log::warning('Redis delete error', [
+                    'keys' => $keys,
+                    'pattern' => $fullPattern,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $this->invalidatePatternFromArrayStore($fullPattern);
+    }
+
+    private function invalidatePatternFromArrayStore(string $pattern): void
+    {
+        $store = Cache::getStore();
+
+        if (!$store instanceof \Illuminate\Cache\ArrayStore) {
+            return;
+        }
+
+        try {
+            $storageProp = new \ReflectionProperty($store, 'storage');
+            $storageProp->setAccessible(true);
+            $storage = $storageProp->getValue($store);
+            $cachePrefix = config('cache.prefix', '');
+            $matchPattern = $pattern;
+
+            $prefixSegment = $cachePrefix !== '' ? $cachePrefix . ':' : '';
+
+            foreach (array_keys($storage) as $key) {
+                if (fnmatch($matchPattern, $key)) {
+                    $keyWithoutPrefix = $prefixSegment !== '' && str_starts_with($key, $prefixSegment)
+                        ? substr($key, strlen($prefixSegment))
+                        : $key;
+                    Cache::forget($keyWithoutPrefix);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning('Array cache pattern invalidation error', [
+                'pattern' => $pattern,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -443,21 +543,28 @@ class AdvancedCacheService
     /**
      * Calculate cache hit rate
      */
-    private function calculateHitRate(): float
+    private function calculateHitRate(array $info): float
     {
-        try {
-            $redisInfo = Redis::info();
-            $hits = $redisInfo['keyspace_hits'] ?? 0;
-            $misses = $redisInfo['keyspace_misses'] ?? 0;
-            
-            if ($hits + $misses === 0) {
-                return 0.0;
-            }
-            
-            return round(($hits / ($hits + $misses)) * 100, 2);
-        } catch (\Exception $e) {
+        $hits = $info['keyspace_hits'] ?? 0;
+        $misses = $info['keyspace_misses'] ?? 0;
+
+        if ($hits + $misses === 0) {
             return 0.0;
         }
+
+        return round($hits / ($hits + $misses), 4);
+    }
+
+    private function calculateMissRate(array $info): float
+    {
+        $hits = $info['keyspace_hits'] ?? 0;
+        $misses = $info['keyspace_misses'] ?? 0;
+
+        if ($hits + $misses === 0) {
+            return 0.0;
+        }
+
+        return round($misses / ($hits + $misses), 4);
     }
 
     /**

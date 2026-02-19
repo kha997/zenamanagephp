@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Services\ErrorEnvelopeService;
 use Src\Foundation\Utils\JSendResponse;
 use Src\RBAC\Services\AuthService;
 
@@ -38,9 +39,19 @@ class AuthController
             $result = $this->authService->login($credentials);
 
             if (!$result['success']) {
-                return JSendResponse::fail([
-                    'message' => $result['message']
-                ], 401);
+                if (($result['status'] ?? null) === 403 && isset($result['code'])) {
+                    return ErrorEnvelopeService::error(
+                        $result['code'],
+                        $result['message'] ?? 'Account is inactive',
+                        [],
+                        403
+                    );
+                }
+
+                return JSendResponse::error(
+                    $result['message'] ?? 'Invalid credentials',
+                    $result['status'] ?? 401
+                );
             }
 
             return JSendResponse::success([
@@ -106,9 +117,13 @@ class AuthController
                 ], 404);
             }
 
-            return JSendResponse::success([
-                'user' => $user
+            $userData = $user->loadMissing('tenant')->toArray();
+
+            $responseData = array_merge($userData, [
+                'user' => $userData,
             ]);
+
+            return JSendResponse::success($responseData);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy thông tin user: ' . $e->getMessage(), 500);
         }
@@ -159,7 +174,7 @@ class AuthController
             }
 
             return JSendResponse::success([
-                'message' => 'Đăng xuất thành công'
+                'message' => 'Successfully logged out'
             ]);
         } catch (\Exception $e) {
             return JSendResponse::error('Đăng xuất thất bại: ' . $e->getMessage(), 500);

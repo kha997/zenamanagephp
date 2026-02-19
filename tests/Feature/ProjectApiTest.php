@@ -8,8 +8,8 @@ use Tests\TestCase;
 use App\Models\User;
 use App\Models\Tenant;
 use Src\CoreProject\Models\Project;
-use Src\RBAC\Models\Role;
-use Src\RBAC\Models\Permission;
+use App\Models\Role;
+use App\Models\Permission;
 use Illuminate\Support\Facades\Hash;
 
 class ProjectApiTest extends TestCase
@@ -19,6 +19,15 @@ class ProjectApiTest extends TestCase
     protected $user;
     protected $tenant;
     protected $token;
+
+    private function apiHeaders(): array
+    {
+        return [
+            'Authorization' => 'Bearer ' . $this->token,
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $this->tenant->id,
+        ];
+    }
 
     /**
      * Setup method
@@ -44,12 +53,12 @@ class ProjectApiTest extends TestCase
         $this->createRolesAndPermissions();
         
         // Login để lấy token
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
+        $loginResponse = $this->postJson('/api/auth/login', [
             'email' => $this->user->email,
             'password' => 'password123',
         ]);
         
-        $this->token = $loginResponse->json('data.token');
+        $this->token = $loginResponse->json('token');
     }
 
     /**
@@ -61,33 +70,49 @@ class ProjectApiTest extends TestCase
         $permissions = [
             'project.create',
             'project.read',
+            'project.write',
             'project.update',
             'project.delete',
         ];
         
         foreach ($permissions as $permissionCode) {
-            Permission::create([
-                'code' => $permissionCode,
-                'module' => 'project',
-                'action' => explode('.', $permissionCode)[1],
-                'description' => 'Permission for ' . $permissionCode
-            ]);
+            Permission::updateOrCreate(
+                ['name' => $permissionCode],
+                [
+                    'code' => $permissionCode,
+                    'module' => 'project',
+                    'action' => explode('.', $permissionCode)[1] ?? 'access',
+                    'description' => 'Permission for ' . $permissionCode
+                ]
+            );
         }
         
-        // Tạo role admin
-        $adminRole = Role::create([
-            'name' => 'Admin',
-            'scope' => 'system',
-            'description' => 'System Administrator'
-        ]);
-        
-        // Gán permissions cho role
-        $adminRole->permissions()->attach(
-            Permission::whereIn('code', $permissions)->pluck('id')
+        // Tạo role admin (lowercase)
+        $adminRole = Role::firstOrCreate(
+            ['name' => 'admin'],
+            [
+                'scope' => 'system',
+                'description' => 'System Administrator'
+            ]
+        );
+
+        // Tạo role Admin (CamelCase) để thỏa điều kiện controller cũ
+        $adminRoleCamel = Role::firstOrCreate(
+            ['name' => 'Admin'],
+            [
+                'scope' => 'system',
+                'description' => 'System Administrator'
+            ]
         );
         
+        $permissionIds = Permission::whereIn('name', $permissions)->pluck('id')->toArray();
+        
+        // Gán permissions cho các role
+        $adminRole->permissions()->syncWithoutDetaching($permissionIds);
+        $adminRoleCamel->permissions()->syncWithoutDetaching($permissionIds);
+        
         // Gán role cho user
-        $this->user->systemRoles()->attach($adminRole->id);
+        $this->user->roles()->syncWithoutDetaching([$adminRole->id, $adminRoleCamel->id]);
     }
 
     /**
@@ -100,28 +125,22 @@ class ProjectApiTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/v1/projects');
+        $response = $this->withHeaders($this->apiHeaders())
+                         ->getJson('/api/projects');
 
         $response->assertStatus(200)
                  ->assertJsonStructure([
+                     'success',
                      'status',
-                     'data' => [
-                         'projects' => [
-                             '*' => [
-                                 'id',
-                                 'name',
-                                 'description',
-                                 'start_date',
-                                 'end_date',
-                                 'status',
-                                 'progress',
-                                 'created_at',
-                                 'updated_at'
-                             ]
-                         ],
-                         'pagination'
+                     'status_text',
+                     'data',
+                     'meta' => [
+                         'pagination' => [
+                             'page',
+                             'per_page',
+                             'total',
+                             'last_page'
+                         ]
                      ]
                  ]);
     }
@@ -140,26 +159,26 @@ class ProjectApiTest extends TestCase
             'planned_cost' => 1000000
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/v1/projects', $projectData);
+        $response = $this->withHeaders($this->apiHeaders())
+                         ->postJson('/api/projects', $projectData);
 
         $response->assertStatus(201)
                  ->assertJsonStructure([
+                     'success',
                      'status',
+                     'status_text',
                      'data' => [
-                         'project' => [
-                             'id',
-                             'name',
-                             'description',
-                             'start_date',
-                             'end_date',
-                             'status',
-                             'created_at',
-                             'updated_at'
-                         ]
+                         'id',
+                         'name',
+                         'description',
+                         'tenant_id',
+                         'status',
+                         'created_at',
+                         'updated_at'
                      ]
-                 ]);
+                 ])
+                 ->assertJsonPath('data.name', $projectData['name'])
+                 ->assertJsonPath('data.tenant_id', (string) $this->tenant->id);
 
         $this->assertDatabaseHas('projects', [
             'name' => $projectData['name'],
@@ -176,20 +195,34 @@ class ProjectApiTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson("/api/v1/projects/{$project->id}");
+        $response = $this->withHeaders($this->apiHeaders())
+                         ->getJson("/api/projects/{$project->id}");
 
         $response->assertStatus(200)
-                 ->assertJson([
-                     'status' => 'success',
+                 ->assertJsonStructure([
+                     'success',
+                     'status',
+                     'status_text',
                      'data' => [
                          'project' => [
-                             'id' => $project->id,
-                             'name' => $project->name,
-                         ]
-                     ]
-                 ]);
+                             'id',
+                             'name',
+                             'tenant_id',
+                         ],
+                         'metrics' => [
+                             'project_id',
+                             'progress',
+                             'tasks' => [
+                                 'total',
+                                 'completed',
+                                 'pending',
+                             ],
+                             'status',
+                         ],
+                     ],
+                 ])
+                 ->assertJsonPath('data.project.id', $project->id)
+                 ->assertJsonPath('data.project.name', $project->name);
     }
 
     /**
@@ -204,23 +237,20 @@ class ProjectApiTest extends TestCase
         $updateData = [
             'name' => 'Updated Project Name',
             'description' => 'Updated description',
-            'status' => 'in_progress'
+            'status' => 'active',
+            'start_date' => $project->start_date->format('Y-m-d'),
+            'end_date' => $project->end_date->format('Y-m-d'),
         ];
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->putJson("/api/v1/projects/{$project->id}", $updateData);
+        $response = $this->withHeaders($this->apiHeaders())
+                         ->putJson("/api/projects/{$project->id}", $updateData);
 
         $response->assertStatus(200)
                  ->assertJson([
                      'status' => 'success',
-                     'data' => [
-                         'project' => [
-                             'id' => $project->id,
-                             'name' => 'Updated Project Name',
-                         ]
-                     ]
-                 ]);
+                 ])
+                 ->assertJsonPath('data.id', $project->id)
+                 ->assertJsonPath('data.name', 'Updated Project Name');
 
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
@@ -237,16 +267,19 @@ class ProjectApiTest extends TestCase
             'tenant_id' => $this->tenant->id
         ]);
 
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->deleteJson("/api/v1/projects/{$project->id}");
+        $response = $this->withHeaders($this->apiHeaders())
+                         ->deleteJson("/api/projects/{$project->id}");
 
         $response->assertStatus(200)
+                 ->assertJsonStructure([
+                     'status',
+                     'message',
+                     'data'
+                 ])
                  ->assertJson([
                      'status' => 'success',
-                     'data' => [
-                         'message' => 'Dự án đã được xóa thành công'
-                     ]
+                     'message' => 'Project deleted successfully',
+                     'data' => []
                  ]);
 
         $this->assertSoftDeleted('projects', [
@@ -259,12 +292,12 @@ class ProjectApiTest extends TestCase
      */
     public function test_create_project_validation_errors()
     {
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->postJson('/api/v1/projects', []);
+        $response = $this->withHeaders($this->apiHeaders())
+                         ->postJson('/api/projects', []);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['name', 'start_date', 'end_date']);
+                 ->assertJsonPath('error.code', 'E422.VALIDATION')
+                 ->assertJsonPath('error.details.validation.name.0', 'Tên dự án là bắt buộc.');
     }
 
     /**
@@ -272,7 +305,10 @@ class ProjectApiTest extends TestCase
      */
     public function test_unauthorized_access_to_projects()
     {
-        $response = $this->getJson('/api/v1/projects');
+        $response = $this->withHeaders([
+            'Accept' => 'application/json',
+            'X-Tenant-ID' => (string) $this->tenant->id,
+        ])->getJson('/api/projects');
 
         $response->assertStatus(401);
     }
@@ -282,14 +318,10 @@ class ProjectApiTest extends TestCase
      */
     public function test_project_not_found()
     {
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-        ])->getJson('/api/v1/projects/999999');
+        $response = $this->withHeaders($this->apiHeaders())
+                         ->getJson('/api/projects/999999');
 
         $response->assertStatus(404)
-                 ->assertJson([
-                     'status' => 'error',
-                     'message' => 'Dự án không tồn tại'
-                 ]);
+                 ->assertJsonPath('error.code', 'E404.NOT_FOUND');
     }
 }

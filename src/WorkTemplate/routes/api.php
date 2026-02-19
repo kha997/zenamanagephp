@@ -75,6 +75,7 @@ Route::prefix('v1/work-template')->middleware(['auth:api'])->group(function () {
         Route::prefix('tasks')->group(function () {
             // CRUD operations
             Route::post('/', [ProjectTaskController::class, 'store'])->middleware('rbac:task.create');
+            Route::get('conditional', [ProjectTaskController::class, 'conditionalTasks'])->middleware('rbac:task.view');
             Route::get('{taskId}', [ProjectTaskController::class, 'show'])->middleware('rbac:task.view');
             Route::put('{taskId}', [ProjectTaskController::class, 'update'])->middleware('rbac:task.edit');
             Route::delete('{taskId}', [ProjectTaskController::class, 'destroy'])->middleware('rbac:task.delete');
@@ -82,7 +83,7 @@ Route::prefix('v1/work-template')->middleware(['auth:api'])->group(function () {
             // Task specific actions
             Route::put('{taskId}/progress', [ProjectTaskController::class, 'updateProgress'])->middleware('rbac:task.edit');
             Route::put('{taskId}/status', [ProjectTaskController::class, 'updateStatus'])->middleware('rbac:task.edit');
-            Route::post('{taskId}/toggle-conditional', [ProjectTaskController::class, 'toggleConditionalVisibility'])->middleware('rbac:task.edit');
+            Route::post('{taskId}/toggle-conditional', [ProjectTaskController::class, 'toggleConditional'])->middleware('rbac:task.edit');
             
             // Bulk operations
             Route::post('bulk-update', [ProjectTaskController::class, 'bulkUpdate'])->middleware('rbac:task.edit');

@@ -8,6 +8,7 @@ use Src\CoreProject\Models\Component;
 use Src\CoreProject\Resources\ComponentResource;
 use Src\CoreProject\Requests\StoreComponentRequest;
 use Src\CoreProject\Requests\UpdateComponentRequest;
+use Src\CoreProject\Services\ComponentService;
 use Src\RBAC\Middleware\RBACMiddleware;
 use Src\Foundation\Utils\JSendResponse;
 
@@ -39,7 +40,7 @@ class ComponentController
         try {
             $components = Component::where('project_id', $projectId)->get();
             return JSendResponse::success(ComponentResource::collection($components));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return JSendResponse::error('Không thể lấy danh sách components: ' . $e->getMessage());
         }
     }
@@ -54,12 +55,13 @@ class ComponentController
     public function store(StoreComponentRequest $request, string $projectId): JsonResponse
     {
         try {
+            $request->merge(['project_id' => $projectId]);
             $data = $request->validated();
-            $data['project_id'] = $projectId;
             
-            $component = Component::create($data);
-            return JSendResponse::success(new ComponentResource($component), 'Component đã được tạo thành công');
-        } catch (\Exception $e) {
+            $componentService = new ComponentService();
+            $component = $componentService->createComponent($projectId, $data);
+            return JSendResponse::success(new ComponentResource($component), 201);
+        } catch (\Throwable $e) {
             return JSendResponse::error('Không thể tạo component: ' . $e->getMessage());
         }
     }
@@ -67,18 +69,15 @@ class ComponentController
     /**
      * Hiển thị chi tiết component
      *
-     * @param string $projectId
-     * @param string $componentId
+     * @param string $id
      * @return JsonResponse
      */
-    public function show(string $projectId, string $componentId): JsonResponse
+    public function show(string $id): JsonResponse
     {
         try {
-            $component = Component::where('project_id', $projectId)
-                                ->where('id', $componentId)
-                                ->firstOrFail();
+            $component = Component::where('id', $id)->firstOrFail();
             return JSendResponse::success(new ComponentResource($component));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return JSendResponse::error('Không tìm thấy component: ' . $e->getMessage());
         }
     }
@@ -87,20 +86,16 @@ class ComponentController
      * Cập nhật component
      *
      * @param UpdateComponentRequest $request
-     * @param string $projectId
-     * @param string $componentId
+     * @param string $id
      * @return JsonResponse
      */
-    public function update(UpdateComponentRequest $request, string $projectId, string $componentId): JsonResponse
+    public function update(UpdateComponentRequest $request, string $id): JsonResponse
     {
         try {
-            $component = Component::where('project_id', $projectId)
-                                ->where('id', $componentId)
-                                ->firstOrFail();
-            
-            $component->update($request->validated());
-            return JSendResponse::success(new ComponentResource($component), 'Component đã được cập nhật thành công');
-        } catch (\Exception $e) {
+            $componentService = new ComponentService();
+            $component = $componentService->updateComponent($id, $request->validated());
+            return JSendResponse::success(new ComponentResource($component));
+        } catch (\Throwable $e) {
             return JSendResponse::error('Không thể cập nhật component: ' . $e->getMessage());
         }
     }
@@ -108,20 +103,16 @@ class ComponentController
     /**
      * Xóa component
      *
-     * @param string $projectId
-     * @param string $componentId
+     * @param string $id
      * @return JsonResponse
      */
-    public function destroy(string $projectId, string $componentId): JsonResponse
+    public function destroy(string $id): JsonResponse
     {
         try {
-            $component = Component::where('project_id', $projectId)
-                                ->where('id', $componentId)
-                                ->firstOrFail();
-            
-            $component->delete();
-            return JSendResponse::success(null, 'Component đã được xóa thành công');
-        } catch (\Exception $e) {
+            $componentService = new ComponentService();
+            $componentService->deleteComponent($id);
+            return JSendResponse::success();
+        } catch (\Throwable $e) {
             return JSendResponse::error('Không thể xóa component: ' . $e->getMessage());
         }
     }
@@ -140,7 +131,7 @@ class ComponentController
                                  ->with('children')
                                  ->get();
             return JSendResponse::success(ComponentResource::collection($components));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return JSendResponse::error('Không thể lấy cây components: ' . $e->getMessage());
         }
     }

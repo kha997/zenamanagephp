@@ -3,8 +3,6 @@
 declare(strict_types=1);
 
 namespace App\Services;
-use Illuminate\Support\Facades\Auth;
-
 
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -70,11 +68,17 @@ class UserManagementService
             throw new \InvalidArgumentException('Validation failed: ' . $validator->errors()->first());
         }
 
+        $tenantId = TenantContext::id($request);
+
+        if (!$tenantId) {
+            throw new \RuntimeException('Tenant context missing');
+        }
+
         $user = User::create([
             'name' => $request->input('name'),
             'email' => $request->input('email'),
             'password' => Hash::make($request->input('password')),
-            'tenant_id' => $request->input('tenant_id'),
+            'tenant_id' => $tenantId,
             'status' => 'active',
         ]);
 
@@ -183,7 +187,6 @@ class UserManagementService
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'tenant_id' => 'required|exists:tenants,id',
         ]);
     }
 
@@ -213,7 +216,6 @@ class UserManagementService
      */
     private function getCurrentTenantId(Request $request): ?string
     {
-        // This method should be implemented based on your tenant resolution logic
-        return $request->get('tenant_context') ?? Auth::user()?->tenant_id;
+        return TenantContext::id($request);
     }
 }

@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Tenant;
 
@@ -28,10 +29,13 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $email = $this->faker->unique()->safeEmail();
+        [$local, $domain] = explode('@', $email);
+
         return [
-            'id' => \Illuminate\Support\Str::ulid(),
+            'id' => (string) Str::ulid(),
             'name' => $this->faker->name(),
-            'email' => $this->faker->unique()->safeEmail(),
+            'email' => sprintf('%s+%s@%s', $local, Str::ulid(), $domain),
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
             'remember_token' => \Illuminate\Support\Str::random(10),

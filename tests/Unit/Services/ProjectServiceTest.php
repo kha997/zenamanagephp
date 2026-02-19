@@ -63,7 +63,7 @@ class ProjectServiceTest extends TestCase
             'status' => 'active',
         ];
         
-        $updatedProject = $this->projectService->updateProject($project->id, $updateData);
+        $updatedProject = $this->projectService->updateProject($project, $updateData, $user->id);
         
         $this->assertEquals('Updated Project Name', $updatedProject->name);
         $this->assertEquals('active', $updatedProject->status);
@@ -77,7 +77,7 @@ class ProjectServiceTest extends TestCase
         $user = $this->createAuthenticatedUser();
         $project = Project::factory()->create(['tenant_id' => $user->tenant_id]);
         
-        $result = $this->projectService->deleteProject($project->id);
+        $result = $this->projectService->deleteProject($project, $user->id);
         
         $this->assertTrue($result);
         $this->assertSoftDeleted('projects', ['id' => $project->id]);

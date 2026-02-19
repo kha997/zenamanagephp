@@ -8,11 +8,15 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
+use Tests\Traits\AuthenticationTrait;
+use Tests\Traits\ApiTestTrait;
+use Tests\Traits\RouteNameTrait;
+use Tests\Support\SSOT\FixtureFactory;
 
+/** @group slow */
 class ProjectManagerApiIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AuthenticationTrait, ApiTestTrait, RouteNameTrait, FixtureFactory;
 
     protected $user;
     protected $tenant;
@@ -23,29 +27,31 @@ class ProjectManagerApiIntegrationTest extends TestCase
         parent::setUp();
         
         // Create tenant
-        $this->tenant = Tenant::factory()->create();
+        $this->tenant = $this->createTenant();
         
         // Create user with project manager role
-        $this->user = User::factory()->create([
+        $this->user = $this->createTenantUserWithRbac($this->tenant, 'project_manager', 'project_manager', [], [
             'tenant_id' => $this->tenant->id,
-            'role' => 'project_manager'
+            'role' => 'project_manager',
         ]);
-        
+
         // Create project
-        $this->project = Project::factory()->create([
+        $this->project = $this->createProjectForTenant($this->tenant, $this->user, [
             'tenant_id' => $this->tenant->id,
             'pm_id' => $this->user->id,
             'budget_planned' => 100000,
-            'budget_actual' => 75000
+            'budget_actual' => 75000,
         ]);
         
         // Create tasks
         Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'status' => 'pending'
         ]);
         
         Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'status' => 'completed'
         ]);
@@ -56,9 +62,9 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_project_manager_dashboard_stats_endpoint()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -96,7 +102,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_project_manager_dashboard_stats_endpoint_without_auth()
     {
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(401)
                 ->assertJsonStructure([
@@ -121,9 +127,9 @@ class ProjectManagerApiIntegrationTest extends TestCase
             'role' => 'member'
         ]);
 
-        Sanctum::actingAs($member);
+        $this->apiAs($member, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(403)
                 ->assertJsonStructure([
@@ -135,7 +141,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
                     ]
                 ]);
 
-        $this->assertEquals('E403.AUTHORIZATION', $response->json('error.code'));
+        $this->assertContains($response->json('error.code'), ['E403.AUTHORIZATION', 'RBAC_ACCESS_DENIED']);
     }
 
     /**
@@ -143,9 +149,9 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_project_manager_dashboard_timeline_endpoint()
     {
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->apiGet($this->v1('project_manager.dashboard.timeline'));
 
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -175,7 +181,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_project_manager_dashboard_timeline_endpoint_without_auth()
     {
-        $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->getJson($this->v1('project_manager.dashboard.timeline'));
 
         $response->assertStatus(401)
                 ->assertJsonStructure([
@@ -200,9 +206,9 @@ class ProjectManagerApiIntegrationTest extends TestCase
             'role' => 'member'
         ]);
 
-        Sanctum::actingAs($member);
+        $this->apiAs($member, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->getJson($this->v1('project_manager.dashboard.timeline'));
 
         $response->assertStatus(403)
                 ->assertJsonStructure([
@@ -214,7 +220,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
                     ]
                 ]);
 
-        $this->assertEquals('E403.AUTHORIZATION', $response->json('error.code'));
+        $this->assertContains($response->json('error.code'), ['E403.AUTHORIZATION', 'RBAC_ACCESS_DENIED']);
     }
 
     /**
@@ -222,7 +228,7 @@ class ProjectManagerApiIntegrationTest extends TestCase
      */
     public function test_error_envelope_format_consistency()
     {
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(401)
                 ->assertJsonStructure([
@@ -261,9 +267,9 @@ class ProjectManagerApiIntegrationTest extends TestCase
             'pm_id' => $otherUser->id
         ]);
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->apiGet($this->v1('project_manager.dashboard.stats'));
 
         $response->assertStatus(200);
         
@@ -285,16 +291,17 @@ class ProjectManagerApiIntegrationTest extends TestCase
             
             for ($j = 0; $j < 10; $j++) {
                 Task::factory()->create([
+                    'tenant_id' => $this->tenant->id,
                     'project_id' => $project->id
                 ]);
             }
         }
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $startTime = microtime(true);
         
-        $response = $this->getJson('/api/v1/project-manager/dashboard/stats');
+        $response = $this->getJson($this->v1('project_manager.dashboard.stats'));
         
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
@@ -320,11 +327,11 @@ class ProjectManagerApiIntegrationTest extends TestCase
             ]);
         }
 
-        Sanctum::actingAs($this->user);
+        $this->apiAs($this->user, $this->tenant);
 
         $startTime = microtime(true);
         
-        $response = $this->getJson('/api/v1/project-manager/dashboard/timeline');
+        $response = $this->apiGet($this->v1('project_manager.dashboard.timeline'));
         
         $endTime = microtime(true);
         $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds

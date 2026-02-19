@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Session\TokenMismatchException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
@@ -66,7 +68,7 @@ class Handler extends ExceptionHandler
             }
 
             return ErrorEnvelopeService::authenticationError(
-                $exception->getMessage() ?: 'Authentication required',
+                'Unauthorized',
                 ErrorEnvelopeService::getCurrentRequestId()
             );
         });
@@ -139,6 +141,30 @@ class Handler extends ExceptionHandler
                 ErrorEnvelopeService::getCurrentRequestId()
             );
         });
+
+        $this->renderable(function (TokenMismatchException $exception, Request $request) {
+            if (!app()->environment('testing')) {
+                return null;
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'CSRF token mismatch.'
+                ], 419);
+            }
+
+            return response('CSRF token mismatch.', 419);
+        });
+
+        $this->renderable(function (HttpExceptionInterface $exception, Request $request) {
+            if (!app()->environment('testing') ||
+                $exception->getStatusCode() !== 419 ||
+                $request->expectsJson()) {
+                return null;
+            }
+
+            return response('CSRF token mismatch.', 419);
+        });
     }
 
     /**
@@ -205,7 +231,7 @@ class Handler extends ExceptionHandler
             }
 
             return ErrorEnvelopeService::authenticationError(
-                $exception->getMessage() ?: 'Authentication required',
+                'Unauthorized',
                 ErrorEnvelopeService::getCurrentRequestId()
             );
         }

@@ -29,7 +29,7 @@ class VerySimpleProjectMilestoneTest extends TestCase
      */
     public function test_project_milestone_required_fields_only(): void
     {
-        $project = Project::create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'PRJ-TEST-001',
             'name' => 'Test Project',
@@ -55,7 +55,7 @@ class VerySimpleProjectMilestoneTest extends TestCase
      */
     public function test_project_milestone_with_explicit_order(): void
     {
-        $project = Project::create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'PRJ-TEST-002',
             'name' => 'Test Project Order',

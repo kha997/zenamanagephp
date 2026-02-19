@@ -1,0 +1,6 @@
+# Known dead endpoints that should not appear in active tests
+/api/v1/users
+/api/v1/templates
+/api/dashboards
+/api/widgets
+/api/support/tickets

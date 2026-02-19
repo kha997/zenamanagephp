@@ -30,7 +30,7 @@ class UserManagementAuthenticationTest extends TestCase
         \DB::statement('PRAGMA foreign_keys=OFF;');
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'domain' => 'test.com',
@@ -40,12 +40,13 @@ class UserManagementAuthenticationTest extends TestCase
         ]);
 
         // Tạo user
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password123'),
             'tenant_id' => $this->tenant->id,
             'is_active' => true,
+            'remember_token' => null,
             'profile_data' => json_encode(['department' => 'IT']),
         ]);
     }
@@ -58,13 +59,13 @@ class UserManagementAuthenticationTest extends TestCase
         $userData = [
             'name' => 'New User',
             'email' => 'newuser@example.com',
-            'password' => 'password123',
+            'password' => Hash::make('password123'),
             'tenant_id' => $this->tenant->id,
             'is_active' => true,
             'profile_data' => json_encode(['department' => 'HR']),
         ];
 
-        $user = User::create($userData);
+        $user = User::factory()->create($userData);
 
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
@@ -130,7 +131,7 @@ class UserManagementAuthenticationTest extends TestCase
     public function test_inactive_user_cannot_authenticate(): void
     {
         // Create inactive user
-        $inactiveUser = User::create([
+        User::factory()->create([
             'name' => 'Inactive User',
             'email' => 'inactive@example.com',
             'password' => Hash::make('password123'),
@@ -138,12 +139,15 @@ class UserManagementAuthenticationTest extends TestCase
             'is_active' => false,
         ]);
 
-        $credentials = [
+        $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'inactive@example.com',
             'password' => 'password123',
-        ];
+        ]);
 
-        $this->assertFalse(Auth::attempt($credentials));
+        $response->assertStatus(403)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('error.code', 'E403.USER_INACTIVE')
+            ->assertJsonPath('message', 'Account is inactive');
     }
 
     /**
@@ -227,14 +231,18 @@ class UserManagementAuthenticationTest extends TestCase
             ],
         ];
 
-        $this->user->update([
+        $this->user->forceFill([
             'profile_data' => json_encode($profileData),
-        ]);
+        ])->save();
+        $this->user->refresh();
 
-        $this->assertEquals($profileData, $this->user->profile_data);
-        $this->assertEquals('Engineering', $this->user->profile_data['department']);
-        $this->assertEquals('Senior Developer', $this->user->profile_data['position']);
-        $this->assertContains('PHP', $this->user->profile_data['skills']);
+        $storedProfileData = json_decode((string) $this->user->profile_data, true);
+
+        $this->assertIsArray($storedProfileData);
+        $this->assertEquals($profileData, $storedProfileData);
+        $this->assertEquals('Engineering', $storedProfileData['department']);
+        $this->assertEquals('Senior Developer', $storedProfileData['position']);
+        $this->assertContains('PHP', $storedProfileData['skills']);
     }
 
     /**
@@ -277,32 +285,29 @@ class UserManagementAuthenticationTest extends TestCase
     }
 
     /**
-     * Test user email uniqueness within tenant
+     * Test user email uniqueness is enforced globally
      */
     public function test_email_uniqueness_within_tenant(): void
     {
-        // This should work (different tenant)
-        $anotherTenant = Tenant::create([
-            'name' => 'Another Company',
-            'slug' => 'another-company',
-            'domain' => 'another.com',
-            'status' => 'active',
-            'is_active' => true,
-        ]);
-
-        $userInAnotherTenant = User::create([
-            'name' => 'User in Another Tenant',
-            'email' => 'test@example.com', // Same email
-            'password' => Hash::make('password123'),
-            'tenant_id' => $anotherTenant->id,
-            'is_active' => true,
-        ]);
-
-        $this->assertDatabaseHas('users', [
-            'id' => $userInAnotherTenant->id,
+        $response = $this->postJson('/api/v1/auth/register', [
+            'name' => 'User With Duplicate Email',
             'email' => 'test@example.com',
-            'tenant_id' => $anotherTenant->id,
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'company_name' => 'Another Company',
+            'company_domain' => 'another-company.test',
         ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('error.code', 'E422.VALIDATION');
+
+        $details = $response->json('error.details');
+
+        $this->assertIsArray($details);
+        $this->assertNotEmpty(
+            data_get($details, 'validation.email')
+                ?? data_get($details, 'data.validation_errors.email')
+        );
     }
 
     /**
@@ -325,7 +330,9 @@ class UserManagementAuthenticationTest extends TestCase
     {
         $this->assertNull($this->user->remember_token);
 
-        $this->user->update(['remember_token' => 'test-remember-token']);
+        $this->user->setRememberToken('test-remember-token');
+        $this->user->save();
+        $this->user->refresh();
 
         $this->assertEquals('test-remember-token', $this->user->remember_token);
     }
@@ -352,7 +359,7 @@ class UserManagementAuthenticationTest extends TestCase
         // Create multiple users
         $users = [];
         for ($i = 1; $i <= 5; $i++) {
-            $users[] = User::create([
+            $users[] = User::factory()->create([
                 'name' => "Bulk User {$i}",
                 'email' => "bulk{$i}@example.com",
                 'password' => Hash::make('password123'),

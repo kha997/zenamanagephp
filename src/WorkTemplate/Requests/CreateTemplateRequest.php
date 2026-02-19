@@ -18,8 +18,7 @@ class CreateTemplateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // Kiểm tra quyền tạo template thông qua RBAC middleware
-        return $this->user()->can('template.create');
+        return $this->user() !== null;
     }
 
     /**

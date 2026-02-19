@@ -31,20 +31,20 @@ class FinancialManagementTest extends TestCase
         parent::setUp();
         
         // Create test data
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'status' => 'active'
         ]);
 
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Finance Manager',
             'email' => 'finance@test.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
 
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'PROJ-001',
             'name' => 'Test Project',
@@ -245,7 +245,7 @@ class FinancialManagementTest extends TestCase
     public function test_can_generate_financial_reports(): void
     {
         // Create multiple projects with different financial statuses
-        $project1 = Project::create([
+        $project1 = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'PROJ-002',
             'name' => 'Profitable Project',
@@ -253,7 +253,7 @@ class FinancialManagementTest extends TestCase
             'status' => 'completed'
         ]);
 
-        $project2 = Project::create([
+        $project2 = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'code' => 'PROJ-003',
             'name' => 'Over Budget Project',
@@ -366,13 +366,13 @@ class FinancialManagementTest extends TestCase
     public function test_financial_data_is_tenant_isolated(): void
     {
         // Create another tenant
-        $tenant2 = Tenant::create([
+        $tenant2 = Tenant::factory()->create([
             'name' => 'Another Company',
             'slug' => 'another-company',
             'status' => 'active'
         ]);
 
-        $project2 = Project::create([
+        $project2 = Project::factory()->create([
             'tenant_id' => $tenant2->id,
             'code' => 'PROJ-004',
             'name' => 'Another Project',

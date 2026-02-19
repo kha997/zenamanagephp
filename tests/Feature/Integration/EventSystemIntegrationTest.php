@@ -4,12 +4,14 @@ namespace Tests\Feature\Integration;
 
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use App\Models\User;
 use App\Models\Project;
 use App\Models\Component;
 use App\Models\EventLog;
+use Illuminate\Queue\CallQueuedClosure;
 use Src\Foundation\Events\BaseEvent;
 use Src\CoreProject\Events\ComponentProgressUpdated;
 use Src\CoreProject\Events\ProjectCreated;
@@ -55,7 +57,6 @@ class EventSystemIntegrationTest extends TestCase
 
         // Trigger event
         $component->update(['progress_percent' => 50]);
-
         // Verify event được dispatch
         Event::assertDispatched(ComponentProgressUpdated::class, function ($event) use ($component) {
             return $event->component->id === $component->id &&
@@ -175,7 +176,6 @@ class EventSystemIntegrationTest extends TestCase
 
         // Refresh project
         $this->project->refresh();
-
         // Verify calculations
         // Expected progress: (50 * 8000 + 25 * 12000) / (8000 + 12000) = 35%
         $expectedProgress = (50 * 8000 + 25 * 12000) / (8000 + 12000);
@@ -239,7 +239,7 @@ class EventSystemIntegrationTest extends TestCase
         $component->update(['progress_percent' => 75]);
 
         // Verify job was queued
-        Queue::assertPushed(\Closure::class);
+        Queue::assertPushed(CallQueuedClosure::class);
     }
 
     /**
@@ -248,11 +248,10 @@ class EventSystemIntegrationTest extends TestCase
      */
     public function test_event_auditing(): void
     {
-        // Không fake EventLogListener để test real auditing
-        Event::fake([
-            // Fake other events but not EventLogged
-        ]);
-
+        // Để đảm bảo EventLogListener chạy thật thì không fake events nào
+        Event::listen(ComponentProgressUpdated::class, function ($event) {
+            (new EventLogListener())->handle($event->getEventName(), [$event]);
+        });
         $component = Component::factory()->create([
             'project_id' => $this->project->id
         ]);
@@ -263,8 +262,9 @@ class EventSystemIntegrationTest extends TestCase
         $component->update(['progress_percent' => 60]);
 
         // Verify events were logged
+        $eventType = 'Project.Component.ProgressUpdated';
         $eventLogs = EventLog::where('project_id', $this->project->id)
-            ->where('event_type', 'ComponentProgressUpdated')
+            ->where('event_type', $eventType)
             ->get();
 
         $this->assertGreaterThanOrEqual(3, $eventLogs->count());
@@ -272,7 +272,7 @@ class EventSystemIntegrationTest extends TestCase
         // Verify log structure
         $log = $eventLogs->first();
         $this->assertEquals($this->project->id, $log->project_id);
-        $this->assertEquals('ComponentProgressUpdated', $log->event_type);
+        $this->assertEquals($eventType, $log->event_type);
         $this->assertNotNull($log->event_data);
         $this->assertNotNull($log->created_at);
     }

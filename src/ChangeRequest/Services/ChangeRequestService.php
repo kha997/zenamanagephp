@@ -11,6 +11,8 @@ use Src\ChangeRequest\Events\ChangeRequestApproved;
 use Src\ChangeRequest\Events\ChangeRequestRejected;
 use Src\Foundation\EventBus;
 use Carbon\Carbon;
+use RuntimeException;
+use App\Services\TenantContext;
 
 /**
  * Service xử lý business logic cho Change Request
@@ -65,23 +67,40 @@ class ChangeRequestService
     /**
      * Tạo Change Request mới
      */
-    public function createChangeRequest(array $data, int $createdBy): ChangeRequest
+    public function createChangeRequest(array $data, string $createdBy): ChangeRequest
     {
         // Tạo mã CR tự động
-        $data['code'] = $this->generateChangeRequestCode($data['project_id']);
+        $changeNumber = $this->generateChangeRequestCode($data['project_id']);
+        $data['code'] = $changeNumber;
+        $data['change_number'] = $changeNumber;
+
+        $tenantId = TenantContext::id();
+
+        if (empty($tenantId)) {
+            throw new RuntimeException('Tenant context is required to create a change request.');
+        }
+
+        $data['tenant_id'] = $tenantId;
+        $data['change_type'] = $data['change_type'] ?? 'scope';
+        $data['requested_at'] = $data['requested_at'] ?? Carbon::now();
         $data['created_by'] = $createdBy;
+        $data['requested_by'] = $createdBy;
         $data['status'] = ChangeRequest::STATUS_DRAFT;
 
         $changeRequest = ChangeRequest::create($data);
 
         // Dispatch event
-        EventBus::dispatch(new ChangeRequestCreated(
+        $event = new ChangeRequestCreated(
             $changeRequest->id,
             $changeRequest->project_id,
             $createdBy,
-            ['change_request' => $changeRequest->toArray()],
-            'ChangeRequest.Created'
-        ));
+            ['change_request' => $changeRequest->toArray()]
+        );
+
+        EventBus::dispatch(
+            $event->getEventName(),
+            $event->toArray()
+        );
 
         return $changeRequest->load(['project']);
     }
@@ -89,7 +108,7 @@ class ChangeRequestService
     /**
      * Cập nhật Change Request (chỉ khi status = draft)
      */
-    public function updateChangeRequest(int $id, array $data, int $updatedBy): ?ChangeRequest
+    public function updateChangeRequest(int $id, array $data, string $updatedBy): ?ChangeRequest
     {
         $changeRequest = $this->getChangeRequestById($id);
         
@@ -103,7 +122,7 @@ class ChangeRequestService
 
         // Dispatch event nếu có thay đổi
         if ($oldData !== $changeRequest->toArray()) {
-            EventBus::dispatch(new ChangeRequestStatusChanged(
+            $event = new ChangeRequestStatusChanged(
                 $changeRequest->id,
                 $changeRequest->project_id,
                 $updatedBy,
@@ -111,9 +130,13 @@ class ChangeRequestService
                     'old_data' => $oldData,
                     'new_data' => $changeRequest->toArray(),
                     'changed_fields' => array_keys(array_diff_assoc($changeRequest->toArray(), $oldData))
-                ],
-                'ChangeRequest.Updated'
-            ));
+                ]
+            );
+
+            EventBus::dispatch(
+                $event->getEventName(),
+                $event->toArray()
+            );
         }
 
         return $changeRequest;
@@ -122,7 +145,7 @@ class ChangeRequestService
     /**
      * Submit Change Request để approval
      */
-    public function submitForApproval(int $id, int $submittedBy): ?ChangeRequest
+    public function submitForApproval(int $id, string $submittedBy): ?ChangeRequest
     {
         $changeRequest = $this->getChangeRequestById($id);
         
@@ -136,7 +159,7 @@ class ChangeRequestService
         ]);
 
         // Dispatch event
-        EventBus::dispatch(new ChangeRequestStatusChanged(
+        $event = new ChangeRequestStatusChanged(
             $changeRequest->id,
             $changeRequest->project_id,
             $submittedBy,
@@ -144,9 +167,13 @@ class ChangeRequestService
                 'old_status' => $oldStatus,
                 'new_status' => ChangeRequest::STATUS_AWAITING_APPROVAL,
                 'action' => 'submitted_for_approval'
-            ],
-            'ChangeRequest.SubmittedForApproval'
-        ));
+            ]
+        );
+
+        EventBus::dispatch(
+            $event->getEventName(),
+            $event->toArray()
+        );
 
         return $changeRequest->refresh();
     }
@@ -154,7 +181,7 @@ class ChangeRequestService
     /**
      * Approve Change Request
      */
-    public function approveChangeRequest(int $id, int $decidedBy, ?string $decisionNote = null): ?ChangeRequest
+    public function approveChangeRequest(int $id, string $decidedBy, ?string $decisionNote = null): ?ChangeRequest
     {
         $changeRequest = $this->getChangeRequestById($id);
         
@@ -170,7 +197,7 @@ class ChangeRequestService
         ]);
 
         // Dispatch event để các module khác có thể áp dụng thay đổi
-        EventBus::dispatch(new ChangeRequestApproved(
+        $event = new ChangeRequestApproved(
             $changeRequest->id,
             $changeRequest->project_id,
             $decidedBy,
@@ -180,9 +207,13 @@ class ChangeRequestService
                 'impact_cost' => $changeRequest->impact_cost,
                 'impact_kpi' => $changeRequest->impact_kpi,
                 'decision_note' => $decisionNote
-            ],
-            'ChangeRequest.Approved'
-        ));
+            ]
+        );
+
+        EventBus::dispatch(
+            $event->getEventName(),
+            $event->toArray()
+        );
 
         return $changeRequest->refresh();
     }
@@ -190,7 +221,7 @@ class ChangeRequestService
     /**
      * Reject Change Request
      */
-    public function rejectChangeRequest(int $id, int $decidedBy, ?string $decisionNote = null): ?ChangeRequest
+    public function rejectChangeRequest(int $id, string $decidedBy, ?string $decisionNote = null): ?ChangeRequest
     {
         $changeRequest = $this->getChangeRequestById($id);
         
@@ -206,16 +237,20 @@ class ChangeRequestService
         ]);
 
         // Dispatch event
-        EventBus::dispatch(new ChangeRequestRejected(
+        $event = new ChangeRequestRejected(
             $changeRequest->id,
             $changeRequest->project_id,
             $decidedBy,
             [
                 'change_request' => $changeRequest->toArray(),
                 'decision_note' => $decisionNote
-            ],
-            'ChangeRequest.Rejected'
-        ));
+            ]
+        );
+
+        EventBus::dispatch(
+            $event->getEventName(),
+            $event->toArray()
+        );
 
         return $changeRequest->refresh();
     }
@@ -247,9 +282,9 @@ class ChangeRequestService
     /**
      * Tạo mã CR tự động
      */
-    private function generateChangeRequestCode(int $projectId): string
+    private function generateChangeRequestCode(string $projectId): string
     {
-        $count = ChangeRequest::byProject($projectId)->count() + 1;
+        $count = ChangeRequest::where('project_id', $projectId)->count() + 1;
         return sprintf('CR-%03d', $count);
     }
 }

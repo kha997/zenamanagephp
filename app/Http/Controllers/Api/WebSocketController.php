@@ -60,7 +60,8 @@ class WebSocketController extends Controller
     public function markOnline(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
+            'user_id' => 'required|string',
+            'connection_id' => 'required|string',
             'activity' => 'sometimes|string',
         ]);
 
@@ -104,7 +105,7 @@ class WebSocketController extends Controller
     public function markOffline(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
+            'user_id' => 'required|string',
         ]);
 
         try {
@@ -142,15 +143,17 @@ class WebSocketController extends Controller
     public function updateActivity(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
-            'activity' => 'required|string',
+            'user_id' => 'required|string',
+            'activity' => 'required_without:activity_type|string',
+            'activity_type' => 'required_without:activity|string',
             'metadata' => 'sometimes|array',
+            'activity_data' => 'sometimes|array',
         ]);
 
         try {
             $userId = $request->input('user_id');
-            $activity = $request->input('activity');
-            $metadata = $request->input('metadata', []);
+            $activity = $request->input('activity') ?? $request->input('activity_type');
+            $metadata = $request->input('metadata', $request->input('activity_data', []));
             $tenantId = $request->header('X-Tenant-ID');
             
             $success = $this->webSocketService->updateUserActivity($userId, $activity, $metadata, $tenantId);
@@ -189,7 +192,7 @@ class WebSocketController extends Controller
             'event' => 'required|string',
             'data' => 'required|array',
             'target_users' => 'sometimes|array',
-            'target_users.*' => 'integer',
+            'target_users.*' => 'string',
         ]);
 
         try {
@@ -248,16 +251,23 @@ class WebSocketController extends Controller
     public function sendNotification(Request $request): JsonResponse
     {
         $request->validate([
-            'user_id' => 'required|integer',
-            'notification' => 'required|array',
-            'notification.title' => 'required|string',
-            'notification.message' => 'required|string',
+            'user_id' => 'required|string',
+            'notification' => 'sometimes|array',
+            'notification.title' => 'required_with:notification|string',
+            'notification.message' => 'required_with:notification|string',
             'notification.type' => 'sometimes|string',
+            'title' => 'required_without:notification|string',
+            'message' => 'required_without:notification|string',
+            'type' => 'sometimes|string',
         ]);
 
         try {
             $userId = $request->input('user_id');
-            $notification = $request->input('notification');
+            $notification = $request->input('notification') ?? [
+                'title' => $request->input('title'),
+                'message' => $request->input('message'),
+                'type' => $request->input('type'),
+            ];
             $tenantId = $request->header('X-Tenant-ID');
             
             $success = $this->webSocketService->sendNotification($userId, $notification, $tenantId);
@@ -343,30 +353,47 @@ class WebSocketController extends Controller
     public function testConnection(): JsonResponse
     {
         try {
+            $testId = uniqid('test_', true);
+            $start = microtime(true);
             $testData = [
                 'message' => 'WebSocket connection test',
                 'timestamp' => time(),
-                'test_id' => uniqid('test_', true),
+                'test_id' => $testId,
             ];
-            
+
             $success = $this->webSocketService->broadcast('system', 'connection_test', $testData);
+            $responseTime = microtime(true) - $start;
+
+            $stats = [
+                'connection_status' => $success ? 'connected' : 'failed',
+                'response_time' => $responseTime,
+                'server_info' => [
+                    'endpoint' => config('websocket.url', 'ws://localhost:6001'),
+                    'channel' => 'system',
+                    'test_id' => $testId,
+                ],
+                'test_timestamp' => now()->toISOString(),
+            ];
             
             if ($success) {
                 return response()->json([
                     'success' => true,
                     'message' => 'WebSocket connection test successful',
-                    'test_data' => $testData,
+                    'data' => $stats,
                 ]);
             } else {
                 return response()->json([
                     'success' => false,
-                    'error' => 'WebSocket connection test failed',
+                    'status' => 'error',
+                    'message' => 'WebSocket connection test failed',
                     'code' => 'WEBSOCKET_TEST_ERROR',
+                    'data' => $stats,
                 ], 500);
             }
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
+                'status' => 'error',
                 'error' => 'WebSocket connection test failed',
                 'message' => $e->getMessage(),
                 'code' => 'WEBSOCKET_TEST_ERROR',

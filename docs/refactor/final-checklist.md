@@ -116,6 +116,14 @@
 
 ### **Route Verification**
 ```bash
+# Check login route middleware with JSON output when available
+if php artisan route:list --path=login --json >/dev/null 2>&1; then
+  php artisan route:list --path=login --json # watch for the middleware array
+else
+  php artisan route:list --path=login
+  echo "JSON output unavailable; inspect routes/web.php around the /login route."
+fi
+
 # Check all routes have proper middleware
 php artisan route:list | grep -v "middleware" # Should be empty
 php artisan route:list --path=admin | grep -v "rbac" # Should be empty

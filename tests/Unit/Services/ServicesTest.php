@@ -22,7 +22,7 @@ class ServicesTest extends TestCase
     {
         $service = new SecurityAuditService();
         
-        $result = $service->runComprehensiveAudit();
+        $result = $service->performSecurityAudit();
         
         $this->assertIsArray($result);
         $this->assertArrayHasKey('timestamp', $result);
@@ -39,16 +39,17 @@ class ServicesTest extends TestCase
         $service = new SecurityAuditService();
         
         $reflection = new \ReflectionClass($service);
-        $method = $reflection->getMethod('checkPolicyCoverage');
+        $method = $reflection->getMethod('auditApiSecurity');
         $method->setAccessible(true);
         
         $result = $method->invoke($service);
         
         $this->assertIsArray($result);
-        $this->assertArrayHasKey('status', $result);
-        $this->assertArrayHasKey('message', $result);
         $this->assertArrayHasKey('score', $result);
-        $this->assertContains($result['status'], ['pass', 'fail']);
+        $this->assertArrayHasKey('max_score', $result);
+        $this->assertArrayHasKey('checks', $result);
+        $this->assertArrayHasKey('rate_limiting', $result['checks']);
+        $this->assertContains($result['checks']['rate_limiting']['status'], ['pass', 'fail']);
     }
 
     /** @test */
@@ -57,16 +58,17 @@ class ServicesTest extends TestCase
         $service = new SecurityAuditService();
         
         $reflection = new \ReflectionClass($service);
-        $method = $reflection->getMethod('checkMiddlewareEnforcement');
+        $method = $reflection->getMethod('auditMiddlewareSecurity');
         $method->setAccessible(true);
         
         $result = $method->invoke($service);
         
         $this->assertIsArray($result);
-        $this->assertArrayHasKey('status', $result);
-        $this->assertArrayHasKey('message', $result);
         $this->assertArrayHasKey('score', $result);
-        $this->assertContains($result['status'], ['pass', 'fail']);
+        $this->assertArrayHasKey('max_score', $result);
+        $this->assertArrayHasKey('checks', $result);
+        $this->assertArrayHasKey('csrf_protection', $result['checks']);
+        $this->assertContains($result['checks']['csrf_protection']['status'], ['pass', 'fail']);
     }
 
     /** @test */
@@ -75,16 +77,17 @@ class ServicesTest extends TestCase
         $service = new SecurityAuditService();
         
         $reflection = new \ReflectionClass($service);
-        $method = $reflection->getMethod('checkTenantIsolation');
+        $method = $reflection->getMethod('auditTenantIsolation');
         $method->setAccessible(true);
         
         $result = $method->invoke($service);
         
         $this->assertIsArray($result);
-        $this->assertArrayHasKey('status', $result);
-        $this->assertArrayHasKey('message', $result);
         $this->assertArrayHasKey('score', $result);
-        $this->assertContains($result['status'], ['pass', 'fail']);
+        $this->assertArrayHasKey('max_score', $result);
+        $this->assertArrayHasKey('checks', $result);
+        $this->assertArrayHasKey('cross_tenant_access', $result['checks']);
+        $this->assertContains($result['checks']['cross_tenant_access']['status'], ['pass', 'fail']);
     }
 
     /** @test */
@@ -92,14 +95,14 @@ class ServicesTest extends TestCase
     {
         $service = new CacheOptimizationService();
         
-        $result = $service->optimizeApplicationCache();
+        $result = $service->optimizeCache();
         
         $this->assertIsArray($result);
         $this->assertArrayHasKey('timestamp', $result);
-        $this->assertArrayHasKey('actions_taken', $result);
-        $this->assertArrayHasKey('metrics_before', $result);
-        $this->assertArrayHasKey('metrics_after', $result);
-        $this->assertIsArray($result['actions_taken']);
+        $this->assertArrayHasKey('optimizations', $result);
+        $this->assertArrayHasKey('report', $result);
+        $this->assertArrayHasKey('clear_expired', $result['optimizations']);
+        $this->assertArrayHasKey('optimize_keys', $result['optimizations']);
     }
 
     /** @test */
@@ -107,10 +110,15 @@ class ServicesTest extends TestCase
     {
         $service = new CacheOptimizationService();
         
-        $result = $service->getCacheMetrics();
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('getPerformanceMetrics');
+        $method->setAccessible(true);
+        
+        $result = $method->invoke($service);
         
         $this->assertIsArray($result);
-        $this->assertArrayHasKey('driver', $result);
+        $this->assertArrayHasKey('cache_hits', $result);
+        $this->assertArrayHasKey('hit_rate', $result);
     }
 
     /** @test */
@@ -121,7 +129,7 @@ class ServicesTest extends TestCase
         // This should not throw an exception
         $this->expectNotToPerformAssertions();
         
-        $service->clearAllApplicationCaches();
+        $service->clearCacheByPattern('nonexistent');
     }
 
     /** @test */
@@ -133,10 +141,10 @@ class ServicesTest extends TestCase
         
         $this->assertIsArray($result);
         $this->assertArrayHasKey('timestamp', $result);
-        $this->assertArrayHasKey('actions_taken', $result);
-        $this->assertArrayHasKey('before_optimization', $result);
-        $this->assertArrayHasKey('after_optimization', $result);
-        $this->assertIsArray($result['actions_taken']);
+        $this->assertArrayHasKey('optimizations', $result);
+        $this->assertArrayHasKey('report', $result);
+        $this->assertArrayHasKey('analyze_slow_queries', $result['optimizations']);
+        $this->assertArrayHasKey('optimize_indexes', $result['optimizations']);
     }
 
     /** @test */
@@ -145,12 +153,13 @@ class ServicesTest extends TestCase
         $service = new DatabaseOptimizationService();
         
         $reflection = new \ReflectionClass($service);
-        $method = $reflection->getMethod('findMissingForeignKeyIndexes');
+        $method = $reflection->getMethod('optimizeIndexes');
         $method->setAccessible(true);
         
         $result = $method->invoke($service);
         
         $this->assertIsArray($result);
+        $this->assertArrayHasKey('missing_indexes', $result);
     }
 
     /** @test */
@@ -158,7 +167,11 @@ class ServicesTest extends TestCase
     {
         $service = new DatabaseOptimizationService();
         
-        $result = $service->runQueryAnalysis('SELECT 1');
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('optimizeQueries');
+        $method->setAccessible(true);
+        
+        $result = $method->invoke($service);
         
         $this->assertIsArray($result);
     }
@@ -168,117 +181,86 @@ class ServicesTest extends TestCase
     {
         $service = new VulnerabilityScannerService();
         
-        $result = $service->runVulnerabilityScan();
+        $result = $service->scanVulnerabilities();
         
         $this->assertIsArray($result);
         $this->assertArrayHasKey('timestamp', $result);
-        $this->assertArrayHasKey('overall_status', $result);
-        $this->assertArrayHasKey('findings', $result);
-        $this->assertContains($result['overall_status'], ['clean', 'vulnerable']);
-        $this->assertIsArray($result['findings']);
+        $this->assertArrayHasKey('overall_risk', $result);
+        $this->assertArrayHasKey('vulnerabilities', $result);
+        $this->assertArrayHasKey('recommendations', $result);
+        $this->assertIsArray($result['recommendations']);
     }
 
     /** @test */
-    public function security_monitoring_service_handles_login_attempts()
+    public function security_monitoring_service_monitors_security_events()
     {
         $service = new SecurityMonitoringService();
         
-        // Mock event data
-        $eventData = [
-            'email' => 'test@example.com',
-            'ip_address' => '192.168.1.1',
-            'success' => false
-        ];
-        
-        // This should not throw an exception
-        $this->expectNotToPerformAssertions();
-        
-        $service->handleLoginAttempt(new \App\Events\Security\LoginAttempt($eventData));
-    }
-
-    /** @test */
-    public function security_monitoring_service_handles_unauthorized_access()
-    {
-        $service = new SecurityMonitoringService();
-        
-        // Mock event data
-        $eventData = [
-            'user_id' => 1,
-            'ip_address' => '192.168.1.1',
-            'route' => '/admin'
-        ];
-        
-        // This should not throw an exception
-        $this->expectNotToPerformAssertions();
-        
-        $service->handleUnauthorizedAccess(new \App\Events\Security\UnauthorizedAccess($eventData));
-    }
-
-    /** @test */
-    public function security_monitoring_service_handles_suspicious_activity()
-    {
-        $service = new SecurityMonitoringService();
-        
-        // Mock event data
-        $eventData = [
-            'type' => 'multiple_failed_logins',
-            'ip_address' => '192.168.1.1',
-            'count' => 10
-        ];
-        
-        // This should not throw an exception
-        $this->expectNotToPerformAssertions();
-        
-        $service->handleSuspiciousActivity(new \App\Events\Security\SuspiciousActivity($eventData));
-    }
-
-    /** @test */
-    public function security_monitoring_service_gets_recent_security_events()
-    {
-        $service = new SecurityMonitoringService();
-        
-        $result = $service->getRecentSecurityEvents(10);
+        $result = $service->monitorSecurityEvents();
         
         $this->assertIsArray($result);
-        $this->assertLessThanOrEqual(10, count($result));
+        $this->assertArrayHasKey('timestamp', $result);
+        $this->assertArrayHasKey('events', $result);
+        $this->assertArrayHasKey('alerts', $result);
     }
 
     /** @test */
-    public function security_monitoring_service_runs_daily_security_report()
+    public function security_monitoring_service_generates_alerts()
     {
         $service = new SecurityMonitoringService();
         
-        $result = $service->runDailySecurityReport();
+        $reflection = new \ReflectionClass($service);
+        $method = $reflection->getMethod('generateSecurityAlerts');
+        $method->setAccessible(true);
+        
+        $result = $method->invoke($service, [
+            'failed_logins' => [
+                'events' => [
+                    [
+                        'type' => 'failed_login',
+                        'severity' => 'high',
+                        'message' => 'Multiple failed logins detected'
+                    ]
+                ]
+            ]
+        ]);
         
         $this->assertIsArray($result);
-        $this->assertArrayHasKey('report_date', $result);
-        $this->assertArrayHasKey('login_failures_24h', $result);
-        $this->assertArrayHasKey('unauthorized_attempts_24h', $result);
-        $this->assertArrayHasKey('suspicious_activities_24h', $result);
-        $this->assertArrayHasKey('top_ips_with_failures', $result);
+    }
+
+    /** @test */
+    public function security_monitoring_service_generates_monitoring_report()
+    {
+        $service = new SecurityMonitoringService();
+        
+        $result = $service->generateSecurityMonitoringReport();
+        
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('alerts', $result);
+        $this->assertArrayHasKey('details', $result);
     }
 
     /** @test */
     public function all_services_log_their_operations()
     {
+        Log::shouldReceive('channel')->andReturnSelf()->atLeast()->once();
         Log::shouldReceive('info')->atLeast()->once();
-        Log::shouldReceive('warning')->atLeast()->once();
         Log::shouldReceive('error')->atLeast()->once();
         
         $securityService = new SecurityAuditService();
-        $securityService->runComprehensiveAudit();
+        $securityService->performSecurityAudit();
         
         $cacheService = new CacheOptimizationService();
-        $cacheService->optimizeApplicationCache();
+        $cacheService->optimizeCache();
         
         $dbService = new DatabaseOptimizationService();
         $dbService->optimizeDatabase();
         
         $vulnService = new VulnerabilityScannerService();
-        $vulnService->runVulnerabilityScan();
+        $vulnService->scanVulnerabilities();
         
         $monitoringService = new SecurityMonitoringService();
-        $monitoringService->runDailySecurityReport();
+        $monitoringService->generateSecurityMonitoringReport();
     }
 
     /** @test */
@@ -335,16 +317,34 @@ class ServicesTest extends TestCase
             VulnerabilityScannerService::class,
             SecurityMonitoringService::class
         ];
-        
+
+        $resolvedCount = 0;
+
         foreach ($services as $serviceClass) {
+            $instance = $this->app->make($serviceClass);
+            $this->assertInstanceOf($serviceClass, $instance);
+            $resolvedCount++;
+
             $reflection = new \ReflectionClass($serviceClass);
             $constructor = $reflection->getConstructor();
-            
+
             if ($constructor) {
                 $parameters = $constructor->getParameters();
-                $this->assertIsArray($parameters, $serviceClass . ' constructor should have parameters array');
+                $this->assertNotEmpty($parameters, $serviceClass . ' should declare explicit dependencies');
+                foreach ($parameters as $parameter) {
+                    $this->assertTrue(
+                        $parameter->hasType() && !$parameter->getType()->isBuiltin(),
+                        $serviceClass . ' constructor dependency ' . $parameter->getName() . ' should be type-hinted'
+                    );
+                    $this->assertTrue(
+                        $parameter->allowsNull() === false,
+                        $serviceClass . ' dependency ' . $parameter->getName() . ' should not be nullable'
+                    );
+                }
             }
         }
+
+        $this->assertGreaterThan(0, $resolvedCount, 'At least one service should be resolvable from the container');
     }
 
     private function getPublicMethod($service)

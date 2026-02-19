@@ -45,14 +45,14 @@ class NotificationSystemTest extends TestCase
         \DB::statement('PRAGMA foreign_keys=OFF;');
         
         // Tạo tenant
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Company',
             'slug' => 'test-company',
             'status' => 'active',
         ]);
 
         // Tạo user
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
@@ -61,7 +61,7 @@ class NotificationSystemTest extends TestCase
         ]);
 
         // Tạo project
-        $this->project = Project::create([
+        $this->project = Project::factory()->create([
             'name' => 'Test Project',
             'code' => 'TEST001',
             'description' => 'Test project description',
@@ -270,7 +270,7 @@ class NotificationSystemTest extends TestCase
     public function test_can_filter_notifications_by_user(): void
     {
         // Tạo user khác
-        $otherUser = User::create([
+        $otherUser = User::factory()->create([
             'name' => 'Other User',
             'email' => 'other@example.com',
             'password' => bcrypt('password'),
@@ -438,14 +438,14 @@ class NotificationSystemTest extends TestCase
     public function test_notifications_are_isolated_by_tenant(): void
     {
         // Tạo tenant khác
-        $otherTenant = Tenant::create([
+        $otherTenant = Tenant::factory()->create([
             'name' => 'Other Company',
             'slug' => 'other-company',
             'status' => 'active',
         ]);
 
         // Tạo user cho tenant khác
-        $otherUser = User::create([
+        $otherUser = User::factory()->create([
             'name' => 'Other User',
             'email' => 'other@example.com',
             'password' => bcrypt('password'),
@@ -572,7 +572,7 @@ class NotificationSystemTest extends TestCase
         // Tạo multiple users
         $users = [];
         for ($i = 1; $i <= 3; $i++) {
-            $users[] = User::create([
+            $users[] = User::factory()->create([
                 'name' => "User {$i}",
                 'email' => "user{$i}@example.com",
                 'password' => bcrypt('password'),

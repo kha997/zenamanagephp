@@ -1,0 +1,3 @@
+# Explicitly allowed hardcoded API endpoints in tests.
+# Prefer named routes; add only when route names are intentionally unavailable.
+

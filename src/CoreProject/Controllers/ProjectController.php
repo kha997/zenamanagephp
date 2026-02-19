@@ -5,6 +5,7 @@ namespace Src\CoreProject\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller; // Thêm import này
+use App\Services\TenantContext;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Resources\ProjectResource;
 use Src\CoreProject\Requests\StoreProjectRequest;
@@ -147,20 +148,31 @@ class ProjectController extends Controller // Thêm extends Controller
      * @param int $projectId
      * @return JsonResponse
      */
-    public function show(string $projectId): JsonResponse // Đổi từ int thành string
+    public function show(Request $request, string $projectId): JsonResponse // Đổi từ int thành string
     {
         try {
+            $tenantId = TenantContext::id($request);
+
+            if ($tenantId === null) {
+                return JSendResponse::error('Dự án không tồn tại.', 404);
+            }
+
             $project = Project::with([
                 'rootComponents.childComponents',
                 'tasks.assignments.user',
                 'tasks.component'
-            ])->findOrFail($projectId);
+            ])
+                ->where('id', $projectId)
+                ->where('tenant_id', $tenantId)
+                ->first();
+
+            if ($project === null) {
+                return JSendResponse::error('Dự án không tồn tại.', 404);
+            }
 
             return JSendResponse::success([
                 'project' => new ProjectResource($project)
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy thông tin dự án: ' . $e->getMessage(), 500);
         }

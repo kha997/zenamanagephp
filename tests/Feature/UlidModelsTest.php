@@ -140,7 +140,7 @@ class UlidModelsTest extends TestCase
      */
     public function test_mass_assignment_with_ulid(): void
     {
-        $tenant = Tenant::create([
+        $tenant = Tenant::factory()->create([
             'name' => 'Mass Assignment Tenant',
             'domain' => 'mass.example.com',
             'is_active' => true

@@ -7,6 +7,7 @@ use Src\CoreProject\Models\Component;
 use Tests\TestCase;
 use Tests\Traits\DatabaseTrait;
 use Tests\Traits\AuthenticationTrait;
+use Tests\Traits\RouteNameTrait;
 use Illuminate\Foundation\Testing\WithFaker;
 
 /**
@@ -14,7 +15,7 @@ use Illuminate\Foundation\Testing\WithFaker;
  */
 class ComponentApiTest extends TestCase
 {
-    use DatabaseTrait, AuthenticationTrait, WithFaker;
+    use DatabaseTrait, AuthenticationTrait, RouteNameTrait, WithFaker;
     
     /**
      * Test get components for project
@@ -32,7 +33,7 @@ class ComponentApiTest extends TestCase
             'project_id' => $project->id
         ]);
         
-        $response = $this->getJson("/api/v1/projects/{$project->id}/components");
+        $response = $this->getJson($this->v1('projects.components.index', ['projectId' => $project->id]));
         
         $response->assertStatus(200)
                 ->assertJsonStructure([
@@ -72,8 +73,8 @@ class ComponentApiTest extends TestCase
             'progress_percent' => 0
         ];
         
-        $response = $this->postJson("/api/v1/projects/{$project->id}/components", $componentData);
-        
+        $response = $this->postJson($this->v1('projects.components.store', ['projectId' => $project->id]), $componentData);
+
         $response->assertStatus(201)
                 ->assertJson([
                     'status' => 'success',
@@ -114,8 +115,8 @@ class ComponentApiTest extends TestCase
             'planned_cost' => 50000.00
         ];
         
-        $response = $this->postJson("/api/v1/projects/{$project->id}/components", $childData);
-        
+        $response = $this->postJson($this->v1('projects.components.store', ['projectId' => $project->id]), $childData);
+
         $response->assertStatus(201)
                 ->assertJson([
                     'status' => 'success',
@@ -149,7 +150,7 @@ class ComponentApiTest extends TestCase
             'progress_percent' => 50
         ];
         
-        $response = $this->putJson("/api/v1/components/{$component->id}", $updateData);
+        $response = $this->patchJson($this->v1('components.update', ['id' => $component->id]), $updateData);
         
         $response->assertStatus(200)
                 ->assertJson([

@@ -7,6 +7,7 @@ use Src\RBAC\Models\Role;
 use Src\RBAC\Models\Permission;
 use App\Models\User;
 use App\Models\Tenant;
+use Illuminate\Support\Str;
 
 /**
  * Class TestDatabaseSeeder
@@ -87,7 +88,7 @@ class TestDatabaseSeeder extends Seeder
 
         // Create test users
         $adminUser = User::firstOrCreate([
-            'email' => 'admin@test.com'
+            'email' => $this->buildTestEmail('admin')
         ], [
             'name' => 'Test Admin',
             'tenant_id' => $tenant->id,
@@ -96,7 +97,7 @@ class TestDatabaseSeeder extends Seeder
         $adminUser->systemRoles()->sync([$adminRole->id]);
 
         $pmUser = User::firstOrCreate([
-            'email' => 'pm@test.com'
+            'email' => $this->buildTestEmail('pm')
         ], [
             'name' => 'Test Project Manager',
             'tenant_id' => $tenant->id,
@@ -105,12 +106,22 @@ class TestDatabaseSeeder extends Seeder
         $pmUser->systemRoles()->sync([$pmRole->id]);
 
         $regularUser = User::firstOrCreate([
-            'email' => 'user@test.com'
+            'email' => $this->buildTestEmail('user')
         ], [
             'name' => 'Test User',
             'tenant_id' => $tenant->id,
             'password' => bcrypt('password')
         ]);
         $regularUser->systemRoles()->sync([$userRole->id]);
+    }
+
+    /**
+     * Build a unique email while tests are running to avoid duplicates.
+     */
+    private function buildTestEmail(string $base): string
+    {
+        $suffix = app()->runningUnitTests() ? '+' . Str::ulid() : '';
+
+        return sprintf('%s%s@test.com', $base, $suffix);
     }
 }

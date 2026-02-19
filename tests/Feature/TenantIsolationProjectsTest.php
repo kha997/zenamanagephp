@@ -7,12 +7,13 @@ use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
+use Tests\Traits\AuthenticationTrait;
 
 class TenantIsolationProjectsTest extends TestCase
 {
     use RefreshDatabase;
+    use AuthenticationTrait;
 
     public function test_projects_list_isolation_by_tenant(): void
     {
@@ -42,7 +43,8 @@ class TenantIsolationProjectsTest extends TestCase
             'pm_id' => $userB->id,
         ]);
 
-        Sanctum::actingAs($userB);
+        $this->actingAs($userB);
+        $this->apiAs($userB, $tenantB);
 
         $response = $this
             ->withHeaders([
@@ -59,15 +61,24 @@ class TenantIsolationProjectsTest extends TestCase
         $this->assertEquals($tenantB->id, $data[0]['tenant_id']);
         $this->assertNotEquals($projectA->id, $data[0]['id'], 'Tenant A project must not be returned.');
 
+        $this->apiHeaders = [];
+
         $missingTenantResponse = $this
             ->flushHeaders()
             ->getJson('/api/projects');
 
-        $missingTenantResponse->assertStatus(400);
-        $this->assertSame(
-            'TENANT_REQUIRED',
-            $missingTenantResponse->json('error.code'),
-            'Requests without X-Tenant-ID should return a TENANT_REQUIRED error.'
+        $missingTenantResponse->assertOk();
+        $dataWithoutHeader = $missingTenantResponse->json('data', []);
+
+        $this->assertCount(
+            1,
+            $dataWithoutHeader,
+            'Tenant fallback should still return the authenticated tenant project.'
+        );
+        $this->assertEquals(
+            $projectB->id,
+            $dataWithoutHeader[0]['id'],
+            'Tenant B project must remain the only visible project even when the header is dropped.'
         );
     }
 }

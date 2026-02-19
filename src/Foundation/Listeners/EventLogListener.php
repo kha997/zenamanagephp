@@ -3,10 +3,13 @@
 namespace Src\Foundation\Listeners;
 
 use Src\Foundation\Helpers\AuthHelper;
+use Src\Foundation\Events\EventLogged;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * Listener để lưu trữ tất cả events vào bảng event_logs
@@ -50,13 +53,16 @@ class EventLogListener
         $payload = method_exists($event, 'getPayload') ? $event->getPayload() : [];
         
         DB::table('event_logs')->insert([
+            'id' => (string) Str::ulid(),
             'event_name' => $event->getEventName(),
+            'event_type' => $event->getEventName(),
             'event_class' => get_class($event),
             'entity_id' => $payload['component_id'] ?? $payload['project_id'] ?? $payload['task_id'] ?? null,
             'project_id' => $payload['project_id'] ?? null,
             'actor_id' => $payload['actor_id'] ?? null,
             'tenant_id' => $payload['tenant_id'] ?? null,
             'payload' => json_encode($payload),
+            'event_data' => json_encode($payload),
             'changed_fields' => isset($payload['changed_fields']) ? json_encode($payload['changed_fields']) : null,
             'source_module' => $this->extractModuleFromClass(get_class($event)),
             'severity' => $this->determineSeverity($event->getEventName()),
@@ -64,6 +70,14 @@ class EventLogListener
             'created_at' => now(),
             'updated_at' => now()
         ]);
+        Event::dispatch(new EventLogged(
+            $event->getEventName(),
+            $payload,
+            $payload['project_id'] ?? null,
+            $payload['actor_id'] ?? null,
+            $this->extractModuleFromClass(get_class($event)),
+            $this->determineSeverity($event->getEventName())
+        ));
     }
 
     /**
@@ -85,12 +99,24 @@ class EventLogListener
         // Loại bỏ dòng lỗi: $event->actor_id = $actorId ?? 'system';
         
         DB::table('event_logs')->insert([
+            'id' => (string) Str::ulid(),
             'event_name' => $eventName,
+            'event_type' => $eventName,
             'payload' => json_encode($payload),
+            'event_data' => json_encode($payload),
             'actor_id' => $actorId,
+            'event_timestamp' => now(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+        Event::dispatch(new EventLogged(
+            $eventName,
+            $payload,
+            $payload['project_id'] ?? null,
+            $actorId,
+            'Generic',
+            $this->determineSeverity($eventName)
+        ));
     }
 
     /**
@@ -110,7 +136,8 @@ class EventLogListener
             'eloquent.saving',
             'eloquent.saved',
             'eloquent.deleting',
-            'eloquent.deleted'
+            'eloquent.deleted',
+            'EventLogged' // Prevent logging the audit event to avoid recursion
         ];
 
         foreach ($skipEvents as $skip) {

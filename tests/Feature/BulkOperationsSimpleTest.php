@@ -9,7 +9,9 @@ use App\Models\Tenant;
 use App\Models\Project;
 use App\Models\Task;
 use App\Services\BulkOperationsService;
+use App\Services\SecureAuditService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class BulkOperationsSimpleTest extends TestCase
 {
@@ -27,15 +29,15 @@ class BulkOperationsSimpleTest extends TestCase
         config(['auth.defaults.guard' => 'api']);
         
         // Create tenant and user
-        $this->tenant = Tenant::create([
+        $this->tenant = Tenant::factory()->create([
             'name' => 'Test Tenant',
-            'slug' => 'test-tenant',
+            'slug' => 'test-tenant-' . Str::lower((string) Str::ulid()),
             'status' => 'active'
         ]);
         
-        $this->user = User::create([
+        $this->user = User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test+' . Str::lower((string) Str::ulid()) . '@example.com',
             'password' => bcrypt('password'),
             'tenant_id' => $this->tenant->id
         ]);
@@ -43,7 +45,7 @@ class BulkOperationsSimpleTest extends TestCase
         // Act as authenticated user with API guard
         $this->actingAs($this->user, 'api');
         
-        $this->bulkService = new BulkOperationsService();
+        $this->bulkService = new BulkOperationsService(new SecureAuditService());
     }
 
     public function test_can_bulk_create_users()
@@ -65,7 +67,7 @@ class BulkOperationsSimpleTest extends TestCase
 
         $result = $this->bulkService->bulkCreateUsers($userData);
 
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result['success'] > 0);
         $this->assertEquals(2, $result['created']);
         $this->assertEquals(0, $result['failed']);
         $this->assertCount(2, $result['results']);
@@ -96,7 +98,7 @@ class BulkOperationsSimpleTest extends TestCase
 
         $result = $this->bulkService->bulkCreateProjects($projectData);
 
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result['success'] > 0);
         $this->assertEquals(2, $result['created']);
         $this->assertEquals(0, $result['failed']);
         
@@ -108,7 +110,7 @@ class BulkOperationsSimpleTest extends TestCase
     public function test_can_bulk_create_tasks()
     {
         // Create a project first
-        $project = Project::create([
+        $project = Project::factory()->create([
             'name' => 'Test Project',
             'description' => 'Test project',
             'status' => 'active',
@@ -139,7 +141,7 @@ class BulkOperationsSimpleTest extends TestCase
 
         $result = $this->bulkService->bulkCreateTasks($taskData);
 
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result['success'] > 0);
         $this->assertEquals(2, $result['created']);
         $this->assertEquals(0, $result['failed']);
         
@@ -170,7 +172,7 @@ class BulkOperationsSimpleTest extends TestCase
 
         $result = $this->bulkService->bulkCreateUsers($invalidData);
 
-        $this->assertFalse($result['success']);
+        $this->assertEquals(0, $result['success']);
         $this->assertEquals(0, $result['created']);
         $this->assertEquals(1, $result['failed']);
         $this->assertCount(1, $result['errors']);
@@ -179,7 +181,7 @@ class BulkOperationsSimpleTest extends TestCase
     public function test_bulk_operations_tenant_isolation()
     {
         // Create another tenant
-        $otherTenant = Tenant::create([
+        $otherTenant = Tenant::factory()->create([
             'name' => 'Other Tenant',
             'slug' => 'other-tenant',
             'status' => 'active'
@@ -199,7 +201,7 @@ class BulkOperationsSimpleTest extends TestCase
 
         // Should still work - bulk operations don't enforce tenant isolation
         // That's handled by middleware/controllers
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result['success'] > 0);
         $this->assertEquals(1, $result['created']);
     }
 
@@ -223,7 +225,7 @@ class BulkOperationsSimpleTest extends TestCase
         $endTime = microtime(true);
         $executionTime = $endTime - $startTime;
 
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result['success'] > 0);
         $this->assertEquals(10, $result['created']);
         
         // Should complete within reasonable time (5 seconds)
@@ -233,7 +235,7 @@ class BulkOperationsSimpleTest extends TestCase
     public function test_bulk_operations_transaction_rollback()
     {
         // Create a user that will cause a constraint violation
-        User::create([
+        User::factory()->create([
             'name' => 'Existing User',
             'email' => 'existing@example.com',
             'password' => bcrypt('password'),
@@ -258,7 +260,7 @@ class BulkOperationsSimpleTest extends TestCase
         $result = $this->bulkService->bulkCreateUsers($userData);
 
         // Should fail due to duplicate email
-        $this->assertFalse($result['success']);
+        $this->assertEquals(0, $result['success']);
         $this->assertEquals(0, $result['created']);
         $this->assertEquals(2, $result['failed']);
     }
@@ -283,7 +285,7 @@ class BulkOperationsSimpleTest extends TestCase
         $result = $this->bulkService->bulkCreateUsers($userData);
 
         // Should have mixed results
-        $this->assertTrue($result['success']); // Overall success if at least one succeeds
+        $this->assertTrue($result['success'] > 0); // Overall success if at least one succeeds
         $this->assertEquals(1, $result['created']);
         $this->assertEquals(1, $result['failed']);
         $this->assertCount(1, $result['errors']);

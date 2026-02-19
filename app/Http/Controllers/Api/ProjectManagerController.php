@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Project;
+use Src\CoreProject\Models\LegacyProjectAdapter as Project;
 use App\Models\Task;
 use App\Services\ErrorEnvelopeService;
 use Carbon\Carbon;

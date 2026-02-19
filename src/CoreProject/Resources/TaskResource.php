@@ -10,6 +10,21 @@ use App\Http\Resources\BaseApiResource;
  */
 class TaskResource extends BaseApiResource
 {
+    private const STATUSES = [
+        'planned' => 'Planned',
+        'in_progress' => 'In Progress',
+        'completed' => 'Completed',
+        'blocked' => 'Blocked',
+        'cancelled' => 'Cancelled',
+    ];
+
+    private const PRIORITIES = [
+        'low' => 'Low',
+        'medium' => 'Medium',
+        'high' => 'High',
+        'critical' => 'Critical',
+    ];
+
     /**
      * Transform the resource into an array.
      *
@@ -31,7 +46,7 @@ class TaskResource extends BaseApiResource
             'status_label' => $this->getStatusLabel(),
             'priority' => $this->priority,
             'priority_label' => $this->getPriorityLabel(),
-            'dependencies' => $this->dependencies,
+            'dependencies' => $this->dependencies_json ?? [],
             'conditional_tag' => $this->conditional_tag,
             'is_hidden' => $this->is_hidden,
             'estimated_hours' => $this->formatDecimal($this->estimated_hours),

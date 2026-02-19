@@ -127,7 +127,7 @@ class CalculationService
     public function calculateTaskDependenciesImpact(string $taskId): array
     {
         $task = Task::findOrFail($taskId);
-        $dependencies = $task->dependencies ?? [];
+        $dependencies = $task->dependencies_json ?? [];
         
         if (empty($dependencies)) {
             return [
@@ -142,7 +142,7 @@ class CalculationService
             ->where('status', '!=', 'completed')
             ->get();
         
-        $blocking = Task::whereJsonContains('dependencies', $taskId)
+        $blocking = Task::whereJsonContains('dependencies_json', $taskId)
             ->get();
         
         $canStart = $blockedBy->isEmpty();

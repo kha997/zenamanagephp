@@ -8,6 +8,8 @@ on:
 jobs:
   test-routes-guardrails:
     runs-on: ubuntu-latest
+    env:
+      COMPOSER_PROCESS_TIMEOUT: 0
 
     services:
       mysql:

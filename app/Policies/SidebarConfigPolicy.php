@@ -2,7 +2,8 @@
 
 namespace App\Policies;
 
-use Illuminate\Auth\Access\HandlesAuthorization;
+use App\Models\SidebarConfig;
+use App\Models\User;
 
 class SidebarConfigPolicy
 {

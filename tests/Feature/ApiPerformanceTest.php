@@ -111,7 +111,8 @@ class ApiPerformanceTest extends TestCase
         $response->assertStatus(200);
         
         // Should use eager loading to avoid N+1 queries
-        $this->assertLessThan(10, $queryCount, 'Should use efficient queries with eager loading');
+        // Includes auth + tenant + RBAC checks before controller eager-loading query path.
+        $this->assertLessThanOrEqual(12, $queryCount, 'Should use efficient queries with eager loading');
         
         DB::disableQueryLog();
     }

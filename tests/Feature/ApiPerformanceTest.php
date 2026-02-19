@@ -8,8 +8,9 @@ use App\Models\User;
 use App\Models\Tenant;
 use Src\CoreProject\Models\Project;
 use Src\CoreProject\Models\Task;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\SSOT\FixtureFactory;
+use Tests\Traits\AuthenticationTrait;
 
 /**
  * Performance tests cho API endpoints
@@ -18,28 +19,23 @@ use Illuminate\Support\Facades\DB;
  */
 class ApiPerformanceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, FixtureFactory, AuthenticationTrait;
 
     protected User $user;
     protected Tenant $tenant;
-    protected string $token;
-
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->tenant = Tenant::factory()->create();
-        $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id,
-            'password' => Hash::make('password123')
-        ]);
-        
-        $loginResponse = $this->postJson('/api/v1/auth/login', [
-            'email' => $this->user->email,
-            'password' => 'password123'
-        ]);
-        
-        $this->token = $loginResponse->json('data.token');
+        $this->tenant = $this->createTenant();
+        $this->user = $this->createTenantUserWithRbac(
+            $this->tenant,
+            'admin',
+            'admin',
+            ['project.view'],
+            ['role' => 'admin']
+        );
+        $this->apiAs($this->user, $this->tenant);
         
         // Seed large dataset
         $this->seedLargeDataset();
@@ -53,9 +49,7 @@ class ApiPerformanceTest extends TestCase
         $startTime = microtime(true);
         $startMemory = memory_get_usage();
         
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->getJson('/api/v1/projects?per_page=50');
+        $response = $this->getJson('/api/v1/projects?per_page=50');
         
         $endTime = microtime(true);
         $endMemory = memory_get_usage();
@@ -87,9 +81,7 @@ class ApiPerformanceTest extends TestCase
         
         // Simulate concurrent requests
         for ($i = 0; $i < $concurrentRequests; $i++) {
-            $promises[] = $this->withHeaders([
-                'Authorization' => 'Bearer ' . $this->token
-            ])->getJson('/api/v1/projects?page=' . ($i + 1));
+            $promises[] = $this->getJson('/api/v1/projects?page=' . ($i + 1));
         }
         
         // Wait for all requests to complete
@@ -111,9 +103,7 @@ class ApiPerformanceTest extends TestCase
     {
         DB::enableQueryLog();
         
-        $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $this->token
-        ])->getJson('/api/v1/projects?include=tasks,components');
+        $response = $this->getJson('/api/v1/projects?include=tasks,components');
         
         $queries = DB::getQueryLog();
         $queryCount = count($queries);

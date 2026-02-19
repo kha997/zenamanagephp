@@ -1436,7 +1436,8 @@ jobs:
         PHP
         echo "::endgroup::"
 
-    - name: Upload Combined Coverage Report
+    - name: Upload Combined Coverage Report (non-blocking)
+      continue-on-error: true
       uses: actions/upload-artifact@v4
       with:
         name: combined-coverage-report

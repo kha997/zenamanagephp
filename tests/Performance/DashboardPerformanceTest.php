@@ -13,7 +13,7 @@ use App\Models\Task;
 use App\Models\Rfi;
 use App\Models\QcInspection;
 use App\Models\QcPlan;
-use App\Models\NCR;
+use App\Models\Ncr;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -134,8 +134,9 @@ class DashboardPerformanceTest extends TestCase
             'created_by' => $this->user->id,
         ]);
 
+        $inspectionIds = [];
         for ($i = 1; $i <= 200; $i++) {
-            QcInspection::factory()->create([
+            $inspection = QcInspection::factory()->create([
                 'title' => "Inspection {$i}",
                 'description' => "Inspection {$i} description",
                 'status' => ['scheduled', 'in_progress', 'completed'][array_rand(['scheduled', 'in_progress', 'completed'])],
@@ -144,18 +145,21 @@ class DashboardPerformanceTest extends TestCase
                 'qc_plan_id' => $qcPlan->id,
                 'tenant_id' => $this->tenant->id,
             ]);
+            $inspectionIds[] = $inspection->id;
         }
 
         // Create 100 NCRs
         for ($i = 1; $i <= 100; $i++) {
-            NCR::create([
+            Ncr::factory()->create([
+                'ncr_number' => sprintf('NCR-%04d', $i),
                 'title' => "NCR {$i}",
                 'description' => "NCR {$i} description",
                 'status' => ['open', 'in_progress', 'closed'][array_rand(['open', 'in_progress', 'closed'])],
                 'severity' => ['low', 'medium', 'high'][array_rand(['low', 'medium', 'high'])],
-                'category' => ['quality', 'safety', 'compliance'][array_rand(['quality', 'safety', 'compliance'])],
+                'created_by' => $this->user->id,
+                'inspection_id' => $inspectionIds[array_rand($inspectionIds)],
                 'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'tenant_id' => $this->tenant->id,
             ]);
         }
 

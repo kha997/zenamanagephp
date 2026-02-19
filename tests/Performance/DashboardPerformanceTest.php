@@ -246,17 +246,55 @@ class DashboardPerformanceTest extends TestCase
     /** @test */
     public function it_can_load_alerts_with_large_dataset_quickly()
     {
-        $startTime = microtime(true);
-        
-        $response = $this->getJson('/api/v1/dashboard/alerts');
-        
-        $endTime = microtime(true);
-        $executionTime = ($endTime - $startTime) * 1000; // Convert to milliseconds
-        
-        $response->assertStatus(200);
-        $this->assertLessThan(1000, $executionTime, 'Alerts should load in less than 1000ms');
-        
-        echo "\nAlerts load time: {$executionTime}ms\n";
+        $endpoint = '/api/v1/dashboard/alerts';
+        $debugEnabled = filter_var(getenv('PERF_DEBUG') ?: '0', FILTER_VALIDATE_BOOLEAN);
+        $isCi = filter_var(getenv('CI') ?: '0', FILTER_VALIDATE_BOOLEAN);
+        $latencyBudgetMs = $isCi ? 450 : 300;
+        $queryBudget = 20;
+
+        // Warm cache and app container state before collecting timings.
+        $warmupResponse = $this->getJson($endpoint);
+        $warmupResponse->assertStatus(200);
+
+        $samples = [];
+        $queryCounts = [];
+
+        for ($i = 0; $i < 3; $i++) {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+
+            $startTime = microtime(true);
+            $response = $this->getJson($endpoint);
+            $endTime = microtime(true);
+
+            $response->assertStatus(200);
+
+            $samples[] = ($endTime - $startTime) * 1000;
+            $queryCounts[] = count(DB::getQueryLog());
+
+            DB::disableQueryLog();
+        }
+
+        sort($samples);
+        $medianMs = $samples[1];
+        $maxQueryCount = max($queryCounts);
+
+        if ($debugEnabled) {
+            $samplesText = implode(', ', array_map(static fn (float $sample): string => sprintf('%.2f', $sample), $samples));
+            $queriesText = implode(', ', $queryCounts);
+            echo "\nAlerts latency samples (ms): [{$samplesText}] | median: " . sprintf('%.2f', $medianMs) . " | query counts: [{$queriesText}] | max queries: {$maxQueryCount}\n";
+        }
+
+        $this->assertLessThan(
+            $latencyBudgetMs,
+            $medianMs,
+            "Alerts median load time should be less than {$latencyBudgetMs}ms"
+        );
+        $this->assertLessThanOrEqual(
+            $queryBudget,
+            $maxQueryCount,
+            "Alerts endpoint should use at most {$queryBudget} queries"
+        );
     }
 
     /** @test */

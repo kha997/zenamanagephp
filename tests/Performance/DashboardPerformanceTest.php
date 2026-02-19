@@ -11,7 +11,8 @@ use App\Models\DashboardAlert;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\Rfi;
-use App\Models\Inspection;
+use App\Models\QcInspection;
+use App\Models\QcPlan;
 use App\Models\NCR;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -127,16 +128,21 @@ class DashboardPerformanceTest extends TestCase
         }
 
         // Create 200 inspections
+        $qcPlan = QcPlan::factory()->create([
+            'project_id' => $this->project->id,
+            'tenant_id' => $this->tenant->id,
+            'created_by' => $this->user->id,
+        ]);
+
         for ($i = 1; $i <= 200; $i++) {
-            Inspection::create([
+            QcInspection::factory()->create([
                 'title' => "Inspection {$i}",
                 'description' => "Inspection {$i} description",
                 'status' => ['scheduled', 'in_progress', 'completed'][array_rand(['scheduled', 'in_progress', 'completed'])],
-                'type' => ['quality', 'safety', 'compliance'][array_rand(['quality', 'safety', 'compliance'])],
-                'scheduled_date' => now()->addDays(rand(1, 30)),
+                'inspection_date' => now()->addDays(rand(1, 30)),
                 'inspector_id' => $this->user->id,
-                'project_id' => $this->project->id,
-                'tenant_id' => $this->tenant->id
+                'qc_plan_id' => $qcPlan->id,
+                'tenant_id' => $this->tenant->id,
             ]);
         }
 

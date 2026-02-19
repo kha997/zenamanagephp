@@ -1300,19 +1300,22 @@ jobs:
     - name: Coverage download group start
       run: echo "::group::Download coverage"
 
-    - name: Download Unit Test Coverage
+    - name: Download Unit Test Coverage (non-blocking)
+      continue-on-error: true
       uses: actions/download-artifact@v4
       with:
         name: coverage-unit
         path: coverage/
 
-    - name: Download Feature Test Coverage
+    - name: Download Feature Test Coverage (non-blocking)
+      continue-on-error: true
       uses: actions/download-artifact@v4
       with:
         name: coverage-feature
         path: coverage/
 
-    - name: Download Integration Test Coverage
+    - name: Download Integration Test Coverage (non-blocking)
+      continue-on-error: true
       uses: actions/download-artifact@v4
       with:
         name: coverage-integration

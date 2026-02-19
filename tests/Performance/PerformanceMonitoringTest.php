@@ -9,11 +9,12 @@ use App\Models\Task;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\SSOT\FixtureFactory;
 use Tests\Traits\AuthenticationTrait;
 
 class PerformanceMonitoringTest extends TestCase
 {
-    use RefreshDatabase, AuthenticationTrait;
+    use RefreshDatabase, FixtureFactory, AuthenticationTrait;
 
     protected $user;
     protected $tenant;
@@ -22,14 +23,15 @@ class PerformanceMonitoringTest extends TestCase
     {
         parent::setUp();
         
-        // Create tenant
-        $this->tenant = Tenant::factory()->create();
-        
-        // Create user
-        $this->user = User::factory()->create([
-            'tenant_id' => $this->tenant->id,
-            'role' => 'project_manager'
-        ]);
+        // Create tenant + PM user with explicit RBAC role assignment (SSOT helper)
+        $this->tenant = $this->createTenant();
+        $this->user = $this->createTenantUserWithRbac(
+            $this->tenant,
+            'project_manager',
+            'project_manager',
+            [],
+            ['role' => 'project_manager']
+        );
     }
 
     /**

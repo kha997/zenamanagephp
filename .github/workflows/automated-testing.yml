@@ -1196,14 +1196,20 @@ jobs:
     - name: Run PHPStan Static Analysis
       run: |
         echo "::group::PHPStan static analysis"
+        set +e
         ./vendor/bin/phpstan analyse --error-format=json > phpstan-report.json
+        phpstan_exit=$?
+        php scripts/ci/print-phpstan-summary.php phpstan-report.json 50
         echo "::endgroup::"
+        exit $phpstan_exit
 
     - name: Upload PHPStan Report
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: phpstan-report
         path: phpstan-report.json
+        if-no-files-found: warn
 
     - name: Run PHP CS Fixer
       run: |

@@ -509,6 +509,8 @@ class DashboardPerformanceTest extends TestCase
     /** @test */
     public function it_can_handle_database_query_optimization()
     {
+        $this->bootPerfQueryDebugListener();
+
         // Test query count for dashboard loading
         DB::enableQueryLog();
         
@@ -523,6 +525,47 @@ class DashboardPerformanceTest extends TestCase
         echo "\nDatabase queries count: {$queryCount}\n";
         
         DB::disableQueryLog();
+    }
+
+    private function bootPerfQueryDebugListener(): void
+    {
+        $debugEnabled = filter_var(getenv('PERF_DEBUG_QUERIES') ?: '0', FILTER_VALIDATE_BOOLEAN);
+        if (!$debugEnabled) {
+            return;
+        }
+
+        $logPath = storage_path('logs/perf-dashboard-queries.log');
+        @file_put_contents($logPath, '');
+
+        DB::listen(function ($query) use ($logPath): void {
+            $bindings = json_encode($query->bindings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            $stackHints = collect(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS))
+                ->filter(static function (array $frame): bool {
+                    $file = $frame['file'] ?? null;
+                    return is_string($file)
+                        && str_starts_with($file, base_path())
+                        && !str_contains($file, DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR);
+                })
+                ->map(static fn (array $frame): string => sprintf(
+                    '%s:%s',
+                    str_replace(base_path() . DIRECTORY_SEPARATOR, '', (string) ($frame['file'] ?? 'unknown')),
+                    (string) ($frame['line'] ?? '?')
+                ))
+                ->take(6)
+                ->implode(' <= ');
+
+            $line = sprintf(
+                "[%s] %sms | %s | bindings=%s | stack=%s\n",
+                now()->toDateTimeString(),
+                (string) $query->time,
+                $query->sql,
+                $bindings ?: '[]',
+                $stackHints
+            );
+
+            file_put_contents($logPath, $line, FILE_APPEND);
+        });
     }
 
     /** @test */

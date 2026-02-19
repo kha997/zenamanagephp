@@ -717,12 +717,17 @@ class DashboardRoleBasedService
     {
         $layout = [];
         $y = 0;
+        $defaultWidgetCodes = $roleConfig['default_widgets'] ?? [];
 
-        foreach ($roleConfig['default_widgets'] as $index => $widgetCode) {
-            $widget = DashboardWidget::where('code', $widgetCode)
-                ->where('tenant_id', $user->tenant_id)
-                ->where('is_active', true)
-                ->first();
+        $widgetsByCode = DashboardWidget::query()
+            ->where('tenant_id', $user->tenant_id)
+            ->where('is_active', true)
+            ->whereIn('code', $defaultWidgetCodes)
+            ->get()
+            ->keyBy('code');
+
+        foreach ($defaultWidgetCodes as $index => $widgetCode) {
+            $widget = $widgetsByCode->get($widgetCode);
 
             if ($widget && $this->userCanAccessWidget($user, $widget)) {
                 $layout[] = [

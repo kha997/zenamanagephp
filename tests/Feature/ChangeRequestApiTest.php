@@ -290,4 +290,26 @@ class ChangeRequestApiTest extends TestCase
                      'message' => 'Only draft change requests can be submitted'
                  ]);
     }
+
+    public function test_cross_tenant_change_request_show_returns_not_found(): void
+    {
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['change-request.view']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->getJson("/api/zena/change-requests/{$changeRequest->id}");
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Change request not found',
+            ]);
+    }
 }

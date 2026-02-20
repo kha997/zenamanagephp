@@ -543,7 +543,8 @@ Route::group([], function () {
             Route::get('{team}/invitations', [\App\Http\Controllers\Api\InvitationController::class, 'index'])->middleware('rbac:invitation.view');
             Route::post('{team}/invitations', [\App\Http\Controllers\Api\InvitationController::class, 'store'])->middleware('rbac:invitation.create');
             Route::delete('{team}/invitations/{invitation}', [\App\Http\Controllers\Api\InvitationController::class, 'revoke'])->middleware('rbac:invitation.revoke');
-            Route::post('{team}/invitations/{token}/accept', [\App\Http\Controllers\Api\InvitationController::class, 'accept'])->middleware('rbac:invitation.accept');
+            Route::post('{team}/invitations/{token}/accept', [\App\Http\Controllers\Api\InvitationController::class, 'accept'])
+                ->middleware(['throttle:invitation-accept', 'rbac:invitation.accept']);
         });
 
         /*

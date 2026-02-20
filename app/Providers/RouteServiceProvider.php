@@ -75,5 +75,18 @@ class RouteServiceProvider extends ServiceProvider
             $key = $request->ip();
             return Limit::perMinute(10)->by($key);
         });
+
+        RateLimiter::for('invitation-accept', function (Request $request) {
+            $user = $request->user();
+            $userId = $user ? (string) $user->id : 'guest';
+            $teamId = (string) ($request->route('team') ?? $request->query('team', ''));
+            $key = implode('|', [
+                $userId,
+                (string) $request->ip(),
+                $teamId !== '' ? $teamId : 'no-team',
+            ]);
+
+            return Limit::perMinute(10)->by($key);
+        });
     }
 }

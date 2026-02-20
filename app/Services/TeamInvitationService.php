@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Invitation;
 use App\Models\Team;
 use App\Models\User;
@@ -13,6 +14,8 @@ use App\Notifications\TeamInvitationCreatedNotification;
 
 class TeamInvitationService
 {
+    private const HASH_ONLY_TOKEN_VERSION = 2;
+
     public function resolveByToken(string $tenantId, ?string $teamId, string $token): ?Invitation
     {
         $providedHash = hash('sha256', $token);
@@ -29,26 +32,24 @@ class TeamInvitationService
             ->orderByDesc('created_at')
             ->first();
 
-        if ($hashedMatch instanceof Invitation && hash_equals((string) $hashedMatch->token_hash, $providedHash)) {
+        if ($hashedMatch instanceof Invitation) {
             return $hashedMatch;
         }
 
-        $legacyCandidates = (clone $query)
+        $legacyMatch = (clone $query)
             ->whereNull('token_hash')
             ->whereNotNull('token')
+            ->where('token', $token)
             ->orderByDesc('created_at')
-            ->get();
+            ->first();
 
-        foreach ($legacyCandidates as $candidate) {
-            $storedToken = (string) ($candidate->token ?? '');
-            if ($storedToken !== '' && hash_equals($storedToken, $token)) {
-                $candidate->forceFill([
-                    'token_hash' => $providedHash,
-                    'token_version' => 1,
-                ])->save();
+        if ($legacyMatch instanceof Invitation) {
+            $legacyMatch->forceFill([
+                'token_hash' => $providedHash,
+                'token_version' => self::HASH_ONLY_TOKEN_VERSION,
+            ])->save();
 
-                return $candidate;
-            }
+            return $legacyMatch;
         }
 
         return null;
@@ -81,9 +82,9 @@ class TeamInvitationService
         $invitation = Invitation::query()->create([
             'tenant_id' => $team->tenant_id,
             'team_id' => $team->id,
-            'token' => $rawToken,
+            'token' => null,
             'token_hash' => hash('sha256', $rawToken),
-            'token_version' => 1,
+            'token_version' => self::HASH_ONLY_TOKEN_VERSION,
             'email' => $normalizedEmail,
             'role' => $role,
             'message' => $message,
@@ -101,6 +102,8 @@ class TeamInvitationService
             throw new \RuntimeException('Failed to create invitation.');
         }
 
+        $this->logInvitationAudit('invitation.create', $invitation, $inviter);
+
         try {
             Notification::route('mail', $invitation->email)
                 ->notify(new TeamInvitationCreatedNotification($invitation, $rawToken, $team, $inviter));
@@ -113,6 +116,8 @@ class TeamInvitationService
             ]);
         }
 
+        $invitation->setAttribute('token', $rawToken);
+
         return $invitation;
     }
 
@@ -123,6 +128,7 @@ class TeamInvitationService
         }
 
         $invitation->markAsCancelled($actor->id);
+        $this->logInvitationAudit('invitation.revoke', $invitation, $actor);
 
         return $invitation->fresh() ?? $invitation;
     }
@@ -189,7 +195,45 @@ class TeamInvitationService
             $invitation->update(['accepted_by' => 0]);
         });
 
+        $this->logInvitationAudit('invitation.accept', $invitation, $actor);
+
         return $invitation->fresh() ?? $invitation;
+    }
+
+    private function logInvitationAudit(string $action, Invitation $invitation, User $actor): void
+    {
+        $now = now();
+
+        try {
+            AuditLog::query()->create([
+                'user_id' => (string) $actor->id,
+                'tenant_id' => $invitation->tenant_id ? (string) $invitation->tenant_id : null,
+                'action' => $action,
+                'entity_type' => 'invitation',
+                'entity_id' => (string) $invitation->id,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'new_data' => [
+                    'tenant_id' => $invitation->tenant_id ? (string) $invitation->tenant_id : null,
+                    'team_id' => $invitation->team_id ? (string) $invitation->team_id : null,
+                    'invitation_id' => (string) $invitation->id,
+                    'actor_user_id' => (string) $actor->id,
+                    'action' => $action,
+                    'timestamp' => $now->toISOString(),
+                    'ip' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ],
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to write invitation audit log', [
+                'action' => $action,
+                'invitation_id' => $invitation->id,
+                'tenant_id' => $invitation->tenant_id,
+                'team_id' => $invitation->team_id,
+                'actor_user_id' => $actor->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function normalizeTeamRole(string $role): string

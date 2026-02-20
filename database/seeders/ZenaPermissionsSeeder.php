@@ -81,6 +81,16 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'project.update', 'module' => 'project', 'action' => 'update', 'description' => 'Update existing projects'],
         ['code' => 'project.delete', 'module' => 'project', 'action' => 'delete', 'description' => 'Delete projects'],
 
+        // Contract management
+        ['code' => 'contract.view', 'module' => 'contract', 'action' => 'view', 'description' => 'View contracts'],
+        ['code' => 'contract.create', 'module' => 'contract', 'action' => 'create', 'description' => 'Create contracts'],
+        ['code' => 'contract.update', 'module' => 'contract', 'action' => 'update', 'description' => 'Update contracts'],
+        ['code' => 'contract.delete', 'module' => 'contract', 'action' => 'delete', 'description' => 'Delete contracts'],
+        ['code' => 'contract.payment.view', 'module' => 'contract', 'action' => 'payment.view', 'description' => 'View contract payments'],
+        ['code' => 'contract.payment.create', 'module' => 'contract', 'action' => 'payment.create', 'description' => 'Create contract payments'],
+        ['code' => 'contract.payment.update', 'module' => 'contract', 'action' => 'payment.update', 'description' => 'Update contract payments'],
+        ['code' => 'contract.payment.delete', 'module' => 'contract', 'action' => 'payment.delete', 'description' => 'Delete contract payments'],
+
         // Task management
         ['code' => 'task.view', 'module' => 'task', 'action' => 'view', 'description' => 'View tasks'],
         ['code' => 'task.create', 'module' => 'task', 'action' => 'create', 'description' => 'Create tasks'],

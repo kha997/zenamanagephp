@@ -781,6 +781,39 @@ Route::prefix('dashboard')->group(function () {
 });
 
 Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+    Route::prefix('projects/{project}/contracts')->as('projects.contracts.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\ContractController::class, 'index'])
+            ->middleware('rbac:contract.view')
+            ->name('index');
+        Route::post('/', [App\Http\Controllers\Api\ContractController::class, 'store'])
+            ->middleware('rbac:contract.create')
+            ->name('store');
+        Route::get('/{contract}', [App\Http\Controllers\Api\ContractController::class, 'show'])
+            ->middleware('rbac:contract.view')
+            ->name('show');
+        Route::put('/{contract}', [App\Http\Controllers\Api\ContractController::class, 'update'])
+            ->middleware('rbac:contract.update')
+            ->name('update');
+        Route::delete('/{contract}', [App\Http\Controllers\Api\ContractController::class, 'destroy'])
+            ->middleware('rbac:contract.delete')
+            ->name('destroy');
+    });
+
+    Route::prefix('contracts/{contract}/payments')->as('contracts.payments.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\ContractPaymentController::class, 'index'])
+            ->middleware('rbac:contract.payment.view')
+            ->name('index');
+        Route::post('/', [App\Http\Controllers\Api\ContractPaymentController::class, 'store'])
+            ->middleware('rbac:contract.payment.create')
+            ->name('store');
+        Route::put('/{payment}', [App\Http\Controllers\Api\ContractPaymentController::class, 'update'])
+            ->middleware('rbac:contract.payment.update')
+            ->name('update');
+        Route::delete('/{payment}', [App\Http\Controllers\Api\ContractPaymentController::class, 'destroy'])
+            ->middleware('rbac:contract.payment.delete')
+            ->name('destroy');
+    });
+
     Route::prefix('dashboard')->as('dashboard.')->middleware(['input.sanitization', 'error.envelope'])->group(function () {
         Route::get('/', [App\Http\Controllers\Api\DashboardController::class, 'getUserDashboard'])->name('index');
         Route::get('/template', [App\Http\Controllers\Api\DashboardController::class, 'getDashboardTemplate'])->name('template');

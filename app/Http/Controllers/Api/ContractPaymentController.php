@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Contract;
 use App\Models\ContractPayment;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,12 +22,27 @@ class ContractPaymentController extends BaseApiController
         return $tenantId ? (string) $tenantId : '';
     }
 
-    private function findContract(string $tenantId, string $contractId): ?Contract
+    private function findContractOrFail(string $tenantId, string $contractId): Contract
     {
-        return Contract::query()
+        /** @var Contract $contract */
+        $contract = Contract::query()
             ->where('tenant_id', $tenantId)
             ->whereKey($contractId)
-            ->first();
+            ->firstOrFail();
+
+        return $contract;
+    }
+
+    private function findPaymentOrFail(string $tenantId, string $contractId, string $paymentId): ContractPayment
+    {
+        /** @var ContractPayment $payment */
+        $payment = ContractPayment::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', $contractId)
+            ->whereKey($paymentId)
+            ->firstOrFail();
+
+        return $payment;
     }
 
     public function index(Request $request, string $contract): JsonResponse
@@ -36,9 +52,13 @@ class ContractPaymentController extends BaseApiController
             return $this->errorResponse('Tenant context missing', 400);
         }
 
-        if (!$this->findContract($tenantId, $contract)) {
+        try {
+            $this->findContractOrFail($tenantId, $contract);
+        } catch (ModelNotFoundException) {
             return $this->notFound('Contract not found');
         }
+
+        $this->authorize('viewAny', ContractPayment::class);
 
         $perPage = min((int) $request->input('per_page', 15), 100);
 
@@ -66,9 +86,13 @@ class ContractPaymentController extends BaseApiController
             return $this->errorResponse('Tenant context missing', 400);
         }
 
-        if (!$this->findContract($tenantId, $contract)) {
+        try {
+            $this->findContractOrFail($tenantId, $contract);
+        } catch (ModelNotFoundException) {
             return $this->notFound('Contract not found');
         }
+
+        $this->authorize('create', ContractPayment::class);
 
         $validator = Validator::make($request->all(), [
             'name' => ['required', 'string', 'max:255'],
@@ -104,19 +128,19 @@ class ContractPaymentController extends BaseApiController
             return $this->errorResponse('Tenant context missing', 400);
         }
 
-        if (!$this->findContract($tenantId, $contract)) {
+        try {
+            $this->findContractOrFail($tenantId, $contract);
+        } catch (ModelNotFoundException) {
             return $this->notFound('Contract not found');
         }
 
-        $paymentModel = ContractPayment::query()
-            ->where('tenant_id', $tenantId)
-            ->where('contract_id', $contract)
-            ->whereKey($payment)
-            ->first();
-
-        if (!$paymentModel) {
+        try {
+            $paymentModel = $this->findPaymentOrFail($tenantId, $contract, $payment);
+        } catch (ModelNotFoundException) {
             return $this->notFound('Contract payment not found');
         }
+
+        $this->authorize('update', $paymentModel);
 
         $validator = Validator::make($request->all(), [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -150,19 +174,19 @@ class ContractPaymentController extends BaseApiController
             return $this->errorResponse('Tenant context missing', 400);
         }
 
-        if (!$this->findContract($tenantId, $contract)) {
+        try {
+            $this->findContractOrFail($tenantId, $contract);
+        } catch (ModelNotFoundException) {
             return $this->notFound('Contract not found');
         }
 
-        $paymentModel = ContractPayment::query()
-            ->where('tenant_id', $tenantId)
-            ->where('contract_id', $contract)
-            ->whereKey($payment)
-            ->first();
-
-        if (!$paymentModel) {
+        try {
+            $paymentModel = $this->findPaymentOrFail($tenantId, $contract, $payment);
+        } catch (ModelNotFoundException) {
             return $this->notFound('Contract payment not found');
         }
+
+        $this->authorize('delete', $paymentModel);
 
         $paymentModel->delete();
 

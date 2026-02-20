@@ -13,6 +13,8 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         'App\Models\Project' => 'App\Policies\ProjectPolicy',
+        'App\Models\Contract' => 'App\Policies\ContractPolicy',
+        'App\Models\ContractPayment' => 'App\Policies\ContractPaymentPolicy',
         'App\Models\Task' => 'App\Policies\TaskPolicy',
         'App\Models\User' => 'App\Policies\UserPolicy',
         'App\Models\Document' => 'App\Policies\DocumentPolicy',

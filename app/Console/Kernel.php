@@ -2,11 +2,19 @@
 
 namespace App\Console;
 
+use App\Console\Commands\BackfillInvitationTokenHash;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 class Kernel extends ConsoleKernel
 {
+    /**
+     * @var array<int, class-string>
+     */
+    protected $commands = [
+        BackfillInvitationTokenHash::class,
+    ];
+
     /**
      * Define the application's command schedule.
      */

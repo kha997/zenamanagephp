@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\Support\SSOT\FixtureFactory;
 
 /**
@@ -273,10 +274,14 @@ class UserManagementSimpleTest extends TestCase
      */
     public function test_can_search_users(): void
     {
+        $baselineTenantUsers = User::where('tenant_id', $this->tenant->id)->count();
+        $johnNeedle = 'JohnSearch'.Str::lower(Str::random(8));
+        $janeNeedle = 'jane-search-'.Str::lower(Str::random(8));
+
         // Create additional users for search testing
         User::factory()->create([
-            'name' => 'John Doe',
-            'email' => 'john@example.com',
+            'name' => $johnNeedle,
+            'email' => $johnNeedle.'@example.com',
             'password' => Hash::make('password123'),
             'tenant_id' => $this->tenant->id,
             'is_active' => true,
@@ -284,25 +289,29 @@ class UserManagementSimpleTest extends TestCase
 
         User::factory()->create([
             'name' => 'Jane Smith',
-            'email' => 'jane@example.com',
+            'email' => $janeNeedle.'@example.com',
             'password' => Hash::make('password123'),
             'tenant_id' => $this->tenant->id,
             'is_active' => true,
         ]);
 
-        // Search by name
-        $johnUsers = User::where('name', 'like', '%John%')->get();
+        // Search by name (tenant-scoped to avoid seed-data collisions)
+        $johnUsers = User::where('tenant_id', $this->tenant->id)
+            ->where('name', 'like', '%'.$johnNeedle.'%')
+            ->get();
         $this->assertCount(1, $johnUsers);
-        $this->assertEquals('John Doe', $johnUsers->first()->name);
+        $this->assertEquals($johnNeedle, $johnUsers->first()->name);
 
         // Search by email
-        $janeUsers = User::where('email', 'like', '%jane%')->get();
+        $janeUsers = User::where('tenant_id', $this->tenant->id)
+            ->where('email', 'like', '%'.$janeNeedle.'%')
+            ->get();
         $this->assertCount(1, $janeUsers);
-        $this->assertEquals('jane@example.com', $janeUsers->first()->email);
+        $this->assertEquals($janeNeedle.'@example.com', $janeUsers->first()->email);
 
         // Search by tenant
         $tenantUsers = User::where('tenant_id', $this->tenant->id)->get();
-        $this->assertCount(3, $tenantUsers); // Original user + 2 new users
+        $this->assertCount($baselineTenantUsers + 2, $tenantUsers);
     }
 
     /**

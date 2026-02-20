@@ -49,8 +49,11 @@ class AccessibilityTest extends TestCase
         // Test for proper heading structure (h1, h2, h3 hierarchy)
         $this->assertStringContainsString('<h1', $content, 'Dashboard should have h1 heading');
         
-        // Test for alt text on images
-        $this->assertStringContainsString('alt="', $content, 'Dashboard images should have alt text');
+        // If image tags are present, each must carry alt text.
+        preg_match_all('/<img\b[^>]*>/i', $content, $imageTags);
+        foreach ($imageTags[0] as $imageTag) {
+            $this->assertMatchesRegularExpression('/\balt\s*=\s*["\'][^"\']*["\']/i', $imageTag, 'Dashboard images should have alt text');
+        }
         
     }
 

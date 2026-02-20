@@ -465,7 +465,9 @@ Route::get('/admin/users', function() {
 
 // Invitation Routes
 Route::prefix('invitations')->name('invitations.')->group(function () {
-    Route::get('/accept/{token}', [App\Http\Controllers\Web\InvitationController::class, 'accept'])->name('accept');
+    Route::get('/accept/{token}', [App\Http\Controllers\Web\AuthenticatedInvitationAcceptController::class, 'show'])
+        ->middleware(['auth', 'tenant.isolation'])
+        ->name('accept');
     // POST /invitations/accept/{token} - MOVED TO API: /api/v1/invitations/accept/{token}
     Route::get('/decline/{token}', [App\Http\Controllers\Web\InvitationController::class, 'decline'])->name('decline');
 });

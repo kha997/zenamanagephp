@@ -312,4 +312,72 @@ class ChangeRequestApiTest extends TestCase
                 'message' => 'Change request not found',
             ]);
     }
+
+    public function test_cross_tenant_change_request_update_returns_not_found(): void
+    {
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['change-request.update']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->putJson("/api/zena/change-requests/{$changeRequest->id}", [
+                'title' => 'Cross tenant update attempt',
+            ]);
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Change request not found',
+            ]);
+    }
+
+    public function test_cross_tenant_change_request_destroy_returns_not_found(): void
+    {
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['change-request.delete']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->deleteJson("/api/zena/change-requests/{$changeRequest->id}");
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Change request not found',
+            ]);
+    }
+
+    public function test_cross_tenant_change_request_submit_returns_not_found(): void
+    {
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['change-request.submit']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/submit");
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Change request not found',
+            ]);
+    }
 }

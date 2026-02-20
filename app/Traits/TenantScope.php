@@ -15,9 +15,9 @@ trait TenantScope
     /**
      * Boot the trait
      */
-    protected static function bootTenantScope()
+    protected static function bootTenantScope(): void
     {
-        static::addGlobalScope('tenant', function (Builder $builder) {
+        static::addGlobalScope('tenant', function (Builder $builder): void {
             $tenantId = null;
 
             if (app()->has('tenant')) {
@@ -37,23 +37,25 @@ trait TenantScope
     /**
      * Get the tenant ID for this model
      */
-    public function getTenantId()
+    public function getTenantId(): ?string
     {
-        return $this->tenant_id;
+        $tenantId = $this->getAttribute('tenant_id');
+
+        return $tenantId !== null ? (string) $tenantId : null;
     }
 
     /**
      * Check if model belongs to a specific tenant
      */
-    public function belongsToTenant($tenantId): bool
+    public function belongsToTenant(string $tenantId): bool
     {
-        return $this->tenant_id === $tenantId;
+        return $this->getTenantId() === $tenantId;
     }
 
     /**
      * Scope to get models for a specific tenant
      */
-    public function scopeForTenant(Builder $query, $tenantId): Builder
+    public function scopeForTenant(Builder $query, string $tenantId): Builder
     {
         return $query->where('tenant_id', $tenantId);
     }

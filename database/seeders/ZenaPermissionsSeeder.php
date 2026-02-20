@@ -114,6 +114,24 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'change-request.approve', 'module' => 'change-request', 'action' => 'approve', 'description' => 'Approve a change request'],
         ['code' => 'change-request.reject', 'module' => 'change-request', 'action' => 'reject', 'description' => 'Reject a change request'],
         ['code' => 'change-request.apply', 'module' => 'change-request', 'action' => 'apply', 'description' => 'Apply a change request'],
+
+        // Team management
+        ['code' => 'team.view', 'module' => 'team', 'action' => 'view', 'description' => 'View teams'],
+        ['code' => 'team.create', 'module' => 'team', 'action' => 'create', 'description' => 'Create teams'],
+        ['code' => 'team.update', 'module' => 'team', 'action' => 'update', 'description' => 'Update teams'],
+        ['code' => 'team.delete', 'module' => 'team', 'action' => 'delete', 'description' => 'Delete teams'],
+        ['code' => 'team.archive', 'module' => 'team', 'action' => 'archive', 'description' => 'Archive teams'],
+        ['code' => 'team.restore', 'module' => 'team', 'action' => 'restore', 'description' => 'Restore teams'],
+        ['code' => 'team.member.view', 'module' => 'team', 'action' => 'member.view', 'description' => 'View team members'],
+        ['code' => 'team.member.add', 'module' => 'team', 'action' => 'member.add', 'description' => 'Add team members'],
+        ['code' => 'team.member.remove', 'module' => 'team', 'action' => 'member.remove', 'description' => 'Remove team members'],
+        ['code' => 'team.member.update-role', 'module' => 'team', 'action' => 'member.update-role', 'description' => 'Update team member roles'],
+
+        // Invitations
+        ['code' => 'invitation.view', 'module' => 'invitation', 'action' => 'view', 'description' => 'View invitations'],
+        ['code' => 'invitation.create', 'module' => 'invitation', 'action' => 'create', 'description' => 'Create invitations'],
+        ['code' => 'invitation.revoke', 'module' => 'invitation', 'action' => 'revoke', 'description' => 'Revoke invitations'],
+        ['code' => 'invitation.accept', 'module' => 'invitation', 'action' => 'accept', 'description' => 'Accept invitations'],
     ];
 
     private const PERMISSION_TABLE = 'permissions';

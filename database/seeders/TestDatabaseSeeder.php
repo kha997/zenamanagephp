@@ -57,7 +57,11 @@ class TestDatabaseSeeder extends Seeder
             'project.create', 'project.view', 'project.update', 'project.delete',
             'component.create', 'component.view', 'component.update', 'component.delete',
             'task.create', 'task.view', 'task.update', 'task.delete', 'task.assign',
-            'user.manage', 'role.manage'
+            'user.manage', 'role.manage',
+            'team.view', 'team.create', 'team.update', 'team.delete',
+            'team.archive', 'team.restore', 'team.member.view', 'team.member.add',
+            'team.member.remove', 'team.member.update-role',
+            'invitation.view', 'invitation.create', 'invitation.revoke', 'invitation.accept',
         ];
 
         foreach ($permissions as $permissionCode) {

@@ -9,23 +9,23 @@ class ProjectPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('projects.view');
+        return $user->hasPermission('project.view');
     }
 
     public function view(User $user, Project $project): bool
     {
         return $user->tenant_id === $project->tenant_id && 
-               $user->hasPermission('projects.view');
+               $user->hasPermission('project.view');
     }
 
     public function create(User $user): bool
     {
-        return $user->hasPermission('projects.create');
+        return $user->hasPermission('project.create');
     }
 
     public function update(User $user, Project $project): bool
     {
         return $user->tenant_id === $project->tenant_id && 
-               $user->hasPermission('projects.update');
+               $user->hasPermission('project.update');
     }
 }

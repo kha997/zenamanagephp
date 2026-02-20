@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,7 +31,7 @@ use Illuminate\Support\Facades\Event;
  */
 class ChangeRequest extends Model
 {
-    use HasUlids, HasFactory;
+    use HasUlids, HasFactory, TenantScope;
 
     protected $table = 'change_requests';
     protected $keyType = 'string';

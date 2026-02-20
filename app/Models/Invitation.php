@@ -43,6 +43,9 @@ class Invitation extends Model
 {
     use HasFactory;
 
+    public const TOKEN_VERSION_LEGACY = 1;
+    public const TOKEN_VERSION_HASH_ONLY = 2;
+
     public const STATUS_PENDING = 'pending';
     public const STATUS_ACCEPTED = 'accepted';
     public const STATUS_EXPIRED = 'expired';
@@ -89,16 +92,24 @@ class Invitation extends Model
         parent::boot();
 
         static::creating(function (Invitation $invitation): void {
-            if ($invitation->token === null || $invitation->token === '') {
+            if (
+                ($invitation->token === null || $invitation->token === '')
+                && ($invitation->token_hash === null || $invitation->token_hash === '')
+            ) {
                 $invitation->token = Str::random(80);
             }
 
-            if ($invitation->token_hash === null || $invitation->token_hash === '') {
+            if (
+                ($invitation->token_hash === null || $invitation->token_hash === '')
+                && ($invitation->token !== null && $invitation->token !== '')
+            ) {
                 $invitation->token_hash = hash('sha256', (string) $invitation->token);
             }
 
             if ($invitation->token_version === null) {
-                $invitation->token_version = 1;
+                $invitation->token_version = ($invitation->token === null || $invitation->token === '')
+                    ? self::TOKEN_VERSION_HASH_ONLY
+                    : self::TOKEN_VERSION_LEGACY;
             }
 
             if ($invitation->status === null || $invitation->status === '') {
@@ -235,7 +246,7 @@ class Invitation extends Model
         $this->update([
             'token' => $token,
             'token_hash' => hash('sha256', $token),
-            'token_version' => 1,
+            'token_version' => self::TOKEN_VERSION_LEGACY,
             'expires_at' => Carbon::now()->addDays(7),
             'status' => self::STATUS_PENDING,
             'revoked_at' => null,
@@ -270,20 +281,20 @@ class Invitation extends Model
         $providedHash = hash('sha256', $token);
 
         $hashed = static::where('token_hash', $providedHash)->first();
-        if ($hashed instanceof self && hash_equals((string) $hashed->token_hash, $providedHash)) {
+        if ($hashed instanceof self) {
             return $hashed;
         }
 
         $legacy = static::query()
             ->whereNull('token_hash')
             ->whereNotNull('token')
-            ->get()
-            ->first(static fn (self $invitation): bool => hash_equals((string) $invitation->token, $token));
+            ->where('token', $token)
+            ->first();
 
         if ($legacy instanceof self) {
             $legacy->forceFill([
                 'token_hash' => $providedHash,
-                'token_version' => 1,
+                'token_version' => self::TOKEN_VERSION_HASH_ONLY,
             ])->save();
         }
 

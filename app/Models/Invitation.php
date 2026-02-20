@@ -1,16 +1,56 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace App\Models;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string|null $tenant_id
+ * @property string|null $team_id
+ * @property string|null $token
+ * @property string $email
+ * @property string|null $first_name
+ * @property string|null $last_name
+ * @property string $full_name
+ * @property string $role
+ * @property string|null $message
+ * @property int $organization_id
+ * @property int|null $project_id
+ * @property int $invited_by
+ * @property string|null $invited_by_user_id
+ * @property string|null $status
+ * @property Carbon|null $expires_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $accepted_at
+ * @property int|null $accepted_by
+ * @property string|null $accepted_by_user_id
+ * @property Carbon|null $revoked_at
+ * @property string|null $revoked_by_user_id
+ * @property array<string, mixed>|null $metadata
+ * @property string|null $notes
+ */
 class Invitation extends Model
 {
+    use HasFactory;
+
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_ACCEPTED = 'accepted';
+    public const STATUS_EXPIRED = 'expired';
+    public const STATUS_CANCELLED = 'cancelled';
+
+    protected $table = 'invitations';
 
     protected $fillable = [
+        'tenant_id',
+        'team_id',
         'token',
         'email',
         'first_name',
@@ -20,10 +60,14 @@ class Invitation extends Model
         'organization_id',
         'project_id',
         'invited_by',
+        'invited_by_user_id',
         'status',
         'expires_at',
         'accepted_at',
         'accepted_by',
+        'accepted_by_user_id',
+        'revoked_at',
+        'revoked_by_user_id',
         'metadata',
         'notes',
     ];
@@ -31,179 +75,198 @@ class Invitation extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'accepted_at' => 'datetime',
+        'revoked_at' => 'datetime',
         'metadata' => 'array',
     ];
 
-    protected static function boot()
+    protected static function boot(): void
     {
         parent::boot();
 
-        static::creating(function ($invitation) {
-            if (empty($invitation->token)) {
+        static::creating(function (Invitation $invitation): void {
+            if ($invitation->token === null || $invitation->token === '') {
                 $invitation->token = Str::random(64);
             }
-            
-            if (empty($invitation->expires_at)) {
+
+            if ($invitation->status === null || $invitation->status === '') {
+                $invitation->status = self::STATUS_PENDING;
+            }
+
+            if ($invitation->expires_at === null) {
                 $invitation->expires_at = Carbon::now()->addDays(7);
             }
         });
     }
 
-    // Relationships
-    public function organization()
+    public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
     }
 
-    public function project()
+    public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
-    public function inviter()
+    public function inviter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'invited_by');
+        return $this->belongsTo(User::class, 'invited_by_user_id');
     }
 
-    public function accepter()
+    public function accepter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'accepted_by');
+        return $this->belongsTo(User::class, 'accepted_by_user_id');
     }
 
-    public function user()
+    public function revokedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'revoked_by_user_id');
+    }
+
+    public function user(): HasOne
     {
         return $this->hasOne(User::class, 'invitation_id');
     }
 
-    // Scopes
-    public function scopePending($query)
+    public function team(): BelongsTo
     {
-        return $query->where('status', 'pending');
+        return $this->belongsTo(Team::class, 'team_id');
     }
 
-    public function scopeExpired($query)
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_PENDING);
+    }
+
+    public function scopeExpired(Builder $query): Builder
     {
         return $query->where('expires_at', '<', now());
     }
 
-    public function scopeValid($query)
+    public function scopeValid(Builder $query): Builder
     {
-        return $query->where('status', 'pending')
-                    ->where('expires_at', '>', now());
+        return $query
+            ->where('status', self::STATUS_PENDING)
+            ->where('expires_at', '>', now());
     }
 
-    public function scopeByEmail($query, $email)
+    public function scopeByEmail(Builder $query, string $email): Builder
     {
         return $query->where('email', $email);
     }
 
-    public function scopeByOrganization($query, $organizationId)
+    public function scopeByOrganization(Builder $query, int $organizationId): Builder
     {
         return $query->where('organization_id', $organizationId);
     }
 
-    // Accessors & Mutators
-    public function getFullNameAttribute()
+    public function getFullNameAttribute(): string
     {
-        return trim($this->first_name . ' ' . $this->last_name);
+        return trim((string) $this->first_name . ' ' . (string) $this->last_name);
     }
 
-    public function getIsExpiredAttribute()
+    public function getIsExpiredAttribute(): bool
     {
-        return $this->expires_at->isPast();
+        return $this->expires_at?->isPast() ?? true;
     }
 
-    public function getIsValidAttribute()
+    public function getIsValidAttribute(): bool
     {
-        return $this->status === 'pending' && !$this->is_expired;
+        return $this->status === self::STATUS_PENDING && !$this->is_expired;
     }
 
-    public function getInvitationUrlAttribute()
+    public function getInvitationUrlAttribute(): string
     {
         return route('invitation.accept', ['token' => $this->token]);
     }
 
-    public function getDaysUntilExpiryAttribute()
+    public function getDaysUntilExpiryAttribute(): int
     {
-        return $this->expires_at->diffInDays(now());
+        return $this->expires_at?->diffInDays(now()) ?? 0;
     }
 
-    // Methods
-    public function markAsAccepted($userId = null)
+    public function markAsAccepted(?string $userId = null): void
     {
         $this->update([
-            'status' => 'accepted',
+            'status' => self::STATUS_ACCEPTED,
             'accepted_at' => now(),
-            'accepted_by' => $userId,
+            'accepted_by_user_id' => $userId,
         ]);
     }
 
-    public function markAsExpired()
+    public function markAsExpired(): void
     {
-        $this->update(['status' => 'expired']);
+        $this->update(['status' => self::STATUS_EXPIRED]);
     }
 
-    public function markAsCancelled()
-    {
-        $this->update(['status' => 'cancelled']);
-    }
-
-    public function extendExpiry($days = 7)
+    public function markAsCancelled(?string $userId = null): void
     {
         $this->update([
-            'expires_at' => Carbon::now()->addDays($days)
+            'status' => self::STATUS_CANCELLED,
+            'revoked_at' => now(),
+            'revoked_by_user_id' => $userId,
         ]);
     }
 
-    public function resend()
+    public function extendExpiry(int $days = 7): void
     {
-        // Reset token and expiry
+        $this->update([
+            'expires_at' => Carbon::now()->addDays($days),
+        ]);
+    }
+
+    public function resend(): void
+    {
         $this->update([
             'token' => Str::random(64),
             'expires_at' => Carbon::now()->addDays(7),
-            'status' => 'pending',
+            'status' => self::STATUS_PENDING,
+            'revoked_at' => null,
+            'revoked_by_user_id' => null,
         ]);
     }
 
-    public function getRoleDisplayName()
+    public function getRoleDisplayName(): string
     {
         $roles = $this->organization->getAvailableRoles();
-        return $roles[$this->role] ?? $this->role;
+
+        return $roles[$this->role] ?? (string) $this->role;
     }
 
-    public function canBeAccepted()
+    public function canBeAccepted(): bool
     {
-        return $this->status === 'pending' && !$this->is_expired;
+        return $this->status === self::STATUS_PENDING && !$this->is_expired;
     }
 
-    public function getProjectName()
+    public function getProjectName(): string
     {
-        return $this->project ? $this->project->name : 'General';
+        return $this->project ? (string) $this->project->name : 'General';
     }
 
-    public function getInviterName()
+    public function getInviterName(): string
     {
-        return $this->inviter ? $this->inviter->name : 'System';
+        return $this->inviter ? (string) $this->inviter->name : 'System';
     }
 
-    // Static methods
-    public static function findByToken($token)
+    public static function findByToken(string $token): ?self
     {
         return static::where('token', $token)->first();
     }
 
-    public static function createInvitation($data)
+    /** @param array<string, mixed> $data */
+    public static function createInvitation(array $data): self
     {
         return static::create(array_merge($data, [
             'token' => Str::random(64),
             'expires_at' => Carbon::now()->addDays(7),
+            'status' => self::STATUS_PENDING,
         ]));
     }
 
-    public static function cleanupExpired()
+    public static function cleanupExpired(): int
     {
-        return static::where('status', 'pending')
-                    ->where('expires_at', '<', now())
-                    ->update(['status' => 'expired']);
+        return static::where('status', self::STATUS_PENDING)
+            ->where('expires_at', '<', now())
+            ->update(['status' => self::STATUS_EXPIRED]);
     }
 }

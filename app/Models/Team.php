@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\TenantScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string $id
+ * @property string $tenant_id
+ * @property string $name
+ * @property string|null $description
+ * @property string|null $team_lead_id
+ * @property string|null $department
+ * @property string $status
+ * @property bool $is_active
+ * @property array<string, mixed>|null $settings
+ * @property string|null $created_by
+ * @property string|null $updated_by
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class Team extends Model
 {
     use HasUlids, HasFactory, TenantScope;

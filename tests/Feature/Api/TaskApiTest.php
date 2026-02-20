@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Tenant;
 use App\Models\ZenaProject;
 use App\Models\ZenaTask;
 use App\Models\User;
@@ -138,5 +139,79 @@ class TaskApiTest extends TestCase
             'id' => $task->id,
             'status' => 'in_progress'
         ]);
+    }
+
+    public function test_cross_tenant_task_show_returns_not_found(): void
+    {
+        $project = ZenaProject::factory()->create([
+            'tenant_id' => $this->tenantId,
+        ]);
+
+        $task = ZenaTask::factory()->create([
+            'project_id' => $project->id,
+            'tenant_id' => $this->tenantId,
+        ]);
+
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['task.view']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->getJson($this->zena('tasks.show', ['id' => $task->id]));
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Task not found',
+            ]);
+    }
+
+    public function test_cross_tenant_task_update_returns_not_found(): void
+    {
+        $project = ZenaProject::factory()->create([
+            'tenant_id' => $this->tenantId,
+        ]);
+
+        $task = ZenaTask::factory()->create([
+            'project_id' => $project->id,
+            'tenant_id' => $this->tenantId,
+        ]);
+
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['task.update']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->putJson($this->zena('tasks.update', ['id' => $task->id]), [
+                'name' => 'Cross tenant update',
+            ]);
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Task not found',
+            ]);
+    }
+
+    public function test_cross_tenant_task_destroy_returns_not_found(): void
+    {
+        $project = ZenaProject::factory()->create([
+            'tenant_id' => $this->tenantId,
+        ]);
+
+        $task = ZenaTask::factory()->create([
+            'project_id' => $project->id,
+            'tenant_id' => $this->tenantId,
+        ]);
+
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['task.delete']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->deleteJson($this->zena('tasks.destroy', ['id' => $task->id]));
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Task not found',
+            ]);
     }
 }

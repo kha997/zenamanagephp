@@ -4,6 +4,7 @@ namespace Tests\Feature\Api;
 
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
+use App\Models\Tenant;
 use App\Models\Task;
 use App\Models\TaskDependency;
 use App\Models\User;
@@ -320,6 +321,35 @@ class TaskDependenciesTest extends TestCase
         ]);
 
         $response->assertStatus(401);
+    }
+
+    public function test_cross_tenant_add_dependency_returns_not_found(): void
+    {
+        $task = ZenaTask::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
+        ]);
+
+        $dependency = ZenaTask::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->project->tenant_id,
+        ]);
+
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['task.dependencies.add']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->postJson($this->zena('tasks.add-dependency', ['id' => $task->id]), [
+                'dependency_id' => $dependency->id,
+            ]);
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Task not found',
+            ]);
     }
 
     private function createTaskDependencyRecord(Task $task, Task $dependency): TaskDependency

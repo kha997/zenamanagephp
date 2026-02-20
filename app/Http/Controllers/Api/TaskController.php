@@ -17,6 +17,16 @@ class TaskController extends BaseApiController
 {
     use ZenaContractResponseTrait;
 
+    private function tenantId(Request $request): string
+    {
+        $authTenantId = data_get(Auth::user(), 'tenant_id');
+        $tenantId = $request->attributes->get('tenant_id')
+            ?? app('current_tenant_id')
+            ?? $authTenantId;
+
+        return $tenantId ? (string) $tenantId : '';
+    }
+
     protected function error(string $message, int $statusCode = 400, $data = null): JsonResponse
     {
         return $this->errorResponse($message, $statusCode, $data);
@@ -214,7 +224,7 @@ class TaskController extends BaseApiController
     /**
      * Display the specified resource.
      */
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
         
@@ -222,8 +232,15 @@ class TaskController extends BaseApiController
             return $this->error('Unauthorized', 401);
         }
 
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->error('Tenant context missing', 400);
+        }
+
         $task = Task::with(['project', 'component', 'assignments.user', 'dependencies'])
-            ->find($id);
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
 
         if (!$task) {
             return $this->error('Task not found', 404);
@@ -243,7 +260,15 @@ class TaskController extends BaseApiController
             return $this->error('Unauthorized', 401);
         }
 
-        $task = Task::find($id);
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->error('Tenant context missing', 400);
+        }
+
+        $task = Task::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
 
         if (!$task) {
             return $this->error('Task not found', 404);
@@ -305,7 +330,7 @@ class TaskController extends BaseApiController
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
         
@@ -313,7 +338,15 @@ class TaskController extends BaseApiController
             return $this->error('Unauthorized', 401);
         }
 
-        $task = Task::find($id);
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->error('Tenant context missing', 400);
+        }
+
+        $task = Task::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
 
         if (!$task) {
             return $this->error('Task not found', 404);
@@ -340,6 +373,11 @@ class TaskController extends BaseApiController
             return $this->error('Unauthorized', 401);
         }
 
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->error('Tenant context missing', 400);
+        }
+
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:todo,in_progress,done,pending',
         ]);
@@ -348,7 +386,10 @@ class TaskController extends BaseApiController
             return $this->error('Validation failed', 422, $validator->errors());
         }
 
-        $task = Task::find($id);
+        $task = Task::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
 
         if (!$task) {
             return $this->error('Task not found', 404);
@@ -370,7 +411,7 @@ class TaskController extends BaseApiController
     /**
      * Get task dependencies
      */
-    public function getDependencies(string $id): JsonResponse
+    public function getDependencies(Request $request, string $id): JsonResponse
     {
         $user = Auth::user();
         
@@ -378,7 +419,15 @@ class TaskController extends BaseApiController
             return $this->error('Unauthorized', 401);
         }
 
-        $task = Task::with(['dependencies'])->find($id);
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->error('Tenant context missing', 400);
+        }
+
+        $task = Task::with(['dependencies'])
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
 
         if (!$task) {
             return $this->error('Task not found', 404);
@@ -399,6 +448,11 @@ class TaskController extends BaseApiController
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return $this->error('Tenant context missing', 400);
+            }
+
             $request->validate([
                 'user_id' => ['required', 'string', 'exists:users,id'],
                 'role' => ['nullable', 'string', 'in:assignee,reviewer,watcher'],
@@ -406,7 +460,14 @@ class TaskController extends BaseApiController
                 'notes' => ['nullable', 'string', 'max:1000'],
             ]);
 
-            $task = Task::findOrFail($id);
+            $task = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+
+            if (!$task) {
+                return $this->error('Task not found', 404);
+            }
 
             // Check if user is already assigned
             if ($task->assignee_id === $request->input('user_id')) {
@@ -455,6 +516,11 @@ class TaskController extends BaseApiController
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return $this->error('Tenant context missing', 400);
+            }
+
             $request->validate([
                 'team_id' => ['required', 'string', 'exists:teams,id'],
                 'role' => ['nullable', 'string', 'in:assignee,reviewer,watcher'],
@@ -462,7 +528,14 @@ class TaskController extends BaseApiController
                 'notes' => ['nullable', 'string', 'max:1000'],
             ]);
 
-            $task = Task::findOrFail($id);
+            $task = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+
+            if (!$task) {
+                return $this->error('Task not found', 404);
+            }
 
             // Check if team is already assigned
             $existingAssignment = TaskAssignment::where('task_id', $id)
@@ -523,13 +596,34 @@ class TaskController extends BaseApiController
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return $this->error('Tenant context missing', 400);
+            }
+
             $request->validate([
                 'dependencies' => ['required', 'array'],
                 'dependencies.*' => ['string', 'exists:tasks,id'],
             ]);
 
-            $task = Task::findOrFail($id);
+            $task = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+            if (!$task) {
+                return $this->error('Task not found', 404);
+            }
             $dependencies = $request->input('dependencies', []);
+
+            foreach ($dependencies as $depId) {
+                $dependencyTask = Task::query()
+                    ->where('tenant_id', $tenantId)
+                    ->whereKey($depId)
+                    ->first();
+                if (!$dependencyTask) {
+                    return $this->error('Task not found', 404);
+                }
+            }
 
             // Check for circular dependencies
             foreach ($dependencies as $depId) {
@@ -576,7 +670,7 @@ class TaskController extends BaseApiController
     /**
      * Get task watchers
      */
-    public function getWatchers(string $id): JsonResponse
+    public function getWatchers(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -585,7 +679,18 @@ class TaskController extends BaseApiController
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
-            $task = Task::findOrFail($id);
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return $this->error('Tenant context missing', 400);
+            }
+
+            $task = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+            if (!$task) {
+                return $this->error('Task not found', 404);
+            }
             $watchers = $task->watchers()->select('id', 'name', 'email')->get();
 
             return response()->json([
@@ -616,11 +721,22 @@ class TaskController extends BaseApiController
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return $this->error('Tenant context missing', 400);
+            }
+
             $request->validate([
                 'user_id' => ['required', 'string', 'exists:users,id'],
             ]);
 
-            $task = Task::findOrFail($id);
+            $task = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+            if (!$task) {
+                return $this->error('Task not found', 404);
+            }
             $userId = $request->input('user_id');
 
             if ($task->addWatcher($userId)) {
@@ -666,11 +782,22 @@ class TaskController extends BaseApiController
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return $this->error('Tenant context missing', 400);
+            }
+
             $request->validate([
                 'user_id' => ['required', 'string', 'exists:users,id'],
             ]);
 
-            $task = Task::findOrFail($id);
+            $task = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+            if (!$task) {
+                return $this->error('Task not found', 404);
+            }
             $userId = $request->input('user_id');
 
             if ($task->removeWatcher($userId)) {
@@ -776,12 +903,31 @@ class TaskController extends BaseApiController
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return $this->error('Tenant context missing', 400);
+            }
+
             $request->validate([
                 'dependency_id' => ['required', 'string', 'exists:tasks,id'],
             ]);
 
-            $task = Task::findOrFail($id);
+            $task = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+            if (!$task) {
+                return $this->error('Task not found', 404);
+            }
             $dependencyId = $request->input('dependency_id');
+
+            $dependencyTask = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((string) $dependencyId)
+                ->first();
+            if (!$dependencyTask) {
+                return $this->error('Task not found', 404);
+            }
 
             // Check for self-dependency
             if ($dependencyId === $id) {
@@ -846,12 +992,31 @@ class TaskController extends BaseApiController
                 return response()->json(['error' => 'Unauthorized'], 401);
             }
 
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return $this->error('Tenant context missing', 400);
+            }
+
             $request->validate([
                 'dependency_id' => ['required', 'string', 'exists:tasks,id'],
             ]);
 
-            $task = Task::findOrFail($id);
-            $dependencyId = $request->input('dependency_id');
+            $task = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+            if (!$task) {
+                return $this->error('Task not found', 404);
+            }
+            $dependencyId = $request->input('dependency_id') ?? $request->route('dependencyId');
+
+            $dependencyTask = Task::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((string) $dependencyId)
+                ->first();
+            if (!$dependencyTask) {
+                return $this->error('Task not found', 404);
+            }
 
             if ($task->removeDependency($dependencyId)) {
                 $task->update(['updated_by' => $user->id]);

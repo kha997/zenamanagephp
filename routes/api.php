@@ -525,15 +525,25 @@ Route::group([], function () {
         | Team Management Routes
         |--------------------------------------------------------------------------
         */
-        Route::apiResource('teams', \App\Http\Controllers\Api\TeamController::class);
+        Route::get('teams', [\App\Http\Controllers\Api\TeamController::class, 'index'])->name('teams.index')->middleware('rbac:team.view');
+        Route::post('teams', [\App\Http\Controllers\Api\TeamController::class, 'store'])->name('teams.store')->middleware('rbac:team.create');
+        Route::get('teams/{team}', [\App\Http\Controllers\Api\TeamController::class, 'show'])->name('teams.show')->middleware('rbac:team.view');
+        Route::put('teams/{team}', [\App\Http\Controllers\Api\TeamController::class, 'update'])->name('teams.update')->middleware('rbac:team.update');
+        Route::patch('teams/{team}', [\App\Http\Controllers\Api\TeamController::class, 'update'])->middleware('rbac:team.update');
+        Route::delete('teams/{team}', [\App\Http\Controllers\Api\TeamController::class, 'destroy'])->name('teams.destroy')->middleware('rbac:team.delete');
         Route::prefix('teams')->group(function () {
-            Route::post('{team}/members', [\App\Http\Controllers\Api\TeamController::class, 'addMember']);
-            Route::delete('{team}/members', [\App\Http\Controllers\Api\TeamController::class, 'removeMember']);
-            Route::patch('{team}/members/role', [\App\Http\Controllers\Api\TeamController::class, 'updateMemberRole']);
-            Route::get('{team}/members', [\App\Http\Controllers\Api\TeamController::class, 'getMembers']);
-            Route::get('{team}/statistics', [\App\Http\Controllers\Api\TeamController::class, 'getStatistics']);
-            Route::post('{team}/archive', [\App\Http\Controllers\Api\TeamController::class, 'archive']);
-            Route::post('{team}/restore', [\App\Http\Controllers\Api\TeamController::class, 'restore']);
+            Route::post('{team}/members', [\App\Http\Controllers\Api\TeamController::class, 'addMember'])->middleware('rbac:team.member.add');
+            Route::delete('{team}/members', [\App\Http\Controllers\Api\TeamController::class, 'removeMember'])->middleware('rbac:team.member.remove');
+            Route::patch('{team}/members/role', [\App\Http\Controllers\Api\TeamController::class, 'updateMemberRole'])->middleware('rbac:team.member.update-role');
+            Route::get('{team}/members', [\App\Http\Controllers\Api\TeamController::class, 'getMembers'])->middleware('rbac:team.member.view');
+            Route::get('{team}/statistics', [\App\Http\Controllers\Api\TeamController::class, 'getStatistics'])->middleware('rbac:team.view');
+            Route::post('{team}/archive', [\App\Http\Controllers\Api\TeamController::class, 'archive'])->middleware('rbac:team.archive');
+            Route::post('{team}/restore', [\App\Http\Controllers\Api\TeamController::class, 'restore'])->middleware('rbac:team.restore');
+
+            Route::get('{team}/invitations', [\App\Http\Controllers\Api\InvitationController::class, 'index'])->middleware('rbac:invitation.view');
+            Route::post('{team}/invitations', [\App\Http\Controllers\Api\InvitationController::class, 'store'])->middleware('rbac:invitation.create');
+            Route::delete('{team}/invitations/{invitation}', [\App\Http\Controllers\Api\InvitationController::class, 'revoke'])->middleware('rbac:invitation.revoke');
+            Route::post('{team}/invitations/{token}/accept', [\App\Http\Controllers\Api\InvitationController::class, 'accept'])->middleware('rbac:invitation.accept');
         });
 
         /*

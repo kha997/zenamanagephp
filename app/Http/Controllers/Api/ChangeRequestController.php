@@ -17,6 +17,16 @@ use Illuminate\Validation\Rule;
 class ChangeRequestController extends BaseApiController
 {
     use ZenaContractResponseTrait;
+
+    private function tenantId(Request $request): string
+    {
+        $tenantId = $request->attributes->get('tenant_id')
+            ?? app('current_tenant_id')
+            ?? Auth::user()?->tenant_id;
+
+        return $tenantId ? (string) $tenantId : '';
+    }
+
     /**
      * Display a listing of change requests.
      */
@@ -29,8 +39,8 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $tenantId = $this->resolveTenantId($request);
-            if (!$tenantId) {
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
                 return ErrorEnvelopeService::error(
                     'TENANT_REQUIRED',
                     'Tenant context missing',
@@ -91,8 +101,8 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $tenantId = $this->resolveTenantId($request);
-            if (!$tenantId) {
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
                 return ErrorEnvelopeService::error(
                     'TENANT_REQUIRED',
                     'Tenant context missing',
@@ -138,7 +148,7 @@ class ChangeRequestController extends BaseApiController
                 'status' => 'draft',
                 'requested_at' => now(),
                 'requested_by' => $user->id,
-                'change_number' => $this->generateChangeRequestNumber($request->input('project_id')),
+                'change_number' => $this->generateChangeRequestNumber($request->input('project_id'), $tenantId),
             ]);
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name']);
@@ -152,7 +162,7 @@ class ChangeRequestController extends BaseApiController
     /**
      * Display the specified change request.
      */
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -161,8 +171,21 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
             $changeRequest = ChangeRequest::with(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name'])
-                ->find($id);
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -186,7 +209,21 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::find($id);
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -226,7 +263,7 @@ class ChangeRequestController extends BaseApiController
     /**
      * Remove the specified change request.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -235,7 +272,21 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::find($id);
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -261,7 +312,21 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::find($id);
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -296,7 +361,21 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::find($id);
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -359,7 +438,21 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::find($id);
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -402,7 +495,21 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::find($id);
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -437,7 +544,7 @@ class ChangeRequestController extends BaseApiController
     /**
      * Get impact analysis for change request.
      */
-    public function getImpactAnalysis(string $id): JsonResponse
+    public function getImpactAnalysis(Request $request, string $id): JsonResponse
     {
         try {
             $user = Auth::user();
@@ -446,7 +553,21 @@ class ChangeRequestController extends BaseApiController
                 return $this->unauthorized('Authentication required');
             }
 
-            $changeRequest = ChangeRequest::find($id);
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
 
             if (!$changeRequest) {
                 return $this->notFound('Change request not found');
@@ -480,12 +601,16 @@ class ChangeRequestController extends BaseApiController
     /**
      * Generate unique change request number.
      */
-    private function generateChangeRequestNumber(string $projectId): string
+    private function generateChangeRequestNumber(string $projectId, string $tenantId): string
     {
-        $project = Project::find($projectId);
+        $project = Project::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($projectId)
+            ->first();
         $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
         
-        $lastChangeRequest = ChangeRequest::where('project_id', $projectId)
+        $lastChangeRequest = ChangeRequest::where('tenant_id', $tenantId)
+            ->where('project_id', $projectId)
             ->orderBy('created_at', 'desc')
             ->first();
         
@@ -493,15 +618,6 @@ class ChangeRequestController extends BaseApiController
         $sequenceString = (string) $sequence;
         
         return $projectCode . '-CR-' . str_pad($sequenceString, 4, '0', STR_PAD_LEFT);
-    }
-
-    private function resolveTenantId(Request $request): ?string
-    {
-        $tenantId = $request->attributes->get('tenant_id')
-            ?? app('current_tenant_id')
-            ?? Auth::user()?->tenant_id;
-
-        return $tenantId ? (string) $tenantId : null;
     }
 
     /**

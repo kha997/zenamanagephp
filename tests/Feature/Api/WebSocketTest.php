@@ -2,9 +2,12 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Tenant;
+use App\Services\WebSocketService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
+use Mockery\MockInterface;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
 
@@ -228,6 +231,87 @@ class WebSocketTest extends TestCase
         $this->assertEquals((string) $this->apiFeatureUser->id, (string) $response->json('user_id'));
         $this->assertEquals('page_view', $response->json('activity'));
         $this->assertIsString($response->json('message'));
+    }
+
+    public function test_mark_user_online_calls_websocket_service_with_resolved_tenant(): void
+    {
+        $expectedUserId = (string) $this->apiFeatureUser->id;
+        $expectedTenantId = (string) $this->apiFeatureTenant->id;
+
+        $this->mock(WebSocketService::class, function (MockInterface $mock) use ($expectedUserId, $expectedTenantId): void {
+            $mock->shouldReceive('markUserOnline')
+                ->once()
+                ->with($expectedUserId, $expectedTenantId)
+                ->andReturn(true);
+        });
+
+        $response = $this->apiPost('/api/websocket/online', [
+            'user_id' => $expectedUserId,
+            'connection_id' => 'test_connection_' . uniqid(),
+        ], [
+            'X-Tenant-ID' => '',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'user_id',
+            ]);
+        $this->assertTrue($response->json('success'));
+    }
+
+    public function test_update_user_activity_calls_websocket_service_with_resolved_tenant(): void
+    {
+        $expectedUserId = (string) $this->apiFeatureUser->id;
+        $expectedTenantId = (string) $this->apiFeatureTenant->id;
+
+        $this->mock(WebSocketService::class, function (MockInterface $mock) use ($expectedUserId, $expectedTenantId): void {
+            $mock->shouldReceive('updateUserActivity')
+                ->once()
+                ->with($expectedUserId, 'dashboard_view', ['page' => '/dashboard'], $expectedTenantId)
+                ->andReturn(true);
+        });
+
+        $response = $this->apiPost('/api/websocket/activity', [
+            'user_id' => $expectedUserId,
+            'activity_type' => 'dashboard_view',
+            'activity_data' => [
+                'page' => '/dashboard',
+            ],
+        ], [
+            'X-Tenant-ID' => '',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'user_id',
+                'activity',
+            ]);
+        $this->assertTrue($response->json('success'));
+    }
+
+    public function test_websocket_online_rejects_tenant_mismatch_before_service_side_effects(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+
+        $this->mock(WebSocketService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('markUserOnline')->never();
+            $mock->shouldReceive('updateUserActivity')->never();
+        });
+
+        $response = $this->apiPost('/api/websocket/online', [
+            'user_id' => (string) $this->apiFeatureUser->id,
+            'connection_id' => 'test_connection_' . uniqid(),
+        ], [
+            'X-Tenant-ID' => (string) $otherTenant->id,
+        ]);
+
+        $response->assertStatus(403);
+        $this->assertSame('TENANT_INVALID', $response->json('error.code'));
+        $this->assertSame('X-Tenant-ID does not match authenticated user', $response->json('error.message'));
     }
 
     /**

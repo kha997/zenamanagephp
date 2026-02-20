@@ -68,7 +68,7 @@ class WebSocketController extends Controller
         try {
             $userId = $request->input('user_id');
             $activity = $request->input('activity', 'online');
-            $tenantId = $request->header('X-Tenant-ID');
+            $tenantId = $this->resolveTenantId($request);
             
             $success = $this->webSocketService->markUserOnline($userId, $tenantId);
             
@@ -154,7 +154,7 @@ class WebSocketController extends Controller
             $userId = $request->input('user_id');
             $activity = $request->input('activity') ?? $request->input('activity_type');
             $metadata = $request->input('metadata', $request->input('activity_data', []));
-            $tenantId = $request->header('X-Tenant-ID');
+            $tenantId = $this->resolveTenantId($request);
             
             $success = $this->webSocketService->updateUserActivity($userId, $activity, $metadata, $tenantId);
             
@@ -399,5 +399,26 @@ class WebSocketController extends Controller
                 'code' => 'WEBSOCKET_TEST_ERROR',
             ], 500);
         }
+    }
+
+    private function resolveTenantId(Request $request): ?string
+    {
+        $tenantId = $request->attributes->get('tenant_id');
+
+        if (is_string($tenantId) && $tenantId !== '') {
+            return $tenantId;
+        }
+
+        if (app()->bound('current_tenant_id')) {
+            $resolvedTenantId = app('current_tenant_id');
+
+            if (is_string($resolvedTenantId) && $resolvedTenantId !== '') {
+                return $resolvedTenantId;
+            }
+        }
+
+        $headerTenantId = trim((string) $request->header('X-Tenant-ID', ''));
+
+        return $headerTenantId !== '' ? $headerTenantId : null;
     }
 }

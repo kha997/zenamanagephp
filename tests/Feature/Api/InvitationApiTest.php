@@ -3,10 +3,14 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Invitation;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\Team;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Notifications\TeamInvitationCreatedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -19,6 +23,8 @@ class InvitationApiTest extends TestCase
 
     public function test_create_invitation_returns_token(): void
     {
+        Notification::fake();
+
         $tenant = Tenant::factory()->create();
         $manager = $this->createApiUser($tenant, ['invitation.create', 'invitation.view']);
 
@@ -36,6 +42,27 @@ class InvitationApiTest extends TestCase
 
         $token = (string) $response->json('data.token');
         $this->assertNotSame('', $token);
+
+        $invitationId = (int) $response->json('data.id');
+        $this->assertDatabaseHas('invitations', [
+            'id' => $invitationId,
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'email' => 'invitee@example.com',
+            'token_version' => 1,
+        ]);
+
+        $invitation = Invitation::query()->findOrFail($invitationId);
+        $this->assertNotNull($invitation->token_hash);
+        $this->assertSame(hash('sha256', $token), $invitation->token_hash);
+
+        Notification::assertSentOnDemand(
+            TeamInvitationCreatedNotification::class,
+            function (TeamInvitationCreatedNotification $notification, array $channels, object $notifiable): bool {
+                return in_array('mail', $channels, true)
+                    && (($notifiable->routes['mail'] ?? null) === 'invitee@example.com');
+            }
+        );
     }
 
     public function test_accept_invitation_creates_team_membership(): void
@@ -107,6 +134,12 @@ class InvitationApiTest extends TestCase
             ->postJson('/api/teams/' . $team->id . '/invitations/' . $expiredToken . '/accept')
             ->assertStatus(409)
             ->assertJsonPath('error.code', 'E409.CONFLICT');
+
+        $token = (string) $created->json('data.token');
+        $this->asUser($invitee, $tenant)
+            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
+            ->assertStatus(409)
+            ->assertJsonPath('error.code', 'E409.CONFLICT');
     }
 
     public function test_cross_tenant_token_team_mismatch_blocked(): void
@@ -153,14 +186,105 @@ class InvitationApiTest extends TestCase
             ->assertJsonPath('error.code', 'E403.AUTHORIZATION');
     }
 
+    public function test_accept_invitation_twice_returns_deterministic_conflict(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $manager = $this->createApiUser($tenant, ['invitation.create', 'invitation.accept']);
+        $invitee = $this->createApiUser($tenant, ['invitation.accept'], [
+            'email' => 'invitee+' . Str::random(6) . '@example.com',
+        ]);
+
+        $team = $this->createTeam($tenant, $manager);
+
+        $create = $this->asUser($manager, $tenant)
+            ->postJson('/api/teams/' . $team->id . '/invitations', [
+                'email' => $invitee->email,
+                'role' => Team::ROLE_MEMBER,
+            ])
+            ->assertStatus(201);
+
+        $token = (string) $create->json('data.token');
+
+        $this->asUser($invitee, $tenant)
+            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
+            ->assertStatus(200);
+
+        $this->asUser($invitee, $tenant)
+            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
+            ->assertStatus(409)
+            ->assertJsonPath('error.code', 'E409.CONFLICT');
+    }
+
+    public function test_accept_invitation_with_wrong_identity_is_forbidden(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $manager = $this->createApiUser($tenant, ['invitation.create']);
+        $actualInvitee = $this->createApiUser($tenant, ['invitation.accept'], [
+            'email' => 'actual+' . Str::random(6) . '@example.com',
+        ]);
+        $otherUser = $this->createApiUser($tenant, ['invitation.accept'], [
+            'email' => 'other+' . Str::random(6) . '@example.com',
+        ]);
+
+        $team = $this->createTeam($tenant, $manager);
+        $create = $this->asUser($manager, $tenant)
+            ->postJson('/api/teams/' . $team->id . '/invitations', [
+                'email' => $actualInvitee->email,
+                'role' => Team::ROLE_MEMBER,
+            ])
+            ->assertStatus(201);
+
+        $token = (string) $create->json('data.token');
+
+        $this->asUser($otherUser, $tenant)
+            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
+            ->assertStatus(403)
+            ->assertJsonPath('error.code', 'E403.AUTHORIZATION');
+    }
+
+    public function test_web_invitation_accept_page_requires_authentication(): void
+    {
+        $token = Str::random(64);
+        $response = $this->get('/invitations/accept/' . $token);
+        $response->assertRedirect('/login');
+    }
+
     private function createApiUser(Tenant $tenant, array $permissions, array $attributes = []): User
     {
-        return $this->createTenantUser(
+        $user = $this->createTenantUser(
             $tenant,
             array_merge(['email' => 'invite+' . Str::random(8) . '@example.com'], $attributes),
             ['admin'],
             $permissions,
         );
+
+        $adminRole = Role::firstOrCreate(
+            ['name' => 'admin'],
+            [
+                'scope' => Role::SCOPE_SYSTEM,
+                'allow_override' => true,
+                'is_active' => true,
+                'description' => 'System Administrator',
+            ]
+        );
+
+        foreach ($permissions as $permissionCode) {
+            $permission = Permission::firstOrCreate(
+                ['code' => $permissionCode],
+                [
+                    'name' => $permissionCode,
+                    'module' => 'invitation',
+                    'action' => 'access',
+                    'description' => $permissionCode,
+                ]
+            );
+
+            $adminRole->permissions()->syncWithoutDetaching([$permission->id]);
+        }
+
+        $user->roles()->syncWithoutDetaching([$adminRole->id]);
+
+        return $user;
     }
 
     private function createTeam(Tenant $tenant, User $owner): Team

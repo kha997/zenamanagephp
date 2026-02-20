@@ -1,0 +1,234 @@
+<?php declare(strict_types=1);
+
+namespace Tests\Feature\Api;
+
+use App\Models\Contract;
+use App\Models\ContractPayment;
+use App\Models\Project;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+use Tests\Traits\AuthenticationTestTrait;
+use Tests\Traits\RouteNameTrait;
+
+class ContractApiTest extends TestCase
+{
+    use RefreshDatabase, AuthenticationTestTrait, RouteNameTrait;
+
+    private Tenant $tenantA;
+    private Tenant $tenantB;
+    private User $userA;
+    private User $userB;
+    private Project $projectA;
+    private Project $projectB;
+
+    /** @var list<string> */
+    private array $allPermissions = [
+        'contract.view',
+        'contract.create',
+        'contract.update',
+        'contract.delete',
+        'contract.payment.view',
+        'contract.payment.create',
+        'contract.payment.update',
+        'contract.payment.delete',
+    ];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->tenantA = Tenant::factory()->create();
+        $this->tenantB = Tenant::factory()->create();
+
+        [$this->userA] = $this->createApiUserWithPermissions($this->tenantA, $this->allPermissions);
+        [$this->userB] = $this->createApiUserWithPermissions($this->tenantB, $this->allPermissions);
+
+        $this->projectA = Project::factory()->create([
+            'tenant_id' => $this->tenantA->id,
+            'pm_id' => $this->userA->id,
+            'created_by' => $this->userA->id,
+        ]);
+
+        $this->projectB = Project::factory()->create([
+            'tenant_id' => $this->tenantB->id,
+            'pm_id' => $this->userB->id,
+            'created_by' => $this->userB->id,
+        ]);
+    }
+
+    public function test_contract_routes_accept_ulid_strings(): void
+    {
+        $createResponse = $this->postJson(
+            $this->v1('projects.contracts.store', ['project' => $this->projectA->id]),
+            [
+                'code' => 'CTR-ULID-001',
+                'title' => 'ULID Contract',
+                'status' => Contract::STATUS_DRAFT,
+                'currency' => 'USD',
+                'total_value' => 12345.67,
+            ],
+            $this->freshHeadersFor($this->userA)
+        );
+
+        $createResponse->assertStatus(201)
+            ->assertJsonPath('status', 'success');
+
+        $contractId = (string) $createResponse->json('data.id');
+        $this->assertMatchesRegularExpression('/^[0-9A-HJKMNP-TV-Z]{26}$/', strtoupper($contractId));
+
+        $this->getJson(
+            $this->v1('projects.contracts.show', ['project' => $this->projectA->id, 'contract' => $contractId]),
+            $this->freshHeadersFor($this->userA)
+        )
+            ->assertStatus(200)
+            ->assertJsonPath('data.id', $contractId);
+    }
+
+    public function test_cross_tenant_contract_show_update_delete_returns_404(): void
+    {
+        $contract = Contract::query()->create([
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $this->projectA->id,
+            'code' => 'CTR-CROSS-001',
+            'title' => 'Tenant A Contract',
+            'status' => Contract::STATUS_ACTIVE,
+            'currency' => 'USD',
+            'total_value' => 25000,
+            'created_by' => $this->userA->id,
+        ]);
+
+        $this->getJson(
+            $this->v1('projects.contracts.show', ['project' => $this->projectA->id, 'contract' => $contract->id]),
+            $this->freshHeadersFor($this->userB)
+        )
+            ->assertStatus(404);
+
+        $this->putJson($this->v1('projects.contracts.update', ['project' => $this->projectA->id, 'contract' => $contract->id]), [
+                'title' => 'Cross tenant edit',
+            ], $this->freshHeadersFor($this->userB))
+            ->assertStatus(404);
+
+        $this->deleteJson(
+            $this->v1('projects.contracts.destroy', ['project' => $this->projectA->id, 'contract' => $contract->id]),
+            [],
+            $this->freshHeadersFor($this->userB)
+        )
+            ->assertStatus(404);
+    }
+
+    public function test_contract_rbac_denies_without_permission_and_allows_with_permission(): void
+    {
+        [$limitedUser, $limitedHeaders] = $this->createApiUserWithPermissions($this->tenantA, [], ['team_member']);
+
+        $this->getJson(
+            $this->v1('projects.contracts.index', ['project' => $this->projectA->id]),
+            $limitedHeaders
+        )
+            ->assertStatus(403);
+
+        $this->postJson($this->v1('projects.contracts.store', ['project' => $this->projectA->id]), [
+                'code' => 'CTR-NOPE-001',
+                'title' => 'Should fail',
+            ], $limitedHeaders)
+            ->assertStatus(403);
+
+        $this->assertNotNull($limitedUser->id);
+    }
+
+    public function test_payments_are_tenant_and_contract_scoped(): void
+    {
+        $contractA = Contract::query()->create([
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $this->projectA->id,
+            'code' => 'CTR-PAY-001',
+            'title' => 'Payment Contract A',
+            'status' => Contract::STATUS_ACTIVE,
+            'currency' => 'USD',
+            'total_value' => 50000,
+            'created_by' => $this->userA->id,
+        ]);
+
+        $contractB = Contract::query()->create([
+            'tenant_id' => $this->tenantB->id,
+            'project_id' => $this->projectB->id,
+            'code' => 'CTR-PAY-002',
+            'title' => 'Payment Contract B',
+            'status' => Contract::STATUS_ACTIVE,
+            'currency' => 'USD',
+            'total_value' => 60000,
+            'created_by' => $this->userB->id,
+        ]);
+
+        $createPaymentResponse = $this->postJson($this->v1('contracts.payments.store', ['contract' => $contractA->id]), [
+                'name' => 'Advance',
+                'amount' => 10000,
+                'status' => ContractPayment::STATUS_PLANNED,
+            ], $this->freshHeadersFor($this->userA));
+
+        $createPaymentResponse->assertStatus(201)
+            ->assertJsonPath('status', 'success');
+
+        $paymentId = (string) $createPaymentResponse->json('data.id');
+
+        $this->postJson($this->v1('contracts.payments.store', ['contract' => $contractB->id]), [
+                'name' => 'Cross tenant create',
+                'amount' => 999,
+            ], $this->freshHeadersFor($this->userA))
+            ->assertStatus(404);
+
+    }
+
+    public function test_payment_rbac_denies_without_permission_and_allows_with_permission(): void
+    {
+        $contract = Contract::query()->create([
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $this->projectA->id,
+            'code' => 'CTR-RBAC-001',
+            'title' => 'RBAC Contract',
+            'status' => Contract::STATUS_ACTIVE,
+            'currency' => 'USD',
+            'total_value' => 11000,
+            'created_by' => $this->userA->id,
+        ]);
+
+        [, $limitedHeaders] = $this->createApiUserWithPermissions($this->tenantA, ['contract.view'], ['team_member']);
+
+        $this->getJson(
+            $this->v1('contracts.payments.index', ['contract' => $contract->id]),
+            $limitedHeaders
+        )
+            ->assertStatus(403);
+
+    }
+
+    /**
+     * @param list<string> $permissions
+     * @param list<string> $roles
+     * @return array{0: User, 1: array<string, string>}
+     */
+    private function createApiUserWithPermissions(Tenant $tenant, array $permissions, array $roles = ['admin']): array
+    {
+        $user = $this->createTenantUser(
+            $tenant,
+            [],
+            $roles,
+            $permissions
+        );
+
+        $token = $user->createToken('contract-api-test')->plainTextToken;
+
+        return [$user, $this->authHeadersForUser($user, $token)];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function freshHeadersFor(User $user): array
+    {
+        $token = $user->createToken('contract-api-test')->plainTextToken;
+
+        return $this->authHeadersForUser($user, $token);
+    }
+}

@@ -55,6 +55,8 @@ class TestDatabaseSeeder extends Seeder
         // Create permissions
         $permissions = [
             'project.create', 'project.view', 'project.update', 'project.delete',
+            'contract.view', 'contract.create', 'contract.update', 'contract.delete',
+            'contract.payment.view', 'contract.payment.create', 'contract.payment.update', 'contract.payment.delete',
             'component.create', 'component.view', 'component.update', 'component.delete',
             'task.create', 'task.view', 'task.update', 'task.delete', 'task.assign',
             'user.manage', 'role.manage',

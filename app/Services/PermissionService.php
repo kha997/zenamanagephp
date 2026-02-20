@@ -160,8 +160,11 @@ class PermissionService
     {
         $routePermissionMap = [
             'dashboard' => [],
+            'projects.view' => ['project.view'],
             'projects.index' => ['project.read'],
             'projects.create' => ['project.create'],
+            'projects.update' => ['project.update'],
+            'projects.delete' => ['project.delete'],
             'projects.show' => ['project.read'],
             'projects.edit' => ['project.update'],
             'projects.destroy' => ['project.delete'],

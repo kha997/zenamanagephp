@@ -18,7 +18,7 @@ class ProjectBulkCreateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Auth::check() && Auth::user()->hasPermission('projects.create');
+        return Auth::check() && Auth::user()->hasPermission('project.create');
     }
 
     /**

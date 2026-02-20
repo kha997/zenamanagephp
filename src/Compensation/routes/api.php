@@ -14,7 +14,7 @@ use Src\Compensation\Controllers\CompensationController;
 */
 
 Route::prefix('v1/compensation')
-    ->middleware(['auth:api'])
+    ->middleware(['auth:sanctum', 'tenant.isolation'])
     ->group(function () {
         
         // Task Compensation CRUD routes
@@ -24,13 +24,11 @@ Route::prefix('v1/compensation')
             
         Route::get('/tasks/{taskId}', [CompensationController::class, 'showTaskCompensation'])
             ->middleware('rbac:compensation.view')
-            ->name('compensation.tasks.show')
-            ->where('taskId', '[0-9]+');
+            ->name('compensation.tasks.show');
             
         Route::put('/tasks/{taskId}', [CompensationController::class, 'updateTaskCompensation'])
             ->middleware('rbac:compensation.edit')
-            ->name('compensation.tasks.update')
-            ->where('taskId', '[0-9]+');
+            ->name('compensation.tasks.update');
         
         // Compensation workflow routes
         Route::post('/sync-assignments', [CompensationController::class, 'syncTaskAssignments'])
@@ -48,11 +46,9 @@ Route::prefix('v1/compensation')
         // Statistics and reporting routes
         Route::get('/stats/{projectId}', [CompensationController::class, 'stats'])
             ->middleware('rbac:compensation.stats')
-            ->name('compensation.stats')
-            ->where('projectId', '[0-9]+');
+            ->name('compensation.stats');
             
         Route::get('/project/{projectId}', [CompensationController::class, 'index'])
             ->middleware('rbac:compensation.view')
-            ->name('compensation.by-project')
-            ->where('projectId', '[0-9]+');
+            ->name('compensation.by-project');
     });

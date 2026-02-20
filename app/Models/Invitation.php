@@ -15,6 +15,8 @@ use Illuminate\Support\Str;
  * @property string|null $tenant_id
  * @property string|null $team_id
  * @property string|null $token
+ * @property string|null $token_hash
+ * @property int|null $token_version
  * @property string $email
  * @property string|null $first_name
  * @property string|null $last_name
@@ -52,6 +54,8 @@ class Invitation extends Model
         'tenant_id',
         'team_id',
         'token',
+        'token_hash',
+        'token_version',
         'email',
         'first_name',
         'last_name',
@@ -76,6 +80,7 @@ class Invitation extends Model
         'expires_at' => 'datetime',
         'accepted_at' => 'datetime',
         'revoked_at' => 'datetime',
+        'token_version' => 'integer',
         'metadata' => 'array',
     ];
 
@@ -85,7 +90,15 @@ class Invitation extends Model
 
         static::creating(function (Invitation $invitation): void {
             if ($invitation->token === null || $invitation->token === '') {
-                $invitation->token = Str::random(64);
+                $invitation->token = Str::random(80);
+            }
+
+            if ($invitation->token_hash === null || $invitation->token_hash === '') {
+                $invitation->token_hash = hash('sha256', (string) $invitation->token);
+            }
+
+            if ($invitation->token_version === null) {
+                $invitation->token_version = 1;
             }
 
             if ($invitation->status === null || $invitation->status === '') {
@@ -177,7 +190,7 @@ class Invitation extends Model
 
     public function getInvitationUrlAttribute(): string
     {
-        return route('invitation.accept', ['token' => $this->token]);
+        return route('invitations.accept', ['token' => $this->token, 'team' => $this->team_id]);
     }
 
     public function getDaysUntilExpiryAttribute(): int
@@ -217,8 +230,12 @@ class Invitation extends Model
 
     public function resend(): void
     {
+        $token = Str::random(80);
+
         $this->update([
-            'token' => Str::random(64),
+            'token' => $token,
+            'token_hash' => hash('sha256', $token),
+            'token_version' => 1,
             'expires_at' => Carbon::now()->addDays(7),
             'status' => self::STATUS_PENDING,
             'revoked_at' => null,
@@ -250,7 +267,27 @@ class Invitation extends Model
 
     public static function findByToken(string $token): ?self
     {
-        return static::where('token', $token)->first();
+        $providedHash = hash('sha256', $token);
+
+        $hashed = static::where('token_hash', $providedHash)->first();
+        if ($hashed instanceof self && hash_equals((string) $hashed->token_hash, $providedHash)) {
+            return $hashed;
+        }
+
+        $legacy = static::query()
+            ->whereNull('token_hash')
+            ->whereNotNull('token')
+            ->get()
+            ->first(static fn (self $invitation): bool => hash_equals((string) $invitation->token, $token));
+
+        if ($legacy instanceof self) {
+            $legacy->forceFill([
+                'token_hash' => $providedHash,
+                'token_version' => 1,
+            ])->save();
+        }
+
+        return $legacy;
     }
 
     /** @param array<string, mixed> $data */

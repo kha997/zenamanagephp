@@ -19,10 +19,11 @@ class InvitationEmail extends Mailable implements ShouldQueue
     /**
      * Create a new message instance.
      */
-    public function __construct(Invitation $invitation)
+    public function __construct(mixed $invitation)
     {
         $this->invitation = $invitation;
-        $this->acceptUrl = config('app.url') . "/invitations/accept/{$invitation->token}";
+        $teamQuery = $invitation->team_id ? ('?team=' . urlencode((string) $invitation->team_id)) : '';
+        $this->acceptUrl = config('app.url') . "/invitations/accept/{$invitation->token}{$teamQuery}";
         $this->organizationName = $invitation->organization->name ?? 'Our Organization';
         $this->inviterName = $invitation->inviter->name ?? 'Administrator';
     }

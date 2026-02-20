@@ -158,11 +158,7 @@ class InvitationController extends Controller
             return ErrorEnvelopeService::notFoundError('Team');
         }
 
-        $invitationModel = Invitation::query()
-            ->where('tenant_id', $tenantId)
-            ->where('team_id', $teamModel->id)
-            ->where('token', $token)
-            ->first();
+        $invitationModel = $this->service->resolveByToken($tenantId, $teamModel->id, $token);
 
         if (!$invitationModel instanceof Invitation) {
             return ErrorEnvelopeService::notFoundError('Invitation');

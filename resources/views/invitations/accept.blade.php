@@ -1,247 +1,133 @@
 @extends('layouts.auth')
 
 @section('title', 'Accept Invitation')
-@section('page-title', 'Join Our Team')
-@section('page-description', 'Complete your registration to join our organization')
+@section('page-title', 'Accept Team Invitation')
+@section('page-description', 'Join your team using this invitation')
 
 @section('content')
-<div x-data="acceptInvitation()" class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-        <!-- Header -->
-        <div class="text-center">
-            <div class="mx-auto h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-envelope-open text-blue-600 text-xl"></i>
-            </div>
-            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
-                You're Invited!
-            </h2>
-            <p class="mt-2 text-sm text-gray-600">
-                Complete your registration to join <strong>{{ $invitation->organization->name }}</strong>
-            </p>
-        </div>
+<div x-data="acceptInvitationPage()" class="min-h-screen flex items-center justify-center bg-gray-50 py-10 px-4">
+    <div class="w-full max-w-lg space-y-6">
+        <div class="bg-white rounded-lg shadow border p-6">
+            <h2 class="text-2xl font-semibold text-gray-900">You are invited</h2>
+            <p class="mt-2 text-sm text-gray-600">Review invitation details and accept to join the team.</p>
 
-        <!-- Invitation Details -->
-        <div class="bg-white p-6 rounded-lg shadow-sm border">
-            <div class="text-center mb-6">
-                <div class="mx-auto h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <span class="text-2xl font-bold text-gray-600">
-                        {{ strtoupper(substr($invitation->email, 0, 2)) }}
-                    </span>
+            <dl class="mt-5 space-y-3 text-sm">
+                <div class="flex justify-between border-b pb-2">
+                    <dt class="text-gray-500">Email</dt>
+                    <dd class="text-gray-900">{{ $invitation->email }}</dd>
                 </div>
-                <h3 class="text-lg font-medium text-gray-900">
-                    {{ $invitation->full_name ?: $invitation->email }}
-                </h3>
-                <p class="text-sm text-gray-600">{{ $invitation->email }}</p>
-            </div>
+                <div class="flex justify-between border-b pb-2">
+                    <dt class="text-gray-500">Team</dt>
+                    <dd class="text-gray-900">{{ $teamName ?? 'Team' }}</dd>
+                </div>
+                <div class="flex justify-between border-b pb-2">
+                    <dt class="text-gray-500">Role</dt>
+                    <dd class="text-gray-900">{{ $invitation->role }}</dd>
+                </div>
+                <div class="flex justify-between">
+                    <dt class="text-gray-500">Expires</dt>
+                    <dd class="text-gray-900">{{ optional($invitation->expires_at)->toDateTimeString() }}</dd>
+                </div>
+            </dl>
 
-            <div class="space-y-3 mb-6">
-                <div class="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span class="text-sm font-medium text-gray-600">Role</span>
-                    <span class="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                        {{ $invitation->getRoleDisplayName() }}
-                    </span>
+            @if(!empty($invitation->message))
+                <div class="mt-4 rounded-md bg-blue-50 p-3 text-sm text-blue-900">
+                    {{ $invitation->message }}
                 </div>
-                <div class="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span class="text-sm font-medium text-gray-600">Project</span>
-                    <span class="text-sm text-gray-900">{{ $invitation->getProjectName() }}</span>
-                </div>
-                <div class="flex items-center justify-between py-2 border-b border-gray-100">
-                    <span class="text-sm font-medium text-gray-600">Invited by</span>
-                    <span class="text-sm text-gray-900">{{ $invitation->getInviterName() }}</span>
-                </div>
-                <div class="flex items-center justify-between py-2">
-                    <span class="text-sm font-medium text-gray-600">Expires</span>
-                    <span class="text-sm text-gray-900">{{ $invitation->expires_at->format('M d, Y') }}</span>
-                </div>
-            </div>
-
-            @if($invitation->message)
-            <div class="bg-blue-50 p-4 rounded-lg mb-6">
-                <h4 class="text-sm font-medium text-blue-900 mb-2">Personal Message</h4>
-                <p class="text-sm text-blue-800">{{ $invitation->message }}</p>
-            </div>
             @endif
         </div>
 
-        <!-- Registration Form -->
-        <form @submit.prevent="submitRegistration()" class="bg-white p-6 rounded-lg shadow-sm border">
-            <div class="space-y-6">
-                <!-- Password -->
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-lock text-gray-400 mr-1"></i>
-                        Create Password *
-                    </label>
-                    <input 
-                        id="password"
-                        type="password" 
-                        x-model="formData.password"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                        placeholder="Enter a strong password"
-                        required
-                        minlength="8"
-                    >
-                    <p class="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
-                </div>
-
-                <!-- Confirm Password -->
-                <div>
-                    <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-lock text-gray-400 mr-1"></i>
-                        Confirm Password *
-                    </label>
-                    <input 
-                        id="password_confirmation"
-                        type="password" 
-                        x-model="formData.password_confirmation"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                        placeholder="Confirm your password"
-                        required
-                    >
-                </div>
-
-                <!-- Additional Info -->
-                <div class="grid grid-cols-1 gap-4">
-                    <div>
-                        <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-phone text-gray-400 mr-1"></i>
-                            Phone Number
-                        </label>
-                        <input 
-                            id="phone"
-                            type="tel" 
-                            x-model="formData.phone"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="+1 (555) 123-4567"
-                        >
-                    </div>
-                    <div>
-                        <label for="job_title" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-briefcase text-gray-400 mr-1"></i>
-                            Job Title
-                        </label>
-                        <input 
-                            id="job_title"
-                            type="text" 
-                            x-model="formData.job_title"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                            placeholder="e.g., Software Engineer"
-                        >
-                    </div>
-                </div>
-
-                <!-- Terms -->
-                <div class="flex items-start">
-                    <div class="flex items-center h-5">
-                        <input 
-                            id="terms" 
-                            type="checkbox" 
-                            x-model="formData.accept_terms"
-                            class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
-                            required
-                        >
-                    </div>
-                    <div class="ml-3 text-sm">
-                        <label for="terms" class="text-gray-700">
-                            I agree to the <a href="#" class="text-blue-600 hover:text-blue-500">Terms of Service</a> 
-                            and <a href="#" class="text-blue-600 hover:text-blue-500">Privacy Policy</a>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
-            <div class="mt-6">
-                <button 
-                    type="submit" 
-                    class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                    :disabled="isSubmitting"
+        <div class="bg-white rounded-lg shadow border p-6">
+            <template x-if="state === 'idle'">
+                <button
+                    type="button"
+                    @click="accept()"
+                    class="w-full rounded-md bg-blue-600 px-4 py-2.5 text-white hover:bg-blue-700"
+                    :disabled="submitting"
                 >
-                    <i class="fas fa-check mr-2" x-show="!isSubmitting"></i>
-                    <i class="fas fa-spinner fa-spin mr-2" x-show="isSubmitting"></i>
-                    <span x-text="isSubmitting ? 'Creating Account...' : 'Accept Invitation & Create Account'"></span>
+                    Accept Invitation
                 </button>
-            </div>
-        </form>
+            </template>
 
-        <!-- Footer -->
-        <div class="text-center">
-            <p class="text-xs text-gray-500">
-                Having trouble? Contact your organization administrator.
-            </p>
+            <template x-if="state === 'success'">
+                <div class="rounded-md bg-green-50 p-3 text-sm text-green-800" x-text="message"></div>
+            </template>
+
+            <template x-if="state === 'error'">
+                <div class="space-y-3">
+                    <div class="rounded-md bg-red-50 p-3 text-sm text-red-800" x-text="message"></div>
+                    <button
+                        type="button"
+                        @click="accept()"
+                        class="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        :disabled="submitting"
+                    >
+                        Retry
+                    </button>
+                </div>
+            </template>
         </div>
     </div>
 </div>
 
 <script>
-function acceptInvitation() {
+function acceptInvitationPage() {
     return {
-        formData: {
-            password: '',
-            password_confirmation: '',
-            phone: '',
-            job_title: '',
-            accept_terms: false
-        },
-        isSubmitting: false,
+        submitting: false,
+        state: 'idle',
+        message: '',
+        token: @json($token),
+        teamId: @json($teamId),
+        tenantId: @json((string) auth()->user()?->tenant_id),
 
-        async submitRegistration() {
-            if (!this.formData.accept_terms) {
-                this.showNotification('Please accept the terms and conditions', 'error');
+        async accept() {
+            if (!this.teamId) {
+                this.state = 'error';
+                this.message = 'Invitation is missing team context.';
                 return;
             }
 
-            if (this.formData.password !== this.formData.password_confirmation) {
-                this.showNotification('Passwords do not match', 'error');
-                return;
-            }
-
-            this.isSubmitting = true;
+            this.submitting = true;
+            this.state = 'idle';
+            this.message = '';
 
             try {
-                const response = await fetch(`/invitations/accept/{{ $invitation->token }}`, {
+                const token = localStorage.getItem('auth_token') || '';
+                const headers = {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Tenant-ID': this.tenantId
+                };
+
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                const response = await fetch(`/api/teams/${encodeURIComponent(this.teamId)}/invitations/${encodeURIComponent(this.token)}/accept`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                    },
-                    body: JSON.stringify(this.formData)
+                    headers
                 });
 
-                const result = await response.json();
-
-                if (result.success) {
-                    this.showNotification('Account created successfully! Redirecting...', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/dashboard';
-                    }, 2000);
-                } else {
-                    this.showNotification(result.message || 'Failed to create account', 'error');
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result.success === false) {
+                    this.state = 'error';
+                    this.message = result?.error?.message || result?.message || 'Failed to accept invitation.';
+                    return;
                 }
-            } catch (error) {
-                this.showNotification('An error occurred while creating your account', 'error');
-            } finally {
-                this.isSubmitting = false;
-            }
-        },
 
-        showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg text-white shadow-lg transition-all duration-300 ${
-                type === 'success' ? 'bg-green-600' : 
-                type === 'error' ? 'bg-red-600' : 
-                type === 'warning' ? 'bg-yellow-600' :
-                'bg-blue-600'
-            }`;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 5000);
+                this.state = 'success';
+                this.message = 'Invitation accepted successfully.';
+                setTimeout(() => {
+                    window.location.href = '/app/team';
+                }, 1200);
+            } catch (error) {
+                this.state = 'error';
+                this.message = 'Unable to accept invitation right now.';
+            } finally {
+                this.submitting = false;
+            }
         }
-    }
+    };
 }
 </script>
 @endsection

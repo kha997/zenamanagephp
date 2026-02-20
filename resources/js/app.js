@@ -73,8 +73,12 @@ class ZenaApp {
     setupAjaxDefaults() {
         // Setup default headers for all AJAX requests
         const token = this.getToken();
+        const tenantId = this.getTenantId();
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        }
+        if (tenantId) {
+            axios.defaults.headers.common['X-Tenant-ID'] = tenantId;
         }
         axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
         axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -85,8 +89,12 @@ class ZenaApp {
         axios.interceptors.request.use(
             (config) => {
                 const token = this.getToken();
+                const tenantId = this.getTenantId();
                 if (token) {
                     config.headers.Authorization = `Bearer ${token}`;
+                }
+                if (tenantId) {
+                    config.headers['X-Tenant-ID'] = tenantId;
                 }
                 return config;
             },
@@ -129,14 +137,33 @@ class ZenaApp {
         return localStorage.getItem('auth_token');
     }
 
+    getTenantId() {
+        const raw = localStorage.getItem('user_data');
+        if (!raw) {
+            return '';
+        }
+
+        try {
+            const user = JSON.parse(raw);
+            return user?.tenant_id || '';
+        } catch (error) {
+            return '';
+        }
+    }
+
     setToken(token) {
         localStorage.setItem('auth_token', token);
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        const tenantId = this.getTenantId();
+        if (tenantId) {
+            axios.defaults.headers.common['X-Tenant-ID'] = tenantId;
+        }
     }
 
     removeToken() {
         localStorage.removeItem('auth_token');
         delete axios.defaults.headers.common['Authorization'];
+        delete axios.defaults.headers.common['X-Tenant-ID'];
     }
 
     // Generic API call method

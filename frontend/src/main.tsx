@@ -7,6 +7,8 @@ import { Toaster } from 'react-hot-toast';
 // Import components
 import ProjectsDashboard from './pages/ProjectsDashboard';
 import CreateProjectPage from './pages/projects/CreateProjectPage';
+import ContractsListPage from './pages/contracts/ContractsListPage';
+import ContractDetailPlaceholderPage from './pages/contracts/ContractDetailPlaceholderPage';
 
 // Create query client
 const queryClient = new QueryClient({
@@ -27,6 +29,8 @@ function App() {
           <Route path="/" element={<Navigate to="/projects" replace />} />
           <Route path="/projects" element={<ProjectsDashboard />} />
           <Route path="/projects/new" element={<CreateProjectPage />} />
+          <Route path="/app/projects/:projectId/contracts" element={<ContractsListPage />} />
+          <Route path="/app/projects/:projectId/contracts/:contractId" element={<ContractDetailPlaceholderPage />} />
         </Routes>
         <Toaster
           position="top-right"

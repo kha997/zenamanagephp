@@ -372,6 +372,14 @@ export default function ProjectsDashboard() {
 
                         {/* Actions */}
                         <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                          <Link
+                            to={`/app/projects/${project.id}/contracts`}
+                            className="zena-btn zena-btn-outline zena-btn-sm"
+                            aria-label={`View contracts for ${project.name}`}
+                          >
+                            <i className="fas fa-file-signature mr-1"></i>
+                            Contracts
+                          </Link>
                           <button className="zena-btn zena-btn-outline zena-btn-sm">
                             <i className="fas fa-eye"></i>
                           </button>
@@ -447,6 +455,14 @@ export default function ProjectsDashboard() {
                             </td>
                             <td>
                               <div className="flex space-x-2">
+                                <Link
+                                  to={`/app/projects/${project.id}/contracts`}
+                                  className="zena-btn zena-btn-outline zena-btn-sm"
+                                  aria-label={`View contracts for ${project.name}`}
+                                >
+                                  <i className="fas fa-file-signature mr-1"></i>
+                                  Contracts
+                                </Link>
                                 <button className="zena-btn zena-btn-outline zena-btn-sm">
                                   <i className="fas fa-eye"></i>
                                 </button>

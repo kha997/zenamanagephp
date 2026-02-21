@@ -20,12 +20,58 @@ interface ContractsPagination {
 }
 
 interface ContractsResponse {
+  success?: boolean;
   status: string;
-  data: {
-    items: ContractItem[];
-    pagination: ContractsPagination;
+  data?: unknown;
+  meta?: {
+    pagination?: Partial<ContractsPagination> & {
+      current_page?: number;
+      total_pages?: number;
+    };
+  };
+  pagination?: Partial<ContractsPagination> & {
+    current_page?: number;
+    total_pages?: number;
   };
   message?: string;
+}
+
+type AnyPagination = Partial<ContractsPagination> & {
+  current_page?: number;
+  total_pages?: number;
+};
+
+function extractContractsPayload(response: ContractsResponse): {
+  items: ContractItem[];
+  pagination: AnyPagination | null;
+} {
+  const primary = response?.data as any;
+  const nestedData = primary?.data;
+
+  const rawItems =
+    (nestedData as { items?: unknown } | undefined)?.items ??
+    nestedData ??
+    (primary as { items?: unknown } | undefined)?.items ??
+    primary ??
+    [];
+
+  let items: ContractItem[] = [];
+  if (Array.isArray(rawItems)) {
+    items = rawItems as ContractItem[];
+  } else if (rawItems && typeof rawItems === 'object') {
+    // Defensive fallback for keyed collections; if shape is unexpected this still avoids runtime crashes.
+    const values = Object.values(rawItems);
+    items = Array.isArray(values) ? (values as ContractItem[]) : [];
+  }
+
+  const pagination =
+    (nestedData as { pagination?: AnyPagination } | undefined)?.pagination ??
+    response?.meta?.pagination ??
+    response?.pagination ??
+    (primary as { pagination?: AnyPagination } | undefined)?.pagination ??
+    null;
+
+  return { items, pagination };
 }
 
 export default function ContractsListPage() {
@@ -48,10 +94,15 @@ export default function ContractsListPage() {
     },
   });
 
-  const items = data?.data?.items ?? [];
-  const pagination = data?.data?.pagination;
-  const canGoPrev = page > 1;
-  const canGoNext = Boolean(pagination && page < pagination.last_page);
+  const parsedPayload = data ? extractContractsPayload(data) : { items: [], pagination: null };
+  const items = parsedPayload.items;
+  const pagination = parsedPayload.pagination;
+  const currentPage = pagination?.current_page ?? pagination?.page ?? 1;
+  const lastPage = pagination?.last_page ?? pagination?.total_pages ?? 1;
+  const totalItems = pagination?.total ?? items.length;
+  const pageSize = pagination?.per_page ?? perPage;
+  const canGoPrev = Boolean(pagination) && currentPage > 1;
+  const canGoNext = Boolean(pagination) && currentPage < lastPage;
 
   const formatCurrency = (value: number | null, currency: string | null): string => {
     const amount = typeof value === 'number' ? value : 0;
@@ -104,8 +155,10 @@ export default function ContractsListPage() {
       {isError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-6">
           <p className="text-sm text-red-700">
-            Failed to load contracts.
-            {error instanceof Error ? ` ${error.message}` : ''}
+            {(error as { response?: { status?: number } })?.response?.status === 403 ||
+            (error as { response?: { status?: number } })?.response?.status === 404
+              ? 'Not found or no access.'
+              : `Failed to load contracts.${error instanceof Error ? ` ${error.message}` : ''}`}
           </p>
           <button
             type="button"
@@ -176,10 +229,10 @@ export default function ContractsListPage() {
             </table>
           </div>
 
-          {pagination && pagination.total > pagination.per_page ? (
+          {pagination && totalItems > pageSize ? (
             <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
               <p className="text-sm text-gray-600">
-                Page {pagination.page} of {pagination.last_page} ({pagination.total} total)
+                Page {currentPage} of {lastPage} ({totalItems} total)
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -193,7 +246,7 @@ export default function ContractsListPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setPage((previous) => previous + 1)}
+                  onClick={() => setPage((previous) => Math.min(lastPage, previous + 1))}
                   disabled={!canGoNext}
                   className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Go to next contracts page"

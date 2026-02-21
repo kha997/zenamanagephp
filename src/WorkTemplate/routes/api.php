@@ -14,7 +14,7 @@ use Src\WorkTemplate\Controllers\ProjectTaskController;
 |
 */
 
-Route::prefix('v1/work-template')->middleware(['auth:api'])->group(function () {
+Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])->group(function () {
     
     /*
     |--------------------------------------------------------------------------

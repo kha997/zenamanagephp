@@ -16,7 +16,7 @@ use Src\Notification\Controllers\NotificationRuleController;
 */
 
 Route::prefix('api/v1/notifications')
-    ->middleware(['auth:api', 'rbac'])
+    ->middleware(['auth:api', 'tenant.isolation', 'rbac'])
     ->group(function () {
         
         // Notification CRUD routes
@@ -60,7 +60,7 @@ Route::prefix('api/v1/notifications')
 
 // Notification Rules routes
 Route::prefix('api/v1/notification-rules')
-    ->middleware(['auth:api', 'rbac'])
+    ->middleware(['auth:api', 'tenant.isolation', 'rbac'])
     ->group(function () {
         
         // Notification Rule CRUD routes

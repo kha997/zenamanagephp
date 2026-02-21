@@ -18,13 +18,33 @@ class InvitationFactory extends Factory
 
     public function definition(): array
     {
-        $tenant = Tenant::factory()->create();
-        $inviter = User::factory()->create(['tenant_id' => $tenant->id]);
-        $team = Team::factory()->create([
-            'tenant_id' => $tenant->id,
-            'created_by' => $inviter->id,
-            'updated_by' => $inviter->id,
-        ]);
+        $tenant = Tenant::query()->inRandomOrder()->first();
+        if (! $tenant instanceof Tenant) {
+            $tenant = Tenant::factory()->createOne();
+        }
+        /** @var Tenant $tenant */
+
+        $inviter = User::query()
+            ->where('tenant_id', $tenant->id)
+            ->inRandomOrder()
+            ->first();
+        if (! $inviter instanceof User) {
+            $inviter = User::factory()->createOne(['tenant_id' => $tenant->id]);
+        }
+        /** @var User $inviter */
+
+        $team = Team::query()
+            ->where('tenant_id', $tenant->id)
+            ->inRandomOrder()
+            ->first();
+        if (! $team instanceof Team) {
+            $team = Team::factory()->createOne([
+                'tenant_id' => $tenant->id,
+                'created_by' => $inviter->id,
+                'updated_by' => $inviter->id,
+            ]);
+        }
+        /** @var Team $team */
 
         $rawToken = Str::random(80);
 

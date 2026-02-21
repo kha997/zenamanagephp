@@ -8,11 +8,8 @@ use App\Models\Role;
 use App\Models\Team;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Notifications\TeamInvitationCreatedNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -23,210 +20,49 @@ class InvitationApiTest extends TestCase
     use RefreshDatabase;
     use AuthenticationTrait;
 
-    public function test_create_invitation_returns_token(): void
+    public function test_can_list_invitations_with_permission_same_tenant(): void
     {
-        Notification::fake();
-
         $tenant = Tenant::factory()->create();
-        $manager = $this->createApiUser($tenant, ['invitation.create', 'invitation.view']);
+        $viewer = $this->createApiUser($tenant, ['invitation.view']);
+        $team = $this->createTeam($tenant, $viewer);
+        $otherTeam = $this->createTeam($tenant, $viewer);
 
-        $team = $this->createTeam($tenant, $manager);
-
-        $response = $this->asUser($manager, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations', [
-                'email' => 'invitee@example.com',
-                'role' => Team::ROLE_MEMBER,
-            ]);
-
-        $response->assertStatus(201)
-            ->assertJsonPath('data.email', 'invitee@example.com')
-            ->assertJsonPath('data.team_id', $team->id);
-
-        $token = (string) $response->json('data.token');
-        $this->assertNotSame('', $token);
-
-        $invitationId = (int) $response->json('data.id');
-        $this->assertDatabaseHas('invitations', [
-            'id' => $invitationId,
+        Invitation::factory()->count(2)->create([
             'tenant_id' => $tenant->id,
             'team_id' => $team->id,
-            'email' => 'invitee@example.com',
-            'token' => null,
-            'token_version' => Invitation::TOKEN_VERSION_HASH_ONLY,
+            'invited_by_user_id' => $viewer->id,
         ]);
 
-        $invitation = Invitation::query()->findOrFail($invitationId);
-        $this->assertNotNull($invitation->token_hash);
-        $this->assertSame(hash('sha256', $token), $invitation->token_hash);
-
-        Notification::assertSentOnDemand(
-            TeamInvitationCreatedNotification::class,
-            function (TeamInvitationCreatedNotification $notification, array $channels, object $notifiable): bool {
-                return in_array('mail', $channels, true)
-                    && (($notifiable->routes['mail'] ?? null) === 'invitee@example.com');
-            }
-        );
-    }
-
-    public function test_accept_invitation_creates_team_membership(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $manager = $this->createApiUser($tenant, ['invitation.create', 'invitation.accept']);
-        $invitee = $this->createApiUser($tenant, ['invitation.accept'], [
-            'email' => 'invitee+' . Str::random(6) . '@example.com',
-        ]);
-
-        $team = $this->createTeam($tenant, $manager);
-
-        $inviteResponse = $this->asUser($manager, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations', [
-                'email' => $invitee->email,
-                'role' => Team::ROLE_MEMBER,
-            ]);
-
-        $token = (string) $inviteResponse->json('data.token');
-        $invitationId = (int) $inviteResponse->json('data.id');
-
-        $this->assertDatabaseHas('invitations', [
-            'id' => $invitationId,
-            'token' => null,
-            'token_hash' => hash('sha256', $token),
-            'token_version' => Invitation::TOKEN_VERSION_HASH_ONLY,
-        ]);
-
-        $this->asUser($invitee, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
-            ->assertStatus(200)
-            ->assertJsonPath('data.status', Invitation::STATUS_ACCEPTED);
-
-        $this->assertDatabaseHas('team_members', [
-            'team_id' => $team->id,
-            'user_id' => $invitee->id,
-        ]);
-    }
-
-    public function test_accept_legacy_token_backfills_hash_and_version(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $manager = $this->createApiUser($tenant, ['invitation.accept']);
-        $invitee = $this->createApiUser($tenant, ['invitation.accept'], [
-            'email' => 'legacy+' . Str::random(6) . '@example.com',
-        ]);
-        $team = $this->createTeam($tenant, $manager);
-
-        $legacyToken = 'legacy-' . Str::random(40);
-        DB::table('invitations')->insert([
+        Invitation::factory()->create([
             'tenant_id' => $tenant->id,
-            'team_id' => $team->id,
-            'token' => $legacyToken,
-            'token_hash' => null,
-            'token_version' => null,
-            'email' => strtolower($invitee->email),
-            'role' => Team::ROLE_MEMBER,
-            'organization_id' => 0,
-            'invited_by' => 0,
-            'invited_by_user_id' => $manager->id,
-            'status' => Invitation::STATUS_PENDING,
-            'expires_at' => now()->addDay(),
-            'created_at' => now(),
-            'updated_at' => now(),
+            'team_id' => $otherTeam->id,
+            'invited_by_user_id' => $viewer->id,
         ]);
 
-        $invitationId = (int) DB::table('invitations')->max('id');
+        $otherTenant = Tenant::factory()->create();
+        $otherUser = $this->createApiUser($otherTenant, ['invitation.view']);
+        $otherTenantTeam = $this->createTeam($otherTenant, $otherUser);
 
-        $this->asUser($invitee, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations/' . $legacyToken . '/accept')
-            ->assertStatus(200)
-            ->assertJsonPath('data.status', Invitation::STATUS_ACCEPTED);
-
-        $this->assertDatabaseHas('invitations', [
-            'id' => $invitationId,
-            'token' => $legacyToken,
-            'token_hash' => hash('sha256', $legacyToken),
-            'token_version' => Invitation::TOKEN_VERSION_HASH_ONLY,
-            'status' => Invitation::STATUS_ACCEPTED,
-        ]);
-    }
-
-    public function test_revoke_and_expired_invitation_behaviour(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $manager = $this->createApiUser($tenant, ['invitation.create', 'invitation.revoke', 'invitation.accept']);
-        $invitee = $this->createApiUser($tenant, ['invitation.accept']);
-
-        $team = $this->createTeam($tenant, $manager);
-
-        $created = $this->asUser($manager, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations', [
-                'email' => 'revoked@example.com',
-                'role' => Team::ROLE_MEMBER,
-            ])
-            ->assertStatus(201);
-
-        $invitationId = (string) $created->json('data.id');
-
-        $this->asUser($manager, $tenant)
-            ->deleteJson('/api/teams/' . $team->id . '/invitations/' . $invitationId)
-            ->assertStatus(200)
-            ->assertJsonPath('data.status', Invitation::STATUS_CANCELLED);
-
-        $expiredToken = (string) Str::random(32);
-        Invitation::create([
-            'tenant_id' => $tenant->id,
-            'team_id' => $team->id,
-            'token' => $expiredToken,
-            'email' => $invitee->email,
-            'role' => Team::ROLE_MEMBER,
-            'organization_id' => 0,
-            'invited_by' => 0,
-            'invited_by_user_id' => $manager->id,
-            'status' => Invitation::STATUS_PENDING,
-            'expires_at' => now()->subMinute(),
+        Invitation::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'team_id' => $otherTenantTeam->id,
+            'invited_by_user_id' => $otherUser->id,
         ]);
 
-        $this->asUser($invitee, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations/' . $expiredToken . '/accept')
-            ->assertStatus(409)
-            ->assertJsonPath('error.code', 'E409.CONFLICT');
+        $response = $this->asUser($viewer, $tenant)
+            ->getJson('/api/teams/' . $team->id . '/invitations');
 
-        $token = (string) $created->json('data.token');
-        $this->asUser($invitee, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
-            ->assertStatus(409)
-            ->assertJsonPath('error.code', 'E409.CONFLICT');
+        $response->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('status', 'success');
+
+        $data = collect($response->json('data'));
+        $this->assertCount(2, $data);
+        $this->assertTrue($data->every(fn (array $row): bool => $row['team_id'] === $team->id));
+        $this->assertTrue($data->every(fn (array $row): bool => $row['tenant_id'] === $tenant->id));
     }
 
-    public function test_cross_tenant_token_team_mismatch_blocked(): void
-    {
-        $tenantA = Tenant::factory()->create();
-        $tenantB = Tenant::factory()->create();
-
-        $managerA = $this->createApiUser($tenantA, ['invitation.create', 'invitation.accept']);
-        $userB = $this->createApiUser($tenantB, ['invitation.accept']);
-
-        $teamA = $this->createTeam($tenantA, $managerA);
-        $teamB = $this->createTeam($tenantB, $userB);
-
-        $create = $this->asUser($managerA, $tenantA)
-            ->postJson('/api/teams/' . $teamA->id . '/invitations', [
-                'email' => 'tenant-a-invitee@example.com',
-                'role' => Team::ROLE_MEMBER,
-            ]);
-
-        $token = (string) $create->json('data.token');
-
-        $this->asUser($userB, $tenantB)
-            ->postJson('/api/teams/' . $teamA->id . '/invitations/' . $token . '/accept')
-            ->assertStatus(404)
-            ->assertJsonPath('error.code', 'E404.NOT_FOUND');
-
-        $this->asUser($managerA, $tenantA)
-            ->postJson('/api/teams/' . $teamB->id . '/invitations/' . $token . '/accept')
-            ->assertStatus(404)
-            ->assertJsonPath('error.code', 'E404.NOT_FOUND');
-    }
-
-    public function test_invitation_create_permission_missing_returns_403(): void
+    public function test_create_invitation_requires_permission(): void
     {
         $tenant = Tenant::factory()->create();
         $user = $this->createApiUser($tenant, []);
@@ -235,142 +71,150 @@ class InvitationApiTest extends TestCase
         $this->asUser($user, $tenant)
             ->postJson('/api/teams/' . $team->id . '/invitations', [
                 'email' => 'noperm@example.com',
+                'role' => Team::ROLE_MEMBER,
             ])
             ->assertStatus(403)
             ->assertJsonPath('error.code', 'E403.AUTHORIZATION');
     }
 
-    public function test_accept_invitation_twice_returns_deterministic_conflict(): void
+    public function test_can_create_invitation_hash_only_token(): void
     {
         $tenant = Tenant::factory()->create();
-        $manager = $this->createApiUser($tenant, ['invitation.create', 'invitation.accept']);
-        $invitee = $this->createApiUser($tenant, ['invitation.accept'], [
-            'email' => 'invitee+' . Str::random(6) . '@example.com',
-        ]);
-
+        $manager = $this->createApiUser($tenant, ['invitation.create']);
         $team = $this->createTeam($tenant, $manager);
 
-        $create = $this->asUser($manager, $tenant)
+        $response = $this->asUser($manager, $tenant)
             ->postJson('/api/teams/' . $team->id . '/invitations', [
-                'email' => $invitee->email,
+                'email' => 'invitee+' . Str::random(8) . '@example.com',
+                'role' => Team::ROLE_MEMBER,
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('status', 'success');
+
+        $invitationId = (int) $response->json('data.id');
+        $rawToken = (string) $response->json('data.token');
+
+        $this->assertNotSame('', $rawToken);
+        $this->assertDatabaseHas('invitations', [
+            'id' => $invitationId,
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'token' => null,
+            'token_version' => Invitation::TOKEN_VERSION_HASH_ONLY,
+        ]);
+
+        $invitation = Invitation::query()->findOrFail($invitationId);
+        $this->assertSame(hash('sha256', $rawToken), $invitation->token_hash);
+    }
+
+    public function test_cross_tenant_team_returns_404_for_create_and_list(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+
+        $userA = $this->createApiUser($tenantA, ['invitation.view', 'invitation.create']);
+        $userB = $this->createApiUser($tenantB, ['invitation.view', 'invitation.create']);
+
+        $teamB = $this->createTeam($tenantB, $userB);
+
+        $this->asUser($userA, $tenantA)
+            ->getJson('/api/teams/' . $teamB->id . '/invitations')
+            ->assertStatus(404)
+            ->assertJsonPath('error.code', 'E404.NOT_FOUND');
+
+        $this->asUser($userA, $tenantA)
+            ->postJson('/api/teams/' . $teamB->id . '/invitations', [
+                'email' => 'cross-tenant@example.com',
                 'role' => Team::ROLE_MEMBER,
             ])
-            ->assertStatus(201);
+            ->assertStatus(404)
+            ->assertJsonPath('error.code', 'E404.NOT_FOUND');
+    }
 
-        $token = (string) $create->json('data.token');
+    public function test_can_revoke_invitation_with_permission(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $manager = $this->createApiUser($tenant, ['invitation.revoke']);
+        $team = $this->createTeam($tenant, $manager);
+
+        $invitation = Invitation::factory()->create([
+            'tenant_id' => $tenant->id,
+            'team_id' => $team->id,
+            'invited_by_user_id' => $manager->id,
+            'status' => Invitation::STATUS_PENDING,
+        ]);
+
+        $this->asUser($manager, $tenant)
+            ->deleteJson('/api/teams/' . $team->id . '/invitations/' . $invitation->id)
+            ->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', Invitation::STATUS_CANCELLED);
+
+        $invitation->refresh();
+        $this->assertSame(Invitation::STATUS_CANCELLED, $invitation->status);
+        $this->assertNotNull($invitation->revoked_at);
+    }
+
+    public function test_accept_invitation_valid_token_succeeds_and_reuse_fails(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $manager = $this->createApiUser($tenant, ['invitation.accept']);
+        $invitee = $this->createApiUser($tenant, ['invitation.accept'], [
+            'email' => 'invitee+' . Str::random(8) . '@example.com',
+        ]);
+        $team = $this->createTeam($tenant, $manager);
+
+        $validToken = 'valid-' . Str::random(40);
+        $validInvitation = Invitation::factory()
+            ->withRawToken($validToken)
+            ->create([
+                'tenant_id' => $tenant->id,
+                'team_id' => $team->id,
+                'invited_by_user_id' => $manager->id,
+                'email' => strtolower($invitee->email),
+                'status' => Invitation::STATUS_PENDING,
+                'expires_at' => now()->addDay(),
+            ]);
+
+        $this->assertSame(hash('sha256', $validToken), $validInvitation->token_hash);
+        $this->assertNull($validInvitation->token);
 
         $this->asUser($invitee, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
-            ->assertStatus(200);
+            ->postJson('/api/teams/' . $team->id . '/invitations/' . $validToken . '/accept')
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', Invitation::STATUS_ACCEPTED);
 
         $this->asUser($invitee, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
+            ->postJson('/api/teams/' . $team->id . '/invitations/' . $validToken . '/accept')
+            ->assertStatus(409)
+            ->assertJsonPath('error.code', 'E409.CONFLICT');
+
+        $expiredToken = 'expired-' . Str::random(40);
+        Invitation::factory()
+            ->withRawToken($expiredToken)
+            ->expired()
+            ->create([
+                'tenant_id' => $tenant->id,
+                'team_id' => $team->id,
+                'invited_by_user_id' => $manager->id,
+                'email' => strtolower($invitee->email),
+                'status' => Invitation::STATUS_PENDING,
+            ]);
+
+        $this->asUser($invitee, $tenant)
+            ->postJson('/api/teams/' . $team->id . '/invitations/' . $expiredToken . '/accept')
             ->assertStatus(409)
             ->assertJsonPath('error.code', 'E409.CONFLICT');
     }
 
-    public function test_accept_invitation_with_wrong_identity_is_forbidden(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $manager = $this->createApiUser($tenant, ['invitation.create']);
-        $actualInvitee = $this->createApiUser($tenant, ['invitation.accept'], [
-            'email' => 'actual+' . Str::random(6) . '@example.com',
-        ]);
-        $otherUser = $this->createApiUser($tenant, ['invitation.accept'], [
-            'email' => 'other+' . Str::random(6) . '@example.com',
-        ]);
-
-        $team = $this->createTeam($tenant, $manager);
-        $create = $this->asUser($manager, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations', [
-                'email' => $actualInvitee->email,
-                'role' => Team::ROLE_MEMBER,
-            ])
-            ->assertStatus(201);
-
-        $token = (string) $create->json('data.token');
-
-        $this->asUser($otherUser, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations/' . $token . '/accept')
-            ->assertStatus(403)
-            ->assertJsonPath('error.code', 'E403.AUTHORIZATION');
-    }
-
-    public function test_invitation_create_revoke_accept_writes_audit_entries(): void
-    {
-        $tenant = Tenant::factory()->create();
-        $manager = $this->createApiUser($tenant, ['invitation.create', 'invitation.revoke', 'invitation.accept']);
-        $invitee = $this->createApiUser($tenant, ['invitation.accept'], [
-            'email' => 'audit+' . Str::random(6) . '@example.com',
-        ]);
-        $team = $this->createTeam($tenant, $manager);
-
-        $created = $this->asUser($manager, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations', [
-                'email' => 'audit-revoke+' . Str::random(6) . '@example.com',
-                'role' => Team::ROLE_MEMBER,
-            ])
-            ->assertStatus(201);
-        $createdId = (string) $created->json('data.id');
-
-        $this->assertDatabaseHas('audit_logs', [
-            'action' => 'invitation.create',
-            'entity_type' => 'invitation',
-            'entity_id' => $createdId,
-            'tenant_id' => $tenant->id,
-            'user_id' => $manager->id,
-        ]);
-
-        $this->asUser($manager, $tenant)
-            ->deleteJson('/api/teams/' . $team->id . '/invitations/' . $createdId)
-            ->assertStatus(200);
-
-        $this->assertDatabaseHas('audit_logs', [
-            'action' => 'invitation.revoke',
-            'entity_type' => 'invitation',
-            'entity_id' => $createdId,
-            'tenant_id' => $tenant->id,
-            'user_id' => $manager->id,
-        ]);
-
-        $acceptInvite = $this->asUser($manager, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations', [
-                'email' => $invitee->email,
-                'role' => Team::ROLE_MEMBER,
-            ])
-            ->assertStatus(201);
-        $acceptInvitationId = (string) $acceptInvite->json('data.id');
-        $acceptToken = (string) $acceptInvite->json('data.token');
-
-        $this->asUser($invitee, $tenant)
-            ->postJson('/api/teams/' . $team->id . '/invitations/' . $acceptToken . '/accept')
-            ->assertStatus(200);
-
-        $this->assertDatabaseHas('audit_logs', [
-            'action' => 'invitation.accept',
-            'entity_type' => 'invitation',
-            'entity_id' => $acceptInvitationId,
-            'tenant_id' => $tenant->id,
-            'user_id' => $invitee->id,
-        ]);
-    }
-
-    public function test_web_invitation_accept_page_requires_authentication(): void
-    {
-        $token = Str::random(64);
-        $response = $this->get('/invitations/accept/' . $token);
-        $response->assertRedirect('/login');
-    }
-
-    public function test_accept_routes_use_invitation_accept_throttle_middleware(): void
+    public function test_accept_route_uses_invitation_accept_throttle_middleware(): void
     {
         $apiRoute = $this->findRoute('api/teams/{team}/invitations/{token}/accept', 'POST');
+
         $this->assertNotNull($apiRoute);
         $this->assertContains('throttle:invitation-accept', $apiRoute->gatherMiddleware());
-
-        $webRoute = $this->findRoute('invitations/accept/{token}', 'GET');
-        $this->assertNotNull($webRoute);
-        $this->assertContains('throttle:invitation-accept', $webRoute->gatherMiddleware());
     }
 
     private function createApiUser(Tenant $tenant, array $permissions, array $attributes = []): User

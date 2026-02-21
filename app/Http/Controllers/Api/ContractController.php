@@ -112,7 +112,12 @@ class ContractController extends BaseApiController
 
         $this->authorize('create', Contract::class);
 
-        $validator = Validator::make($request->all(), [
+        $input = $request->all();
+        if (array_key_exists('code', $input) && is_string($input['code'])) {
+            $input['code'] = strtoupper(trim($input['code']));
+        }
+
+        $validator = Validator::make($input, [
             'code' => [
                 'required',
                 'string',
@@ -132,19 +137,20 @@ class ContractController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
+        $validated = $validator->validated();
         $userId = Auth::id();
 
         $contractModel = Contract::query()->create([
             'tenant_id' => $tenantId,
             'project_id' => $project,
-            'code' => strtoupper((string) $request->string('code')),
-            'title' => $request->string('title')->value(),
-            'status' => (string) $request->input('status', Contract::STATUS_DRAFT),
-            'currency' => strtoupper((string) $request->input('currency', 'USD')),
-            'total_value' => (float) $request->input('total_value', 0),
-            'signed_at' => $request->input('signed_at'),
-            'start_date' => $request->input('start_date'),
-            'end_date' => $request->input('end_date'),
+            'code' => $validated['code'],
+            'title' => $validated['title'],
+            'status' => $validated['status'] ?? Contract::STATUS_DRAFT,
+            'currency' => strtoupper($validated['currency'] ?? 'USD'),
+            'total_value' => (float) ($validated['total_value'] ?? 0),
+            'signed_at' => $validated['signed_at'] ?? null,
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
             'created_by' => $userId ? (string) $userId : null,
         ]);
 
@@ -166,7 +172,12 @@ class ContractController extends BaseApiController
 
         $this->authorize('update', $contractModel);
 
-        $validator = Validator::make($request->all(), [
+        $input = $request->all();
+        if (array_key_exists('code', $input) && is_string($input['code'])) {
+            $input['code'] = strtoupper(trim($input['code']));
+        }
+
+        $validator = Validator::make($input, [
             'code' => [
                 'sometimes',
                 'required',
@@ -174,11 +185,11 @@ class ContractController extends BaseApiController
                 'max:100',
                 Rule::unique('contracts', 'code')
                     ->where('tenant_id', $tenantId)
-                    ->ignore($contractModel->id),
+                    ->ignore($contractModel->getKey()),
             ],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'status' => ['sometimes', Rule::in(Contract::VALID_STATUSES)],
-            'currency' => ['sometimes', 'required', 'string', 'size:3'],
+            'status' => ['sometimes', 'nullable', Rule::in(Contract::VALID_STATUSES)],
+            'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
             'total_value' => ['sometimes', 'required', 'numeric', 'min:0'],
             'signed_at' => ['nullable', 'date'],
             'start_date' => ['nullable', 'date'],
@@ -189,19 +200,18 @@ class ContractController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        $payload = $request->only([
-            'code',
-            'title',
-            'status',
-            'currency',
-            'total_value',
-            'signed_at',
-            'start_date',
-            'end_date',
-        ]);
+        $payload = $validator->validated();
+
+        if (($payload['status'] ?? null) === null) {
+            unset($payload['status']);
+        }
+
+        if (($payload['currency'] ?? null) === null) {
+            unset($payload['currency']);
+        }
 
         if (array_key_exists('code', $payload) && is_string($payload['code'])) {
-            $payload['code'] = strtoupper($payload['code']);
+            $payload['code'] = strtoupper(trim($payload['code']));
         }
 
         if (array_key_exists('currency', $payload) && is_string($payload['currency'])) {

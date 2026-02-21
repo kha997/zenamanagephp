@@ -86,6 +86,104 @@ class ContractApiTest extends TestCase
             ->assertJsonPath('data.id', $contractId);
     }
 
+    public function test_create_contract_null_status_and_currency_use_defaults(): void
+    {
+        $response = $this->postJson(
+            $this->v1('projects.contracts.store', ['project' => $this->projectA->id]),
+            [
+                'code' => 'ctr-null-default-001',
+                'title' => 'Null Default Contract',
+                'status' => null,
+                'currency' => null,
+            ],
+            $this->freshHeadersFor($this->userA)
+        );
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.status', Contract::STATUS_DRAFT)
+            ->assertJsonPath('data.currency', 'USD');
+
+        $contractId = (string) $response->json('data.id');
+        $this->assertDatabaseHas('contracts', [
+            'id' => $contractId,
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $this->projectA->id,
+            'code' => 'CTR-NULL-DEFAULT-001',
+            'status' => Contract::STATUS_DRAFT,
+            'currency' => 'USD',
+        ]);
+    }
+
+    public function test_update_contract_null_status_and_currency_do_not_overwrite_with_empty_string(): void
+    {
+        $contract = Contract::query()->create([
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $this->projectA->id,
+            'code' => 'CTR-NULL-UPD-001',
+            'title' => 'Before null update',
+            'status' => Contract::STATUS_ACTIVE,
+            'currency' => 'EUR',
+            'total_value' => 100,
+            'created_by' => $this->userA->id,
+        ]);
+
+        $response = $this->putJson(
+            $this->v1('projects.contracts.update', ['project' => $this->projectA->id, 'contract' => $contract->id]),
+            [
+                'title' => 'After null update',
+                'status' => null,
+                'currency' => null,
+            ],
+            $this->freshHeadersFor($this->userA)
+        );
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.status', Contract::STATUS_ACTIVE)
+            ->assertJsonPath('data.currency', 'EUR')
+            ->assertJsonPath('data.title', 'After null update');
+
+        $this->assertDatabaseHas('contracts', [
+            'id' => $contract->id,
+            'status' => Contract::STATUS_ACTIVE,
+            'currency' => 'EUR',
+            'title' => 'After null update',
+        ]);
+        $this->assertDatabaseMissing('contracts', ['id' => $contract->id, 'status' => '']);
+        $this->assertDatabaseMissing('contracts', ['id' => $contract->id, 'currency' => '']);
+    }
+
+    public function test_create_contract_rejects_case_insensitive_duplicate_code_after_normalization(): void
+    {
+        Contract::query()->create([
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $this->projectA->id,
+            'code' => 'ABC',
+            'title' => 'Existing Contract',
+            'status' => Contract::STATUS_DRAFT,
+            'currency' => 'USD',
+            'total_value' => 0,
+            'created_by' => $this->userA->id,
+        ]);
+
+        $response = $this->postJson(
+            $this->v1('projects.contracts.store', ['project' => $this->projectA->id]),
+            [
+                'code' => ' abc ',
+                'title' => 'Duplicate code should fail',
+            ],
+            $this->freshHeadersFor($this->userA)
+        );
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseCount('contracts', 1);
+        $this->assertDatabaseHas('contracts', [
+            'tenant_id' => $this->tenantA->id,
+            'project_id' => $this->projectA->id,
+            'code' => 'ABC',
+        ]);
+    }
+
     public function test_cross_tenant_contract_show_update_delete_returns_404(): void
     {
         $contract = Contract::query()->create([

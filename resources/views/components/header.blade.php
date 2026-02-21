@@ -7,7 +7,7 @@
                 <!-- Logo -->
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg">
-                        <span class="text-white font-bold text-lg">Z</span>
+                        <img src="/icons/icon-32x32.png" alt="ZenaManage logo" class="w-6 h-6" loading="lazy">
                     </div>
                     <div class="flex flex-col">
                         <h1 class="text-xl font-bold text-gray-900 leading-tight">ZenaManage</h1>

@@ -138,12 +138,22 @@ export default function ContractsListPage() {
           <h1 className="text-2xl font-bold text-gray-900">Contracts</h1>
           <p className="mt-1 text-sm text-gray-600">Project ID: {projectId}</p>
         </div>
-        <Link
-          to="/projects"
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Back to Projects
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/app/projects/${projectId}/contracts/new`}
+            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            aria-label="Create new contract"
+          >
+            New Contract
+          </Link>
+          <Link
+            to="/projects"
+            className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            aria-label="Back to projects list"
+          >
+            Back to Projects
+          </Link>
+        </div>
       </div>
 
       {isLoading || isFetching ? (

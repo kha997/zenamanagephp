@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/api-client';
 
 type ContractStatus = 'draft' | 'active' | 'closed' | 'cancelled';
 type PaymentStatus = 'planned' | 'paid' | 'overdue';
+type PaymentFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
 type ContractTab = 'overview' | 'edit' | 'payments';
 type PaymentFormMode = 'create' | 'edit';
 
@@ -60,6 +61,13 @@ interface PaymentFormState {
   note: string;
 }
 
+interface SchedulePreviewRow {
+  name: string;
+  amount: number;
+  due_date: string | null;
+  status: PaymentStatus;
+}
+
 const CONTRACT_STATUS_OPTIONS: Array<{ value: ContractStatus; label: string }> = [
   { value: 'draft', label: 'Draft' },
   { value: 'active', label: 'Active' },
@@ -71,6 +79,13 @@ const PAYMENT_STATUS_OPTIONS: Array<{ value: PaymentStatus; label: string }> = [
   { value: 'planned', label: 'Planned' },
   { value: 'paid', label: 'Paid' },
   { value: 'overdue', label: 'Overdue' },
+];
+
+const PAYMENT_FREQUENCY_OPTIONS: Array<{ value: PaymentFrequency; label: string }> = [
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Biweekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
 ];
 
 const PAYMENT_FIELDS: Array<keyof PaymentFormState> = ['name', 'amount', 'due_date', 'status', 'paid_at', 'note'];
@@ -88,10 +103,11 @@ function extractContract(payload: unknown): ContractRecord | null {
 
 function extractPaymentsPayload(response: unknown): { items: ContractPaymentRecord[]; pagination: AnyPagination | null } {
   const payload = response as any;
+  const container = payload?.data ?? payload;
 
-  const rawItems = payload?.data?.data?.items ?? payload?.data?.data ?? payload?.data?.items ?? payload?.data ?? [];
-  const pagination =
-    payload?.data?.data?.pagination ?? payload?.data?.meta?.pagination ?? payload?.data?.pagination ?? null;
+  // SSOT shape: data.items + data.pagination
+  const rawItems = container?.items ?? container?.data?.items ?? container?.data ?? payload?.items ?? [];
+  const pagination = container?.pagination ?? container?.data?.pagination ?? container?.meta?.pagination ?? null;
 
   let items: ContractPaymentRecord[] = [];
   if (Array.isArray(rawItems)) {
@@ -175,6 +191,55 @@ function truncateText(value: string | null | undefined, maxLength = 60): string 
   return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
+function parseDateInput(value: string): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDateInput(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addFrequency(date: Date, frequency: PaymentFrequency, steps: number): Date {
+  const clone = new Date(date.getTime());
+  if (frequency === 'weekly') {
+    clone.setDate(clone.getDate() + steps * 7);
+    return clone;
+  }
+
+  if (frequency === 'biweekly') {
+    clone.setDate(clone.getDate() + steps * 14);
+    return clone;
+  }
+
+  if (frequency === 'quarterly') {
+    clone.setMonth(clone.getMonth() + steps * 3);
+    return clone;
+  }
+
+  clone.setMonth(clone.getMonth() + steps);
+  return clone;
+}
+
+function splitAmountByCount(totalValue: number, count: number): number[] {
+  if (count <= 0) {
+    return [];
+  }
+
+  const totalCents = Math.round(totalValue * 100);
+  const baseCents = Math.floor(totalCents / count);
+  const lastCents = totalCents - baseCents * (count - 1);
+
+  return Array.from({ length: count }, (_, index) => (index === count - 1 ? lastCents : baseCents) / 100);
+}
+
 export default function ContractDetailPage() {
   const { projectId, contractId } = useParams<{ projectId: string; contractId: string }>();
   const navigate = useNavigate();
@@ -199,6 +264,12 @@ export default function ContractDetailPage() {
   const [paymentForm, setPaymentForm] = useState<PaymentFormState>(toPaymentForm());
   const [paymentValidationErrors, setPaymentValidationErrors] = useState<Record<string, string[]>>({});
   const [paymentFormError, setPaymentFormError] = useState<string | null>(null);
+  const [scheduleCount, setScheduleCount] = useState<string>('4');
+  const [scheduleFirstDueDate, setScheduleFirstDueDate] = useState<string>('');
+  const [scheduleFrequency, setScheduleFrequency] = useState<PaymentFrequency>('monthly');
+  const [scheduleNamePrefix, setScheduleNamePrefix] = useState<string>('Payment');
+  const [schedulePreviewRows, setSchedulePreviewRows] = useState<SchedulePreviewRow[]>([]);
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
 
   const {
     data: detailResponse,
@@ -434,6 +505,45 @@ export default function ContractDetailPage() {
     },
   });
 
+  const applyScheduleMutation = useMutation({
+    mutationFn: async (rows: SchedulePreviewRow[]) => {
+      if (!contractId) {
+        throw new Error('Missing contract id.');
+      }
+
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index];
+        try {
+          await apiClient.post(`/api/v1/contracts/${contractId}/payments`, {
+            name: row.name,
+            amount: row.amount,
+            due_date: row.due_date,
+            status: row.status,
+          });
+        } catch (error) {
+          const wrappedError = new Error(`Schedule apply failed at row ${index + 1}`);
+          (wrappedError as Error & { cause?: unknown; rowIndex?: number }).cause = error;
+          (wrappedError as Error & { cause?: unknown; rowIndex?: number }).rowIndex = index;
+          throw wrappedError;
+        }
+      }
+    },
+    onSuccess: async () => {
+      setScheduleError(null);
+      setSchedulePreviewRows([]);
+      setPaymentsPage(1);
+      await refetchPayments();
+      toast.success('Schedule applied successfully.');
+    },
+    onError: (mutationError: unknown) => {
+      const payload = mutationError as Error & { cause?: unknown; rowIndex?: number };
+      const failedIndex = typeof payload.rowIndex === 'number' ? payload.rowIndex + 1 : null;
+      const sourceError = payload.cause ?? mutationError;
+      const baseMessage = extractApiErrorMessage(sourceError, 'Failed to apply schedule.');
+      setScheduleError(failedIndex ? `Stopped at payment #${failedIndex}. ${baseMessage}` : baseMessage);
+    },
+  });
+
   const formatCurrency = (value: number | null, currency: string | null): string => {
     const amount = typeof value === 'number' ? value : 0;
 
@@ -601,6 +711,45 @@ export default function ContractDetailPage() {
     }
 
     deletePaymentMutation.mutate(payment.id);
+  };
+
+  const onGenerateSchedulePreview = () => {
+    setScheduleError(null);
+
+    const count = Number(scheduleCount);
+    if (!Number.isInteger(count) || count <= 0) {
+      setSchedulePreviewRows([]);
+      setScheduleError('Number of payments must be a positive whole number.');
+      return;
+    }
+
+    const prefix = scheduleNamePrefix.trim() || 'Payment';
+    const totalValue = typeof contract.total_value === 'number' ? contract.total_value : 0;
+    const amounts = splitAmountByCount(totalValue, count);
+    const firstDate = parseDateInput(scheduleFirstDueDate);
+    if (scheduleFirstDueDate && !firstDate) {
+      setSchedulePreviewRows([]);
+      setScheduleError('First due date must be in YYYY-MM-DD format.');
+      return;
+    }
+
+    const rows: SchedulePreviewRow[] = Array.from({ length: count }, (_, index) => ({
+      name: `${prefix} #${index + 1}`,
+      amount: amounts[index] ?? 0,
+      due_date: firstDate ? formatDateInput(addFrequency(firstDate, scheduleFrequency, index)) : null,
+      status: 'planned',
+    }));
+
+    setSchedulePreviewRows(rows);
+  };
+
+  const onApplySchedule = () => {
+    if (schedulePreviewRows.length === 0 || applyScheduleMutation.isPending) {
+      return;
+    }
+
+    setScheduleError(null);
+    applyScheduleMutation.mutate(schedulePreviewRows);
   };
 
   if (!projectId || !contractId) {
@@ -883,6 +1032,121 @@ export default function ContractDetailPage() {
                 Add payment
               </button>
             </div>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-700">Schedule generator</h3>
+            <div className="grid gap-3 md:grid-cols-4">
+              <div>
+                <label htmlFor="schedule_count" className="block text-sm font-medium text-gray-700">
+                  Number of payments
+                </label>
+                <input
+                  id="schedule_count"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={scheduleCount}
+                  onChange={(event) => setScheduleCount(event.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="schedule_first_due_date" className="block text-sm font-medium text-gray-700">
+                  First due date
+                </label>
+                <input
+                  id="schedule_first_due_date"
+                  type="date"
+                  value={scheduleFirstDueDate}
+                  onChange={(event) => setScheduleFirstDueDate(event.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="schedule_frequency" className="block text-sm font-medium text-gray-700">
+                  Frequency
+                </label>
+                <select
+                  id="schedule_frequency"
+                  value={scheduleFrequency}
+                  onChange={(event) => setScheduleFrequency(event.target.value as PaymentFrequency)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                >
+                  {PAYMENT_FREQUENCY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="schedule_name_prefix" className="block text-sm font-medium text-gray-700">
+                  Name prefix
+                </label>
+                <input
+                  id="schedule_name_prefix"
+                  type="text"
+                  value={scheduleNamePrefix}
+                  onChange={(event) => setScheduleNamePrefix(event.target.value)}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={onGenerateSchedulePreview}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              >
+                Generate preview
+              </button>
+              <button
+                type="button"
+                onClick={onApplySchedule}
+                disabled={schedulePreviewRows.length === 0 || applyScheduleMutation.isPending}
+                className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {applyScheduleMutation.isPending ? 'Applying...' : 'Apply schedule'}
+              </button>
+              <p className="text-xs text-gray-600">
+                Total source: {formatCurrency(contract.total_value, contract.currency)}. Last row adjusts rounding.
+              </p>
+            </div>
+
+            {scheduleError ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                <p className="text-sm text-red-700">{scheduleError}</p>
+              </div>
+            ) : null}
+
+            {schedulePreviewRows.length > 0 ? (
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Name</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Amount</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Due Date</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {schedulePreviewRows.map((row, index) => (
+                        <tr key={`${row.name}-${index}`}>
+                          <td className="px-4 py-2 text-sm text-gray-900">{row.name}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700">{formatCurrency(row.amount, contract.currency)}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700">{formatDate(row.due_date)}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700">{row.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {isPaymentsLoading || isPaymentsFetching ? (

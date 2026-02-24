@@ -1,7 +1,7 @@
 ---
 **DEPRECATED** (2025-09-24): This document is outdated.
 Canonical reference: INSTALLATION_GUIDE.md
-Reason: Superseded by a more comprehensive installation guide.
+Reason: Superseded by canonical installation guide.
 ---
 # Z.E.N.A Project Management - Installation Guide
 
@@ -33,4 +33,3 @@ Reason: Superseded by a more comprehensive installation guide.
 ## Installation Steps
 
 ### 1. Download and Extract
-

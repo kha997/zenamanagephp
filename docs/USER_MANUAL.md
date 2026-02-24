@@ -1,7 +1,7 @@
 ---
 **DEPRECATED** (2025-09-24): This document is outdated.
 Canonical reference: USER_MANUAL.md
-Reason: Superseded by a more comprehensive and English-language user manual.
+Reason: Superseded by canonical user manual.
 ---
 # Z.E.N.A Project Management - User Manual
 

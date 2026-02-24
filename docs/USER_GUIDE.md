@@ -1,7 +1,7 @@
 ---
 **DEPRECATED** (2025-09-24): This document is outdated.
 Canonical reference: USER_DOCUMENTATION.md
-Reason: Superseded by a more comprehensive and English-language user documentation.
+Reason: Superseded by canonical user documentation.
 ---
 # 👥 USER GUIDE - DASHBOARD SYSTEM
 
@@ -625,4 +625,3 @@ Display chronological events.
 - **Admin Training**: For system administrators
 - **Custom Training**: Tailored to your needs
 - **Certification Program**: Professional certification available
-

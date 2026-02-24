@@ -1,3 +1,7 @@
+# Markdown Inventory
+
+Snapshot note: Maintained without legacy inventory helper scripts (`update_user_guide_inventory.sh`, `update_user_manual_inventory.sh`).
+
  Path                                                       Last Git Commit (hash + date)    Size (lines)    References Count    Recommendation    Evidence Notes 
 ---                                                        ---                              ---             ---                 ---               ---
  ./.trae/rules/project_rules.md                             9859b26f 2025-09-02              98              0                                     

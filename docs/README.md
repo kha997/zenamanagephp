@@ -1,21 +1,20 @@
-# Current Documentation
+# Current Documentation (Canonical)
 
-- API Documentation: docs/api/API_DOCUMENTATION.md
-- Installation Guide: INSTALLATION_GUIDE.md
-- User Manual: USER_MANUAL.md
-- User Documentation: USER_DOCUMENTATION.md
+- API Documentation: `docs/api/API_DOCUMENTATION.md`
+- Installation Guide: `INSTALLATION_GUIDE.md`
+- Deployment Guide: `DEPLOYMENT_GUIDE.md`
+- User Manual: `USER_MANUAL.md`
+- User Documentation: `USER_DOCUMENTATION.md`
 
-## Deprecated Docs
+## Deprecated Docs (with Canonical Target)
 
-- API Documentation (root): API_DOCUMENTATION.md
-- API Documentation (docs): docs/API_DOCUMENTATION.md
-- Installation Guide (docs): docs/INSTALLATION.md
-- Deployment Guide (docs): docs/DEPLOYMENT_GUIDE.md
-- User Manual (docs): docs/USER_MANUAL.md
-- User Guide (docs): docs/USER_GUIDE.md
+- `API_DOCUMENTATION.md` -> `docs/api/API_DOCUMENTATION.md`
+- `docs/API_DOCUMENTATION.md` -> `docs/api/API_DOCUMENTATION.md`
+- `docs/INSTALLATION.md` -> `INSTALLATION_GUIDE.md`
+- `docs/DEPLOYMENT_GUIDE.md` -> `DEPLOYMENT_GUIDE.md`
+- `docs/USER_MANUAL.md` -> `USER_MANUAL.md`
+- `docs/USER_GUIDE.md` -> `USER_DOCUMENTATION.md`
 
 ## Architecture
-- (Add more links here)
 
-- Routing Architecture Law: docs/architecture/routing-architecture.md
-
+- Routing Architecture Law: `docs/architecture/routing-architecture.md`

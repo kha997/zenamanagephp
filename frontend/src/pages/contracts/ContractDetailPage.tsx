@@ -9,6 +9,9 @@ type PaymentStatus = 'planned' | 'paid' | 'overdue';
 type PaymentFrequency = 'weekly' | 'biweekly' | 'monthly' | 'quarterly';
 type ContractTab = 'overview' | 'edit' | 'payments';
 type PaymentFormMode = 'create' | 'edit';
+type PaymentFilterStatus = 'all' | PaymentStatus;
+type PaymentSortKey = 'due_date' | 'amount' | 'status' | 'created_at';
+type SortDirection = 'asc' | 'desc';
 
 interface ContractRecord {
   id: string;
@@ -308,6 +311,10 @@ export default function ContractDetailPage() {
 
   const [paymentsPage, setPaymentsPage] = useState<number>(1);
   const paymentsPerPage = 15;
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentFilterStatus>('all');
+  const [paymentNameSearch, setPaymentNameSearch] = useState<string>('');
+  const [paymentSortKey, setPaymentSortKey] = useState<PaymentSortKey>('due_date');
+  const [paymentSortDirection, setPaymentSortDirection] = useState<SortDirection>('asc');
 
   const [paymentModalMode, setPaymentModalMode] = useState<PaymentFormMode | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<ContractPaymentRecord | null>(null);
@@ -370,29 +377,66 @@ export default function ContractDetailPage() {
   const paymentsCurrentPage = paymentsPagination?.current_page ?? paymentsPagination?.page ?? paymentsPage;
   const paymentsLastPage = paymentsPagination?.last_page ?? paymentsPagination?.total_pages ?? 1;
   const paymentsTotalItems = paymentsPagination?.total ?? payments.length;
-  const sortedPayments = useMemo(() => {
+  const filteredAndSortedPayments = useMemo(() => {
+    const normalizedSearch = paymentNameSearch.trim().toLowerCase();
+    const directionFactor = paymentSortDirection === 'asc' ? 1 : -1;
+
     return payments
+      .filter((payment) => {
+        if (paymentStatusFilter !== 'all' && payment.status !== paymentStatusFilter) {
+          return false;
+        }
+
+        if (normalizedSearch !== '' && !(payment.name || '').toLowerCase().includes(normalizedSearch)) {
+          return false;
+        }
+
+        return true;
+      })
       .map((payment, index) => ({ payment, index }))
       .sort((a, b) => {
-        const aDue = a.payment.due_date ? Date.parse(a.payment.due_date) : Number.POSITIVE_INFINITY;
-        const bDue = b.payment.due_date ? Date.parse(b.payment.due_date) : Number.POSITIVE_INFINITY;
-        const safeADue = Number.isNaN(aDue) ? Number.POSITIVE_INFINITY : aDue;
-        const safeBDue = Number.isNaN(bDue) ? Number.POSITIVE_INFINITY : bDue;
+        let comparison = 0;
 
-        if (safeADue !== safeBDue) {
-          return safeADue - safeBDue;
+        if (paymentSortKey === 'due_date') {
+          const aDueRaw = a.payment.due_date ? Date.parse(a.payment.due_date) : null;
+          const bDueRaw = b.payment.due_date ? Date.parse(b.payment.due_date) : null;
+          const aDue = aDueRaw != null && !Number.isNaN(aDueRaw) ? aDueRaw : null;
+          const bDue = bDueRaw != null && !Number.isNaN(bDueRaw) ? bDueRaw : null;
+
+          // Null due_date sorts last for asc and first for desc via direction inversion.
+          if (aDue == null && bDue == null) {
+            comparison = 0;
+          } else if (aDue == null) {
+            comparison = 1;
+          } else if (bDue == null) {
+            comparison = -1;
+          } else {
+            comparison = aDue - bDue;
+          }
+        } else if (paymentSortKey === 'amount') {
+          comparison = (a.payment.amount || 0) - (b.payment.amount || 0);
+        } else if (paymentSortKey === 'status') {
+          comparison = (a.payment.status || '').localeCompare(b.payment.status || '');
+        } else if (paymentSortKey === 'created_at') {
+          const aCreated = a.payment.created_at ? Date.parse(a.payment.created_at) : 0;
+          const bCreated = b.payment.created_at ? Date.parse(b.payment.created_at) : 0;
+          const safeACreated = Number.isNaN(aCreated) ? 0 : aCreated;
+          const safeBCreated = Number.isNaN(bCreated) ? 0 : bCreated;
+          comparison = safeACreated - safeBCreated;
         }
 
-        const aCreated = a.payment.created_at ? Date.parse(a.payment.created_at) : null;
-        const bCreated = b.payment.created_at ? Date.parse(b.payment.created_at) : null;
-        if (aCreated != null && bCreated != null && !Number.isNaN(aCreated) && !Number.isNaN(bCreated) && aCreated !== bCreated) {
-          return bCreated - aCreated;
+        if (comparison !== 0) {
+          return comparison * directionFactor;
         }
 
+        const idCompare = String(a.payment.id || '').localeCompare(String(b.payment.id || ''));
+        if (idCompare !== 0) {
+          return idCompare;
+        }
         return a.index - b.index;
       })
       .map((entry) => entry.payment);
-  }, [payments]);
+  }, [paymentNameSearch, paymentSortDirection, paymentSortKey, paymentStatusFilter, payments]);
   const paymentsSummary = useMemo(() => {
     let totalPaid = 0;
     let totalPlanned = 0;
@@ -1253,22 +1297,72 @@ export default function ContractDetailPage() {
             ) : null}
           </div>
 
-          <div className="grid gap-2 rounded-lg border border-gray-200 bg-white p-3 text-sm md:grid-cols-4">
-            <p className="text-gray-700">
-              Paid: <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalPaid, contract.currency)}</span>
-            </p>
-            <p className="text-gray-700">
-              Planned:{' '}
-              <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalPlanned, contract.currency)}</span>
-            </p>
-            <p className="text-gray-700">
-              Overdue:{' '}
-              <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalOverdue, contract.currency)}</span>
-            </p>
-            <p className="text-gray-700">
-              Remaining:{' '}
-              <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.remaining, contract.currency)}</span>
-            </p>
+          <div className="rounded-lg border border-gray-200 bg-white p-3">
+            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-500">Totals (all payments)</div>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="grid gap-2 text-sm md:grid-cols-4">
+                <p className="text-gray-700">
+                  Paid: <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalPaid, contract.currency)}</span>
+                </p>
+                <p className="text-gray-700">
+                  Planned:{' '}
+                  <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalPlanned, contract.currency)}</span>
+                </p>
+                <p className="text-gray-700">
+                  Overdue:{' '}
+                  <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalOverdue, contract.currency)}</span>
+                </p>
+                <p className="text-gray-700">
+                  Remaining:{' '}
+                  <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.remaining, contract.currency)}</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="text-xs font-medium text-gray-700">
+                  Status
+                  <select
+                    value={paymentStatusFilter}
+                    onChange={(event) => setPaymentStatusFilter(event.target.value as PaymentFilterStatus)}
+                    className="mt-1 block rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="all">All</option>
+                    <option value="planned">planned</option>
+                    <option value="paid">paid</option>
+                    <option value="overdue">overdue</option>
+                  </select>
+                </label>
+                <label className="text-xs font-medium text-gray-700">
+                  Search name
+                  <input
+                    type="text"
+                    value={paymentNameSearch}
+                    onChange={(event) => setPaymentNameSearch(event.target.value)}
+                    placeholder="Payment name"
+                    className="mt-1 block rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </label>
+                <label className="text-xs font-medium text-gray-700">
+                  Sort by
+                  <select
+                    value={paymentSortKey}
+                    onChange={(event) => setPaymentSortKey(event.target.value as PaymentSortKey)}
+                    className="mt-1 block rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="due_date">due_date</option>
+                    <option value="amount">amount</option>
+                    <option value="status">status</option>
+                    <option value="created_at">created_at</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setPaymentSortDirection((previous) => (previous === 'asc' ? 'desc' : 'asc'))}
+                  className="rounded-md border border-gray-300 px-2 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  {paymentSortDirection}
+                </button>
+              </div>
+            </div>
           </div>
 
           {isPaymentsLoading || isPaymentsFetching ? (
@@ -1310,14 +1404,14 @@ export default function ContractDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {payments.length === 0 ? (
+                    {filteredAndSortedPayments.length === 0 ? (
                       <tr>
                         <td className="px-4 py-8 text-sm text-gray-500" colSpan={7}>
-                          No payments yet.
+                          {payments.length === 0 ? 'No payments yet.' : 'No payments match current filters.'}
                         </td>
                       </tr>
                     ) : (
-                      sortedPayments.map((payment) => (
+                      filteredAndSortedPayments.map((payment) => (
                         <tr key={payment.id}>
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">{payment.name || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(payment.amount, contract.currency)}</td>

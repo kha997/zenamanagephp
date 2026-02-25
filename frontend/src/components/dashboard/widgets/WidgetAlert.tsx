@@ -26,7 +26,7 @@ import {
 
 interface WidgetAlertProps {
   data: any;
-  config: Record<string, any);
+  config: Record<string, any>;
 }
 
 interface AlertItem {

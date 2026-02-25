@@ -43,3 +43,11 @@ const NotFoundPage: React.FC = () => {
             <Link to="/help" className="text-blue-600 hover:text-blue-800 transition-colors">
               Trung tâm hỗ trợ
             </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default NotFoundPage;

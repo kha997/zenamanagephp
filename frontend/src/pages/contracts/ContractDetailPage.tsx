@@ -673,7 +673,6 @@ export default function ContractDetailPage() {
     onSuccess: async () => {
       setScheduleError(null);
       setSchedulePreviewRows([]);
-      setPaymentsPage(1);
       await refetchPayments();
       toast.success('Schedule applied successfully.');
     },

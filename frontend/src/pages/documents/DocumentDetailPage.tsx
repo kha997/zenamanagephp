@@ -537,4 +537,11 @@ export const DocumentDetailPage: React.FC = () => {
               variant="outline"
               disabled={uploading}
             >
-              H
+              Hủy
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+};

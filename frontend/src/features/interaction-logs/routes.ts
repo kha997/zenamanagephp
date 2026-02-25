@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import React, { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
 
 // Lazy load các pages để tối ưu performance
@@ -16,15 +16,15 @@ export const interactionLogsRoutes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: <InteractionLogsList />,
+        element: React.createElement(InteractionLogsList),
       },
       {
         path: 'create',
-        element: <CreateInteractionLog />,
+        element: React.createElement(CreateInteractionLog),
       },
       {
         path: ':id',
-        element: <InteractionLogDetail />,
+        element: React.createElement(InteractionLogDetail),
       },
     ],
   },

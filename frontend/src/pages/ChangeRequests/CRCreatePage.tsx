@@ -377,7 +377,7 @@ export const CRCreatePage: React.FC = () => {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Attachments */}
             <Card className="p-6">
@@ -475,3 +475,11 @@ export const CRCreatePage: React.FC = () => {
             <div className="space-y-3 text-sm text-gray-600">
               <div>
                 <h3 className="font-medium text-gray-900">Tiêu đề:</h3>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </form>
+    </div>
+  );
+};

@@ -7,17 +7,7 @@ export default defineConfig({
   plugins: [
     react({
       // Enable React Fast Refresh
-      fastRefresh: true,
-      // Optimize React components
-      babel: {
-        plugins: [
-          // Remove console.log in production
-          process.env.NODE_ENV === 'production' && [
-            'transform-remove-console',
-            { exclude: ['error', 'warn'] }
-          ]
-        ].filter(Boolean)
-      }
+      fastRefresh: true
     })
   ],
   
@@ -30,7 +20,7 @@ export default defineConfig({
     sourcemap: process.env.NODE_ENV === 'production' ? 'hidden' : true,
     
     // Minification
-    minify: 'terser',
+    minify: 'esbuild',
     terserOptions: {
       compress: {
         // Remove console.log in production
@@ -60,7 +50,6 @@ export default defineConfig({
           // Vendor chunks
           'react-vendor': ['react', 'react-dom'],
           'router-vendor': ['react-router-dom'],
-          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select'],
           'animation-vendor': ['framer-motion'],
           'utils-vendor': ['date-fns', 'clsx', 'tailwind-merge'],
           'chart-vendor': ['recharts'],

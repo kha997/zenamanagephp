@@ -1,15 +1,15 @@
 import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Loading } from '@/components/ui/Loading';
-import { Toast } from '@/components/ui/Toast';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Loading } from '@/components/ui/loading';
+import toast from 'react-hot-toast';
 import { apiClient } from '@/lib/api-client';
 import { ArrowLeft, Save } from 'lucide-react';
 
@@ -58,13 +58,13 @@ const CreateProjectPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       
       // Show success toast
-      Toast.success('Tạo dự án thành công!');
+      toast.success('Tạo dự án thành công!');
       
       // Navigate to project detail
       navigate(`/projects/${data.id}`);
     },
     onError: (error: any) => {
-      Toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo dự án');
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo dự án');
     }
   });
 
@@ -84,11 +84,9 @@ const CreateProjectPage: React.FC = () => {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" asChild>
-          <Link to="/projects">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Quay lại
-          </Link>
+        <Button variant="outline" onClick={() => navigate('/projects')}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Quay lại
         </Button>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Tạo dự án mới</h1>
@@ -114,9 +112,11 @@ const CreateProjectPage: React.FC = () => {
                 id="name"
                 placeholder="Nhập tên dự án..."
                 {...register('name')}
-                error={errors.name?.message}
                 disabled={createProjectMutation.isPending}
               />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+              )}
             </div>
 
             {/* Description */}
@@ -148,9 +148,11 @@ const CreateProjectPage: React.FC = () => {
                   id="start_date"
                   type="date"
                   {...register('start_date')}
-                  error={errors.start_date?.message}
                   disabled={createProjectMutation.isPending}
                 />
+                {errors.start_date && (
+                  <p className="mt-1 text-sm text-red-600">{errors.start_date.message}</p>
+                )}
               </div>
 
               {/* End Date */}
@@ -162,9 +164,11 @@ const CreateProjectPage: React.FC = () => {
                   id="end_date"
                   type="date"
                   {...register('end_date')}
-                  error={errors.end_date?.message}
                   disabled={createProjectMutation.isPending}
                 />
+                {errors.end_date && (
+                  <p className="mt-1 text-sm text-red-600">{errors.end_date.message}</p>
+                )}
               </div>
             </div>
 
@@ -175,7 +179,7 @@ const CreateProjectPage: React.FC = () => {
               </label>
               <Select
                 value={watch('status')}
-                onValueChange={(value) => setValue('status', value as any)}
+                onChange={(value) => setValue('status', value as CreateProjectFormData['status'])}
                 options={statusOptions}
                 disabled={createProjectMutation.isPending}
               />

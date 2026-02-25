@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
-import { api } from '../lib/api'
+import api from '../lib/api-client'
 import type { 
   WorkTemplate, 
   CreateWorkTemplateForm, 
@@ -47,7 +47,7 @@ interface TemplatesState {
 }
 
 export const useTemplatesStore = create<TemplatesState>()(devtools(
-  (set, get) => ({
+  (set, _get) => ({
     // Initial state
     templates: [],
     currentTemplate: null,
@@ -198,7 +198,7 @@ export const useTemplatesStore = create<TemplatesState>()(devtools(
       return []
     },
 
-    setFilters: (filters) => {
+    setFilters: (filters: Partial<TemplatesState['filters']>) => {
       set(state => ({ filters: { ...state.filters, ...filters } }))
     },
 

@@ -10,7 +10,7 @@ import {
   Server,
   Database
 } from 'lucide-react'
-import { pulseAnimation, spinAnimation, bounceAnimation, fadeInUp } from '../utils/animations'
+import { pulseAnimation, spinAnimation } from '../utils/animations'
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg'

@@ -1,9 +1,10 @@
 import React from 'react'
 import { motion } from 'framer-motion'
+import type { HTMLMotionProps } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { hoverLift, fadeInUp } from '@/utils/animations'
+import { hoverLift } from '@/utils/animations'
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+interface CardProps extends HTMLMotionProps<'div'> {
   children: React.ReactNode
 }
 
@@ -17,8 +18,8 @@ export const Card: React.FC<CardProps> = ({ children, className, ...props }) => 
       initial="initial"
       animate="animate"
       whileHover="hover"
-      variants={hoverLift}
-      transition={{ duration: 0.2, ease: 'easeInOut' }}
+      variants={hoverLift as any}
+      transition={{ duration: 0.2, ease: [0.42, 0, 0.58, 1] }}
       {...props}
     >
       {children}

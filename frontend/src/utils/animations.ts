@@ -4,7 +4,7 @@ export const hoverScale = {
     scale: 1.02,
     transition: {
       duration: 0.2,
-      ease: "easeInOut"
+      ease: "easeInOut" as const
     }
   }
 }
@@ -14,7 +14,7 @@ export const hoverLift = {
     y: -2,
     transition: {
       duration: 0.2,
-      ease: "easeInOut"
+      ease: "easeInOut" as const
     }
   }
 }
@@ -24,7 +24,7 @@ export const touchFeedback = {
     scale: 0.98,
     transition: {
       duration: 0.1,
-      ease: "easeInOut"
+      ease: "easeInOut" as const
     }
   }
 }
@@ -34,7 +34,7 @@ export const focusAnimation = {
     scale: 1.01,
     transition: {
       duration: 0.15,
-      ease: "easeInOut"
+      ease: "easeInOut" as const
     }
   }
 }
@@ -42,7 +42,7 @@ export const focusAnimation = {
 export const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.3, ease: "easeOut" }
+  transition: { duration: 0.3, ease: "easeOut" as const }
 }
 
 export const staggerContainer = {
@@ -56,27 +56,27 @@ export const staggerContainer = {
 export const staggerItem = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.3, ease: "easeOut" }
+  transition: { duration: 0.3, ease: "easeOut" as const }
 }
 
 export const slideUpMobile = {
   initial: { y: "100%", opacity: 0 },
   animate: { y: 0, opacity: 1 },
   exit: { y: "100%", opacity: 0 },
-  transition: { duration: 0.3, ease: "easeInOut" }
+  transition: { duration: 0.3, ease: "easeInOut" as const }
 }
 
 export const slideDownMobile = {
   initial: { y: "-100%", opacity: 0 },
   animate: { y: 0, opacity: 1 },
   exit: { y: "-100%", opacity: 0 },
-  transition: { duration: 0.3, ease: "easeInOut" }
+  transition: { duration: 0.3, ease: "easeInOut" as const }
 }
 
 export const swipeAnimation = {
   initial: { x: 0 },
   animate: { x: 0 },
-  transition: { duration: 0.2, ease: "easeInOut" }
+  transition: { duration: 0.2, ease: "easeInOut" as const }
 }
 
 export const pulseAnimation = {
@@ -85,7 +85,7 @@ export const pulseAnimation = {
     transition: {
       duration: 1.5,
       repeat: Infinity,
-      ease: "easeInOut"
+      ease: "easeInOut" as const
     }
   }
 }
@@ -96,7 +96,7 @@ export const spinAnimation = {
     transition: {
       duration: 1,
       repeat: Infinity,
-      ease: "linear"
+      ease: "linear" as const
     }
   }
 }
@@ -107,7 +107,7 @@ export const bounceAnimation = {
     transition: {
       duration: 0.6,
       repeat: Infinity,
-      ease: "easeInOut"
+      ease: "easeInOut" as const
     }
   }
 }

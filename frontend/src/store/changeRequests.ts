@@ -11,7 +11,7 @@ import type {
   LoadingState,
   ApiResponse
 } from '../lib/types'
-import { api } from '../lib/api'
+import api from '../lib/api/client'
 
 interface ChangeRequestsState {
   // State

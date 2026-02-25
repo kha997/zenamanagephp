@@ -329,6 +329,9 @@ export default function ContractDetailPage() {
   const [scheduleNamePrefix, setScheduleNamePrefix] = useState<string>('Payment');
   const [schedulePreviewRows, setSchedulePreviewRows] = useState<SchedulePreviewRow[]>([]);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [inlinePaidAtByPaymentId, setInlinePaidAtByPaymentId] = useState<Record<string, string>>({});
+  const [inlinePaidAtErrorsByPaymentId, setInlinePaidAtErrorsByPaymentId] = useState<Record<string, string>>({});
+  const [inlinePaidAtSavingPaymentId, setInlinePaidAtSavingPaymentId] = useState<string | null>(null);
   const [deleteConfirmState, setDeleteConfirmState] = useState<DeleteConfirmState>(null);
   const confirmDeleteButtonRef = useRef<HTMLButtonElement | null>(null);
 
@@ -634,6 +637,33 @@ export default function ContractDetailPage() {
     },
   });
 
+  const inlinePaidAtMutation = useMutation({
+    mutationFn: async (args: { paymentId: string; paidAt: string }) => {
+      if (!contractId) {
+        throw new Error('Missing contract id.');
+      }
+
+      const response = await apiClient.put(`/api/v1/contracts/${contractId}/payments/${args.paymentId}`, {
+        paid_at: args.paidAt,
+      });
+      return response.data as unknown;
+    },
+    onSuccess: async () => {
+      await refetchPayments();
+      toast.success('Paid date updated successfully.');
+    },
+    onError: (mutationError: unknown, variables) => {
+      const message = extractApiErrorMessage(mutationError, 'Failed to update paid date.');
+      setInlinePaidAtErrorsByPaymentId((previous) => ({
+        ...previous,
+        [variables.paymentId]: message,
+      }));
+    },
+    onSettled: () => {
+      setInlinePaidAtSavingPaymentId(null);
+    },
+  });
+
   const deletePaymentMutation = useMutation({
     mutationFn: async (paymentId: string) => {
       if (!contractId) {
@@ -876,6 +906,54 @@ export default function ContractDetailPage() {
     confirmDeleteButtonRef.current?.focus();
   }, [deleteConfirmState]);
 
+  useEffect(() => {
+    setInlinePaidAtByPaymentId((previous) => {
+      const next: Record<string, string> = {};
+      let changed = false;
+
+      for (const payment of payments) {
+        if (payment.status !== 'paid') {
+          continue;
+        }
+
+        const nextValue = previous[payment.id] ?? toDateInputValue(payment.paid_at);
+        next[payment.id] = nextValue;
+        if (previous[payment.id] !== nextValue) {
+          changed = true;
+        }
+      }
+
+      const previousKeys = Object.keys(previous);
+      if (!changed && previousKeys.length === Object.keys(next).length) {
+        return previous;
+      }
+
+      return next;
+    });
+
+    setInlinePaidAtErrorsByPaymentId((previous) => {
+      const next: Record<string, string> = {};
+      for (const payment of payments) {
+        if (payment.status !== 'paid') {
+          continue;
+        }
+
+        const errorMessage = previous[payment.id];
+        if (!errorMessage) {
+          continue;
+        }
+
+        next[payment.id] = errorMessage;
+      }
+
+      if (Object.keys(previous).length === Object.keys(next).length) {
+        return previous;
+      }
+
+      return next;
+    });
+  }, [payments]);
+
   const onMarkPaymentPaid = (payment: ContractPaymentRecord) => {
     if (payment.status === 'paid') {
       return;
@@ -888,6 +966,49 @@ export default function ContractDetailPage() {
         paid_at: getTodayDateString(),
       },
     });
+  };
+
+  const onChangeInlinePaidAt = (paymentId: string, value: string) => {
+    setInlinePaidAtByPaymentId((previous) => ({
+      ...previous,
+      [paymentId]: value,
+    }));
+    setInlinePaidAtErrorsByPaymentId((previous) => {
+      if (!previous[paymentId]) {
+        return previous;
+      }
+
+      const next = { ...previous };
+      delete next[paymentId];
+      return next;
+    });
+  };
+
+  const onSaveInlinePaidAt = (payment: ContractPaymentRecord) => {
+    if (payment.status !== 'paid') {
+      return;
+    }
+
+    const selectedDate = inlinePaidAtByPaymentId[payment.id] ?? toDateInputValue(payment.paid_at);
+    if (selectedDate.trim() === '') {
+      setInlinePaidAtErrorsByPaymentId((previous) => ({
+        ...previous,
+        [payment.id]: 'Paid date is required for paid status',
+      }));
+      return;
+    }
+
+    setInlinePaidAtErrorsByPaymentId((previous) => {
+      if (!previous[payment.id]) {
+        return previous;
+      }
+      const next = { ...previous };
+      delete next[payment.id];
+      return next;
+    });
+
+    setInlinePaidAtSavingPaymentId(payment.id);
+    inlinePaidAtMutation.mutate({ paymentId: payment.id, paidAt: selectedDate });
   };
 
   const renderStatusBadge = (status: PaymentStatus) => {
@@ -1460,7 +1581,34 @@ export default function ContractDetailPage() {
                           <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(payment.amount, contract.currency)}</td>
                           <td className="px-4 py-3 text-sm text-gray-700">{formatDate(payment.due_date)}</td>
                           <td className="px-4 py-3 text-sm text-gray-700">{renderStatusBadge(payment.status || 'planned')}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{formatDate(payment.paid_at)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {payment.status === 'paid' ? (
+                              <div className="max-w-[220px] space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="date"
+                                    value={inlinePaidAtByPaymentId[payment.id] ?? toDateInputValue(payment.paid_at)}
+                                    onChange={(event) => onChangeInlinePaidAt(payment.id, event.target.value)}
+                                    disabled={inlinePaidAtSavingPaymentId === payment.id}
+                                    className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => onSaveInlinePaidAt(payment)}
+                                    disabled={inlinePaidAtSavingPaymentId === payment.id}
+                                    className="rounded-md border border-blue-300 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    {inlinePaidAtSavingPaymentId === payment.id ? 'Saving...' : 'Save'}
+                                  </button>
+                                </div>
+                                {inlinePaidAtErrorsByPaymentId[payment.id] ? (
+                                  <p className="text-xs text-red-600">{inlinePaidAtErrorsByPaymentId[payment.id]}</p>
+                                ) : null}
+                              </div>
+                            ) : (
+                              formatDate(payment.paid_at)
+                            )}
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-700">{truncateText(payment.note)}</td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex items-center gap-2">

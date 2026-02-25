@@ -724,7 +724,7 @@ export default function ContractDetailPage() {
     }
 
     const prefix = scheduleNamePrefix.trim() || 'Payment';
-    const totalValue = typeof contract.total_value === 'number' ? contract.total_value : 0;
+    const totalValue = typeof contract?.total_value === 'number' ? contract.total_value : 0;
     const amounts = splitAmountByCount(totalValue, count);
     const firstDate = parseDateInput(scheduleFirstDueDate);
     if (scheduleFirstDueDate && !firstDate) {

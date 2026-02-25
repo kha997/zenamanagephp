@@ -143,7 +143,7 @@ export const testUtils = {
       return new Promise((resolve) => {
         const timeout = setTimeout(() => resolve(false), 3000)
         
-        ws.onmessage = (event) => {
+        ws.onmessage = (_event) => {
           clearTimeout(timeout)
           resolve(true)
         }

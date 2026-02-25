@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { apiClient } from '@/lib/api-client';
@@ -318,7 +318,7 @@ export default function ProjectsDashboard() {
                 </div>
               ) : viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {projects.map((project, index) => {
+                  {projects.map((project) => {
                     const statusConfig = getStatusConfig(project.status);
                     
                     return (
@@ -407,7 +407,7 @@ export default function ProjectsDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {projects.map((project, index) => {
+                      {projects.map((project) => {
                         const statusConfig = getStatusConfig(project.status);
                         
                         return (

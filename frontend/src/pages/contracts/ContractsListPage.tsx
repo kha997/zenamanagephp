@@ -104,23 +104,77 @@ export default function ContractsListPage() {
   const canGoPrev = Boolean(pagination) && currentPage > 1;
   const canGoNext = Boolean(pagination) && currentPage < lastPage;
 
-  const formatCurrency = (value: number | null, currency: string | null): string => {
-    const amount = typeof value === 'number' ? value : 0;
-
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: currency || 'USD',
-    }).format(amount);
-  };
-
-  const formatDate = (value: string): string => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '-';
+  const formatCurrency = (amount: number | null, currency: string | null): string => {
+    if (typeof amount !== 'number' || !Number.isFinite(amount)) {
+      return '—';
     }
 
-    return date.toLocaleDateString();
+    const normalizedCurrency = (currency || 'USD').toUpperCase();
+
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: normalizedCurrency,
+      }).format(amount);
+    } catch (_error) {
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency: 'USD',
+        }).format(amount);
+      } catch (_fallbackError) {
+        return `${amount.toFixed(2)} ${normalizedCurrency}`;
+      }
+    }
   };
+
+  const formatDate = (value: string | null | undefined): string => {
+    if (!value) {
+      return '—';
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '—';
+    }
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatText = (value: string | null | undefined): string => {
+    if (typeof value !== 'string') {
+      return '—';
+    }
+
+    const trimmed = value.trim();
+    return trimmed === '' ? '—' : trimmed;
+  };
+
+  const renderStatusBadge = (status: string | null | undefined) => {
+    const normalized = formatText(status);
+    if (normalized === '—') {
+      return <span className="text-sm text-gray-500">—</span>;
+    }
+
+    const key = normalized.toLowerCase();
+    const styleByStatus: Record<string, string> = {
+      draft: 'bg-gray-100 text-gray-700',
+      active: 'bg-green-100 text-green-700',
+      closed: 'bg-slate-200 text-slate-700',
+      cancelled: 'bg-red-100 text-red-700',
+    };
+
+    return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize ${styleByStatus[key] || 'bg-blue-100 text-blue-700'}`}>{normalized}</span>;
+  };
+
+  const pageTotalValue = items.reduce((sum, contract) => {
+    const value = contract.total_value;
+    return typeof value === 'number' && Number.isFinite(value) ? sum + value : sum;
+  }, 0);
+  const pageTotalCurrency = items.find((contract) => typeof contract.currency === 'string' && contract.currency.trim() !== '')?.currency || 'USD';
 
   if (!projectId) {
     return (
@@ -181,7 +235,19 @@ export default function ContractsListPage() {
       ) : null}
 
       {!isLoading && !isError ? (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Contracts on page</p>
+              <p className="mt-1 text-lg font-semibold text-gray-900">{items.length}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total value on page</p>
+              <p className="mt-1 text-lg font-semibold text-gray-900">{formatCurrency(pageTotalValue, pageTotalCurrency)}</p>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -216,9 +282,9 @@ export default function ContractsListPage() {
                 ) : (
                   items.map((contract) => (
                     <tr key={contract.id}>
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{contract.code || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{contract.status || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{contract.currency || 'USD'}</td>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{formatText(contract.code)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{renderStatusBadge(contract.status)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{formatText(contract.currency)}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {formatCurrency(contract.total_value, contract.currency)}
                       </td>
@@ -266,6 +332,7 @@ export default function ContractsListPage() {
               </div>
             </div>
           ) : null}
+        </div>
         </div>
       ) : null}
     </div>

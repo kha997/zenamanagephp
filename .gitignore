@@ -55,3 +55,4 @@ logs/events.log
 /database/smoke-staging.sqlite
 /smoke-report.md
 /smoke_server.log
+frontend/dist/

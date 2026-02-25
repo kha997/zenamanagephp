@@ -29,15 +29,12 @@
   "include": ["src/main.tsx", "src/vite-env.d.ts"],
   "exclude": [
     "src/tests/**",
+    "src/**/__tests__/**",
     "src/test-api.ts",
     "src/utils/frontendTestUtils.tsx",
-    "src/App.tsx",
     "src/setupTests.ts",
     "src/components/**/__tests__/**",
-    "src/components/**/*Test*.tsx",
-    "src/components/**/Comprehensive*.tsx",
-    "src/pages/**/*Test*.tsx",
-    "src/pages/UsersDebugPage.tsx"
+    "src/components/ComprehensiveApiIntegrationTest.tsx"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

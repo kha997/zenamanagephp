@@ -240,6 +240,56 @@ function splitAmountByCount(totalValue: number, count: number): number[] {
   return Array.from({ length: count }, (_, index) => (index === count - 1 ? lastCents : baseCents) / 100);
 }
 
+function formatCurrency(amount: number | null, currency: string | null): string {
+  const value = typeof amount === 'number' && Number.isFinite(amount) ? amount : 0;
+  const normalizedCurrency = (currency || 'USD').toUpperCase();
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: normalizedCurrency,
+    }).format(value);
+  } catch (_error) {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: 'USD',
+      }).format(value);
+    } catch (_fallbackError) {
+      return `${value.toFixed(2)} ${normalizedCurrency}`;
+    }
+  }
+}
+
+function formatDate(dateString?: string | null): string {
+  if (!dateString) {
+    return '-';
+  }
+
+  const datePart = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+    return datePart;
+  }
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getTodayDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function ContractDetailPage() {
   const { projectId, contractId } = useParams<{ projectId: string; contractId: string }>();
   const navigate = useNavigate();
@@ -320,6 +370,54 @@ export default function ContractDetailPage() {
   const paymentsCurrentPage = paymentsPagination?.current_page ?? paymentsPagination?.page ?? paymentsPage;
   const paymentsLastPage = paymentsPagination?.last_page ?? paymentsPagination?.total_pages ?? 1;
   const paymentsTotalItems = paymentsPagination?.total ?? payments.length;
+  const sortedPayments = useMemo(() => {
+    return payments
+      .map((payment, index) => ({ payment, index }))
+      .sort((a, b) => {
+        const aDue = a.payment.due_date ? Date.parse(a.payment.due_date) : Number.POSITIVE_INFINITY;
+        const bDue = b.payment.due_date ? Date.parse(b.payment.due_date) : Number.POSITIVE_INFINITY;
+        const safeADue = Number.isNaN(aDue) ? Number.POSITIVE_INFINITY : aDue;
+        const safeBDue = Number.isNaN(bDue) ? Number.POSITIVE_INFINITY : bDue;
+
+        if (safeADue !== safeBDue) {
+          return safeADue - safeBDue;
+        }
+
+        const aCreated = a.payment.created_at ? Date.parse(a.payment.created_at) : null;
+        const bCreated = b.payment.created_at ? Date.parse(b.payment.created_at) : null;
+        if (aCreated != null && bCreated != null && !Number.isNaN(aCreated) && !Number.isNaN(bCreated) && aCreated !== bCreated) {
+          return bCreated - aCreated;
+        }
+
+        return a.index - b.index;
+      })
+      .map((entry) => entry.payment);
+  }, [payments]);
+  const paymentsSummary = useMemo(() => {
+    let totalPaid = 0;
+    let totalPlanned = 0;
+    let totalOverdue = 0;
+
+    payments.forEach((payment) => {
+      if (payment.status === 'paid') {
+        totalPaid += payment.amount || 0;
+      } else if (payment.status === 'planned') {
+        totalPlanned += payment.amount || 0;
+      } else if (payment.status === 'overdue') {
+        totalOverdue += payment.amount || 0;
+      }
+    });
+
+    const contractTotalValue = typeof contract?.total_value === 'number' ? contract.total_value : 0;
+    const remaining = Math.max(0, contractTotalValue - totalPaid);
+
+    return {
+      totalPaid,
+      totalPlanned,
+      totalOverdue,
+      remaining,
+    };
+  }, [contract?.total_value, payments]);
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -544,28 +642,6 @@ export default function ContractDetailPage() {
     },
   });
 
-  const formatCurrency = (value: number | null, currency: string | null): string => {
-    const amount = typeof value === 'number' ? value : 0;
-
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: currency || 'USD',
-    }).format(amount);
-  };
-
-  const formatDate = (value?: string | null): string => {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return '-';
-    }
-
-    return date.toLocaleDateString();
-  };
-
   const openEditTab = () => {
     if (!contract) {
       return;
@@ -711,6 +787,34 @@ export default function ContractDetailPage() {
     }
 
     deletePaymentMutation.mutate(payment.id);
+  };
+
+  const onMarkPaymentPaid = (payment: ContractPaymentRecord) => {
+    if (payment.status === 'paid') {
+      return;
+    }
+
+    updatePaymentMutation.mutate({
+      paymentId: payment.id,
+      payload: {
+        status: 'paid',
+        paid_at: getTodayDateString(),
+      },
+    });
+  };
+
+  const renderStatusBadge = (status: PaymentStatus) => {
+    const stylesByStatus: Record<PaymentStatus, string> = {
+      planned: 'bg-gray-100 text-gray-700',
+      paid: 'bg-green-100 text-green-700',
+      overdue: 'bg-red-100 text-red-700',
+    };
+
+    return (
+      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold capitalize ${stylesByStatus[status]}`}>
+        {status}
+      </span>
+    );
   };
 
   const onGenerateSchedulePreview = () => {
@@ -1139,7 +1243,7 @@ export default function ContractDetailPage() {
                           <td className="px-4 py-2 text-sm text-gray-900">{row.name}</td>
                           <td className="px-4 py-2 text-sm text-gray-700">{formatCurrency(row.amount, contract.currency)}</td>
                           <td className="px-4 py-2 text-sm text-gray-700">{formatDate(row.due_date)}</td>
-                          <td className="px-4 py-2 text-sm text-gray-700">{row.status}</td>
+                          <td className="px-4 py-2 text-sm text-gray-700">{renderStatusBadge(row.status)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1147,6 +1251,24 @@ export default function ContractDetailPage() {
                 </div>
               </div>
             ) : null}
+          </div>
+
+          <div className="grid gap-2 rounded-lg border border-gray-200 bg-white p-3 text-sm md:grid-cols-4">
+            <p className="text-gray-700">
+              Paid: <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalPaid, contract.currency)}</span>
+            </p>
+            <p className="text-gray-700">
+              Planned:{' '}
+              <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalPlanned, contract.currency)}</span>
+            </p>
+            <p className="text-gray-700">
+              Overdue:{' '}
+              <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.totalOverdue, contract.currency)}</span>
+            </p>
+            <p className="text-gray-700">
+              Remaining:{' '}
+              <span className="font-semibold text-gray-900">{formatCurrency(paymentsSummary.remaining, contract.currency)}</span>
+            </p>
           </div>
 
           {isPaymentsLoading || isPaymentsFetching ? (
@@ -1195,16 +1317,26 @@ export default function ContractDetailPage() {
                         </td>
                       </tr>
                     ) : (
-                      payments.map((payment) => (
+                      sortedPayments.map((payment) => (
                         <tr key={payment.id}>
                           <td className="px-4 py-3 text-sm font-medium text-gray-900">{payment.name || '-'}</td>
                           <td className="px-4 py-3 text-sm text-gray-700">{formatCurrency(payment.amount, contract.currency)}</td>
                           <td className="px-4 py-3 text-sm text-gray-700">{formatDate(payment.due_date)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{payment.status || '-'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{renderStatusBadge(payment.status || 'planned')}</td>
                           <td className="px-4 py-3 text-sm text-gray-700">{formatDate(payment.paid_at)}</td>
                           <td className="px-4 py-3 text-sm text-gray-700">{truncateText(payment.note)}</td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex items-center gap-2">
+                              {payment.status !== 'paid' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onMarkPaymentPaid(payment)}
+                                  disabled={updatePaymentMutation.isPending}
+                                  className="rounded-md border border-green-300 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  Mark paid
+                                </button>
+                              ) : null}
                               <button
                                 type="button"
                                 onClick={() => openEditPaymentModal(payment)}

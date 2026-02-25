@@ -27,5 +27,10 @@
     }
   },
   "include": ["src"],
+  "exclude": [
+    "src/tests/**",
+    "src/test-api.ts",
+    "src/utils/frontendTestUtils.tsx"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

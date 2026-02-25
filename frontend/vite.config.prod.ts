@@ -55,9 +55,7 @@ export default defineConfig({
           'chart-vendor': ['recharts'],
           'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
           'notification-vendor': ['react-hot-toast'],
-          'websocket-vendor': ['socket.io-client'],
-          'file-vendor': ['react-dropzone'],
-          'pdf-vendor': ['jspdf', 'html2canvas']
+          'file-vendor': ['react-dropzone']
         },
         
         // Asset file naming

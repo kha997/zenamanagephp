@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -70,6 +70,8 @@ interface SchedulePreviewRow {
   due_date: string | null;
   status: PaymentStatus;
 }
+
+type DeleteConfirmState = { type: 'contract' } | { type: 'payment'; payment: ContractPaymentRecord } | null;
 
 const CONTRACT_STATUS_OPTIONS: Array<{ value: ContractStatus; label: string }> = [
   { value: 'draft', label: 'Draft' },
@@ -327,6 +329,8 @@ export default function ContractDetailPage() {
   const [scheduleNamePrefix, setScheduleNamePrefix] = useState<string>('Payment');
   const [schedulePreviewRows, setSchedulePreviewRows] = useState<SchedulePreviewRow[]>([]);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [deleteConfirmState, setDeleteConfirmState] = useState<DeleteConfirmState>(null);
+  const confirmDeleteButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const {
     data: detailResponse,
@@ -742,13 +746,7 @@ export default function ContractDetailPage() {
       return;
     }
 
-    const confirmed = window.confirm('Delete this contract? This action cannot be undone.');
-    if (!confirmed) {
-      return;
-    }
-
-    setActionError(null);
-    deleteMutation.mutate();
+    setDeleteConfirmState({ type: 'contract' });
   };
 
   const onSubmitPayment = (event: FormEvent<HTMLFormElement>) => {
@@ -824,13 +822,59 @@ export default function ContractDetailPage() {
       return;
     }
 
-    const confirmed = window.confirm(`Delete payment "${payment.name}"? This action cannot be undone.`);
-    if (!confirmed) {
+    setDeleteConfirmState({ type: 'payment', payment });
+  };
+
+  const isDeletePending = deleteMutation.isPending || deletePaymentMutation.isPending;
+
+  const closeDeleteConfirm = () => {
+    if (isDeletePending) {
       return;
     }
 
-    deletePaymentMutation.mutate(payment.id);
+    setDeleteConfirmState(null);
   };
+
+  const onConfirmDelete = () => {
+    if (!deleteConfirmState || isDeletePending) {
+      return;
+    }
+
+    if (deleteConfirmState.type === 'contract') {
+      setActionError(null);
+      deleteMutation.mutate(undefined, {
+        onSettled: () => setDeleteConfirmState(null),
+      });
+      return;
+    }
+
+    deletePaymentMutation.mutate(deleteConfirmState.payment.id, {
+      onSettled: () => setDeleteConfirmState(null),
+    });
+  };
+
+  useEffect(() => {
+    if (!deleteConfirmState) {
+      return undefined;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeDeleteConfirm();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [deleteConfirmState, isDeletePending]);
+
+  useEffect(() => {
+    if (!deleteConfirmState) {
+      return;
+    }
+
+    confirmDeleteButtonRef.current?.focus();
+  }, [deleteConfirmState]);
 
   const onMarkPaymentPaid = (payment: ContractPaymentRecord) => {
     if (payment.status === 'paid') {
@@ -1440,6 +1484,7 @@ export default function ContractDetailPage() {
                               <button
                                 type="button"
                                 onClick={() => onDeletePayment(payment)}
+                                disabled={deletePaymentMutation.isPending}
                                 className="rounded-md border border-red-300 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50"
                               >
                                 Delete
@@ -1638,6 +1683,78 @@ export default function ContractDetailPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteConfirmState ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+          onClick={closeDeleteConfirm}
+        >
+          <div
+            className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirm delete"
+          >
+            <h2 className="text-lg font-semibold text-gray-900">
+              {deleteConfirmState.type === 'contract' ? 'Delete contract?' : 'Delete payment?'}
+            </h2>
+
+            {deleteConfirmState.type === 'contract' ? (
+              <div className="mt-3 space-y-2 text-sm text-gray-700">
+                <p>
+                  Contract: <span className="font-semibold text-gray-900">{contract.code || '-'}</span> -{' '}
+                  <span className="font-semibold text-gray-900">{contract.title || '-'}</span>
+                </p>
+                <p className="text-red-700">This action cannot be undone.</p>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-2 text-sm text-gray-700">
+                <p>
+                  Payment: <span className="font-semibold text-gray-900">{deleteConfirmState.payment.name || '-'}</span>
+                </p>
+                <p>
+                  Amount:{' '}
+                  <span className="font-semibold text-gray-900">
+                    {formatCurrency(deleteConfirmState.payment.amount, contract.currency)}
+                  </span>
+                </p>
+                <p>
+                  Due date: <span className="font-semibold text-gray-900">{formatDate(deleteConfirmState.payment.due_date)}</span>
+                </p>
+                <p className="text-red-700">This action cannot be undone.</p>
+              </div>
+            )}
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteConfirm}
+                disabled={isDeletePending}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                ref={confirmDeleteButtonRef}
+                type="button"
+                onClick={onConfirmDelete}
+                disabled={isDeletePending}
+                className="inline-flex items-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isDeletePending ? (
+                  <>
+                    <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

@@ -1,5 +1,3 @@
-import React from "react";
-
 export function NotificationsPlaceholder() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">

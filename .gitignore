@@ -57,3 +57,4 @@ logs/events.log
 /smoke_server.log
 frontend/dist/
 route-surface.current.json
+ts-build.log

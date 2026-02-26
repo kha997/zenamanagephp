@@ -4,7 +4,7 @@
  */
 import { useMemo } from 'react';
 import { useAuthStore } from '../store/auth';
-import { Permission, Role } from '../lib/types';
+import { Permission } from '../lib/types';
 import { hasPermission, hasRole } from '../lib/utils/auth';
 
 export const usePermissions = () => {
@@ -32,11 +32,13 @@ export const usePermissions = () => {
   }, [user?.roles]);
 
   const checkPermission = (permissionCode: string, projectId?: number) => {
-    return hasPermission(user, permissionCode, projectId);
+    void projectId;
+    return hasPermission(permissionCode, user ?? undefined);
   };
 
   const checkRole = (roleCode: string, projectId?: number) => {
-    return hasRole(user, roleCode, projectId);
+    void projectId;
+    return hasRole(roleCode, user ?? undefined);
   };
 
   const canAccess = (resource: string, action: string, projectId?: number) => {

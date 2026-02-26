@@ -23,7 +23,8 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@heroicons/react/24/outline": ["./src/lib/heroicons.tsx"]
     }
   },
   "include": ["src/main.tsx", "src/vite-env.d.ts"],

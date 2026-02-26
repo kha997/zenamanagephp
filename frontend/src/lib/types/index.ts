@@ -45,6 +45,13 @@ export interface LoginCredentials {
   remember?: boolean
 }
 
+export interface RegisterData {
+  name: string
+  email: string
+  password: string
+  password_confirmation: string
+}
+
 export interface AuthResponse {
   user: User
   token: string
@@ -298,6 +305,8 @@ export interface ChangeRequest extends BaseEntity {
   days_since_decided?: number
 }
 
+export type ChangeRequestStatus = ChangeRequest['status']
+
 export interface CreateChangeRequestForm {
   title: string
   description: string
@@ -310,6 +319,8 @@ export interface CreateChangeRequestForm {
   justification?: string
 }
 
+export type CreateChangeRequestData = CreateChangeRequestForm
+
 export interface UpdateChangeRequestForm {
   title?: string
   description?: string
@@ -321,6 +332,8 @@ export interface UpdateChangeRequestForm {
   visibility?: 'internal' | 'client'
   justification?: string
 }
+
+export type UpdateChangeRequestData = UpdateChangeRequestForm
 
 export interface ChangeRequestDecision {
   decision: 'approve' | 'reject'

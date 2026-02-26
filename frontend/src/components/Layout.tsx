@@ -14,7 +14,6 @@ import {
   Calendar,
   FileText,
   CheckCircle,
-  FileEdit,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import ThemeToggle from './ThemeToggle'
@@ -38,7 +37,6 @@ export default function Layout({ children }: LayoutProps) {
     { name: 'Gantt Chart', href: '/gantt', icon: Calendar },
     { name: 'Documents', href: '/documents', icon: FileText },
     { name: 'Quality Control', href: '/qc', icon: CheckCircle },
-    { name: 'Change Requests', href: '/change-requests', icon: FileEdit },
     { name: 'Test', href: '/test', icon: Activity },
   ]
 

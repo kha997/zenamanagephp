@@ -17,7 +17,7 @@ import { Task } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Route, Eye, EyeOff } from 'lucide-react';
 
 interface TaskDependencyViewerProps {

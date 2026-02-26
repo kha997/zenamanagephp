@@ -8,7 +8,7 @@ import { Select } from '../../../components/ui/Select'
 import { Card } from '../../../components/ui/Card'
 import { Badge } from '../../../components/ui/Badge'
 import { Pagination } from '../../../components/ui/Pagination'
-import { LoadingSpinner } from '../../../components/ui/LoadingSpinner'
+import { LoadingSpinner } from '../../../components/ui/loading-spinner'
 import { TemplateCard } from '../components/TemplateCard'
 import { TemplateFilters } from '../components/TemplateFilters'
 

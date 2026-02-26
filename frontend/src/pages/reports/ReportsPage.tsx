@@ -11,7 +11,7 @@ import {
   ArrowDownTrayIcon,
   FunnelIcon,
   ArrowPathIcon
-} from '@heroicons/react/24/outline';
+} from '@/lib/heroicons';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Select';

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { ProjectCard } from './ProjectCard';
 import { ProjectsFilterBar, ProjectsFilters } from './ProjectsFilterBar';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { ResponsiveGrid } from '@/components/ui/ResponsiveGrid';
 import { Plus, Grid, List, Download, Upload } from 'lucide-react';

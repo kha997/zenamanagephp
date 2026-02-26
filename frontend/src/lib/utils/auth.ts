@@ -73,26 +73,20 @@ export const getUserProfile = (): User | null => {
  * Kiểm tra user có permission không
  */
 export const hasPermission = (permission: string, user?: User): boolean => {
-  if (!user) {
-    user = getUserProfile()
-  }
+  const currentUser = user ?? getUserProfile()
+  if (!currentUser) return false
   
-  if (!user) return false
-  
-  return user.permissions.includes(permission)
+  return currentUser.permissions.includes(permission)
 }
 
 /**
  * Kiểm tra user có role không
  */
 export const hasRole = (roleName: string, user?: User): boolean => {
-  if (!user) {
-    user = getUserProfile()
-  }
+  const currentUser = user ?? getUserProfile()
+  if (!currentUser) return false
   
-  if (!user) return false
-  
-  return user.roles.some(role => role.name === roleName)
+  return currentUser.roles.some(role => role.name === roleName)
 }
 
 /**
@@ -105,16 +99,13 @@ export const isAdmin = (user?: User): boolean => {
 /**
  * Kiểm tra user có quyền truy cập project không
  */
-export const canAccessProject = (projectId: string, user?: User): boolean => {
-  if (!user) {
-    user = getUserProfile()
-  }
-  
-  if (!user) return false
+export const canAccessProject = (_projectId: string, user?: User): boolean => {
+  const currentUser = user ?? getUserProfile()
+  if (!currentUser) return false
   
   // Admin có thể truy cập tất cả projects
-  if (isAdmin(user)) return true
+  if (isAdmin(currentUser)) return true
   
   // Kiểm tra permission cụ thể cho project
-  return hasPermission('project.read', user)
+  return hasPermission('project.read', currentUser)
 }

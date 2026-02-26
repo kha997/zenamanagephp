@@ -10,7 +10,7 @@ import {
   UserIcon,
   DocumentTextIcon,
   ChartBarIcon
-} from '@heroicons/react/24/outline';
+} from '@/lib/heroicons';
 
 interface ChangeRequestCardProps {
   changeRequest: ChangeRequest;

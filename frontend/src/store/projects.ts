@@ -225,3 +225,5 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
     set({ error: null })
   },
 }))
+
+export const useProjectStore = useProjectsStore

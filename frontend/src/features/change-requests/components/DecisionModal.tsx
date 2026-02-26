@@ -7,10 +7,10 @@ import {
   DialogTitle,
   DialogFooter
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, XCircleIcon } from '@/lib/heroicons';
 
 interface DecisionModalProps {
   isOpen: boolean;
@@ -25,7 +25,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
   changeRequest,
   onDecision
 }) => {
-  const [decision, setDecision] = useState<'approved' | 'rejected' | null>(null);
+  const [decision, setDecision] = useState<'approve' | 'reject' | null>(null);
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -36,7 +36,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
     try {
       await onDecision({
         decision,
-        note: note.trim() || undefined
+        decision_note: note.trim() || undefined
       });
       onClose();
       setDecision(null);
@@ -74,9 +74,9 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             <div className="flex space-x-4">
               <button
                 type="button"
-                onClick={() => setDecision('approved')}
+                onClick={() => setDecision('approve')}
                 className={`flex items-center px-4 py-2 rounded-md border transition-colors ${
-                  decision === 'approved'
+                  decision === 'approve'
                     ? 'bg-green-50 border-green-200 text-green-700'
                     : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
@@ -86,9 +86,9 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setDecision('rejected')}
+                onClick={() => setDecision('reject')}
                 className={`flex items-center px-4 py-2 rounded-md border transition-colors ${
-                  decision === 'rejected'
+                  decision === 'reject'
                     ? 'bg-red-50 border-red-200 text-red-700'
                     : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}
@@ -104,7 +104,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             <Textarea
               id="decision-note"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNote(e.target.value)}
               placeholder="Nhập ghi chú về quyết định..."
               rows={3}
             />
@@ -124,7 +124,7 @@ export const DecisionModal: React.FC<DecisionModalProps> = ({
             type="button"
             onClick={handleSubmit}
             disabled={!decision || isSubmitting}
-            className={decision === 'approved' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+            className={decision === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
           >
             {isSubmitting ? 'Đang xử lý...' : 'Xác nhận'}
           </Button>

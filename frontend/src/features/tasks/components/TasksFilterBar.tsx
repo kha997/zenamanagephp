@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/Popover';
 import { Calendar } from '@/components/ui/Calendar';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { Label } from '@/components/ui/Label';
-import { Separator } from '@/components/ui/Separator';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import {
   Search,
   Filter,

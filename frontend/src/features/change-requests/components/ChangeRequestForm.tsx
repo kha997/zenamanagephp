@@ -10,11 +10,11 @@ import {
   createChangeRequestSchema, 
   updateChangeRequestSchema 
 } from '../validations/changeRequestValidation';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   PlusIcon, 
@@ -23,7 +23,7 @@ import {
   CurrencyDollarIcon,
   ClockIcon,
   ChartBarIcon
-} from '@heroicons/react/24/outline';
+} from '@/lib/heroicons';
 import { formatCurrency } from '@/lib/utils';
 
 interface ChangeRequestFormProps {
@@ -41,7 +41,7 @@ export const ChangeRequestForm: React.FC<ChangeRequestFormProps> = ({
   onCancel,
   isLoading = false,
   mode = initialData ? 'edit' : 'create',
-  projectId
+  projectId: _projectId
 }) => {
   const [kpiEntries, setKpiEntries] = useState<Array<{ key: string; value: string; id: string }>>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -287,9 +287,9 @@ export const ChangeRequestForm: React.FC<ChangeRequestFormProps> = ({
                     <p className="text-xs text-gray-500">
                       Chi phí dự kiến sẽ phát sinh từ thay đổi này
                     </p>
-                    {watchedValues.impact_cost > 0 && (
+                    {(watchedValues.impact_cost ?? 0) > 0 && (
                       <p className="text-xs text-blue-600 font-medium">
-                        ≈ {formatCurrency(watchedValues.impact_cost)}
+                        ≈ {formatCurrency(watchedValues.impact_cost ?? 0)}
                       </p>
                     )}
                   </div>
@@ -331,7 +331,7 @@ export const ChangeRequestForm: React.FC<ChangeRequestFormProps> = ({
                       <Input
                         placeholder="Tên KPI (ví dụ: Chất lượng, Hiệu suất...)"
                         value={entry.key}
-                        onChange={(e) => updateKpiEntry(entry.id, 'key', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateKpiEntry(entry.id, 'key', e.target.value)}
                         className="bg-white"
                       />
                     </div>
@@ -339,7 +339,7 @@ export const ChangeRequestForm: React.FC<ChangeRequestFormProps> = ({
                       <Input
                         placeholder="Mức độ tác động (ví dụ: +10%, -5 điểm...)"
                         value={entry.value}
-                        onChange={(e) => updateKpiEntry(entry.id, 'value', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateKpiEntry(entry.id, 'value', e.target.value)}
                         className="bg-white"
                       />
                     </div>

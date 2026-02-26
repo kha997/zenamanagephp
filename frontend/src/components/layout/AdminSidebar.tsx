@@ -1,16 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/store/auth';
 import {
   HomeIcon,
   UsersIcon,
   FolderIcon,
   ShieldCheckIcon,
   ChartBarIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon
-} from '@heroicons/react/24/outline';
+  Cog6ToothIcon
+} from '@/lib/heroicons';
 
 interface AdminSidebarProps {
   className?: string;
@@ -27,11 +25,6 @@ const adminNavigation = [
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ className }) => {
   const location = useLocation();
-  const { logout } = useAuthStore();
-
-  const handleLogout = () => {
-    logout();
-  };
 
   return (
     <div className={cn('flex h-full w-64 flex-col bg-red-900', className)}>

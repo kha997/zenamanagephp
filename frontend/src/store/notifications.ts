@@ -25,7 +25,7 @@ interface NotificationsState {
 /**
  * Zustand store cho notifications management
  */
-export const useNotificationsStore = create<NotificationsState>((set, get) => ({
+export const useNotificationsStore = create<NotificationsState>((set) => ({
   // Initial state
   notifications: [],
   unreadCount: 0,
@@ -139,3 +139,5 @@ export const useNotificationsStore = create<NotificationsState>((set, get) => ({
     set({ error: null })
   },
 }))
+
+export const useNotificationStore = useNotificationsStore

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuthStore } from '@/store/auth';
-import { BellIcon, UserIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { BellIcon, UserIcon, Cog6ToothIcon } from '@/lib/heroicons';
 import { cn } from '@/lib/utils';
 
 interface HeaderProps {

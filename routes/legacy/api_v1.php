@@ -2,12 +2,12 @@
 
 /*
 |--------------------------------------------------------------------------
-| API v1 Routes
+| Legacy API v1 Routes (Archived)
 |--------------------------------------------------------------------------
 |
-| Here is where you can register API v1 routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "api" middleware group. Now create something great!
+| Legacy reference only; not loaded by RouteServiceProvider.
+| Canonical runtime API routes are defined in routes/api.php.
+| Keep this file for historical reference and diff/audit purposes only.
 |
 */
 

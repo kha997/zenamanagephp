@@ -19,6 +19,8 @@ import { Notifications } from '@/features/notifications/pages/Notifications'
 import { UserProfile } from '@/features/users/pages/UserProfile'
 import { Settings } from '@/features/settings/pages/Settings'
 import { NotificationSettingsPage } from '@/pages/settings/NotificationSettingsPage'
+import { GeneralSettingsPage } from '@/pages/settings/GeneralSettingsPage'
+import { SecuritySettingsPage } from '@/pages/settings/SecuritySettingsPage'
 
 // Z.E.N.A Dashboard pages
 import { PmDashboard } from '@/pages/dashboard/PmDashboard'
@@ -119,7 +121,9 @@ export function AppRoutes() {
         {/* Other routes */}
         <Route path="notifications" element={<Notifications />} />
         <Route path="profile" element={<UserProfile />} />
-        <Route path="settings" element={<Navigate to="settings/notifications" replace />} />
+        <Route path="settings" element={<Navigate to="settings/general" replace />} />
+        <Route path="settings/general" element={<GeneralSettingsPage />} />
+        <Route path="settings/security" element={<SecuritySettingsPage />} />
         <Route path="settings/notifications" element={<NotificationSettingsPage />} />
       </Route>
 

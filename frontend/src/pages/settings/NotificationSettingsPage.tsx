@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuthStore } from '@/store/auth.store'
+import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 
 type SettingsObject = Record<string, any>
@@ -276,6 +277,14 @@ export const NotificationSettingsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2 text-sm">
+        <Link to="/settings/general" className="text-gray-600 hover:text-blue-600">General</Link>
+        <span className="text-gray-400">|</span>
+        <Link to="/settings/security" className="text-gray-600 hover:text-blue-600">Security</Link>
+        <span className="text-gray-400">|</span>
+        <Link to="/settings/notifications" className="font-semibold text-blue-600">Notifications</Link>
+      </div>
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Notification Settings</h1>
         <p className="text-gray-600">Load and save notification preferences from the v1 settings API.</p>

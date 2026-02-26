@@ -30,9 +30,11 @@ export function Settings() {
                 <h4 className="text-sm font-medium text-gray-900">Bảo trì hệ thống</h4>
                 <p className="text-sm text-gray-500">Bật/tắt chế độ bảo trì</p>
               </div>
-              <Button variant="outline" size="sm">
-                Cấu hình
-              </Button>
+              <Link to="/settings/general">
+                <Button variant="outline" size="sm">
+                  Open
+                </Button>
+              </Link>
             </div>
             
             <div className="flex items-center justify-between">
@@ -40,9 +42,11 @@ export function Settings() {
                 <h4 className="text-sm font-medium text-gray-900">Backup tự động</h4>
                 <p className="text-sm text-gray-500">Lên lịch backup dữ liệu</p>
               </div>
-              <Button variant="outline" size="sm">
-                Cấu hình
-              </Button>
+              <Link to="/settings/security">
+                <Button variant="outline" size="sm">
+                  Open
+                </Button>
+              </Link>
             </div>
             
             <div className="flex items-center justify-between">

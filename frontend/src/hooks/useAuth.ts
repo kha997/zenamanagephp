@@ -4,128 +4,80 @@
  */
 import { useCallback } from 'react';
 import { useAuthStore } from '../store/auth';
-import { apiClient } from '../lib/api/client';
 import { LoginCredentials, RegisterData, User } from '../lib/types';
-import { removeToken, removeUser } from '../lib/utils/auth';
+import { AuthService } from '../lib/api/auth.service';
 import { useToast } from './useToast';
 
 export const useAuth = () => {
   const {
     user,
-    token,
     isAuthenticated,
     isLoading,
-    setUser,
-    setToken,
-    setLoading,
-    clearAuth
+    login: storeLogin,
+    logout: storeLogout,
+    updateProfile: storeUpdateProfile
   } = useAuthStore();
   
   const { showToast } = useToast();
 
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
-      setLoading(true);
-      const response = await apiClient.post('/auth/login', credentials);
-      
-      if (response.data.status === 'success') {
-        const { user, token } = response.data.data;
-        setUser(user);
-        setToken(token);
-        showToast('Đăng nhập thành công!', 'success');
-        return { success: true, user, token };
-      }
-      
-      throw new Error(response.data.message || 'Đăng nhập thất bại');
+      await storeLogin(credentials);
+      showToast('success', 'Đăng nhập thành công!');
+      return { success: true };
     } catch (error: any) {
       const message = error.response?.data?.message || 'Đăng nhập thất bại';
-      showToast(message, 'error');
+      showToast('error', message);
       return { success: false, error: message };
-    } finally {
-      setLoading(false);
     }
-  }, [setUser, setToken, setLoading, showToast]);
+  }, [storeLogin, showToast]);
 
   const register = useCallback(async (data: RegisterData) => {
     try {
-      setLoading(true);
-      const response = await apiClient.post('/auth/register', data);
-      
-      if (response.data.status === 'success') {
-        showToast('Đăng ký thành công! Vui lòng đăng nhập.', 'success');
-        return { success: true };
-      }
-      
-      throw new Error(response.data.message || 'Đăng ký thất bại');
+      await AuthService.register(data);
+      showToast('success', 'Đăng ký thành công! Vui lòng đăng nhập.');
+      return { success: true };
     } catch (error: any) {
       const message = error.response?.data?.message || 'Đăng ký thất bại';
-      showToast(message, 'error');
+      showToast('error', message);
       return { success: false, error: message };
-    } finally {
-      setLoading(false);
     }
-  }, [setLoading, showToast]);
+  }, [showToast]);
 
   const logout = useCallback(async () => {
     try {
-      // Gọi API logout để invalidate token trên server
-      await apiClient.post('/auth/logout');
+      await storeLogout();
     } catch (error) {
-      // Ignore logout API errors, still clear local auth
       console.warn('Logout API failed:', error);
-    } finally {
-      // Clear local auth state
-      clearAuth();
-      removeToken();
-      removeUser();
-      showToast('Đã đăng xuất thành công', 'info');
     }
-  }, [clearAuth, showToast]);
+    showToast('info', 'Đã đăng xuất thành công');
+  }, [storeLogout, showToast]);
 
   const refreshToken = useCallback(async () => {
     try {
-      const response = await apiClient.post('/auth/refresh');
-      
-      if (response.data.status === 'success') {
-        const { token } = response.data.data;
-        setToken(token);
-        return token;
-      }
-      
-      throw new Error('Token refresh failed');
+      await useAuthStore.getState().refreshToken();
+      return true;
     } catch (error) {
-      // Token refresh failed, logout user
       logout();
       throw error;
     }
-  }, [setToken, logout]);
+  }, [logout]);
 
   const updateProfile = useCallback(async (userData: Partial<User>) => {
     try {
-      setLoading(true);
-      const response = await apiClient.put('/auth/profile', userData);
-      
-      if (response.data.status === 'success') {
-        const updatedUser = response.data.data;
-        setUser(updatedUser);
-        showToast('Cập nhật thông tin thành công!', 'success');
-        return { success: true, user: updatedUser };
-      }
-      
-      throw new Error(response.data.message || 'Cập nhật thất bại');
+      await storeUpdateProfile(userData);
+      showToast('success', 'Cập nhật thông tin thành công!');
+      return { success: true };
     } catch (error: any) {
       const message = error.response?.data?.message || 'Cập nhật thất bại';
-      showToast(message, 'error');
+      showToast('error', message);
       return { success: false, error: message };
-    } finally {
-      setLoading(false);
     }
-  }, [setUser, setLoading, showToast]);
+  }, [storeUpdateProfile, showToast]);
 
   return {
     // State
     user,
-    token,
     isAuthenticated,
     isLoading,
     

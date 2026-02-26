@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/Progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   DollarSign, 
   TrendingUp, 

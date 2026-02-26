@@ -12,7 +12,7 @@ import {
   ClockIcon,
   UserIcon,
   FolderIcon
-} from '@heroicons/react/24/outline';
+} from '@/lib/heroicons';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';

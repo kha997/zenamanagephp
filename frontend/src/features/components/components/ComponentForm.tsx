@@ -11,8 +11,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Save, 
   X, 

@@ -3,8 +3,8 @@ import { useComponents, useComponentFilters } from '../hooks/useComponents';
 import { ComponentCard } from './index';
 import { ComponentsFilterBar } from './index';
 import { ComponentFilters } from '../types/component';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Loader2, Plus, Grid, List } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 

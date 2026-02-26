@@ -10,7 +10,7 @@ import {
   XCircleIcon,
   ClockIcon,
   DocumentTextIcon
-} from '@heroicons/react/24/outline';
+} from '@/lib/heroicons';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';

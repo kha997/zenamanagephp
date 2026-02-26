@@ -130,7 +130,8 @@ export default defineConfig({
       '@/stores': resolve(__dirname, './src/stores'),
       '@/types': resolve(__dirname, './src/types'),
       '@/lib': resolve(__dirname, './src/lib'),
-      '@/contexts': resolve(__dirname, './src/contexts')
+      '@/contexts': resolve(__dirname, './src/contexts'),
+      '@heroicons/react/24/outline': resolve(__dirname, './src/lib/heroicons.tsx')
     }
   },
   

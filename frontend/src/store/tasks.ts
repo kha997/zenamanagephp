@@ -270,3 +270,5 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     }
   },
 }))
+
+export const useTaskStore = useTasksStore

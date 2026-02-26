@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Calendar, Filter, Download, Upload, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

@@ -10,7 +10,7 @@ import {
   EyeSlashIcon,
   CheckIcon,
   XMarkIcon
-} from '@heroicons/react/24/outline';
+} from '@/lib/heroicons';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card } from '../../components/ui/Card';

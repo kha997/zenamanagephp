@@ -11,7 +11,7 @@ import {
   UserIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon
-} from '@heroicons/react/24/outline';
+} from '@/lib/heroicons';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';

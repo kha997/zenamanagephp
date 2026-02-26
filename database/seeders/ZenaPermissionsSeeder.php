@@ -115,6 +115,12 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'notification.delete', 'module' => 'notification', 'action' => 'delete', 'description' => 'Delete notifications'],
         ['code' => 'notification.stats', 'module' => 'notification', 'action' => 'stats', 'description' => 'Read notification metrics'],
 
+        // Application settings
+        ['code' => 'settings.general.read', 'module' => 'settings', 'action' => 'general.read', 'description' => 'View general settings'],
+        ['code' => 'settings.general.update', 'module' => 'settings', 'action' => 'general.update', 'description' => 'Update general settings'],
+        ['code' => 'settings.security.read', 'module' => 'settings', 'action' => 'security.read', 'description' => 'View security settings'],
+        ['code' => 'settings.security.update', 'module' => 'settings', 'action' => 'security.update', 'description' => 'Update security settings'],
+
         // Change request management
         ['code' => 'change-request.view', 'module' => 'change-request', 'action' => 'view', 'description' => 'View change requests'],
         ['code' => 'change-request.create', 'module' => 'change-request', 'action' => 'create', 'description' => 'Create change requests'],

@@ -30,7 +30,7 @@ const getNavigationForRole = (userRoles: string[]) => {
   const baseNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, roles: ['*'] },
     { name: 'Profile', href: '/profile', icon: UserIcon, roles: ['*'] },
-    { name: 'Settings', href: '/settings/notifications', icon: Cog6ToothIcon, roles: ['*'] },
+    { name: 'Settings', href: '/settings/general', icon: Cog6ToothIcon, roles: ['*'] },
   ];
 
   const roleSpecificNavigation = [

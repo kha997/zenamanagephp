@@ -18,6 +18,9 @@ import { ChangeRequestsList } from '@/features/change-requests/pages/ChangeReque
 import { ChangeRequestDetail } from '@/features/change-requests/pages/ChangeRequestDetail'
 import { CreateChangeRequest } from '@/features/change-requests/pages/CreateChangeRequest'
 import { EditChangeRequest } from '@/features/change-requests/pages/EditChangeRequest'
+import { TemplatesList } from '@/features/templates/pages/TemplatesList'
+import { CreateTemplate } from '@/features/templates/pages/CreateTemplate'
+import { TemplateDetail } from '@/features/templates/pages/TemplateDetail'
 
 function ProjectsListRoutePlaceholder() {
   return <div className="p-6">Projects list is temporarily unavailable.</div>
@@ -60,6 +63,9 @@ export function AppRoutes() {
         <Route path="change-requests/create" element={<CreateChangeRequest />} />
         <Route path="change-requests/:id" element={<ChangeRequestDetail />} />
         <Route path="change-requests/:id/edit" element={<EditChangeRequest />} />
+        <Route path="templates" element={<TemplatesList />} />
+        <Route path="templates/create" element={<CreateTemplate />} />
+        <Route path="templates/:id" element={<TemplateDetail />} />
         <Route path="app/projects/:projectId/contracts" element={<ContractsListPage />} />
         <Route path="app/projects/:projectId/contracts/new" element={<ContractCreatePage />} />
         <Route path="app/projects/:projectId/contracts/:contractId" element={<ContractDetailPage />} />

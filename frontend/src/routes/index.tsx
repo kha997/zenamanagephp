@@ -21,6 +21,9 @@ import { EditChangeRequest } from '@/features/change-requests/pages/EditChangeRe
 import { TemplatesList } from '@/features/templates/pages/TemplatesList'
 import { CreateTemplate } from '@/features/templates/pages/CreateTemplate'
 import { TemplateDetail } from '@/features/templates/pages/TemplateDetail'
+import { InteractionLogsList } from '@/features/interaction-logs/pages/InteractionLogsList'
+import { InteractionLogDetail } from '@/features/interaction-logs/pages/InteractionLogDetail'
+import { CreateInteractionLog } from '@/features/interaction-logs/pages/CreateInteractionLog'
 
 function ProjectsListRoutePlaceholder() {
   return <div className="p-6">Projects list is temporarily unavailable.</div>
@@ -66,6 +69,9 @@ export function AppRoutes() {
         <Route path="templates" element={<TemplatesList />} />
         <Route path="templates/create" element={<CreateTemplate />} />
         <Route path="templates/:id" element={<TemplateDetail />} />
+        <Route path="interaction-logs" element={<InteractionLogsList />} />
+        <Route path="interaction-logs/create" element={<CreateInteractionLog />} />
+        <Route path="interaction-logs/:id" element={<InteractionLogDetail />} />
         <Route path="app/projects/:projectId/contracts" element={<ContractsListPage />} />
         <Route path="app/projects/:projectId/contracts/new" element={<ContractCreatePage />} />
         <Route path="app/projects/:projectId/contracts/:contractId" element={<ContractDetailPage />} />

@@ -2,7 +2,10 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\Cache;
@@ -41,6 +44,27 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'password' => bcrypt('password123'),
             'role' => 'admin'
         ]);
+        $role = Role::firstOrCreate(
+            ['name' => 'admin'],
+            ['scope' => Role::SCOPE_SYSTEM, 'allow_override' => true, 'is_active' => true]
+        );
+        $user->roles()->syncWithoutDetaching([$role->id]);
+        foreach (['auth.me', 'auth.permissions', 'auth.logout'] as $permissionCode) {
+            $permission = Permission::firstOrCreate(
+                ['code' => $permissionCode],
+                [
+                    'name' => $permissionCode,
+                    'module' => 'auth',
+                    'action' => explode('.', $permissionCode)[1] ?? 'access',
+                    'description' => $permissionCode,
+                ]
+            );
+            if (empty($permission->name)) {
+                $permission->name = $permissionCode;
+                $permission->save();
+            }
+            $role->permissions()->syncWithoutDetaching([$permission->id]);
+        }
 
         $loginData = [
             'email' => 'test@example.com',
@@ -115,6 +139,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = $this->createRbacAdminUser($tenant);
+        $this->grantAuthPermissions($user);
         $token = $user->createToken('test-token')->plainTextToken;
         $headers = $this->authHeadersForUser($user, $token);
 
@@ -179,6 +204,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     {
         $tenant = Tenant::factory()->create();
         $user = $this->createRbacAdminUser($tenant);
+        $this->grantAuthPermissions($user);
         $token = $user->createToken('test-token')->plainTextToken;
         $headers = $this->authHeadersForUser($user, $token);
 
@@ -218,6 +244,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     public function test_websocket_workflow()
     {
         $user = $this->createRbacAdminUser();
+        $this->grantAuthPermissions($user);
         $token = $user->createToken('test-token')->plainTextToken;
         $headers = $this->authHeadersForUser($user, $token);
 
@@ -306,6 +333,8 @@ class ComprehensiveApiIntegrationTest extends TestCase
             'tenant_id' => $tenant2->id,
             'role' => 'admin'
         ]);
+        $this->grantAuthPermissions($user1);
+        $this->grantAuthPermissions($user2);
 
         $token1 = $user1->createToken('test-token')->plainTextToken;
         $token2 = $user2->createToken('test-token')->plainTextToken;
@@ -407,6 +436,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     public function test_performance_across_endpoints()
     {
         $user = $this->createRbacAdminUser();
+        $this->grantAuthPermissions($user);
         $token = $user->createToken('test-token')->plainTextToken;
         $headers = $this->authHeadersForUser($user, $token);
 
@@ -443,6 +473,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     public function test_security_headers()
     {
         $user = $this->createRbacAdminUser();
+        $this->grantAuthPermissions($user);
         $token = $user->createToken('test-token')->plainTextToken;
         $headers = $this->authHeadersForUser($user, $token);
 
@@ -467,6 +498,34 @@ class ComprehensiveApiIntegrationTest extends TestCase
             $this->assertEquals('nosniff', $response->headers->get('X-Content-Type-Options'));
             $this->assertEquals('DENY', $response->headers->get('X-Frame-Options'));
             $this->assertEquals('1; mode=block', $response->headers->get('X-XSS-Protection'));
+        }
+    }
+
+    private function grantAuthPermissions(User $user): void
+    {
+        $role = Role::firstOrCreate(
+            ['name' => 'admin'],
+            ['scope' => Role::SCOPE_SYSTEM, 'allow_override' => true, 'is_active' => true]
+        );
+        $user->roles()->syncWithoutDetaching([$role->id]);
+
+        foreach (['auth.me', 'auth.permissions', 'auth.logout'] as $permissionCode) {
+            $permission = Permission::firstOrCreate(
+                ['code' => $permissionCode],
+                [
+                    'name' => $permissionCode,
+                    'module' => 'auth',
+                    'action' => explode('.', $permissionCode)[1] ?? 'access',
+                    'description' => $permissionCode,
+                ]
+            );
+
+            if (empty($permission->name)) {
+                $permission->name = $permissionCode;
+                $permission->save();
+            }
+
+            $role->permissions()->syncWithoutDetaching([$permission->id]);
         }
     }
 }

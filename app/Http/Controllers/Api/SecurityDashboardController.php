@@ -7,6 +7,7 @@ use App\Services\gService;
 use App\Services\SecurityMonitoringService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -269,14 +270,22 @@ class SecurityDashboardController extends Controller
             $format = $request->input('format', 'json');
             $period = $request->input('period', '7d');
             $includeDetails = $request->input('include_details', false);
+            $days = match ($period) {
+                '1h' => 1,
+                '24h' => 1,
+                '7d' => 7,
+                '30d' => 30,
+                default => 7,
+            };
 
-            $report = $this->securityMonitoringService->generateSecurityReport($period, $includeDetails);
+            $report = $this->securityMonitoringService->generateSecurityReport($days, $includeDetails);
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'report' => $report,
                     'format' => $format,
+                    'period' => $period,
                     'generated_at' => now()->toISOString(),
                 ]
             ]);

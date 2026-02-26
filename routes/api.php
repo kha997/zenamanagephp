@@ -782,6 +782,18 @@ Route::prefix('dashboard')->group(function () {
 
 Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
     Route::prefix('settings')->as('settings.')->group(function () {
+        Route::get('/general', [App\Http\Controllers\Api\App\SettingsController::class, 'general'])
+            ->middleware('rbac:settings.general.read')
+            ->name('general');
+        Route::patch('/general', [App\Http\Controllers\Api\App\SettingsController::class, 'updateGeneral'])
+            ->middleware('rbac:settings.general.update')
+            ->name('general.update');
+        Route::get('/security', [App\Http\Controllers\Api\App\SettingsController::class, 'security'])
+            ->middleware('rbac:settings.security.read')
+            ->name('security');
+        Route::patch('/security', [App\Http\Controllers\Api\App\SettingsController::class, 'updateSecurity'])
+            ->middleware('rbac:settings.security.update')
+            ->name('security.update');
         Route::get('/notifications', [App\Http\Controllers\Api\App\SettingsController::class, 'notifications'])
             ->middleware('rbac:notification.read')
             ->name('notifications');

@@ -67,6 +67,12 @@ class PermissionSeeder extends Seeder
             // Notification Management
             ['code' => 'notification.read', 'module' => 'notification', 'action' => 'read', 'description' => 'Xem thông báo'],
             ['code' => 'notification.manage_rules', 'module' => 'notification', 'action' => 'manage_rules', 'description' => 'Quản lý quy tắc thông báo'],
+
+            // Settings Management
+            ['code' => 'settings.general.read', 'module' => 'settings', 'action' => 'general.read', 'description' => 'Xem cài đặt chung'],
+            ['code' => 'settings.general.update', 'module' => 'settings', 'action' => 'general.update', 'description' => 'Cập nhật cài đặt chung'],
+            ['code' => 'settings.security.read', 'module' => 'settings', 'action' => 'security.read', 'description' => 'Xem cài đặt bảo mật'],
+            ['code' => 'settings.security.update', 'module' => 'settings', 'action' => 'security.update', 'description' => 'Cập nhật cài đặt bảo mật'],
             
             // Interaction Logs
             ['code' => 'interaction_log.create', 'module' => 'interaction_log', 'action' => 'create', 'description' => 'Tạo nhật ký tương tác'],
@@ -110,6 +116,8 @@ class PermissionSeeder extends Seeder
                 'change_request.create', 'change_request.read', 'change_request.approve', 'change_request.reject',
                 'user.read', 'user.manage_roles',
                 'notification.read', 'notification.manage_rules',
+                'settings.general.read', 'settings.general.update',
+                'settings.security.read', 'settings.security.update',
                 'interaction_log.create', 'interaction_log.read', 'interaction_log.approve'
             ])->get();
             $managerRole->permissions()->sync($managerPermissions->pluck('id'));
@@ -124,6 +132,8 @@ class PermissionSeeder extends Seeder
                 'document.read', 'document.create',
                 'change_request.create', 'change_request.read',
                 'notification.read',
+                'settings.general.read',
+                'settings.security.read',
                 'interaction_log.create', 'interaction_log.read'
             ])->get();
             $memberRole->permissions()->sync($memberPermissions->pluck('id'));

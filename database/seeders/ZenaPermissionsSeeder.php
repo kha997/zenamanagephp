@@ -43,6 +43,9 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'auth.me', 'module' => 'auth', 'action' => 'me', 'description' => 'Fetch authenticated user profile'],
         ['code' => 'auth.refresh', 'module' => 'auth', 'action' => 'refresh', 'description' => 'Refresh the sanctum token'],
         ['code' => 'auth.check-permission', 'module' => 'auth', 'action' => 'check-permission', 'description' => 'Verify permission ownership'],
+        ['code' => 'auth.permissions', 'module' => 'auth', 'action' => 'permissions', 'description' => 'Read authenticated permission matrix'],
+        ['code' => 'auth.bulk.manage', 'module' => 'auth', 'action' => 'bulk.manage', 'description' => 'Run auth-scoped bulk import/export operations'],
+        ['code' => 'auth.security.read', 'module' => 'auth', 'action' => 'security.read', 'description' => 'Read security dashboard data'],
         ['code' => 'auth.dashboard-url', 'module' => 'auth', 'action' => 'dashboard-url', 'description' => 'Get dashboard redirect URL'],
         ['code' => 'auth.notifications.view', 'module' => 'auth', 'action' => 'notifications.view', 'description' => 'View auth notifications'],
         ['code' => 'auth.notifications.read', 'module' => 'auth', 'action' => 'notifications.read', 'description' => 'Mark a notification as read'],
@@ -120,6 +123,10 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'settings.general.update', 'module' => 'settings', 'action' => 'general.update', 'description' => 'Update general settings'],
         ['code' => 'settings.security.read', 'module' => 'settings', 'action' => 'security.read', 'description' => 'View security settings'],
         ['code' => 'settings.security.update', 'module' => 'settings', 'action' => 'security.update', 'description' => 'Update security settings'],
+
+        // User sidebar preferences
+        ['code' => 'user-preferences.read', 'module' => 'user-preferences', 'action' => 'read', 'description' => 'View user sidebar preferences'],
+        ['code' => 'user-preferences.update', 'module' => 'user-preferences', 'action' => 'update', 'description' => 'Update user sidebar preferences'],
 
         // Change request management
         ['code' => 'change-request.view', 'module' => 'change-request', 'action' => 'view', 'description' => 'View change requests'],

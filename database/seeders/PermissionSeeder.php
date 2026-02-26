@@ -73,6 +73,8 @@ class PermissionSeeder extends Seeder
             ['code' => 'settings.general.update', 'module' => 'settings', 'action' => 'general.update', 'description' => 'Cập nhật cài đặt chung'],
             ['code' => 'settings.security.read', 'module' => 'settings', 'action' => 'security.read', 'description' => 'Xem cài đặt bảo mật'],
             ['code' => 'settings.security.update', 'module' => 'settings', 'action' => 'security.update', 'description' => 'Cập nhật cài đặt bảo mật'],
+            ['code' => 'user-preferences.read', 'module' => 'user-preferences', 'action' => 'read', 'description' => 'Xem cài đặt sidebar cá nhân'],
+            ['code' => 'user-preferences.update', 'module' => 'user-preferences', 'action' => 'update', 'description' => 'Cập nhật cài đặt sidebar cá nhân'],
             
             // Interaction Logs
             ['code' => 'interaction_log.create', 'module' => 'interaction_log', 'action' => 'create', 'description' => 'Tạo nhật ký tương tác'],
@@ -118,6 +120,7 @@ class PermissionSeeder extends Seeder
                 'notification.read', 'notification.manage_rules',
                 'settings.general.read', 'settings.general.update',
                 'settings.security.read', 'settings.security.update',
+                'user-preferences.read', 'user-preferences.update',
                 'interaction_log.create', 'interaction_log.read', 'interaction_log.approve'
             ])->get();
             $managerRole->permissions()->sync($managerPermissions->pluck('id'));
@@ -134,6 +137,7 @@ class PermissionSeeder extends Seeder
                 'notification.read',
                 'settings.general.read',
                 'settings.security.read',
+                'user-preferences.read',
                 'interaction_log.create', 'interaction_log.read'
             ])->get();
             $memberRole->permissions()->sync($memberPermissions->pluck('id'));

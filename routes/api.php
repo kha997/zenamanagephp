@@ -133,8 +133,11 @@ Route::group([], function () {
     |--------------------------------------------------------------------------
     */
     Route::prefix('auth')->group(function () {
-        Route::post('login', [AuthController::class, 'login']);
-        Route::post('register', [AuthController::class, 'register']);
+        Route::middleware(['rate.limit:auth'])->group(function () {
+            Route::post('login', [\App\Http\Controllers\Api\AuthenticationController::class, 'login']);
+            Route::post('register', [AuthController::class, 'register']);
+            Route::get('validate', [\App\Http\Controllers\Api\AuthenticationController::class, 'validateToken']);
+        });
         
         // SSO routes
         Route::prefix('oidc')->group(function () {
@@ -155,59 +158,62 @@ Route::group([], function () {
         Route::get('sso/config', [SSOController::class, 'getSSOConfig']);
         Route::post('sso/test', [SSOController::class, 'testSSOConnection']);
         
-        // Bulk operations routes
-        Route::prefix('bulk')->group(function () {
-            // User bulk operations
-            Route::post('users/create', [BulkOperationsController::class, 'bulkCreateUsers']);
-            Route::post('users/update', [BulkOperationsController::class, 'bulkUpdateUsers']);
-            Route::post('users/delete', [BulkOperationsController::class, 'bulkDeleteUsers']);
-            
-            // Project bulk operations
-            Route::post('projects/create', [BulkOperationsController::class, 'bulkCreateProjects']);
-            Route::post('projects/update', [BulkOperationsController::class, 'bulkUpdateProjects']);
-            
-            // Task bulk operations
-            Route::post('tasks/create', [BulkOperationsController::class, 'bulkCreateTasks']);
-            Route::post('tasks/update-status', [BulkOperationsController::class, 'bulkUpdateTaskStatus']);
-            
-            // Generic bulk operations
-            Route::post('assign-users-to-projects', [BulkOperationsController::class, 'bulkAssignUsersToProjects']);
-            
-            // Import/Export operations
-            Route::get('export/users', [BulkOperationsController::class, 'exportUsers']);
-            Route::get('export/projects', [BulkOperationsController::class, 'exportProjects']);
-            Route::get('export/tasks', [BulkOperationsController::class, 'exportTasks']);
-            
-            Route::post('import/users', [BulkOperationsController::class, 'importUsers']);
-            Route::post('import/projects', [BulkOperationsController::class, 'importProjects']);
-            Route::post('import/tasks', [BulkOperationsController::class, 'importTasks']);
-            
-            Route::get('template/{type}', [BulkOperationsController::class, 'getImportTemplate']);
-            Route::get('download/{filename}', [BulkOperationsController::class, 'downloadFile']);
-            
-        // Queue operations
-        Route::post('queue', [BulkOperationsController::class, 'queueBulkOperation']);
-        Route::get('status/{operation_id}', [BulkOperationsController::class, 'getBulkOperationStatus']);
+        Route::middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+            // Protected auth routes
+            Route::get('me', [\App\Http\Controllers\Api\AuthenticationController::class, 'me'])->middleware('rbac:auth.me');
+            Route::post('logout', [\App\Http\Controllers\Api\AuthenticationController::class, 'logout'])->middleware('rbac:auth.logout');
+            Route::post('refresh', [\App\Http\Controllers\Api\AuthenticationController::class, 'refresh'])->middleware('rbac:auth.refresh');
+            Route::post('check-permission', [AuthController::class, 'checkPermission'])->middleware('rbac:auth.check-permission');
+            Route::get('permissions', [\App\Http\Controllers\Api\AuthenticationController::class, 'permissions'])->middleware('rbac:auth.permissions');
+
+            // Bulk operations routes
+            Route::prefix('bulk')->middleware('rbac:auth.bulk.manage')->group(function () {
+                // User bulk operations
+                Route::post('users/create', [BulkOperationsController::class, 'bulkCreateUsers']);
+                Route::post('users/update', [BulkOperationsController::class, 'bulkUpdateUsers']);
+                Route::post('users/delete', [BulkOperationsController::class, 'bulkDeleteUsers']);
+
+                // Project bulk operations
+                Route::post('projects/create', [BulkOperationsController::class, 'bulkCreateProjects']);
+                Route::post('projects/update', [BulkOperationsController::class, 'bulkUpdateProjects']);
+
+                // Task bulk operations
+                Route::post('tasks/create', [BulkOperationsController::class, 'bulkCreateTasks']);
+                Route::post('tasks/update-status', [BulkOperationsController::class, 'bulkUpdateTaskStatus']);
+
+                // Generic bulk operations
+                Route::post('assign-users-to-projects', [BulkOperationsController::class, 'bulkAssignUsersToProjects']);
+
+                // Import/Export operations
+                Route::get('export/users', [BulkOperationsController::class, 'exportUsers']);
+                Route::get('export/projects', [BulkOperationsController::class, 'exportProjects']);
+                Route::get('export/tasks', [BulkOperationsController::class, 'exportTasks']);
+
+                Route::post('import/users', [BulkOperationsController::class, 'importUsers']);
+                Route::post('import/projects', [BulkOperationsController::class, 'importProjects']);
+                Route::post('import/tasks', [BulkOperationsController::class, 'importTasks']);
+
+                Route::get('template/{type}', [BulkOperationsController::class, 'getImportTemplate']);
+                Route::get('download/{filename}', [BulkOperationsController::class, 'downloadFile']);
+
+                // Queue operations
+                Route::post('queue', [BulkOperationsController::class, 'queueBulkOperation']);
+                Route::get('status/{operation_id}', [BulkOperationsController::class, 'getBulkOperationStatus']);
+            });
+
+            // Security dashboard routes
+            Route::prefix('security')->middleware('rbac:auth.security.read')->group(function () {
+                Route::get('overview', [SecurityDashboardController::class, 'getSecurityOverview']);
+                Route::get('events/timeline', [SecurityDashboardController::class, 'getSecurityEventsTimeline']);
+                Route::get('failed-logins', [SecurityDashboardController::class, 'getFailedLoginAttempts']);
+                Route::get('suspicious-activities', [SecurityDashboardController::class, 'getSuspiciousActivities']);
+                Route::get('user-status', [SecurityDashboardController::class, 'getUserSecurityStatus']);
+                Route::get('recommendations', [SecurityDashboardController::class, 'getSecurityRecommendations']);
+                Route::get('alerts', [SecurityDashboardController::class, 'getSecurityAlerts']);
+                Route::get('metrics', [SecurityDashboardController::class, 'getSecurityMetrics']);
+                Route::get('export-report', [SecurityDashboardController::class, 'exportSecurityReport']);
+            });
         });
-        
-        // Security dashboard routes
-        Route::prefix('security')->group(function () {
-            Route::get('overview', [SecurityDashboardController::class, 'getSecurityOverview']);
-            Route::get('events/timeline', [SecurityDashboardController::class, 'getSecurityEventsTimeline']);
-            Route::get('failed-logins', [SecurityDashboardController::class, 'getFailedLoginAttempts']);
-            Route::get('suspicious-activities', [SecurityDashboardController::class, 'getSuspiciousActivities']);
-            Route::get('user-status', [SecurityDashboardController::class, 'getUserSecurityStatus']);
-            Route::get('recommendations', [SecurityDashboardController::class, 'getSecurityRecommendations']);
-            Route::get('alerts', [SecurityDashboardController::class, 'getSecurityAlerts']);
-            Route::get('metrics', [SecurityDashboardController::class, 'getSecurityMetrics']);
-            Route::get('export-report', [SecurityDashboardController::class, 'exportSecurityReport']);
-        });
-        
-        // Protected auth routes
-            Route::get('me', [AuthController::class, 'me']);
-            Route::post('logout', [AuthController::class, 'logout']);
-            Route::post('refresh', [AuthController::class, 'refresh']);
-            Route::post('check-permission', [AuthController::class, 'checkPermission']);
     });
     
     /*
@@ -217,8 +223,8 @@ Route::group([], function () {
     */
     Route::group(['middleware' => ['auth:sanctum', 'tenant.isolation', 'rbac']], function () {
         
-        // Simple Document Controller Routes
-        Route::apiResource('documents-simple', App\Http\Controllers\Api\DocumentController::class);
+        // Canonical document routes use the hardened simple controller
+        Route::apiResource('documents-simple', App\Http\Controllers\Api\SimpleDocumentController::class);
 
         // Support system helpers
         Route::prefix('support')->as('api.support.')->middleware(['input.sanitization', 'error.envelope'])->group(function () {
@@ -477,11 +483,11 @@ Route::group([], function () {
         | Document Management Routes
         |--------------------------------------------------------------------------
         */
-        Route::apiResource('documents', \App\Http\Controllers\Api\DocumentController::class);
+        Route::apiResource('documents', \App\Http\Controllers\Api\SimpleDocumentController::class);
         Route::prefix('documents')->group(function () {
-            Route::get('{document}/download', [\App\Http\Controllers\Api\DocumentController::class, 'download']);
-            Route::post('{document}/versions', [\App\Http\Controllers\Api\DocumentController::class, 'createVersion']);
-            Route::get('{document}/versions', [\App\Http\Controllers\Api\DocumentController::class, 'getVersions']);
+            Route::get('{document}/download', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'download']);
+            Route::post('{document}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'createVersion']);
+            Route::get('{document}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'getVersions']);
         });
         
         /*
@@ -984,20 +990,20 @@ Route::prefix('admin')->middleware(['auth:sanctum'])->group(function () {
 
         // User Preferences Routes
         Route::prefix('user-preferences')->middleware(['auth:sanctum'])->group(function () {
-            Route::get('/', [App\Http\Controllers\Api\UserPreferenceController::class, 'getPreferences'])->name('api.user-preferences.get');
-            Route::put('/', [App\Http\Controllers\Api\UserPreferenceController::class, 'updatePreferences'])->name('api.user-preferences.update');
-            Route::post('/pin', [App\Http\Controllers\Api\UserPreferenceController::class, 'pinItem'])->name('api.user-preferences.pin');
-            Route::post('/unpin', [App\Http\Controllers\Api\UserPreferenceController::class, 'unpinItem'])->name('api.user-preferences.unpin');
-            Route::post('/hide', [App\Http\Controllers\Api\UserPreferenceController::class, 'hideItem'])->name('api.user-preferences.hide');
-            Route::post('/show', [App\Http\Controllers\Api\UserPreferenceController::class, 'showItem'])->name('api.user-preferences.show');
-            Route::post('/custom-order', [App\Http\Controllers\Api\UserPreferenceController::class, 'setCustomOrder'])->name('api.user-preferences.custom-order');
-            Route::post('/theme', [App\Http\Controllers\Api\UserPreferenceController::class, 'setTheme'])->name('api.user-preferences.theme');
-            Route::post('/toggle-compact', [App\Http\Controllers\Api\UserPreferenceController::class, 'toggleCompactMode'])->name('api.user-preferences.toggle-compact');
-            Route::post('/toggle-badges', [App\Http\Controllers\Api\UserPreferenceController::class, 'toggleBadges'])->name('api.user-preferences.toggle-badges');
-            Route::post('/toggle-auto-expand', [App\Http\Controllers\Api\UserPreferenceController::class, 'toggleAutoExpandGroups'])->name('api.user-preferences.toggle-auto-expand');
-            Route::post('/reset', [App\Http\Controllers\Api\UserPreferenceController::class, 'resetPreferences'])->name('api.user-preferences.reset');
-            Route::get('/stats', [App\Http\Controllers\Api\UserPreferenceController::class, 'getStats'])->name('api.user-preferences.stats');
-            Route::post('/bulk-update', [App\Http\Controllers\Api\UserPreferenceController::class, 'bulkUpdate'])->name('api.user-preferences.bulk-update');
+            Route::get('/', [App\Http\Controllers\Api\UserPreferenceController::class, 'getPreferences'])->middleware('rbac:user-preferences.read')->name('api.user-preferences.get');
+            Route::put('/', [App\Http\Controllers\Api\UserPreferenceController::class, 'updatePreferences'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.update');
+            Route::post('/pin', [App\Http\Controllers\Api\UserPreferenceController::class, 'pinItem'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.pin');
+            Route::post('/unpin', [App\Http\Controllers\Api\UserPreferenceController::class, 'unpinItem'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.unpin');
+            Route::post('/hide', [App\Http\Controllers\Api\UserPreferenceController::class, 'hideItem'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.hide');
+            Route::post('/show', [App\Http\Controllers\Api\UserPreferenceController::class, 'showItem'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.show');
+            Route::post('/custom-order', [App\Http\Controllers\Api\UserPreferenceController::class, 'setCustomOrder'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.custom-order');
+            Route::post('/theme', [App\Http\Controllers\Api\UserPreferenceController::class, 'setTheme'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.theme');
+            Route::post('/toggle-compact', [App\Http\Controllers\Api\UserPreferenceController::class, 'toggleCompactMode'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.toggle-compact');
+            Route::post('/toggle-badges', [App\Http\Controllers\Api\UserPreferenceController::class, 'toggleBadges'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.toggle-badges');
+            Route::post('/toggle-auto-expand', [App\Http\Controllers\Api\UserPreferenceController::class, 'toggleAutoExpandGroups'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.toggle-auto-expand');
+            Route::post('/reset', [App\Http\Controllers\Api\UserPreferenceController::class, 'resetPreferences'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.reset');
+            Route::get('/stats', [App\Http\Controllers\Api\UserPreferenceController::class, 'getStats'])->middleware('rbac:user-preferences.read')->name('api.user-preferences.stats');
+            Route::post('/bulk-update', [App\Http\Controllers\Api\UserPreferenceController::class, 'bulkUpdate'])->middleware('rbac:user-preferences.update')->name('api.user-preferences.bulk-update');
         });
 
     }); // Close v1 prefix group
@@ -1029,7 +1035,7 @@ require base_path('src/Compensation/routes/api.php');
 require base_path('src/CoreProject/routes/api.php');
 
 // Password reset routes
-Route::prefix('auth')->group(function () {
+Route::prefix('auth')->middleware(['rate.limit:auth'])->group(function () {
     Route::post('/password/reset', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
     Route::post('/password/reset/confirm', [PasswordResetController::class, 'reset'])->name('password.update');
     Route::post('/password/reset/check-token', [PasswordResetController::class, 'checkToken'])->name('password.check-token');
@@ -1058,25 +1064,11 @@ if (app()->environment(['local', 'testing'])) {
     Route::get('test-controller', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
 }
 
-// Authentication Routes (public) with rate limiting
-Route::prefix('auth')->middleware([\App\Http\Middleware\EnhancedRateLimitMiddleware::class . ':auth'])->group(function () {
-    Route::post('login', [\App\Http\Controllers\Api\AuthenticationController::class, 'login']);
-    Route::post('logout', [\App\Http\Controllers\Api\AuthenticationController::class, 'logout']);
-    Route::post('refresh', [\App\Http\Controllers\Api\AuthenticationController::class, 'refresh']);
-    Route::get('validate', [\App\Http\Controllers\Api\AuthenticationController::class, 'validateToken']);
-});
-
 // CSRF Token endpoint (public - no authentication required)
 Route::get('csrf-token', [\App\Http\Controllers\Api\DashboardController::class, 'getCsrfToken']);
 
 // Authenticated support routes
 Route::middleware(['auth:sanctum', 'tenant.isolation', 'rate.limit:api'])->group(function () {
-    // User info and permissions
-    Route::prefix('auth')->group(function () {
-        Route::get('me', [\App\Http\Controllers\Api\AuthenticationController::class, 'me']);
-        Route::get('permissions', [\App\Http\Controllers\Api\AuthenticationController::class, 'permissions']);
-    });
-
     Route::middleware(['rbac'])->group(function () {
         Route::get('dashboard/data', [\App\Http\Controllers\Api\DashboardController::class, 'getDashboardData']);
         Route::get('dashboard/analytics', [\App\Http\Controllers\Api\DashboardController::class, 'getAnalytics']);

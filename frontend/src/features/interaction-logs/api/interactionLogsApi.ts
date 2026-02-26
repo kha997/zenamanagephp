@@ -1,121 +1,85 @@
-/**
- * API layer cho Interaction Logs
- * Sử dụng Axios instance với JWT authentication
- */
-import { api } from '@/lib/api'
+import api from '@/lib/api'
 import type {
-  InteractionLog,
   CreateInteractionLogForm,
-  UpdateInteractionLogForm,
+  InteractionLogDetailResponse,
   InteractionLogFilters,
   InteractionLogListResponse,
-  InteractionLogDetailResponse,
   InteractionLogStatsResponse,
-  JSendResponse
+  JSendResponse,
+  UpdateInteractionLogForm,
 } from '../types/interactionLog'
 
-// Base API endpoints
 const ENDPOINTS = {
-  LIST: '/api/v1/interaction-logs',
-  DETAIL: (id: string) => `/api/v1/interaction-logs/${id}`,
-  CREATE: '/api/v1/interaction-logs',
-  UPDATE: (id: string) => `/api/v1/interaction-logs/${id}`,
-  DELETE: (id: string) => `/api/v1/interaction-logs/${id}`,
-  APPROVE: (id: string) => `/api/v1/interaction-logs/${id}/approve-for-client`,
-  BY_TAG_PATH: '/api/v1/interaction-logs/by-tag-path',
-  
-  // Project-specific endpoints
-  PROJECT_LIST: (projectId: string) => `/api/v1/projects/${projectId}/interaction-logs`,
-  PROJECT_STATS: (projectId: string) => `/api/v1/projects/${projectId}/interaction-logs/stats`,
-  PROJECT_AUTOCOMPLETE: (projectId: string) => `/api/v1/projects/${projectId}/interaction-logs/autocomplete-tag-path`
+  LIST: '/interaction-logs',
+  DETAIL: (id: string) => `/interaction-logs/${id}`,
+  CREATE: '/interaction-logs',
+  UPDATE: (id: string) => `/interaction-logs/${id}`,
+  DELETE: (id: string) => `/interaction-logs/${id}`,
+  APPROVE: (id: string) => `/interaction-logs/${id}/approve-for-client`,
+  BY_TAG_PATH: '/interaction-logs/by-tag-path',
+  PROJECT_LIST: (projectId: string) => `/projects/${projectId}/interaction-logs`,
+  PROJECT_STATS: (projectId: string) => `/projects/${projectId}/interaction-logs/stats`,
+  PROJECT_AUTOCOMPLETE: (projectId: string) => `/projects/${projectId}/interaction-logs/autocomplete-tag-path`,
 }
 
 export class InteractionLogsApi {
-  /**
-   * Lấy danh sách interaction logs với phân trang và filter
-   */
-  static async list(filters: InteractionLogFilters & { page?: number; per_page?: number } = {}): Promise<InteractionLogListResponse> {
-    const response = await api.get(ENDPOINTS.LIST, { params: filters })
-    return response.data
-  }
-
-  /**
-   * Lấy chi tiết một interaction log
-   */
-  static async detail(id: string): Promise<InteractionLogDetailResponse> {
-    const response = await api.get(ENDPOINTS.DETAIL(id))
-    return response.data
-  }
-
-  /**
-   * Tạo interaction log mới
-   */
-  static async create(data: CreateInteractionLogForm): Promise<InteractionLogDetailResponse> {
-    const response = await api.post(ENDPOINTS.CREATE, data)
-    return response.data
-  }
-
-  /**
-   * Cập nhật interaction log
-   */
-  static async update(id: string, data: UpdateInteractionLogForm): Promise<InteractionLogDetailResponse> {
-    const response = await api.put(ENDPOINTS.UPDATE(id), data)
-    return response.data
-  }
-
-  /**
-   * Xóa interaction log
-   */
-  static async delete(id: string): Promise<JSendResponse> {
-    const response = await api.delete(ENDPOINTS.DELETE(id))
-    return response.data
-  }
-
-  /**
-   * Duyệt interaction log cho client
-   */
-  static async approveForClient(id: string): Promise<InteractionLogDetailResponse> {
-    const response = await api.post(ENDPOINTS.APPROVE(id))
-    return response.data
-  }
-
-  /**
-   * Lấy interaction logs theo tag path
-   */
-  static async getByTagPath(tagPath: string, filters: InteractionLogFilters = {}): Promise<InteractionLogListResponse> {
-    const response = await api.get(ENDPOINTS.BY_TAG_PATH, {
-      params: { tag_path: tagPath, ...filters }
-    })
-    return response.data
-  }
-
-  /**
-   * Lấy danh sách interaction logs của một project
-   */
-  static async listByProject(
-    projectId: string, 
+  static async list(
     filters: InteractionLogFilters & { page?: number; per_page?: number } = {}
   ): Promise<InteractionLogListResponse> {
-    const response = await api.get(ENDPOINTS.PROJECT_LIST(projectId), { params: filters })
-    return response.data
+    return (await api.get<InteractionLogListResponse>(ENDPOINTS.LIST, filters)) as unknown as InteractionLogListResponse
   }
 
-  /**
-   * Lấy thống kê interaction logs của project
-   */
+  static async detail(id: string): Promise<InteractionLogDetailResponse> {
+    return (await api.get<InteractionLogDetailResponse>(ENDPOINTS.DETAIL(id))) as unknown as InteractionLogDetailResponse
+  }
+
+  static async getById(id: string): Promise<InteractionLogDetailResponse> {
+    return this.detail(id)
+  }
+
+  static async create(data: CreateInteractionLogForm): Promise<InteractionLogDetailResponse> {
+    return (await api.post<InteractionLogDetailResponse>(ENDPOINTS.CREATE, data)) as unknown as InteractionLogDetailResponse
+  }
+
+  static async update(id: string, data: UpdateInteractionLogForm): Promise<InteractionLogDetailResponse> {
+    return (await api.put<InteractionLogDetailResponse>(ENDPOINTS.UPDATE(id), data)) as unknown as InteractionLogDetailResponse
+  }
+
+  static async delete(id: string): Promise<JSendResponse> {
+    return (await api.delete<JSendResponse>(ENDPOINTS.DELETE(id))) as unknown as JSendResponse
+  }
+
+  static async approveForClient(id: string): Promise<InteractionLogDetailResponse> {
+    return (await api.post<InteractionLogDetailResponse>(ENDPOINTS.APPROVE(id))) as unknown as InteractionLogDetailResponse
+  }
+
+  static async approve(id: string): Promise<InteractionLogDetailResponse> {
+    return this.approveForClient(id)
+  }
+
+  static async getByTagPath(
+    tagPath: string,
+    filters: InteractionLogFilters = {}
+  ): Promise<InteractionLogListResponse> {
+    return (await api.get<InteractionLogListResponse>(ENDPOINTS.BY_TAG_PATH, {
+      tag_path: tagPath,
+      ...filters,
+    })) as unknown as InteractionLogListResponse
+  }
+
+  static async listByProject(
+    projectId: string,
+    filters: InteractionLogFilters & { page?: number; per_page?: number } = {}
+  ): Promise<InteractionLogListResponse> {
+    return (await api.get<InteractionLogListResponse>(ENDPOINTS.PROJECT_LIST(projectId), filters)) as unknown as InteractionLogListResponse
+  }
+
   static async getProjectStats(projectId: string): Promise<InteractionLogStatsResponse> {
-    const response = await api.get(ENDPOINTS.PROJECT_STATS(projectId))
-    return response.data
+    return (await api.get<InteractionLogStatsResponse>(ENDPOINTS.PROJECT_STATS(projectId))) as unknown as InteractionLogStatsResponse
   }
 
-  /**
-   * Autocomplete tag path cho project
-   */
   static async autocompleteTagPath(projectId: string, query: string): Promise<JSendResponse<string[]>> {
-    const response = await api.get(ENDPOINTS.PROJECT_AUTOCOMPLETE(projectId), {
-      params: { q: query }
-    })
-    return response.data
+    return (await api.get<JSendResponse<string[]>>(ENDPOINTS.PROJECT_AUTOCOMPLETE(projectId), { q: query })) as unknown as JSendResponse<string[]>
   }
 }
 

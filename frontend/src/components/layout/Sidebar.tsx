@@ -60,6 +60,7 @@ const getNavigationForRole = (userRoles: string[]) => {
     { name: 'Projects', href: '/projects', icon: FolderIcon, roles: ['PM', 'Designer', 'SiteEngineer', 'QC', 'SuperAdmin', 'Admin'] },
     { name: 'Tasks', href: '/tasks', icon: ClipboardDocumentListIcon, roles: ['PM', 'Designer', 'SiteEngineer', 'QC', 'SuperAdmin', 'Admin'] },
     { name: 'Change Requests', href: '/change-requests', icon: DocumentTextIcon, roles: ['PM', 'Designer', 'SiteEngineer', 'QC', 'SuperAdmin', 'Admin'] },
+    { name: 'Interaction Logs', href: '/interaction-logs', icon: DocumentTextIcon, roles: ['PM', 'Designer', 'SiteEngineer', 'QC', 'SuperAdmin', 'Admin'] },
     { name: 'Templates', href: '/templates', icon: DocumentTextIcon, roles: ['PM', 'Designer', 'SuperAdmin', 'Admin'] },
     { name: 'Notifications', href: '/notifications', icon: BellIcon, roles: ['*'] },
   ];

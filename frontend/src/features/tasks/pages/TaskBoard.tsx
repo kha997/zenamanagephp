@@ -67,8 +67,13 @@ export const TaskBoard: React.FC = () => {
       // Cập nhật trạng thái task khi di chuyển giữa các cột
       const taskId = draggableId;
       const newStatus = destination.droppableId;
-      if (projectId) {
-        updateTaskStatus(projectId, taskId, newStatus as Task['status']);
+      const isTaskStatus = (
+        status: string
+      ): status is Task['status'] =>
+        ['pending', 'in_progress', 'review', 'completed', 'cancelled'].includes(status);
+
+      if (projectId && isTaskStatus(newStatus)) {
+        updateTaskStatus(projectId, taskId, newStatus);
       }
     }
   };

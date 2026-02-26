@@ -95,6 +95,9 @@ export const TaskDependencyViewer: React.FC<TaskDependencyViewerProps> = ({
           </AlertDescription>
         </Alert>
       )}
+      {circularDependencies.length === 0 && (
+        <p className="px-4 pt-3 text-xs text-gray-500">Graph view coming soon.</p>
+      )}
 
       <div className="flex-1 overflow-auto p-4 space-y-3">
         {tasks.map((task) => {

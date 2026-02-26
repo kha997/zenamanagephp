@@ -4,7 +4,7 @@ import { ArrowLeft, Edit, Trash2, CheckCircle, XCircle, Clock, FileText } from '
 import { useChangeRequestsStore } from '../../../store/changeRequests';
 import { StatusBadge } from '../components/StatusBadge';
 import { DecisionModal } from '../components/DecisionModal';
-import type { ChangeRequest } from '../../../lib/types';
+import type { ChangeRequestDecision, User } from '../../../lib/types';
 
 export const ChangeRequestDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,8 +20,12 @@ export const ChangeRequestDetail: React.FC = () => {
   } = useChangeRequestsStore();
   
   const [showDecisionModal, setShowDecisionModal] = useState(false);
-  const [decisionType, setDecisionType] = useState<'approve' | 'reject'>('approve');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const getUserLabel = (user?: User | null) => {
+    if (!user) return 'N/A';
+    return user.name || user.email || 'N/A';
+  };
 
   useEffect(() => {
     if (id) {
@@ -29,14 +33,14 @@ export const ChangeRequestDetail: React.FC = () => {
     }
   }, [id, fetchChangeRequest]);
 
-  const handleDecision = async (decision: 'approve' | 'reject', note?: string) => {
+  const handleDecision = async ({ decision, decision_note }: ChangeRequestDecision) => {
     if (!currentChangeRequest) return;
 
     try {
       if (decision === 'approve') {
-        await approveChangeRequest(currentChangeRequest.id, note);
+        await approveChangeRequest(currentChangeRequest.id, decision_note);
       } else {
-        await rejectChangeRequest(currentChangeRequest.id, note);
+        await rejectChangeRequest(currentChangeRequest.id, decision_note);
       }
       setShowDecisionModal(false);
     } catch (error) {
@@ -77,7 +81,7 @@ export const ChangeRequestDetail: React.FC = () => {
     });
   };
 
-  if (loading) {
+  if (loading.isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -151,7 +155,6 @@ export const ChangeRequestDetail: React.FC = () => {
             <>
               <button
                 onClick={() => {
-                  setDecisionType('approve');
                   setShowDecisionModal(true);
                 }}
                 className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
@@ -161,7 +164,6 @@ export const ChangeRequestDetail: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setDecisionType('reject');
                   setShowDecisionModal(true);
                 }}
                 className="inline-flex items-center px-3 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700"
@@ -249,7 +251,7 @@ export const ChangeRequestDetail: React.FC = () => {
                 {currentChangeRequest.decided_by && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Người quyết định:</span>
-                    <span className="text-sm font-medium">{currentChangeRequest.decided_by}</span>
+                    <span className="text-sm font-medium">{getUserLabel(currentChangeRequest.decided_by)}</span>
                   </div>
                 )}
                 {currentChangeRequest.decided_at && (
@@ -287,7 +289,7 @@ export const ChangeRequestDetail: React.FC = () => {
               </div>
               <div>
                 <span className="text-sm text-gray-600">Người tạo:</span>
-                <p className="font-medium">{currentChangeRequest.created_by}</p>
+                <p className="font-medium">{getUserLabel(currentChangeRequest.created_by)}</p>
               </div>
               <div>
                 <span className="text-sm text-gray-600">Ngày tạo:</span>
@@ -307,9 +309,8 @@ export const ChangeRequestDetail: React.FC = () => {
         <DecisionModal
           isOpen={showDecisionModal}
           onClose={() => setShowDecisionModal(false)}
+          changeRequest={currentChangeRequest}
           onDecision={handleDecision}
-          decisionType={decisionType}
-          changeRequestTitle={currentChangeRequest.title}
         />
       )}
     </div>

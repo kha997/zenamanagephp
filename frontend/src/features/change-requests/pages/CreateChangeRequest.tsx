@@ -3,15 +3,21 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { ChangeRequestForm } from '../components/ChangeRequestForm';
 import { useChangeRequestsStore } from '../../../store/changeRequests';
-import type { CreateChangeRequestData } from '../../../lib/types';
+import type { CreateChangeRequestForm, UpdateChangeRequestForm } from '../../../lib/types';
 
 export const CreateChangeRequest: React.FC = () => {
   const navigate = useNavigate();
-  const { createChangeRequest } = useChangeRequestsStore();
+  const { createChangeRequest, loading } = useChangeRequestsStore();
 
-  const handleSubmit = async (data: CreateChangeRequestData) => {
+  const handleSubmit = async (data: CreateChangeRequestForm | UpdateChangeRequestForm) => {
     try {
-      const newChangeRequest = await createChangeRequest(data);
+      const createPayload = data as CreateChangeRequestForm & { project_id?: string };
+      if (!createPayload.project_id) {
+        throw new Error('Thiếu project_id để tạo change request');
+      }
+
+      const { project_id, ...payload } = createPayload;
+      const newChangeRequest = await createChangeRequest(project_id, payload as CreateChangeRequestForm);
       navigate(`/change-requests/${newChangeRequest.id}`);
     } catch (error) {
       console.error('Lỗi khi tạo Change Request:', error);
@@ -45,7 +51,10 @@ export const CreateChangeRequest: React.FC = () => {
         <div className="p-6">
           <ChangeRequestForm
             onSubmit={handleSubmit}
-            submitButtonText="Tạo Change Request"
+            mode="create"
+            projectId=""
+            isLoading={loading.isLoading}
+            onCancel={() => navigate('/change-requests')}
           />
         </div>
       </div>

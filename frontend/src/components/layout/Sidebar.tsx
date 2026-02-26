@@ -11,15 +11,13 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   DocumentTextIcon,
-  ExclamationTriangleIcon,
-  ChatBubbleLeftRightIcon,
   BuildingOfficeIcon,
   WrenchScrewdriverIcon,
   CheckCircleIcon,
   ShoppingCartIcon,
   CurrencyDollarIcon,
   UserGroupIcon
-} from '@heroicons/react/24/outline';
+} from '@/lib/heroicons';
 
 interface SidebarProps {
   className?: string;
@@ -62,7 +60,6 @@ const getNavigationForRole = (userRoles: string[]) => {
     { name: 'Projects', href: '/projects', icon: FolderIcon, roles: ['PM', 'Designer', 'SiteEngineer', 'QC', 'SuperAdmin', 'Admin'] },
     { name: 'Tasks', href: '/tasks', icon: ClipboardDocumentListIcon, roles: ['PM', 'Designer', 'SiteEngineer', 'QC', 'SuperAdmin', 'Admin'] },
     { name: 'Templates', href: '/templates', icon: DocumentTextIcon, roles: ['PM', 'Designer', 'SuperAdmin', 'Admin'] },
-    { name: 'Change Requests', href: '/change-requests', icon: ExclamationTriangleIcon, roles: ['PM', 'SuperAdmin', 'Admin'] },
     { name: 'Notifications', href: '/notifications', icon: BellIcon, roles: ['*'] },
   ];
 

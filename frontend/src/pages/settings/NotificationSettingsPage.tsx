@@ -1,7 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { apiClient } from '@/lib/api/client'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { useAuthStore } from '@/store/auth.store'
+import toast from 'react-hot-toast'
 
 type SettingsObject = Record<string, any>
 
@@ -70,30 +73,125 @@ const setByPath = (object: SettingsObject, path: string[], nextValue: unknown): 
   return { ...object, [head]: setByPath(current, tail, nextValue) }
 }
 
+const getByPath = (object: SettingsObject, path: string[]): unknown => {
+  return path.reduce<unknown>((current, key) => {
+    if (!isPlainObject(current)) {
+      return undefined
+    }
+    return current[key]
+  }, object)
+}
+
+const collectBooleanPaths = (value: unknown, parent: string[] = []): string[][] => {
+  if (!isPlainObject(value)) {
+    return []
+  }
+
+  const paths: string[][] = []
+  for (const [key, child] of Object.entries(value)) {
+    const nextPath = [...parent, key]
+    if (typeof child === 'boolean') {
+      paths.push(nextPath)
+      continue
+    }
+    if (isPlainObject(child)) {
+      paths.push(...collectBooleanPaths(child, nextPath))
+    }
+  }
+  return paths
+}
+
+const buildPartialPatch = (
+  currentSettings: SettingsObject,
+  initialSettings: SettingsObject,
+  allowedPathKeys: string[]
+): SettingsObject => {
+  const patch: SettingsObject = {}
+
+  for (const key of allowedPathKeys) {
+    const path = key.split('.')
+    const currentValue = getByPath(currentSettings, path)
+    const initialValue = getByPath(initialSettings, path)
+
+    if (typeof currentValue === 'boolean' && currentValue !== initialValue) {
+      if (path.length === 1) {
+        patch[path[0]] = currentValue
+        continue
+      }
+      const root = path[0]
+      patch[root] = setByPath(
+        isPlainObject(patch[root]) ? patch[root] : {},
+        path.slice(1),
+        currentValue
+      )
+    }
+  }
+
+  return patch
+}
+
 export const NotificationSettingsPage: React.FC = () => {
+  const user = useAuthStore((state) => state.user)
+  const canReadSettings = user?.permissions?.includes('notification.read') ?? false
+  const canManageSettings = user?.permissions?.includes('notification.manage_rules') ?? false
+
   const [settings, setSettings] = useState<SettingsObject>({})
+  const [initialSettings, setInitialSettings] = useState<SettingsObject>({})
+  const [allowedPathKeys, setAllowedPathKeys] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  const [hasNoAccess, setHasNoAccess] = useState(false)
+
+  const hasChanges = useMemo(() => {
+    if (allowedPathKeys.length === 0) {
+      return false
+    }
+    return allowedPathKeys.some((key) => {
+      const path = key.split('.')
+      return getByPath(settings, path) !== getByPath(initialSettings, path)
+    })
+  }, [allowedPathKeys, initialSettings, settings])
 
   const loadSettings = useCallback(async () => {
+    if (!canReadSettings) {
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setLoadError(null)
     setSaveSuccess(null)
+    setHasNoAccess(false)
 
     try {
       const response = await apiClient.get<any>(SETTINGS_ENDPOINT)
       const payload = unwrapPayload(response)
-      setSettings(isPlainObject(payload) ? payload : {})
+      if (isPlainObject(payload)) {
+        const nextAllowedPaths = collectBooleanPaths(payload).map((path) => path.join('.'))
+        setAllowedPathKeys(nextAllowedPaths)
+        setSettings(payload)
+        setInitialSettings(payload)
+      } else {
+        setAllowedPathKeys([])
+        setSettings({})
+        setInitialSettings({})
+      }
     } catch (error: any) {
-      setLoadError(resolveErrorMessage(error))
+      if ((error?.status ?? error?.response?.status) === 403) {
+        setHasNoAccess(true)
+      } else {
+        setLoadError(resolveErrorMessage(error))
+      }
+      setAllowedPathKeys([])
       setSettings({})
+      setInitialSettings({})
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [canReadSettings])
 
   useEffect(() => {
     void loadSettings()
@@ -104,19 +202,38 @@ export const NotificationSettingsPage: React.FC = () => {
   }
 
   const handleSave = async (): Promise<void> => {
+    if (!canManageSettings) {
+      setSaveError('No access to manage notification settings.')
+      return
+    }
+
+    const patchPayload = buildPartialPatch(settings, initialSettings, allowedPathKeys)
+    if (Object.keys(patchPayload).length === 0) {
+      setSaveSuccess('No changes to save.')
+      return
+    }
+
     setIsSaving(true)
     setSaveError(null)
     setSaveSuccess(null)
 
     try {
-      const response = await apiClient.patch<any>(SETTINGS_ENDPOINT, settings)
+      const response = await apiClient.patch<any>(SETTINGS_ENDPOINT, patchPayload)
       const payload = unwrapPayload(response)
       if (isPlainObject(payload)) {
+        const nextAllowedPaths = collectBooleanPaths(payload).map((path) => path.join('.'))
+        setAllowedPathKeys(nextAllowedPaths)
         setSettings(payload)
+        setInitialSettings(payload)
+      } else {
+        setInitialSettings(settings)
       }
       setSaveSuccess('Notification settings saved.')
+      toast.success('Notification settings saved.')
     } catch (error: any) {
-      setSaveError(resolveErrorMessage(error))
+      const message = resolveErrorMessage(error)
+      setSaveError(message)
+      toast.error(message)
     } finally {
       setIsSaving(false)
     }
@@ -130,6 +247,7 @@ export const NotificationSettingsPage: React.FC = () => {
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             checked={value}
+            disabled={isSaving || !canManageSettings}
             onChange={(event) => handleBooleanChange(path, event.target.checked)}
           />
         </label>
@@ -163,6 +281,15 @@ export const NotificationSettingsPage: React.FC = () => {
         <p className="text-gray-600">Load and save notification preferences from the v1 settings API.</p>
       </div>
 
+      {(!canReadSettings || hasNoAccess) && (
+        <Card className="p-6">
+          <p className="text-sm font-medium text-red-700">No access.</p>
+          <p className="mt-1 text-sm text-gray-600">
+            You do not have permission `notification.read` for this page.
+          </p>
+        </Card>
+      )}
+
       {loadError && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{loadError}</div>
       )}
@@ -175,33 +302,58 @@ export const NotificationSettingsPage: React.FC = () => {
         <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-700">{saveSuccess}</div>
       )}
 
-      <Card className="space-y-4 p-6">
-        {isLoading && <p className="text-sm text-gray-600">Loading settings...</p>}
-
-        {!isLoading && Object.keys(settings).length === 0 && (
-          <p className="text-sm text-gray-600">No notification settings were returned by the API.</p>
-        )}
-
-        {!isLoading &&
-          Object.entries(settings).map(([key, value]) => (
-            <div key={key} className="rounded-md border border-gray-200 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-medium text-gray-900">{toLabel(key)}</p>
-                {!isPlainObject(value) && renderValue(value, [key])}
-              </div>
-              {isPlainObject(value) && renderValue(value, [key])}
+      {canReadSettings && !hasNoAccess && (
+        <Card className="space-y-4 p-6">
+          {isLoading && (
+            <div className="space-y-4">
+              <Skeleton height={20} width="30%" />
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="rounded-md border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <Skeleton height={16} width="45%" />
+                    <Skeleton height={18} width={18} />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-      </Card>
+          )}
 
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={() => void loadSettings()} disabled={isLoading || isSaving}>
-          Reload
-        </Button>
-        <Button onClick={() => void handleSave()} disabled={isLoading || isSaving || !Object.keys(settings).length}>
-          {isSaving ? 'Saving...' : 'Save settings'}
-        </Button>
-      </div>
+          {!isLoading && Object.keys(settings).length === 0 && (
+            <p className="text-sm text-gray-600">No notification settings were returned by the API.</p>
+          )}
+
+          {!isLoading &&
+            Object.entries(settings).map(([key, value]) => (
+              <div key={key} className="rounded-md border border-gray-200 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium text-gray-900">{toLabel(key)}</p>
+                  {!isPlainObject(value) && renderValue(value, [key])}
+                </div>
+                {isPlainObject(value) && renderValue(value, [key])}
+              </div>
+            ))}
+        </Card>
+      )}
+
+      {canReadSettings && !hasNoAccess && (
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={() => void loadSettings()} disabled={isLoading || isSaving}>
+            Reload
+          </Button>
+          <Button
+            onClick={() => void handleSave()}
+            disabled={
+              isLoading ||
+              isSaving ||
+              !canManageSettings ||
+              !Object.keys(settings).length ||
+              !hasChanges
+            }
+          >
+            {isSaving ? 'Saving...' : 'Save settings'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

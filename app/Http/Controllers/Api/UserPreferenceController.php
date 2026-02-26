@@ -3,11 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\ErrorEnvelopeService;
+use App\Services\UserPreferenceService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class UserPreferenceController extends Controller
 {
+    public function __construct(
+        private readonly UserPreferenceService $userPreferenceService
+    ) {
+    }
+
     /**
      * Get user sidebar preferences.
      */
@@ -28,8 +37,7 @@ class UserPreferenceController extends Controller
     public function updatePreferences(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'pinned_items' => 'array',
             'pinned_items.*' => 'string',
             'hidden_items' => 'array',
@@ -41,6 +49,10 @@ class UserPreferenceController extends Controller
             'show_badges' => 'boolean',
             'auto_expand_groups' => 'boolean',
         ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+        $validated = $validator->validated();
 
         $preference = $this->userPreferenceService->updateUserPreferences($user, $validated);
 
@@ -57,10 +69,13 @@ class UserPreferenceController extends Controller
     public function pinItem(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'item_id' => 'required|string',
         ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+        $validated = $validator->validated();
 
         $this->userPreferenceService->pinItem($user, $validated['item_id']);
 
@@ -76,10 +91,13 @@ class UserPreferenceController extends Controller
     public function unpinItem(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'item_id' => 'required|string',
         ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+        $validated = $validator->validated();
 
         $this->userPreferenceService->unpinItem($user, $validated['item_id']);
 
@@ -95,10 +113,13 @@ class UserPreferenceController extends Controller
     public function hideItem(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'item_id' => 'required|string',
         ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+        $validated = $validator->validated();
 
         $this->userPreferenceService->hideItem($user, $validated['item_id']);
 
@@ -114,10 +135,13 @@ class UserPreferenceController extends Controller
     public function showItem(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'item_id' => 'required|string',
         ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+        $validated = $validator->validated();
 
         $this->userPreferenceService->showItem($user, $validated['item_id']);
 
@@ -133,11 +157,14 @@ class UserPreferenceController extends Controller
     public function setCustomOrder(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'item_ids' => 'required|array',
             'item_ids.*' => 'string',
         ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+        $validated = $validator->validated();
 
         $this->userPreferenceService->setCustomOrder($user, $validated['item_ids']);
 
@@ -153,10 +180,13 @@ class UserPreferenceController extends Controller
     public function setTheme(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'theme' => 'required|string|in:light,dark,auto',
         ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+        $validated = $validator->validated();
 
         $this->userPreferenceService->setTheme($user, $validated['theme']);
 
@@ -242,8 +272,7 @@ class UserPreferenceController extends Controller
     public function bulkUpdate(Request $request): JsonResponse
     {
         $user = Auth::user();
-
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'updates' => 'required|array',
             'updates.pinned_items' => 'array',
             'updates.pinned_items.*' => 'string',
@@ -256,6 +285,10 @@ class UserPreferenceController extends Controller
             'updates.show_badges' => 'boolean',
             'updates.auto_expand_groups' => 'boolean',
         ]);
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+        $validated = $validator->validated();
 
         $this->userPreferenceService->bulkUpdatePreferences($user, $validated['updates']);
 

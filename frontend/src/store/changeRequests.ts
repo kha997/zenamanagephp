@@ -19,6 +19,7 @@ interface ChangeRequestsState {
   currentChangeRequest: ChangeRequest | null
   stats: ChangeRequestStats | null
   loading: LoadingState
+  error: string | null
   pagination: PaginationState
   filters: ChangeRequestFilters
   
@@ -30,6 +31,8 @@ interface ChangeRequestsState {
   deleteChangeRequest: (id: string) => Promise<void>
   submitChangeRequest: (id: string) => Promise<ChangeRequest>
   decideChangeRequest: (id: string, decision: ChangeRequestDecision) => Promise<ChangeRequest>
+  approveChangeRequest: (id: string, note?: string) => Promise<ChangeRequest>
+  rejectChangeRequest: (id: string, note?: string) => Promise<ChangeRequest>
   fetchStats: (projectId?: string) => Promise<void>
   fetchPendingApproval: () => Promise<void>
   setFilters: (filters: Partial<ChangeRequestFilters>) => void
@@ -45,21 +48,30 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
     currentChangeRequest: null,
     stats: null,
     loading: { isLoading: false, error: null },
+    error: null,
     pagination: { page: 1, pageSize: 15, total: 0, totalPages: 0 },
     filters: {},
     
     // Actions
     fetchChangeRequests: async (projectId?: string) => {
-      set({ loading: { isLoading: true, error: null } })
+      set({ loading: { isLoading: true, error: null }, error: null })
       
       try {
         const { filters, pagination } = get()
-        const params = new URLSearchParams({
-          page: pagination.page.toString(),
-          per_page: pagination.pageSize.toString(),
-          ...filters,
-          ...(projectId && { project_id: projectId })
-        })
+        const params = new URLSearchParams()
+        params.set('page', pagination.page.toString())
+        params.set('per_page', pagination.pageSize.toString())
+        if (projectId) params.set('project_id', projectId)
+
+        if (filters.status) params.set('status', filters.status)
+        if (filters.priority) params.set('priority', filters.priority)
+        if (filters.project_id) params.set('project_id', filters.project_id)
+        if (filters.created_by) params.set('created_by', filters.created_by)
+        if (filters.decided_by) params.set('decided_by', filters.decided_by)
+        if (filters.visibility) params.set('visibility', filters.visibility)
+        if (filters.tags?.length) params.set('tags', filters.tags.join(','))
+        if (filters.date_range?.start) params.set('date_from', filters.date_range.start)
+        if (filters.date_range?.end) params.set('date_to', filters.date_range.end)
         
         const endpoint = projectId 
           ? `/projects/${projectId}/change-requests?${params}`
@@ -74,21 +86,24 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
           set({
             changeRequests: response.data.change_requests,
             pagination: response.data.pagination,
-            loading: { isLoading: false, error: null }
+            loading: { isLoading: false, error: null },
+            error: null
           })
         }
       } catch (error: any) {
+        const message = error.message || 'Không thể tải danh sách change requests'
         set({
           loading: {
             isLoading: false,
-            error: error.message || 'Không thể tải danh sách change requests'
-          }
+            error: message
+          },
+          error: message
         })
       }
     },
     
     fetchChangeRequest: async (id: string) => {
-      set({ loading: { isLoading: true, error: null } })
+      set({ loading: { isLoading: true, error: null }, error: null })
       
       try {
         const response: ApiResponse<ChangeRequest> = await api.get(`/change-requests/${id}`)
@@ -96,21 +111,24 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
         if (response.status === 'success' && response.data) {
           set({
             currentChangeRequest: response.data,
-            loading: { isLoading: false, error: null }
+            loading: { isLoading: false, error: null },
+            error: null
           })
         }
       } catch (error: any) {
+        const message = error.message || 'Không thể tải thông tin change request'
         set({
           loading: {
             isLoading: false,
-            error: error.message || 'Không thể tải thông tin change request'
-          }
+            error: message
+          },
+          error: message
         })
       }
     },
     
     createChangeRequest: async (projectId: string, data: CreateChangeRequestForm) => {
-      set({ loading: { isLoading: true, error: null } })
+      set({ loading: { isLoading: true, error: null }, error: null })
       
       try {
         const response: ApiResponse<ChangeRequest> = await api.post(
@@ -123,24 +141,27 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
           set(state => ({
             changeRequests: [newCR, ...state.changeRequests],
             currentChangeRequest: newCR,
-            loading: { isLoading: false, error: null }
+            loading: { isLoading: false, error: null },
+            error: null
           }))
           return newCR
         }
         throw new Error('Không thể tạo change request')
       } catch (error: any) {
+        const message = error.message || 'Không thể tạo change request'
         set({
           loading: {
             isLoading: false,
-            error: error.message || 'Không thể tạo change request'
-          }
+            error: message
+          },
+          error: message
         })
         throw error
       }
     },
     
     updateChangeRequest: async (id: string, data: UpdateChangeRequestForm) => {
-      set({ loading: { isLoading: true, error: null } })
+      set({ loading: { isLoading: true, error: null }, error: null })
       
       try {
         const response: ApiResponse<ChangeRequest> = await api.put(
@@ -157,24 +178,27 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
             currentChangeRequest: state.currentChangeRequest?.id === id 
               ? updatedCR 
               : state.currentChangeRequest,
-            loading: { isLoading: false, error: null }
+            loading: { isLoading: false, error: null },
+            error: null
           }))
           return updatedCR
         }
         throw new Error('Không thể cập nhật change request')
       } catch (error: any) {
+        const message = error.message || 'Không thể cập nhật change request'
         set({
           loading: {
             isLoading: false,
-            error: error.message || 'Không thể cập nhật change request'
-          }
+            error: message
+          },
+          error: message
         })
         throw error
       }
     },
     
     deleteChangeRequest: async (id: string) => {
-      set({ loading: { isLoading: true, error: null } })
+      set({ loading: { isLoading: true, error: null }, error: null })
       
       try {
         await api.delete(`/change-requests/${id}`)
@@ -184,21 +208,24 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
           currentChangeRequest: state.currentChangeRequest?.id === id 
             ? null 
             : state.currentChangeRequest,
-          loading: { isLoading: false, error: null }
+          loading: { isLoading: false, error: null },
+          error: null
         }))
       } catch (error: any) {
+        const message = error.message || 'Không thể xóa change request'
         set({
           loading: {
             isLoading: false,
-            error: error.message || 'Không thể xóa change request'
-          }
+            error: message
+          },
+          error: message
         })
         throw error
       }
     },
     
     submitChangeRequest: async (id: string) => {
-      set({ loading: { isLoading: true, error: null } })
+      set({ loading: { isLoading: true, error: null }, error: null })
       
       try {
         const response: ApiResponse<ChangeRequest> = await api.post(
@@ -214,24 +241,27 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
             currentChangeRequest: state.currentChangeRequest?.id === id 
               ? updatedCR 
               : state.currentChangeRequest,
-            loading: { isLoading: false, error: null }
+            loading: { isLoading: false, error: null },
+            error: null
           }))
           return updatedCR
         }
         throw new Error('Không thể submit change request')
       } catch (error: any) {
+        const message = error.message || 'Không thể submit change request'
         set({
           loading: {
             isLoading: false,
-            error: error.message || 'Không thể submit change request'
-          }
+            error: message
+          },
+          error: message
         })
         throw error
       }
     },
     
     decideChangeRequest: async (id: string, decision: ChangeRequestDecision) => {
-      set({ loading: { isLoading: true, error: null } })
+      set({ loading: { isLoading: true, error: null }, error: null })
       
       try {
         const endpoint = decision.decision === 'approve' 
@@ -251,20 +281,31 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
             currentChangeRequest: state.currentChangeRequest?.id === id 
               ? updatedCR 
               : state.currentChangeRequest,
-            loading: { isLoading: false, error: null }
+            loading: { isLoading: false, error: null },
+            error: null
           }))
           return updatedCR
         }
         throw new Error(`Không thể ${decision.decision === 'approve' ? 'approve' : 'reject'} change request`)
       } catch (error: any) {
+        const message = error.message || `Không thể ${decision.decision === 'approve' ? 'approve' : 'reject'} change request`
         set({
           loading: {
             isLoading: false,
-            error: error.message || `Không thể ${decision.decision === 'approve' ? 'approve' : 'reject'} change request`
-          }
+            error: message
+          },
+          error: message
         })
         throw error
       }
+    },
+
+    approveChangeRequest: async (id: string, note?: string) => {
+      return get().decideChangeRequest(id, { decision: 'approve', decision_note: note })
+    },
+
+    rejectChangeRequest: async (id: string, note?: string) => {
+      return get().decideChangeRequest(id, { decision: 'reject', decision_note: note })
     },
     
     fetchStats: async (projectId?: string) => {
@@ -284,7 +325,7 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
     },
     
     fetchPendingApproval: async () => {
-      set({ loading: { isLoading: true, error: null } })
+      set({ loading: { isLoading: true, error: null }, error: null })
       
       try {
         const response: ApiResponse<ChangeRequest[]> = await api.get('/change-requests/pending-approval')
@@ -292,15 +333,18 @@ export const useChangeRequestsStore = create<ChangeRequestsState>()(devtools(
         if (response.status === 'success' && response.data) {
           set({
             changeRequests: response.data,
-            loading: { isLoading: false, error: null }
+            loading: { isLoading: false, error: null },
+            error: null
           })
         }
       } catch (error: any) {
+        const message = error.message || 'Không thể tải danh sách pending approval'
         set({
           loading: {
             isLoading: false,
-            error: error.message || 'Không thể tải danh sách pending approval'
-          }
+            error: message
+          },
+          error: message
         })
       }
     },

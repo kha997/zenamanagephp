@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { ChangeRequestStatus } from '../types/changeRequest';
 
 // Schema cho việc tạo change request
 export const createChangeRequestSchema = z.object({

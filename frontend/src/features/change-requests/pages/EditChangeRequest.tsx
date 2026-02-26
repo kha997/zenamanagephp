@@ -34,7 +34,7 @@ export const EditChangeRequest: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (loading.isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -108,15 +108,12 @@ export const EditChangeRequest: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="p-6">
           <ChangeRequestForm
-            initialData={{
-              title: currentChangeRequest.title,
-              description: currentChangeRequest.description,
-              impact_days: currentChangeRequest.impact_days,
-              impact_cost: currentChangeRequest.impact_cost,
-              impact_kpi: currentChangeRequest.impact_kpi
-            }}
+            initialData={currentChangeRequest}
             onSubmit={handleSubmit}
-            submitButtonText="Cập nhật Change Request"
+            mode="edit"
+            projectId={currentChangeRequest.project_id}
+            isLoading={loading.isLoading}
+            onCancel={() => navigate(`/change-requests/${currentChangeRequest.id}`)}
           />
         </div>
       </div>

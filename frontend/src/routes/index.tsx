@@ -14,6 +14,10 @@ import ContractsListPage from '@/pages/contracts/ContractsListPage'
 import ContractCreatePage from '@/pages/contracts/ContractCreatePage'
 import ContractDetailPage from '@/pages/contracts/ContractDetailPage'
 import { TaskBoard } from '@/features/tasks/pages'
+import { ChangeRequestsList } from '@/features/change-requests/pages/ChangeRequestsList'
+import { ChangeRequestDetail } from '@/features/change-requests/pages/ChangeRequestDetail'
+import { CreateChangeRequest } from '@/features/change-requests/pages/CreateChangeRequest'
+import { EditChangeRequest } from '@/features/change-requests/pages/EditChangeRequest'
 
 function ProjectsListRoutePlaceholder() {
   return <div className="p-6">Projects list is temporarily unavailable.</div>
@@ -52,6 +56,10 @@ export function AppRoutes() {
         <Route path="projects" element={<ProjectsListRoutePlaceholder />} />
         <Route path="projects/:id" element={<ProjectDetailRoutePlaceholder />} />
         <Route path="tasks" element={<TaskBoard />} />
+        <Route path="change-requests" element={<ChangeRequestsList />} />
+        <Route path="change-requests/create" element={<CreateChangeRequest />} />
+        <Route path="change-requests/:id" element={<ChangeRequestDetail />} />
+        <Route path="change-requests/:id/edit" element={<EditChangeRequest />} />
         <Route path="app/projects/:projectId/contracts" element={<ContractsListPage />} />
         <Route path="app/projects/:projectId/contracts/new" element={<ContractCreatePage />} />
         <Route path="app/projects/:projectId/contracts/:contractId" element={<ContractDetailPage />} />

@@ -14,7 +14,6 @@ import {
 
 interface ChangeRequestCardProps {
   changeRequest: ChangeRequest;
-  projectId: string;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onDecision?: (id: string, decision: 'approve' | 'reject') => void;
@@ -24,7 +23,6 @@ interface ChangeRequestCardProps {
 
 export const ChangeRequestCard: React.FC<ChangeRequestCardProps> = ({ 
   changeRequest, 
-  projectId,
   onEdit,
   onDelete,
   onDecision,
@@ -33,6 +31,8 @@ export const ChangeRequestCard: React.FC<ChangeRequestCardProps> = ({
 }) => {
   const canDecide = changeRequest.status === 'awaiting_approval';
   const canEdit = changeRequest.status === 'draft';
+  const displayUser = changeRequest.created_by?.name || changeRequest.created_by?.email || 'N/A';
+  const displayDecider = changeRequest.decided_by?.name || changeRequest.decided_by?.email || 'N/A';
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200 hover:shadow-lg group">
@@ -41,7 +41,7 @@ export const ChangeRequestCard: React.FC<ChangeRequestCardProps> = ({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1 min-w-0">
             <Link 
-              to={`/projects/${projectId}/change-requests/${changeRequest.id}`}
+              to={`/change-requests/${changeRequest.id}`}
               className="block group-hover:text-blue-600 transition-colors"
               aria-label={`Xem chi tiết change request ${changeRequest.code}`}
             >
@@ -99,7 +99,7 @@ export const ChangeRequestCard: React.FC<ChangeRequestCardProps> = ({
             <UserIcon className="h-5 w-5 mr-3 text-purple-500 flex-shrink-0" />
             <div>
               <p className="font-medium text-gray-900 truncate">
-                {changeRequest.created_by || 'N/A'}
+                {displayUser}
               </p>
               <p className="text-xs text-gray-500">người tạo</p>
             </div>
@@ -134,7 +134,7 @@ export const ChangeRequestCard: React.FC<ChangeRequestCardProps> = ({
               <DocumentTextIcon className="h-4 w-4 mt-0.5 text-gray-400" />
               <div className="text-xs text-gray-600">
                 <p>
-                  <span className="font-medium">Quyết định bởi:</span> {changeRequest.decided_by}
+                  <span className="font-medium">Quyết định bởi:</span> {displayDecider}
                 </p>
                 <p>
                   <span className="font-medium">Thời gian:</span> {formatDate(changeRequest.decided_at)}

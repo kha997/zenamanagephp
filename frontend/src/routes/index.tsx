@@ -13,6 +13,7 @@ import { SecuritySettingsPage } from '@/pages/settings/SecuritySettingsPage'
 import ContractsListPage from '@/pages/contracts/ContractsListPage'
 import ContractCreatePage from '@/pages/contracts/ContractCreatePage'
 import ContractDetailPage from '@/pages/contracts/ContractDetailPage'
+import { TaskBoard } from '@/features/tasks/pages'
 
 function ProjectsListRoutePlaceholder() {
   return <div className="p-6">Projects list is temporarily unavailable.</div>
@@ -50,6 +51,7 @@ export function AppRoutes() {
         {/* Projects routes */}
         <Route path="projects" element={<ProjectsListRoutePlaceholder />} />
         <Route path="projects/:id" element={<ProjectDetailRoutePlaceholder />} />
+        <Route path="tasks" element={<TaskBoard />} />
         <Route path="app/projects/:projectId/contracts" element={<ContractsListPage />} />
         <Route path="app/projects/:projectId/contracts/new" element={<ContractCreatePage />} />
         <Route path="app/projects/:projectId/contracts/:contractId" element={<ContractDetailPage />} />

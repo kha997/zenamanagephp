@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTaskStore } from '@/store/tasks';
 import { useProjectStore } from '@/store/projects';
+import { Task } from '@/lib/types';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -13,22 +14,22 @@ import { TaskDependencyViewer } from '../components/TaskDependencyViewer';
 interface TaskColumn {
   id: string;
   title: string;
-  tasks: any[];
+  tasks: Task[];
 }
 
 export const TaskBoard: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
-  const { tasks, isLoading, fetchTasksByProject, updateTaskStatus, updateTaskDependencies } = useTaskStore();
+  const { tasks, isLoading, fetchTasks, updateTaskStatus, updateTaskDependencies } = useTaskStore();
   const { currentProject, fetchProject } = useProjectStore();
   const [columns, setColumns] = useState<TaskColumn[]>([]);
   const [activeTab, setActiveTab] = useState('kanban');
 
   useEffect(() => {
     if (projectId) {
-      fetchProject(parseInt(projectId));
-      fetchTasksByProject(parseInt(projectId));
+      fetchProject(projectId);
+      fetchTasks(projectId);
     }
-  }, [projectId, fetchProject, fetchTasksByProject]);
+  }, [projectId, fetchProject, fetchTasks]);
 
   useEffect(() => {
     // Tổ chức tasks theo trạng thái
@@ -64,9 +65,11 @@ export const TaskBoard: React.FC = () => {
     
     if (source.droppableId !== destination.droppableId) {
       // Cập nhật trạng thái task khi di chuyển giữa các cột
-      const taskId = parseInt(draggableId);
+      const taskId = draggableId;
       const newStatus = destination.droppableId;
-      updateTaskStatus(taskId, newStatus);
+      if (projectId) {
+        updateTaskStatus(projectId, taskId, newStatus as Task['status']);
+      }
     }
   };
 
@@ -157,10 +160,12 @@ export const TaskBoard: React.FC = () => {
                             index={index}
                           >
                             {(provided, snapshot) => (
-                              <Card
+                              <div
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
+                              >
+                              <Card
                                 className={`p-4 cursor-move ${
                                   snapshot.isDragging ? 'shadow-lg' : 'hover:shadow-md'
                                 } transition-shadow`}
@@ -172,7 +177,6 @@ export const TaskBoard: React.FC = () => {
                                     </h4>
                                     {task.priority && (
                                       <Badge 
-                                        size="sm" 
                                         className={getPriorityColor(task.priority)}
                                       >
                                         {task.priority}
@@ -197,21 +201,19 @@ export const TaskBoard: React.FC = () => {
                                   
                                   <div className="flex items-center justify-between">
                                     <Badge 
-                                      size="sm" 
                                       className={getStatusColor(task.status)}
                                     >
                                       {task.status}
                                     </Badge>
                                     
-                                    {task.estimated_hours && (
-                                      <div className="flex items-center space-x-1 text-xs text-gray-500">
-                                        <Clock className="w-3 h-3" />
-                                        <span>{task.estimated_hours}h</span>
-                                      </div>
-                                    )}
+                                    <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                      <Clock className="w-3 h-3" />
+                                      <span>{task.progress}%</span>
+                                    </div>
                                   </div>
                                 </div>
                               </Card>
+                              </div>
                             )}
                           </Draggable>
                         ))}

@@ -20,7 +20,8 @@ interface TasksState {
   createTask: (projectId: string, data: CreateTaskForm) => Promise<Task>
   updateTask: (projectId: string, taskId: string, data: Partial<Task>) => Promise<void>
   deleteTask: (projectId: string, taskId: string) => Promise<void>
-  updateTaskStatus: (projectId: string, taskId: string, status: string) => Promise<void>
+  updateTaskStatus: (projectId: string, taskId: string, status: Task['status']) => Promise<void>
+  updateTaskDependencies: (taskId: string, dependencies: string[]) => Promise<void>
   assignTask: (projectId: string, taskId: string, userIds: string[]) => Promise<void>
   setCurrentTask: (task: Task | null) => void
   setFilters: (filters: FilterState) => void
@@ -187,7 +188,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   /**
    * Cập nhật trạng thái task
    */
-  updateTaskStatus: async (projectId: string, taskId: string, status: string) => {
+  updateTaskStatus: async (projectId: string, taskId: string, status: Task['status']) => {
     try {
       await get().updateTask(projectId, taskId, { status })
     } catch (error) {

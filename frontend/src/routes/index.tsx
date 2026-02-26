@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { ProtectedRoute } from './ProtectedRoute'
+import { NotificationsPlaceholder } from '@/pages/NotificationsPlaceholder'
 
 // Auth pages
 import { Login } from '@/features/auth/pages/Login'
@@ -58,6 +59,7 @@ export function AppRoutes() {
         <Route path="settings/general" element={<GeneralSettingsPage />} />
         <Route path="settings/security" element={<SecuritySettingsPage />} />
         <Route path="settings/notifications" element={<NotificationSettingsPage />} />
+        <Route path="notifications" element={<NotificationsPlaceholder />} />
       </Route>
 
       {/* Fallback route */}

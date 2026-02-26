@@ -56,3 +56,4 @@ logs/events.log
 /smoke-report.md
 /smoke_server.log
 frontend/dist/
+route-surface.current.json

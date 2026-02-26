@@ -21,6 +21,8 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\SupportDocumentationController;
 use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\HealthCheckController;
+use App\Http\Controllers\Api\Public\HealthController as PublicHealthController;
 use App\Http\Controllers\Api\Public\SystemHealthController;
 
 /*
@@ -83,6 +85,14 @@ Route::get('/status', function () {
         'timestamp' => now()->toISOString()
     ]);
 });
+
+Route::prefix('v1/public')
+    ->middleware([\App\Http\Middleware\ComprehensiveRateLimitMiddleware::class . ':public'])
+    ->group(function () {
+        Route::get('/health', [PublicHealthController::class, 'liveness']);
+        Route::get('/health/liveness', [PublicHealthController::class, 'liveness']);
+        Route::get('/health/readiness', [HealthCheckController::class, 'readiness']);
+    });
 
 // API information endpoint
 Route::get('/info', function () {

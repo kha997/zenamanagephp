@@ -1,9 +1,13 @@
+---
+**DEPRECATED** (2025-09-24): This document is outdated.
+Canonical reference: USER_DOCUMENTATION.md
+Reason: Superseded by canonical user documentation.
+---
 # 👥 USER GUIDE - DASHBOARD SYSTEM
 
 ## 📋 OVERVIEW
 
 This guide provides step-by-step instructions for using the ZenaManage Dashboard System, including role-based features, customization options, and best practices.
-
 ---
 
 ## 🚀 **GETTING STARTED**
@@ -19,7 +23,6 @@ This guide provides step-by-step instructions for using the ZenaManage Dashboard
 2. **Role Selection**: Confirm your role (if not auto-assigned)
 3. **Dashboard Tour**: Take the guided tour
 4. **Initial Configuration**: Set your preferences
-
 ---
 
 ## 🎭 **ROLE-BASED FEATURES**
@@ -178,7 +181,6 @@ This guide provides step-by-step instructions for using the ZenaManage Dashboard
 - Resource allocation widget (medium)
 - Performance metrics widget (medium)
 - Contract status widget (small)
-
 ---
 
 ## 🎨 **DASHBOARD CUSTOMIZATION**
@@ -249,11 +251,10 @@ This guide provides step-by-step instructions for using the ZenaManage Dashboard
 2. Configure:
    - Theme (light/dark)
    - Refresh interval
-   - Compact mode
-   - Widget borders
+- Compact mode
+- Widget borders
    - Animations
 3. Click "Save" to apply preferences
-
 ---
 
 ## 📊 **WIDGET TYPES**
@@ -334,7 +335,6 @@ Display chronological events.
 - Event types
 - Display format
 - Interaction options
-
 ---
 
 ## 🔔 **ALERTS & NOTIFICATIONS**
@@ -394,7 +394,6 @@ Display chronological events.
    - Alert types to show
    - Severity thresholds
    - Auto-refresh interval
-
 ---
 
 ## 📈 **METRICS & ANALYTICS**
@@ -431,7 +430,6 @@ Display chronological events.
 - Performance trends
 - Predictive analytics
 - Benchmark comparisons
-
 ---
 
 ## 🔄 **REAL-TIME UPDATES**
@@ -455,7 +453,6 @@ Display chronological events.
 - Email alerts
 - SMS notifications (if configured)
 - Mobile app notifications
-
 ---
 
 ## 🎛️ **PREFERENCES & SETTINGS**

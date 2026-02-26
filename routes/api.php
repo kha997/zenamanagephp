@@ -781,6 +781,15 @@ Route::prefix('dashboard')->group(function () {
 });
 
 Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'tenant.isolation', 'rbac'])->group(function () {
+    Route::prefix('settings')->as('settings.')->group(function () {
+        Route::get('/notifications', [App\Http\Controllers\Api\App\SettingsController::class, 'notifications'])
+            ->middleware('rbac:notification.read')
+            ->name('notifications');
+        Route::patch('/notifications', [App\Http\Controllers\Api\App\SettingsController::class, 'updateNotifications'])
+            ->middleware('rbac:notification.manage_rules')
+            ->name('notifications.update');
+    });
+
     Route::prefix('projects/{project}/contracts')->as('projects.contracts.')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\ContractController::class, 'index'])
             ->middleware('rbac:contract.view')

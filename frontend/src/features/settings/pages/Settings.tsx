@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -111,9 +112,11 @@ export function Settings() {
                 <h4 className="text-sm font-medium text-gray-900">Webhook settings</h4>
                 <p className="text-sm text-gray-500">Cấu hình webhook</p>
               </div>
-              <Button variant="outline" size="sm">
-                Cấu hình
-              </Button>
+              <Link to="/settings/notifications">
+                <Button variant="outline" size="sm">
+                  Open
+                </Button>
+              </Link>
             </div>
           </div>
         </Card>

@@ -18,6 +18,7 @@ import { TaskBoard } from '@/features/tasks/pages/TaskBoard'
 import { Notifications } from '@/features/notifications/pages/Notifications'
 import { UserProfile } from '@/features/users/pages/UserProfile'
 import { Settings } from '@/features/settings/pages/Settings'
+import { NotificationSettingsPage } from '@/pages/settings/NotificationSettingsPage'
 
 // Z.E.N.A Dashboard pages
 import { PmDashboard } from '@/pages/dashboard/PmDashboard'
@@ -118,6 +119,8 @@ export function AppRoutes() {
         {/* Other routes */}
         <Route path="notifications" element={<Notifications />} />
         <Route path="profile" element={<UserProfile />} />
+        <Route path="settings" element={<Navigate to="settings/notifications" replace />} />
+        <Route path="settings/notifications" element={<NotificationSettingsPage />} />
       </Route>
 
       {/* Admin routes - System administration */}

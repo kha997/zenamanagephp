@@ -9,6 +9,7 @@ use App\Models\WorkTemplate;
 use App\Models\WorkTemplateField;
 use App\Models\WorkTemplateStep;
 use App\Models\WorkTemplateVersion;
+use App\Services\WorkTemplatePackageService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -19,7 +20,10 @@ use Illuminate\Support\Facades\Validator;
 
 class WorkTemplateController extends BaseApiController
 {
-    public function __construct(private ZenaAuditLogger $auditLogger)
+    public function __construct(
+        private ZenaAuditLogger $auditLogger,
+        private WorkTemplatePackageService $templatePackageService
+    )
     {
     }
 
@@ -358,6 +362,10 @@ class WorkTemplateController extends BaseApiController
 
     public function exportTemplatePackage(Request $request, string $wtId): JsonResponse
     {
+        if (!$this->currentUserHasPermission('template.view')) {
+            return $this->forbidden('You do not have permission to access this resource');
+        }
+
         try {
             $template = $this->templateForTenant($wtId)->firstOrFail();
 
@@ -368,18 +376,7 @@ class WorkTemplateController extends BaseApiController
                 ->orderByDesc('created_at')
                 ->get();
 
-            $package = [
-                'manifest' => [
-                    'format' => 'json',
-                    'exported_at' => now()->toIso8601String(),
-                    'work_template_id' => (string) $template->id,
-                    'code' => $template->code,
-                    'name' => $template->name,
-                ],
-                'work_template' => $template,
-                'versions' => $versions,
-                'assets' => [],
-            ];
+            $package = $this->templatePackageService->buildExportPayload($template, $versions);
 
             $this->auditLogger->log(
                 $request,
@@ -400,14 +397,21 @@ class WorkTemplateController extends BaseApiController
 
     public function importTemplatePackage(Request $request): JsonResponse
     {
+        if (!$this->currentUserHasPermission('template.edit_draft')) {
+            return $this->forbidden('You do not have permission to access this resource');
+        }
+
         $validator = Validator::make($request->all(), [
             'manifest' => 'required|array',
-            'work_template' => 'required|array',
-            'work_template.code' => 'required|string|max:100',
-            'work_template.name' => 'required|string|max:255',
-            'work_template.description' => 'nullable|string',
-            'work_template.content_json' => 'nullable|array',
-            'work_template.steps' => 'nullable|array',
+            'schema_version' => 'required|string',
+            'template' => 'required|array',
+            'template.code' => 'required|string|max:100',
+            'template.name' => 'required|string|max:255',
+            'template.description' => 'nullable|string',
+            'template.versions' => 'required|array|min:1',
+            'template.versions.*.semver' => 'required|string|max:100',
+            'template.versions.*.content_json' => 'nullable|array',
+            'template.versions.*.steps' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -416,39 +420,19 @@ class WorkTemplateController extends BaseApiController
 
         $tenantId = $this->tenantId();
         $userId = (string) Auth::id();
-        $payload = $request->input('work_template');
+        $payload = $request->input('template');
 
-        $template = DB::transaction(function () use ($tenantId, $userId, $payload): WorkTemplate {
-            $template = WorkTemplate::create([
-                'tenant_id' => $tenantId,
-                'code' => (string) $payload['code'],
-                'name' => (string) $payload['name'],
-                'description' => $payload['description'] ?? null,
-                'status' => 'draft',
-                'created_by' => $userId,
-                'updated_by' => $userId,
-            ]);
+        try {
+            $this->templatePackageService->assertSupportedSchemaVersion(
+                $request->string('schema_version')->toString()
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
 
-            $content = [
-                'steps' => $payload['steps'] ?? ($payload['content_json']['steps'] ?? []),
-                'approvals' => $payload['approvals'] ?? ($payload['content_json']['approvals'] ?? []),
-                'rules' => $payload['rules'] ?? ($payload['content_json']['rules'] ?? []),
-            ];
-
-            $version = WorkTemplateVersion::create([
-                'tenant_id' => $tenantId,
-                'work_template_id' => $template->id,
-                'semver' => $this->nextDraftSemver($template),
-                'content_json' => $content,
-                'is_immutable' => false,
-                'created_by' => $userId,
-                'updated_by' => $userId,
-            ]);
-
-            $this->syncStepsAndFields($version, $content['steps']);
-
-            return $template->fresh(['versions']);
-        });
+        $template = DB::transaction(
+            fn (): WorkTemplate => $this->templatePackageService->importTemplate($tenantId, $userId, $payload)
+        );
 
         $this->auditLogger->log(
             $request,
@@ -675,5 +659,23 @@ class WorkTemplateController extends BaseApiController
             ->whereNotNull('published_at')
             ->orderByDesc('published_at')
             ->first();
+    }
+
+    private function currentUserHasPermission(string $permission): bool
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return false;
+        }
+
+        return DB::table('user_roles')
+            ->join('role_permissions', 'role_permissions.role_id', '=', 'user_roles.role_id')
+            ->join('permissions', 'permissions.id', '=', 'role_permissions.permission_id')
+            ->where('user_roles.user_id', (string) $userId)
+            ->where(function ($query) use ($permission): void {
+                $query->where('permissions.name', $permission)
+                    ->orWhere('permissions.code', $permission);
+            })
+            ->exists();
     }
 }

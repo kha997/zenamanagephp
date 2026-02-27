@@ -14,6 +14,7 @@ use App\Models\WorkTemplate;
 use App\Models\WorkTemplateField;
 use App\Models\WorkTemplateStep;
 use App\Models\WorkTemplateVersion;
+use App\Services\WorkTemplatePackageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -451,6 +452,114 @@ class WorkTemplateMvpApiTest extends TestCase
             ->assertStatus(403);
     }
 
+    public function test_export_import_template_package_round_trip_preserves_equivalent_structure(): void
+    {
+        $sourceTenant = Tenant::factory()->create();
+        $sourceUser = $this->createTenantUser($sourceTenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish']);
+
+        $template = $this->createDraftTemplate($sourceTenant, $sourceUser, [
+            'key' => 'quality-check',
+            'name' => 'Quality Check',
+            'fields' => [
+                [
+                    'key' => 'result',
+                    'label' => 'Result',
+                    'type' => 'enum',
+                    'required' => true,
+                ],
+                [
+                    'key' => 'notes',
+                    'label' => 'Inspector Notes',
+                    'type' => 'string',
+                    'required' => false,
+                ],
+            ],
+        ]);
+
+        $this->postJson('/api/zena/work-templates/' . $template->id . '/publish', [], $this->authHeaders($sourceUser))
+            ->assertStatus(200);
+
+        $export = $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($sourceUser));
+        $export->assertStatus(200)
+            ->assertJsonPath('data.schema_version', WorkTemplatePackageService::SCHEMA_VERSION);
+
+        $package = $export->json('data');
+
+        $import = $this->postJson('/api/zena/import-template-package', $package, $this->authHeaders($sourceUser));
+        $import->assertStatus(201);
+
+        $importedTemplateId = (string) $import->json('data.id');
+
+        $this->assertNotSame((string) $template->id, $importedTemplateId);
+        $this->assertDatabaseHas('work_templates', [
+            'id' => $importedTemplateId,
+            'tenant_id' => (string) $sourceTenant->id,
+        ]);
+
+        $reExport = $this->getJson('/api/zena/export-template-package/' . $importedTemplateId, $this->authHeaders($sourceUser));
+        $reExport->assertStatus(200);
+
+        $this->assertSame(
+            $this->normalizeTemplatePackageTemplate($package['template']),
+            $this->normalizeTemplatePackageTemplate($reExport->json('data.template'))
+        );
+    }
+
+    public function test_import_template_package_rejects_unsupported_schema_version(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.edit_draft']);
+
+        $payload = $this->minimalTemplatePackagePayload();
+        $payload['schema_version'] = '0.9.0';
+
+        $this->postJson('/api/zena/import-template-package', $payload, $this->authHeaders($user))
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Unsupported schema_version "0.9.0". Expected "' . WorkTemplatePackageService::SCHEMA_VERSION . '".');
+    }
+
+    public function test_template_package_import_export_rbac_enforced(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $authorizedCreator = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft']);
+        $template = $this->createDraftTemplate($tenant, $authorizedCreator);
+        $userWithoutRbac = User::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'is_active' => true,
+        ]);
+
+        $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($userWithoutRbac))
+            ->assertStatus(403);
+
+        $this->postJson('/api/zena/import-template-package', $this->minimalTemplatePackagePayload(), $this->authHeaders($userWithoutRbac))
+            ->assertStatus(403);
+    }
+
+    public function test_template_package_import_export_write_audit_logs(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft']);
+        $template = $this->createDraftTemplate($tenant, $user);
+
+        $export = $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($user));
+        $export->assertStatus(200);
+
+        $this->postJson('/api/zena/import-template-package', $export->json('data'), $this->authHeaders($user))
+            ->assertStatus(201);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => (string) $tenant->id,
+            'user_id' => (string) $user->id,
+            'action' => 'zena.work-template.export-package',
+        ]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => (string) $tenant->id,
+            'user_id' => (string) $user->id,
+            'action' => 'zena.work-template.import-package',
+        ]);
+    }
+
     private function createDraftTemplate(Tenant $tenant, User $user, array $stepOverrides = []): WorkTemplate
     {
         $template = WorkTemplate::create([
@@ -530,6 +639,115 @@ class WorkTemplateMvpApiTest extends TestCase
             'Content-Type' => 'application/json',
             'X-Tenant-ID' => (string) $user->tenant_id,
             'Authorization' => 'Bearer ' . $token,
+        ];
+    }
+
+    private function minimalTemplatePackagePayload(): array
+    {
+        return [
+            'manifest' => [
+                'format' => 'json',
+                'exported_at' => now()->toIso8601String(),
+                'code' => 'WT-PKG',
+                'name' => 'Package Template',
+            ],
+            'schema_version' => WorkTemplatePackageService::SCHEMA_VERSION,
+            'template' => [
+                'code' => 'WT-PKG',
+                'name' => 'Package Template',
+                'description' => 'Template from package',
+                'status' => 'draft',
+                'versions' => [
+                    [
+                        'semver' => 'draft-1',
+                        'is_immutable' => false,
+                        'published_at' => null,
+                        'content_json' => [
+                            'steps' => [
+                                [
+                                    'key' => 's1',
+                                    'name' => 'Step 1',
+                                    'type' => 'task',
+                                    'order' => 1,
+                                    'fields' => [
+                                        [
+                                            'key' => 'f1',
+                                            'label' => 'Field 1',
+                                            'type' => 'string',
+                                            'required' => false,
+                                        ],
+                                    ],
+                                ],
+                            ],
+                            'approvals' => [],
+                            'rules' => [],
+                        ],
+                        'steps' => [
+                            [
+                                'key' => 's1',
+                                'name' => 'Step 1',
+                                'type' => 'task',
+                                'order' => 1,
+                                'fields' => [
+                                    [
+                                        'key' => 'f1',
+                                        'label' => 'Field 1',
+                                        'type' => 'string',
+                                        'required' => false,
+                                    ],
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    private function normalizeTemplatePackageTemplate(array $template): array
+    {
+        $versions = array_map(function (array $version): array {
+            $steps = array_map(function (array $step): array {
+                $fields = $step['fields'] ?? [];
+                usort($fields, static fn (array $left, array $right): int => strcmp((string) ($left['key'] ?? ''), (string) ($right['key'] ?? '')));
+
+                $normalizedFields = array_map(static fn (array $field): array => [
+                    'key' => $field['key'] ?? null,
+                    'label' => $field['label'] ?? null,
+                    'type' => $field['type'] ?? null,
+                    'required' => (bool) ($field['required'] ?? false),
+                ], array_values($fields));
+
+                return [
+                    'key' => $step['key'] ?? null,
+                    'name' => $step['name'] ?? null,
+                    'type' => $step['type'] ?? null,
+                    'order' => $step['order'] ?? null,
+                    'depends_on' => $step['depends_on'] ?? [],
+                    'assignee_rule' => $step['assignee_rule'] ?? null,
+                    'sla_hours' => $step['sla_hours'] ?? null,
+                    'fields' => $normalizedFields,
+                ];
+            }, $version['steps'] ?? []);
+
+            usort($steps, static fn (array $left, array $right): int => ($left['order'] ?? 0) <=> ($right['order'] ?? 0));
+            return [
+                'semver' => $version['semver'] ?? null,
+                'is_immutable' => (bool) ($version['is_immutable'] ?? false),
+                'published_at' => $version['published_at'] ?? null,
+                'steps' => array_values($steps),
+            ];
+        }, $template['versions'] ?? []);
+
+        usort($versions, static function (array $left, array $right): int {
+            return strcmp((string) ($left['semver'] ?? ''), (string) ($right['semver'] ?? ''));
+        });
+
+        return [
+            'name' => $template['name'] ?? null,
+            'description' => $template['description'] ?? null,
+            'status' => $template['status'] ?? null,
+            'versions' => array_values($versions),
         ];
     }
 }

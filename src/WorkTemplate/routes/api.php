@@ -149,7 +149,7 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])-
                     ]
                 ]
             ]);
-        });
+        })->middleware('rbac');
         
         Route::get('statistics', [TemplateController::class, 'getSystemStatistics'])->middleware('rbac:template.view');
     });
@@ -185,5 +185,5 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])-
                 ]
             ]
         ]);
-    });
+    })->middleware('rbac');
 });

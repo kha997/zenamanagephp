@@ -27,9 +27,19 @@ export type WorkInstanceStep = {
   status: string
   snapshot_fields_json?: WorkFieldDef[]
   values?: WorkFieldValue[]
+  attachments?: WorkStepAttachment[]
   assignee_rule_json?: {
     requires_approval?: boolean
   }
+}
+
+export type WorkStepAttachment = {
+  id: string
+  file_name: string
+  mime_type: string
+  file_size: number
+  uploaded_by: string
+  created_at?: string
 }
 
 export type WorkInstanceRecord = {
@@ -122,6 +132,43 @@ export async function approveWorkInstanceStep(
     zenaPath(`/work-instances/${workInstanceId}/steps/${stepId}/approve`),
     payload
   )
+  return ensureData(response)
+}
+
+export async function listWorkInstanceStepAttachments(workInstanceId: string, stepId: string): Promise<WorkStepAttachment[]> {
+  const response = await apiClient.get<{ attachments: WorkStepAttachment[] }>(
+    zenaPath(`/work-instances/${workInstanceId}/steps/${stepId}/attachments`)
+  )
+
+  return ensureData(response).attachments || []
+}
+
+export async function uploadWorkInstanceStepAttachment(
+  workInstanceId: string,
+  stepId: string,
+  file: File
+): Promise<WorkStepAttachment> {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await apiClient.post<{ attachment: WorkStepAttachment }>(
+    zenaPath(`/work-instances/${workInstanceId}/steps/${stepId}/attachments`),
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  )
+
+  return ensureData(response).attachment
+}
+
+export async function deleteWorkInstanceStepAttachment(workInstanceId: string, stepId: string, attachmentId: string) {
+  const response = await apiClient.delete<{}>(
+    zenaPath(`/work-instances/${workInstanceId}/steps/${stepId}/attachments/${attachmentId}`)
+  )
+
   return ensureData(response)
 }
 

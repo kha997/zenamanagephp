@@ -59,4 +59,10 @@ class WorkInstanceStep extends Model
     {
         return $this->hasMany(Approval::class, 'work_instance_step_id');
     }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(WorkInstanceStepAttachment::class, 'work_instance_step_id')
+            ->orderByDesc('created_at');
+    }
 }

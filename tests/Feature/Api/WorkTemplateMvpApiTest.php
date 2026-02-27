@@ -9,11 +9,14 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WorkInstance;
 use App\Models\WorkInstanceStep;
+use App\Models\WorkInstanceStepAttachment;
 use App\Models\WorkTemplate;
 use App\Models\WorkTemplateField;
 use App\Models\WorkTemplateStep;
 use App\Models\WorkTemplateVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
 
@@ -360,6 +363,92 @@ class WorkTemplateMvpApiTest extends TestCase
                 'zena.work-instance.approve',
             ])->count()
         );
+    }
+
+    public function test_work_instance_step_attachments_upload_list_delete_are_tenant_scoped_and_audited(): void
+    {
+        Storage::fake('local');
+
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+
+        $actorA = $this->createTenantUser($tenantA, [], ['member'], [
+            'template.view',
+            'template.edit_draft',
+            'template.publish',
+            'template.apply',
+            'work.view',
+            'work.update',
+        ]);
+        $actorB = $this->createTenantUser($tenantB, [], ['member'], ['work.view', 'work.update']);
+
+        $projectA = Project::factory()->create([
+            'tenant_id' => (string) $tenantA->id,
+            'created_by' => (string) $actorA->id,
+            'pm_id' => (string) $actorA->id,
+        ]);
+        $templateA = $this->createDraftTemplate($tenantA, $actorA);
+
+        $this->postJson('/api/zena/work-templates/' . $templateA->id . '/publish', [], $this->authHeaders($actorA))
+            ->assertStatus(200);
+
+        $apply = $this->postJson('/api/zena/projects/' . $projectA->id . '/apply-template', [
+            'work_template_id' => (string) $templateA->id,
+        ], $this->authHeaders($actorA));
+        $apply->assertStatus(201);
+
+        $instanceId = (string) $apply->json('data.id');
+        $stepId = (string) WorkInstanceStep::query()
+            ->where('tenant_id', $tenantA->id)
+            ->where('work_instance_id', $instanceId)
+            ->value('id');
+
+        $file = UploadedFile::fake()->createWithContent('qa-checklist.txt', 'step attachment file content', 'text/plain');
+
+        $uploadHeaders = $this->authHeaders($actorA);
+        unset($uploadHeaders['Content-Type']);
+
+        $upload = $this->withHeaders($uploadHeaders)
+            ->post('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/attachments', [
+                'file' => $file,
+            ]);
+
+        $upload->assertStatus(201)
+            ->assertJsonPath('data.attachment.file_name', 'qa-checklist.txt');
+
+        $attachmentId = (string) $upload->json('data.attachment.id');
+
+        $this->getJson('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/attachments', $this->authHeaders($actorA))
+            ->assertStatus(200)
+            ->assertJsonPath('data.attachments.0.id', $attachmentId);
+
+        $record = WorkInstanceStepAttachment::query()->whereKey($attachmentId)->firstOrFail();
+        Storage::disk('local')->assertExists($record->file_path);
+
+        $this->deleteJson('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/attachments/' . $attachmentId, [], $this->authHeaders($actorA))
+            ->assertStatus(200);
+
+        Storage::disk('local')->assertMissing($record->file_path);
+        $this->assertDatabaseMissing('work_instance_step_attachments', ['id' => $attachmentId]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => (string) $tenantA->id,
+            'user_id' => (string) $actorA->id,
+            'action' => 'zena.work-instance.step.attachment.upload',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => (string) $tenantA->id,
+            'user_id' => (string) $actorA->id,
+            'action' => 'zena.work-instance.step.attachment.list',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => (string) $tenantA->id,
+            'user_id' => (string) $actorA->id,
+            'action' => 'zena.work-instance.step.attachment.delete',
+        ]);
+
+        $this->getJson('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/attachments', $this->authHeaders($actorB))
+            ->assertStatus(403);
     }
 
     private function createDraftTemplate(Tenant $tenant, User $user, array $stepOverrides = []): WorkTemplate

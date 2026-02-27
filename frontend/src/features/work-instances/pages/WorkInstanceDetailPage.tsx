@@ -493,7 +493,10 @@ export function WorkInstanceDetailPage() {
 
                 <div className="space-y-2">
                   {attachments.map((attachment) => (
-                    <div key={attachment.id} className="flex items-center justify-between rounded border border-gray-100 px-3 py-2">
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between rounded border border-gray-100 px-3 py-2"
+                    >
                       <div>
                         <p className="text-sm text-gray-900">{attachment.file_name}</p>
                         <p className="text-xs text-gray-500">

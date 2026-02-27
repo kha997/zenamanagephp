@@ -143,6 +143,78 @@ class WorkTemplateMvpApiTest extends TestCase
         ], $this->authHeaders($user))->assertStatus(403);
     }
 
+    public function test_project_work_instances_list_requires_work_view_permission(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.apply']);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+        ]);
+
+        $template = $this->createDraftTemplate($tenant, $user);
+        $versionId = (string) WorkTemplateVersion::query()->where('work_template_id', $template->id)->value('id');
+
+        WorkInstance::create([
+            'tenant_id' => (string) $tenant->id,
+            'project_id' => (string) $project->id,
+            'work_template_version_id' => $versionId,
+            'status' => 'pending',
+            'created_by' => (string) $user->id,
+        ]);
+
+        $this->getJson('/api/zena/projects/' . $project->id . '/work-instances', $this->authHeaders($user))
+            ->assertStatus(403);
+    }
+
+    public function test_project_work_instances_list_respects_tenant_scope_with_anti_enumeration(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+
+        $actorA = $this->createTenantUser($tenantA, [], ['member'], ['work.view']);
+        $actorB = $this->createTenantUser($tenantB, [], ['member'], ['work.view']);
+
+        $projectA = Project::factory()->create([
+            'tenant_id' => (string) $tenantA->id,
+            'created_by' => (string) $actorA->id,
+            'pm_id' => (string) $actorA->id,
+        ]);
+        $projectB = Project::factory()->create([
+            'tenant_id' => (string) $tenantB->id,
+            'created_by' => (string) $actorB->id,
+            'pm_id' => (string) $actorB->id,
+        ]);
+
+        $templateA = $this->createDraftTemplate($tenantA, $actorA);
+        $templateB = $this->createDraftTemplate($tenantB, $actorB);
+        $versionA = (string) WorkTemplateVersion::query()->where('work_template_id', $templateA->id)->value('id');
+        $versionB = (string) WorkTemplateVersion::query()->where('work_template_id', $templateB->id)->value('id');
+
+        WorkInstance::create([
+            'tenant_id' => (string) $tenantA->id,
+            'project_id' => (string) $projectA->id,
+            'work_template_version_id' => $versionA,
+            'status' => 'pending',
+            'created_by' => (string) $actorA->id,
+        ]);
+        WorkInstance::create([
+            'tenant_id' => (string) $tenantB->id,
+            'project_id' => (string) $projectB->id,
+            'work_template_version_id' => $versionB,
+            'status' => 'pending',
+            'created_by' => (string) $actorB->id,
+        ]);
+
+        $this->getJson('/api/zena/projects/' . $projectA->id . '/work-instances', $this->authHeaders($actorA))
+            ->assertOk()
+            ->assertJsonPath('meta.pagination.total', 1);
+
+        $this->getJson('/api/zena/projects/' . $projectB->id . '/work-instances', $this->authHeaders($actorA))
+            ->assertStatus(404);
+    }
+
     public function test_publish_immutability_keeps_published_version_content_unchanged_after_template_update(): void
     {
         $tenant = Tenant::factory()->create();

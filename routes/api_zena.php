@@ -215,6 +215,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         Route::group(['prefix' => 'projects'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ProjectController::class, 'index'])->middleware('rbac:project.view')->name('projects.index');
             Route::post('/', [\App\Http\Controllers\Api\ProjectController::class, 'store'])->middleware('rbac:project.create')->name('projects.store');
+            Route::get('/{project}/work-instances', [\App\Http\Controllers\Api\WorkInstanceController::class, 'listByProject'])->middleware('rbac:work.view')->name('projects.work-instances.index');
             Route::get('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'show'])->middleware('rbac:project.view')->name('projects.show');
             Route::put('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'destroy'])->middleware('rbac:project.delete')->name('projects.destroy');

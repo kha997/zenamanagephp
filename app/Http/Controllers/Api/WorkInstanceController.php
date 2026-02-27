@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Approval;
+use App\Models\Project;
 use App\Models\WorkInstance;
 use App\Models\WorkInstanceFieldValue;
 use App\Models\WorkInstanceStep;
@@ -18,6 +19,43 @@ class WorkInstanceController extends BaseApiController
 {
     public function __construct(private ZenaAuditLogger $auditLogger)
     {
+    }
+
+    public function listByProject(Request $request, string $project): JsonResponse
+    {
+        try {
+            $tenantId = $this->tenantId();
+            $projectRecord = $this->projectForTenant($project, $tenantId);
+
+            $instances = WorkInstance::query()
+                ->with(['templateVersion.template'])
+                ->withCount('steps')
+                ->where('tenant_id', $tenantId)
+                ->where('project_id', $projectRecord->id)
+                ->orderByDesc('created_at')
+                ->paginate(min((int) $request->integer('per_page', 15), $this->maxLimit));
+
+            $instances->getCollection()->transform(static function (WorkInstance $instance): array {
+                return [
+                    'id' => (string) $instance->id,
+                    'project_id' => (string) $instance->project_id,
+                    'work_template_version_id' => (string) $instance->work_template_version_id,
+                    'status' => (string) $instance->status,
+                    'steps_count' => (int) $instance->steps_count,
+                    'template' => [
+                        'id' => (string) ($instance->templateVersion?->template?->id ?? ''),
+                        'name' => (string) ($instance->templateVersion?->template?->name ?? ''),
+                        'semver' => (string) ($instance->templateVersion?->semver ?? ''),
+                    ],
+                    'created_at' => optional($instance->created_at)?->toIso8601String(),
+                    'updated_at' => optional($instance->updated_at)?->toIso8601String(),
+                ];
+            });
+
+            return $this->listSuccessResponse($instances, 'Project work instances retrieved successfully');
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Project not found');
+        }
     }
 
     public function updateStep(Request $request, string $id, string $stepId): JsonResponse
@@ -222,6 +260,14 @@ class WorkInstanceController extends BaseApiController
             ->where('tenant_id', $tenantId)
             ->where('work_instance_id', $instance->id)
             ->whereKey($stepId)
+            ->firstOrFail();
+    }
+
+    private function projectForTenant(string $projectId, string $tenantId): Project
+    {
+        return Project::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($projectId)
             ->firstOrFail();
     }
 

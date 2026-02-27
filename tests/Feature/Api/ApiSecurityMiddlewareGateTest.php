@@ -44,14 +44,6 @@ class ApiSecurityMiddlewareGateTest extends TestCase
                 'pattern' => '#^api/zena$#',
                 'reason' => 'Public Zena API info endpoint by design (aligned with Zena route invariants).',
             ],
-            [
-                'pattern' => '#^api/v1/work-template/api-info$#',
-                'reason' => 'Public API info endpoint for work-template module.',
-            ],
-            [
-                'pattern' => '#^api/v1/work-template/system/health$#',
-                'reason' => 'Public module health endpoint for work-template module.',
-            ],
         ];
 
         $violations = [];
@@ -68,10 +60,6 @@ class ApiSecurityMiddlewareGateTest extends TestCase
             }
 
             $middleware = $this->normalizeMiddleware($route['middleware'] ?? []);
-            if (!$this->isBusinessRoute($middleware)) {
-                continue;
-            }
-
             if ($this->matchesAllowlist($uriNorm, $allowlist)) {
                 continue;
             }
@@ -130,20 +118,6 @@ class ApiSecurityMiddlewareGateTest extends TestCase
         return str_starts_with($uri, 'api/v1/') || $uri === 'api/zena' || str_starts_with($uri, 'api/zena/');
     }
 
-    private function isBusinessRoute(array $middleware): bool
-    {
-        $hasTenant = $this->hasMiddleware($middleware, [
-            'tenant.isolation',
-            'TenantIsolationMiddleware',
-        ]);
-        $hasRbac = $this->hasMiddleware($middleware, [
-            'rbac',
-            'RoleBasedAccessControlMiddleware',
-        ]);
-
-        return $hasTenant || $hasRbac;
-    }
-
     private function matchesAllowlist(string $uri, array $allowlist): bool
     {
         foreach ($allowlist as $entry) {
@@ -177,9 +151,19 @@ class ApiSecurityMiddlewareGateTest extends TestCase
     {
         foreach ($middleware as $entry) {
             $value = (string)$entry;
+            $normalized = strtolower($value);
+            $classPortion = strtolower((string)strtok($value, ':'));
+            $classBase = strtolower((string)basename(str_replace('\\', '/', $classPortion)));
 
             foreach ($aliases as $alias) {
-                if ($value === $alias || str_starts_with($value, $alias)) {
+                $aliasNorm = strtolower($alias);
+                if (
+                    $normalized === $aliasNorm
+                    || str_starts_with($normalized, $aliasNorm . ':')
+                    || $classPortion === $aliasNorm
+                    || $classBase === $aliasNorm
+                    || str_starts_with($classBase, $aliasNorm)
+                ) {
                     return true;
                 }
             }

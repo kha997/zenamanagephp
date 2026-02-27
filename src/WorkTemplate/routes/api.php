@@ -132,7 +132,7 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])-
         Route::get('tasks', [ProjectTaskController::class, 'searchTasks'])->middleware('rbac:task.view');
     });
     
-    // System health check và monitoring
+    // System health check và monitoring (không cần RBAC)
     Route::prefix('system')->group(function () {
         Route::get('health', function () {
             return response()->json([
@@ -149,7 +149,7 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])-
                     ]
                 ]
             ]);
-        })->middleware('rbac');
+        });
         
         Route::get('statistics', [TemplateController::class, 'getSystemStatistics'])->middleware('rbac:template.view');
     });
@@ -160,7 +160,7 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])-
     |--------------------------------------------------------------------------
     */
     
-    // API info
+    // API info không cần RBAC
     Route::get('api-info', function () {
         return response()->json([
             'status' => 'success',
@@ -185,5 +185,5 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])-
                 ]
             ]
         ]);
-    })->middleware('rbac');
+    });
 });

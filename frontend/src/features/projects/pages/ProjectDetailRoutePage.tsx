@@ -109,7 +109,7 @@ export function ProjectDetailRoutePage() {
   const isLoading = projectQuery.isLoading || workInstancesQuery.isLoading
 
   const project = projectQuery.data
-  const workflowItems = useMemo(() => workInstancesQuery.data?.items || [], [workInstancesQuery.data?.items])
+  const workflowItems = useMemo(() => workInstancesQuery.data?.items || [], [workInstancesQuery.data])
   const templates = useMemo(() => templatesQuery.data || [], [templatesQuery.data])
 
   if (isLoading) {
@@ -189,13 +189,18 @@ export function ProjectDetailRoutePage() {
           <p className="mt-3 text-sm text-gray-600">No work instances yet for this project.</p>
         ) : (
           <div className="mt-4 space-y-3">
-            {workflowItems.map((instance) => (
+            {workflowItems.map((instance: WorkInstanceRecord) => (
               <div key={instance.id} className="rounded border border-gray-200 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{instance.template?.name || 'Template'} {instance.template?.semver ? `(${instance.template.semver})` : ''}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {instance.template?.name || 'Template'}{' '}
+                      {instance.template?.semver ? `(${instance.template.semver})` : ''}
+                    </p>
                     <p className="text-xs text-gray-500">ID: {instance.id}</p>
-                    <p className="text-xs text-gray-500">Steps: {instance.steps_count} | Created: {formatDateTime(instance.created_at)}</p>
+                    <p className="text-xs text-gray-500">
+                      Steps: {instance.steps_count ?? 0} | Created: {formatDateTime(instance.created_at ?? undefined)}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">{instance.status}</span>

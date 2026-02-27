@@ -218,6 +218,16 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'show'])->middleware('rbac:project.view')->name('projects.show');
             Route::put('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'destroy'])->middleware('rbac:project.delete')->name('projects.destroy');
+            Route::post('/{id}/apply-template', [\App\Http\Controllers\Api\WorkTemplateController::class, 'applyToProject'])->middleware('rbac:template.apply')->name('projects.apply-template');
+        });
+
+        // Work template routes
+        Route::group(['prefix' => 'work-templates'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\WorkTemplateController::class, 'index'])->middleware('rbac:template.view')->name('work-templates.index');
+            Route::post('/', [\App\Http\Controllers\Api\WorkTemplateController::class, 'store'])->middleware('rbac:template.edit_draft')->name('work-templates.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\WorkTemplateController::class, 'show'])->middleware('rbac:template.view')->name('work-templates.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\WorkTemplateController::class, 'update'])->middleware('rbac:template.edit_draft')->name('work-templates.update');
+            Route::post('/{id}/publish', [\App\Http\Controllers\Api\WorkTemplateController::class, 'publish'])->middleware('rbac:template.publish')->name('work-templates.publish');
         });
 
         // Tasks Management routes
@@ -335,5 +345,16 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/stats/count', [\App\Http\Controllers\Api\NotificationController::class, 'getUnreadCount'])->middleware('rbac:notification.stats')->name('notifications.unread-count');
             Route::get('/stats/summary', [\App\Http\Controllers\Api\NotificationController::class, 'getStats'])->middleware('rbac:notification.stats')->name('notifications.stats');
         });
+
+        // Work instance execution routes
+        Route::group(['prefix' => 'work-instances'], function () {
+            Route::patch('/{id}/steps/{stepId}', [\App\Http\Controllers\Api\WorkInstanceController::class, 'updateStep'])->middleware('rbac:work.update')->name('work-instances.steps.update');
+            Route::post('/{id}/steps/{stepId}/approve', [\App\Http\Controllers\Api\WorkInstanceController::class, 'approveStep'])->middleware('rbac:work.approve')->name('work-instances.steps.approve');
+            Route::post('/{id}/export', [\App\Http\Controllers\Api\WorkInstanceController::class, 'exportDeliverable'])->middleware('rbac:work.export')->name('work-instances.export');
+        });
+
+        // Template package import/export routes
+        Route::get('/export-template-package/{wtId}', [\App\Http\Controllers\Api\WorkTemplateController::class, 'exportTemplatePackage'])->middleware('rbac:template.view')->name('work-templates.package.export');
+        Route::post('/import-template-package', [\App\Http\Controllers\Api\WorkTemplateController::class, 'importTemplatePackage'])->middleware('rbac:template.edit_draft')->name('work-templates.package.import');
     });
 });

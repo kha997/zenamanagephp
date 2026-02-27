@@ -9,16 +9,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class WorkTemplate extends Model
+class DeliverableTemplate extends Model
 {
     use HasUlids, HasFactory, TenantScope;
 
-    protected $table = 'work_templates';
+    protected $table = 'deliverable_templates';
     protected $keyType = 'string';
     public $incrementing = false;
 
     protected $fillable = [
         'tenant_id',
+        'work_template_id',
         'code',
         'name',
         'description',
@@ -29,26 +30,11 @@ class WorkTemplate extends Model
 
     public function versions(): HasMany
     {
-        return $this->hasMany(WorkTemplateVersion::class)->orderByDesc('created_at');
+        return $this->hasMany(DeliverableTemplateVersion::class);
     }
 
-    public function publishedVersions(): HasMany
+    public function workTemplate(): BelongsTo
     {
-        return $this->versions()->whereNotNull('published_at');
-    }
-
-    public function draftVersions(): HasMany
-    {
-        return $this->versions()->whereNull('published_at');
-    }
-
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function updater(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'updated_by');
+        return $this->belongsTo(WorkTemplate::class);
     }
 }

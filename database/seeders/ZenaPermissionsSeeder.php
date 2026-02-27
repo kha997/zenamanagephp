@@ -84,6 +84,18 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'project.update', 'module' => 'project', 'action' => 'update', 'description' => 'Update existing projects'],
         ['code' => 'project.delete', 'module' => 'project', 'action' => 'delete', 'description' => 'Delete projects'],
 
+        // Work templates
+        ['code' => 'template.view', 'module' => 'template', 'action' => 'view', 'description' => 'View work templates'],
+        ['code' => 'template.edit_draft', 'module' => 'template', 'action' => 'edit_draft', 'description' => 'Create or update template draft versions'],
+        ['code' => 'template.publish', 'module' => 'template', 'action' => 'publish', 'description' => 'Publish immutable template versions'],
+        ['code' => 'template.apply', 'module' => 'template', 'action' => 'apply', 'description' => 'Apply a published template version to a project'],
+
+        // Work instances
+        ['code' => 'work.view', 'module' => 'work', 'action' => 'view', 'description' => 'View work instances'],
+        ['code' => 'work.update', 'module' => 'work', 'action' => 'update', 'description' => 'Update work instance steps and values'],
+        ['code' => 'work.approve', 'module' => 'work', 'action' => 'approve', 'description' => 'Approve or reject work steps'],
+        ['code' => 'work.export', 'module' => 'work', 'action' => 'export', 'description' => 'Export work instance deliverables'],
+
         // Contract management
         ['code' => 'contract.view', 'module' => 'contract', 'action' => 'view', 'description' => 'View contracts'],
         ['code' => 'contract.create', 'module' => 'contract', 'action' => 'create', 'description' => 'Create contracts'],

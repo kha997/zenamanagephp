@@ -30,6 +30,8 @@ import { WorkTemplateDetailPage } from '@/features/work-templates/pages/WorkTemp
 import { WorkInstancesListPage } from '@/features/work-instances/pages/WorkInstancesListPage'
 import { WorkInstanceDetailPage } from '@/features/work-instances/pages/WorkInstanceDetailPage'
 import { ProjectDetailRoutePage } from '@/features/projects/pages/ProjectDetailRoutePage'
+import { DeliverableTemplatesListPage } from '@/features/deliverable-templates/pages/DeliverableTemplatesListPage'
+import { DeliverableTemplateDetailPage } from '@/features/deliverable-templates/pages/DeliverableTemplateDetailPage'
 
 function ProjectsListRoutePlaceholder() {
   return <div className="p-6">Projects list is temporarily unavailable.</div>
@@ -76,6 +78,8 @@ export function AppRoutes() {
         <Route path="interaction-logs/:id" element={<InteractionLogDetail />} />
         <Route path="work-templates" element={<WorkTemplatesListPage />} />
         <Route path="work-templates/:id" element={<WorkTemplateDetailPage />} />
+        <Route path="deliverable-templates" element={<DeliverableTemplatesListPage />} />
+        <Route path="deliverable-templates/:id" element={<DeliverableTemplateDetailPage />} />
         <Route path="work-instances" element={<WorkInstancesListPage />} />
         <Route path="work-instances/:id" element={<WorkInstanceDetailPage />} />
         <Route path="app/projects/:projectId/contracts" element={<ContractsListPage />} />

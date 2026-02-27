@@ -19,16 +19,21 @@ class DeliverableTemplateVersion extends Model
     protected $fillable = [
         'tenant_id',
         'deliverable_template_id',
-        'version',
-        'document_id',
-        'document_version_id',
-        'metadata_json',
+        'semver',
+        'storage_path',
+        'checksum_sha256',
+        'mime',
+        'size',
+        'placeholders_spec_json',
         'published_at',
         'published_by',
+        'created_by',
+        'updated_by',
     ];
 
     protected $casts = [
-        'metadata_json' => 'array',
+        'placeholders_spec_json' => 'array',
+        'size' => 'integer',
         'published_at' => 'datetime',
     ];
 
@@ -37,13 +42,18 @@ class DeliverableTemplateVersion extends Model
         return $this->belongsTo(DeliverableTemplate::class, 'deliverable_template_id');
     }
 
-    public function document(): BelongsTo
+    public function publisher(): BelongsTo
     {
-        return $this->belongsTo(Document::class, 'document_id');
+        return $this->belongsTo(User::class, 'published_by');
     }
 
-    public function documentVersion(): BelongsTo
+    public function creator(): BelongsTo
     {
-        return $this->belongsTo(DocumentVersion::class, 'document_version_id');
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 }

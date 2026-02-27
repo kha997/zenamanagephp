@@ -19,7 +19,6 @@ class DeliverableTemplate extends Model
 
     protected $fillable = [
         'tenant_id',
-        'work_template_id',
         'code',
         'name',
         'description',
@@ -28,13 +27,19 @@ class DeliverableTemplate extends Model
         'updated_by',
     ];
 
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
     public function versions(): HasMany
     {
         return $this->hasMany(DeliverableTemplateVersion::class);
     }
 
-    public function workTemplate(): BelongsTo
-    {
-        return $this->belongsTo(WorkTemplate::class);
-    }
 }

@@ -1,0 +1,94 @@
+<?php declare(strict_types=1);
+
+namespace App\Services;
+
+use InvalidArgumentException;
+
+class DeliverableTemplateVersionService
+{
+    private const PLACEHOLDER_KEY_PATTERN = '/^[a-zA-Z0-9_.-]+$/';
+    private const ALLOWED_TYPES = ['string', 'number', 'boolean', 'date', 'datetime', 'html'];
+
+    public function computeChecksum(string $html): string
+    {
+        return hash('sha256', $html);
+    }
+
+    /**
+     * @param array<string, mixed>|string|null $spec
+     * @return array<string, mixed>
+     */
+    public function normalizePlaceholdersSpec(array|string|null $spec, string $html): array
+    {
+        if (is_string($spec)) {
+            $decoded = json_decode($spec, true);
+            if (!is_array($decoded)) {
+                throw new InvalidArgumentException('placeholders_spec_json must be a valid JSON object.');
+            }
+            $spec = $decoded;
+        }
+
+        $placeholders = $spec['placeholders'] ?? null;
+        if ($spec === null || $placeholders === null) {
+            return [
+                'schema_version' => '1.0.0',
+                'placeholders' => $this->inferPlaceholdersFromHtml($html),
+            ];
+        }
+
+        if (!is_array($placeholders)) {
+            throw new InvalidArgumentException('placeholders_spec.placeholders must be an array.');
+        }
+
+        $normalized = [];
+        foreach ($placeholders as $placeholder) {
+            if (is_string($placeholder)) {
+                $placeholder = ['key' => $placeholder];
+            }
+
+            if (!is_array($placeholder)) {
+                throw new InvalidArgumentException('Each placeholder must be a string key or object.');
+            }
+
+            $key = (string) ($placeholder['key'] ?? '');
+            if ($key === '' || preg_match(self::PLACEHOLDER_KEY_PATTERN, $key) !== 1) {
+                throw new InvalidArgumentException('Placeholder key is invalid.');
+            }
+
+            $type = (string) ($placeholder['type'] ?? 'string');
+            if (!in_array($type, self::ALLOWED_TYPES, true)) {
+                throw new InvalidArgumentException('Placeholder type is invalid.');
+            }
+
+            $normalized[$key] = [
+                'key' => $key,
+                'type' => $type,
+                'required' => (bool) ($placeholder['required'] ?? false),
+            ];
+        }
+
+        ksort($normalized);
+
+        return [
+            'schema_version' => (string) ($spec['schema_version'] ?? '1.0.0'),
+            'placeholders' => array_values($normalized),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public function inferPlaceholdersFromHtml(string $html): array
+    {
+        preg_match_all('/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/', $html, $matches);
+
+        $keys = array_values(array_unique($matches[1] ?? []));
+        sort($keys);
+
+        return array_map(static fn (string $key): array => [
+            'key' => $key,
+            'type' => 'string',
+            'required' => false,
+        ], $keys);
+    }
+}

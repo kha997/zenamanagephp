@@ -68,7 +68,6 @@ class WorkInstanceController extends BaseApiController
             'assignee_id' => 'nullable|exists:users,id',
             'deadline_at' => 'nullable|date',
             'field_values' => 'nullable|array',
-            'attachments' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -110,7 +109,7 @@ class WorkInstanceController extends BaseApiController
                 $this->upsertFieldValues($step, $request->input('field_values', []), $tenantId);
             });
 
-            $step = $step->fresh(['values']);
+            $step = $step->fresh(['values', 'attachments']);
 
             $this->auditLogger->log(
                 $request,
@@ -123,91 +122,7 @@ class WorkInstanceController extends BaseApiController
                 (string) Auth::id()
             );
 
-            return $this->successResponse([
-                'step' => $step,
-                'attachments_hook' => $request->input('attachments', []),
-            ], 'Work instance step updated successfully');
-        } catch (ModelNotFoundException) {
-            return $this->notFound('Work instance or step not found');
-        }
-    }
-
-    public function approveStep(Request $request, string $id, string $stepId): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'decision' => 'required|in:approved,rejected',
-            'comment' => 'nullable|string',
-            'requested_by' => 'nullable|exists:users,id',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->validationError($validator->errors());
-        }
-
-        try {
-            $tenantId = $this->tenantId();
-            $userId = (string) Auth::id();
-            $instance = $this->instanceForTenant($id, $tenantId);
-            $step = $this->stepForInstance($instance, $stepId, $tenantId);
-
-            $approval = DB::transaction(function () use ($request, $step, $tenantId, $userId): Approval {
-                $approval = Approval::create([
-                    'tenant_id' => $tenantId,
-                    'work_instance_step_id' => $step->id,
-                    'decision' => $request->input('decision'),
-                    'comment' => $request->input('comment'),
-                    'requested_by' => $request->input('requested_by', $step->assignee_id),
-                    'approved_by' => $userId,
-                    'approved_at' => now(),
-                ]);
-
-                $step->update([
-                    'status' => $request->input('decision'),
-                    'completed_at' => now(),
-                ]);
-
-                return $approval;
-            });
-
-            $this->auditLogger->log(
-                $request,
-                'zena.work-instance.approve',
-                'approval',
-                (string) $approval->id,
-                201,
-                $instance->project_id,
-                $tenantId,
-                $userId
-            );
-
-            return $this->successResponse($approval, 'Work instance step approval recorded successfully', 201);
-        } catch (ModelNotFoundException) {
-            return $this->notFound('Work instance or step not found');
-        }
-    }
-
-    public function listStepAttachments(Request $request, string $id, string $stepId): JsonResponse
-    {
-        try {
-            $tenantId = $this->tenantId();
-            $instance = $this->instanceForTenant($id, $tenantId);
-            $step = $this->stepForInstance($instance, $stepId, $tenantId);
-            $attachments = $step->attachments()->get();
-
-            $this->auditLogger->log(
-                $request,
-                'zena.work-instance.step.attachment.list',
-                'work_instance_step',
-                (string) $step->id,
-                200,
-                $instance->project_id,
-                $tenantId,
-                (string) Auth::id()
-            );
-
-            return $this->successResponse([
-                'attachments' => $attachments->map(fn (WorkInstanceStepAttachment $attachment): array => $this->transformAttachment($attachment))->values(),
-            ], 'Work instance step attachments retrieved successfully');
+            return $this->successResponse(['step' => $step], 'Work instance step updated successfully');
         } catch (ModelNotFoundException) {
             return $this->notFound('Work instance or step not found');
         }
@@ -297,6 +212,87 @@ class WorkInstanceController extends BaseApiController
             return $this->successResponse([], 'Work instance step attachment deleted successfully');
         } catch (ModelNotFoundException) {
             return $this->notFound('Work instance, step, or attachment not found');
+        }
+    }
+
+    public function approveStep(Request $request, string $id, string $stepId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'decision' => 'required|in:approved,rejected',
+            'comment' => 'nullable|string',
+            'requested_by' => 'nullable|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $tenantId = $this->tenantId();
+            $userId = (string) Auth::id();
+            $instance = $this->instanceForTenant($id, $tenantId);
+            $step = $this->stepForInstance($instance, $stepId, $tenantId);
+
+            $approval = DB::transaction(function () use ($request, $step, $tenantId, $userId): Approval {
+                $approval = Approval::create([
+                    'tenant_id' => $tenantId,
+                    'work_instance_step_id' => $step->id,
+                    'decision' => $request->input('decision'),
+                    'comment' => $request->input('comment'),
+                    'requested_by' => $request->input('requested_by', $step->assignee_id),
+                    'approved_by' => $userId,
+                    'approved_at' => now(),
+                ]);
+
+                $step->update([
+                    'status' => $request->input('decision'),
+                    'completed_at' => now(),
+                ]);
+
+                return $approval;
+            });
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-instance.approve',
+                'approval',
+                (string) $approval->id,
+                201,
+                $instance->project_id,
+                $tenantId,
+                $userId
+            );
+
+            return $this->successResponse($approval, 'Work instance step approval recorded successfully', 201);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work instance or step not found');
+        }
+    }
+
+    public function listStepAttachments(Request $request, string $id, string $stepId): JsonResponse
+    {
+        try {
+            $tenantId = $this->tenantId();
+            $instance = $this->instanceForTenant($id, $tenantId);
+            $step = $this->stepForInstance($instance, $stepId, $tenantId);
+            $attachments = $step->attachments()->get();
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-instance.step.attachment.list',
+                'work_instance_step',
+                (string) $step->id,
+                200,
+                $instance->project_id,
+                $tenantId,
+                (string) Auth::id()
+            );
+
+            return $this->successResponse([
+                'attachments' => $attachments->map(fn (WorkInstanceStepAttachment $attachment): array => $this->transformAttachment($attachment))->values(),
+            ], 'Work instance step attachments retrieved successfully');
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work instance or step not found');
         }
     }
 

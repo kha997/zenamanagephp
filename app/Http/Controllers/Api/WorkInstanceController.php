@@ -296,6 +296,120 @@ class WorkInstanceController extends BaseApiController
         }
     }
 
+    public function listStepAttachments(Request $request, string $id, string $stepId): JsonResponse
+    {
+        try {
+            $tenantId = $this->tenantId();
+            $instance = $this->instanceForTenant($id, $tenantId);
+            $step = $this->stepForInstance($instance, $stepId, $tenantId);
+            $attachments = $step->attachments()->get();
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-instance.step.attachment.list',
+                'work_instance_step',
+                (string) $step->id,
+                200,
+                $instance->project_id,
+                $tenantId,
+                (string) Auth::id()
+            );
+
+            return $this->successResponse([
+                'attachments' => $attachments->map(fn (WorkInstanceStepAttachment $attachment): array => $this->transformAttachment($attachment))->values(),
+            ], 'Work instance step attachments retrieved successfully');
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work instance or step not found');
+        }
+    }
+
+    public function uploadStepAttachment(Request $request, string $id, string $stepId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar,7z,csv',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $tenantId = $this->tenantId();
+            $userId = (string) Auth::id();
+            $instance = $this->instanceForTenant($id, $tenantId);
+            $step = $this->stepForInstance($instance, $stepId, $tenantId);
+            /** @var UploadedFile $file */
+            $file = $request->file('file');
+
+            $directory = sprintf('work-instances/%s/steps/%s/attachments', $instance->id, $step->id);
+            $storedFilename = (string) \Illuminate\Support\Str::ulid() . '.' . $file->getClientOriginalExtension();
+            $storedPath = Storage::disk('local')->putFileAs($directory, $file, $storedFilename);
+
+            if ($storedPath === false) {
+                return $this->serverError('Failed to store attachment');
+            }
+
+            $attachment = WorkInstanceStepAttachment::create([
+                'tenant_id' => $tenantId,
+                'work_instance_step_id' => (string) $step->id,
+                'file_name' => (string) $file->getClientOriginalName(),
+                'file_path' => $storedPath,
+                'mime_type' => $file->getMimeType(),
+                'file_size' => (int) $file->getSize(),
+                'uploaded_by' => $userId,
+            ]);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-instance.step.attachment.upload',
+                'work_instance_step_attachment',
+                (string) $attachment->id,
+                201,
+                $instance->project_id,
+                $tenantId,
+                $userId
+            );
+
+            return $this->successResponse([
+                'attachment' => $this->transformAttachment($attachment),
+            ], 'Work instance step attachment uploaded successfully', 201);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work instance or step not found');
+        }
+    }
+
+    public function deleteStepAttachment(Request $request, string $id, string $stepId, string $attachmentId): JsonResponse
+    {
+        try {
+            $tenantId = $this->tenantId();
+            $userId = (string) Auth::id();
+            $instance = $this->instanceForTenant($id, $tenantId);
+            $step = $this->stepForInstance($instance, $stepId, $tenantId);
+            $attachment = $this->attachmentForStep($step, $attachmentId, $tenantId);
+
+            if ($attachment->file_path !== '' && Storage::disk('local')->exists($attachment->file_path)) {
+                Storage::disk('local')->delete($attachment->file_path);
+            }
+
+            $attachment->delete();
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-instance.step.attachment.delete',
+                'work_instance_step_attachment',
+                (string) $attachmentId,
+                200,
+                $instance->project_id,
+                $tenantId,
+                $userId
+            );
+
+            return $this->successResponse([], 'Work instance step attachment deleted successfully');
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work instance, step, or attachment not found');
+        }
+    }
+
     public function exportDeliverable(Request $request, string $id): JsonResponse
     {
         try {

@@ -45,23 +45,29 @@ export type WorkStepAttachment = {
 export type WorkInstanceRecord = {
   id: string
   project_id?: string
+  work_template_version_id?: string
   status: string
   steps: WorkInstanceStep[]
-}
-
-export type ProjectWorkInstanceRecord = {
-  id: string
-  project_id: string
-  work_template_version_id: string
-  status: string
-  steps_count: number
+  steps_count?: number
   template?: {
     id: string
     name: string
     semver: string
   }
-  created_at?: string
-  updated_at?: string
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+type ProjectWorkInstancesList = {
+  items: WorkInstanceRecord[]
+  meta: {
+    pagination?: {
+      page: number
+      per_page: number
+      total: number
+      last_page: number
+    }
+  }
 }
 
 const zenaPath = (path: string) => `/api/zena${path}`
@@ -139,7 +145,6 @@ export async function listWorkInstanceStepAttachments(workInstanceId: string, st
   const response = await apiClient.get<{ attachments: WorkStepAttachment[] }>(
     zenaPath(`/work-instances/${workInstanceId}/steps/${stepId}/attachments`)
   )
-
   return ensureData(response).attachments || []
 }
 
@@ -168,15 +173,30 @@ export async function deleteWorkInstanceStepAttachment(workInstanceId: string, s
   const response = await apiClient.delete<{}>(
     zenaPath(`/work-instances/${workInstanceId}/steps/${stepId}/attachments/${attachmentId}`)
   )
-
   return ensureData(response)
 }
 
-export async function listProjectWorkInstances(projectId: string, params?: { page?: number; per_page?: number }) {
-  const response = await apiClient.get<ProjectWorkInstanceRecord[]>(zenaPath(`/projects/${projectId}/work-instances`), { params })
+
+// Project-scoped Work Instances
+export async function listProjectWorkInstances(
+  projectId: string,
+  params?: { page?: number; per_page?: number }
+): Promise<ProjectWorkInstancesList> {
+  const response = await apiClient.get<WorkInstanceRecord[]>(zenaPath(`/projects/${projectId}/work-instances`), {
+    params,
+  })
 
   return {
     items: ensureData(response),
-    meta: response.meta || {},
+    meta: {
+      pagination: response.meta
+        ? {
+            page: response.meta.current_page,
+            per_page: response.meta.per_page,
+            total: response.meta.total,
+            last_page: response.meta.last_page,
+          }
+        : undefined,
+    },
   }
 }

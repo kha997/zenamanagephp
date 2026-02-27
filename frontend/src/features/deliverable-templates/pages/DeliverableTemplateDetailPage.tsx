@@ -22,7 +22,6 @@ export function DeliverableTemplateDetailPage() {
   const [publishing, setPublishing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [rawHtml, setRawHtml] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const loadData = async () => {
@@ -91,18 +90,16 @@ export function DeliverableTemplateDetailPage() {
       return
     }
 
-    if (!selectedFile && !rawHtml.trim()) {
-      setError('Upload an HTML file or provide raw HTML text.')
+    if (!selectedFile) {
+      setError('Select an HTML file to upload.')
       return
     }
 
     try {
       setUploading(true)
       await uploadDeliverableTemplateVersion(id, {
-        file: selectedFile || undefined,
-        html: selectedFile ? undefined : rawHtml,
+        file: selectedFile,
       })
-      setRawHtml('')
       setSelectedFile(null)
       await loadData()
       setError(null)
@@ -177,15 +174,6 @@ export function DeliverableTemplateDetailPage() {
           <label className="block text-sm text-gray-700">
             HTML File
             <input className="mt-1 block w-full text-sm" type="file" accept=".html,.htm,text/html" onChange={onFileChange} />
-          </label>
-          <label className="block text-sm text-gray-700">
-            Or Raw HTML
-            <textarea
-              className="mt-1 h-40 w-full rounded border border-gray-300 px-3 py-2 font-mono text-xs"
-              value={rawHtml}
-              onChange={(event) => setRawHtml(event.target.value)}
-              placeholder="<html><body>{{project.name}}</body></html>"
-            />
           </label>
           <Button onClick={onUpload} disabled={uploading}>
             {uploading ? 'Uploading...' : 'Upload Draft Version'}

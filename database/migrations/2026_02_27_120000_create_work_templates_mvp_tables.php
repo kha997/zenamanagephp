@@ -174,26 +174,20 @@ return new class extends Migration
             $table->ulid('id')->primary();
             $table->string('tenant_id');
             $table->string('deliverable_template_id');
-            $table->string('semver');
-            $table->string('storage_path');
-            $table->string('checksum_sha256', 64);
-            $table->string('mime', 100);
-            $table->unsignedBigInteger('size');
-            $table->json('placeholders_spec_json')->nullable();
+            $table->string('version');
+            $table->string('document_id')->nullable();
+            $table->string('document_version_id')->nullable();
+            $table->json('metadata_json')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->string('published_by')->nullable();
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
             $table->timestamps();
 
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
             $table->foreign('deliverable_template_id')->references('id')->on('deliverable_templates')->cascadeOnDelete();
+            $table->foreign('document_id')->references('id')->on('documents')->nullOnDelete();
+            $table->foreign('document_version_id')->references('id')->on('document_versions')->nullOnDelete();
             $table->foreign('published_by')->references('id')->on('users')->nullOnDelete();
-            $table->foreign('created_by')->references('id')->on('users')->nullOnDelete();
-            $table->foreign('updated_by')->references('id')->on('users')->nullOnDelete();
-            $table->unique(['deliverable_template_id', 'semver'], 'dt_versions_template_semver_unique');
-            $table->index(['tenant_id', 'deliverable_template_id'], 'dt_versions_tenant_template_index');
-            $table->index(['tenant_id', 'published_at'], 'dt_versions_tenant_published_index');
+            $table->unique(['deliverable_template_id', 'version'], 'dt_versions_template_version_unique');
         });
     }
 

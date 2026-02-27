@@ -19,6 +19,7 @@ class DeliverableTemplateVersion extends Model
     protected $fillable = [
         'tenant_id',
         'deliverable_template_id',
+        'version',
         'semver',
         'storage_path',
         'checksum_sha256',

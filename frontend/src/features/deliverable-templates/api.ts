@@ -78,29 +78,21 @@ export async function getDeliverableTemplate(id: string) {
 export async function uploadDeliverableTemplateVersion(
   id: string,
   payload: {
-    html?: string
-    file?: File
+    file: File
   }
 ) {
-  if (payload.file) {
-    const formData = new FormData()
-    formData.append('html_file', payload.file)
-    const response = await apiClient.post<DeliverableTemplateVersionRecord>(
-      zenaPath(`/deliverable-templates/${id}/upload-version`),
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    )
+  const formData = new FormData()
+  formData.append('file', payload.file)
 
-    return ensureData(response)
-  }
-
-  const response = await apiClient.post<DeliverableTemplateVersionRecord>(zenaPath(`/deliverable-templates/${id}/upload-version`), {
-    html: payload.html || '',
-  })
+  const response = await apiClient.post<DeliverableTemplateVersionRecord>(
+    zenaPath(`/deliverable-templates/${id}/upload-version`),
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  )
 
   return ensureData(response)
 }

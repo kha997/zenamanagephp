@@ -9,7 +9,6 @@ use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -136,8 +135,7 @@ class DeliverableTemplateController extends BaseApiController
     public function uploadVersion(Request $request, string $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'html' => 'required_without:html_file|string',
-            'html_file' => 'required_without:html|file|mimetypes:text/html,text/plain|max:5120',
+            'file' => 'required|file|mimes:html,htm|max:1024',
             'placeholders_spec' => 'nullable|array',
             'placeholders_spec_json' => 'nullable|string',
         ]);
@@ -151,8 +149,19 @@ class DeliverableTemplateController extends BaseApiController
             $userId = (string) Auth::id();
             $template = $this->templateForTenant($id)->firstOrFail();
 
-            $file = $request->file('html_file');
-            [$html, $mime, $size] = $this->resolveHtmlPayload($request, $file);
+            $file = $request->file('file');
+            if ($file === null) {
+                return $this->errorResponse('HTML file is required.', 422);
+            }
+
+            $extension = strtolower((string) $file->getClientOriginalExtension());
+            if (!in_array($extension, ['html', 'htm'], true)) {
+                return $this->errorResponse('Only .html files are allowed.', 422);
+            }
+
+            $html = (string) $file->get();
+            $mime = (string) ($file->getMimeType() ?? 'text/html');
+            $size = (int) $file->getSize();
             $checksum = $this->versionService->computeChecksum($html);
 
             $rawSpec = $request->input('placeholders_spec');
@@ -189,6 +198,7 @@ class DeliverableTemplateController extends BaseApiController
                     }
 
                     $draft->fill([
+                        'version' => 'draft',
                         'storage_path' => $path,
                         'checksum_sha256' => $checksum,
                         'mime' => $mime,
@@ -205,6 +215,7 @@ class DeliverableTemplateController extends BaseApiController
                     $version = DeliverableTemplateVersion::create([
                         'tenant_id' => $tenantId,
                         'deliverable_template_id' => $template->id,
+                        'version' => 'draft',
                         'semver' => 'draft',
                         'storage_path' => $path,
                         'checksum_sha256' => $checksum,
@@ -260,10 +271,12 @@ class DeliverableTemplateController extends BaseApiController
                     throw new InvalidArgumentException('No draft version available to publish.');
                 }
 
+                $nextSemver = $this->nextPublishedSemver($template->id, $tenantId);
                 $published = DeliverableTemplateVersion::create([
                     'tenant_id' => $tenantId,
                     'deliverable_template_id' => $template->id,
-                    'semver' => $this->nextPublishedSemver($template->id, $tenantId),
+                    'version' => $nextSemver,
+                    'semver' => $nextSemver,
                     'storage_path' => $draft->storage_path,
                     'checksum_sha256' => $draft->checksum_sha256,
                     'mime' => $draft->mime,
@@ -339,23 +352,6 @@ class DeliverableTemplateController extends BaseApiController
         }
 
         return (string) $tenantId;
-    }
-
-    /**
-     * @return array{0: string, 1: string, 2: int}
-     */
-    private function resolveHtmlPayload(Request $request, ?UploadedFile $file): array
-    {
-        if ($file instanceof UploadedFile) {
-            return [
-                (string) $file->get(),
-                (string) ($file->getMimeType() ?? 'text/html'),
-                (int) $file->getSize(),
-            ];
-        }
-
-        $html = $request->string('html')->toString();
-        return [$html, 'text/html', strlen($html)];
     }
 
     private function nextPublishedSemver(string $templateId, string $tenantId): string

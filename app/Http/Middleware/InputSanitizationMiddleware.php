@@ -68,11 +68,6 @@ class InputSanitizationMiddleware
         // Sanitize request data
         $data = $request->all();
         $sanitizedData = $this->sanitizationService->sanitizeArray($data);
-
-        if ($this->shouldAllowRawHtmlPayload($request) && isset($data['html']) && is_string($data['html'])) {
-            // Preserve full HTML source for deliverable template draft uploads.
-            $sanitizedData['html'] = $data['html'];
-        }
         
         // Replace request data
         foreach ($sanitizedData as $key => $value) {
@@ -127,10 +122,6 @@ class InputSanitizationMiddleware
         );
 
         foreach ($allInput as $key => $value) {
-            if ($this->shouldSkipSuspiciousScanForField($request, (string) $key)) {
-                continue;
-            }
-
             $inputString = $this->normalizeInputForInspection($value);
 
             if ($inputString === null) {
@@ -145,16 +136,6 @@ class InputSanitizationMiddleware
         }
 
         return false;
-    }
-
-    private function shouldSkipSuspiciousScanForField(Request $request, string $field): bool
-    {
-        return $this->shouldAllowRawHtmlPayload($request) && $field === 'html';
-    }
-
-    private function shouldAllowRawHtmlPayload(Request $request): bool
-    {
-        return $request->is('api/zena/deliverable-templates/*/upload-version');
     }
 
     /**

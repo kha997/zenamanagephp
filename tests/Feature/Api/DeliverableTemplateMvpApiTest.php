@@ -8,6 +8,7 @@ use App\Models\DeliverableTemplateVersion;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
@@ -37,6 +38,7 @@ class DeliverableTemplateMvpApiTest extends TestCase
         DeliverableTemplateVersion::create([
             'tenant_id' => (string) $tenantB->id,
             'deliverable_template_id' => (string) $templateB->id,
+            'version' => 'draft',
             'semver' => 'draft',
             'storage_path' => 'deliverable-templates/' . $tenantB->id . '/' . $templateB->id . '/draft/source.html',
             'checksum_sha256' => hash('sha256', '<h1>B</h1>'),
@@ -65,9 +67,10 @@ class DeliverableTemplateMvpApiTest extends TestCase
 
         $template = $this->createTemplate($tenant, $owner);
 
-        $this->postJson('/api/zena/deliverable-templates/' . $template->id . '/upload-version', [
-            'html' => '<html><body><h1>Draft</h1></body></html>',
-        ], $this->authHeaders($viewer))->assertStatus(403);
+        $this->withHeaders($this->authHeaders($viewer, false))
+            ->post('/api/zena/deliverable-templates/' . $template->id . '/upload-version', [
+                'file' => $this->htmlUpload('<html><body><h1>Draft</h1></body></html>', 'draft.html'),
+            ])->assertStatus(403);
 
         $this->postJson('/api/zena/deliverable-templates/' . $template->id . '/publish-version', [], $this->authHeaders($viewer))
             ->assertStatus(403);
@@ -81,9 +84,10 @@ class DeliverableTemplateMvpApiTest extends TestCase
         $template = $this->createTemplate($tenant, $user);
 
         $htmlV1 = '<html><body><h1>v1</h1>{{project.name}}</body></html>';
-        $uploadV1 = $this->postJson('/api/zena/deliverable-templates/' . $template->id . '/upload-version', [
-            'html' => $htmlV1,
-        ], $this->authHeaders($user));
+        $uploadV1 = $this->withHeaders($this->authHeaders($user, false))
+            ->post('/api/zena/deliverable-templates/' . $template->id . '/upload-version', [
+                'file' => $this->htmlUpload($htmlV1, 'v1.html'),
+            ]);
         $uploadV1->assertStatus(201);
 
         $publishV1 = $this->postJson('/api/zena/deliverable-templates/' . $template->id . '/publish-version', [], $this->authHeaders($user));
@@ -94,9 +98,10 @@ class DeliverableTemplateMvpApiTest extends TestCase
         $publishedV1Checksum = (string) $publishV1->json('data.checksum_sha256');
 
         $htmlV2 = '<html><body><h1>v2</h1>{{project.code}}</body></html>';
-        $this->postJson('/api/zena/deliverable-templates/' . $template->id . '/upload-version', [
-            'html' => $htmlV2,
-        ], $this->authHeaders($user))->assertStatus(201);
+        $this->withHeaders($this->authHeaders($user, false))
+            ->post('/api/zena/deliverable-templates/' . $template->id . '/upload-version', [
+                'file' => $this->htmlUpload($htmlV2, 'v2.html'),
+            ])->assertStatus(201);
 
         $publishV2 = $this->postJson('/api/zena/deliverable-templates/' . $template->id . '/publish-version', [], $this->authHeaders($user));
         $publishV2->assertStatus(201)
@@ -134,9 +139,10 @@ class DeliverableTemplateMvpApiTest extends TestCase
         $create->assertStatus(201);
         $templateId = (string) $create->json('data.id');
 
-        $this->postJson('/api/zena/deliverable-templates/' . $templateId . '/upload-version', [
-            'html' => '<html><body>{{project.name}}</body></html>',
-        ], $this->authHeaders($user))->assertStatus(201);
+        $this->withHeaders($this->authHeaders($user, false))
+            ->post('/api/zena/deliverable-templates/' . $templateId . '/upload-version', [
+                'file' => $this->htmlUpload('<html><body>{{project.name}}</body></html>', 'audit.html'),
+            ])->assertStatus(201);
 
         $this->postJson('/api/zena/deliverable-templates/' . $templateId . '/publish-version', [], $this->authHeaders($user))
             ->assertStatus(201);
@@ -173,15 +179,25 @@ class DeliverableTemplateMvpApiTest extends TestCase
         ]);
     }
 
-    private function authHeaders(User $user): array
+    private function authHeaders(User $user, bool $asJson = true): array
     {
         $token = $user->createToken('test-token')->plainTextToken;
 
-        return [
+        $headers = [
             'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
             'X-Tenant-ID' => (string) $user->tenant_id,
             'Authorization' => 'Bearer ' . $token,
         ];
+
+        if ($asJson) {
+            $headers['Content-Type'] = 'application/json';
+        }
+
+        return $headers;
+    }
+
+    private function htmlUpload(string $content, string $name = 'template.html'): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent($name, $content);
     }
 }

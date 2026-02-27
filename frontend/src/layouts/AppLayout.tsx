@@ -1,5 +1,4 @@
 import { Outlet } from 'react-router-dom'
-import { useState } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { TopBar } from '@/components/layout/TopBar'
 import { useUIStore } from '@/store/ui'

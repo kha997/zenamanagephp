@@ -1,5 +1,6 @@
-import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthLayout } from '@/layouts/AuthLayout'
+import { AppLayout } from '@/layouts/AppLayout'
 import { ProtectedRoute } from './ProtectedRoute'
 import { NotificationsPlaceholder } from '@/pages/NotificationsPlaceholder'
 
@@ -24,6 +25,10 @@ import { TemplateDetail } from '@/features/templates/pages/TemplateDetail'
 import { InteractionLogsList } from '@/features/interaction-logs/pages/InteractionLogsList'
 import { InteractionLogDetail } from '@/features/interaction-logs/pages/InteractionLogDetail'
 import { CreateInteractionLog } from '@/features/interaction-logs/pages/CreateInteractionLog'
+import { WorkTemplatesListPage } from '@/features/work-templates/pages/WorkTemplatesListPage'
+import { WorkTemplateDetailPage } from '@/features/work-templates/pages/WorkTemplateDetailPage'
+import { WorkInstancesListPage } from '@/features/work-instances/pages/WorkInstancesListPage'
+import { WorkInstanceDetailPage } from '@/features/work-instances/pages/WorkInstanceDetailPage'
 
 function ProjectsListRoutePlaceholder() {
   return <div className="p-6">Projects list is temporarily unavailable.</div>
@@ -52,7 +57,7 @@ export function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <Outlet />
+            <AppLayout />
           </ProtectedRoute>
         }
       >
@@ -72,6 +77,10 @@ export function AppRoutes() {
         <Route path="interaction-logs" element={<InteractionLogsList />} />
         <Route path="interaction-logs/create" element={<CreateInteractionLog />} />
         <Route path="interaction-logs/:id" element={<InteractionLogDetail />} />
+        <Route path="work-templates" element={<WorkTemplatesListPage />} />
+        <Route path="work-templates/:id" element={<WorkTemplateDetailPage />} />
+        <Route path="work-instances" element={<WorkInstancesListPage />} />
+        <Route path="work-instances/:id" element={<WorkInstanceDetailPage />} />
         <Route path="app/projects/:projectId/contracts" element={<ContractsListPage />} />
         <Route path="app/projects/:projectId/contracts/new" element={<ContractCreatePage />} />
         <Route path="app/projects/:projectId/contracts/:contractId" element={<ContractDetailPage />} />

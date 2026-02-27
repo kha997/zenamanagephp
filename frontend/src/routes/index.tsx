@@ -29,10 +29,14 @@ import { WorkTemplatesListPage } from '@/features/work-templates/pages/WorkTempl
 import { WorkTemplateDetailPage } from '@/features/work-templates/pages/WorkTemplateDetailPage'
 import { WorkInstancesListPage } from '@/features/work-instances/pages/WorkInstancesListPage'
 import { WorkInstanceDetailPage } from '@/features/work-instances/pages/WorkInstanceDetailPage'
-import { ProjectDetailRoutePage } from '@/features/projects/pages/ProjectDetailRoutePage'
+import { ProjectDetailRoutePage } from "@/features/projects/pages/ProjectDetailRoutePage";
 
 function ProjectsListRoutePlaceholder() {
   return <div className="p-6">Projects list is temporarily unavailable.</div>
+}
+
+function ProjectDetailRoutePlaceholder() {
+  return <div className="p-6">Project detail is temporarily unavailable.</div>
 }
 
 /**
@@ -62,7 +66,7 @@ export function AppRoutes() {
 
         {/* Projects routes */}
         <Route path="projects" element={<ProjectsListRoutePlaceholder />} />
-        <Route path="projects/:id" element={<ProjectDetailRoutePage />} />
+        <Route path="projects/:id" element={<ProjectDetailRoutePlaceholder />} />
         <Route path="tasks" element={<TaskBoard />} />
         <Route path="change-requests" element={<ChangeRequestsList />} />
         <Route path="change-requests/create" element={<CreateChangeRequest />} />

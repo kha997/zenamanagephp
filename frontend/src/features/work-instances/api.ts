@@ -39,21 +39,6 @@ export type WorkInstanceRecord = {
   steps: WorkInstanceStep[]
 }
 
-export type ProjectWorkInstanceRecord = {
-  id: string
-  project_id: string
-  work_template_version_id: string
-  status: string
-  steps_count: number
-  template?: {
-    id: string
-    name: string
-    semver: string
-  }
-  created_at?: string
-  updated_at?: string
-}
-
 const zenaPath = (path: string) => `/api/zena${path}`
 const CACHE_KEY = 'work_instance_cache_v1'
 
@@ -123,13 +108,4 @@ export async function approveWorkInstanceStep(
     payload
   )
   return ensureData(response)
-}
-
-export async function listProjectWorkInstances(projectId: string, params?: { page?: number; per_page?: number }) {
-  const response = await apiClient.get<ProjectWorkInstanceRecord[]>(zenaPath(`/projects/${projectId}/work-instances`), { params })
-
-  return {
-    items: ensureData(response),
-    meta: response.meta || {},
-  }
 }

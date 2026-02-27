@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { type ChangeEvent, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -6,10 +6,14 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import {
   approveWorkInstanceStep,
   cacheWorkInstance,
+  deleteWorkInstanceStepAttachment,
   getWorkInstance,
+  listWorkInstanceStepAttachments,
+  uploadWorkInstanceStepAttachment,
   type WorkFieldDef,
   type WorkInstanceRecord,
   type WorkInstanceStep,
+  type WorkStepAttachment,
   updateWorkInstanceStep,
 } from '@/features/work-instances/api'
 
@@ -70,6 +74,9 @@ export function WorkInstanceDetailPage() {
   const [status, setStatus] = useState('in_progress')
   const [submitting, setSubmitting] = useState(false)
   const [approvalComment, setApprovalComment] = useState('')
+  const [attachments, setAttachments] = useState<WorkStepAttachment[]>([])
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false)
+  const [attachmentSubmitting, setAttachmentSubmitting] = useState(false)
 
   useEffect(() => {
     if (!id) {
@@ -120,6 +127,7 @@ export function WorkInstanceDetailPage() {
   useEffect(() => {
     if (!selectedStep) {
       setFieldValues({})
+      setAttachments([])
       return
     }
 
@@ -132,6 +140,36 @@ export function WorkInstanceDetailPage() {
     setFieldValues(values)
     setStatus(selectedStep.status || 'in_progress')
   }, [selectedStep])
+
+  useEffect(() => {
+    if (!instance || !selectedStep) {
+      return
+    }
+
+    let mounted = true
+    setAttachmentsLoading(true)
+    listWorkInstanceStepAttachments(instance.id, selectedStep.id)
+      .then((items) => {
+        if (!mounted) {
+          return
+        }
+        setAttachments(items)
+      })
+      .catch(() => {
+        if (mounted) {
+          setAttachments([])
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setAttachmentsLoading(false)
+        }
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [instance, selectedStep])
 
   const onSaveStep = async () => {
     if (!instance || !selectedStep) {
@@ -190,6 +228,45 @@ export function WorkInstanceDetailPage() {
       setError(message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const onUploadAttachment = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!selectedFile || !instance || !selectedStep) {
+      return
+    }
+
+    try {
+      setAttachmentSubmitting(true)
+      const uploaded = await uploadWorkInstanceStepAttachment(instance.id, selectedStep.id, selectedFile)
+      setAttachments((current) => [uploaded, ...current])
+      setError(null)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to upload attachment'
+      setError(message)
+    } finally {
+      setAttachmentSubmitting(false)
+    }
+  }
+
+  const onDeleteAttachment = async (attachmentId: string) => {
+    if (!instance || !selectedStep) {
+      return
+    }
+
+    try {
+      setAttachmentSubmitting(true)
+      await deleteWorkInstanceStepAttachment(instance.id, selectedStep.id, attachmentId)
+      setAttachments((current) => current.filter((attachment) => attachment.id !== attachmentId))
+      setError(null)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to delete attachment'
+      setError(message)
+    } finally {
+      setAttachmentSubmitting(false)
     }
   }
 
@@ -392,9 +469,52 @@ export function WorkInstanceDetailPage() {
                 <Button onClick={onSaveStep} disabled={submitting}>
                   {submitting ? 'Submitting...' : 'Submit Values'}
                 </Button>
-                <Button type="button" variant="outline" disabled>
-                  Attachments (placeholder)
-                </Button>
+              </div>
+
+              <div className="rounded border border-gray-200 p-3">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-gray-900">Attachments</p>
+                  <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-50">
+                    {attachmentSubmitting ? 'Uploading...' : 'Upload file'}
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={onUploadAttachment}
+                      disabled={attachmentSubmitting}
+                    />
+                  </label>
+                </div>
+
+                {attachmentsLoading ? <p className="text-sm text-gray-500">Loading attachments...</p> : null}
+
+                {!attachmentsLoading && attachments.length === 0 ? (
+                  <p className="text-sm text-gray-500">No attachments for this step.</p>
+                ) : null}
+
+                <div className="space-y-2">
+                  {attachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between rounded border border-gray-100 px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-sm text-gray-900">{attachment.file_name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(attachment.file_size / 1024).toFixed(1)} KB
+                          {attachment.created_at ? ` • ${new Date(attachment.created_at).toLocaleString()}` : ''}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => onDeleteAttachment(attachment.id)}
+                        disabled={attachmentSubmitting}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {shouldRequireApproval(selectedStep) ? (

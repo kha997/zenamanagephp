@@ -113,4 +113,86 @@ class ApiSecurityMiddlewareGateTest extends TestCase
 
         $this->assertTrue(true); // explicit pass
     }
+
+    public function test_check_project_permission_bypass_middleware_is_not_registered_or_used(): void
+    {
+        $forbiddenMiddlewareClass = 'App\\Http\\Middleware\\CheckProjectPermission';
+
+        /** @var array<string, string> $aliases */
+        $aliases = app('router')->getMiddleware();
+        $forbiddenAliasKeys = [
+            'project.permission',
+            'project_permission',
+            'check.project.permission',
+            'check_project_permission',
+            'check.project',
+        ];
+
+        foreach ($aliases as $alias => $middlewareClass) {
+            $this->assertNotSame(
+                $forbiddenMiddlewareClass,
+                $middlewareClass,
+                "Forbidden middleware class is still registered under alias [{$alias}]"
+            );
+        }
+
+        foreach ($forbiddenAliasKeys as $aliasKey) {
+            $this->assertArrayNotHasKey(
+                $aliasKey,
+                $aliases,
+                "Forbidden middleware alias [{$aliasKey}] must not be registered"
+            );
+        }
+
+        Artisan::call('route:list', [
+            '--json' => true,
+            '--except-vendor' => true,
+        ]);
+
+        /** @var mixed $decoded */
+        $decoded = json_decode(Artisan::output(), true);
+        $this->assertIsArray($decoded, 'route:list --json must return a JSON array');
+
+        $violations = [];
+
+        foreach ($decoded as $route) {
+            $uri = ltrim((string)($route['uri'] ?? ''), '/');
+            $method = (string)($route['method'] ?? '');
+            $action = (string)($route['action'] ?? '');
+            $middleware = $route['middleware'] ?? [];
+
+            if (is_string($middleware)) {
+                $middleware = [$middleware];
+            }
+            if (!is_array($middleware)) {
+                $middleware = [];
+            }
+
+            $middlewareStrings = array_map('strval', $middleware);
+
+            foreach ($middlewareStrings as $mw) {
+                if (str_contains($mw, 'CheckProjectPermission')
+                    || str_contains($mw, 'project.permission')
+                    || str_contains($mw, 'project_permission')
+                    || str_contains($mw, 'check.project.permission')
+                    || str_contains($mw, 'check_project_permission')
+                    || str_contains($mw, 'check.project')) {
+                    $violations[] = sprintf(
+                        '%s %s action=%s middleware=%s',
+                        $method,
+                        $uri,
+                        $action,
+                        implode(' | ', $middlewareStrings)
+                    );
+                    break;
+                }
+            }
+        }
+
+        $this->assertSame(
+            [],
+            $violations,
+            "Forbidden project-permission bypass middleware found on routes:\n" . implode("\n", array_slice($violations, 0, 20))
+        );
+    }
 }

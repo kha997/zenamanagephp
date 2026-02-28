@@ -18,6 +18,7 @@ class ZenaAuditLogger
         'user_id',
         'entity_id',
         'template_version_id',
+        'format',
     ];
 
     private const FORBIDDEN_META_PATTERNS = [

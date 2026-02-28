@@ -178,7 +178,7 @@ export async function deleteWorkInstanceStepAttachment(workInstanceId: string, s
 
 export async function exportWorkInstanceDeliverable(
   workInstanceId: string,
-  payload: { deliverable_template_version_id: string }
+  payload: { deliverable_template_version_id: string; format?: 'html' | 'pdf' }
 ): Promise<{ blob: Blob; filename: string | null }> {
   const response = await apiClient.postBlob(
     zenaPath(`/work-instances/${workInstanceId}/export`),
@@ -186,7 +186,7 @@ export async function exportWorkInstanceDeliverable(
     {
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'text/html',
+        Accept: 'text/html, application/pdf',
       },
     }
   )

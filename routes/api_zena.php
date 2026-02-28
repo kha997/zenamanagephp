@@ -367,6 +367,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/{id}/steps/{stepId}/attachments', [\App\Http\Controllers\Api\WorkInstanceController::class, 'listStepAttachments'])->middleware('rbac:work.view')->name('work-instances.steps.attachments.index');
             Route::post('/{id}/steps/{stepId}/attachments', [\App\Http\Controllers\Api\WorkInstanceController::class, 'uploadStepAttachment'])->middleware('rbac:work.update')->name('work-instances.steps.attachments.store');
             Route::delete('/{id}/steps/{stepId}/attachments/{attachmentId}', [\App\Http\Controllers\Api\WorkInstanceController::class, 'deleteStepAttachment'])->middleware('rbac:work.update')->name('work-instances.steps.attachments.destroy');
+            Route::post('/{id}/export-bundle', [\App\Http\Controllers\Api\WorkInstanceController::class, 'exportBundle'])->middleware('rbac:work.export')->name('work-instances.export-bundle');
             Route::post('/{id}/export', [\App\Http\Controllers\Api\WorkInstanceController::class, 'exportDeliverable'])->middleware('rbac:work.export')->name('work-instances.export');
         });
 

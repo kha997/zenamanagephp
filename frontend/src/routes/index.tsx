@@ -29,6 +29,7 @@ import { WorkTemplatesListPage } from '@/features/work-templates/pages/WorkTempl
 import { WorkTemplateDetailPage } from '@/features/work-templates/pages/WorkTemplateDetailPage'
 import { WorkInstancesListPage } from '@/features/work-instances/pages/WorkInstancesListPage'
 import { WorkInstanceDetailPage } from '@/features/work-instances/pages/WorkInstanceDetailPage'
+import { WorkflowsDashboardPage } from '@/features/work-instances/pages/WorkflowsDashboardPage'
 import { ProjectDetailRoutePage } from '@/features/projects/pages/ProjectDetailRoutePage'
 import { DeliverableTemplatesListPage } from '@/features/deliverable-templates/pages/DeliverableTemplatesListPage'
 import { DeliverableTemplateDetailPage } from '@/features/deliverable-templates/pages/DeliverableTemplateDetailPage'
@@ -80,6 +81,7 @@ export function AppRoutes() {
         <Route path="work-templates/:id" element={<WorkTemplateDetailPage />} />
         <Route path="deliverable-templates" element={<DeliverableTemplatesListPage />} />
         <Route path="deliverable-templates/:id" element={<DeliverableTemplateDetailPage />} />
+        <Route path="workflows" element={<WorkflowsDashboardPage />} />
         <Route path="work-instances" element={<WorkInstancesListPage />} />
         <Route path="work-instances/:id" element={<WorkInstanceDetailPage />} />
         <Route path="app/projects/:projectId/contracts" element={<ContractsListPage />} />

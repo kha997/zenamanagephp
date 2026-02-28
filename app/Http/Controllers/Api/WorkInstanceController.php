@@ -11,8 +11,9 @@ use App\Models\WorkInstanceFieldValue;
 use App\Models\WorkInstanceStep;
 use App\Models\WorkInstanceStepAttachment;
 use App\Services\DeliverablePdfExportService;
-use App\Services\DeliverableTemplateVersionService;
+use App\Services\WorkInstanceExportBundleService;
 use App\Services\ZenaAuditLogger;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
@@ -22,15 +23,32 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class WorkInstanceController extends BaseApiController
 {
     public function __construct(
         private ZenaAuditLogger $auditLogger,
-        private DeliverableTemplateVersionService $deliverableTemplateVersionService,
-        private DeliverablePdfExportService $deliverablePdfExportService
+        private DeliverablePdfExportService $deliverablePdfExportService,
+        private WorkInstanceExportBundleService $workInstanceExportBundleService
     )
     {
+    }
+
+    public function index(Request $request): JsonResponse
+    {
+        $tenantId = $this->tenantId();
+
+        $instances = $this->workInstanceSummaryQuery($tenantId);
+        $this->applyWorkInstanceFilters($request, $instances);
+
+        $paginated = $instances
+            ->orderByDesc('created_at')
+            ->paginate($this->perPage($request));
+
+        $paginated->getCollection()->transform(fn (WorkInstance $instance): array => $this->transformInstanceSummary($instance));
+
+        return $this->listSuccessResponse($paginated, 'Work instances retrieved successfully');
     }
 
     public function listByProject(Request $request, string $project): JsonResponse
@@ -39,35 +57,44 @@ class WorkInstanceController extends BaseApiController
             $tenantId = $this->tenantId();
             $projectRecord = $this->projectForTenant($project, $tenantId);
 
-            $instances = WorkInstance::query()
-                ->with(['templateVersion.template'])
-                ->withCount('steps')
-                ->where('tenant_id', $tenantId)
+            $instances = $this->workInstanceSummaryQuery($tenantId)
                 ->where('project_id', $projectRecord->id)
                 ->orderByDesc('created_at')
-                ->paginate(min((int) $request->integer('per_page', 15), $this->maxLimit));
+                ->paginate($this->perPage($request));
 
-            $instances->getCollection()->transform(static function (WorkInstance $instance): array {
-                return [
-                    'id' => (string) $instance->id,
-                    'project_id' => (string) $instance->project_id,
-                    'work_template_version_id' => (string) $instance->work_template_version_id,
-                    'status' => (string) $instance->status,
-                    'steps_count' => (int) $instance->steps_count,
-                    'template' => [
-                        'id' => (string) ($instance->templateVersion?->template?->id ?? ''),
-                        'name' => (string) ($instance->templateVersion?->template?->name ?? ''),
-                        'semver' => (string) ($instance->templateVersion?->semver ?? ''),
-                    ],
-                    'created_at' => optional($instance->created_at)?->toIso8601String(),
-                    'updated_at' => optional($instance->updated_at)?->toIso8601String(),
-                ];
-            });
+            $instances->getCollection()->transform(fn (WorkInstance $instance): array => $this->transformInstanceSummary($instance));
 
             return $this->listSuccessResponse($instances, 'Project work instances retrieved successfully');
         } catch (ModelNotFoundException) {
             return $this->notFound('Project not found');
         }
+    }
+
+    public function metrics(Request $request): JsonResponse
+    {
+        $tenantId = $this->tenantId();
+
+        $instanceQuery = WorkInstance::query()
+            ->where('tenant_id', $tenantId);
+        $this->applyWorkInstanceFilters($request, $instanceQuery);
+
+        $stepQuery = WorkInstanceStep::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('work_instance_id', (clone $instanceQuery)->select('id'));
+
+        $data = [
+            'total_instances' => (int) (clone $instanceQuery)->count(),
+            'instances_by_status' => $this->statusBreakdown((clone $instanceQuery)),
+            'total_steps' => (int) (clone $stepQuery)->count(),
+            'steps_by_status' => $this->statusBreakdown((clone $stepQuery)),
+            'overdue_steps' => (int) (clone $stepQuery)
+                ->whereNotNull('deadline_at')
+                ->where('deadline_at', '<', now())
+                ->whereNotIn('status', ['completed', 'approved', 'rejected'])
+                ->count(),
+        ];
+
+        return $this->successResponse(['metrics' => $data], 'Work instance metrics retrieved successfully');
     }
 
     public function updateStep(Request $request, string $id, string $stepId): JsonResponse
@@ -310,11 +337,7 @@ class WorkInstanceController extends BaseApiController
         try {
             $tenantId = $this->tenantId();
             $userId = (string) Auth::id();
-            $instance = WorkInstance::query()
-                ->with(['project', 'steps.values'])
-                ->where('tenant_id', $tenantId)
-                ->whereKey($id)
-                ->firstOrFail();
+            $instance = $this->instanceForTenant($id, $tenantId)->load(['project', 'steps.values']);
 
             $validator = Validator::make($request->all(), [
                 'deliverable_template_version_id' => 'required|string',
@@ -325,20 +348,11 @@ class WorkInstanceController extends BaseApiController
                 return $this->validationError($validator->errors());
             }
 
-            $templateVersion = DeliverableTemplateVersion::query()
-                ->where('tenant_id', $tenantId)
-                ->whereKey($request->string('deliverable_template_version_id')->toString())
-                ->firstOrFail();
-
-            if ($templateVersion->storage_path === '' || !Storage::disk('local')->exists($templateVersion->storage_path)) {
-                return $this->serverError('Deliverable template source file not found');
-            }
-
-            $templateHtml = (string) Storage::disk('local')->get($templateVersion->storage_path);
-            $renderedHtml = $this->deliverableTemplateVersionService->renderHtml(
-                $templateHtml,
-                $this->buildDeliverableContext($instance)
+            $templateVersion = $this->deliverableTemplateVersionForTenant(
+                $request->string('deliverable_template_version_id')->toString(),
+                $tenantId
             );
+            $renderedHtml = $this->workInstanceExportBundleService->renderHtmlForInstance($instance, $templateVersion);
             $format = $request->string('format')->toString() ?: 'html';
             $pdfOptions = $format === 'pdf'
                 ? $this->deliverablePdfExportService->normalizeOptions($this->pdfRequestPayload($request))
@@ -392,6 +406,59 @@ class WorkInstanceController extends BaseApiController
             return $this->notFound('Work instance or deliverable template version not found');
         } catch (DeliverablePdfExportUnavailableException $exception) {
             return $this->errorResponse($exception->getMessage(), 501);
+        } catch (\RuntimeException $exception) {
+            return $this->serverError($exception->getMessage());
+        }
+    }
+
+    public function exportBundle(Request $request, string $id): JsonResponse|BinaryFileResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'deliverable_template_version_id' => 'required|string',
+            'pdf' => 'nullable|array',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $tenantId = $this->tenantId();
+            $userId = (string) Auth::id();
+            $instance = $this->instanceForTenant($id, $tenantId)->load(['project', 'steps.values', 'steps.attachments']);
+            $templateVersion = $this->deliverableTemplateVersionForTenant(
+                $request->string('deliverable_template_version_id')->toString(),
+                $tenantId
+            );
+            $bundle = $this->workInstanceExportBundleService->buildZipForInstance($instance, [
+                'template_version' => $templateVersion,
+                'pdf' => $this->pdfRequestPayload($request),
+            ]);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-instance.export.bundle',
+                'work_instance',
+                (string) $instance->id,
+                200,
+                $instance->project_id,
+                $tenantId,
+                $userId,
+                [
+                    'template_version_id' => (string) $templateVersion->id,
+                    'format' => 'zip',
+                ]
+            );
+
+            return response()->download(
+                $bundle['zip_path'],
+                $bundle['zip_filename'],
+                ['Content-Type' => 'application/zip']
+            )->deleteFileAfterSend(true);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work instance or deliverable template version not found');
+        } catch (\RuntimeException $exception) {
+            return $this->serverError($exception->getMessage());
         }
     }
 
@@ -403,6 +470,67 @@ class WorkInstanceController extends BaseApiController
         $payload = $request->input('pdf');
 
         return is_array($payload) ? $payload : [];
+    }
+
+    private function workInstanceSummaryQuery(string $tenantId): Builder
+    {
+        return WorkInstance::query()
+            ->with(['templateVersion.template'])
+            ->withCount('steps')
+            ->where('tenant_id', $tenantId);
+    }
+
+    private function applyWorkInstanceFilters(Request $request, Builder $query): void
+    {
+        foreach (['project_id', 'work_template_version_id', 'status', 'created_by'] as $filter) {
+            if ($request->has($filter)) {
+                $query->where($filter, (string) $request->input($filter));
+            }
+        }
+    }
+
+    /**
+     * @return array<int, array{status: string, count: int}>
+     */
+    private function statusBreakdown(Builder $query): array
+    {
+        return $query
+            ->select('status', DB::raw('COUNT(*) as aggregate'))
+            ->groupBy('status')
+            ->orderBy('status')
+            ->get()
+            ->map(static fn ($row): array => [
+                'status' => (string) ($row->status ?? ''),
+                'count' => (int) $row->aggregate,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function perPage(Request $request): int
+    {
+        return min(max((int) $request->integer('per_page', $this->defaultLimit), 1), $this->maxLimit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function transformInstanceSummary(WorkInstance $instance): array
+    {
+        return [
+            'id' => (string) $instance->id,
+            'project_id' => (string) $instance->project_id,
+            'work_template_version_id' => (string) $instance->work_template_version_id,
+            'status' => (string) $instance->status,
+            'steps_count' => (int) $instance->steps_count,
+            'template' => [
+                'id' => (string) ($instance->templateVersion?->template?->id ?? ''),
+                'name' => (string) ($instance->templateVersion?->template?->name ?? ''),
+                'semver' => (string) ($instance->templateVersion?->semver ?? ''),
+            ],
+            'created_at' => optional($instance->created_at)?->toIso8601String(),
+            'updated_at' => optional($instance->updated_at)?->toIso8601String(),
+        ];
     }
 
     private function tenantId(): string
@@ -423,6 +551,14 @@ class WorkInstanceController extends BaseApiController
     private function instanceForTenant(string $id, string $tenantId): WorkInstance
     {
         return WorkInstance::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->firstOrFail();
+    }
+
+    private function deliverableTemplateVersionForTenant(string $id, string $tenantId): DeliverableTemplateVersion
+    {
+        return DeliverableTemplateVersion::query()
             ->where('tenant_id', $tenantId)
             ->whereKey($id)
             ->firstOrFail();
@@ -515,43 +651,4 @@ class WorkInstanceController extends BaseApiController
         ];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildDeliverableContext(WorkInstance $instance): array
-    {
-        $context = [
-            'project.name' => $instance->project?->name,
-            'wi.id' => (string) $instance->id,
-        ];
-
-        foreach ($instance->steps->sortBy('step_order') as $step) {
-            foreach ($step->values as $value) {
-                $context['fields.' . $value->field_key] = $this->fieldValueForExport($value);
-            }
-        }
-
-        return $context;
-    }
-
-    private function fieldValueForExport(WorkInstanceFieldValue $value): mixed
-    {
-        if ($value->value_number !== null) {
-            return $value->value_number;
-        }
-
-        if ($value->value_datetime !== null) {
-            return $value->value_datetime;
-        }
-
-        if ($value->value_date !== null) {
-            return $value->value_date;
-        }
-
-        if ($value->value_string !== null) {
-            return $value->value_string;
-        }
-
-        return $value->value_json;
-    }
 }

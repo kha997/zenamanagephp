@@ -3,16 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Approval;
+use App\Models\DeliverableTemplateVersion;
 use App\Models\Project;
 use App\Models\WorkInstance;
 use App\Models\WorkInstanceFieldValue;
 use App\Models\WorkInstanceStep;
 use App\Models\WorkInstanceStepAttachment;
+use App\Services\DeliverableTemplateVersionService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +23,10 @@ use Illuminate\Support\Facades\Validator;
 
 class WorkInstanceController extends BaseApiController
 {
-    public function __construct(private ZenaAuditLogger $auditLogger)
+    public function __construct(
+        private ZenaAuditLogger $auditLogger,
+        private DeliverableTemplateVersionService $deliverableTemplateVersionService
+    )
     {
     }
 
@@ -296,51 +302,64 @@ class WorkInstanceController extends BaseApiController
         }
     }
 
-    public function exportDeliverable(Request $request, string $id): JsonResponse
+    public function exportDeliverable(Request $request, string $id): JsonResponse|Response
     {
         try {
             $tenantId = $this->tenantId();
+            $userId = (string) Auth::id();
             $instance = WorkInstance::query()
-                ->with(['steps.values'])
+                ->with(['project', 'steps.values'])
                 ->where('tenant_id', $tenantId)
                 ->whereKey($id)
                 ->firstOrFail();
 
-            $payload = [
-                'format' => 'json-stub',
-                'generated_at' => now()->toIso8601String(),
-                'work_instance_id' => (string) $instance->id,
-                'work_template_version_id' => (string) $instance->work_template_version_id,
-                'project_id' => (string) $instance->project_id,
-                'steps' => $instance->steps->map(static fn (WorkInstanceStep $step): array => [
-                    'id' => (string) $step->id,
-                    'step_key' => $step->step_key,
-                    'status' => $step->status,
-                    'values' => $step->values->map(static fn (WorkInstanceFieldValue $value): array => [
-                        'field_key' => $value->field_key,
-                        'value_string' => $value->value_string,
-                        'value_number' => $value->value_number,
-                        'value_date' => $value->value_date?->toDateString(),
-                        'value_datetime' => $value->value_datetime?->toIso8601String(),
-                        'value_json' => $value->value_json,
-                    ])->values(),
-                ])->values(),
-            ];
+            $validator = Validator::make($request->all(), [
+                'deliverable_template_version_id' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            $templateVersion = DeliverableTemplateVersion::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($request->string('deliverable_template_version_id')->toString())
+                ->firstOrFail();
+
+            if ($templateVersion->storage_path === '' || !Storage::disk('local')->exists($templateVersion->storage_path)) {
+                return $this->serverError('Deliverable template source file not found');
+            }
+
+            $templateHtml = (string) Storage::disk('local')->get($templateVersion->storage_path);
+            $renderedHtml = $this->deliverableTemplateVersionService->renderHtml(
+                $templateHtml,
+                $this->buildDeliverableContext($instance)
+            );
+
+            $filename = sprintf(
+                'deliverable-%s-%s.html',
+                (string) $instance->id,
+                preg_replace('/[^A-Za-z0-9._-]/', '-', (string) $templateVersion->semver) ?? (string) $templateVersion->semver
+            );
 
             $this->auditLogger->log(
                 $request,
-                'zena.work-instance.export',
+                'work.export',
                 'work_instance',
                 (string) $instance->id,
                 200,
                 $instance->project_id,
                 $tenantId,
-                (string) Auth::id()
+                $userId,
+                ['template_version_id' => (string) $templateVersion->id]
             );
 
-            return $this->successResponse($payload, 'Deliverable export generated successfully');
+            return response($renderedHtml, 200, [
+                'Content-Type' => 'text/html; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
         } catch (ModelNotFoundException) {
-            return $this->notFound('Work instance not found');
+            return $this->notFound('Work instance or deliverable template version not found');
         }
     }
 
@@ -452,5 +471,45 @@ class WorkInstanceController extends BaseApiController
             'uploaded_by' => (string) ($attachment->uploaded_by ?? ''),
             'created_at' => optional($attachment->created_at)?->toIso8601String(),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildDeliverableContext(WorkInstance $instance): array
+    {
+        $context = [
+            'project.name' => $instance->project?->name,
+            'wi.id' => (string) $instance->id,
+        ];
+
+        foreach ($instance->steps->sortBy('step_order') as $step) {
+            foreach ($step->values as $value) {
+                $context['fields.' . $value->field_key] = $this->fieldValueForExport($value);
+            }
+        }
+
+        return $context;
+    }
+
+    private function fieldValueForExport(WorkInstanceFieldValue $value): mixed
+    {
+        if ($value->value_number !== null) {
+            return $value->value_number;
+        }
+
+        if ($value->value_datetime !== null) {
+            return $value->value_datetime;
+        }
+
+        if ($value->value_date !== null) {
+            return $value->value_date;
+        }
+
+        if ($value->value_string !== null) {
+            return $value->value_string;
+        }
+
+        return $value->value_json;
     }
 }

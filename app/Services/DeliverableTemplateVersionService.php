@@ -7,6 +7,7 @@ use InvalidArgumentException;
 class DeliverableTemplateVersionService
 {
     private const PLACEHOLDER_KEY_PATTERN = '/^[a-zA-Z0-9_.-]+$/';
+    private const PLACEHOLDER_PATTERN = '/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/';
     private const ALLOWED_TYPES = ['string', 'number', 'boolean', 'date', 'datetime', 'html'];
 
     public function computeChecksum(string $html): string
@@ -80,7 +81,7 @@ class DeliverableTemplateVersionService
      */
     public function inferPlaceholdersFromHtml(string $html): array
     {
-        preg_match_all('/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/', $html, $matches);
+        preg_match_all(self::PLACEHOLDER_PATTERN, $html, $matches);
 
         $keys = array_values(array_unique($matches[1] ?? []));
         sort($keys);
@@ -90,5 +91,40 @@ class DeliverableTemplateVersionService
             'type' => 'string',
             'required' => false,
         ], $keys);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    public function renderHtml(string $html, array $context): string
+    {
+        return (string) preg_replace_callback(
+            self::PLACEHOLDER_PATTERN,
+            fn (array $matches): string => $this->stringifyForHtml($context[$matches[1]] ?? null),
+            $html
+        );
+    }
+
+    public function stringifyForHtml(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_scalar($value)) {
+            return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return htmlspecialchars($value->format(\DateTimeInterface::ATOM), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }
+
+        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return htmlspecialchars($encoded === false ? '' : $encoded, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 }

@@ -176,6 +176,32 @@ export async function deleteWorkInstanceStepAttachment(workInstanceId: string, s
   return ensureData(response)
 }
 
+export async function exportWorkInstanceDeliverable(
+  workInstanceId: string,
+  payload: { deliverable_template_version_id: string }
+): Promise<{ blob: Blob; filename: string | null }> {
+  const response = await apiClient.postBlob(
+    zenaPath(`/work-instances/${workInstanceId}/export`),
+    payload,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/html',
+      },
+    }
+  )
+
+  const disposition = response.headers['content-disposition']
+  const filenameMatch = typeof disposition === 'string'
+    ? disposition.match(/filename="([^"]+)"/i) || disposition.match(/filename=([^;]+)/i)
+    : null
+
+  return {
+    blob: response.data,
+    filename: filenameMatch?.[1]?.trim() ?? null,
+  }
+}
+
 
 // Project-scoped Work Instances
 export async function listProjectWorkInstances(

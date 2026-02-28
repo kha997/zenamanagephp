@@ -95,6 +95,13 @@ class ApiClient {
     return response.data
   }
 
+  async postBlob(url: string, data?: any, config?: AxiosRequestConfig): Promise<AxiosResponse<Blob>> {
+    return this.instance.post<Blob>(url, data, {
+      ...config,
+      responseType: 'blob',
+    })
+  }
+
   /**
    * PUT request
    */

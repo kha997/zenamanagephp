@@ -4,9 +4,16 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import {
+  listDeliverableTemplates,
+  listDeliverableTemplateVersions,
+  type DeliverableTemplateRecord,
+  type DeliverableTemplateVersionRecord,
+} from '@/features/deliverable-templates/api'
+import {
   approveWorkInstanceStep,
   cacheWorkInstance,
   deleteWorkInstanceStepAttachment,
+  exportWorkInstanceDeliverable,
   getWorkInstance,
   listWorkInstanceStepAttachments,
   uploadWorkInstanceStepAttachment,
@@ -77,6 +84,14 @@ export function WorkInstanceDetailPage() {
   const [attachments, setAttachments] = useState<WorkStepAttachment[]>([])
   const [attachmentsLoading, setAttachmentsLoading] = useState(false)
   const [attachmentSubmitting, setAttachmentSubmitting] = useState(false)
+  const [deliverableTemplates, setDeliverableTemplates] = useState<DeliverableTemplateRecord[]>([])
+  const [deliverableVersions, setDeliverableVersions] = useState<DeliverableTemplateVersionRecord[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [selectedTemplateVersionId, setSelectedTemplateVersionId] = useState('')
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [versionsLoading, setVersionsLoading] = useState(false)
+  const [exportSubmitting, setExportSubmitting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) {
@@ -170,6 +185,79 @@ export function WorkInstanceDetailPage() {
       mounted = false
     }
   }, [instance, selectedStep])
+
+  useEffect(() => {
+    let mounted = true
+    setTemplatesLoading(true)
+
+    listDeliverableTemplates({ per_page: 100 })
+      .then(({ items }) => {
+        if (!mounted) {
+          return
+        }
+
+        setDeliverableTemplates(items)
+        setSelectedTemplateId((current) => current || items[0]?.id || '')
+      })
+      .catch((err: unknown) => {
+        if (!mounted) {
+          return
+        }
+        const message = err instanceof Error ? err.message : 'Failed to load deliverable templates'
+        setExportError(message)
+      })
+      .finally(() => {
+        if (mounted) {
+          setTemplatesLoading(false)
+        }
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!selectedTemplateId) {
+      setDeliverableVersions([])
+      setSelectedTemplateVersionId('')
+      return
+    }
+
+    let mounted = true
+    setVersionsLoading(true)
+
+    listDeliverableTemplateVersions(selectedTemplateId, { per_page: 100 })
+      .then(({ items }) => {
+        if (!mounted) {
+          return
+        }
+
+        setDeliverableVersions(items)
+        setSelectedTemplateVersionId((current) => {
+          if (current && items.some((item) => item.id === current)) {
+            return current
+          }
+          return items[0]?.id || ''
+        })
+      })
+      .catch((err: unknown) => {
+        if (!mounted) {
+          return
+        }
+        const message = err instanceof Error ? err.message : 'Failed to load deliverable template versions'
+        setExportError(message)
+      })
+      .finally(() => {
+        if (mounted) {
+          setVersionsLoading(false)
+        }
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [selectedTemplateId])
 
   const onSaveStep = async () => {
     if (!instance || !selectedStep) {
@@ -267,6 +355,35 @@ export function WorkInstanceDetailPage() {
       setError(message)
     } finally {
       setAttachmentSubmitting(false)
+    }
+  }
+
+  const onExportDeliverable = async () => {
+    if (!instance || !selectedTemplateVersionId) {
+      return
+    }
+
+    try {
+      setExportSubmitting(true)
+      setExportError(null)
+
+      const { blob, filename } = await exportWorkInstanceDeliverable(instance.id, {
+        deliverable_template_version_id: selectedTemplateVersionId,
+      })
+
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename || `deliverable-${instance.id}.html`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to export deliverable'
+      setExportError(message)
+    } finally {
+      setExportSubmitting(false)
     }
   }
 
@@ -404,6 +521,68 @@ export function WorkInstanceDetailPage() {
       </div>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {exportError ? <p className="text-sm text-red-600">{exportError}</p> : null}
+
+      <Card className="p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-900">Export deliverable</h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Select a deliverable template and version to download HTML for this work instance.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[520px]">
+            <label className="text-sm text-gray-700">
+              Template
+              <select
+                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                value={selectedTemplateId}
+                onChange={(event) => setSelectedTemplateId(event.target.value)}
+                disabled={templatesLoading || deliverableTemplates.length === 0}
+              >
+                {deliverableTemplates.length === 0 ? (
+                  <option value="">{templatesLoading ? 'Loading templates...' : 'No templates available'}</option>
+                ) : null}
+                {deliverableTemplates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.code} - {template.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="text-sm text-gray-700">
+              Version
+              <select
+                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                value={selectedTemplateVersionId}
+                onChange={(event) => setSelectedTemplateVersionId(event.target.value)}
+                disabled={versionsLoading || deliverableVersions.length === 0}
+              >
+                {deliverableVersions.length === 0 ? (
+                  <option value="">{versionsLoading ? 'Loading versions...' : 'No versions available'}</option>
+                ) : null}
+                {deliverableVersions.map((version) => (
+                  <option key={version.id} value={version.id}>
+                    {version.semver}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div>
+            <Button
+              type="button"
+              onClick={onExportDeliverable}
+              disabled={exportSubmitting || !selectedTemplateVersionId}
+            >
+              {exportSubmitting ? 'Exporting...' : 'Export deliverable'}
+            </Button>
+          </div>
+        </div>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <Card className="p-3">

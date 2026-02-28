@@ -56,4 +56,28 @@ class DeliverableTemplateVersionServiceTest extends TestCase
             ],
         ], '<div>{{project.name}}</div>');
     }
+
+    public function test_it_renders_html_with_missing_placeholders_as_empty_and_escapes_values(): void
+    {
+        $service = new DeliverableTemplateVersionService();
+
+        $rendered = $service->renderHtml(
+            '<div>{{project.name}}|{{fields.remark}}|{{fields.missing}}</div>',
+            [
+                'project.name' => 'Tower A',
+                'fields.remark' => 'Checked & signed',
+            ]
+        );
+
+        $this->assertSame('<div>Tower A|Checked &amp; signed|</div>', $rendered);
+    }
+
+    public function test_it_stringifies_complex_values_for_html_rendering(): void
+    {
+        $service = new DeliverableTemplateVersionService();
+
+        $this->assertSame('true', $service->stringifyForHtml(true));
+        $this->assertSame('12.5', $service->stringifyForHtml(12.5));
+        $this->assertSame('{&quot;status&quot;:&quot;ready&quot;}', $service->stringifyForHtml(['status' => 'ready']));
+    }
 }

@@ -58,6 +58,18 @@ export type WorkInstanceRecord = {
   updated_at?: string | null
 }
 
+export type DeliverablePdfExportOptions = {
+  preset?: 'a4_clean'
+  orientation?: 'portrait' | 'landscape'
+  header_footer?: boolean
+  margin_mm?: {
+    top?: number
+    right?: number
+    bottom?: number
+    left?: number
+  }
+}
+
 type ProjectWorkInstancesList = {
   items: WorkInstanceRecord[]
   meta: {
@@ -178,7 +190,11 @@ export async function deleteWorkInstanceStepAttachment(workInstanceId: string, s
 
 export async function exportWorkInstanceDeliverable(
   workInstanceId: string,
-  payload: { deliverable_template_version_id: string; format?: 'html' | 'pdf' }
+  payload: {
+    deliverable_template_version_id: string
+    format?: 'html' | 'pdf'
+    pdf?: DeliverablePdfExportOptions
+  }
 ): Promise<{ blob: Blob; filename: string | null }> {
   const response = await apiClient.postBlob(
     zenaPath(`/work-instances/${workInstanceId}/export`),

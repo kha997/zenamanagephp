@@ -62,16 +62,13 @@ return new class extends Migration
         }
 
         Schema::table('deliverable_template_versions', function (Blueprint $table): void {
-            try {
-                $table->dropUnique('dt_versions_template_version_unique');
-            } catch (\Throwable) {
-                // Index may not exist depending on environment history.
-            }
-
-            try {
-                $table->unique(['deliverable_template_id', 'semver'], 'dt_versions_template_semver_unique');
-            } catch (\Throwable) {
-                // Ignore if it already exists.
+            if (Schema::hasColumn('deliverable_template_versions', 'deliverable_template_id')
+                && Schema::hasColumn('deliverable_template_versions', 'semver')) {
+                try {
+                    $table->unique(['deliverable_template_id', 'semver'], 'dt_versions_template_semver_unique');
+                } catch (\Throwable) {
+                    // Ignore if it already exists.
+                }
             }
 
             try {
@@ -107,11 +104,6 @@ return new class extends Migration
 
             try {
                 $table->dropIndex('dt_versions_tenant_published_index');
-            } catch (\Throwable) {
-            }
-
-            try {
-                $table->unique(['deliverable_template_id', 'version'], 'dt_versions_template_version_unique');
             } catch (\Throwable) {
             }
 

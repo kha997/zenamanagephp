@@ -340,6 +340,9 @@ class WorkInstanceController extends BaseApiController
                 $this->buildDeliverableContext($instance)
             );
             $format = $request->string('format')->toString() ?: 'html';
+            $pdfOptions = $format === 'pdf'
+                ? $this->deliverablePdfExportService->normalizeOptions($this->pdfRequestPayload($request))
+                : null;
 
             $filename = sprintf(
                 'deliverable-%s-%s.%s',
@@ -349,8 +352,25 @@ class WorkInstanceController extends BaseApiController
             );
 
             $payload = $format === 'pdf'
-                ? $this->deliverablePdfExportService->render($renderedHtml)
+                ? $this->deliverablePdfExportService->render($renderedHtml, $pdfOptions ?? [], [
+                    'project_name' => (string) ($instance->project?->name ?? ''),
+                    'template_semver' => (string) $templateVersion->semver,
+                    'generated_at' => now()->toIso8601String(),
+                ])
                 : $renderedHtml;
+
+            $auditMeta = [
+                'template_version_id' => (string) $templateVersion->id,
+                'format' => $format,
+            ];
+
+            if ($pdfOptions !== null) {
+                $auditMeta['pdf'] = [
+                    'preset' => $pdfOptions['preset'],
+                    'orientation' => $pdfOptions['orientation'],
+                    'header_footer' => $pdfOptions['header_footer'],
+                ];
+            }
 
             $this->auditLogger->log(
                 $request,
@@ -361,10 +381,7 @@ class WorkInstanceController extends BaseApiController
                 $instance->project_id,
                 $tenantId,
                 $userId,
-                [
-                    'template_version_id' => (string) $templateVersion->id,
-                    'format' => $format,
-                ]
+                $auditMeta
             );
 
             return response($payload, 200, [
@@ -376,6 +393,16 @@ class WorkInstanceController extends BaseApiController
         } catch (DeliverablePdfExportUnavailableException $exception) {
             return $this->errorResponse($exception->getMessage(), 501);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function pdfRequestPayload(Request $request): array
+    {
+        $payload = $request->input('pdf');
+
+        return is_array($payload) ? $payload : [];
     }
 
     private function tenantId(): string

@@ -19,6 +19,7 @@ class ZenaAuditLogger
         'entity_id',
         'template_version_id',
         'format',
+        'pdf',
     ];
 
     private const FORBIDDEN_META_PATTERNS = [

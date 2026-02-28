@@ -10,6 +10,7 @@ import {
   type DeliverableTemplateVersionRecord,
 } from '@/features/deliverable-templates/api'
 import {
+  type DeliverablePdfExportOptions,
   approveWorkInstanceStep,
   cacheWorkInstance,
   deleteWorkInstanceStepAttachment,
@@ -89,6 +90,9 @@ export function WorkInstanceDetailPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedTemplateVersionId, setSelectedTemplateVersionId] = useState('')
   const [exportFormat, setExportFormat] = useState<'html' | 'pdf'>('html')
+  const [pdfPreset, setPdfPreset] = useState<NonNullable<DeliverablePdfExportOptions['preset']>>('a4_clean')
+  const [pdfOrientation, setPdfOrientation] = useState<NonNullable<DeliverablePdfExportOptions['orientation']>>('portrait')
+  const [pdfHeaderFooter, setPdfHeaderFooter] = useState(true)
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [versionsLoading, setVersionsLoading] = useState(false)
   const [exportSubmitting, setExportSubmitting] = useState(false)
@@ -371,6 +375,13 @@ export function WorkInstanceDetailPage() {
       const { blob, filename } = await exportWorkInstanceDeliverable(instance.id, {
         deliverable_template_version_id: selectedTemplateVersionId,
         format: exportFormat,
+        pdf: exportFormat === 'pdf'
+          ? {
+              preset: pdfPreset,
+              orientation: pdfOrientation,
+              header_footer: pdfHeaderFooter,
+            }
+          : undefined,
       })
 
       const url = window.URL.createObjectURL(blob)
@@ -534,7 +545,7 @@ export function WorkInstanceDetailPage() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[680px]">
+          <div className="grid gap-3 lg:min-w-[680px]">
             <label className="text-sm text-gray-700">
               Template
               <select
@@ -584,6 +595,42 @@ export function WorkInstanceDetailPage() {
                 <option value="pdf">PDF</option>
               </select>
             </label>
+
+            {exportFormat === 'pdf' ? (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="text-sm text-gray-700">
+                  Preset
+                  <select
+                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                    value={pdfPreset}
+                    onChange={(event) => setPdfPreset(event.target.value as 'a4_clean')}
+                  >
+                    <option value="a4_clean">A4 Clean</option>
+                  </select>
+                </label>
+
+                <label className="text-sm text-gray-700">
+                  Orientation
+                  <select
+                    className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                    value={pdfOrientation}
+                    onChange={(event) => setPdfOrientation(event.target.value as 'portrait' | 'landscape')}
+                  >
+                    <option value="portrait">Portrait</option>
+                    <option value="landscape">Landscape</option>
+                  </select>
+                </label>
+
+                <label className="flex items-center gap-2 self-end rounded border border-gray-200 px-3 py-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={pdfHeaderFooter}
+                    onChange={(event) => setPdfHeaderFooter(event.target.checked)}
+                  />
+                  Header/footer
+                </label>
+              </div>
+            ) : null}
           </div>
 
           <div>

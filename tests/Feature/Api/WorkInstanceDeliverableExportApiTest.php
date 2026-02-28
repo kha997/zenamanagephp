@@ -117,9 +117,39 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         [, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
 
         $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('normalizeOptions')
+                ->once()
+                ->with([])
+                ->andReturn([
+                    'preset' => 'a4_clean',
+                    'orientation' => 'portrait',
+                    'header_footer' => true,
+                    'margin_mm' => [
+                        'top' => 18,
+                        'right' => 14,
+                        'bottom' => 18,
+                        'left' => 14,
+                    ],
+                ]);
             $mock->shouldReceive('render')
                 ->once()
-                ->with(Mockery::on(static fn (string $html): bool => str_contains($html, 'North Tower')))
+                ->with(
+                    Mockery::on(static fn (string $html): bool => str_contains($html, 'North Tower')),
+                    Mockery::on(static fn (array $options): bool => $options === [
+                        'preset' => 'a4_clean',
+                        'orientation' => 'portrait',
+                        'header_footer' => true,
+                        'margin_mm' => [
+                            'top' => 18,
+                            'right' => 14,
+                            'bottom' => 18,
+                            'left' => 14,
+                        ],
+                    ]),
+                    Mockery::on(static fn (array $meta): bool => ($meta['project_name'] ?? null) === 'North Tower'
+                        && ($meta['template_semver'] ?? null) === '1.2.3'
+                        && is_string($meta['generated_at'] ?? null))
+                )
                 ->andReturn("%PDF-1.7\nfake deliverable\n");
         }));
 
@@ -146,6 +176,20 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         [$tenant, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
 
         $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('normalizeOptions')
+                ->once()
+                ->with([])
+                ->andReturn([
+                    'preset' => 'a4_clean',
+                    'orientation' => 'portrait',
+                    'header_footer' => true,
+                    'margin_mm' => [
+                        'top' => 18,
+                        'right' => 14,
+                        'bottom' => 18,
+                        'left' => 14,
+                    ],
+                ]);
             $mock->shouldReceive('render')->once()->andReturn("%PDF-1.7\nfake deliverable\n");
         }));
 
@@ -166,6 +210,112 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
 
         $this->assertSame((string) $version->id, $audit->meta['template_version_id'] ?? null);
         $this->assertSame('pdf', $audit->meta['format'] ?? null);
+        $this->assertSame('a4_clean', $audit->meta['pdf']['preset'] ?? null);
+        $this->assertSame('portrait', $audit->meta['pdf']['orientation'] ?? null);
+        $this->assertTrue($audit->meta['pdf']['header_footer'] ?? false);
+    }
+
+    public function test_export_pdf_with_options_returns_pdf_download(): void
+    {
+        [, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
+
+        $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('normalizeOptions')
+                ->once()
+                ->with([
+                    'orientation' => 'landscape',
+                    'header_footer' => false,
+                ])
+                ->andReturn([
+                    'preset' => 'a4_clean',
+                    'orientation' => 'landscape',
+                    'header_footer' => false,
+                    'margin_mm' => [
+                        'top' => 18,
+                        'right' => 14,
+                        'bottom' => 18,
+                        'left' => 14,
+                    ],
+                ]);
+
+            $mock->shouldReceive('render')
+                ->once()
+                ->with(
+                    Mockery::type('string'),
+                    [
+                        'preset' => 'a4_clean',
+                        'orientation' => 'landscape',
+                        'header_footer' => false,
+                        'margin_mm' => [
+                            'top' => 18,
+                            'right' => 14,
+                            'bottom' => 18,
+                            'left' => 14,
+                        ],
+                    ],
+                    Mockery::type('array')
+                )
+                ->andReturn("%PDF-1.7\nfake deliverable\n");
+        }));
+
+        $response = $this->withHeaders($this->authHeaders($user))
+            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+                'deliverable_template_version_id' => (string) $version->id,
+                'format' => 'pdf',
+                'pdf' => [
+                    'orientation' => 'landscape',
+                    'header_footer' => false,
+                ],
+            ]);
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+    }
+
+    public function test_export_pdf_audit_log_includes_pdf_option_metadata(): void
+    {
+        [$tenant, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
+
+        $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('normalizeOptions')->once()->andReturn([
+                'preset' => 'a4_clean',
+                'orientation' => 'landscape',
+                'header_footer' => false,
+                'margin_mm' => [
+                    'top' => 18,
+                    'right' => 14,
+                    'bottom' => 18,
+                    'left' => 14,
+                ],
+            ]);
+            $mock->shouldReceive('render')->once()->andReturn("%PDF-1.7\nfake deliverable\n");
+        }));
+
+        $this->withHeaders($this->authHeaders($user))
+            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+                'deliverable_template_version_id' => (string) $version->id,
+                'format' => 'pdf',
+                'pdf' => [
+                    'orientation' => 'landscape',
+                    'header_footer' => false,
+                    'preset' => 'bad-value',
+                ],
+            ])
+            ->assertOk();
+
+        /** @var AuditLog $audit */
+        $audit = AuditLog::query()
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('user_id', (string) $user->id)
+            ->where('action', 'work.export')
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame((string) $version->id, $audit->meta['template_version_id'] ?? null);
+        $this->assertSame('pdf', $audit->meta['format'] ?? null);
+        $this->assertSame('a4_clean', $audit->meta['pdf']['preset'] ?? null);
+        $this->assertSame('landscape', $audit->meta['pdf']['orientation'] ?? null);
+        $this->assertFalse($audit->meta['pdf']['header_footer'] ?? true);
     }
 
     public function test_export_pdf_returns_501_when_runtime_dependencies_are_missing(): void
@@ -173,6 +323,20 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         [, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
 
         $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('normalizeOptions')
+                ->once()
+                ->with([])
+                ->andReturn([
+                    'preset' => 'a4_clean',
+                    'orientation' => 'portrait',
+                    'header_footer' => true,
+                    'margin_mm' => [
+                        'top' => 18,
+                        'right' => 14,
+                        'bottom' => 18,
+                        'left' => 14,
+                    ],
+                ]);
             $mock->shouldReceive('render')
                 ->once()
                 ->andThrow(new DeliverablePdfExportUnavailableException());

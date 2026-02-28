@@ -9,12 +9,29 @@ use RuntimeException;
 
 class DeliverablePdfExportService
 {
-    public function render(string $html): string
+    private const DEFAULT_OPTIONS = [
+        'preset' => 'a4_clean',
+        'orientation' => 'portrait',
+        'header_footer' => true,
+        'margin_mm' => [
+            'top' => 18,
+            'right' => 14,
+            'bottom' => 18,
+            'left' => 14,
+        ],
+    ];
+
+    private const ALLOWED_PRESETS = ['a4_clean'];
+
+    private const ALLOWED_ORIENTATIONS = ['portrait', 'landscape'];
+
+    public function render(string $html, array $options = [], array $documentMeta = []): string
     {
         $htmlPath = $this->tempPath('html');
         $pdfPath = $this->tempPath('pdf');
         $environment = $this->buildEnvironment();
         $nodeBinary = $this->resolveNodeBinary();
+        $normalizedOptions = $this->normalizeOptions($options);
 
         try {
             if (file_put_contents($htmlPath, $html) === false) {
@@ -28,7 +45,10 @@ class DeliverablePdfExportService
             }
 
             $this->ensureDependenciesAvailable($nodeBinary, $environment);
-            $this->runCommand($this->buildCommand($nodeBinary, $htmlPath, $pdfPath), $environment);
+            $this->runCommand(
+                $this->buildCommand($nodeBinary, $htmlPath, $pdfPath, $normalizedOptions, $documentMeta),
+                $environment
+            );
 
             if (!is_file($pdfPath)) {
                 throw new RuntimeException('Deliverable PDF export did not produce an output file.');
@@ -70,14 +90,82 @@ class DeliverablePdfExportService
     /**
      * @return array<int, string>
      */
-    protected function buildCommand(string $nodeBinary, string $htmlPath, string $pdfPath): array
-    {
-        return [
+    protected function buildCommand(
+        string $nodeBinary,
+        string $htmlPath,
+        string $pdfPath,
+        array $options,
+        array $documentMeta = []
+    ): array {
+        $normalizedOptions = $this->normalizeOptions($options);
+
+        $command = [
             $nodeBinary,
             $this->scriptPath(),
             $htmlPath,
             $pdfPath,
+            '--preset',
+            (string) $normalizedOptions['preset'],
+            '--orientation',
+            (string) $normalizedOptions['orientation'],
+            '--header-footer',
+            $normalizedOptions['header_footer'] ? 'true' : 'false',
+            '--margins',
+            implode(',', [
+                (string) $normalizedOptions['margin_mm']['top'],
+                (string) $normalizedOptions['margin_mm']['right'],
+                (string) $normalizedOptions['margin_mm']['bottom'],
+                (string) $normalizedOptions['margin_mm']['left'],
+            ]),
         ];
+
+        $projectName = trim((string) ($documentMeta['project_name'] ?? ''));
+        if ($projectName !== '') {
+            $command[] = '--project-name';
+            $command[] = $projectName;
+        }
+
+        $templateSemver = trim((string) ($documentMeta['template_semver'] ?? ''));
+        if ($templateSemver !== '') {
+            $command[] = '--template-semver';
+            $command[] = $templateSemver;
+        }
+
+        $generatedAt = trim((string) ($documentMeta['generated_at'] ?? ''));
+        if ($generatedAt !== '') {
+            $command[] = '--generated-at';
+            $command[] = $generatedAt;
+        }
+
+        return $command;
+    }
+
+    public function normalizeOptions(array $options = []): array
+    {
+        $defaults = self::DEFAULT_OPTIONS;
+        $normalized = $defaults;
+
+        $preset = $options['preset'] ?? null;
+        if (is_string($preset) && in_array($preset, self::ALLOWED_PRESETS, true)) {
+            $normalized['preset'] = $preset;
+        }
+
+        $orientation = $options['orientation'] ?? null;
+        if (is_string($orientation) && in_array($orientation, self::ALLOWED_ORIENTATIONS, true)) {
+            $normalized['orientation'] = $orientation;
+        }
+
+        if (array_key_exists('header_footer', $options)) {
+            $headerFooter = filter_var($options['header_footer'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if (is_bool($headerFooter)) {
+                $normalized['header_footer'] = $headerFooter;
+            }
+        }
+
+        $marginInput = $options['margin_mm'] ?? null;
+        $normalized['margin_mm'] = $this->normalizeMargins(is_array($marginInput) ? $marginInput : []);
+
+        return $normalized;
     }
 
     /**
@@ -184,5 +272,32 @@ class DeliverablePdfExportService
         }
 
         return $target;
+    }
+
+    /**
+     * @param array<string, mixed> $margins
+     * @return array{top:int,right:int,bottom:int,left:int}
+     */
+    private function normalizeMargins(array $margins): array
+    {
+        $defaults = self::DEFAULT_OPTIONS['margin_mm'];
+        $normalized = $defaults;
+
+        foreach ($defaults as $side => $defaultValue) {
+            $rawValue = $margins[$side] ?? null;
+
+            if (!is_int($rawValue) && !is_float($rawValue) && !(is_string($rawValue) && is_numeric($rawValue))) {
+                continue;
+            }
+
+            $value = (int) round((float) $rawValue);
+            if ($value < 0 || $value > 50) {
+                continue;
+            }
+
+            $normalized[$side] = $value;
+        }
+
+        return $normalized;
     }
 }

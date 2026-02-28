@@ -231,6 +231,17 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/publish', [\App\Http\Controllers\Api\WorkTemplateController::class, 'publish'])->middleware('rbac:template.publish')->name('work-templates.publish');
         });
 
+        // Deliverable template routes
+        Route::group(['prefix' => 'deliverable-templates'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\DeliverableTemplateController::class, 'index'])->middleware('rbac:template.view')->name('deliverable-templates.index');
+            Route::post('/', [\App\Http\Controllers\Api\DeliverableTemplateController::class, 'store'])->middleware('rbac:template.edit_draft')->name('deliverable-templates.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\DeliverableTemplateController::class, 'show'])->middleware('rbac:template.view')->name('deliverable-templates.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\DeliverableTemplateController::class, 'update'])->middleware('rbac:template.edit_draft')->name('deliverable-templates.update');
+            Route::post('/{id}/upload-version', [\App\Http\Controllers\Api\DeliverableTemplateController::class, 'uploadVersion'])->middleware('rbac:template.edit_draft')->name('deliverable-templates.upload-version');
+            Route::post('/{id}/publish-version', [\App\Http\Controllers\Api\DeliverableTemplateController::class, 'publishVersion'])->middleware('rbac:template.publish')->name('deliverable-templates.publish-version');
+            Route::get('/{id}/versions', [\App\Http\Controllers\Api\DeliverableTemplateController::class, 'versions'])->middleware('rbac:template.view')->name('deliverable-templates.versions');
+        });
+
         // Tasks Management routes
         Route::group(['prefix' => 'tasks'], function () {
             Route::get('/', [\App\Http\Controllers\Api\TaskController::class, 'index'])->middleware('rbac:task.view')->name('tasks.index');

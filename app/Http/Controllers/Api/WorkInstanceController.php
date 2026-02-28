@@ -11,7 +11,7 @@ use App\Models\WorkInstanceFieldValue;
 use App\Models\WorkInstanceStep;
 use App\Models\WorkInstanceStepAttachment;
 use App\Services\DeliverablePdfExportService;
-use App\Services\DeliverableTemplateVersionService;
+use App\Services\WorkInstanceExportBundleService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -23,13 +23,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class WorkInstanceController extends BaseApiController
 {
     public function __construct(
         private ZenaAuditLogger $auditLogger,
-        private DeliverableTemplateVersionService $deliverableTemplateVersionService,
-        private DeliverablePdfExportService $deliverablePdfExportService
+        private DeliverablePdfExportService $deliverablePdfExportService,
+        private WorkInstanceExportBundleService $workInstanceExportBundleService
     )
     {
     }
@@ -336,11 +337,7 @@ class WorkInstanceController extends BaseApiController
         try {
             $tenantId = $this->tenantId();
             $userId = (string) Auth::id();
-            $instance = WorkInstance::query()
-                ->with(['project', 'steps.values'])
-                ->where('tenant_id', $tenantId)
-                ->whereKey($id)
-                ->firstOrFail();
+            $instance = $this->instanceForTenant($id, $tenantId)->load(['project', 'steps.values']);
 
             $validator = Validator::make($request->all(), [
                 'deliverable_template_version_id' => 'required|string',
@@ -351,20 +348,11 @@ class WorkInstanceController extends BaseApiController
                 return $this->validationError($validator->errors());
             }
 
-            $templateVersion = DeliverableTemplateVersion::query()
-                ->where('tenant_id', $tenantId)
-                ->whereKey($request->string('deliverable_template_version_id')->toString())
-                ->firstOrFail();
-
-            if ($templateVersion->storage_path === '' || !Storage::disk('local')->exists($templateVersion->storage_path)) {
-                return $this->serverError('Deliverable template source file not found');
-            }
-
-            $templateHtml = (string) Storage::disk('local')->get($templateVersion->storage_path);
-            $renderedHtml = $this->deliverableTemplateVersionService->renderHtml(
-                $templateHtml,
-                $this->buildDeliverableContext($instance)
+            $templateVersion = $this->deliverableTemplateVersionForTenant(
+                $request->string('deliverable_template_version_id')->toString(),
+                $tenantId
             );
+            $renderedHtml = $this->workInstanceExportBundleService->renderHtmlForInstance($instance, $templateVersion);
             $format = $request->string('format')->toString() ?: 'html';
             $pdfOptions = $format === 'pdf'
                 ? $this->deliverablePdfExportService->normalizeOptions($this->pdfRequestPayload($request))
@@ -418,6 +406,59 @@ class WorkInstanceController extends BaseApiController
             return $this->notFound('Work instance or deliverable template version not found');
         } catch (DeliverablePdfExportUnavailableException $exception) {
             return $this->errorResponse($exception->getMessage(), 501);
+        } catch (\RuntimeException $exception) {
+            return $this->serverError($exception->getMessage());
+        }
+    }
+
+    public function exportBundle(Request $request, string $id): JsonResponse|BinaryFileResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'deliverable_template_version_id' => 'required|string',
+            'pdf' => 'nullable|array',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $tenantId = $this->tenantId();
+            $userId = (string) Auth::id();
+            $instance = $this->instanceForTenant($id, $tenantId)->load(['project', 'steps.values', 'steps.attachments']);
+            $templateVersion = $this->deliverableTemplateVersionForTenant(
+                $request->string('deliverable_template_version_id')->toString(),
+                $tenantId
+            );
+            $bundle = $this->workInstanceExportBundleService->buildZipForInstance($instance, [
+                'template_version' => $templateVersion,
+                'pdf' => $this->pdfRequestPayload($request),
+            ]);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.work-instance.export.bundle',
+                'work_instance',
+                (string) $instance->id,
+                200,
+                $instance->project_id,
+                $tenantId,
+                $userId,
+                [
+                    'template_version_id' => (string) $templateVersion->id,
+                    'format' => 'zip',
+                ]
+            );
+
+            return response()->download(
+                $bundle['zip_path'],
+                $bundle['zip_filename'],
+                ['Content-Type' => 'application/zip']
+            )->deleteFileAfterSend(true);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work instance or deliverable template version not found');
+        } catch (\RuntimeException $exception) {
+            return $this->serverError($exception->getMessage());
         }
     }
 
@@ -515,6 +556,14 @@ class WorkInstanceController extends BaseApiController
             ->firstOrFail();
     }
 
+    private function deliverableTemplateVersionForTenant(string $id, string $tenantId): DeliverableTemplateVersion
+    {
+        return DeliverableTemplateVersion::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->firstOrFail();
+    }
+
     private function stepForInstance(WorkInstance $instance, string $stepId, string $tenantId): WorkInstanceStep
     {
         return WorkInstanceStep::query()
@@ -602,43 +651,4 @@ class WorkInstanceController extends BaseApiController
         ];
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildDeliverableContext(WorkInstance $instance): array
-    {
-        $context = [
-            'project.name' => $instance->project?->name,
-            'wi.id' => (string) $instance->id,
-        ];
-
-        foreach ($instance->steps->sortBy('step_order') as $step) {
-            foreach ($step->values as $value) {
-                $context['fields.' . $value->field_key] = $this->fieldValueForExport($value);
-            }
-        }
-
-        return $context;
-    }
-
-    private function fieldValueForExport(WorkInstanceFieldValue $value): mixed
-    {
-        if ($value->value_number !== null) {
-            return $value->value_number;
-        }
-
-        if ($value->value_datetime !== null) {
-            return $value->value_datetime;
-        }
-
-        if ($value->value_date !== null) {
-            return $value->value_date;
-        }
-
-        if ($value->value_string !== null) {
-            return $value->value_string;
-        }
-
-        return $value->value_json;
-    }
 }

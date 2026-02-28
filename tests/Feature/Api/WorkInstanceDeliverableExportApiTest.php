@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\AuditLog;
 use App\Models\DeliverableTemplate;
@@ -165,6 +166,29 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
 
         $this->assertSame((string) $version->id, $audit->meta['template_version_id'] ?? null);
         $this->assertSame('pdf', $audit->meta['format'] ?? null);
+    }
+
+    public function test_export_pdf_returns_501_when_runtime_dependencies_are_missing(): void
+    {
+        [, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
+
+        $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('render')
+                ->once()
+                ->andThrow(new DeliverablePdfExportUnavailableException());
+        }));
+
+        $response = $this->withHeaders($this->authHeaders($user))
+            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+                'deliverable_template_version_id' => (string) $version->id,
+                'format' => 'pdf',
+            ]);
+
+        $response->assertStatus(501);
+        $response->assertJson([
+            'success' => false,
+            'message' => DeliverablePdfExportUnavailableException::MESSAGE,
+        ]);
     }
 
     /**

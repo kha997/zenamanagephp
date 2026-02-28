@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Models\Approval;
 use App\Models\DeliverableTemplateVersion;
 use App\Models\Project;
@@ -372,6 +373,8 @@ class WorkInstanceController extends BaseApiController
             ]);
         } catch (ModelNotFoundException) {
             return $this->notFound('Work instance or deliverable template version not found');
+        } catch (DeliverablePdfExportUnavailableException $exception) {
+            return $this->errorResponse($exception->getMessage(), 501);
         }
     }
 

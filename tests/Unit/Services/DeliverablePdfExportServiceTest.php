@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Services\DeliverablePdfExportService;
 use Tests\TestCase;
 
@@ -17,6 +18,10 @@ class DeliverablePdfExportServiceTest extends TestCase
             /** @var array<string, string> */
             public array $capturedEnvironment = [];
 
+            protected function ensureDependenciesAvailable(string $nodeBinary, array $environment): void
+            {
+            }
+
             protected function runCommand(array $command, array $environment): void
             {
                 $this->capturedCommand = $command;
@@ -29,7 +34,7 @@ class DeliverablePdfExportServiceTest extends TestCase
         $pdf = $service->render('<html><body><h1>North Tower</h1></body></html>');
 
         $this->assertSame("%PDF-1.7\nfake pdf\n", $pdf);
-        $this->assertSame('node', $service->capturedCommand[0]);
+        $this->assertStringEndsWith('/node', $service->capturedCommand[0]);
         $this->assertSame(base_path('scripts/render_deliverable_pdf.mjs'), $service->capturedCommand[1]);
         $this->assertSame([], $service->capturedEnvironment);
     }
@@ -44,6 +49,10 @@ class DeliverablePdfExportServiceTest extends TestCase
             {
                 /** @var array<string, string> */
                 public array $capturedEnvironment = [];
+
+                protected function ensureDependenciesAvailable(string $nodeBinary, array $environment): void
+                {
+                }
 
                 protected function runCommand(array $command, array $environment): void
                 {
@@ -63,5 +72,25 @@ class DeliverablePdfExportServiceTest extends TestCase
                 putenv('DELIVERABLE_PDF_BROWSER_PATH=' . $previous);
             }
         }
+    }
+
+    public function test_it_throws_a_specific_exception_when_node_is_unavailable(): void
+    {
+        $service = new class extends DeliverablePdfExportService
+        {
+            protected function resolveNodeBinary(): ?string
+            {
+                return null;
+            }
+
+            protected function warnUnavailable(string $reason): void
+            {
+            }
+        };
+
+        $this->expectException(DeliverablePdfExportUnavailableException::class);
+        $this->expectExceptionMessage(DeliverablePdfExportUnavailableException::MESSAGE);
+
+        $service->render('<html><body>Export</body></html>');
     }
 }

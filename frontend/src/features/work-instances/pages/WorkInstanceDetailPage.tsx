@@ -88,6 +88,7 @@ export function WorkInstanceDetailPage() {
   const [deliverableVersions, setDeliverableVersions] = useState<DeliverableTemplateVersionRecord[]>([])
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedTemplateVersionId, setSelectedTemplateVersionId] = useState('')
+  const [exportFormat, setExportFormat] = useState<'html' | 'pdf'>('html')
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [versionsLoading, setVersionsLoading] = useState(false)
   const [exportSubmitting, setExportSubmitting] = useState(false)
@@ -369,12 +370,13 @@ export function WorkInstanceDetailPage() {
 
       const { blob, filename } = await exportWorkInstanceDeliverable(instance.id, {
         deliverable_template_version_id: selectedTemplateVersionId,
+        format: exportFormat,
       })
 
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = filename || `deliverable-${instance.id}.html`
+      link.download = filename || `deliverable-${instance.id}.${exportFormat}`
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -528,11 +530,11 @@ export function WorkInstanceDetailPage() {
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-gray-900">Export deliverable</h2>
             <p className="mt-1 text-sm text-gray-600">
-              Select a deliverable template and version to download HTML for this work instance.
+              Select a deliverable template, version, and format to download this work instance export.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[520px]">
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[680px]">
             <label className="text-sm text-gray-700">
               Template
               <select
@@ -568,6 +570,18 @@ export function WorkInstanceDetailPage() {
                     {version.semver}
                   </option>
                 ))}
+              </select>
+            </label>
+
+            <label className="text-sm text-gray-700">
+              Format
+              <select
+                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                value={exportFormat}
+                onChange={(event) => setExportFormat(event.target.value as 'html' | 'pdf')}
+              >
+                <option value="html">HTML</option>
+                <option value="pdf">PDF</option>
               </select>
             </label>
           </div>

@@ -41,3 +41,8 @@ Environment overrides:
 - Logging: configure `LOG_CHANNEL` for production aggregation
 - Storage: configure `FILESYSTEM_DISK` (local/s3, etc.)
 - Mail: configure `MAIL_MAILER` and credentials
+
+## PDF Export Runtime
+- Install Node dependencies at the repo root with `npm ci`
+- Install Chromium for Playwright with `npx playwright install chromium`
+- Linux hosts may also need Playwright system packages; if Chromium launch fails during provisioning, run `npx playwright install --with-deps chromium` or install the equivalent distro packages documented by Playwright

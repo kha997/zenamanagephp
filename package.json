@@ -18,7 +18,9 @@
     "dev": "vite",
     "preview": "vite preview",
     "test:e2e:smoke": "npm run test:e2e",
-    "test:e2e:smoke:finance": "npm run test:e2e"
+    "test:e2e:smoke:finance": "npm run test:e2e",
+    "pw:install": "playwright install --with-deps chromium",
+    "pw:install:chromium": "playwright install chromium"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",
@@ -26,6 +28,7 @@
     "@emotion/styled": "^11.11.0",
     "axios": "^1.6.2",
     "framer-motion": "^10.16.4",
+    "playwright": "^1.52.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.1"

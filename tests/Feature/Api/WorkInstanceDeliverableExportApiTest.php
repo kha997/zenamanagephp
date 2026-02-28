@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\AuditLog;
 use App\Models\DeliverableTemplate;
@@ -14,9 +15,11 @@ use App\Models\WorkInstanceFieldValue;
 use App\Models\WorkInstanceStep;
 use App\Models\WorkTemplate;
 use App\Models\WorkTemplateVersion;
+use App\Services\DeliverablePdfExportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Mockery;
 use Tests\TestCase;
 use Tests\Traits\TenantUserFactoryTrait;
 
@@ -106,6 +109,86 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         $this->assertSame('work_instance', $audit->entity_type);
         $this->assertSame((string) $instance->id, $audit->entity_id);
         $this->assertSame((string) $version->id, $audit->meta['template_version_id'] ?? null);
+        $this->assertSame('html', $audit->meta['format'] ?? null);
+    }
+
+    public function test_export_pdf_returns_pdf_download(): void
+    {
+        [, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
+
+        $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('render')
+                ->once()
+                ->with(Mockery::on(static fn (string $html): bool => str_contains($html, 'North Tower')))
+                ->andReturn("%PDF-1.7\nfake deliverable\n");
+        }));
+
+        $response = $this->withHeaders($this->authHeaders($user))
+            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+                'deliverable_template_version_id' => (string) $version->id,
+                'format' => 'pdf',
+            ]);
+
+        $response->assertOk();
+        $this->assertSame('application/pdf', $response->headers->get('content-type'));
+        $this->assertSame(
+            'attachment; filename="deliverable-' . $instance->id . '-1.2.3.pdf"',
+            $response->headers->get('content-disposition')
+        );
+
+        $content = $response->getContent();
+        $this->assertIsString($content);
+        $this->assertStringStartsWith('%PDF-1.7', $content);
+    }
+
+    public function test_export_pdf_writes_audit_log_with_format_metadata(): void
+    {
+        [$tenant, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
+
+        $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('render')->once()->andReturn("%PDF-1.7\nfake deliverable\n");
+        }));
+
+        $this->withHeaders($this->authHeaders($user))
+            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+                'deliverable_template_version_id' => (string) $version->id,
+                'format' => 'pdf',
+            ])
+            ->assertOk();
+
+        /** @var AuditLog $audit */
+        $audit = AuditLog::query()
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('user_id', (string) $user->id)
+            ->where('action', 'work.export')
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertSame((string) $version->id, $audit->meta['template_version_id'] ?? null);
+        $this->assertSame('pdf', $audit->meta['format'] ?? null);
+    }
+
+    public function test_export_pdf_returns_501_when_runtime_dependencies_are_missing(): void
+    {
+        [, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
+
+        $this->app->instance(DeliverablePdfExportService::class, Mockery::mock(DeliverablePdfExportService::class, function ($mock): void {
+            $mock->shouldReceive('render')
+                ->once()
+                ->andThrow(new DeliverablePdfExportUnavailableException());
+        }));
+
+        $response = $this->withHeaders($this->authHeaders($user))
+            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+                'deliverable_template_version_id' => (string) $version->id,
+                'format' => 'pdf',
+            ]);
+
+        $response->assertStatus(501);
+        $response->assertJson([
+            'success' => false,
+            'message' => DeliverablePdfExportUnavailableException::MESSAGE,
+        ]);
     }
 
     /**

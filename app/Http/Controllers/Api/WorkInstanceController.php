@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Models\Approval;
 use App\Models\DeliverableTemplateVersion;
 use App\Models\Project;
@@ -9,6 +10,7 @@ use App\Models\WorkInstance;
 use App\Models\WorkInstanceFieldValue;
 use App\Models\WorkInstanceStep;
 use App\Models\WorkInstanceStepAttachment;
+use App\Services\DeliverablePdfExportService;
 use App\Services\DeliverableTemplateVersionService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -25,7 +27,8 @@ class WorkInstanceController extends BaseApiController
 {
     public function __construct(
         private ZenaAuditLogger $auditLogger,
-        private DeliverableTemplateVersionService $deliverableTemplateVersionService
+        private DeliverableTemplateVersionService $deliverableTemplateVersionService,
+        private DeliverablePdfExportService $deliverablePdfExportService
     )
     {
     }
@@ -315,6 +318,7 @@ class WorkInstanceController extends BaseApiController
 
             $validator = Validator::make($request->all(), [
                 'deliverable_template_version_id' => 'required|string',
+                'format' => 'nullable|in:html,pdf',
             ]);
 
             if ($validator->fails()) {
@@ -335,12 +339,18 @@ class WorkInstanceController extends BaseApiController
                 $templateHtml,
                 $this->buildDeliverableContext($instance)
             );
+            $format = $request->string('format')->toString() ?: 'html';
 
             $filename = sprintf(
-                'deliverable-%s-%s.html',
+                'deliverable-%s-%s.%s',
                 (string) $instance->id,
-                preg_replace('/[^A-Za-z0-9._-]/', '-', (string) $templateVersion->semver) ?? (string) $templateVersion->semver
+                preg_replace('/[^A-Za-z0-9._-]/', '-', (string) $templateVersion->semver) ?? (string) $templateVersion->semver,
+                $format
             );
+
+            $payload = $format === 'pdf'
+                ? $this->deliverablePdfExportService->render($renderedHtml)
+                : $renderedHtml;
 
             $this->auditLogger->log(
                 $request,
@@ -351,15 +361,20 @@ class WorkInstanceController extends BaseApiController
                 $instance->project_id,
                 $tenantId,
                 $userId,
-                ['template_version_id' => (string) $templateVersion->id]
+                [
+                    'template_version_id' => (string) $templateVersion->id,
+                    'format' => $format,
+                ]
             );
 
-            return response($renderedHtml, 200, [
-                'Content-Type' => 'text/html; charset=utf-8',
+            return response($payload, 200, [
+                'Content-Type' => $format === 'pdf' ? 'application/pdf' : 'text/html; charset=utf-8',
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ]);
         } catch (ModelNotFoundException) {
             return $this->notFound('Work instance or deliverable template version not found');
+        } catch (DeliverablePdfExportUnavailableException $exception) {
+            return $this->errorResponse($exception->getMessage(), 501);
         }
     }
 

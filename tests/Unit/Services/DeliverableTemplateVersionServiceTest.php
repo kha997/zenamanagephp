@@ -20,11 +20,14 @@ class DeliverableTemplateVersionServiceTest extends TestCase
     {
         $service = new DeliverableTemplateVersionService();
 
-        $spec = $service->normalizePlaceholdersSpec(null, '<div>{{project.name}} {{project.code}}</div>');
+        $spec = $service->normalizePlaceholdersSpec(null, '<div>{{ project.name }} {{project.code}}</div>');
 
         $this->assertSame('1.0.0', $spec['schema_version']);
         $this->assertSame('project.code', $spec['placeholders'][0]['key']);
         $this->assertSame('project.name', $spec['placeholders'][1]['key']);
+        $this->assertSame(['project.code', 'project.name'], $spec['found']['all']);
+        $this->assertSame(['project.code', 'project.name'], $spec['found']['builtins']);
+        $this->assertSame([], $spec['warnings']);
     }
 
     public function test_it_validates_and_normalizes_placeholders_spec(): void
@@ -70,6 +73,28 @@ class DeliverableTemplateVersionServiceTest extends TestCase
         );
 
         $this->assertSame('<div>Tower A|Checked &amp; signed|</div>', $rendered);
+    }
+
+    public function test_it_records_unknown_and_unmapped_placeholder_warnings(): void
+    {
+        $service = new DeliverableTemplateVersionService();
+
+        $spec = $service->normalizePlaceholdersSpec([
+            'schema_version' => '1.0.0',
+            'placeholders' => [
+                ['key' => 'project.name', 'type' => 'string'],
+                ['key' => 'fields.remark', 'type' => 'string'],
+            ],
+        ], '<div>{{ project.name }} {{ fields.remark }} {{ fields.quantity }} {{ custom.token }}</div>');
+
+        $this->assertSame(['project.name'], $spec['found']['builtins']);
+        $this->assertSame(['fields.quantity', 'fields.remark'], $spec['found']['fields']);
+        $this->assertSame(['custom.token'], $spec['found']['unknown']);
+        $this->assertCount(2, $spec['warnings']);
+        $this->assertSame('unknown_placeholder', $spec['warnings'][0]['type']);
+        $this->assertSame('custom.token', $spec['warnings'][0]['key']);
+        $this->assertSame('unmapped_field', $spec['warnings'][1]['type']);
+        $this->assertSame('fields.quantity', $spec['warnings'][1]['key']);
     }
 
     public function test_it_stringifies_complex_values_for_html_rendering(): void

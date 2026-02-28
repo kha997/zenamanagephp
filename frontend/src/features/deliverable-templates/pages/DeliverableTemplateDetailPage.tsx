@@ -23,6 +23,7 @@ export function DeliverableTemplateDetailPage() {
   const [error, setError] = useState<string | null>(null)
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null)
 
   const loadData = async () => {
     if (!id) {
@@ -36,6 +37,13 @@ export function DeliverableTemplateDetailPage() {
 
     setTemplate(record)
     setVersions(versionsResult.items)
+    setSelectedVersionId((current) => {
+      if (current && versionsResult.items.some((version) => version.id === current)) {
+        return current
+      }
+
+      return versionsResult.items[0]?.id ?? null
+    })
   }
 
   useEffect(() => {
@@ -79,6 +87,12 @@ export function DeliverableTemplateDetailPage() {
     () => versions.find((version) => version.semver === 'draft' && !version.published_at),
     [versions]
   )
+  const selectedVersion = useMemo(
+    () => versions.find((version) => version.id === selectedVersionId) ?? versions[0] ?? null,
+    [selectedVersionId, versions]
+  )
+  const placeholderFound = selectedVersion?.placeholders_spec_json?.found
+  const placeholderWarnings = selectedVersion?.placeholders_spec_json?.warnings ?? []
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null
@@ -187,15 +201,71 @@ export function DeliverableTemplateDetailPage() {
 
         <div className="space-y-2">
           {versions.map((version) => (
-            <div key={version.id} className="rounded border border-gray-200 p-3">
+            <button
+              key={version.id}
+              className={`block w-full rounded border p-3 text-left ${
+                selectedVersion?.id === version.id ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
+              }`}
+              onClick={() => setSelectedVersionId(version.id)}
+              type="button"
+            >
               <p className="text-sm font-medium text-gray-900">
                 {version.semver} {version.published_at ? '(published)' : '(draft)'}
               </p>
               <p className="text-xs text-gray-500">Checksum: {version.checksum_sha256}</p>
               <p className="text-xs text-gray-500">Mime: {version.mime} | Size: {version.size} bytes</p>
-            </div>
+            </button>
           ))}
         </div>
+      </Card>
+
+      <Card className="space-y-4 p-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Placeholders Found</h2>
+          <p className="text-sm text-gray-500">
+            {selectedVersion ? `Showing scan results for ${selectedVersion.semver}.` : 'Select a version to inspect placeholders.'}
+          </p>
+        </div>
+
+        {!selectedVersion ? <p className="text-sm text-gray-500">No version selected.</p> : null}
+
+        {selectedVersion && !placeholderFound?.all?.length ? (
+          <p className="text-sm text-gray-500">No placeholders detected in this HTML version.</p>
+        ) : null}
+
+        {selectedVersion && placeholderFound?.all?.length ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {placeholderFound.all.map((placeholder) => {
+                const isWarning = placeholderWarnings.some((warning) => warning.key === placeholder)
+
+                return (
+                  <span
+                    key={placeholder}
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                      isWarning ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {placeholder}
+                  </span>
+                )
+              })}
+            </div>
+
+            {placeholderWarnings.length > 0 ? (
+              <div className="rounded border border-amber-200 bg-amber-50 p-3">
+                <p className="text-sm font-medium text-amber-900">Warnings</p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-800">
+                  {placeholderWarnings.map((warning) => (
+                    <li key={`${warning.type}:${warning.key}`}>{warning.message}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-sm text-green-700">No placeholder warnings for this version.</p>
+            )}
+          </div>
+        ) : null}
       </Card>
     </div>
   )

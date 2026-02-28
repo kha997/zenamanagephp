@@ -166,6 +166,59 @@ class DeliverableTemplateMvpApiTest extends TestCase
         ]);
     }
 
+    public function test_upload_records_detected_placeholders_for_html_version(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish']);
+        $template = $this->createTemplate($tenant, $user);
+
+        $response = $this->withHeaders($this->authHeaders($user, false))
+            ->post('/api/zena/deliverable-templates/' . $template->id . '/upload-version', [
+                'file' => $this->htmlUpload('<html><body>{{ project.name }} {{ fields.remark }} {{wi.id}}</body></html>', 'known.html'),
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.placeholders_spec_json.found.all.0', 'fields.remark')
+            ->assertJsonPath('data.placeholders_spec_json.found.all.1', 'project.name')
+            ->assertJsonPath('data.placeholders_spec_json.found.all.2', 'wi.id')
+            ->assertJsonPath('data.placeholders_spec_json.warnings', []);
+
+        $version = DeliverableTemplateVersion::query()
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('deliverable_template_id', (string) $template->id)
+            ->where('semver', 'draft')
+            ->firstOrFail();
+
+        $this->assertSame(['project.name', 'wi.id'], $version->placeholders_spec_json['found']['builtins']);
+        $this->assertSame(['fields.remark'], $version->placeholders_spec_json['found']['fields']);
+        $this->assertSame([], $version->placeholders_spec_json['found']['unknown']);
+    }
+
+    public function test_upload_records_warning_for_unknown_placeholder(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish']);
+        $template = $this->createTemplate($tenant, $user);
+
+        $response = $this->withHeaders($this->authHeaders($user, false))
+            ->post('/api/zena/deliverable-templates/' . $template->id . '/upload-version', [
+                'file' => $this->htmlUpload('<html><body>{{project.name}} {{custom.token}}</body></html>', 'unknown.html'),
+            ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.placeholders_spec_json.found.unknown.0', 'custom.token')
+            ->assertJsonPath('data.placeholders_spec_json.warnings.0.type', 'unknown_placeholder')
+            ->assertJsonPath('data.placeholders_spec_json.warnings.0.key', 'custom.token');
+
+        $version = DeliverableTemplateVersion::query()
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('deliverable_template_id', (string) $template->id)
+            ->where('semver', 'draft')
+            ->firstOrFail();
+
+        $this->assertSame('custom.token', $version->placeholders_spec_json['warnings'][0]['key']);
+    }
+
     private function createTemplate(Tenant $tenant, User $user): DeliverableTemplate
     {
         return DeliverableTemplate::create([

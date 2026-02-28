@@ -13,6 +13,7 @@ use App\Models\WorkInstanceStepAttachment;
 use App\Services\DeliverablePdfExportService;
 use App\Services\DeliverableTemplateVersionService;
 use App\Services\ZenaAuditLogger;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
@@ -33,41 +34,66 @@ class WorkInstanceController extends BaseApiController
     {
     }
 
+    public function index(Request $request): JsonResponse
+    {
+        $tenantId = $this->tenantId();
+
+        $instances = $this->workInstanceSummaryQuery($tenantId);
+        $this->applyWorkInstanceFilters($request, $instances);
+
+        $paginated = $instances
+            ->orderByDesc('created_at')
+            ->paginate($this->perPage($request));
+
+        $paginated->getCollection()->transform(fn (WorkInstance $instance): array => $this->transformInstanceSummary($instance));
+
+        return $this->listSuccessResponse($paginated, 'Work instances retrieved successfully');
+    }
+
     public function listByProject(Request $request, string $project): JsonResponse
     {
         try {
             $tenantId = $this->tenantId();
             $projectRecord = $this->projectForTenant($project, $tenantId);
 
-            $instances = WorkInstance::query()
-                ->with(['templateVersion.template'])
-                ->withCount('steps')
-                ->where('tenant_id', $tenantId)
+            $instances = $this->workInstanceSummaryQuery($tenantId)
                 ->where('project_id', $projectRecord->id)
                 ->orderByDesc('created_at')
-                ->paginate(min((int) $request->integer('per_page', 15), $this->maxLimit));
+                ->paginate($this->perPage($request));
 
-            $instances->getCollection()->transform(static function (WorkInstance $instance): array {
-                return [
-                    'id' => (string) $instance->id,
-                    'project_id' => (string) $instance->project_id,
-                    'work_template_version_id' => (string) $instance->work_template_version_id,
-                    'status' => (string) $instance->status,
-                    'steps_count' => (int) $instance->steps_count,
-                    'template' => [
-                        'id' => (string) ($instance->templateVersion?->template?->id ?? ''),
-                        'name' => (string) ($instance->templateVersion?->template?->name ?? ''),
-                        'semver' => (string) ($instance->templateVersion?->semver ?? ''),
-                    ],
-                    'created_at' => optional($instance->created_at)?->toIso8601String(),
-                    'updated_at' => optional($instance->updated_at)?->toIso8601String(),
-                ];
-            });
+            $instances->getCollection()->transform(fn (WorkInstance $instance): array => $this->transformInstanceSummary($instance));
 
             return $this->listSuccessResponse($instances, 'Project work instances retrieved successfully');
         } catch (ModelNotFoundException) {
             return $this->notFound('Project not found');
         }
+    }
+
+    public function metrics(Request $request): JsonResponse
+    {
+        $tenantId = $this->tenantId();
+
+        $instanceQuery = WorkInstance::query()
+            ->where('tenant_id', $tenantId);
+        $this->applyWorkInstanceFilters($request, $instanceQuery);
+
+        $stepQuery = WorkInstanceStep::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('work_instance_id', (clone $instanceQuery)->select('id'));
+
+        $data = [
+            'total_instances' => (int) (clone $instanceQuery)->count(),
+            'instances_by_status' => $this->statusBreakdown((clone $instanceQuery)),
+            'total_steps' => (int) (clone $stepQuery)->count(),
+            'steps_by_status' => $this->statusBreakdown((clone $stepQuery)),
+            'overdue_steps' => (int) (clone $stepQuery)
+                ->whereNotNull('deadline_at')
+                ->where('deadline_at', '<', now())
+                ->whereNotIn('status', ['completed', 'approved', 'rejected'])
+                ->count(),
+        ];
+
+        return $this->successResponse(['metrics' => $data], 'Work instance metrics retrieved successfully');
     }
 
     public function updateStep(Request $request, string $id, string $stepId): JsonResponse
@@ -403,6 +429,67 @@ class WorkInstanceController extends BaseApiController
         $payload = $request->input('pdf');
 
         return is_array($payload) ? $payload : [];
+    }
+
+    private function workInstanceSummaryQuery(string $tenantId): Builder
+    {
+        return WorkInstance::query()
+            ->with(['templateVersion.template'])
+            ->withCount('steps')
+            ->where('tenant_id', $tenantId);
+    }
+
+    private function applyWorkInstanceFilters(Request $request, Builder $query): void
+    {
+        foreach (['project_id', 'work_template_version_id', 'status', 'created_by'] as $filter) {
+            if ($request->has($filter)) {
+                $query->where($filter, (string) $request->input($filter));
+            }
+        }
+    }
+
+    /**
+     * @return array<int, array{status: string, count: int}>
+     */
+    private function statusBreakdown(Builder $query): array
+    {
+        return $query
+            ->select('status', DB::raw('COUNT(*) as aggregate'))
+            ->groupBy('status')
+            ->orderBy('status')
+            ->get()
+            ->map(static fn ($row): array => [
+                'status' => (string) ($row->status ?? ''),
+                'count' => (int) $row->aggregate,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function perPage(Request $request): int
+    {
+        return min(max((int) $request->integer('per_page', $this->defaultLimit), 1), $this->maxLimit);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function transformInstanceSummary(WorkInstance $instance): array
+    {
+        return [
+            'id' => (string) $instance->id,
+            'project_id' => (string) $instance->project_id,
+            'work_template_version_id' => (string) $instance->work_template_version_id,
+            'status' => (string) $instance->status,
+            'steps_count' => (int) $instance->steps_count,
+            'template' => [
+                'id' => (string) ($instance->templateVersion?->template?->id ?? ''),
+                'name' => (string) ($instance->templateVersion?->template?->name ?? ''),
+                'semver' => (string) ($instance->templateVersion?->semver ?? ''),
+            ],
+            'created_at' => optional($instance->created_at)?->toIso8601String(),
+            'updated_at' => optional($instance->updated_at)?->toIso8601String(),
+        ];
     }
 
     private function tenantId(): string

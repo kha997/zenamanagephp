@@ -82,6 +82,37 @@ type ProjectWorkInstancesList = {
   }
 }
 
+type PaginationMeta = {
+  pagination?: {
+    page: number
+    per_page: number
+    total: number
+    last_page: number
+  }
+}
+
+export type WorkInstanceListParams = {
+  page?: number
+  per_page?: number
+  project_id?: string
+  work_template_version_id?: string
+  status?: string
+  created_by?: string
+}
+
+export type WorkInstanceStatusMetric = {
+  status: string
+  count: number
+}
+
+export type WorkInstanceMetrics = {
+  total_instances: number
+  instances_by_status: WorkInstanceStatusMetric[]
+  total_steps: number
+  steps_by_status: WorkInstanceStatusMetric[]
+  overdue_steps: number
+}
+
 const zenaPath = (path: string) => `/api/zena${path}`
 const CACHE_KEY = 'work_instance_cache_v1'
 
@@ -90,6 +121,10 @@ const ensureData = <T>(response: ApiResponse<T>): T => {
     throw new Error(response.message || 'Unexpected API response')
   }
   return response.data
+}
+
+const extractPaginationMeta = (response: ApiResponse<unknown>): PaginationMeta => {
+  return (response.meta || {}) as PaginationMeta
 }
 
 export function cacheWorkInstance(instance: WorkInstanceRecord) {
@@ -231,14 +266,28 @@ export async function listProjectWorkInstances(
   return {
     items: ensureData(response),
     meta: {
-      pagination: response.meta
-        ? {
-            page: response.meta.current_page,
-            per_page: response.meta.per_page,
-            total: response.meta.total,
-            last_page: response.meta.last_page,
-          }
-        : undefined,
+      pagination: extractPaginationMeta(response).pagination,
     },
   }
+}
+
+export async function listWorkInstances(params?: WorkInstanceListParams): Promise<ProjectWorkInstancesList> {
+  const response = await apiClient.get<WorkInstanceRecord[]>(zenaPath('/work-instances'), {
+    params,
+  })
+
+  return {
+    items: ensureData(response),
+    meta: {
+      pagination: extractPaginationMeta(response).pagination,
+    },
+  }
+}
+
+export async function getWorkInstanceMetrics(params?: Omit<WorkInstanceListParams, 'page' | 'per_page'>): Promise<WorkInstanceMetrics> {
+  const response = await apiClient.get<{ metrics: WorkInstanceMetrics }>(zenaPath('/work-instances/metrics'), {
+    params,
+  })
+
+  return ensureData(response).metrics
 }

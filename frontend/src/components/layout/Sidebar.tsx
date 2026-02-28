@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/auth'
 import {
   ArrowRightOnRectangleIcon,
   BellIcon,
+  ChartBarIcon,
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
   DocumentTextIcon,
@@ -46,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     { name: 'Interaction Logs', href: '/interaction-logs', icon: DocumentTextIcon, visible: true },
     { name: 'Work Templates', href: '/work-templates', icon: DocumentTextIcon, visible: canViewTemplates },
     { name: 'Deliverable Templates', href: '/deliverable-templates', icon: DocumentTextIcon, visible: canViewTemplates },
+    { name: 'Workflows', href: '/workflows', icon: ChartBarIcon, visible: canViewWork },
     { name: 'Work Instances', href: '/work-instances', icon: ClipboardDocumentListIcon, visible: canViewWork },
     { name: 'Notifications', href: '/notifications', icon: BellIcon, visible: true },
     { name: 'Settings', href: '/settings/general', icon: Cog6ToothIcon, visible: true },

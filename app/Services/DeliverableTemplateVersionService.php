@@ -9,6 +9,7 @@ class DeliverableTemplateVersionService
     private const PLACEHOLDER_KEY_PATTERN = '/^[a-zA-Z0-9_.-]+$/';
     private const PLACEHOLDER_PATTERN = '/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/';
     private const ALLOWED_TYPES = ['string', 'number', 'boolean', 'date', 'datetime', 'html'];
+    private const DEFAULT_SCHEMA_VERSION = '1.0.0';
 
     public function computeChecksum(string $html): string
     {
@@ -21,6 +22,8 @@ class DeliverableTemplateVersionService
      */
     public function normalizePlaceholdersSpec(array|string|null $spec, string $html): array
     {
+        $specWasProvided = $spec !== null;
+
         if (is_string($spec)) {
             $decoded = json_decode($spec, true);
             if (!is_array($decoded)) {
@@ -31,9 +34,12 @@ class DeliverableTemplateVersionService
 
         $placeholders = $spec['placeholders'] ?? null;
         if ($spec === null || $placeholders === null) {
+            $inferredPlaceholders = $this->inferPlaceholdersFromHtml($html);
+
             return [
-                'schema_version' => '1.0.0',
-                'placeholders' => $this->inferPlaceholdersFromHtml($html),
+                'schema_version' => self::DEFAULT_SCHEMA_VERSION,
+                'placeholders' => $inferredPlaceholders,
+                ...$this->buildPlaceholderIntelligence($html),
             ];
         }
 
@@ -70,9 +76,15 @@ class DeliverableTemplateVersionService
 
         ksort($normalized);
 
+        $normalizedPlaceholders = array_values($normalized);
+        $knownFieldKeys = $specWasProvided
+            ? $this->extractFieldKeysFromPlaceholders($normalizedPlaceholders)
+            : null;
+
         return [
-            'schema_version' => (string) ($spec['schema_version'] ?? '1.0.0'),
-            'placeholders' => array_values($normalized),
+            'schema_version' => (string) ($spec['schema_version'] ?? self::DEFAULT_SCHEMA_VERSION),
+            'placeholders' => $normalizedPlaceholders,
+            ...$this->buildPlaceholderIntelligence($html, $knownFieldKeys),
         ];
     }
 
@@ -81,16 +93,68 @@ class DeliverableTemplateVersionService
      */
     public function inferPlaceholdersFromHtml(string $html): array
     {
-        preg_match_all(self::PLACEHOLDER_PATTERN, $html, $matches);
-
-        $keys = array_values(array_unique($matches[1] ?? []));
-        sort($keys);
+        $keys = $this->extractPlaceholderKeys($html);
 
         return array_map(static fn (string $key): array => [
             'key' => $key,
             'type' => 'string',
             'required' => false,
         ], $keys);
+    }
+
+    /**
+     * @param list<string>|null $knownFieldKeys
+     * @return array{found: array<string, list<string>>, warnings: list<array{type: string, key: string, message: string}>}
+     */
+    public function buildPlaceholderIntelligence(string $html, ?array $knownFieldKeys = null): array
+    {
+        $all = $this->extractPlaceholderKeys($html);
+        $builtins = [];
+        $fields = [];
+        $unknown = [];
+        $warnings = [];
+        $knownFieldLookup = $knownFieldKeys !== null ? array_fill_keys($knownFieldKeys, true) : null;
+
+        foreach ($all as $key) {
+            if ($this->isBuiltinPlaceholder($key)) {
+                $builtins[] = $key;
+                continue;
+            }
+
+            if ($this->isFieldPlaceholder($key)) {
+                $fields[] = $key;
+
+                if ($knownFieldLookup !== null) {
+                    $fieldKey = substr($key, 7);
+                    if (!isset($knownFieldLookup[$fieldKey])) {
+                        $warnings[] = [
+                            'type' => 'unmapped_field',
+                            'key' => $key,
+                            'message' => sprintf('Field placeholder "%s" is not mapped in the provided placeholder spec.', $key),
+                        ];
+                    }
+                }
+
+                continue;
+            }
+
+            $unknown[] = $key;
+            $warnings[] = [
+                'type' => 'unknown_placeholder',
+                'key' => $key,
+                'message' => sprintf('Unknown placeholder "%s" was found in the HTML.', $key),
+            ];
+        }
+
+        return [
+            'found' => [
+                'all' => $all,
+                'builtins' => $builtins,
+                'fields' => $fields,
+                'unknown' => $unknown,
+            ],
+            'warnings' => $warnings,
+        ];
     }
 
     /**
@@ -126,5 +190,51 @@ class DeliverableTemplateVersionService
         $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return htmlspecialchars($encoded === false ? '' : $encoded, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extractPlaceholderKeys(string $html): array
+    {
+        preg_match_all(self::PLACEHOLDER_PATTERN, $html, $matches);
+
+        $keys = array_values(array_unique($matches[1] ?? []));
+        sort($keys);
+
+        return $keys;
+    }
+
+    private function isBuiltinPlaceholder(string $key): bool
+    {
+        return preg_match('/^(project|wi)\.[a-zA-Z0-9_.-]+$/', $key) === 1;
+    }
+
+    private function isFieldPlaceholder(string $key): bool
+    {
+        return preg_match('/^fields\.[a-zA-Z0-9_.-]+$/', $key) === 1;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $placeholders
+     * @return list<string>
+     */
+    private function extractFieldKeysFromPlaceholders(array $placeholders): array
+    {
+        $fieldKeys = [];
+
+        foreach ($placeholders as $placeholder) {
+            $key = (string) ($placeholder['key'] ?? '');
+            if (!$this->isFieldPlaceholder($key)) {
+                continue;
+            }
+
+            $fieldKeys[] = substr($key, 7);
+        }
+
+        $fieldKeys = array_values(array_unique($fieldKeys));
+        sort($fieldKeys);
+
+        return $fieldKeys;
     }
 }

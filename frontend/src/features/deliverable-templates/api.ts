@@ -23,6 +23,17 @@ export type DeliverableTemplateVersionRecord = {
   placeholders_spec_json?: {
     schema_version?: string
     placeholders?: Array<{ key: string; type?: string; required?: boolean }>
+    found?: {
+      all?: string[]
+      builtins?: string[]
+      fields?: string[]
+      unknown?: string[]
+    }
+    warnings?: Array<{
+      type: 'unknown_placeholder' | 'unmapped_field' | string
+      key: string
+      message: string
+    }>
   } | null
   published_at?: string | null
   published_by?: string | null

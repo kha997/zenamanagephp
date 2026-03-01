@@ -106,8 +106,10 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     // Smart Tools Routes
     // Search Routes
     Route::post('/search', [App\Http\Controllers\SearchController::class, 'search'])->name('api.search.index');
-    Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class, 'suggestions'])->name('api.search.suggestions');
-    Route::get('/search/recent', [App\Http\Controllers\SearchController::class, 'recent'])->name('api.search.recent');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class, 'suggestions'])->name('api.search.suggestions');
+        Route::get('/search/recent', [App\Http\Controllers\SearchController::class, 'recent'])->name('api.search.recent');
+    });
     Route::post('/search/recent', [App\Http\Controllers\SearchController::class, 'saveRecent'])->name('api.search.save-recent');
     
     // Filter Routes

@@ -7,8 +7,6 @@
     "GET|HEAD api/v1/final-integration/launch-report",
     "GET|HEAD api/v1/final-integration/launch-status",
     "GET|HEAD api/v1/health",
-    "GET|HEAD api/v1/universal-frame/search/recent",
-    "GET|HEAD api/v1/universal-frame/search/suggestions",
     "POST api/v1/auth/check-permission",
     "POST api/v1/auth/login",
     "POST api/v1/auth/logout",

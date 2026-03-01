@@ -145,7 +145,7 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     });
 
 // Performance Optimization API Routes (moved to /api/v1/performance)
-Route::prefix('api/v1/performance')->middleware(['auth'])->group(function () {
+Route::prefix('api/v1/performance')->middleware(['auth', 'tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
     Route::get('/metrics', [App\Http\Controllers\PerformanceOptimizationController::class, 'metrics'])->name('api.performance.metrics');
     Route::get('/analysis', [App\Http\Controllers\PerformanceOptimizationController::class, 'analysis'])->name('api.performance.analysis');
     Route::post('/optimize-database', [App\Http\Controllers\PerformanceOptimizationController::class, 'optimizeDatabase'])->name('api.performance.optimize-database');

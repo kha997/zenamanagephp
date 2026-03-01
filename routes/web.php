@@ -111,19 +111,23 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     Route::post('/search/recent', [App\Http\Controllers\SearchController::class, 'saveRecent'])->name('api.search.save-recent');
     
     // Filter Routes
-    Route::get('/filters/presets', [App\Http\Controllers\FilterController::class, 'presets'])->name('api.filters.presets');
-    Route::get('/filters/deep', [App\Http\Controllers\FilterController::class, 'deepFilters'])->name('api.filters.deep');
-    Route::get('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'savedViews'])->name('api.filters.saved-views');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/filters/presets', [App\Http\Controllers\FilterController::class, 'presets'])->name('api.filters.presets');
+        Route::get('/filters/deep', [App\Http\Controllers\FilterController::class, 'deepFilters'])->name('api.filters.deep');
+        Route::get('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'savedViews'])->name('api.filters.saved-views');
+    });
     Route::post('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'saveView'])->name('api.filters.save-view');
     Route::delete('/filters/saved-views/{viewId}', [App\Http\Controllers\FilterController::class, 'deleteView'])->name('api.filters.delete-view');
     Route::post('/filters/apply', [App\Http\Controllers\FilterController::class, 'applyFilters'])->name('api.filters.apply');
     
     // Analysis Routes
     Route::post('/analysis', [App\Http\Controllers\AnalysisController::class, 'index'])->name('api.analysis.index');
-    Route::get('/analysis/{context}', [App\Http\Controllers\AnalysisController::class, 'context'])->name('api.analysis.context');
-    Route::get('/analysis/{context}/metrics', [App\Http\Controllers\AnalysisController::class, 'metrics'])->name('api.analysis.metrics');
-    Route::get('/analysis/{context}/charts', [App\Http\Controllers\AnalysisController::class, 'charts'])->name('api.analysis.charts');
-    Route::get('/analysis/{context}/insights', [App\Http\Controllers\AnalysisController::class, 'insights'])->name('api.analysis.insights');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/analysis/{context}', [App\Http\Controllers\AnalysisController::class, 'context'])->name('api.analysis.context');
+        Route::get('/analysis/{context}/metrics', [App\Http\Controllers\AnalysisController::class, 'metrics'])->name('api.analysis.metrics');
+        Route::get('/analysis/{context}/charts', [App\Http\Controllers\AnalysisController::class, 'charts'])->name('api.analysis.charts');
+        Route::get('/analysis/{context}/insights', [App\Http\Controllers\AnalysisController::class, 'insights'])->name('api.analysis.insights');
+    });
     
     // Export Routes
     Route::post('/export', [App\Http\Controllers\ExportController::class, 'index'])->name('api.export.index');
@@ -132,7 +136,9 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     Route::post('/export/documents', [App\Http\Controllers\ExportController::class, 'documents'])->name('api.export.documents');
     Route::post('/export/users', [App\Http\Controllers\ExportController::class, 'users'])->name('api.export.users');
     Route::post('/export/tenants', [App\Http\Controllers\ExportController::class, 'tenants'])->name('api.export.tenants');
-    Route::get('/export/history', [App\Http\Controllers\ExportController::class, 'history'])->name('api.export.history');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/export/history', [App\Http\Controllers\ExportController::class, 'history'])->name('api.export.history');
+    });
     Route::delete('/export/{filename}', [App\Http\Controllers\ExportController::class, 'delete'])->name('api.export.delete');
         Route::post('/export/clean-old', [App\Http\Controllers\ExportController::class, 'cleanOld'])->name('api.export.clean-old');
     });

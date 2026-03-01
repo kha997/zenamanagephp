@@ -132,7 +132,7 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     });
 
     // Accessibility API Routes (moved to /api/v1/accessibility)
-    Route::prefix('api/v1/accessibility')->middleware(['auth'])->group(function () {
+    Route::prefix('api/v1/accessibility')->middleware(['auth', 'tenant.isolation', 'rbac', 'input.sanitization', 'error.envelope'])->group(function () {
         Route::get('/preferences', [App\Http\Controllers\AccessibilityController::class, 'preferences'])->name('api.accessibility.preferences');
         Route::post('/preferences', [App\Http\Controllers\AccessibilityController::class, 'savePreferences'])->name('api.accessibility.save-preferences');
         Route::post('/preferences/reset', [App\Http\Controllers\AccessibilityController::class, 'resetPreferences'])->name('api.accessibility.reset-preferences');

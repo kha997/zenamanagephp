@@ -116,6 +116,45 @@ export type WorkInstanceMetrics = {
 const zenaPath = (path: string) => `/api/zena${path}`
 const CACHE_KEY = 'work_instance_cache_v1'
 
+const extractFilenameFromDisposition = (disposition?: string): string | null => {
+  if (typeof disposition !== 'string' || disposition.trim() === '') {
+    return null
+  }
+
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim())
+    } catch {
+      return utf8Match[1].trim()
+    }
+  }
+
+  const filenameMatch = disposition.match(/filename="([^"]+)"/i) || disposition.match(/filename=([^;]+)/i)
+  return filenameMatch?.[1]?.trim() ?? null
+}
+
+const extractBlobErrorMessage = async (error: unknown, fallbackMessage: string): Promise<string> => {
+  const responseData = (error as { response?: { data?: unknown } })?.response?.data
+  if (responseData instanceof Blob) {
+    try {
+      const payload = JSON.parse(await responseData.text()) as { message?: string }
+      if (typeof payload.message === 'string' && payload.message.trim() !== '') {
+        return payload.message
+      }
+    } catch {
+      // Ignore invalid JSON and fall back to standard error extraction.
+    }
+  }
+
+  if (error instanceof Error && error.message.trim() !== '') {
+    return error.message
+  }
+
+  const serverMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+  return serverMessage && serverMessage.trim() !== '' ? serverMessage : fallbackMessage
+}
+
 const ensureData = <T>(response: ApiResponse<T>): T => {
   if (response.data === undefined) {
     throw new Error(response.message || 'Unexpected API response')
@@ -242,14 +281,34 @@ export async function exportWorkInstanceDeliverable(
     }
   )
 
-  const disposition = response.headers['content-disposition']
-  const filenameMatch = typeof disposition === 'string'
-    ? disposition.match(/filename="([^"]+)"/i) || disposition.match(/filename=([^;]+)/i)
-    : null
-
   return {
     blob: response.data,
-    filename: filenameMatch?.[1]?.trim() ?? null,
+    filename: extractFilenameFromDisposition(response.headers['content-disposition']),
+  }
+}
+
+export async function exportWorkInstanceBundle(workInstanceId: string): Promise<Blob> {
+  try {
+    const response = await apiClient.postBlob(
+      zenaPath(`/work-instances/${workInstanceId}/export-bundle`),
+      undefined,
+      {
+        headers: {
+          Accept: 'application/zip',
+        },
+      }
+    )
+
+    const filename = extractFilenameFromDisposition(response.headers['content-disposition'])
+    if (filename) {
+      return new File([response.data], filename, {
+        type: response.data.type || 'application/zip',
+      })
+    }
+
+    return response.data
+  } catch (error: unknown) {
+    throw new Error(await extractBlobErrorMessage(error, 'Failed to download work instance bundle'))
   }
 }
 

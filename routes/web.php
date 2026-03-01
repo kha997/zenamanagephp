@@ -87,11 +87,11 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
         Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->name('api.alerts.index');
         Route::get('/alerts/stats', [App\Http\Controllers\AlertController::class, 'stats'])->name('api.alerts.stats');
+        Route::post('/alerts/acknowledge', [App\Http\Controllers\AlertController::class, 'acknowledge'])->name('api.alerts.acknowledge');
+        Route::post('/alerts/mute', [App\Http\Controllers\AlertController::class, 'mute'])->name('api.alerts.mute');
+        Route::post('/alerts/dismiss-all', [App\Http\Controllers\AlertController::class, 'dismissAll'])->name('api.alerts.dismiss-all');
     });
     Route::post('/alerts/resolve', [App\Http\Controllers\AlertController::class, 'resolve'])->name('api.alerts.resolve');
-    Route::post('/alerts/acknowledge', [App\Http\Controllers\AlertController::class, 'acknowledge'])->name('api.alerts.acknowledge');
-    Route::post('/alerts/mute', [App\Http\Controllers\AlertController::class, 'mute'])->name('api.alerts.mute');
-    Route::post('/alerts/dismiss-all', [App\Http\Controllers\AlertController::class, 'dismissAll'])->name('api.alerts.dismiss-all');
     Route::post('/alerts/create', [App\Http\Controllers\AlertController::class, 'create'])->name('api.alerts.create');
     
     // Activity Routes

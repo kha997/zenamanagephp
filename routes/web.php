@@ -118,8 +118,10 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
         Route::get('/filters/deep', [App\Http\Controllers\FilterController::class, 'deepFilters'])->name('api.filters.deep');
         Route::get('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'savedViews'])->name('api.filters.saved-views');
     });
-    Route::post('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'saveView'])->name('api.filters.save-view');
-    Route::delete('/filters/saved-views/{viewId}', [App\Http\Controllers\FilterController::class, 'deleteView'])->name('api.filters.delete-view');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::post('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'saveView'])->name('api.filters.save-view');
+        Route::delete('/filters/saved-views/{viewId}', [App\Http\Controllers\FilterController::class, 'deleteView'])->name('api.filters.delete-view');
+    });
     Route::post('/filters/apply', [App\Http\Controllers\FilterController::class, 'applyFilters'])->name('api.filters.apply');
     
     // Analysis Routes

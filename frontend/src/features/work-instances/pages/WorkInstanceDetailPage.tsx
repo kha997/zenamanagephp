@@ -1,5 +1,6 @@
 import { type ChangeEvent, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
@@ -14,6 +15,7 @@ import {
   approveWorkInstanceStep,
   cacheWorkInstance,
   deleteWorkInstanceStepAttachment,
+  exportWorkInstanceBundle,
   exportWorkInstanceDeliverable,
   getWorkInstance,
   listWorkInstanceStepAttachments,
@@ -71,6 +73,15 @@ const normalizeInstance = (instance: WorkInstanceRecord): WorkInstanceRecord => 
   }),
 })
 
+const extractErrorMessage = (error: unknown, fallbackMessage: string): string => {
+  if (error instanceof Error && error.message.trim() !== '') {
+    return error.message
+  }
+
+  const serverMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+  return serverMessage && serverMessage.trim() !== '' ? serverMessage : fallbackMessage
+}
+
 export function WorkInstanceDetailPage() {
   const { id } = useParams<{ id: string }>()
 
@@ -96,6 +107,7 @@ export function WorkInstanceDetailPage() {
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [versionsLoading, setVersionsLoading] = useState(false)
   const [exportSubmitting, setExportSubmitting] = useState(false)
+  const [bundleSubmitting, setBundleSubmitting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -393,10 +405,38 @@ export function WorkInstanceDetailPage() {
       link.remove()
       window.URL.revokeObjectURL(url)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to export deliverable'
+      const message = extractErrorMessage(err, 'Failed to export deliverable')
       setExportError(message)
     } finally {
       setExportSubmitting(false)
+    }
+  }
+
+  const onDownloadBundle = async () => {
+    if (!instance) {
+      return
+    }
+
+    try {
+      setBundleSubmitting(true)
+      setExportError(null)
+
+      const blob = await exportWorkInstanceBundle(instance.id)
+      const filename = blob instanceof File && blob.name ? blob.name : `work-instance-${instance.id}.zip`
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err: unknown) {
+      const message = extractErrorMessage(err, 'Failed to download work instance bundle')
+      setExportError(message)
+      toast.error(message)
+    } finally {
+      setBundleSubmitting(false)
     }
   }
 
@@ -633,13 +673,21 @@ export function WorkInstanceDetailPage() {
             ) : null}
           </div>
 
-          <div>
+          <div className="flex flex-col gap-2">
             <Button
               type="button"
               onClick={onExportDeliverable}
               disabled={exportSubmitting || !selectedTemplateVersionId}
             >
               {exportSubmitting ? 'Exporting...' : 'Export deliverable'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onDownloadBundle}
+              disabled={bundleSubmitting}
+            >
+              {bundleSubmitting ? 'Downloading bundle...' : 'Download Bundle (.zip)'}
             </Button>
           </div>
         </div>

@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Exceptions\DeliverablePdfExportUnavailableException;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Process;
 use RuntimeException;
+use Symfony\Component\Process\Process;
 
 class DeliverablePdfExportService
 {
@@ -73,14 +73,13 @@ class DeliverablePdfExportService
     protected function runCommand(array $command, array $environment): void
     {
         $timeout = (int) env('DELIVERABLE_PDF_PROCESS_TIMEOUT', 60);
-        $result = Process::timeout($timeout)
-            ->env($environment)
-            ->run($command);
+        $result = new Process($command, null, $environment, null, $timeout);
+        $result->run();
 
-        if ($result->failed()) {
-            $message = trim($result->errorOutput());
+        if (!$result->isSuccessful()) {
+            $message = trim($result->getErrorOutput());
             if ($message === '') {
-                $message = trim($result->output());
+                $message = trim($result->getOutput());
             }
 
             throw new RuntimeException($message !== '' ? $message : 'Deliverable PDF export failed.');
@@ -174,21 +173,20 @@ class DeliverablePdfExportService
     protected function ensureDependenciesAvailable(string $nodeBinary, array $environment): void
     {
         $timeout = (int) env('DELIVERABLE_PDF_PROCESS_TIMEOUT', 60);
-        $result = Process::timeout(min($timeout, 15))
-            ->env($environment)
-            ->run([
-                $nodeBinary,
-                $this->scriptPath(),
-                '--check-deps',
-            ]);
+        $result = new Process([
+            $nodeBinary,
+            $this->scriptPath(),
+            '--check-deps',
+        ], null, $environment, null, min($timeout, 15));
+        $result->run();
 
-        if ($result->successful()) {
+        if ($result->isSuccessful()) {
             return;
         }
 
-        $message = trim($result->errorOutput());
+        $message = trim($result->getErrorOutput());
         if ($message === '') {
-            $message = trim($result->output());
+            $message = trim($result->getOutput());
         }
 
         $this->warnUnavailable(

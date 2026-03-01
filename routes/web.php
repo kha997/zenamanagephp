@@ -75,26 +75,32 @@ if (app()->environment(['local', 'testing'])) {
 // Universal Frame API Routes (moved to /api/v1/universal-frame)
 Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function () {
     // KPI Routes
-    Route::get('/kpis', [App\Http\Controllers\KpiController::class, 'index'])->name('api.kpis.index');
-    Route::get('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'preferences'])->name('api.kpis.preferences');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/kpis', [App\Http\Controllers\KpiController::class, 'index'])->name('api.kpis.index');
+        Route::get('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'preferences'])->name('api.kpis.preferences');
+        Route::get('/kpis/stats', [App\Http\Controllers\KpiController::class, 'stats'])->name('api.kpis.stats');
+    });
     Route::post('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'savePreferences'])->name('api.kpis.save-preferences');
     Route::post('/kpis/refresh', [App\Http\Controllers\KpiController::class, 'refresh'])->name('api.kpis.refresh');
-    Route::get('/kpis/stats', [App\Http\Controllers\KpiController::class, 'stats'])->name('api.kpis.stats');
     
     // Alert Routes
-    Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->name('api.alerts.index');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->name('api.alerts.index');
+        Route::get('/alerts/stats', [App\Http\Controllers\AlertController::class, 'stats'])->name('api.alerts.stats');
+    });
     Route::post('/alerts/resolve', [App\Http\Controllers\AlertController::class, 'resolve'])->name('api.alerts.resolve');
     Route::post('/alerts/acknowledge', [App\Http\Controllers\AlertController::class, 'acknowledge'])->name('api.alerts.acknowledge');
     Route::post('/alerts/mute', [App\Http\Controllers\AlertController::class, 'mute'])->name('api.alerts.mute');
     Route::post('/alerts/dismiss-all', [App\Http\Controllers\AlertController::class, 'dismissAll'])->name('api.alerts.dismiss-all');
     Route::post('/alerts/create', [App\Http\Controllers\AlertController::class, 'create'])->name('api.alerts.create');
-    Route::get('/alerts/stats', [App\Http\Controllers\AlertController::class, 'stats'])->name('api.alerts.stats');
     
     // Activity Routes
-    Route::get('/activities', [App\Http\Controllers\ActivityController::class, 'index'])->name('api.activities.index');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::get('/activities', [App\Http\Controllers\ActivityController::class, 'index'])->name('api.activities.index');
+        Route::get('/activities/by-type', [App\Http\Controllers\ActivityController::class, 'byType'])->name('api.activities.by-type');
+        Route::get('/activities/stats', [App\Http\Controllers\ActivityController::class, 'stats'])->name('api.activities.stats');
+    });
     Route::post('/activities/create', [App\Http\Controllers\ActivityController::class, 'create'])->name('api.activities.create');
-    Route::get('/activities/by-type', [App\Http\Controllers\ActivityController::class, 'byType'])->name('api.activities.by-type');
-    Route::get('/activities/stats', [App\Http\Controllers\ActivityController::class, 'stats'])->name('api.activities.stats');
     Route::post('/activities/clear-old', [App\Http\Controllers\ActivityController::class, 'clearOld'])->name('api.activities.clear-old');
     
     // Smart Tools Routes

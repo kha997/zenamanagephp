@@ -87,11 +87,11 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
         Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->name('api.alerts.index');
         Route::get('/alerts/stats', [App\Http\Controllers\AlertController::class, 'stats'])->name('api.alerts.stats');
-        Route::post('/alerts/resolve', [App\Http\Controllers\AlertController::class, 'resolve'])->name('api.alerts.resolve');
+        Route::post('/alerts/acknowledge', [App\Http\Controllers\AlertController::class, 'acknowledge'])->name('api.alerts.acknowledge');
+        Route::post('/alerts/mute', [App\Http\Controllers\AlertController::class, 'mute'])->name('api.alerts.mute');
+        Route::post('/alerts/dismiss-all', [App\Http\Controllers\AlertController::class, 'dismissAll'])->name('api.alerts.dismiss-all');
     });
-    Route::post('/alerts/acknowledge', [App\Http\Controllers\AlertController::class, 'acknowledge'])->name('api.alerts.acknowledge');
-    Route::post('/alerts/mute', [App\Http\Controllers\AlertController::class, 'mute'])->name('api.alerts.mute');
-    Route::post('/alerts/dismiss-all', [App\Http\Controllers\AlertController::class, 'dismissAll'])->name('api.alerts.dismiss-all');
+    Route::post('/alerts/resolve', [App\Http\Controllers\AlertController::class, 'resolve'])->name('api.alerts.resolve');
     Route::post('/alerts/create', [App\Http\Controllers\AlertController::class, 'create'])->name('api.alerts.create');
     
     // Activity Routes
@@ -99,9 +99,9 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
         Route::get('/activities', [App\Http\Controllers\ActivityController::class, 'index'])->name('api.activities.index');
         Route::get('/activities/by-type', [App\Http\Controllers\ActivityController::class, 'byType'])->name('api.activities.by-type');
         Route::get('/activities/stats', [App\Http\Controllers\ActivityController::class, 'stats'])->name('api.activities.stats');
-        Route::post('/activities/create', [App\Http\Controllers\ActivityController::class, 'create'])->name('api.activities.create');
-        Route::post('/activities/clear-old', [App\Http\Controllers\ActivityController::class, 'clearOld'])->name('api.activities.clear-old');
     });
+    Route::post('/activities/create', [App\Http\Controllers\ActivityController::class, 'create'])->name('api.activities.create');
+    Route::post('/activities/clear-old', [App\Http\Controllers\ActivityController::class, 'clearOld'])->name('api.activities.clear-old');
     
     // Smart Tools Routes
     // Search Routes
@@ -118,8 +118,10 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
         Route::get('/filters/deep', [App\Http\Controllers\FilterController::class, 'deepFilters'])->name('api.filters.deep');
         Route::get('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'savedViews'])->name('api.filters.saved-views');
     });
-    Route::post('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'saveView'])->name('api.filters.save-view');
-    Route::delete('/filters/saved-views/{viewId}', [App\Http\Controllers\FilterController::class, 'deleteView'])->name('api.filters.delete-view');
+    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+        Route::post('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'saveView'])->name('api.filters.save-view');
+        Route::delete('/filters/saved-views/{viewId}', [App\Http\Controllers\FilterController::class, 'deleteView'])->name('api.filters.delete-view');
+    });
     Route::post('/filters/apply', [App\Http\Controllers\FilterController::class, 'applyFilters'])->name('api.filters.apply');
     
     // Analysis Routes
@@ -286,6 +288,9 @@ Route::get('/admin/users', function() {
         return '<h1>Alerts</h1><p>System alerts here.</p>';
     })->name('alerts');
     Route::get('/activities', function() {
+        Route::post('/alerts/resolve', [App\Http\Controllers\AlertController::class, 'resolve'])->name('api.alerts.resolve');
+        Route::post('/activities/create', [App\Http\Controllers\ActivityController::class, 'create'])->name('api.activities.create');
+        Route::post('/activities/clear-old', [App\Http\Controllers\ActivityController::class, 'clearOld'])->name('api.activities.clear-old');
         return '<h1>Activities</h1><p>Activity logs here.</p>';
     })->name('activities');
     Route::get('/analytics', function() {

@@ -78,10 +78,10 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
         Route::get('/kpis', [App\Http\Controllers\KpiController::class, 'index'])->name('api.kpis.index');
         Route::get('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'preferences'])->name('api.kpis.preferences');
+        Route::post('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'savePreferences'])->name('api.kpis.save-preferences');
+        Route::post('/kpis/refresh', [App\Http\Controllers\KpiController::class, 'refresh'])->name('api.kpis.refresh');
         Route::get('/kpis/stats', [App\Http\Controllers\KpiController::class, 'stats'])->name('api.kpis.stats');
     });
-    Route::post('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'savePreferences'])->name('api.kpis.save-preferences');
-    Route::post('/kpis/refresh', [App\Http\Controllers\KpiController::class, 'refresh'])->name('api.kpis.refresh');
     
     // Alert Routes
     Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {

@@ -31,8 +31,6 @@
     "POST api/v1/universal-frame/export/tenants",
     "POST api/v1/universal-frame/export/users",
     "POST api/v1/universal-frame/filters/apply",
-    "POST api/v1/universal-frame/kpis/preferences",
-    "POST api/v1/universal-frame/kpis/refresh",
     "POST api/v1/universal-frame/search",
     "POST api/v1/universal-frame/search/recent",
     "POST api/v1/upload-document"

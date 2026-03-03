@@ -45,7 +45,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $templateB = $this->createDraftTemplate($tenantB, $actorB);
 
         $draft = WorkTemplateVersion::query()->where('work_template_id', $templateB->id)->whereNull('published_at')->firstOrFail();
-        $published = WorkTemplateVersion::create([
+        $published = WorkTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'work_template_id' => (string) $templateB->id,
             'semver' => '1.0.0',
@@ -60,7 +60,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $sourceStep = WorkTemplateStep::query()->where('work_template_version_id', $draft->id)->firstOrFail();
         $sourceField = WorkTemplateField::query()->where('work_template_step_id', $sourceStep->id)->first();
 
-        $publishedStep = WorkTemplateStep::create([
+        $publishedStep = WorkTemplateStep::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'work_template_version_id' => (string) $published->id,
             'step_key' => $sourceStep->step_key,
@@ -73,7 +73,7 @@ class WorkTemplateMvpApiTest extends TestCase
         ]);
 
         if ($sourceField) {
-            WorkTemplateField::create([
+            WorkTemplateField::factory()->create([
                 'tenant_id' => (string) $tenantB->id,
                 'work_template_step_id' => (string) $publishedStep->id,
                 'field_key' => $sourceField->field_key,
@@ -83,7 +83,7 @@ class WorkTemplateMvpApiTest extends TestCase
             ]);
         }
 
-        $instanceB = WorkInstance::create([
+        $instanceB = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'project_id' => (string) $projectB->id,
             'work_template_version_id' => (string) $published->id,
@@ -91,7 +91,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'created_by' => (string) $actorB->id,
         ]);
 
-        WorkInstanceStep::create([
+        WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'work_instance_id' => (string) $instanceB->id,
             'work_template_step_id' => (string) $publishedStep->id,
@@ -124,7 +124,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'work_template_id' => (string) $template->id,
         ], $this->authHeaders($user))->assertStatus(403);
 
-        $instance = WorkInstance::create([
+        $instance = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => (string) $project->id,
             'work_template_version_id' => (string) WorkTemplateVersion::query()->where('work_template_id', $template->id)->value('id'),
@@ -132,7 +132,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
-        $step = WorkInstanceStep::create([
+        $step = WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_id' => (string) $instance->id,
             'step_key' => 'approval-step',
@@ -160,7 +160,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $template = $this->createDraftTemplate($tenant, $user);
         $versionId = (string) WorkTemplateVersion::query()->where('work_template_id', $template->id)->value('id');
 
-        WorkInstance::create([
+        WorkInstance::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => (string) $project->id,
             'work_template_version_id' => $versionId,
@@ -196,14 +196,14 @@ class WorkTemplateMvpApiTest extends TestCase
         $versionA = (string) WorkTemplateVersion::query()->where('work_template_id', $templateA->id)->value('id');
         $versionB = (string) WorkTemplateVersion::query()->where('work_template_id', $templateB->id)->value('id');
 
-        WorkInstance::create([
+        WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantA->id,
             'project_id' => (string) $projectA->id,
             'work_template_version_id' => $versionA,
             'status' => 'pending',
             'created_by' => (string) $actorA->id,
         ]);
-        WorkInstance::create([
+        WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'project_id' => (string) $projectB->id,
             'work_template_version_id' => $versionB,
@@ -562,7 +562,7 @@ class WorkTemplateMvpApiTest extends TestCase
 
     private function createDraftTemplate(Tenant $tenant, User $user, array $stepOverrides = []): WorkTemplate
     {
-        $template = WorkTemplate::create([
+        $template = WorkTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'WT-' . substr((string) \Illuminate\Support\Str::ulid(), -8),
             'name' => 'Template ' . substr((string) \Illuminate\Support\Str::ulid(), -6),
@@ -590,7 +590,7 @@ class WorkTemplateMvpApiTest extends TestCase
             ],
         ], $stepOverrides);
 
-        $version = WorkTemplateVersion::create([
+        $version = WorkTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_id' => (string) $template->id,
             'semver' => 'draft-initial',
@@ -604,7 +604,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $templateStep = WorkTemplateStep::create([
+        $templateStep = WorkTemplateStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_version_id' => (string) $version->id,
             'step_key' => (string) $step['key'],
@@ -617,7 +617,7 @@ class WorkTemplateMvpApiTest extends TestCase
         ]);
 
         foreach (($step['fields'] ?? []) as $field) {
-            WorkTemplateField::create([
+            WorkTemplateField::factory()->create([
                 'tenant_id' => (string) $tenant->id,
                 'work_template_step_id' => (string) $templateStep->id,
                 'field_key' => (string) $field['key'],

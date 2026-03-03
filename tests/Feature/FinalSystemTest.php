@@ -2,35 +2,40 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use App\Models\User;
-use App\Models\Tenant;
 use App\Models\Dashboard;
 use App\Models\DashboardWidget;
-use App\Models\Widget;
-use App\Models\SupportTicket;
-use App\Models\MaintenanceTask;
 use App\Models\PerformanceMetric;
-use App\Models\SupportDocumentation;
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Models\Widget;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Exception\MethodNotAllowedException;
+use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 use Tests\Traits\RouteNameTrait;
 
 class FinalSystemTest extends TestCase
 {
-    use RefreshDatabase, WithFaker, AuthenticationTrait, RouteNameTrait;
+    use RefreshDatabase;
+    use WithFaker;
+    use AuthenticationTrait;
+    use RouteNameTrait;
 
     protected $user;
+
     protected $admin;
+
     protected Tenant $tenant;
+
     protected string $userApiToken;
+
     protected string $adminApiToken;
 
     protected function setUp(): void
@@ -46,7 +51,7 @@ class FinalSystemTest extends TestCase
             [
                 'role' => 'project_manager',
                 'email' => $this->uniqueTestEmail('user'),
-                'name' => 'System User'
+                'name' => 'System User',
             ],
             ['project_manager']
         );
@@ -56,7 +61,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test complete user authentication flow
+     * Test complete user authentication flow.
      */
     public function test_user_authentication_flow()
     {
@@ -65,31 +70,35 @@ class FinalSystemTest extends TestCase
             [
                 'role' => 'user',
                 'email' => $this->uniqueTestEmail('auth'),
-                'name' => 'Auth Flow User'
+                'name' => 'Auth Flow User',
             ],
             ['user']
         );
 
+        foreach (['auth.me', 'auth.permissions', 'auth.logout'] as $permissionCode) {
+            $this->grantPermissionToUser($authUser, $permissionCode);
+        }
+
         $loginResponse = $this->withHeaders($this->apiHeadersForTenant((string) $this->tenant->id))
             ->postJson('/api/auth/login', [
                 'email' => $authUser->email,
-                'password' => 'password'
+                'password' => 'password',
             ]);
 
         $loginResponse->assertStatus(200)
             ->assertJson([
-                'success' => true
+                'success' => true,
             ])
             ->assertJsonStructure([
                 'success',
                 'data' => [
                     'user' => [
                         'id',
-                        'email'
+                        'email',
                     ],
                     'token',
-                    'expires_at'
-                ]
+                    'expires_at',
+                ],
             ]);
 
         $token = $loginResponse->json('data.token');
@@ -100,7 +109,7 @@ class FinalSystemTest extends TestCase
         $meResponse = $this->getJson('/api/auth/me', $authHeaders);
         $meResponse->assertStatus(200)
             ->assertJson([
-                'success' => true
+                'success' => true,
             ])
             ->assertJsonPath('data.email', $authUser->email);
 
@@ -110,19 +119,19 @@ class FinalSystemTest extends TestCase
                 'success',
                 'data' => [
                     'permissions',
-                    'roles'
-                ]
+                    'roles',
+                ],
             ]);
 
         $logoutResponse = $this->postJson('/api/auth/logout', [], $authHeaders);
         $logoutResponse->assertStatus(200)
             ->assertJson([
-                'success' => true
+                'success' => true,
             ]);
     }
 
     /**
-     * Test dashboard creation and management
+     * Test dashboard creation and management.
      */
     public function test_dashboard_management()
     {
@@ -131,7 +140,7 @@ class FinalSystemTest extends TestCase
         $dashboardResponse = $this->getJson('/api/v1/dashboard', $headers);
         $dashboardResponse->assertStatus(200)
             ->assertJson([
-                'success' => true
+                'success' => true,
             ])
             ->assertJsonStructure([
                 'success',
@@ -140,15 +149,15 @@ class FinalSystemTest extends TestCase
                     'name',
                     'layout',
                     'widgets',
-                    'preferences'
-                ]
+                    'preferences',
+                ],
             ]);
 
         $layout = $dashboardResponse->json('data.layout') ?? [];
 
         if (!empty($layout)) {
             $layoutResponse = $this->putJson('/api/v1/dashboard/layout', [
-                'layout' => $layout
+                'layout' => $layout,
             ], $headers);
 
             $layoutResponse->assertStatus(200)
@@ -158,7 +167,7 @@ class FinalSystemTest extends TestCase
         }
 
         $preferencesResponse = $this->postJson('/api/v1/dashboard/preferences', [
-            'preferences' => ['theme' => 'dark']
+            'preferences' => ['theme' => 'dark'],
         ], $headers);
 
         $preferencesResponse->assertStatus(200)
@@ -166,7 +175,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test widget management
+     * Test widget management.
      */
     public function test_widget_management()
     {
@@ -176,14 +185,14 @@ class FinalSystemTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'code' => 'system-test-widget',
             'permissions' => ['roles' => ['admin', 'project_manager']],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         $availableResponse = $this->getJson('/api/v1/dashboard/widgets', $headers);
         $availableResponse->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'data'
+                'data',
             ]);
 
         $this->assertIsArray($availableResponse->json('data'));
@@ -192,8 +201,8 @@ class FinalSystemTest extends TestCase
             'widget_id' => $widget->id,
             'config' => [
                 'title' => 'Test Widget',
-                'size' => 'medium'
-            ]
+                'size' => 'medium',
+            ],
         ], $headers);
 
         $addResponse->assertStatus(200)
@@ -205,8 +214,8 @@ class FinalSystemTest extends TestCase
         $updateResponse = $this->putJson("/api/v1/dashboard/widgets/{$widgetInstance['id']}/config", [
             'config' => [
                 'title' => 'Updated Widget',
-                'size' => 'large'
-            ]
+                'size' => 'large',
+            ],
         ], $headers);
 
         $updateResponse->assertStatus(200)
@@ -219,14 +228,14 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test support ticket system
+     * Test support ticket system.
      *
      * @group slow
      */
     public function test_support_ticket_system()
     {
         $supportTicketsStore = $this->namedRoute('api.support.tickets.store');
-        if (! $this->routeExists('POST', $supportTicketsStore)) {
+        if (!$this->routeExists('POST', $supportTicketsStore)) {
             $this->markTestSkipped('dependency: support ticket API route not registered in this environment.');
         }
 
@@ -237,7 +246,7 @@ class FinalSystemTest extends TestCase
             'subject' => 'Test Support Ticket',
             'description' => 'This is a test support ticket',
             'category' => 'technical',
-            'priority' => 'medium'
+            'priority' => 'medium',
         ], $userHeaders);
 
         $response->assertStatus(201);
@@ -251,7 +260,7 @@ class FinalSystemTest extends TestCase
             'status',
             'user_id',
             'created_at',
-            'updated_at'
+            'updated_at',
         ]);
 
         $ticketId = $response->json('id');
@@ -263,7 +272,7 @@ class FinalSystemTest extends TestCase
         // Add message to ticket
         $response = $this->postJson($this->namedRoute('api.support.tickets.messages.store', ['ticket' => $ticketId]), [
             'message' => 'This is a test message',
-            'is_internal' => false
+            'is_internal' => false,
         ], $userHeaders);
 
         $response->assertStatus(201);
@@ -271,14 +280,14 @@ class FinalSystemTest extends TestCase
         // Update ticket status (as admin)
         $response = $this->putJson($this->namedRoute('api.support.tickets.update', ['ticket' => $ticketId]), [
             'status' => 'resolved',
-            'assigned_to' => $this->admin->id
+            'assigned_to' => $this->admin->id,
         ], $this->adminApiHeaders());
 
         $response->assertStatus(200);
     }
 
     /**
-     * Test maintenance system
+     * Test maintenance system.
      */
     public function test_maintenance_system()
     {
@@ -296,7 +305,7 @@ class FinalSystemTest extends TestCase
         foreach ($actions as [$path, $expectedJson]) {
             $uri = ltrim($path, '/');
 
-            if (! $this->routeExists('POST', $uri)) {
+            if (!$this->routeExists('POST', $uri)) {
                 continue;
             }
 
@@ -306,7 +315,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test system health monitoring
+     * Test system health monitoring.
      *
      * @group slow
      */
@@ -324,6 +333,7 @@ class FinalSystemTest extends TestCase
         } else {
             $this->dumpTestDiagnostic('health-missing-route.json', [], '', ['reason' => 'Health API not registered']);
             $this->markTestSkipped('dependency: health API route not registered');
+
             return;
         }
 
@@ -338,7 +348,7 @@ class FinalSystemTest extends TestCase
                 'services',
                 'metrics',
                 'alerts',
-                'recommendations'
+                'recommendations',
             ]);
         } elseif ($this->isSsotHealthContract($json)) {
             $response->assertJsonStructure([
@@ -349,11 +359,12 @@ class FinalSystemTest extends TestCase
                     'services',
                     'metrics',
                     'alerts',
-                    'recommendations'
-                ]
+                    'recommendations',
+                ],
             ]);
         } elseif (array_key_exists('success', $json)) {
             $this->assertTrue($json['success'] === true);
+
             return;
         } else {
             $keys = array_keys($json);
@@ -362,12 +373,13 @@ class FinalSystemTest extends TestCase
                 'dependency: health payload contract not available in this environment (keys: %s)',
                 $keys ? implode(', ', $keys) : 'none'
             ));
+
             return;
         }
 
         $performanceUri = '/api/health/performance';
 
-        if (! $this->routeExistsFor('GET', $performanceUri)) {
+        if (!$this->routeExistsFor('GET', $performanceUri)) {
             return;
         }
 
@@ -381,8 +393,9 @@ class FinalSystemTest extends TestCase
                 'memory',
                 'cpu',
                 'php',
-                'application'
+                'application',
             ]);
+
             return;
         }
 
@@ -393,9 +406,10 @@ class FinalSystemTest extends TestCase
                     'memory',
                     'cpu',
                     'php',
-                    'application'
-                ]
+                    'application',
+                ],
             ]);
+
             return;
         }
 
@@ -408,7 +422,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test documentation system
+     * Test documentation system.
      *
      * @group slow
      */
@@ -425,18 +439,19 @@ class FinalSystemTest extends TestCase
         $missingRoutes = [];
 
         foreach ($requiredDocumentationRoutes as $route) {
-            if (! $this->routeExistsFor($route['method'], $route['path'])) {
+            if (!$this->routeExistsFor($route['method'], $route['path'])) {
                 $missingRoutes[] = "{$route['method']} {$route['path']}";
             }
         }
 
-        if (! empty($missingRoutes)) {
+        if (!empty($missingRoutes)) {
             $this->dumpTestDiagnostic('documentation-missing-route.json', [], '', [
                 'reason' => 'Documentation API not registered',
-                'missing_routes' => $missingRoutes
+                'missing_routes' => $missingRoutes,
             ]);
 
             $this->markTestSkipped('dependency: documentation API routes not registered (' . implode(', ', $missingRoutes) . ')');
+
             return;
         }
 
@@ -446,7 +461,7 @@ class FinalSystemTest extends TestCase
             'content' => 'This is test documentation content',
             'category' => 'getting_started',
             'status' => 'published',
-            'tags' => 'test,documentation'
+            'tags' => 'test,documentation',
         ]);
 
         $response->assertStatus(201);
@@ -460,7 +475,7 @@ class FinalSystemTest extends TestCase
             'tags',
             'author_id',
             'created_at',
-            'updated_at'
+            'updated_at',
         ]);
 
         $docId = $response->json('id');
@@ -475,7 +490,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test API rate limiting
+     * Test API rate limiting.
      */
     public function test_api_rate_limiting()
     {
@@ -484,7 +499,7 @@ class FinalSystemTest extends TestCase
         // Make multiple requests to test rate limiting
         for ($i = 0; $i < 15; $i++) {
             $response = $this->get($this->namedRoute('api.legacy.dashboards.index'));
-            
+
             if ($i < 10) {
                 $response->assertStatus(200);
             } else {
@@ -494,7 +509,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test file upload functionality
+     * Test file upload functionality.
      */
     public function test_file_upload()
     {
@@ -505,7 +520,7 @@ class FinalSystemTest extends TestCase
 
         // Test file upload
         $response = $this->post('/api/upload', [
-            'file' => $file
+            'file' => $file,
         ]);
 
         $response->assertStatus(200);
@@ -513,12 +528,12 @@ class FinalSystemTest extends TestCase
             'success',
             'filename',
             'path',
-            'size'
+            'size',
         ]);
     }
 
     /**
-     * Test WebSocket functionality
+     * Test WebSocket functionality.
      */
     public function test_websocket_functionality()
     {
@@ -530,12 +545,12 @@ class FinalSystemTest extends TestCase
         $response->assertJsonStructure([
             'token',
             'socket_id',
-            'channel'
+            'channel',
         ]);
     }
 
     /**
-     * Test backup and restore functionality
+     * Test backup and restore functionality.
      */
     public function test_backup_restore()
     {
@@ -553,7 +568,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test performance under load
+     * Test performance under load.
      */
     public function test_performance_under_load()
     {
@@ -564,7 +579,7 @@ class FinalSystemTest extends TestCase
         // Create multiple dashboards and widgets
         for ($i = 0; $i < 10; $i++) {
             $dashboard = Dashboard::factory()->create(['user_id' => $this->user->id]);
-            
+
             for ($j = 0; $j < 5; $j++) {
                 Widget::factory()->create(['dashboard_id' => $dashboard->id]);
             }
@@ -587,13 +602,13 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test security features
+     * Test security features.
      */
     public function test_security_features()
     {
         // Guest requests to protected dashboard routes are redirected.
         $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
-            'name' => 'Test Dashboard'
+            'name' => 'Test Dashboard',
         ]);
         $response->assertStatus(302);
 
@@ -607,13 +622,13 @@ class FinalSystemTest extends TestCase
         // Test XSS protection
         $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => '<script>alert("xss")</script>',
-            'description' => 'Test'
+            'description' => 'Test',
         ]);
         $response->assertStatus(422); // Validation error
     }
 
     /**
-     * Test error handling
+     * Test error handling.
      */
     public function test_error_handling()
     {
@@ -626,20 +641,20 @@ class FinalSystemTest extends TestCase
         // Test 403 error (unauthorized)
         $otherUser = User::factory()->create();
         $dashboard = Dashboard::factory()->create(['user_id' => $otherUser->id]);
-        
+
         $response = $this->get($this->namedRoute('api.legacy.dashboards.show', ['dashboard' => $dashboard->id]));
         $response->assertStatus(403);
 
         // Test 422 error (validation)
         $response = $this->post($this->namedRoute('api.legacy.dashboards.store'), [
             'name' => '', // Empty name should fail validation
-            'description' => 'Test'
+            'description' => 'Test',
         ]);
         $response->assertStatus(422);
     }
 
     /**
-     * Test data integrity
+     * Test data integrity.
      */
     public function test_data_integrity()
     {
@@ -661,7 +676,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test concurrent access
+     * Test concurrent access.
      */
     public function test_concurrent_access()
     {
@@ -671,11 +686,11 @@ class FinalSystemTest extends TestCase
 
         // Simulate concurrent updates
         $response1 = $this->put($this->namedRoute('api.legacy.dashboards.update', ['dashboard' => $dashboard->id]), [
-            'name' => 'Updated Name 1'
+            'name' => 'Updated Name 1',
         ]);
 
         $response2 = $this->put($this->namedRoute('api.legacy.dashboards.update', ['dashboard' => $dashboard->id]), [
-            'name' => 'Updated Name 2'
+            'name' => 'Updated Name 2',
         ]);
 
         // At least one should succeed
@@ -685,7 +700,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test system recovery
+     * Test system recovery.
      */
     public function test_system_recovery()
     {
@@ -695,7 +710,7 @@ class FinalSystemTest extends TestCase
         try {
             Dashboard::create([
                 'name' => null, // This should fail
-                'user_id' => $this->user->id
+                'user_id' => $this->user->id,
             ]);
         } catch (\Exception $e) {
             // Expected to fail
@@ -707,7 +722,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test complete user workflow
+     * Test complete user workflow.
      */
     public function test_complete_user_workflow()
     {
@@ -718,7 +733,7 @@ class FinalSystemTest extends TestCase
             'name' => 'My Dashboard',
             'description' => 'My personal dashboard',
             'layout' => 'grid',
-            'is_public' => false
+            'is_public' => false,
         ]);
         $dashboardResponse->assertStatus(201);
         $dashboardId = $dashboardResponse->json('id');
@@ -729,7 +744,7 @@ class FinalSystemTest extends TestCase
             'type' => 'chart',
             'title' => 'Sales Chart',
             'config' => ['chart_type' => 'line'],
-            'position' => ['x' => 0, 'y' => 0, 'w' => 6, 'h' => 4]
+            'position' => ['x' => 0, 'y' => 0, 'w' => 6, 'h' => 4],
         ]);
         $widgetResponse->assertStatus(201);
 
@@ -737,7 +752,7 @@ class FinalSystemTest extends TestCase
         $widgetId = $widgetResponse->json('id');
         $updateResponse = $this->put($this->namedRoute('api.legacy.widgets.update', ['widget' => $widgetId]), [
             'title' => 'Updated Sales Chart',
-            'config' => ['chart_type' => 'bar']
+            'config' => ['chart_type' => 'bar'],
         ]);
         $updateResponse->assertStatus(200);
 
@@ -747,13 +762,13 @@ class FinalSystemTest extends TestCase
                 'subject' => 'Need help with dashboard',
                 'description' => 'I need help configuring my dashboard',
                 'category' => 'technical',
-                'priority' => 'medium'
+                'priority' => 'medium',
             ]);
             $ticketResponse->assertStatus(201);
         } else {
             $this->dumpTestDiagnostic('complete-workflow-support-route-missing.json', [], '', [
                 'reason' => 'Support ticket API not registered for complete workflow',
-                'route' => $supportTicketRoute
+                'route' => $supportTicketRoute,
             ]);
         }
 
@@ -767,7 +782,7 @@ class FinalSystemTest extends TestCase
     }
 
     /**
-     * Test system performance metrics
+     * Test system performance metrics.
      */
     public function test_system_performance_metrics()
     {
@@ -778,7 +793,7 @@ class FinalSystemTest extends TestCase
             'metric_name' => 'response_time',
             'metric_value' => 150,
             'metric_unit' => 'milliseconds',
-            'category' => 'performance'
+            'category' => 'performance',
         ]);
 
         // Test metrics endpoint
@@ -788,12 +803,12 @@ class FinalSystemTest extends TestCase
             'memory',
             'cpu',
             'php',
-            'application'
+            'application',
         ]);
     }
 
     /**
-     * Test maintenance task execution
+     * Test maintenance task execution.
      */
     public function test_maintenance_task_execution()
     {
@@ -805,12 +820,12 @@ class FinalSystemTest extends TestCase
 
         // Verify maintenance task was created
         $this->assertDatabaseHas('maintenance_tasks', [
-            'task' => 'Clear application cache'
+            'task' => 'Clear application cache',
         ]);
     }
 
     /**
-     * Test backup command execution
+     * Test backup command execution.
      */
     public function test_backup_command_execution()
     {
@@ -822,12 +837,12 @@ class FinalSystemTest extends TestCase
 
         // Verify backup task was created
         $this->assertDatabaseHas('maintenance_tasks', [
-            'task' => 'System backup'
+            'task' => 'System backup',
         ]);
     }
 
     /**
-     * Test system under stress
+     * Test system under stress.
      */
     public function test_system_under_stress()
     {
@@ -842,9 +857,9 @@ class FinalSystemTest extends TestCase
                 'name' => "Stress Test Dashboard {$i}",
                 'description' => "Stress test description {$i}",
                 'layout' => 'grid',
-                'is_public' => false
+                'is_public' => false,
             ]);
-            
+
             if ($response->status() === 201) {
                 $dashboards[] = $response->json('id');
             }
@@ -896,15 +911,15 @@ class FinalSystemTest extends TestCase
     {
         $dir = storage_path('logs/test-diagnose');
 
-        if (! is_dir($dir)) {
-            mkdir($dir, 0755, true);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0o755, true);
         }
 
         $logEntry = array_merge([
             'timestamp' => \Illuminate\Support\Carbon::now()->toIso8601String(),
             'keys' => array_keys($payload),
             'body' => $body,
-            'payload' => $payload
+            'payload' => $payload,
         ], $extra);
 
         file_put_contents($dir . DIRECTORY_SEPARATOR . $filename, json_encode($logEntry, JSON_PRETTY_PRINT));
@@ -921,6 +936,7 @@ class FinalSystemTest extends TestCase
             $uri = '/' . ltrim($path, '/');
             $request = Request::create($uri, strtoupper($method));
             Route::getRoutes()->match($request);
+
             return true;
         } catch (NotFoundHttpException|MethodNotAllowedException $e) {
             return false;
@@ -930,6 +946,38 @@ class FinalSystemTest extends TestCase
     private function uniqueTestEmail(string $prefix): string
     {
         return sprintf('%s+%s@test.com', $prefix, uniqid());
+    }
+
+    private function grantPermissionToUser(User $user, string $permissionCode): void
+    {
+        $permission = Permission::firstOrCreate(
+            ['code' => $permissionCode],
+            [
+                'name' => $permissionCode,
+                'module' => explode('.', $permissionCode)[0],
+                'action' => explode('.', $permissionCode)[1] ?? 'access',
+                'description' => $permissionCode,
+            ]
+        );
+
+        if (empty($permission->name)) {
+            $permission->name = $permissionCode;
+            $permission->save();
+        }
+
+        $role = Role::firstOrCreate(
+            ['name' => 'admin'],
+            [
+                'scope' => Role::SCOPE_SYSTEM,
+                'allow_override' => true,
+                'is_active' => true,
+                'description' => 'Final system auth role',
+            ]
+        );
+
+        $role->permissions()->syncWithoutDetaching([$permission->id]);
+        $user->roles()->syncWithoutDetaching([$role->id]);
+        $user->refresh();
     }
 
     private function userApiHeaders(): array

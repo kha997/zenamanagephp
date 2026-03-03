@@ -1,37 +1,41 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Browser\Buttons;
 
 use App\Models\Project;
-use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use Laravel\Dusk\TestCase;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
 /**
- * Button Navigation Test
- * 
+ * Button Navigation Test.
+ *
  * Tests navigation flows and user interactions
  */
-class ButtonNavigationTest extends TestCase
+class ButtonNavigationTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = Tenant::create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Create test user
@@ -39,7 +43,7 @@ class ButtonNavigationTest extends TestCase
             'name' => 'Test User',
             'email' => 'test@test-' . uniqid() . '.com',
             'password' => Hash::make('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create test project
@@ -49,16 +53,16 @@ class ButtonNavigationTest extends TestCase
             'name' => 'Test Project',
             'description' => 'Test project for navigation',
             'status' => 'active',
-            'budget_total' => 100000.00
+            'budget_total' => 100000.00,
         ]);
     }
 
     /**
-     * Test main navigation
+     * Test main navigation.
      */
     public function test_main_navigation(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/dashboard')
                     ->assertSee('Dashboard')
@@ -78,11 +82,11 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test breadcrumb navigation
+     * Test breadcrumb navigation.
      */
     public function test_breadcrumb_navigation(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects')
                     ->clickLink($this->project->name)
@@ -93,11 +97,11 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test back/forward navigation
+     * Test back/forward navigation.
      */
     public function test_back_forward_navigation(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects')
                     ->clickLink($this->project->name)
@@ -110,11 +114,11 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test deep linking
+     * Test deep linking.
      */
     public function test_deep_linking(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects/' . $this->project->id)
                     ->assertSee($this->project->name)
@@ -123,11 +127,11 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test mobile navigation
+     * Test mobile navigation.
      */
     public function test_mobile_navigation(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->resize(375, 667) // iPhone size
                     ->visit('/dashboard')
@@ -139,7 +143,7 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test sidebar navigation
+     * Test sidebar navigation.
      */
     public function test_sidebar_navigation(): void
     {
@@ -155,7 +159,7 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test user menu navigation
+     * Test user menu navigation.
      */
     public function test_user_menu_navigation(): void
     {
@@ -172,7 +176,7 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test search navigation
+     * Test search navigation.
      */
     public function test_search_navigation(): void
     {
@@ -186,7 +190,7 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test filter navigation
+     * Test filter navigation.
      */
     public function test_filter_navigation(): void
     {
@@ -202,7 +206,7 @@ class ButtonNavigationTest extends TestCase
     }
 
     /**
-     * Test pagination navigation
+     * Test pagination navigation.
      */
     public function test_pagination_navigation(): void
     {
@@ -214,7 +218,7 @@ class ButtonNavigationTest extends TestCase
                 'name' => "Project {$i}",
                 'description' => "Project {$i} description",
                 'status' => 'active',
-                'budget_total' => 50000.00
+                'budget_total' => 50000.00,
             ]);
         }
 

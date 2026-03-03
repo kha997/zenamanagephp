@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Browser\Buttons;
 
@@ -6,32 +8,35 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use Laravel\Dusk\TestCase;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
 /**
- * Button Form Submission Test
- * 
+ * Button Form Submission Test.
+ *
  * Tests form interactions and submissions
  */
-class ButtonFormSubmissionTest extends TestCase
+class ButtonFormSubmissionTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test tenant
         $this->tenant = Tenant::create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Create test user
@@ -39,7 +44,7 @@ class ButtonFormSubmissionTest extends TestCase
             'name' => 'Test User',
             'email' => 'test@test-' . uniqid() . '.com',
             'password' => Hash::make('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create test project
@@ -49,16 +54,16 @@ class ButtonFormSubmissionTest extends TestCase
             'name' => 'Test Project',
             'description' => 'Test project for form submission',
             'status' => 'active',
-            'budget_total' => 100000.00
+            'budget_total' => 100000.00,
         ]);
     }
 
     /**
-     * Test project creation form
+     * Test project creation form.
      */
     public function test_project_creation_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects/create')
                     ->type('name', 'New Project')
@@ -73,11 +78,11 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test project edit form
+     * Test project edit form.
      */
     public function test_project_edit_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects/' . $this->project->id . '/edit')
                     ->clear('name')
@@ -91,11 +96,11 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test task creation form
+     * Test task creation form.
      */
     public function test_task_creation_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/tasks/create')
                     ->type('name', 'New Task')
@@ -111,11 +116,11 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test form validation
+     * Test form validation.
      */
     public function test_form_validation(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects/create')
                     ->click('.submit-button')
@@ -126,11 +131,11 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test form reset
+     * Test form reset.
      */
     public function test_form_reset(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects/create')
                     ->type('name', 'Test Project')
@@ -142,11 +147,11 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test form cancel
+     * Test form cancel.
      */
     public function test_form_cancel(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects/create')
                     ->type('name', 'Test Project')
@@ -156,11 +161,11 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test file upload form
+     * Test file upload form.
      */
     public function test_file_upload_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/documents/create')
                     ->type('name', 'Test Document')
@@ -174,7 +179,7 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test bulk action form
+     * Test bulk action form.
      */
     public function test_bulk_action_form(): void
     {
@@ -188,12 +193,12 @@ class ButtonFormSubmissionTest extends TestCase
                 'description' => "Bulk task description {$i}",
                 'status' => 'pending',
                 'priority' => 'medium',
-                'estimated_hours' => 8.0
+                'estimated_hours' => 8.0,
             ]);
             $tasks[] = $task;
         }
 
-        $this->browse(function ($browser) use ($tasks) {
+        $this->browse(function (Browser $browser) use ($tasks) {
             $browser->loginAs($this->user)
                     ->visit('/tasks')
                     ->click('.select-all-checkbox')
@@ -207,11 +212,11 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test search form
+     * Test search form.
      */
     public function test_search_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects')
                     ->type('.search-input', $this->project->name)
@@ -225,7 +230,7 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test filter form
+     * Test filter form.
      */
     public function test_filter_form(): void
     {
@@ -242,7 +247,7 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test form loading states
+     * Test form loading states.
      */
     public function test_form_loading_states(): void
     {
@@ -262,7 +267,7 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test form error handling
+     * Test form error handling.
      */
     public function test_form_error_handling(): void
     {

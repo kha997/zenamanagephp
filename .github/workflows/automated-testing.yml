@@ -7,6 +7,11 @@ on:
         description: 'Set to true when manually dispatching to log timeout/ulimit details. Defaults to false so regular runs stay clean.'
         required: false
         default: 'false'
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches: [ main, develop, 'feature/*' ]
     paths-ignore:

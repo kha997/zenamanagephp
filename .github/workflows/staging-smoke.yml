@@ -2,6 +2,12 @@ name: Staging Smoke
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches:
       - main

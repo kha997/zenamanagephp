@@ -12,7 +12,7 @@ APP_BASE_URL="${APP_BASE_URL:-http://${APP_HOST}:${APP_PORT}}"
 SMOKE_EMAIL="${SMOKE_EMAIL:-admin@zena.local}"
 SMOKE_PASSWORD="${SMOKE_PASSWORD:-password}"
 SERVER_LOG="/tmp/smoke_server.log"
-SMOKE_SERVER_MODE="${SMOKE_SERVER_MODE:-router}"
+SMOKE_SERVER_MODE="${SMOKE_SERVER_MODE:-artisan}"
 
 PASS_COUNT=0
 FAIL_COUNT=0
@@ -24,7 +24,6 @@ TOKEN=""
 HAVE_FAILURE=0
 SERVER_MODE=""
 SERVER_UP_SEEN=0
-TEMP_ROOT_INDEX_LINK=0
 SERVER_EXIT_CODE=""
 
 CHECK_LINES=()
@@ -56,10 +55,7 @@ record_skip() {
 cleanup() {
   if [[ -n "${PHP_PID}" ]]; then
     kill "${PHP_PID}" >/dev/null 2>&1 || true
-  fi
-
-  if [[ "${TEMP_ROOT_INDEX_LINK}" -eq 1 && -L index.php ]]; then
-    rm -f index.php
+    wait "${PHP_PID}" >/dev/null 2>&1 || true
   fi
 
   if [[ -n "${ENV_BACKUP}" && -f "${ENV_BACKUP}" ]]; then
@@ -309,7 +305,7 @@ wait_for_readiness() {
         fi
       fi
     done
-    sleep 0.25
+    sleep 1
   done
 
   return 1
@@ -348,6 +344,12 @@ start_artisan_server() {
   start_server_with "artisan serve" "${cmd[@]}"
 }
 
+capture_curl_verbose() {
+  local path="$1"
+
+  curl -v --connect-timeout 3 --max-time 10 "${APP_BASE_URL}${path}" 2>&1 || true
+}
+
 add_diag_block() {
   local title="$1"
   local content="$2"
@@ -368,6 +370,9 @@ collect_diagnostics() {
   local server_status
   local server_head
   local server_tail
+  local root_verbose
+  local zena_health_verbose
+  local api_health_verbose
   local laravel_tail
 
   capture_server_exit_code_if_dead
@@ -386,7 +391,10 @@ collect_diagnostics() {
   zena_health_line="$(status_line '/api/zena/health' || true)"
   api_health_line="$(status_line '/api/health' || true)"
   server_head="$(sed -n '1,40p' "${SERVER_LOG}" 2>&1 || true)"
-  server_tail="$(tail -n 120 "${SERVER_LOG}" 2>&1 || true)"
+  server_tail="$(tail -n 200 "${SERVER_LOG}" 2>&1 || true)"
+  root_verbose="$(capture_curl_verbose '/' )"
+  zena_health_verbose="$(capture_curl_verbose '/api/zena/health' )"
+  api_health_verbose="$(capture_curl_verbose '/api/health' )"
 
   if [[ -f storage/logs/laravel.log ]]; then
     laravel_tail="$(tail -n 120 storage/logs/laravel.log 2>&1 || true)"
@@ -408,6 +416,9 @@ collect_diagnostics() {
   add_diag_block "server process status" "${server_status}"
   add_diag_block "lsof LISTEN ${APP_PORT}" "${listen_output}"
   add_diag_block "curl status lines" "/ => ${root_line}\n/api/zena/health => ${zena_health_line}\n/api/health => ${api_health_line}"
+  add_diag_block "curl -v /" "${root_verbose}"
+  add_diag_block "curl -v /api/zena/health" "${zena_health_verbose}"
+  add_diag_block "curl -v /api/health" "${api_health_verbose}"
   add_diag_block "head -n 40 ${SERVER_LOG}" "${server_head}"
   add_diag_block "tail ${SERVER_LOG}" "${server_tail}"
   add_diag_block "tail storage/logs/laravel.log" "${laravel_tail}"
@@ -416,6 +427,9 @@ collect_diagnostics() {
   printf '%b\n' "${listen_output}" || true
   printf '/ => %s\n/api/zena/health => %s\n/api/health => %s\n' "$root_line" "$zena_health_line" "$api_health_line"
   printf '%b\n' "${server_tail}" || true
+  printf '%b\n' "${root_verbose}" || true
+  printf '%b\n' "${zena_health_verbose}" || true
+  printf '%b\n' "${api_health_verbose}" || true
   printf '%b\n' "${laravel_tail}" || true
 }
 
@@ -426,7 +440,7 @@ write_report() {
     echo "- Timestamp: $(date -u '+%Y-%m-%d %H:%M:%SZ')"
     echo "- Base URL: ${APP_BASE_URL}"
     echo "- Tenant ID: ${TENANT_ID:-unknown}"
-    echo "- Server mode: ${SMOKE_SERVER_MODE}"
+    echo "- Server mode: artisan"
     echo "- Passed: ${PASS_COUNT}"
     echo "- Failed: ${FAIL_COUNT}"
     echo "- Skipped: ${SKIP_COUNT}"
@@ -465,6 +479,7 @@ summary_and_exit() {
 stop_server() {
   if [[ -n "${PHP_PID}" ]]; then
     kill "${PHP_PID}" >/dev/null 2>&1 || true
+    wait "${PHP_PID}" >/dev/null 2>&1 || true
     PHP_PID=""
   fi
 }
@@ -494,44 +509,12 @@ start_server_with() {
 }
 
 start_server() {
-  local requested_mode
-  requested_mode="$(printf '%s' "${SMOKE_SERVER_MODE}" | tr '[:upper:]' '[:lower:]')"
-
-  if [[ "${requested_mode}" == "artisan" ]]; then
-    if start_artisan_server; then
-      return 0
-    fi
-    stop_server
-    record_fail "server process exited early (mode=artisan)"
-    summary_and_exit
-  fi
-
-  if [[ "${requested_mode}" != "router" ]]; then
-    record_fail "invalid SMOKE_SERVER_MODE=${SMOKE_SERVER_MODE} (expected router|artisan)"
-    summary_and_exit
-  fi
-
-  if [[ -f server.php ]]; then
-    if start_server_with "php -S (server.php)" php -S "${APP_HOST}:${APP_PORT}" server.php; then
-      return 0
-    fi
-  elif [[ -f vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php ]]; then
-    if [[ ! -f index.php && -f public/index.php ]]; then
-      ln -s public/index.php index.php
-      TEMP_ROOT_INDEX_LINK=1
-    fi
-    if start_server_with "php -S (vendor router)" php -S "${APP_HOST}:${APP_PORT}" vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php; then
-      return 0
-    fi
-  fi
-
-  stop_server
   if start_artisan_server; then
     return 0
   fi
 
   stop_server
-  record_fail "server process exited early"
+  record_fail "server process exited early (mode=artisan)"
   summary_and_exit
 }
 
@@ -596,15 +579,6 @@ echo $tenant ? $tenant->id : "";
   start_server
 
   readiness_path="$(wait_for_readiness "$health_uri" || true)"
-  if [[ -z "$readiness_path" ]]; then
-    if [[ "$SERVER_MODE" == php\ -S* ]]; then
-      info "Primary server mode failed readiness; retrying with artisan serve"
-      stop_server
-      if start_artisan_server; then
-        readiness_path="$(wait_for_readiness "$health_uri" || true)"
-      fi
-    fi
-  fi
   if [[ -z "$readiness_path" ]]; then
     if [[ "$SERVER_UP_SEEN" -eq 1 ]]; then
       info "Server responded, but readiness endpoint did not return HTTP 200"

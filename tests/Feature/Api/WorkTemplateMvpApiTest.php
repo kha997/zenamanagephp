@@ -479,7 +479,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $this->postJson('/api/zena/work-templates/' . $template->id . '/publish', [], $this->authHeaders($sourceUser))
             ->assertStatus(200);
 
-        $export = $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($sourceUser));
+        $export = $this->getJson(route('api.zena.work-templates.package.export', ['wtId' => $template->id]), $this->authHeaders($sourceUser));
         $export->assertStatus(200)
             ->assertJsonPath('data.schema_version', WorkTemplatePackageService::SCHEMA_VERSION);
 
@@ -496,7 +496,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'tenant_id' => (string) $sourceTenant->id,
         ]);
 
-        $reExport = $this->getJson('/api/zena/export-template-package/' . $importedTemplateId, $this->authHeaders($sourceUser));
+        $reExport = $this->getJson(route('api.zena.work-templates.package.export', ['wtId' => $importedTemplateId]), $this->authHeaders($sourceUser));
         $reExport->assertStatus(200);
 
         $this->assertSame(
@@ -528,7 +528,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($userWithoutRbac))
+        $this->getJson(route('api.zena.work-templates.package.export', ['wtId' => $template->id]), $this->authHeaders($userWithoutRbac))
             ->assertStatus(403);
 
         $this->postJson('/api/zena/import-template-package', $this->minimalTemplatePackagePayload(), $this->authHeaders($userWithoutRbac))
@@ -541,7 +541,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft']);
         $template = $this->createDraftTemplate($tenant, $user);
 
-        $export = $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($user));
+        $export = $this->getJson(route('api.zena.work-templates.package.export', ['wtId' => $template->id]), $this->authHeaders($user));
         $export->assertStatus(200);
 
         $this->postJson('/api/zena/import-template-package', $export->json('data'), $this->authHeaders($user))

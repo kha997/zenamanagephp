@@ -9,22 +9,40 @@ use Tests\TestCase;
 
 class TenantIsolationV1ContractTest extends TestCase
 {
-    private const TARGET_PREFIXES = [
+    private const TARGET_ANCHORS = [
         'api/v1/notifications',
         'api/v1/notification-rules',
-        'api/v1/work-template',
+        'api/v1/work-template/api-info',
     ];
 
-    public function test_v1_target_prefixes_require_tenant_isolation_middleware(): void
+    public function test_v1_target_anchors_require_tenant_isolation_middleware(): void
     {
-        foreach (self::TARGET_PREFIXES as $prefix) {
+        foreach (self::TARGET_ANCHORS as $anchor) {
+            $anchorMatches = $this->routesForPrefix($anchor);
+
+            $this->assertGreaterThan(
+                0,
+                count($anchorMatches),
+                sprintf('Expected at least one route for anchor "%s".', $anchor)
+            );
+
+            $prefix = $this->derivePrefixFromAnchor($anchor);
             $matchedRoutes = $this->routesForPrefix($prefix);
 
             $this->assertGreaterThan(
                 0,
                 count($matchedRoutes),
-                sprintf('Expected at least one route for prefix "%s".', $prefix)
+                sprintf('Expected at least one route for derived prefix "%s" from anchor "%s".', $prefix, $anchor)
             );
+
+            if ($anchor === 'api/v1/work-template/api-info') {
+                $this->assertTrue(
+                    collect($matchedRoutes)->contains(
+                        static fn (RoutingRoute $route): bool => Str::startsWith($route->uri(), Str::beforeLast($anchor, '/'))
+                    ),
+                    'Expected at least one work-template route to match the derived concrete anchor prefix.'
+                );
+            }
 
             foreach ($matchedRoutes as $route) {
                 $middleware = $route->gatherMiddleware();
@@ -57,6 +75,15 @@ class TenantIsolationV1ContractTest extends TestCase
         }
 
         return $matched;
+    }
+
+    private function derivePrefixFromAnchor(string $anchor): string
+    {
+        if (Str::endsWith($anchor, '/api-info') || Str::endsWith($anchor, '/health')) {
+            return Str::beforeLast($anchor, '/');
+        }
+
+        return $anchor;
     }
 
     /**

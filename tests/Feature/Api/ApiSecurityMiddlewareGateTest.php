@@ -8,6 +8,11 @@ use Tests\TestCase;
 
 class ApiSecurityMiddlewareGateTest extends TestCase
 {
+    private const ZENA_PREFIX = 'api/zena/';
+    private const V1_SEGMENT = 'v1';
+    private const WORK_TEMPLATE_STRICT_PREFIX = 'api/' . self::V1_SEGMENT . '/work-template/';
+    private const V1_BASELINE_PREFIX = 'api/' . self::V1_SEGMENT . '/';
+
     public function test_business_api_routes_are_protected_by_auth_tenant_rbac_middleware(): void
     {
         Artisan::call('route:list', [
@@ -138,15 +143,15 @@ class ApiSecurityMiddlewareGateTest extends TestCase
             return null;
         }
 
-        if (str_starts_with($uri, 'api/zena/')) {
+        if (str_starts_with($uri, self::ZENA_PREFIX)) {
             return 'strict';
         }
 
-        if (str_starts_with($uri, 'api/v1/work-template/')) {
+        if (str_starts_with($uri, self::WORK_TEMPLATE_STRICT_PREFIX)) {
             return 'strict';
         }
 
-        if (str_starts_with($uri, 'api/v1/')) {
+        if (str_starts_with($uri, self::V1_BASELINE_PREFIX)) {
             return 'baseline';
         }
 

@@ -17,6 +17,12 @@ jobs:
     env:
       XDEBUG_MODE: off
       PCOV_ENABLED: 0
+      APP_HOST: 127.0.0.1
+      APP_PORT: 18080
+      SMOKE_ENV_NAME: smoke
+      SMOKE_ENV_FILE: .env.smoke
+      SMOKE_DB_PATH: /tmp/zenamanage_smoke.sqlite
+      SMOKE_REPORT_FILE: ${{ github.workspace }}/smoke-report.md
 
     steps:
       - name: Checkout
@@ -26,6 +32,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, curl, sqlite3, pdo_sqlite
           coverage: none
           ini-values: opcache.enable_cli=0
 
@@ -41,10 +48,6 @@ jobs:
         run: npm ci
 
       - name: Run staging smoke
-        env:
-          APP_HOST: 127.0.0.1
-          APP_PORT: 18080
-          SMOKE_REPORT_FILE: ${{ github.workspace }}/smoke-report.md
         run: bash scripts/smoke_staging.sh
 
       - name: Upload smoke report
@@ -52,5 +55,21 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: smoke-report
-          path: smoke-report.md
+          path: ${{ github.workspace }}/smoke-report.md
+          if-no-files-found: warn
+
+      - name: Upload smoke server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-server-log
+          path: /tmp/smoke_server.log
+          if-no-files-found: warn
+
+      - name: Upload laravel smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-laravel-log
+          path: storage/logs/laravel.log
           if-no-files-found: warn

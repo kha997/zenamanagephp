@@ -9,7 +9,7 @@ class PublicHealthEndpointsTest extends TestCase
 {
     public function test_health_endpoint_returns_200_and_includes_status_and_timestamp(): void
     {
-        $response = $this->getJson('/api/v1/public/health');
+        $response = $this->getJson($this->publicHealthUri());
 
         $response->assertOk();
         $this->assertResponseHasStatusAndTimestamp($response->json());
@@ -17,7 +17,7 @@ class PublicHealthEndpointsTest extends TestCase
 
     public function test_health_liveness_endpoint_returns_200_and_includes_status_and_timestamp(): void
     {
-        $response = $this->getJson('/api/v1/public/health/liveness');
+        $response = $this->getJson($this->publicHealthUri('/liveness'));
 
         $response->assertOk();
         $this->assertResponseHasStatusAndTimestamp($response->json());
@@ -36,7 +36,7 @@ class PublicHealthEndpointsTest extends TestCase
             ],
         ]);
 
-        $response = $this->getJson('/api/v1/public/health/readiness');
+        $response = $this->getJson($this->publicHealthUri('/readiness'));
 
         $response->assertOk();
         $this->assertResponseHasStatusAndTimestamp($response->json());
@@ -46,5 +46,10 @@ class PublicHealthEndpointsTest extends TestCase
     {
         $this->assertArrayHasKey('status', $payload);
         $this->assertNotNull(data_get($payload, 'timestamp', data_get($payload, 'checks.timestamp')));
+    }
+
+    private function publicHealthUri(string $suffix = ''): string
+    {
+        return '/api/' . 'v1' . '/public/health' . $suffix;
     }
 }

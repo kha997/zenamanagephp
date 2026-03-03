@@ -354,7 +354,7 @@ class TaskDependenciesTest extends TestCase
 
     private function createTaskDependencyRecord(Task $task, Task $dependency): TaskDependency
     {
-        return TaskDependency::create([
+        return \Database\Factories\TaskDependencyFactory::new()->create([
             'tenant_id' => $this->project->tenant_id,
             'task_id' => $task->id,
             'dependency_id' => $dependency->id,

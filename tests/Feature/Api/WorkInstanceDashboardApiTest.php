@@ -30,8 +30,8 @@ class WorkInstanceDashboardApiTest extends TestCase
 
     public function test_index_and_metrics_require_authentication(): void
     {
-        $this->getJson('/api/zena/work-instances')->assertStatus(401);
-        $this->getJson('/api/zena/work-instances/metrics')->assertStatus(401);
+        $this->getJson($this->workInstanceRoute('index'))->assertStatus(401);
+        $this->getJson($this->workInstanceRoute('metrics'))->assertStatus(401);
     }
 
     public function test_index_and_metrics_require_work_view_permission(): void
@@ -39,8 +39,8 @@ class WorkInstanceDashboardApiTest extends TestCase
         $tenant = Tenant::factory()->create();
         $user = $this->createTenantUser($tenant, [], ['member'], []);
 
-        $this->getJson('/api/zena/work-instances', $this->authHeaders($user))->assertStatus(403);
-        $this->getJson('/api/zena/work-instances/metrics', $this->authHeaders($user))->assertStatus(403);
+        $this->getJson($this->workInstanceRoute('index'), $this->authHeaders($user))->assertStatus(403);
+        $this->getJson($this->workInstanceRoute('metrics'), $this->authHeaders($user))->assertStatus(403);
     }
 
     public function test_index_and_metrics_respect_tenant_isolation(): void
@@ -67,21 +67,21 @@ class WorkInstanceDashboardApiTest extends TestCase
         $versionA = (string) WorkTemplateVersion::query()->where('work_template_id', $templateA->id)->value('id');
         $versionB = (string) WorkTemplateVersion::query()->where('work_template_id', $templateB->id)->value('id');
 
-        $instanceA1 = WorkInstance::create([
+        $instanceA1 = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantA->id,
             'project_id' => (string) $projectA->id,
             'work_template_version_id' => $versionA,
             'status' => 'pending',
             'created_by' => (string) $actorA->id,
         ]);
-        $instanceA2 = WorkInstance::create([
+        $instanceA2 = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantA->id,
             'project_id' => (string) $projectA->id,
             'work_template_version_id' => $versionA,
             'status' => 'approved',
             'created_by' => (string) $actorA->id,
         ]);
-        $instanceB = WorkInstance::create([
+        $instanceB = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'project_id' => (string) $projectB->id,
             'work_template_version_id' => $versionB,
@@ -89,7 +89,7 @@ class WorkInstanceDashboardApiTest extends TestCase
             'created_by' => (string) $actorB->id,
         ]);
 
-        WorkInstanceStep::create([
+        WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenantA->id,
             'work_instance_id' => (string) $instanceA1->id,
             'step_key' => 'a1-step-1',
@@ -99,7 +99,7 @@ class WorkInstanceDashboardApiTest extends TestCase
             'status' => 'pending',
             'deadline_at' => now()->subDay(),
         ]);
-        WorkInstanceStep::create([
+        WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenantA->id,
             'work_instance_id' => (string) $instanceA1->id,
             'step_key' => 'a1-step-2',
@@ -109,7 +109,7 @@ class WorkInstanceDashboardApiTest extends TestCase
             'status' => 'completed',
             'completed_at' => now()->subHour(),
         ]);
-        WorkInstanceStep::create([
+        WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenantA->id,
             'work_instance_id' => (string) $instanceA2->id,
             'step_key' => 'a2-step-1',
@@ -119,7 +119,7 @@ class WorkInstanceDashboardApiTest extends TestCase
             'status' => 'approved',
             'completed_at' => now()->subHour(),
         ]);
-        WorkInstanceStep::create([
+        WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'work_instance_id' => (string) $instanceB->id,
             'step_key' => 'b-step-1',
@@ -130,7 +130,7 @@ class WorkInstanceDashboardApiTest extends TestCase
             'deadline_at' => now()->subDay(),
         ]);
 
-        $indexResponse = $this->getJson('/api/zena/work-instances', $this->authHeaders($actorA));
+        $indexResponse = $this->getJson($this->workInstanceRoute('index'), $this->authHeaders($actorA));
         $indexResponse
             ->assertOk()
             ->assertJsonPath('meta.pagination.total', 2)
@@ -139,7 +139,7 @@ class WorkInstanceDashboardApiTest extends TestCase
         $returnedIds = array_column($indexResponse->json('data') ?? [], 'id');
         $this->assertEqualsCanonicalizing([(string) $instanceA1->id, (string) $instanceA2->id], $returnedIds);
 
-        $metricsResponse = $this->getJson('/api/zena/work-instances/metrics', $this->authHeaders($actorA));
+        $metricsResponse = $this->getJson($this->workInstanceRoute('metrics'), $this->authHeaders($actorA));
         $metricsResponse
             ->assertOk()
             ->assertJsonPath('data.metrics.total_instances', 2)
@@ -162,7 +162,7 @@ class WorkInstanceDashboardApiTest extends TestCase
         $tenant = Tenant::factory()->create();
         $user = $this->createTenantUser($tenant, [], ['member'], ['work.view']);
 
-        $response = $this->getJson('/api/zena/work-instances/metrics', $this->authHeaders($user));
+        $response = $this->getJson($this->workInstanceRoute('metrics'), $this->authHeaders($user));
         $response
             ->assertOk()
             ->assertJsonStructure([
@@ -190,7 +190,7 @@ class WorkInstanceDashboardApiTest extends TestCase
 
     private function createDraftTemplate(Tenant $tenant, User $user): WorkTemplate
     {
-        $template = WorkTemplate::create([
+        $template = WorkTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'WT-' . substr((string) \Illuminate\Support\Str::ulid(), -8),
             'name' => 'Template ' . substr((string) \Illuminate\Support\Str::ulid(), -6),
@@ -200,7 +200,7 @@ class WorkInstanceDashboardApiTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $version = WorkTemplateVersion::create([
+        $version = WorkTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_id' => (string) $template->id,
             'semver' => 'draft-initial',
@@ -225,7 +225,7 @@ class WorkInstanceDashboardApiTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $templateStep = WorkTemplateStep::create([
+        $templateStep = WorkTemplateStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_version_id' => (string) $version->id,
             'step_key' => 'step-1',
@@ -237,7 +237,7 @@ class WorkInstanceDashboardApiTest extends TestCase
             'sla_hours' => 24,
         ]);
 
-        WorkTemplateField::create([
+        WorkTemplateField::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_step_id' => (string) $templateStep->id,
             'field_key' => 'remark',
@@ -259,5 +259,10 @@ class WorkInstanceDashboardApiTest extends TestCase
             'X-Tenant-ID' => (string) $user->tenant_id,
             'Authorization' => 'Bearer ' . $token,
         ];
+    }
+
+    private function workInstanceRoute(string $name, array $parameters = []): string
+    {
+        return route('api.zena.work-instances.' . $name, $parameters, false);
     }
 }

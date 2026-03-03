@@ -23,12 +23,12 @@ class TeamMembersApiTest extends TestCase
         ]);
         $member = $this->createApiUser($tenant, []);
 
-        $team = Team::create([
-            'id' => (string) Str::ulid(),
+        $team = Team::factory()->create([
             'tenant_id' => $tenant->id,
             'name' => 'QA Team',
             'status' => Team::STATUS_ACTIVE,
             'is_active' => true,
+            'team_lead_id' => $manager->id,
             'created_by' => $manager->id,
             'updated_by' => $manager->id,
         ]);
@@ -73,12 +73,12 @@ class TeamMembersApiTest extends TestCase
 
         $memberA = $this->createApiUser($tenantA, []);
 
-        $teamA = Team::create([
-            'id' => (string) Str::ulid(),
+        $teamA = Team::factory()->create([
             'tenant_id' => $tenantA->id,
             'name' => 'Tenant A Team',
             'status' => Team::STATUS_ACTIVE,
             'is_active' => true,
+            'team_lead_id' => $managerA->id,
             'created_by' => $managerA->id,
             'updated_by' => $managerA->id,
         ]);
@@ -108,12 +108,12 @@ class TeamMembersApiTest extends TestCase
         $actor = $this->createApiUser($tenant, []);
         $member = $this->createApiUser($tenant, []);
 
-        $team = Team::create([
-            'id' => (string) Str::ulid(),
+        $team = Team::factory()->create([
             'tenant_id' => $tenant->id,
             'name' => 'No Permission Team',
             'status' => Team::STATUS_ACTIVE,
             'is_active' => true,
+            'team_lead_id' => $actor->id,
             'created_by' => $actor->id,
             'updated_by' => $actor->id,
         ]);

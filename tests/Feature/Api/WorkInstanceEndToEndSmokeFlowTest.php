@@ -39,7 +39,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
     {
         [, , $instance, , $version] = $this->seedSmokeScenario();
 
-        $this->postJson('/api/zena/work-instances/' . $instance->id . '/export-bundle', [
+        $this->postJson($this->workInstanceRoute('export-bundle', ['id' => $instance->id]), [
             'deliverable_template_version_id' => (string) $version->id,
         ], ['X-Tenant-ID' => (string) $instance->tenant_id])
             ->assertStatus(401);
@@ -50,7 +50,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
         [$tenant, $user, $instance, $step, $version] = $this->seedSmokeScenario();
 
         $uploadResponse = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/steps/' . $step->id . '/attachments', [
+            ->post($this->workInstanceStepRoute('attachments.store', ['id' => $instance->id, 'stepId' => $step->id]), [
                 'file' => UploadedFile::fake()->createWithContent('evidence.txt', 'smoke attachment body'),
             ]);
 
@@ -65,7 +65,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
         ]);
 
         $htmlResponse = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
             ]);
 
@@ -82,7 +82,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
         $this->assertStringContainsString('All punch items closed', $html);
 
         $pdfResponse = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
                 'format' => 'pdf',
             ]);
@@ -101,7 +101,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
         }
 
         $bundleResponse = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export-bundle', [
+            ->post($this->workInstanceRoute('export-bundle', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
             ]);
 
@@ -189,7 +189,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
             'pm_id' => (string) $user->id,
         ]);
 
-        $workTemplate = WorkTemplate::create([
+        $workTemplate = WorkTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'WT-' . substr((string) Str::ulid(), -8),
             'name' => 'Execution Template Smoke',
@@ -199,7 +199,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $workTemplateVersion = WorkTemplateVersion::create([
+        $workTemplateVersion = WorkTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_id' => (string) $workTemplate->id,
             'semver' => '1.0.0',
@@ -211,7 +211,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $instance = WorkInstance::create([
+        $instance = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => (string) $project->id,
             'work_template_version_id' => (string) $workTemplateVersion->id,
@@ -219,7 +219,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
-        $step = WorkInstanceStep::create([
+        $step = WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_id' => (string) $instance->id,
             'step_key' => 'qa-check',
@@ -229,7 +229,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
             'status' => 'completed',
         ]);
 
-        WorkInstanceStep::create([
+        WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_id' => (string) $instance->id,
             'step_key' => 'handover',
@@ -239,21 +239,21 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
             'status' => 'completed',
         ]);
 
-        \App\Models\WorkInstanceFieldValue::create([
+        \App\Models\WorkInstanceFieldValue::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_step_id' => (string) $step->id,
             'field_key' => 'remark',
             'value_string' => 'Checked & signed',
         ]);
 
-        \App\Models\WorkInstanceFieldValue::create([
+        \App\Models\WorkInstanceFieldValue::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_step_id' => (string) $step->id,
             'field_key' => 'handover_note',
             'value_string' => 'All punch items closed',
         ]);
 
-        $template = DeliverableTemplate::create([
+        $template = DeliverableTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'DT-' . substr((string) Str::ulid(), -8),
             'name' => 'Inspection Export Smoke',
@@ -276,7 +276,7 @@ class WorkInstanceEndToEndSmokeFlowTest extends TestCase
 HTML
         );
 
-        $version = DeliverableTemplateVersion::create([
+        $version = DeliverableTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'deliverable_template_id' => (string) $template->id,
             'version' => '1.0.0',
@@ -304,5 +304,15 @@ HTML
             'X-Tenant-ID' => (string) $user->tenant_id,
             'Authorization' => 'Bearer ' . $token,
         ];
+    }
+
+    private function workInstanceRoute(string $name, array $parameters = []): string
+    {
+        return route('api.zena.work-instances.' . $name, $parameters, false);
+    }
+
+    private function workInstanceStepRoute(string $name, array $parameters = []): string
+    {
+        return route('api.zena.work-instances.steps.' . $name, $parameters, false);
     }
 }

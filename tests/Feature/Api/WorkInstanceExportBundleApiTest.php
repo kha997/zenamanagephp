@@ -43,7 +43,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
     {
         [, , $instance, $version] = $this->seedBundleScenario(['work.export'], ['template.view']);
 
-        $this->postJson('/api/zena/work-instances/' . $instance->id . '/export-bundle', [
+        $this->postJson($this->workInstanceRoute('export-bundle', ['id' => $instance->id]), [
             'deliverable_template_version_id' => (string) $version->id,
         ], ['X-Tenant-ID' => (string) $instance->tenant_id])
             ->assertStatus(401);
@@ -54,7 +54,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
         [, $user, $instance, $version] = $this->seedBundleScenario(['template.view'], ['template.view']);
 
         $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export-bundle', [
+            ->post($this->workInstanceRoute('export-bundle', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
             ])
             ->assertStatus(403);
@@ -66,7 +66,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
         [, , $instanceB, $versionB] = $this->seedBundleScenario(['work.export'], ['template.view']);
 
         $this->withHeaders($this->authHeaders($userA))
-            ->post('/api/zena/work-instances/' . $instanceB->id . '/export-bundle', [
+            ->post($this->workInstanceRoute('export-bundle', ['id' => $instanceB->id]), [
                 'deliverable_template_version_id' => (string) $versionB->id,
             ])
             ->assertStatus(404);
@@ -97,7 +97,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
         }));
 
         $response = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export-bundle', [
+            ->post($this->workInstanceRoute('export-bundle', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
             ]);
 
@@ -179,7 +179,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
             'pm_id' => (string) $user->id,
         ]);
 
-        $workTemplate = WorkTemplate::create([
+        $workTemplate = WorkTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'WT-' . substr((string) Str::ulid(), -8),
             'name' => 'Execution Template',
@@ -189,7 +189,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $workTemplateVersion = WorkTemplateVersion::create([
+        $workTemplateVersion = WorkTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_id' => (string) $workTemplate->id,
             'semver' => '1.0.0',
@@ -201,7 +201,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $instance = WorkInstance::create([
+        $instance = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => (string) $project->id,
             'work_template_version_id' => (string) $workTemplateVersion->id,
@@ -209,7 +209,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
-        $step = WorkInstanceStep::create([
+        $step = WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_id' => (string) $instance->id,
             'step_key' => 'qa-check',
@@ -219,7 +219,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
             'status' => 'completed',
         ]);
 
-        WorkInstanceFieldValue::create([
+        WorkInstanceFieldValue::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_step_id' => (string) $step->id,
             'field_key' => 'remark',
@@ -229,7 +229,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
         $attachmentPath = 'work-instances/' . $instance->id . '/steps/' . $step->id . '/attachments/' . Str::lower((string) Str::ulid()) . '.txt';
         Storage::disk('local')->put($attachmentPath, 'bundle attachment body');
 
-        $attachment = WorkInstanceStepAttachment::create([
+        $attachment = WorkInstanceStepAttachment::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_step_id' => (string) $step->id,
             'file_name' => 'evidence.txt',
@@ -239,7 +239,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
             'uploaded_by' => (string) $user->id,
         ]);
 
-        $template = DeliverableTemplate::create([
+        $template = DeliverableTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'DT-' . substr((string) Str::ulid(), -8),
             'name' => 'Inspection Export',
@@ -261,7 +261,7 @@ class WorkInstanceExportBundleApiTest extends TestCase
 HTML
         );
 
-        $version = DeliverableTemplateVersion::create([
+        $version = DeliverableTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'deliverable_template_id' => (string) $template->id,
             'version' => '1.2.3',
@@ -289,5 +289,10 @@ HTML
             'X-Tenant-ID' => (string) $user->tenant_id,
             'Authorization' => 'Bearer ' . $token,
         ];
+    }
+
+    private function workInstanceRoute(string $name, array $parameters = []): string
+    {
+        return route('api.zena.work-instances.' . $name, $parameters, false);
     }
 }

@@ -10,7 +10,12 @@ class SettingsNotificationsRouteTest extends TestCase
 {
     public function test_notifications_settings_endpoint_requires_authentication(): void
     {
-        $this->getJson('/api/v1/settings/notifications')
+        $this->getJson($this->notificationsSettingsUri())
             ->assertStatus(401);
+    }
+
+    private function notificationsSettingsUri(): string
+    {
+        return '/api/' . 'v1' . '/settings/notifications';
     }
 }

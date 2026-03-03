@@ -41,7 +41,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         [$tenant, $user, $instance, $version] = $this->seedExportScenario(['template.view'], ['template.view']);
 
         $response = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
             ]);
 
@@ -54,7 +54,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         [, $actorB, , $foreignVersion] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
 
         $response = $this->withHeaders($this->authHeaders($actorA))
-            ->post('/api/zena/work-instances/' . $instanceA->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instanceA->id]), [
                 'deliverable_template_version_id' => (string) $foreignVersion->id,
             ]);
 
@@ -66,7 +66,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         [, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
 
         $response = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
             ]);
 
@@ -93,7 +93,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         [$tenant, $user, $instance, $version] = $this->seedExportScenario(['work.export', 'template.view'], ['work.export', 'template.view']);
 
         $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
             ])
             ->assertOk();
@@ -154,7 +154,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         }));
 
         $response = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
                 'format' => 'pdf',
             ]);
@@ -194,7 +194,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         }));
 
         $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
                 'format' => 'pdf',
             ])
@@ -259,7 +259,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         }));
 
         $response = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
                 'format' => 'pdf',
                 'pdf' => [
@@ -292,7 +292,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         }));
 
         $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
                 'format' => 'pdf',
                 'pdf' => [
@@ -343,7 +343,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
         }));
 
         $response = $this->withHeaders($this->authHeaders($user))
-            ->post('/api/zena/work-instances/' . $instance->id . '/export', [
+            ->post($this->workInstanceRoute('export', ['id' => $instance->id]), [
                 'deliverable_template_version_id' => (string) $version->id,
                 'format' => 'pdf',
             ]);
@@ -375,7 +375,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
             'pm_id' => (string) $user->id,
         ]);
 
-        $workTemplate = WorkTemplate::create([
+        $workTemplate = WorkTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'WT-' . substr((string) Str::ulid(), -8),
             'name' => 'Execution Template',
@@ -385,7 +385,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $workTemplateVersion = WorkTemplateVersion::create([
+        $workTemplateVersion = WorkTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_id' => (string) $workTemplate->id,
             'semver' => '1.0.0',
@@ -397,7 +397,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $instance = WorkInstance::create([
+        $instance = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => (string) $project->id,
             'work_template_version_id' => (string) $workTemplateVersion->id,
@@ -405,7 +405,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
-        $step = WorkInstanceStep::create([
+        $step = WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_id' => (string) $instance->id,
             'step_key' => 'qa-check',
@@ -415,35 +415,35 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
             'status' => 'completed',
         ]);
 
-        WorkInstanceFieldValue::create([
+        WorkInstanceFieldValue::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_step_id' => (string) $step->id,
             'field_key' => 'remark',
             'value_string' => 'Checked & signed',
         ]);
 
-        WorkInstanceFieldValue::create([
+        WorkInstanceFieldValue::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_step_id' => (string) $step->id,
             'field_key' => 'quantity',
             'value_number' => 12.5,
         ]);
 
-        WorkInstanceFieldValue::create([
+        WorkInstanceFieldValue::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_step_id' => (string) $step->id,
             'field_key' => 'approved',
             'value_string' => 'true',
         ]);
 
-        WorkInstanceFieldValue::create([
+        WorkInstanceFieldValue::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_step_id' => (string) $step->id,
             'field_key' => 'summary',
             'value_json' => ['status' => 'ready', 'count' => 2],
         ]);
 
-        $template = DeliverableTemplate::create([
+        $template = DeliverableTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'DT-' . substr((string) Str::ulid(), -8),
             'name' => 'Inspection Export',
@@ -469,7 +469,7 @@ class WorkInstanceDeliverableExportApiTest extends TestCase
 HTML
         );
 
-        $version = DeliverableTemplateVersion::create([
+        $version = DeliverableTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'deliverable_template_id' => (string) $template->id,
             'version' => '1.2.3',
@@ -497,5 +497,10 @@ HTML
             'X-Tenant-ID' => (string) $user->tenant_id,
             'Authorization' => 'Bearer ' . $token,
         ];
+    }
+
+    private function workInstanceRoute(string $name, array $parameters = []): string
+    {
+        return route('api.zena.work-instances.' . $name, $parameters, false);
     }
 }

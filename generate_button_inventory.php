@@ -99,10 +99,10 @@ class ButtonInventoryGenerator
                 'view_path' => $viewName,
                 'view_name' => $viewName,
                 'dom_selector' => $this->generateSelector($buttonHtml),
-                'label_or_icon' => $buttonText ?: $this->extractIcon($buttonHtml),
+                'label_or_icon' => $this->extractButtonLabel($buttonHtml, $buttonText),
                 'type' => 'button',
                 'trigger' => $this->extractTrigger($buttonHtml),
-                'route_or_url' => $this->extractRoute($buttonHtml),
+                'route_or_url' => $this->extractButtonRoute($buttonHtml),
                 'http_method' => $this->extractMethod($buttonHtml),
                 'policy_middleware' => $this->extractPolicy($viewName),
                 'required_role' => $this->extractRequiredRole($viewName),
@@ -327,6 +327,57 @@ class ButtonInventoryGenerator
         }
         
         return '';
+    }
+
+    private function extractButtonRoute($html)
+    {
+        $route = $this->extractRoute($html);
+
+        if ($route !== '') {
+            return $route;
+        }
+
+        if ($this->isModalCloseButton($html)) {
+            return 'action:close-modal';
+        }
+
+        return 'action:button';
+    }
+
+    private function extractButtonLabel($html, $buttonText)
+    {
+        $normalizedText = trim(preg_replace('/\s+/', ' ', $buttonText));
+        if ($normalizedText !== '') {
+            return $normalizedText;
+        }
+
+        $icon = $this->extractIcon($html);
+        if ($icon !== '') {
+            return $icon;
+        }
+
+        if ($this->isModalCloseButton($html)) {
+            return 'Close';
+        }
+
+        return 'button';
+    }
+
+    private function isModalCloseButton($html)
+    {
+        if (preg_match('/class=["\'][^"\']*\bbtn-close\b[^"\']*["\']/i', $html)) {
+            return true;
+        }
+
+        if (preg_match('/aria-label=["\']Close["\']/i', $html)) {
+            return true;
+        }
+
+        if (preg_match('/data-bs-dismiss=["\']modal["\']/i', $html)) {
+            return true;
+        }
+
+        return preg_match('/data-dismiss=["\']modal["\']/i', $html) === 1;
     }
     
     private function extractMethod($html)

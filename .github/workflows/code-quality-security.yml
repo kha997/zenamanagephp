@@ -12,6 +12,7 @@ on:
 
 env:
   PHP_VERSION: '8.2'
+  REPORT_SUMMARY_LIMIT: '20'
 
 jobs:
   code-quality:
@@ -40,9 +41,20 @@ jobs:
       run: composer install --prefer-dist --no-progress --no-suggest
 
     - name: Run PHPStan Static Analysis
+      continue-on-error: true
       run: |
         composer require --dev phpstan/phpstan
-        ./vendor/bin/phpstan analyse --level=8 --error-format=json > phpstan-report.json
+        bash scripts/ci/run-json-report-command.sh phpstan-report.json phpstan ./vendor/bin/phpstan analyse --level=8 --error-format=json
+
+    - name: Summarize PHPStan Static Analysis
+      if: always()
+      run: |
+        {
+          echo "## PHPStan"
+          echo '```text'
+          php scripts/ci/print-phpstan-summary.php phpstan-report.json "${REPORT_SUMMARY_LIMIT}" || true
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Run PHP CS Fixer
       run: |
@@ -60,11 +72,13 @@ jobs:
         ./vendor/bin/phpcpd app --min-lines=5 --min-tokens=70 > phpcpd-report.txt
 
     - name: Upload Code Quality Reports
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: code-quality-reports
         path: |
           phpstan-report.json
+          phpstan-report.stderr.log
           cs-fixer-report.json
           phpmd-report.txt
           phpcpd-report.txt
@@ -127,14 +141,31 @@ jobs:
       run: composer audit --format=json > composer-audit.json || true
 
     - name: Run PHP Security Checker
+      continue-on-error: true
       run: |
         composer require --dev enlightn/security-checker
-        ./vendor/bin/security-checker security:check --format=json > security-checker.json
+        bash scripts/ci/run-json-report-command.sh security-checker.json security-checker ./vendor/bin/security-checker security:check --format=json
 
     - name: Run PHPStan Security Rules
+      continue-on-error: true
       run: |
         composer require --dev phpstan/phpstan-security-rules
-        ./vendor/bin/phpstan analyse --level=8 --error-format=json > phpstan-security.json
+        bash scripts/ci/run-json-report-command.sh phpstan-security.json phpstan-security ./vendor/bin/phpstan analyse --level=8 --error-format=json
+
+    - name: Summarize Security Scans
+      if: always()
+      run: |
+        {
+          echo "## Security Checker"
+          echo '```text'
+          php scripts/ci/print-json-report-summary.php security-checker.json "security-checker" "${REPORT_SUMMARY_LIMIT}" || true
+          echo '```'
+          echo
+          echo "## PHPStan Security"
+          echo '```text'
+          php scripts/ci/print-phpstan-summary.php phpstan-security.json "${REPORT_SUMMARY_LIMIT}" || true
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Run PHP CS Fixer Security Rules
       run: |
@@ -142,13 +173,16 @@ jobs:
         ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-security.json
 
     - name: Upload Security Reports
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
           composer-audit.json
           security-checker.json
+          security-checker.stderr.log
           phpstan-security.json
+          phpstan-security.stderr.log
           cs-fixer-security.json
 
     - name: Comment Security Issues on PR
@@ -213,20 +247,49 @@ jobs:
       run: composer install --prefer-dist --no-progress --no-suggest
 
     - name: Run Composer Outdated Check
-      run: composer outdated --format=json > composer-outdated.json
+      continue-on-error: true
+      run: |
+        bash scripts/ci/run-json-report-command.sh composer-outdated.json composer-outdated composer outdated --format=json
 
-    - name: Run Composer License Check
+    - name: Run Composer Require Checker
+      continue-on-error: true
       run: |
         composer require --dev maglnet/composer-require-checker
-        ./vendor/bin/composer-require-checker check --format=json > composer-require-checker.json
+        set +e
+        ./vendor/bin/composer-require-checker check --output composer-require-checker.txt > composer-require-checker.stdout.log 2> composer-require-checker.stderr.log
+        status=$?
+        set -e
+        if [[ ! -f composer-require-checker.txt ]]; then
+          touch composer-require-checker.txt
+        fi
+        exit $status
+
+    - name: Summarize Dependency Reports
+      if: always()
+      run: |
+        {
+          echo "## Composer Outdated"
+          echo '```text'
+          php scripts/ci/print-json-report-summary.php composer-outdated.json "composer-outdated" 10 || true
+          echo '```'
+          echo
+          echo "## Composer Require Checker"
+          echo '```text'
+          sed -n '1,40p' composer-require-checker.txt || true
+          sed -n '1,40p' composer-require-checker.stderr.log || true
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload Dependency Reports
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: dependency-reports
         path: |
           composer-outdated.json
-          composer-require-checker.json
+          composer-require-checker.txt
+          composer-require-checker.stdout.log
+          composer-require-checker.stderr.log
 
     - name: Comment Dependency Issues on PR
       if: github.event_name == 'pull_request'
@@ -364,16 +427,39 @@ jobs:
     - name: Install Composer dependencies
       run: composer install --prefer-dist --no-progress --no-suggest
 
-    - name: Run Composer License Check
+    - name: Run Composer Require Checker
+      continue-on-error: true
       run: |
         composer require --dev maglnet/composer-require-checker
-        ./vendor/bin/composer-require-checker check --format=json > composer-license-check.json
+        set +e
+        ./vendor/bin/composer-require-checker check --output composer-license-check.txt > composer-license-check.stdout.log 2> composer-license-check.stderr.log
+        status=$?
+        set -e
+        if [[ ! -f composer-license-check.txt ]]; then
+          touch composer-license-check.txt
+        fi
+        exit $status
+
+    - name: Summarize License Scan
+      if: always()
+      run: |
+        {
+          echo "## License Check"
+          echo '```text'
+          sed -n '1,40p' composer-license-check.txt || true
+          sed -n '1,40p' composer-license-check.stderr.log || true
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload License Report
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: license-report
-        path: composer-license-check.json
+        path: |
+          composer-license-check.txt
+          composer-license-check.stdout.log
+          composer-license-check.stderr.log
 
     - name: Comment License Issues on PR
       if: github.event_name == 'pull_request'

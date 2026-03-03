@@ -344,6 +344,12 @@ start_artisan_server() {
   start_server_with "artisan serve" "${cmd[@]}"
 }
 
+start_cli_server() {
+  local -a cmd=(php -S "${APP_HOST}:${APP_PORT}" -t public public/index.php)
+
+  start_server_with "php -S" "${cmd[@]}"
+}
+
 capture_curl_verbose() {
   local path="$1"
 
@@ -509,6 +515,16 @@ start_server_with() {
 }
 
 start_server() {
+  if [[ "${SMOKE_SERVER_MODE}" == "cli-server" ]]; then
+    if start_cli_server; then
+      return 0
+    fi
+
+    stop_server
+    record_fail "server process exited early (mode=cli-server)"
+    summary_and_exit
+  fi
+
   if start_artisan_server; then
     return 0
   fi

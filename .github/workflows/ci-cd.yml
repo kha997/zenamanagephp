@@ -100,10 +100,6 @@ jobs:
       run: |
         echo "🔍 Checking for duplicate imports..."
         php check_duplicate_imports.php
-        if [ $? -ne 0 ]; then
-          echo "❌ Duplicate imports found!"
-          exit 1
-        fi
         echo "✅ No duplicate imports found!"
     
     - name: Run Security Check

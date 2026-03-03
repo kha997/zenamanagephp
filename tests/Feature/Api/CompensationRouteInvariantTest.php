@@ -29,7 +29,7 @@ class CompensationRouteInvariantTest extends TestCase
         $response = $this->withHeaders([
             'Accept' => 'application/json',
             'X-Tenant-ID' => (string) $tenant->id,
-        ])->getJson('/api/v1/compensation/tasks/' . $task->id);
+        ])->getJson(route('compensation.tasks.show', ['taskId' => $task->id], false));
 
         $this->assertNotSame(
             404,
@@ -54,7 +54,7 @@ class CompensationRouteInvariantTest extends TestCase
         $response = $this->withHeaders([
             'Accept' => 'application/json',
             'X-Tenant-ID' => (string) $tenantB->id,
-        ])->getJson('/api/v1/compensation/tasks/' . $taskA->id);
+        ])->getJson(route('compensation.tasks.show', ['taskId' => $taskA->id], false));
 
         $response->assertStatus(403);
         $response->assertJsonPath('error.code', 'TENANT_INVALID');

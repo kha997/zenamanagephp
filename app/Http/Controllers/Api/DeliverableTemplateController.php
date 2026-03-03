@@ -6,6 +6,7 @@ use App\Models\DeliverableTemplate;
 use App\Models\DeliverableTemplateVersion;
 use App\Services\DeliverableTemplateVersionService;
 use App\Services\ZenaAuditLogger;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -332,7 +333,7 @@ class DeliverableTemplateController extends BaseApiController
         }
     }
 
-    private function templateForTenant(string $id)
+    private function templateForTenant(string $id): Builder
     {
         return DeliverableTemplate::query()
             ->where('tenant_id', $this->tenantId())

@@ -62,13 +62,13 @@ class TeamApiTest extends TestCase
         $owner = $this->createApiUser($tenantA, ['team.view', 'team.create', 'team.update', 'team.delete']);
         $crossTenantUser = $this->createApiUser($tenantB, ['team.view', 'team.update', 'team.delete']);
 
-        $team = Team::create([
-            'id' => (string) Str::ulid(),
+        $team = Team::factory()->create([
             'tenant_id' => $tenantA->id,
             'name' => 'Tenant A Team',
             'description' => 'A only',
             'status' => Team::STATUS_ACTIVE,
             'is_active' => true,
+            'team_lead_id' => $owner->id,
             'created_by' => $owner->id,
             'updated_by' => $owner->id,
         ]);

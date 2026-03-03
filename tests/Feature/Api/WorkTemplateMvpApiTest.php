@@ -45,7 +45,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $templateB = $this->createDraftTemplate($tenantB, $actorB);
 
         $draft = WorkTemplateVersion::query()->where('work_template_id', $templateB->id)->whereNull('published_at')->firstOrFail();
-        $published = WorkTemplateVersion::create([
+        $published = WorkTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'work_template_id' => (string) $templateB->id,
             'semver' => '1.0.0',
@@ -60,7 +60,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $sourceStep = WorkTemplateStep::query()->where('work_template_version_id', $draft->id)->firstOrFail();
         $sourceField = WorkTemplateField::query()->where('work_template_step_id', $sourceStep->id)->first();
 
-        $publishedStep = WorkTemplateStep::create([
+        $publishedStep = WorkTemplateStep::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'work_template_version_id' => (string) $published->id,
             'step_key' => $sourceStep->step_key,
@@ -73,7 +73,7 @@ class WorkTemplateMvpApiTest extends TestCase
         ]);
 
         if ($sourceField) {
-            WorkTemplateField::create([
+            WorkTemplateField::factory()->create([
                 'tenant_id' => (string) $tenantB->id,
                 'work_template_step_id' => (string) $publishedStep->id,
                 'field_key' => $sourceField->field_key,
@@ -83,7 +83,7 @@ class WorkTemplateMvpApiTest extends TestCase
             ]);
         }
 
-        $instanceB = WorkInstance::create([
+        $instanceB = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'project_id' => (string) $projectB->id,
             'work_template_version_id' => (string) $published->id,
@@ -91,7 +91,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'created_by' => (string) $actorB->id,
         ]);
 
-        WorkInstanceStep::create([
+        WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'work_instance_id' => (string) $instanceB->id,
             'work_template_step_id' => (string) $publishedStep->id,
@@ -102,10 +102,10 @@ class WorkTemplateMvpApiTest extends TestCase
             'status' => 'pending',
         ]);
 
-        $this->getJson('/api/zena/work-templates/' . $templateB->id, $this->authHeaders($actorA))
+        $this->getJson($this->workTemplateRoute('show', ['id' => $templateB->id]), $this->authHeaders($actorA))
             ->assertStatus(404);
 
-        $this->postJson('/api/zena/work-instances/' . $instanceB->id . '/export', [], $this->authHeaders($actorA))
+        $this->postJson($this->workInstanceRoute('export', ['id' => $instanceB->id]), [], $this->authHeaders($actorA))
             ->assertStatus(404);
     }
 
@@ -117,14 +117,14 @@ class WorkTemplateMvpApiTest extends TestCase
 
         $template = $this->createDraftTemplate($tenant, $user);
 
-        $this->postJson('/api/zena/work-templates/' . $template->id . '/publish', [], $this->authHeaders($user))
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
             ->assertStatus(403);
 
-        $this->postJson('/api/zena/projects/' . $project->id . '/apply-template', [
+        $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
             'work_template_id' => (string) $template->id,
         ], $this->authHeaders($user))->assertStatus(403);
 
-        $instance = WorkInstance::create([
+        $instance = WorkInstance::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => (string) $project->id,
             'work_template_version_id' => (string) WorkTemplateVersion::query()->where('work_template_id', $template->id)->value('id'),
@@ -132,7 +132,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
-        $step = WorkInstanceStep::create([
+        $step = WorkInstanceStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_instance_id' => (string) $instance->id,
             'step_key' => 'approval-step',
@@ -142,7 +142,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'status' => 'in_progress',
         ]);
 
-        $this->postJson('/api/zena/work-instances/' . $instance->id . '/steps/' . $step->id . '/approve', [
+        $this->postJson($this->workInstanceStepRoute('approve', ['id' => $instance->id, 'stepId' => $step->id]), [
             'decision' => 'approved',
         ], $this->authHeaders($user))->assertStatus(403);
     }
@@ -160,7 +160,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $template = $this->createDraftTemplate($tenant, $user);
         $versionId = (string) WorkTemplateVersion::query()->where('work_template_id', $template->id)->value('id');
 
-        WorkInstance::create([
+        WorkInstance::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'project_id' => (string) $project->id,
             'work_template_version_id' => $versionId,
@@ -168,7 +168,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'created_by' => (string) $user->id,
         ]);
 
-        $this->getJson('/api/zena/projects/' . $project->id . '/work-instances', $this->authHeaders($user))
+        $this->getJson($this->projectWorkInstancesRoute((string) $project->id), $this->authHeaders($user))
             ->assertStatus(403);
     }
 
@@ -196,14 +196,14 @@ class WorkTemplateMvpApiTest extends TestCase
         $versionA = (string) WorkTemplateVersion::query()->where('work_template_id', $templateA->id)->value('id');
         $versionB = (string) WorkTemplateVersion::query()->where('work_template_id', $templateB->id)->value('id');
 
-        WorkInstance::create([
+        WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantA->id,
             'project_id' => (string) $projectA->id,
             'work_template_version_id' => $versionA,
             'status' => 'pending',
             'created_by' => (string) $actorA->id,
         ]);
-        WorkInstance::create([
+        WorkInstance::factory()->create([
             'tenant_id' => (string) $tenantB->id,
             'project_id' => (string) $projectB->id,
             'work_template_version_id' => $versionB,
@@ -211,11 +211,11 @@ class WorkTemplateMvpApiTest extends TestCase
             'created_by' => (string) $actorB->id,
         ]);
 
-        $this->getJson('/api/zena/projects/' . $projectA->id . '/work-instances', $this->authHeaders($actorA))
+        $this->getJson($this->projectWorkInstancesRoute((string) $projectA->id), $this->authHeaders($actorA))
             ->assertOk()
             ->assertJsonPath('meta.pagination.total', 1);
 
-        $this->getJson('/api/zena/projects/' . $projectB->id . '/work-instances', $this->authHeaders($actorA))
+        $this->getJson($this->projectWorkInstancesRoute((string) $projectB->id), $this->authHeaders($actorA))
             ->assertStatus(404);
     }
 
@@ -226,7 +226,7 @@ class WorkTemplateMvpApiTest extends TestCase
 
         $template = $this->createDraftTemplate($tenant, $user);
 
-        $this->postJson('/api/zena/work-templates/' . $template->id . '/publish', [], $this->authHeaders($user))
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
             ->assertStatus(200);
 
         $published = WorkTemplateVersion::query()
@@ -238,7 +238,7 @@ class WorkTemplateMvpApiTest extends TestCase
 
         $originalContent = $published->content_json;
 
-        $this->putJson('/api/zena/work-templates/' . $template->id, [
+        $this->putJson($this->workTemplateRoute('update', ['id' => $template->id]), [
             'steps' => [
                 [
                     'key' => 'step-updated',
@@ -268,17 +268,17 @@ class WorkTemplateMvpApiTest extends TestCase
             'name' => 'Initial Step',
         ]);
 
-        $this->postJson('/api/zena/work-templates/' . $template->id . '/publish', [], $this->authHeaders($user))
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
             ->assertStatus(200);
 
-        $applyResponse = $this->postJson('/api/zena/projects/' . $project->id . '/apply-template', [
+        $applyResponse = $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
             'work_template_id' => (string) $template->id,
         ], $this->authHeaders($user));
         $applyResponse->assertStatus(201);
 
         $workInstanceId = (string) $applyResponse->json('data.id');
 
-        $this->putJson('/api/zena/work-templates/' . $template->id, [
+        $this->putJson($this->workTemplateRoute('update', ['id' => $template->id]), [
             'steps' => [
                 [
                     'key' => 'new-step',
@@ -290,7 +290,7 @@ class WorkTemplateMvpApiTest extends TestCase
             ],
         ], $this->authHeaders($user))->assertStatus(200);
 
-        $this->postJson('/api/zena/work-templates/' . $template->id . '/publish', [], $this->authHeaders($user))
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
             ->assertStatus(200);
 
         $snapshotStep = WorkInstanceStep::query()
@@ -318,10 +318,10 @@ class WorkTemplateMvpApiTest extends TestCase
         $project = Project::factory()->create(['tenant_id' => $tenant->id, 'created_by' => $user->id, 'pm_id' => $user->id]);
         $template = $this->createDraftTemplate($tenant, $user);
 
-        $this->postJson('/api/zena/work-templates/' . $template->id . '/publish', [], $this->authHeaders($user))
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
             ->assertStatus(200);
 
-        $apply = $this->postJson('/api/zena/projects/' . $project->id . '/apply-template', [
+        $apply = $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
             'work_template_id' => (string) $template->id,
         ], $this->authHeaders($user));
 
@@ -333,7 +333,7 @@ class WorkTemplateMvpApiTest extends TestCase
             ->where('work_instance_id', $instanceId)
             ->value('id');
 
-        $this->postJson('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/approve', [
+        $this->postJson($this->workInstanceStepRoute('approve', ['id' => $instanceId, 'stepId' => $stepId]), [
             'decision' => 'approved',
             'comment' => 'Looks good',
         ], $this->authHeaders($user))->assertStatus(201);
@@ -390,10 +390,10 @@ class WorkTemplateMvpApiTest extends TestCase
         ]);
         $templateA = $this->createDraftTemplate($tenantA, $actorA);
 
-        $this->postJson('/api/zena/work-templates/' . $templateA->id . '/publish', [], $this->authHeaders($actorA))
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $templateA->id]), [], $this->authHeaders($actorA))
             ->assertStatus(200);
 
-        $apply = $this->postJson('/api/zena/projects/' . $projectA->id . '/apply-template', [
+        $apply = $this->postJson($this->projectApplyTemplateRoute((string) $projectA->id), [
             'work_template_id' => (string) $templateA->id,
         ], $this->authHeaders($actorA));
         $apply->assertStatus(201);
@@ -410,7 +410,7 @@ class WorkTemplateMvpApiTest extends TestCase
         unset($uploadHeaders['Content-Type']);
 
         $upload = $this->withHeaders($uploadHeaders)
-            ->post('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/attachments', [
+            ->post($this->workInstanceStepRoute('attachments.store', ['id' => $instanceId, 'stepId' => $stepId]), [
                 'file' => $file,
             ]);
 
@@ -419,14 +419,14 @@ class WorkTemplateMvpApiTest extends TestCase
 
         $attachmentId = (string) $upload->json('data.attachment.id');
 
-        $this->getJson('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/attachments', $this->authHeaders($actorA))
+        $this->getJson($this->workInstanceStepRoute('attachments.index', ['id' => $instanceId, 'stepId' => $stepId]), $this->authHeaders($actorA))
             ->assertStatus(200)
             ->assertJsonPath('data.attachments.0.id', $attachmentId);
 
         $record = WorkInstanceStepAttachment::query()->whereKey($attachmentId)->firstOrFail();
         Storage::disk('local')->assertExists($record->file_path);
 
-        $this->deleteJson('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/attachments/' . $attachmentId, [], $this->authHeaders($actorA))
+        $this->deleteJson($this->workInstanceStepRoute('attachments.destroy', ['id' => $instanceId, 'stepId' => $stepId, 'attachmentId' => $attachmentId]), [], $this->authHeaders($actorA))
             ->assertStatus(200);
 
         Storage::disk('local')->assertMissing($record->file_path);
@@ -448,7 +448,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'action' => 'zena.work-instance.step.attachment.delete',
         ]);
 
-        $this->getJson('/api/zena/work-instances/' . $instanceId . '/steps/' . $stepId . '/attachments', $this->authHeaders($actorB))
+        $this->getJson($this->workInstanceStepRoute('attachments.index', ['id' => $instanceId, 'stepId' => $stepId]), $this->authHeaders($actorB))
             ->assertStatus(403);
     }
 
@@ -476,16 +476,16 @@ class WorkTemplateMvpApiTest extends TestCase
             ],
         ]);
 
-        $this->postJson('/api/zena/work-templates/' . $template->id . '/publish', [], $this->authHeaders($sourceUser))
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($sourceUser))
             ->assertStatus(200);
 
-        $export = $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($sourceUser));
+        $export = $this->getJson(route('api.zena.work-templates.package.export', ['wtId' => $template->id]), $this->authHeaders($sourceUser));
         $export->assertStatus(200)
             ->assertJsonPath('data.schema_version', WorkTemplatePackageService::SCHEMA_VERSION);
 
         $package = $export->json('data');
 
-        $import = $this->postJson('/api/zena/import-template-package', $package, $this->authHeaders($sourceUser));
+        $import = $this->postJson($this->workTemplatePackageImportRoute(), $package, $this->authHeaders($sourceUser));
         $import->assertStatus(201);
 
         $importedTemplateId = (string) $import->json('data.id');
@@ -496,7 +496,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'tenant_id' => (string) $sourceTenant->id,
         ]);
 
-        $reExport = $this->getJson('/api/zena/export-template-package/' . $importedTemplateId, $this->authHeaders($sourceUser));
+        $reExport = $this->getJson(route('api.zena.work-templates.package.export', ['wtId' => $importedTemplateId]), $this->authHeaders($sourceUser));
         $reExport->assertStatus(200);
 
         $this->assertSame(
@@ -513,7 +513,7 @@ class WorkTemplateMvpApiTest extends TestCase
         $payload = $this->minimalTemplatePackagePayload();
         $payload['schema_version'] = '0.9.0';
 
-        $this->postJson('/api/zena/import-template-package', $payload, $this->authHeaders($user))
+        $this->postJson($this->workTemplatePackageImportRoute(), $payload, $this->authHeaders($user))
             ->assertStatus(422)
             ->assertJsonPath('message', 'Unsupported schema_version "0.9.0". Expected "' . WorkTemplatePackageService::SCHEMA_VERSION . '".');
     }
@@ -528,10 +528,10 @@ class WorkTemplateMvpApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($userWithoutRbac))
+        $this->getJson(route('api.zena.work-templates.package.export', ['wtId' => $template->id]), $this->authHeaders($userWithoutRbac))
             ->assertStatus(403);
 
-        $this->postJson('/api/zena/import-template-package', $this->minimalTemplatePackagePayload(), $this->authHeaders($userWithoutRbac))
+        $this->postJson($this->workTemplatePackageImportRoute(), $this->minimalTemplatePackagePayload(), $this->authHeaders($userWithoutRbac))
             ->assertStatus(403);
     }
 
@@ -541,10 +541,10 @@ class WorkTemplateMvpApiTest extends TestCase
         $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft']);
         $template = $this->createDraftTemplate($tenant, $user);
 
-        $export = $this->getJson('/api/zena/export-template-package/' . $template->id, $this->authHeaders($user));
+        $export = $this->getJson(route('api.zena.work-templates.package.export', ['wtId' => $template->id]), $this->authHeaders($user));
         $export->assertStatus(200);
 
-        $this->postJson('/api/zena/import-template-package', $export->json('data'), $this->authHeaders($user))
+        $this->postJson($this->workTemplatePackageImportRoute(), $export->json('data'), $this->authHeaders($user))
             ->assertStatus(201);
 
         $this->assertDatabaseHas('audit_logs', [
@@ -562,7 +562,7 @@ class WorkTemplateMvpApiTest extends TestCase
 
     private function createDraftTemplate(Tenant $tenant, User $user, array $stepOverrides = []): WorkTemplate
     {
-        $template = WorkTemplate::create([
+        $template = WorkTemplate::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'code' => 'WT-' . substr((string) \Illuminate\Support\Str::ulid(), -8),
             'name' => 'Template ' . substr((string) \Illuminate\Support\Str::ulid(), -6),
@@ -590,7 +590,7 @@ class WorkTemplateMvpApiTest extends TestCase
             ],
         ], $stepOverrides);
 
-        $version = WorkTemplateVersion::create([
+        $version = WorkTemplateVersion::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_id' => (string) $template->id,
             'semver' => 'draft-initial',
@@ -604,7 +604,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'updated_by' => (string) $user->id,
         ]);
 
-        $templateStep = WorkTemplateStep::create([
+        $templateStep = WorkTemplateStep::factory()->create([
             'tenant_id' => (string) $tenant->id,
             'work_template_version_id' => (string) $version->id,
             'step_key' => (string) $step['key'],
@@ -617,7 +617,7 @@ class WorkTemplateMvpApiTest extends TestCase
         ]);
 
         foreach (($step['fields'] ?? []) as $field) {
-            WorkTemplateField::create([
+            WorkTemplateField::factory()->create([
                 'tenant_id' => (string) $tenant->id,
                 'work_template_step_id' => (string) $templateStep->id,
                 'field_key' => (string) $field['key'],
@@ -749,5 +749,35 @@ class WorkTemplateMvpApiTest extends TestCase
             'status' => $template['status'] ?? null,
             'versions' => array_values($versions),
         ];
+    }
+
+    private function workTemplateRoute(string $name, array $parameters = []): string
+    {
+        return route('api.zena.work-templates.' . $name, $parameters, false);
+    }
+
+    private function projectApplyTemplateRoute(string $projectId): string
+    {
+        return route('api.zena.projects.apply-template', ['id' => $projectId], false);
+    }
+
+    private function projectWorkInstancesRoute(string $projectId): string
+    {
+        return route('api.zena.projects.work-instances.index', ['project' => $projectId], false);
+    }
+
+    private function workInstanceRoute(string $name, array $parameters = []): string
+    {
+        return route('api.zena.work-instances.' . $name, $parameters, false);
+    }
+
+    private function workInstanceStepRoute(string $name, array $parameters = []): string
+    {
+        return route('api.zena.work-instances.steps.' . $name, $parameters, false);
+    }
+
+    private function workTemplatePackageImportRoute(): string
+    {
+        return route('api.zena.work-templates.package.import', [], false);
     }
 }

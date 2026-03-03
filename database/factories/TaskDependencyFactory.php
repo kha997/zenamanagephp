@@ -2,8 +2,10 @@
 
 namespace Database\Factories;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+use App\Models\Task;
 use App\Models\TaskDependency;
+use App\Models\Tenant;
+use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TaskDependencyFactory extends Factory
 {
@@ -12,9 +14,9 @@ class TaskDependencyFactory extends Factory
     public function definition(): array
     {
         return [
-            'task_id' => \Src\CoreProject\Models\Task::factory(),
-            'dependency_id' => \Src\CoreProject\Models\Task::factory(),
-            'tenant_id' => \App\Models\Tenant::factory(),
+            'task_id' => Task::factory(),
+            'dependency_id' => Task::factory(),
+            'tenant_id' => Tenant::factory(),
         ];
     }
 }

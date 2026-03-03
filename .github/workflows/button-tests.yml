@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [ main, develop ]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   schedule:
     - cron: '0 2 * * *' # Daily at 2 AM
 

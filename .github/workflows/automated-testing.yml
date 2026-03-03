@@ -9,6 +9,9 @@ on:
         default: 'false'
   push:
     branches: [ main, develop, 'feature/*' ]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   schedule:
     - cron: '0 2 * * *'  # Daily at 2 AM
 

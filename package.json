@@ -59,16 +59,22 @@
   "jest": {
     "testEnvironment": "jsdom",
     "setupFilesAfterEnv": [
-      "<rootDir>/src/setupTests.ts"
+      "<rootDir>/frontend/src/setupTests.ts"
     ],
-    "moduleNameMapping": {
-      "^@/(.*)$": "<rootDir>/src/$1"
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/frontend/src/$1"
     },
+    "roots": [
+      "<rootDir>/frontend/src"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/_repo_review_pack_.*"
+    ],
     "collectCoverageFrom": [
-      "src/**/*.{ts,tsx}",
-      "!src/**/*.d.ts",
-      "!src/index.tsx",
-      "!src/reportWebVitals.ts"
+      "frontend/src/**/*.{ts,tsx}",
+      "!frontend/src/**/*.d.ts",
+      "!frontend/src/index.tsx",
+      "!frontend/src/reportWebVitals.ts"
     ],
     "coverageThreshold": {
       "global": {
@@ -79,8 +85,8 @@
       }
     },
     "testMatch": [
-      "<rootDir>/src/**/__tests__/**/*.{ts,tsx}",
-      "<rootDir>/src/**/*.{test,spec}.{ts,tsx}"
+      "<rootDir>/frontend/src/**/__tests__/**/*.{ts,tsx}",
+      "<rootDir>/frontend/src/**/*.{test,spec}.{ts,tsx}"
     ],
     "transform": {
       "^.+\\.(ts|tsx)$": "ts-jest"

@@ -257,12 +257,12 @@ class InvitationApiTest extends TestCase
 
     private function createTeam(Tenant $tenant, User $owner): Team
     {
-        return Team::create([
-            'id' => (string) Str::ulid(),
+        return Team::factory()->create([
             'tenant_id' => $tenant->id,
             'name' => 'Team ' . Str::random(5),
             'status' => Team::STATUS_ACTIVE,
             'is_active' => true,
+            'team_lead_id' => $owner->id,
             'created_by' => $owner->id,
             'updated_by' => $owner->id,
         ]);

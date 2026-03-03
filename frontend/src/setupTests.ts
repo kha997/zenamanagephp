@@ -1,7 +1,11 @@
 import '@testing-library/jest-dom';
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
+class MockIntersectionObserver implements Partial<IntersectionObserver> {
+  readonly root = null
+  readonly rootMargin = ''
+  readonly thresholds = []
+
   constructor() {}
   observe() {
     return null;
@@ -12,10 +16,15 @@ global.IntersectionObserver = class IntersectionObserver {
   unobserve() {
     return null;
   }
-};
+  takeRecords() {
+    return []
+  }
+}
+
+global.IntersectionObserver = MockIntersectionObserver as unknown as typeof IntersectionObserver
 
 // Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
+class MockResizeObserver implements Partial<ResizeObserver> {
   constructor() {}
   observe() {
     return null;
@@ -26,7 +35,9 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {
     return null;
   }
-};
+}
+
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
 
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -45,21 +56,35 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock localStorage
 const localStorageMock = {
+  get length() {
+    return 0
+  },
   getItem: jest.fn(),
+  key: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
-global.localStorage = localStorageMock;
+Object.defineProperty(window, 'localStorage', {
+  writable: true,
+  value: localStorageMock,
+})
 
 // Mock sessionStorage
 const sessionStorageMock = {
+  get length() {
+    return 0
+  },
   getItem: jest.fn(),
+  key: jest.fn(),
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
-global.sessionStorage = sessionStorageMock;
+Object.defineProperty(window, 'sessionStorage', {
+  writable: true,
+  value: sessionStorageMock,
+})
 
 // Mock fetch
 global.fetch = jest.fn();

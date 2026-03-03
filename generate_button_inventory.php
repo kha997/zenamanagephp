@@ -9,27 +9,30 @@
 
 class ButtonInventoryGenerator
 {
+    private $repoRoot;
     private $viewsPath;
     private $componentsPath;
+    private $docsPath;
     private $routes;
     private $inventory = [];
     
     public function __construct()
     {
-        $this->viewsPath = '/Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views';
-        $this->componentsPath = '/Applications/XAMPP/xamppfiles/htdocs/zenamanage/resources/views/components';
+        $this->repoRoot = __DIR__;
+        $this->viewsPath = $this->repoRoot . '/resources/views';
+        $this->componentsPath = $this->viewsPath . '/components';
+        $this->docsPath = $this->repoRoot . '/docs/testing';
         $this->loadRoutes();
     }
     
     private function loadRoutes()
     {
-        // Load web routes
-        $webRoutes = file_get_contents('/Applications/XAMPP/xamppfiles/htdocs/zenamanage/routes/web.php');
-        $apiRoutes = file_get_contents('/Applications/XAMPP/xamppfiles/htdocs/zenamanage/routes/api.php');
+        $webRoutesPath = $this->repoRoot . '/routes/web.php';
+        $apiRoutesPath = $this->repoRoot . '/routes/api.php';
         
         $this->routes = [
-            'web' => $webRoutes,
-            'api' => $apiRoutes
+            'web' => $this->readFileIfExists($webRoutesPath, true),
+            'api' => $this->readFileIfExists($apiRoutesPath, true),
         ];
     }
     
@@ -38,10 +41,10 @@ class ButtonInventoryGenerator
         echo "Starting Button Inventory Generation...\n";
         
         // Scan all views
-        $this->scanDirectory($this->viewsPath);
+        $this->scanDirectory($this->viewsPath, true);
         
         // Scan components
-        $this->scanDirectory($this->componentsPath);
+        $this->scanDirectory($this->componentsPath, false);
         
         // Generate CSV
         $this->generateCSV();
@@ -50,8 +53,14 @@ class ButtonInventoryGenerator
         echo "Total buttons found: " . count($this->inventory) . "\n";
     }
     
-    private function scanDirectory($path)
+    private function scanDirectory($path, $required = false)
     {
+        if (!is_dir($path)) {
+            $label = $required ? 'Required' : 'Optional';
+            fwrite(STDERR, sprintf("%s directory missing, skipping scan: %s\n", $label, $path));
+            return;
+        }
+
         $iterator = new RecursiveIteratorIterator(
             new RecursiveDirectoryIterator($path)
         );
@@ -517,7 +526,11 @@ class ButtonInventoryGenerator
     
     private function generateCSV()
     {
-        $csvPath = '/Applications/XAMPP/xamppfiles/htdocs/zenamanage/docs/testing/button-inventory.csv';
+        if (!is_dir($this->docsPath) && !mkdir($concurrentDirectory = $this->docsPath, 0777, true) && !is_dir($concurrentDirectory)) {
+            throw new RuntimeException(sprintf('Failed to create output directory: %s', $this->docsPath));
+        }
+
+        $csvPath = $this->docsPath . '/button-inventory.csv';
         
         $file = fopen($csvPath, 'w');
         
@@ -566,6 +579,19 @@ class ButtonInventoryGenerator
         fclose($file);
         
         echo "CSV generated at: {$csvPath}\n";
+    }
+
+    private function readFileIfExists($path, $required = false)
+    {
+        if (!is_file($path)) {
+            $label = $required ? 'Required' : 'Optional';
+            fwrite(STDERR, sprintf("%s file missing, using empty content: %s\n", $label, $path));
+            return '';
+        }
+
+        $content = file_get_contents($path);
+
+        return $content === false ? '' : $content;
     }
 }
 

@@ -1,4 +1,4 @@
-import { User } from '@/services/authService'
+import type { User } from '../services/authService'
 
 /**
  * Role-based dashboard URL mapping

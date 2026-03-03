@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\Tenant;
+use Tests\TestCase;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Tests\Traits\AuthenticationTestTrait;
@@ -130,15 +132,9 @@ class AuthTest extends TestCase
             ?? $loginResponse->json('data.token')
             ?? $loginResponse->json('data.access_token');
         $this->assertNotNull($token, 'Login response did not return a token.');
+        $this->grantPermissionToUser($user, 'auth.logout');
 
-        $this->actingAs($user);
-
-        $response = $this->withHeaders([
-            'Accept' => 'application/json',
-            'X-Tenant-ID' => (string) $tenant->id,
-            'Authorization' => 'Bearer ' . $token,
-        ])->postJson('/api/auth/logout');
-
+        $response = $this->postJson('/api/auth/logout', [], $this->authHeadersForUser($user, $token));
 
         $response->assertStatus(200)
                 ->assertJson([
@@ -170,6 +166,7 @@ class AuthTest extends TestCase
             ?? $loginResponse->json('data.token')
             ?? $loginResponse->json('data.access_token');
         $this->assertNotNull($token, 'Login response did not return a token.');
+        $this->grantPermissionToUser($user, 'auth.me');
 
         $response = $this
             ->actingAsTenantUser($user, (string) $tenant->id, $token)
@@ -236,5 +233,39 @@ class AuthTest extends TestCase
                 ->assertJsonPath('error.code', 'E422.VALIDATION')
                 ->assertJsonPath('error.message', 'No account found with this email address.')
                 ->assertJsonPath('error.details.validation.email.0', 'No account found with this email address.');
+    }
+
+    private function grantPermissionToUser(User $user, string $permissionCode): void
+    {
+        $permission = Permission::firstOrCreate(
+            ['code' => $permissionCode],
+            [
+                'name' => $permissionCode,
+                'module' => explode('.', $permissionCode)[0],
+                'action' => explode('.', $permissionCode)[1] ?? 'access',
+                'description' => $permissionCode,
+            ]
+        );
+
+        if (empty($permission->name)) {
+            $permission->name = $permissionCode;
+            $permission->save();
+        }
+
+        $role = Role::firstOrCreate(
+            ['name' => 'admin'],
+            [
+                'scope' => Role::SCOPE_SYSTEM,
+                'allow_override' => true,
+                'is_active' => true,
+                'description' => 'Auth test admin role',
+            ]
+        );
+
+        $role->permissions()->syncWithoutDetaching([$permission->id]);
+        $user->roles()->syncWithoutDetaching([$role->id]);
+        $user->refresh();
+
+        $this->assertTrue($user->hasPermission($permissionCode), 'User is still missing permission: ' . $permissionCode);
     }
 }

@@ -36,7 +36,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        composer install --no-dev --optimize-autoloader
+        composer install --prefer-dist --no-interaction --no-progress
         npm install
     
     - name: Generate Button Inventory
@@ -92,7 +92,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        composer install --no-dev --optimize-autoloader
+        composer install --prefer-dist --no-interaction --no-progress
         npm install
     
     - name: Setup environment
@@ -153,7 +153,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        composer install --no-dev --optimize-autoloader
+        composer install --prefer-dist --no-interaction --no-progress
         npm install
     
     - name: Setup environment
@@ -220,7 +220,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        composer install --no-dev --optimize-autoloader
+        composer install --prefer-dist --no-interaction --no-progress
         npm install
     
     - name: Setup environment

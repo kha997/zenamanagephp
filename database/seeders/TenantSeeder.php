@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Tenant;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 
 /**
  * Tenant Seeder
@@ -38,8 +37,47 @@ class TenantSeeder extends Seeder
         // Kiểm tra và tạo thêm tenant khác nếu chưa đủ
         $existingCount = Tenant::where('domain', '!=', 'zena.local')->count();
         if ($existingCount < 2) {
-            $needToCreate = 2 - $existingCount;
-            Tenant::factory($needToCreate)->create();
+            foreach (array_slice($this->sampleTenants(), 0, 2 - $existingCount) as $tenant) {
+                Tenant::firstOrCreate(
+                    ['domain' => $tenant['domain']],
+                    $tenant
+                );
+            }
         }
+    }
+
+    /**
+     * Seed deterministic non-default tenants so db:seed works without faker/dev dependencies.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function sampleTenants(): array
+    {
+        return [
+            [
+                'name' => 'ZENA Studio',
+                'slug' => 'zena-studio',
+                'domain' => 'studio.zena.local',
+                'is_active' => true,
+                'status' => 'active',
+                'settings' => [
+                    'timezone' => 'Asia/Ho_Chi_Minh',
+                    'currency' => 'VND',
+                    'language' => 'vi',
+                ],
+            ],
+            [
+                'name' => 'ZENA Build',
+                'slug' => 'zena-build',
+                'domain' => 'build.zena.local',
+                'is_active' => true,
+                'status' => 'active',
+                'settings' => [
+                    'timezone' => 'Asia/Ho_Chi_Minh',
+                    'currency' => 'VND',
+                    'language' => 'vi',
+                ],
+            ],
+        ];
     }
 }

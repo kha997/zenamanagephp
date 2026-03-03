@@ -41,8 +41,10 @@ class UserSeeder extends Seeder
             
             // Chỉ tạo thêm user nếu chưa đủ 5 user
             if ($existingUsersCount < 5) {
-                $usersToCreate = 5 - $existingUsersCount;
-                User::factory($usersToCreate)->forTenant($defaultTenant->id)->create();
+                $this->seedUsersForTenant(
+                    $defaultTenant,
+                    array_slice($this->defaultTenantUsers(), 0, 5 - $existingUsersCount)
+                );
             }
         }
 
@@ -54,9 +56,66 @@ class UserSeeder extends Seeder
             
             // Chỉ tạo thêm user nếu chưa đủ 3 user
             if ($existingUsersCount < 3) {
-                $usersToCreate = 3 - $existingUsersCount;
-                User::factory($usersToCreate)->forTenant($tenant->id)->create();
+                $this->seedUsersForTenant(
+                    $tenant,
+                    array_slice($this->sampleUsersForTenant($tenant), 0, 3 - $existingUsersCount)
+                );
             }
         }
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $users
+     */
+    private function seedUsersForTenant(Tenant $tenant, array $users): void
+    {
+        foreach ($users as $user) {
+            User::firstOrCreate(
+                ['email' => $user['email']],
+                $user + ['tenant_id' => $tenant->id]
+            );
+        }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function defaultTenantUsers(): array
+    {
+        return [
+            $this->userPayload('pm@zena.local', 'Project Manager', 'project_manager'),
+            $this->userPayload('designer@zena.local', 'Design Lead', 'designer'),
+            $this->userPayload('site@zena.local', 'Site Engineer', 'site_engineer'),
+            $this->userPayload('qc@zena.local', 'QC Inspector', 'quality_inspector'),
+            $this->userPayload('finance@zena.local', 'Finance Coordinator', 'finance'),
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function sampleUsersForTenant(Tenant $tenant): array
+    {
+        $slug = $tenant->slug ?: 'tenant';
+
+        return [
+            $this->userPayload("admin+{$slug}@zena.local", "{$tenant->name} Admin", 'admin'),
+            $this->userPayload("pm+{$slug}@zena.local", "{$tenant->name} PM", 'project_manager'),
+            $this->userPayload("ops+{$slug}@zena.local", "{$tenant->name} Ops", 'operations'),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function userPayload(string $email, string $name, string $role): array
+    {
+        return [
+            'name' => $name,
+            'email' => $email,
+            'password' => Hash::make('password'),
+            'role' => $role,
+            'is_active' => true,
+        ];
     }
 }

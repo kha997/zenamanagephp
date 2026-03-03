@@ -6,9 +6,9 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use Laravel\Dusk\TestCase;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Hash;
+use Tests\DuskTestCase;
 
 /**
  * Button Form Submission Test

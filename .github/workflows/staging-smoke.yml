@@ -44,6 +44,7 @@ jobs:
         env:
           APP_HOST: 127.0.0.1
           APP_PORT: 18080
+          SMOKE_SERVER_MODE: cli-server
           SMOKE_REPORT_FILE: ${{ github.workspace }}/smoke-report.md
         run: bash scripts/smoke_staging.sh
 

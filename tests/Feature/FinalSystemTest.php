@@ -10,6 +10,8 @@ use App\Models\Tenant;
 use App\Models\Dashboard;
 use App\Models\DashboardWidget;
 use App\Models\Widget;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\SupportTicket;
 use App\Models\MaintenanceTask;
 use App\Models\PerformanceMetric;
@@ -69,6 +71,9 @@ class FinalSystemTest extends TestCase
             ],
             ['user']
         );
+        $this->grantPermissionToUser($authUser, 'auth.me');
+        $this->grantPermissionToUser($authUser, 'auth.permissions');
+        $this->grantPermissionToUser($authUser, 'auth.logout');
 
         $loginResponse = $this->withHeaders($this->apiHeadersForTenant((string) $this->tenant->id))
             ->postJson('/api/auth/login', [
@@ -930,6 +935,35 @@ class FinalSystemTest extends TestCase
     private function uniqueTestEmail(string $prefix): string
     {
         return sprintf('%s+%s@test.com', $prefix, uniqid());
+    }
+
+    private function grantPermissionToUser(User $user, string $permissionCode): void
+    {
+        $permission = Permission::firstOrCreate(
+            ['code' => $permissionCode],
+            [
+                'name' => $permissionCode,
+                'module' => explode('.', $permissionCode)[0],
+                'action' => explode('.', $permissionCode)[1] ?? 'access',
+                'description' => $permissionCode,
+            ]
+        );
+
+        $role = Role::firstOrCreate(
+            ['name' => 'admin'],
+            [
+                'scope' => Role::SCOPE_SYSTEM,
+                'allow_override' => true,
+                'is_active' => true,
+                'description' => 'Final system test admin role',
+            ]
+        );
+
+        $role->permissions()->syncWithoutDetaching([$permission->id]);
+        $user->roles()->syncWithoutDetaching([$role->id]);
+        $user->refresh();
+
+        $this->assertTrue($user->hasPermission($permissionCode), 'User is still missing permission: ' . $permissionCode);
     }
 
     private function userApiHeaders(): array

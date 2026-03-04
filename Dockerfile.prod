@@ -104,7 +104,8 @@ COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Create nginx user
-RUN adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx
+RUN getent group nginx >/dev/null || addgroup -S nginx \
+ && getent passwd nginx >/dev/null || adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx
 
 # Create nginx directories
 RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run/nginx

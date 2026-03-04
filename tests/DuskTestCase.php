@@ -38,6 +38,7 @@ abstract class DuskTestCase extends BaseTestCase
             ]);
         })->all());
 
+        $this->waitForChromeDriver();
         return RemoteWebDriver::create(
             $_ENV['DUSK_DRIVER_URL'] ?? 'http://localhost:9515',
             DesiredCapabilities::chrome()->setCapability(
@@ -63,4 +64,21 @@ abstract class DuskTestCase extends BaseTestCase
         return isset($_SERVER['DUSK_START_MAXIMIZED']) ||
                isset($_ENV['DUSK_START_MAXIMIZED']);
     }
+    /**
+     * CI can be slower to start ChromeDriver. Wait until port is accepting connections.
+     */
+    protected function waitForChromeDriver(string $host = '127.0.0.1', int $port = 9515, int $retries = 40, int $sleepMs = 250): void
+    {
+        for ($i = 0; $i < $retries; $i++) {
+            $fp = @fsockopen($host, $port, $errno, $errstr, 0.25);
+            if ($fp) {
+                fclose($fp);
+                return;
+            }
+            usleep($sleepMs * 1000);
+        }
+
+        throw new \RuntimeException("ChromeDriver not reachable at {$host}:{$port} after {$retries} retries");
+    }
+
 }

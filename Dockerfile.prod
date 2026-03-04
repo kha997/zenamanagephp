@@ -104,7 +104,7 @@ COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Create nginx user
-RUN (grep -q q{^nginx:} /etc/group || addgroup -S nginx) \
+RUN (grep -q '^nginx:' /etc/group || addgroup -S nginx) \
  && (id -u nginx >/dev/null 2>&1 || adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx)
 
 # Create nginx directories

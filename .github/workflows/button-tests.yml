@@ -167,10 +167,29 @@ jobs:
     - name: Install ChromeDriver
       run: |
         set -euxo pipefail
-        php artisan dusk:chrome-driver --detect
+
+        php artisan dusk:chrome-driver --detect || true
         ls -la vendor/laravel/dusk/bin || true
 
         TARGET="vendor/laravel/dusk/bin/chromedriver-linux"
+        CANDIDATE="vendor/laravel/dusk/bin/chromedriver-linux64/chromedriver"
+
+        # Prefer the binary installed by dusk (linux64) if present
+        if [ ! -f "$TARGET" ] && [ -f "$CANDIDATE" ]; then
+          ln -sf "$CANDIDATE" "$TARGET"
+        fi
+
+        # Fallback: install system chromedriver and link it to the path Dusk expects
+        if [ ! -f "$TARGET" ]; then
+          sudo apt-get update
+          sudo apt-get install -y chromium-chromedriver || sudo apt-get install -y chromium-driver
+          CHROMEDRIVER_PATH="$(command -v chromedriver || find /usr -type f -name chromedriver | head -n 1)"
+          test -n "$CHROMEDRIVER_PATH"
+          ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
+        fi
+
+        test -f "$TARGET"
+        test -x "$TARGET"
 CANDIDATE="vendor/laravel/dusk/bin/chromedriver-linux64/chromedriver"
 if [ ! -f "" ] && [ -f "" ]; then
   ln -sf "" ""

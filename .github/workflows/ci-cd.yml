@@ -19,6 +19,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     services:
       mysql:
@@ -86,6 +87,7 @@ jobs:
 
   code-quality:
     runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     steps:
     - uses: actions/checkout@v3

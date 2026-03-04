@@ -240,8 +240,12 @@ jobs:
       run: |
         php artisan config:clear --env=testing
         php artisan view:clear --env=testing
-        : > /tmp/laravel-serve.log
-        nohup php artisan serve --env=testing --host=127.0.0.1 --port=8000 >/tmp/laravel-serve.log 2>&1 &
+        rm -f /tmp/laravel-serve.log /tmp/laravel-serve.pid || true
+        nohup php -S 127.0.0.1:8000 -t public server.php >/tmp/laravel-serve.log 2>&1 &
+        echo $! > /tmp/laravel-serve.pid
+        echo "serve pid=$(cat /tmp/laravel-serve.pid)"
+        echo "== check LISTEN 8000 =="
+        ss -ltnp | grep ':8000' || true
     
     - name: Wait for server healthcheck
       run: |

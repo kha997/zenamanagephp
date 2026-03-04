@@ -198,7 +198,6 @@ jobs:
           ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
         fi
 
-test -x ""# chmod skipped: symlink-safe        test -x "$TARGET"
     
     - name: Setup environment
       run: |

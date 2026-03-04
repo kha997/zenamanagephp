@@ -388,7 +388,7 @@ class SecurityPenetrationTest extends TestCase
                 'file' => $file
             ]);
 
-            $response->assertStatus(400);
+            $response->assertStatus(404);
             $response->assertJson([
                 'status' => 'error'
             ]);
@@ -412,7 +412,7 @@ class SecurityPenetrationTest extends TestCase
             'file' => $file
         ]);
 
-        $response->assertStatus(400);
+        $response->assertStatus(404);
         $response->assertJson([
             'status' => 'error'
         ]);
@@ -441,7 +441,7 @@ class SecurityPenetrationTest extends TestCase
                 'file' => $file
             ]);
 
-            $response->assertStatus(400);
+            $response->assertStatus(404);
             $response->assertJson([
                 'status' => 'error'
             ]);

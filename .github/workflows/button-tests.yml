@@ -190,10 +190,6 @@ jobs:
 
         test -f "$TARGET"
         test -x "$TARGET"
-CANDIDATE="vendor/laravel/dusk/bin/chromedriver-linux64/chromedriver"
-if [ ! -f "" ] && [ -f "" ]; then
-  ln -sf "" ""
-fi
         if [ ! -f "$TARGET" ]; then
           sudo apt-get update
           sudo apt-get install -y chromium-chromedriver || sudo apt-get install -y chromium-driver
@@ -202,7 +198,6 @@ fi
           ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
         fi
 
-test -f ""
 test -x ""# chmod skipped: symlink-safe        test -x "$TARGET"
     
     - name: Setup environment

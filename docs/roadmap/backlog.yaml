@@ -1,1 +1,271 @@
-# (Dán toàn bộ YAML ở trên vào đây)
+cd /Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden || exit 1
+set -euo pipefail
+
+cat > docs/roadmap/backlog.yaml <<'YAML'
+version: 1
+project: ZenaManage
+repo: zenamanage-golden
+purpose: >
+  Single Source of Truth (SSOT) backlog for AEC + Interior + Inspection platform.
+  Codex must reference this file and implement Stories in order of priority, without violating invariants.
+
+governance:
+  invariants:
+    - "Do not change domain/business logic just to pass tests."
+    - "Tenant isolation + RBAC + middleware gate are immutable: routes must be in correct stack."
+    - "SSOT lint must pass: composer ssot:lint must not introduce NEW violations beyond baseline."
+    - "No disabling/removing tests to pass CI."
+    - "Deploy workflows must not run on PR; deploy only on push main / workflow_dispatch."
+  definition_of_done:
+    - "composer ssot:lint passes (no NEW violations)."
+    - "Routes/middleware policy respected (auth + tenant + rbac + envelope as applicable)."
+    - "Evidence-gated: include repro/verify commands and CI links in PR description."
+    - "No secrets required on PR jobs; gate/skip gracefully where needed."
+  workflow_rules_for_codex:
+    - "Work on ONE Story per PR unless explicitly grouped by maintainer."
+    - "Update this YAML: set story.status to done and add story.done_evidence (PR link + checks)."
+    - "If a Story requires policy change, mark as change_proposal with rationale and impact."
+
+epics:
+  - id: EPIC-0
+    name: Platform Stability & Guardrails
+    objective: "Stabilize module scaffolding, CI reliability, and event→audit→notification basics."
+    priority: P0
+    stories:
+      - id: S0.1
+        title: "Standard module skeleton + route mounting law"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "New module follows src/<Module>/{Controllers,Services,Models,routes/api.php}."
+          - "Routes mounted in routes/api.php; no auto-load via provider."
+          - "Routes are in correct middleware stack."
+          - "composer ssot:lint passes with no NEW violations."
+      - id: S0.2
+        title: "CI reliability hardening (Dusk/Docker/SSOT)"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "Dusk runs deterministically in CI (chromedriver path stable; no chmod symlink failures)."
+          - "Docker scan builds image and scans local image (no unauthorized remote pulls)."
+          - "SSOT lint runs in CI with valid env bootstrap."
+          - "No 'push misfire' failures polluting PR checks."
+      - id: S0.3
+        title: "Event → Audit → Notification minimal pipeline"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "Create Task/CR/Doc emits event, writes audit entry, triggers notification rule."
+          - "At least one channel (in-app or email) works end-to-end."
+          - "Has verify steps/tests for one event path."
+
+  - id: EPIC-1
+    name: Process Template Engine (WorkTemplate v2)
+    objective: "Templateize workflows for Design / Construction / Inspection."
+    priority: P0
+    dependencies: [EPIC-0]
+    stories:
+      - id: S1.1
+        title: "WorkTemplate v2 data model (phases/tasks/checklists/docs/roles)"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "Template schema supports phases → tasks → checklist items → required docs → roles/approvers → triggers."
+          - "CRUD API exists with validation."
+          - "RBAC/tenant isolation applied to all endpoints."
+      - id: S1.2
+        title: "Apply template to Project/Component (generator)"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "Apply endpoint creates tasks + checklists + due dates + assignments by role."
+          - "Supports scope: Project and Component."
+          - "Idempotent behavior is defined (no accidental duplicates)."
+      - id: S1.3
+        title: "Template preview & dry-run"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "Preview returns planned phases/tasks/checklists/docs."
+          - "Dry-run does not write DB."
+      - id: S1.4
+        title: "Seed 3 baseline templates: Design / Construction / Inspection"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "Applying each template yields an end-to-end runnable workflow with notifications."
+
+  - id: EPIC-2
+    name: Document Center (DocumentManagement v2)
+    objective: "Documents as evidence artifacts linked to tasks/components/CR with workflow."
+    priority: P0
+    dependencies: [EPIC-0, EPIC-1]
+    stories:
+      - id: S2.1
+        title: "Document types + metadata + versioning"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "Doc types/metadata (discipline/package/status/revision) stored and searchable."
+          - "Versioning retains history."
+          - "Permission matrix enforced (role/tenant + scope)."
+      - id: S2.2
+        title: "Link docs ↔ Task/Component/CR"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "Attach/detach APIs exist and audited."
+          - "Query surfaces related entities both directions."
+      - id: S2.3
+        title: "Workflow Submit → Review → Approve/Reject"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "State machine exists with reviewers/approvers."
+          - "Notifications on state changes."
+      - id: S2.4
+        title: "Document search & filters"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "Search supports keyword + filters; no cross-tenant leakage."
+
+  - id: EPIC-3
+    name: Change Order (ChangeRequest v2)
+    objective: "Govern change with approvals and baseline/cost/KPI impacts."
+    priority: P0
+    dependencies: [EPIC-1, EPIC-2]
+    stories:
+      - id: S3.1
+        title: "CR links affected scope (components/tasks/docs)"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "CR stores affected items and validates same tenant/project."
+      - id: S3.2
+        title: "Approval workflow + audit trail"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "Draft→Awaiting→Approved/Rejected supported with full audit."
+          - "Notify approvers and stakeholders."
+      - id: S3.3
+        title: "Approved CR creates delta tasks + baseline delta"
+        priority: P0
+        status: todo
+        acceptance_criteria:
+          - "Approved CR triggers task delta generation."
+          - "Baseline history updated (snapshot or delta) with evidence."
+      - id: S3.4
+        title: "CR timeline + attachments"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "Timeline API + attachments via Document Center."
+
+  - id: EPIC-4
+    name: Procurement & Materials
+    objective: "Fill interior/construction gaps: BOQ, materials, submittals, delivery/receipt."
+    priority: P1
+    dependencies: [EPIC-1, EPIC-2, EPIC-3]
+    stories:
+      - id: S4.1
+        title: "Material catalog + vendor list"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "CRUD material catalog + vendor records with RBAC/tenant."
+      - id: S4.2
+        title: "BOQ line items linked to Project/Component"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "BOQ CRUD + line items; each can link component/task."
+      - id: S4.3
+        title: "Material submittal package (docs + approvals)"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "Submittal package uses Document Center workflow."
+          - "Notify on review/approval."
+      - id: S4.4
+        title: "Delivery/Receipt + acceptance checklist"
+        priority: P2
+        status: todo
+        acceptance_criteria:
+          - "Delivery/receipt tracked and tied to evidence + checklist."
+      - id: S4.5
+        title: "Cost mapping to Compensation/Contract (minimal)"
+        priority: P2
+        status: todo
+        acceptance_criteria:
+          - "Material lines aggregate into cost summary endpoints."
+
+  - id: EPIC-5
+    name: Inspection & Quality (QMS-lite)
+    objective: "Checklists, NCR, CAPA, escalation, QC dashboards."
+    priority: P1
+    dependencies: [EPIC-1, EPIC-2]
+    stories:
+      - id: S5.1
+        title: "Inspection checklist templates (reuse WorkTemplate)"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "Checklist template + instances generated via engine."
+      - id: S5.2
+        title: "NCR + CAPA tasks lifecycle"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "NCR CRUD with evidence docs."
+          - "CAPA tasks created/assigned; NCR states managed."
+      - id: S5.3
+        title: "Escalation rules + notifications"
+        priority: P2
+        status: todo
+        acceptance_criteria:
+          - "Overdue CAPA triggers alerts/notifications with audit."
+      - id: S5.4
+        title: "QC dashboard widgets"
+        priority: P2
+        status: todo
+        acceptance_criteria:
+          - "QC metrics available role-based and traceable."
+
+  - id: EPIC-6
+    name: Analytics/Dashboard v2 + Service-ready boundaries
+    objective: "Role-based widgets + alert taxonomy + event/outbox for future scaling."
+    priority: P2
+    dependencies: [EPIC-1, EPIC-2, EPIC-3, EPIC-5]
+    stories:
+      - id: S6.1
+        title: "Role-based widget sets for AEC"
+        priority: P2
+        status: todo
+        acceptance_criteria:
+          - "Widgets exist for Design Lead / Site / QC / PM / Finance."
+          - "Each widget links to traceable data sources."
+      - id: S6.2
+        title: "Alert taxonomy + rules"
+        priority: P2
+        status: todo
+        acceptance_criteria:
+          - "Alert types configured and triggered by events."
+      - id: S6.3
+        title: "Internal outbox/event record (future microservice boundary)"
+        priority: P3
+        status: todo
+        acceptance_criteria:
+          - "Events recorded/replayable without breaking tenant/RBAC."
+      - id: S6.4
+        title: "Documentation coverage: module→API→screens→workflows"
+        priority: P3
+        status: todo
+        acceptance_criteria:
+          - "Docs map endpoints/screens/workflows; includes project template walkthrough."
+YAML
+
+git add docs/roadmap/backlog.yaml
+git commit -m "docs: populate SSOT backlog roadmap YAML"
+git push origin HEAD

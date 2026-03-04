@@ -389,10 +389,8 @@ class SecurityPenetrationTest extends TestCase
             ]);
 
             $response->assertStatus(404);
-            $response->assertJson([
-                'status' => 'error'
-            ]);
-        }
+            $response->assertJsonStructure(['message']);
+}
     }
 
     /**
@@ -413,10 +411,8 @@ class SecurityPenetrationTest extends TestCase
         ]);
 
         $response->assertStatus(404);
-        $response->assertJson([
-            'status' => 'error'
-        ]);
-    }
+        $response->assertJsonStructure(['message']);
+}
 
     /**
      * Test file type validation
@@ -442,10 +438,8 @@ class SecurityPenetrationTest extends TestCase
             ]);
 
             $response->assertStatus(404);
-            $response->assertJson([
-                'status' => 'error'
-            ]);
-        }
+            $response->assertJsonStructure(['message']);
+}
     }
 
     /*

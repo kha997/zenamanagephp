@@ -245,16 +245,32 @@ jobs:
     
     - name: Wait for server healthcheck
       run: |
-        for i in $(seq 1 60); do
-          if curl -fsS http://127.0.0.1:8000 >/dev/null; then
+        # Treat any non-000 HTTP response as "reachable" (302/401/etc are OK for healthcheck).
+        # Also extend wait time because serve can start late on CI runners.
+        for i in $(seq 1 180); do
+          set +e
+          code="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000)"
+          rc=$?
+          set -e
+
+          if [ "$rc" -eq 0 ] && [ "$code" != "000" ]; then
+            echo "OK: server reachable (rc=$rc HTTP $code) on retry $i/180"
             exit 0
           fi
 
-          curl -i http://127.0.0.1:8000 || true
+          echo "Not ready yet (rc=$rc HTTP $code) - retry $i/180"
+
+          if [ "$i" -eq 10 ] || [ "$i" -eq 60 ] || [ "$i" -eq 120 ]; then
+            echo "== debug @ retry $i =="
+            ps aux | grep -E 'artisan serve|php -S' || true
+            tail -n 200 /tmp/laravel-serve.log || true
+            echo "== end debug =="
+          fi
+
           sleep 1
         done
 
-        echo "Laravel server did not become reachable within 60 seconds" >&2
+        echo "Laravel server did not become reachable within 180 seconds" >&2
         curl -i http://127.0.0.1:8000 || true
         ls -la storage/logs || true
         tail -n 300 storage/logs/*.log || true

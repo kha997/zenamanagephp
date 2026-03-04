@@ -67,7 +67,7 @@ abstract class DuskTestCase extends BaseTestCase
     /**
      * CI can be slower to start ChromeDriver. Wait until port is accepting connections.
      */
-    protected function waitForChromeDriver(string $host = '127.0.0.1', int $port = 9515, int $retries = 40, int $sleepMs = 250): void
+    protected function waitForChromeDriver(string $host = '127.0.0.1', int $port = 9515, int $retries = 120, int $sleepMs = 250): void
     {
         for ($i = 0; $i < $retries; $i++) {
             $fp = @fsockopen($host, $port, $errno, $errstr, 0.25);

@@ -230,6 +230,27 @@ jobs:
         test -f vendor/laravel/dusk/bin/chromedriver-linux
         test -x vendor/laravel/dusk/bin/chromedriver-linux
     
+    - name: Start ChromeDriver (CI)
+      run: |
+        set -euxo pipefail
+        TARGET="vendor/laravel/dusk/bin/chromedriver-linux"
+        "$TARGET" --version || true
+        # Start chromedriver in background
+        nohup "$TARGET" --port=9515 --url-base=/wd/hub --verbose --log-path=/tmp/chromedriver.log > /tmp/chromedriver.out 2>&1 &
+        # Wait until it's ready
+        for i in $(seq 1 60); do
+          curl -fsS http://127.0.0.1:9515/status >/dev/null 2>&1 && break || true
+          curl -fsS http://127.0.0.1:9515/wd/hub/status >/dev/null 2>&1 && break || true
+          sleep 0.5
+        done
+        if ! curl -fsS http://127.0.0.1:9515/status >/dev/null 2>&1 && ! curl -fsS http://127.0.0.1:9515/wd/hub/status >/dev/null 2>&1; then
+          echo "ChromeDriver still not ready" >&2
+          tail -n 200 /tmp/chromedriver.out || true
+          tail -n 200 /tmp/chromedriver.log || true
+          exit 1
+        fi
+        echo "ChromeDriver ready"
+
     - name: Run Browser Tests
       run: php artisan dusk tests/Browser/Buttons/ --env=testing --without-tty
     

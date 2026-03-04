@@ -19,7 +19,7 @@ abstract class DuskTestCase extends BaseTestCase
      */
     public static function prepare(): void
     {
-        if (! static::runningInSail()) {
+        if (! static::runningInSail() && ! static::hasExternalDriverUrl()) {
             static::startChromeDriver();
         }
     }
@@ -29,6 +29,7 @@ abstract class DuskTestCase extends BaseTestCase
      */
     protected function driver(): RemoteWebDriver
     {
+        $driverUrl = $this->driverUrl();
         $options = (new ChromeOptions)->addArguments(collect([
             $this->shouldStartMaximized() ? '--start-maximized' : '--window-size=1920,1080',
         ])->unless($this->hasHeadlessDisabled(), function (Collection $items) {
@@ -38,13 +39,28 @@ abstract class DuskTestCase extends BaseTestCase
             ]);
         })->all());
 
-        $this->waitForChromeDriver();
+        $this->waitForChromeDriver($driverUrl);
         return RemoteWebDriver::create(
-            $_ENV['DUSK_DRIVER_URL'] ?? 'http://localhost:9515',
+            $driverUrl,
             DesiredCapabilities::chrome()->setCapability(
                 ChromeOptions::CAPABILITY, $options
             )
         );
+    }
+
+    protected static function hasExternalDriverUrl(): bool
+    {
+        $driverUrl = $_ENV['DUSK_DRIVER_URL'] ?? $_SERVER['DUSK_DRIVER_URL'] ?? getenv('DUSK_DRIVER_URL');
+
+        return is_string($driverUrl) && $driverUrl !== '';
+    }
+
+    protected function driverUrl(): string
+    {
+        return $_ENV['DUSK_DRIVER_URL']
+            ?? $_SERVER['DUSK_DRIVER_URL']
+            ?? getenv('DUSK_DRIVER_URL')
+            ?: 'http://localhost:9515';
     }
 
     /**
@@ -67,8 +83,11 @@ abstract class DuskTestCase extends BaseTestCase
     /**
      * CI can be slower to start ChromeDriver. Wait until port is accepting connections.
      */
-    protected function waitForChromeDriver(string $host = '127.0.0.1', int $port = 9515, int $retries = 120, int $sleepMs = 250): void
+    protected function waitForChromeDriver(string $driverUrl, int $retries = 120, int $sleepMs = 250): void
     {
+        $host = parse_url($driverUrl, PHP_URL_HOST) ?: '127.0.0.1';
+        $port = parse_url($driverUrl, PHP_URL_PORT) ?: 9515;
+
         for ($i = 0; $i < $retries; $i++) {
             $fp = @fsockopen($host, $port, $errno, $errstr, 0.25);
             if ($fp) {

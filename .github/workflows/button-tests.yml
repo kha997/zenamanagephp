@@ -201,14 +201,18 @@ jobs:
     
     - name: Setup environment
       run: |
+        mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions bootstrap/cache
+        chmod -R 777 storage bootstrap/cache
         cp .env.example .env.testing
         echo "APP_URL=http://127.0.0.1:8000" >> .env.testing
+        echo "DUSK_URL=http://127.0.0.1:8000" >> .env.testing
         echo "DB_CONNECTION=mysql" >> .env.testing
         echo "DB_HOST=127.0.0.1" >> .env.testing
         echo "DB_PORT=3306" >> .env.testing
         echo "DB_DATABASE=zenamanage_test" >> .env.testing
         echo "DB_USERNAME=root" >> .env.testing
         echo "DB_PASSWORD=password" >> .env.testing
+        echo "VIEW_COMPILED_PATH=${GITHUB_WORKSPACE}/storage/framework/views" >> .env.testing
     
     - name: Generate application key
       run: php artisan key:generate --env=testing
@@ -221,6 +225,8 @@ jobs:
     
     - name: Start Laravel server
       run: |
+        php artisan config:clear --env=testing
+        php artisan view:clear --env=testing
         : > /tmp/laravel-serve.log
         nohup php artisan serve --env=testing --host=127.0.0.1 --port=8000 >/tmp/laravel-serve.log 2>&1 &
     

@@ -48,6 +48,7 @@ RUN apk add --no-cache \
     icu-dev \
     imagemagick-dev \
     imagemagick \
+    linux-headers \
     redis \
     mysql-client \
     && rm -rf /var/cache/apk/*

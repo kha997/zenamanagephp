@@ -212,6 +212,14 @@ jobs:
         echo "DB_DATABASE=zenamanage_test" >> .env.testing
         echo "DB_USERNAME=root" >> .env.testing
         echo "DB_PASSWORD=password" >> .env.testing
+        echo "CACHE_DRIVER=array" >> .env.testing
+        echo "SESSION_DRIVER=file" >> .env.testing
+        echo "QUEUE_CONNECTION=sync" >> .env.testing
+        echo "BROADCAST_DRIVER=log" >> .env.testing
+        echo "MAIL_MAILER=log" >> .env.testing
+        echo "LOG_CHANNEL=stderr" >> .env.testing
+        echo "LOG_LEVEL=debug" >> .env.testing
+        echo "APP_DEBUG=true" >> .env.testing
         echo "VIEW_COMPILED_PATH=${GITHUB_WORKSPACE}/storage/framework/views" >> .env.testing
     
     - name: Generate application key
@@ -237,10 +245,16 @@ jobs:
             exit 0
           fi
 
+          curl -i http://127.0.0.1:8000 || true
           sleep 1
         done
 
         echo "Laravel server did not become reachable within 60 seconds" >&2
+        curl -i http://127.0.0.1:8000 || true
+        ls -la storage/logs || true
+        tail -n 300 storage/logs/*.log || true
+        php -v || true
+        php artisan --version || true
         tail -n 200 /tmp/laravel-serve.log || true
         exit 1
 

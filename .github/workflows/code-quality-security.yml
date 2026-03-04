@@ -353,6 +353,10 @@ jobs:
     - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
+        outputs: type=docker
+      - name: Verify image present
+        run: docker image inspect zenamanage:test
+        load: true
         context: .
         file: ./Dockerfile.prod
         push: false
@@ -363,6 +367,9 @@ jobs:
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         image-ref: 'zenamanage:test'
         format: 'sarif'
         output: 'trivy-results.sarif'
@@ -370,11 +377,17 @@ jobs:
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v2
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         sarif_file: 'trivy-results.sarif'
 
     - name: Run Trivy vulnerability scanner (JSON)
       uses: aquasecurity/trivy-action@master
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         image-ref: 'zenamanage:test'
         format: 'json'
         output: 'trivy-results.json'
@@ -382,6 +395,9 @@ jobs:
     - name: Upload Trivy JSON results
       uses: actions/upload-artifact@v4
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         name: trivy-results
         path: trivy-results.json
 
@@ -390,6 +406,9 @@ jobs:
       continue-on-error: true
       uses: actions/github-script@v6
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         script: |
           const fs = require('fs');
           const trivyResults = JSON.parse(fs.readFileSync('trivy-results.json', 'utf8'));
@@ -436,12 +455,18 @@ jobs:
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         php-version: ${{ env.PHP_VERSION }}
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
 
     - name: Cache Composer dependencies
       uses: actions/cache@v4
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
         restore-keys: |
@@ -478,6 +503,9 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         name: license-report
         path: |
           composer-license-check.txt
@@ -489,6 +517,9 @@ jobs:
       continue-on-error: true
       uses: actions/github-script@v6
       with:
+        outputs: type=docker
+        load: true
+        tags: zenamanage:test
         script: |
           const fs = require('fs');
           const summary = fs.existsSync('composer-license-check.txt')

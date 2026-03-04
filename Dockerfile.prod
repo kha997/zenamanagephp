@@ -46,7 +46,6 @@ RUN apk add --no-cache \
     freetype-dev \
     libzip-dev \
     icu-dev \
-    imagemagick-dev \
     imagemagick \
     linux-headers \
     redis \
@@ -66,13 +65,13 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         bcmath \
         sockets
 
-# Install Redis extension
-RUN pecl install redis \
-    && docker-php-ext-enable redis
-
-# Install Imagick extension
-RUN pecl install imagick \
-    && docker-php-ext-enable imagick
+# Install PECL extensions with temporary phpize build deps
+RUN apk add --no-cache --virtual .phpize-deps \
+        $PHPIZE_DEPS \
+        imagemagick-dev \
+    && pecl install redis imagick \
+    && docker-php-ext-enable redis imagick \
+    && apk del .phpize-deps
 
 # Install Composer
 COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer

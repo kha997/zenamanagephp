@@ -165,7 +165,23 @@ jobs:
       uses: browser-actions/setup-chrome@v1
 
     - name: Install ChromeDriver
-      run: php artisan dusk:chrome-driver --detect
+      run: |
+        set -euxo pipefail
+        php artisan dusk:chrome-driver --detect
+        ls -la vendor/laravel/dusk/bin || true
+
+        TARGET="vendor/laravel/dusk/bin/chromedriver-linux"
+        if [ ! -f "$TARGET" ]; then
+          sudo apt-get update
+          sudo apt-get install -y chromium-chromedriver || sudo apt-get install -y chromium-driver
+          CHROMEDRIVER_PATH="$(command -v chromedriver || find /usr -type f -name chromedriver | head -n 1)"
+          test -n "$CHROMEDRIVER_PATH"
+          ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
+        fi
+
+        test -f "$TARGET"
+        chmod +x "$TARGET"
+        test -x "$TARGET"
     
     - name: Setup environment
       run: |
@@ -191,6 +207,12 @@ jobs:
     
     - name: Wait for server
       run: sleep 10
+
+    - name: Verify Dusk driver path
+      run: |
+        ls -la vendor/laravel/dusk/bin
+        test -f vendor/laravel/dusk/bin/chromedriver-linux
+        test -x vendor/laravel/dusk/bin/chromedriver-linux
     
     - name: Run Browser Tests
       run: php artisan dusk tests/Browser/Buttons/ --env=testing --without-tty

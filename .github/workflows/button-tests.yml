@@ -160,6 +160,12 @@ jobs:
       run: |
         composer install --prefer-dist --no-interaction --no-progress
         npm install
+
+    - name: Setup Chrome
+      uses: browser-actions/setup-chrome@v1
+
+    - name: Install ChromeDriver
+      run: php artisan dusk:chrome-driver --detect
     
     - name: Setup environment
       run: |
@@ -187,7 +193,7 @@ jobs:
       run: sleep 10
     
     - name: Run Browser Tests
-      run: php artisan dusk tests/Browser/Buttons/ --env=testing
+      run: php artisan dusk tests/Browser/Buttons/ --env=testing --without-tty
     
     - name: Upload Browser Test Results
       uses: actions/upload-artifact@v4

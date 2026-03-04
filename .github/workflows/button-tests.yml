@@ -235,24 +235,43 @@ jobs:
         set -euxo pipefail
         TARGET="vendor/laravel/dusk/bin/chromedriver-linux"
         "$TARGET" --version || true
-        # Start chromedriver in background
-        nohup "$TARGET" --port=9515 --url-base=/wd/hub --verbose --log-path=/tmp/chromedriver.log > /tmp/chromedriver.out 2>&1 &
-        # Wait until it's ready
+        : > /tmp/chromedriver.log
+        nohup "$TARGET" --port=9515 --verbose --log-path=/tmp/chromedriver.log >/tmp/chromedriver.out 2>&1 &
+
+        DRIVER_URL=""
         for i in $(seq 1 60); do
-          curl -fsS http://127.0.0.1:9515/status >/dev/null 2>&1 && break || true
-          curl -fsS http://127.0.0.1:9515/wd/hub/status >/dev/null 2>&1 && break || true
-          sleep 0.5
+          STATUS_BODY="$(curl -fsS http://127.0.0.1:9515/status 2>/dev/null || true)"
+          if printf '%s' "$STATUS_BODY" | rg -q "ChromeDriver"; then
+            DRIVER_URL="http://127.0.0.1:9515"
+            break
+          fi
+
+          STATUS_BODY="$(curl -fsS http://127.0.0.1:9515/status 2>/dev/null || true)"
+          if printf '%s' "$STATUS_BODY" | rg -q "ChromeDriver"; then
+            DRIVER_URL="http://127.0.0.1:9515"
+            break
+          fi
+
+          sleep 1
         done
-        if ! curl -fsS http://127.0.0.1:9515/status >/dev/null 2>&1 && ! curl -fsS http://127.0.0.1:9515/wd/hub/status >/dev/null 2>&1; then
-          echo "ChromeDriver still not ready" >&2
-          tail -n 200 /tmp/chromedriver.out || true
+
+        if [ -z "$DRIVER_URL" ]; then
+          echo "ChromeDriver did not expose a valid status endpoint within 60 seconds" >&2
           tail -n 200 /tmp/chromedriver.log || true
           exit 1
         fi
-        echo "ChromeDriver ready"
+
+        echo "DUSK_DRIVER_URL=$DRIVER_URL" >> "$GITHUB_ENV"
+        echo "ChromeDriver ready at $DRIVER_URL"
 
     - name: Run Browser Tests
       run: php artisan dusk tests/Browser/Buttons/ --env=testing --without-tty
+
+    - name: Browser test diagnostics
+      if: failure()
+      run: |
+        tail -n 200 /tmp/chromedriver.log || true
+        ps aux | rg 'chromedriver|chrome' || true
     
     - name: Upload Browser Test Results
       uses: actions/upload-artifact@v4

@@ -223,7 +223,12 @@ jobs:
         echo "VIEW_COMPILED_PATH=${GITHUB_WORKSPACE}/storage/framework/views" >> .env.testing
     
     - name: Generate application key
-      run: php artisan key:generate --env=testing
+      run: |
+        APP_KEY="$(php artisan key:generate --show --env=testing)"
+        sed -i '/^APP_KEY=/d' .env.testing
+        echo "APP_KEY=$APP_KEY" >> .env.testing
+        cp .env.testing .env
+        grep -n '^APP_KEY=' .env.testing .env || true
     
     - name: Run migrations
       run: php artisan migrate --env=testing

@@ -35,8 +35,7 @@ class ServiceUnitTest extends TestCase
     public function test_rate_limit_service()
     {
         $service = new RateLimitService();
-        $request = Request::create('/api/test', 'GET', [], [], [], ['REMOTE_ADDR' => '203.0.113.5']);
-
+        $request = Request::create('/api/v1/nonexistent-endpoint', 'GET', [], [], [], ['REMOTE_ADDR' => '203.0.113.5']); // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
         $defaultConfig = $service->getRateLimitConfig($request);
         $authConfig = $service->getRateLimitConfig($request, 'auth/login');
         $uploadConfig = $service->getRateLimitConfig($request, 'upload');

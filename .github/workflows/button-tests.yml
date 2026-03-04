@@ -202,6 +202,7 @@ jobs:
     - name: Setup environment
       run: |
         cp .env.example .env.testing
+        echo "APP_URL=http://127.0.0.1:8000" >> .env.testing
         echo "DB_CONNECTION=mysql" >> .env.testing
         echo "DB_HOST=127.0.0.1" >> .env.testing
         echo "DB_PORT=3306" >> .env.testing
@@ -219,10 +220,23 @@ jobs:
       run: php artisan db:seed --env=testing
     
     - name: Start Laravel server
-      run: php artisan serve --env=testing &
+      run: |
+        : > /tmp/laravel-serve.log
+        nohup php artisan serve --env=testing --host=127.0.0.1 --port=8000 >/tmp/laravel-serve.log 2>&1 &
     
-    - name: Wait for server
-      run: sleep 10
+    - name: Wait for server healthcheck
+      run: |
+        for i in $(seq 1 60); do
+          if curl -fsS http://127.0.0.1:8000 >/dev/null; then
+            exit 0
+          fi
+
+          sleep 1
+        done
+
+        echo "Laravel server did not become reachable within 60 seconds" >&2
+        tail -n 200 /tmp/laravel-serve.log || true
+        exit 1
 
     - name: Verify Dusk driver path
       run: |
@@ -264,8 +278,9 @@ jobs:
     - name: Browser test diagnostics
       if: failure()
       run: |
+        tail -n 200 /tmp/laravel-serve.log || true
         tail -n 200 /tmp/chromedriver.log || true
-        ps aux | rg 'chromedriver|chrome' || true
+        ps aux | grep -E 'artisan serve|chromedriver|chrome' || true
     
     - name: Upload Browser Test Results
       uses: actions/upload-artifact@v4

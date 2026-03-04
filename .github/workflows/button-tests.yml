@@ -241,7 +241,7 @@ jobs:
         DRIVER_URL=""
         for i in $(seq 1 60); do
           STATUS_BODY="$(curl -fsS http://127.0.0.1:9515/status 2>/dev/null || true)"
-          if printf '%s' "$STATUS_BODY" | rg -q "ChromeDriver"; then
+          if printf '%s' "$STATUS_BODY" | grep -q "ChromeDriver"; then
             DRIVER_URL="http://127.0.0.1:9515"
             break
           fi

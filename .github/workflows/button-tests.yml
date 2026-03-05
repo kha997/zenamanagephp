@@ -318,7 +318,42 @@ jobs:
         echo "ChromeDriver ready at $DRIVER_URL"
 
     - name: Run Browser Tests
-      run: php artisan dusk tests/Browser/Buttons/ --env=testing --without-tty
+      run: php artisan dusk tests/Browser/Buttons/ --env=testing --without-tty --stop-on-failure
+
+    - name: Prepare Dusk artifacts (always)
+      if: ${{ always() }}
+      run: |
+        mkdir -p /tmp/dusk-artifacts
+        {
+          echo "run_id=$GITHUB_RUN_ID"
+          echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+          echo "sha=$GITHUB_SHA"
+          echo "ref=$GITHUB_REF"
+          date -u
+        } > /tmp/dusk-artifacts/meta.txt
+
+        # Dusk outputs (only exist when failures happen)
+        cp -R tests/Browser/screenshots /tmp/dusk-artifacts/ 2>/dev/null || true
+        cp -R tests/Browser/console /tmp/dusk-artifacts/ 2>/dev/null || true
+        cp -R tests/Browser/source /tmp/dusk-artifacts/ 2>/dev/null || true
+
+        # Laravel logs (may be empty if LOG_CHANNEL=stderr, but keep anyway)
+        cp -R storage/logs /tmp/dusk-artifacts/ 2>/dev/null || true
+
+        # Server logs (depending on how you start the server)
+        cp /tmp/laravel-serve.log /tmp/dusk-artifacts/ 2>/dev/null || true
+        cp /tmp/php-server.log /tmp/dusk-artifacts/ 2>/dev/null || true
+
+        echo "== dusk-artifacts tree =="
+        find /tmp/dusk-artifacts -maxdepth 3 -type f -print || true
+
+    - name: Upload Dusk artifacts
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: dusk-artifacts
+        path: /tmp/dusk-artifacts
+        if-no-files-found: error
 
     - name: Browser test diagnostics
       if: failure()

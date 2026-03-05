@@ -267,10 +267,21 @@ jobs:
         ls -la "$GITHUB_WORKSPACE/public/index.php" /tmp/dusk-router.php || true
 
         # Start PHP built-in server with absolute docroot + router
-        nohup php -S 127.0.0.1:8000 -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php >/tmp/laravel-serve.log 2>&1 &
+        # Disable coverage/debug extensions for the *server* process to avoid instability (PCOV/Xdebug/JIT)
+        nohup php \
+          -d pcov.enabled=0 \
+          -d xdebug.mode=off \
+          -d opcache.enable_cli=0 \
+          -d opcache.jit=0 \
+          -d opcache.jit_buffer_size=0 \
+          -S 127.0.0.1:8000 \
+          -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php \
+          >/tmp/laravel-serve.log 2>&1 &
         echo $! > /tmp/laravel-serve.pid
         sleep 1
         echo "serve pid=$(cat /tmp/laravel-serve.pid)"
+        # quick sanity: server process still alive + port listener
+        kill -0 "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1 || (echo "Server process died immediately" && tail -n 200 /tmp/laravel-serve.log || true && exit 1)
         echo "== check LISTEN 8000 =="
         ss -ltnp | grep ':8000' || true
         echo "== serve log (tail 80) =="
@@ -279,7 +290,19 @@ jobs:
     - name: Wait for server healthcheck
       run: |
         for i in $(seq 1 180); do
-          code="$(curl -sS --connect-timeout 1 --max-time 3 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000 || true)"
+          # if server process is gone, fail early with diagnostics
+          if [ -f /tmp/laravel-serve.pid ] && ! kill -0 "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1; then
+            echo "Server process not running (pid=$(cat /tmp/laravel-serve.pid))"
+            ss -ltnp | grep ':8000' || true
+            tail -n 200 /tmp/laravel-serve.log || true
+            exit 1
+          fi
+
+          set +e
+          code="$(curl -sS --connect-timeout 1 --max-time 10 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000)"
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then code="000"; fi
           if [ "$code" != "000" ]; then
             # If app returns 5xx, fail fast (don't let Dusk run against a broken server)
             if echo "$code" | grep -qE '^5'; then
@@ -292,11 +315,12 @@ jobs:
             exit 0
           fi
 
-          echo "Not ready yet (HTTP 000) - retry $i/180"
+          echo "Not ready yet (rc=$rc HTTP 000) - retry $i/180"
 
           if [ "$i" = "10" ] || [ "$i" = "60" ] || [ "$i" = "120" ]; then
             echo "== debug @ retry $i =="
             ps aux | grep -E 'artisan serve|php -S' || true
+            ss -ltnp | grep ':8000' || true
             tail -n 200 /tmp/laravel-serve.log || true
             echo "== end debug =="
           fi

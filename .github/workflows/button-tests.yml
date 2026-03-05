@@ -158,22 +158,31 @@ jobs:
     
     - name: Install dependencies
       run: |
+        set -euo pipefail
         composer install --prefer-dist --no-interaction --no-progress
         npm install
 
-        # If app uses Vite in Blade, Dusk needs built assets (manifest) or pages will 500.
-        if grep -R --line-number --fixed-strings "@vite" resources/views >/dev/null 2>&1; then
-          echo "Detected @vite in resources/views -> building assets"
-          npm run build
+        # Ensure .env exists for Vite (many builds read root .env)
+        if [ ! -f .env ] && [ -f .env.example ]; then
+          cp .env.example .env
+        fi
+
+        # Detect @vite safely (never fail the step just because grep finds nothing)
+        if [ -d resources/views ] && grep -R "@vite" resources/views >/dev/null 2>&1; then
+          echo "✅ Detected @vite in Blade views -> running npm run build"
+          npm run build 2>&1 | tee /tmp/npm-build.log
+
           if [ ! -f public/build/manifest.json ]; then
-            echo "ERROR: public/build/manifest.json missing after build (Dusk will 500)" >&2
+            echo "❌ Vite manifest missing: public/build/manifest.json"
             ls -la public || true
             ls -la public/build || true
             exit 1
           fi
-          echo "OK: Vite manifest present"
+
+          echo "✅ Vite manifest present"
+          ls -la public/build/manifest.json || true
         else
-          echo "No @vite detected -> skipping npm build sanity"
+          echo "ℹ️ No @vite detected (or resources/views missing) -> skipping npm run build"
         fi
 
     - name: Setup Chrome

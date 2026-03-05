@@ -250,8 +250,12 @@ jobs:
         # Create a router script that mimics Laravel's server.php (serve static if exists, else front-controller)
         cat >/tmp/dusk-router.php <<'PHP'
         <?php
-        $root = getenv('GITHUB_WORKSPACE') ?: getcwd();
-        $public = rtrim($root, '/') . '/public';
+        // Prefer DOCUMENT_ROOT (set by php -S -t) to avoid relying on cwd/env
+        $public = rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', '/');
+        if ($public === '') {
+            $root = getenv('GITHUB_WORKSPACE') ?: getcwd();
+            $public = rtrim($root, '/') . '/public';
+        }
         $uri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
         if ($uri !== '/' && file_exists($public . $uri)) {
             return false;
@@ -275,7 +279,7 @@ jobs:
     - name: Wait for server healthcheck
       run: |
         for i in $(seq 1 180); do
-          code="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000 || true)"
+          code="$(curl -sS --connect-timeout 1 --max-time 3 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000 || true)"
           if [ "$code" != "000" ]; then
             # If app returns 5xx, fail fast (don't let Dusk run against a broken server)
             if echo "$code" | grep -qE '^5'; then

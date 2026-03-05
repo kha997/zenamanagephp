@@ -161,6 +161,21 @@ jobs:
         composer install --prefer-dist --no-interaction --no-progress
         npm install
 
+        # If app uses Vite in Blade, Dusk needs built assets (manifest) or pages will 500.
+        if grep -R --line-number --fixed-strings "@vite" resources/views >/dev/null 2>&1; then
+          echo "Detected @vite in resources/views -> building assets"
+          npm run build
+          if [ ! -f public/build/manifest.json ]; then
+            echo "ERROR: public/build/manifest.json missing after build (Dusk will 500)" >&2
+            ls -la public || true
+            ls -la public/build || true
+            exit 1
+          fi
+          echo "OK: Vite manifest present"
+        else
+          echo "No @vite detected -> skipping npm build sanity"
+        fi
+
     - name: Setup Chrome
       uses: browser-actions/setup-chrome@v1
 
@@ -267,15 +282,16 @@ jobs:
         ls -la "$GITHUB_WORKSPACE/public/index.php" /tmp/dusk-router.php || true
 
         # Start PHP built-in server with absolute docroot + router
-        # Disable coverage/debug extensions for the *server* process to avoid instability (PCOV/Xdebug/JIT)
-        nohup php \
+        # Force Laravel to load .env.testing (APP_ENV=testing) to match migrate/seed steps.
+        # Also raise execution/socket timeouts to avoid killing the server on slow first boot.
+        APP_ENV=testing APP_DEBUG=true nohup php \
           -d pcov.enabled=0 \
           -d xdebug.mode=off \
           -d opcache.enable_cli=0 \
-          -d opcache.jit=0 \
-          -d opcache.jit_buffer_size=0 \
-          -S 127.0.0.1:8000 \
-          -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php \
+          -d pcre.jit=0 \
+          -d max_execution_time=120 \
+          -d default_socket_timeout=120 \
+          -S 127.0.0.1:8000 -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php \
           >/tmp/laravel-serve.log 2>&1 &
         echo $! > /tmp/laravel-serve.pid
         sleep 1
@@ -307,7 +323,7 @@ jobs:
             # If app returns 5xx, fail fast (don't let Dusk run against a broken server)
             if echo "$code" | grep -qE '^5'; then
               echo "Server reachable but unhealthy (HTTP $code) - failing fast"
-              curl -i http://127.0.0.1:8000 || true
+              curl -sS --connect-timeout 1 --max-time 10 -i http://127.0.0.1:8000 | sed -n '1,160p' || true
               tail -n 200 /tmp/laravel-serve.log || true
               exit 1
             fi
@@ -329,7 +345,7 @@ jobs:
         done
 
         echo "Laravel server did not become reachable within 180 seconds" >&2
-        curl -i http://127.0.0.1:8000 || true
+        curl -sS --connect-timeout 1 --max-time 10 -i http://127.0.0.1:8000 | sed -n '1,160p' || true
         ls -la storage/logs || true
         tail -n 300 storage/logs/*.log || true
         php -v || true

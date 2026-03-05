@@ -240,31 +240,57 @@ jobs:
       run: |
         php artisan config:clear --env=testing
         php artisan view:clear --env=testing
-        rm -f /tmp/laravel-serve.log /tmp/laravel-serve.pid || true
-        nohup php -S 127.0.0.1:8000 -t public server.php >/tmp/laravel-serve.log 2>&1 &
+        # ensure previous server (if any) is stopped
+        if [ -f /tmp/laravel-serve.pid ]; then
+          kill "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1 || true
+        fi
+        rm -f /tmp/laravel-serve.pid /tmp/laravel-serve.log /tmp/php-server.log || true
+
+        # Laravel repos may not ship server.php; use public front-controller instead
+        # Create a router script that mimics Laravel's server.php (serve static if exists, else front-controller)
+        cat >/tmp/dusk-router.php <<'PHP'
+        <?php
+        $root = getenv('GITHUB_WORKSPACE') ?: getcwd();
+        $public = rtrim($root, '/') . '/public';
+        $uri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
+        if ($uri !== '/' && file_exists($public . $uri)) {
+            return false;
+        }
+        require $public . '/index.php';
+        PHP
+
+        echo "== router sanity =="
+        ls -la "$GITHUB_WORKSPACE/public/index.php" /tmp/dusk-router.php || true
+
+        # Start PHP built-in server with absolute docroot + router
+        nohup php -S 127.0.0.1:8000 -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php >/tmp/laravel-serve.log 2>&1 &
         echo $! > /tmp/laravel-serve.pid
+        sleep 1
         echo "serve pid=$(cat /tmp/laravel-serve.pid)"
         echo "== check LISTEN 8000 =="
         ss -ltnp | grep ':8000' || true
+        echo "== serve log (tail 80) =="
+        tail -n 80 /tmp/laravel-serve.log || true
     
     - name: Wait for server healthcheck
       run: |
-        # Treat any non-000 HTTP response as "reachable" (302/401/etc are OK for healthcheck).
-        # Also extend wait time because serve can start late on CI runners.
         for i in $(seq 1 180); do
-          set +e
-          code="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000)"
-          rc=$?
-          set -e
-
-          if [ "$rc" -eq 0 ] && [ "$code" != "000" ]; then
-            echo "OK: server reachable (rc=$rc HTTP $code) on retry $i/180"
+          code="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8000 || true)"
+          if [ "$code" != "000" ]; then
+            # If app returns 5xx, fail fast (don't let Dusk run against a broken server)
+            if echo "$code" | grep -qE '^5'; then
+              echo "Server reachable but unhealthy (HTTP $code) - failing fast"
+              curl -i http://127.0.0.1:8000 || true
+              tail -n 200 /tmp/laravel-serve.log || true
+              exit 1
+            fi
+            echo "Server reachable (HTTP $code)"
             exit 0
           fi
 
-          echo "Not ready yet (rc=$rc HTTP $code) - retry $i/180"
+          echo "Not ready yet (HTTP 000) - retry $i/180"
 
-          if [ "$i" -eq 10 ] || [ "$i" -eq 60 ] || [ "$i" -eq 120 ]; then
+          if [ "$i" = "10" ] || [ "$i" = "60" ] || [ "$i" = "120" ]; then
             echo "== debug @ retry $i =="
             ps aux | grep -E 'artisan serve|php -S' || true
             tail -n 200 /tmp/laravel-serve.log || true

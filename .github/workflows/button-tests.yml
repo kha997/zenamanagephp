@@ -169,8 +169,12 @@ jobs:
 
         # Detect @vite safely (never fail the step just because grep finds nothing)
         if [ -d resources/views ] && grep -R "@vite" resources/views >/dev/null 2>&1; then
-          echo "✅ Detected @vite in Blade views -> running ./node_modules/.bin/vite build"
-          npm run build 2>&1 | tee /tmp/npm-build.log
+          echo "✅ Detected @vite in Blade views -> building Vite assets (manifest required)"
+          : > /tmp/npm-build.log
+  # Optional: keep CSS pipeline if script exists
+  node -e 'const p=require("./package.json"); process.exit(p.scripts && p.scripts["build:css"] ? 0 : 1)' \
+    && npm run build:css 2>&1 | tee -a /tmp/npm-build.log
+  ./node_modules/.bin/vite build 2>&1 | tee -a /tmp/npm-build.log
 
           if [ ! -f public/build/manifest.json ]; then
             echo "❌ Vite manifest missing: public/build/manifest.json"
@@ -184,6 +188,14 @@ jobs:
         else
           echo "ℹ️ No @vite detected (or resources/views missing) -> skipping npm run build"
         fi
+
+    - name: Upload npm build log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: dusk-npm-build-log
+        path: /tmp/npm-build.log
+        if-no-files-found: ignore
 
     - name: Setup Chrome
       uses: browser-actions/setup-chrome@v1

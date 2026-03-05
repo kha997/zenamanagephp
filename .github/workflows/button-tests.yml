@@ -169,7 +169,7 @@ jobs:
 
         # Detect @vite safely (never fail the step just because grep finds nothing)
         if [ -d resources/views ] && grep -R "@vite" resources/views >/dev/null 2>&1; then
-          echo "✅ Detected @vite in Blade views -> running npm run build"
+          echo "✅ Detected @vite in Blade views -> running ./node_modules/.bin/vite build"
           npm run build 2>&1 | tee /tmp/npm-build.log
 
           if [ ! -f public/build/manifest.json ]; then

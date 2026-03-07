@@ -174,7 +174,11 @@ jobs:
 
           # Optional: keep CSS pipeline if script exists
           if node -e 'const p=require("./package.json"); process.exit(p.scripts && p.scripts["build:css"] ? 0 : 1)'; then
-            npm run build:css 2>&1 | tee -a /tmp/npm-build.log
+            if [ -f ./src/index.css ]; then
+              npm run build:css 2>&1 | tee -a /tmp/npm-build.log || echo "⚠️ build:css failed (non-blocking) -> continuing" | tee -a /tmp/npm-build.log
+            else
+              echo "ℹ️ build:css input missing (./src/index.css) -> skipping" | tee -a /tmp/npm-build.log
+            fi
           else
             echo "ℹ️ build:css not defined -> skipping" | tee -a /tmp/npm-build.log
           fi

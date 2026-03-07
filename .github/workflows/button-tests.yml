@@ -170,7 +170,6 @@ jobs:
         # Detect @vite safely (never fail the step just because grep finds nothing)
         if [ -d resources/views ] && grep -R "@vite" resources/views >/dev/null 2>&1; then
           echo "✅ Detected @vite in Blade views -> building Vite assets (manifest required)"
-          echo "✅ Detected @vite in Blade views -> building Vite assets (manifest required)"
           : > /tmp/npm-build.log
 
           # Optional: keep CSS pipeline if script exists
@@ -182,8 +181,7 @@ jobs:
 
           ./node_modules/.bin/vite build 2>&1 | tee -a /tmp/npm-build.log
 
-          
-if [ ! -f public/build/manifest.json ]; then
+          if [ ! -f public/build/manifest.json ]; then
             echo "❌ Vite manifest missing: public/build/manifest.json"
             ls -la public || true
             ls -la public/build || true

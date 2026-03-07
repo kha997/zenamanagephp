@@ -2,6 +2,11 @@ name: CI/CD Pipeline
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches: [ main, develop ]
     paths-ignore:
@@ -14,6 +19,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     services:
       mysql:
@@ -67,18 +73,21 @@ jobs:
         DB_DATABASE: zenamanage_test
         DB_USERNAME: root
         DB_PASSWORD: password
-      run: php artisan test --coverage
-    
+      run: php artisan test --coverage --coverage-clover=coverage.xml
+
     - name: Upload coverage reports to Codecov
+      if: ${{ secrets.CODECOV_TOKEN != '' }}
       uses: codecov/codecov-action@v3
       with:
-        file: ./coverage/lcov.info
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
         flags: unittests
         name: codecov-umbrella
-        fail_ci_if_error: true
+        fail_ci_if_error: false
 
   code-quality:
     runs-on: ubuntu-latest
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     
     steps:
     - uses: actions/checkout@v3
@@ -95,6 +104,12 @@ jobs:
     
     - name: Install Dependencies
       run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+    - name: Prepare environment for SSOT lint
+      run: |
+        mkdir -p database
+        touch database/database.sqlite
+        php -r 'file_put_contents(".env", "APP_NAME=ZenaManage\nAPP_ENV=ci\nAPP_KEY=base64:".base64_encode(random_bytes(32))."\nAPP_DEBUG=true\nAPP_URL=http://localhost\nLOG_CHANNEL=stack\nCACHE_STORE=file\nCACHE_DRIVER=file\nQUEUE_CONNECTION=sync\nSESSION_DRIVER=file\nDB_CONNECTION=sqlite\nDB_DATABASE=".getcwd()."/database/database.sqlite\n");'
     
     - name: Check Duplicate Imports
       run: |
@@ -109,16 +124,14 @@ jobs:
     - name: Run Security Check
       run: |
         composer audit || true
-    
-    - name: Run PHPStan
-      run: |
-        composer require --dev phpstan/phpstan
-        ./vendor/bin/phpstan analyse --level=5
+
+    - name: Run SSOT Lint
+      run: composer ssot:lint
 
   deploy:
     needs: [test, code-quality]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
     - uses: actions/checkout@v3

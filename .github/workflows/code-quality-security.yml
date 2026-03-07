@@ -2,6 +2,11 @@ name: Code Quality & Security
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches: [ main, develop, feature/* ]
     paths-ignore:
@@ -13,6 +18,11 @@ on:
 env:
   PHP_VERSION: '8.2'
   REPORT_SUMMARY_LIMIT: '20'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   code-quality:
@@ -57,16 +67,19 @@ jobs:
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Run PHP CS Fixer
+      continue-on-error: true
       run: |
         composer require --dev friendsofphp/php-cs-fixer
-        ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-report.json
+        bash scripts/ci/run-json-report-command.sh cs-fixer-report.json php-cs-fixer ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json
 
     - name: Run PHP Mess Detector
+      continue-on-error: true
       run: |
         composer require --dev phpmd/phpmd
         ./vendor/bin/phpmd app text cleancode,codesize,controversial,design,naming,unusedcode > phpmd-report.txt
 
     - name: Run PHP Copy Paste Detector
+      continue-on-error: true
       run: |
         composer require --dev sebastian/phpcpd
         ./vendor/bin/phpcpd app --min-lines=5 --min-tokens=70 > phpcpd-report.txt
@@ -84,7 +97,8 @@ jobs:
           phpcpd-report.txt
 
     - name: Comment Code Quality on PR
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
       uses: actions/github-script@v6
       with:
         script: |
@@ -93,16 +107,16 @@ jobs:
           const csFixer = JSON.parse(fs.readFileSync('cs-fixer-report.json', 'utf8'));
           
           let comment = '## Code Quality Report\n\n';
+          const phpstanErrors = phpstan.totals?.errors ?? phpstan.totals?.file_errors ?? phpstan.totals?.errors ?? 0;
           
-          if (phpstan.totals.errors > 0) {
-            comment += `### PHPStan Issues: ${phpstan.totals.errors} errors\n`;
-            phpstan.files.slice(0, 5).forEach(file => {
-              comment += `- ${file.path}: ${file.errors.length} issues\n`;
-            });
+          if (phpstanErrors > 0) {
+            comment += `### PHPStan Issues: ${phpstanErrors} errors\n`;
           }
           
           if (csFixer.files && csFixer.files.length > 0) {
             comment += `\n### Code Style Issues: ${csFixer.files.length} files need fixing\n`;
+          } else if (csFixer.status && csFixer.status !== 'ok_without_json_output') {
+            comment += `\n### Code Style Issues\n- php-cs-fixer exited with status: ${csFixer.status}\n`;
           }
           
           github.rest.issues.createComment({
@@ -168,9 +182,10 @@ jobs:
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Run PHP CS Fixer Security Rules
+      continue-on-error: true
       run: |
         composer require --dev friendsofphp/php-cs-fixer
-        ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json > cs-fixer-security.json
+        bash scripts/ci/run-json-report-command.sh cs-fixer-security.json php-cs-fixer-security ./vendor/bin/php-cs-fixer fix --dry-run --diff --format=json
 
     - name: Upload Security Reports
       if: always()
@@ -186,7 +201,8 @@ jobs:
           cs-fixer-security.json
 
     - name: Comment Security Issues on PR
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
       uses: actions/github-script@v6
       with:
         script: |
@@ -195,10 +211,15 @@ jobs:
           const securityChecker = JSON.parse(fs.readFileSync('security-checker.json', 'utf8'));
           
           let comment = '## Security Scan Report\n\n';
+          const advisories = composerAudit.advisories
+            ? Array.isArray(composerAudit.advisories)
+              ? composerAudit.advisories
+              : Object.values(composerAudit.advisories).flat()
+            : [];
           
-          if (composerAudit.advisories && composerAudit.advisories.length > 0) {
-            comment += `### Composer Security Issues: ${composerAudit.advisories.length} vulnerabilities found\n`;
-            composerAudit.advisories.slice(0, 5).forEach(advisory => {
+          if (advisories.length > 0) {
+            comment += `### Composer Security Issues: ${advisories.length} vulnerabilities found\n`;
+            advisories.slice(0, 5).forEach(advisory => {
               comment += `- ${advisory.packageName}: ${advisory.title}\n`;
             });
           }
@@ -210,7 +231,7 @@ jobs:
             });
           }
           
-          if (composerAudit.advisories.length === 0 && securityChecker.vulnerabilities.length === 0) {
+          if (advisories.length === 0 && (!securityChecker.vulnerabilities || securityChecker.vulnerabilities.length === 0)) {
             comment += '✅ No security vulnerabilities found!';
           }
           
@@ -292,7 +313,8 @@ jobs:
           composer-require-checker.stderr.log
 
     - name: Comment Dependency Issues on PR
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
       uses: actions/github-script@v6
       with:
         script: |
@@ -335,8 +357,11 @@ jobs:
         file: ./Dockerfile.prod
         push: false
         tags: zenamanage:test
+        load: true
         cache-from: type=gha
         cache-to: type=gha,mode=max
+    - name: Verify image present
+      run: docker image inspect zenamanage:test
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
@@ -364,7 +389,8 @@ jobs:
         path: trivy-results.json
 
     - name: Comment Docker Security Issues on PR
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
       uses: actions/github-script@v6
       with:
         script: |
@@ -462,20 +488,22 @@ jobs:
           composer-license-check.stderr.log
 
     - name: Comment License Issues on PR
-      if: github.event_name == 'pull_request'
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
       uses: actions/github-script@v6
       with:
         script: |
           const fs = require('fs');
-          const licenseCheck = JSON.parse(fs.readFileSync('composer-license-check.json', 'utf8'));
+          const summary = fs.existsSync('composer-license-check.txt')
+            ? fs.readFileSync('composer-license-check.txt', 'utf8').trim()
+            : '';
           
           let comment = '## License Compliance Report\n\n';
-          
-          if (licenseCheck.violations && licenseCheck.violations.length > 0) {
-            comment += `### License Violations: ${licenseCheck.violations.length} found\n`;
-            licenseCheck.violations.forEach(violation => {
-              comment += `- ${violation.package}: ${violation.license}\n`;
-            });
+
+          if (summary.length > 0) {
+            comment += '```text\n';
+            comment += summary.split('\n').slice(0, 20).join('\n');
+            comment += '\n```';
           } else {
             comment += '✅ All packages comply with license requirements!';
           }

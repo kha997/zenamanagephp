@@ -18,6 +18,20 @@ use Illuminate\Support\Str;
 class EventLogListener
 {
     /**
+     * Guard against re-entrancy: this listener may be triggered by DB events,
+     * while it itself queries the DB (e.g., Schema::hasTable), causing recursion.
+     */
+    private static bool $inEventLogListener = false;
+
+    /**
+     * Cache table readiness to avoid calling Schema::hasTable on every DB event
+     * (which can exhaust max_prepared_stmt_count and/or time out).
+     */
+    private static ?bool $eventLogTableReadyCache = null;
+    private static int $eventLogTableReadyCacheTs = 0;
+    private const EVENT_LOG_TABLE_READY_NEGATIVE_TTL_SECONDS = 5;
+
+    /**
      * Xử lý event và lưu vào database
      *
      * @param string $eventName Tên event
@@ -25,8 +39,35 @@ class EventLogListener
      */
     public function handle(string $eventName, array $data): void
     {
-        if (!$this->isEventLogTableReady()) {
+        // Prevent recursion when our own DB checks trigger DB events.
+        if (self::$inEventLogListener) {
             return;
+        }
+
+        // Cache/TTL the "table ready" check to avoid hammering Schema::hasTable().
+        $now = time();
+        if (self::$eventLogTableReadyCache !== true) {
+            if (
+                self::$eventLogTableReadyCache === false
+                && ($now - self::$eventLogTableReadyCacheTs) < self::EVENT_LOG_TABLE_READY_NEGATIVE_TTL_SECONDS
+            ) {
+                return;
+            }
+
+            self::$inEventLogListener = true;
+            try {
+                self::$eventLogTableReadyCache = $this->isEventLogTableReady();
+                self::$eventLogTableReadyCacheTs = $now;
+            } catch (\Throwable $e) {
+                self::$eventLogTableReadyCache = false;
+                self::$eventLogTableReadyCacheTs = $now;
+            } finally {
+                self::$inEventLogListener = false;
+            }
+
+            if (self::$eventLogTableReadyCache !== true) {
+                return;
+            }
         }
 
         try {

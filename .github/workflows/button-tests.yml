@@ -2,6 +2,11 @@ name: Button Test Suite
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches: [ main, develop ]
     paths-ignore:
@@ -153,21 +158,122 @@ jobs:
     
     - name: Install dependencies
       run: |
+        set -euo pipefail
         composer install --prefer-dist --no-interaction --no-progress
         npm install
+
+        # Ensure .env exists for Vite (many builds read root .env)
+        if [ ! -f .env ] && [ -f .env.example ]; then
+          cp .env.example .env
+        fi
+
+        # Detect @vite safely (never fail the step just because grep finds nothing)
+        if [ -d resources/views ] && grep -R "@vite" resources/views >/dev/null 2>&1; then
+          echo "✅ Detected @vite in Blade views -> building Vite assets (manifest required)"
+          : > /tmp/npm-build.log
+
+          # Optional: keep CSS pipeline if script exists
+          if node -e 'const p=require("./package.json"); process.exit(p.scripts && p.scripts["build:css"] ? 0 : 1)'; then
+            if [ -f ./src/index.css ]; then
+              npm run build:css 2>&1 | tee -a /tmp/npm-build.log || echo "⚠️ build:css failed (non-blocking) -> continuing" | tee -a /tmp/npm-build.log
+            else
+              echo "ℹ️ build:css input missing (./src/index.css) -> skipping" | tee -a /tmp/npm-build.log
+            fi
+          else
+            echo "ℹ️ build:css not defined -> skipping" | tee -a /tmp/npm-build.log
+          fi
+
+          ./node_modules/.bin/vite build 2>&1 | tee -a /tmp/npm-build.log
+
+          if [ ! -f public/build/manifest.json ]; then
+            echo "❌ Vite manifest missing: public/build/manifest.json"
+            ls -la public || true
+            ls -la public/build || true
+            exit 1
+          fi
+
+          echo "✅ Vite manifest present"
+          ls -la public/build/manifest.json || true
+        else
+          echo "ℹ️ No @vite detected (or resources/views missing) -> skipping Vite build"
+        fi
+
+    - name: Upload npm build log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: dusk-npm-build-log
+        path: /tmp/npm-build.log
+        if-no-files-found: ignore
+
+    - name: Setup Chrome
+      uses: browser-actions/setup-chrome@v1
+
+    - name: Install ChromeDriver
+      run: |
+        set -euxo pipefail
+
+        php artisan dusk:chrome-driver --detect || true
+        ls -la vendor/laravel/dusk/bin || true
+
+        TARGET="vendor/laravel/dusk/bin/chromedriver-linux"
+        CANDIDATE="vendor/laravel/dusk/bin/chromedriver-linux64/chromedriver"
+
+        # Prefer the binary installed by dusk (linux64) if present
+        if [ ! -f "$TARGET" ] && [ -f "$CANDIDATE" ]; then
+          ln -sf "$CANDIDATE" "$TARGET"
+        fi
+
+        # Fallback: install system chromedriver and link it to the path Dusk expects
+        if [ ! -f "$TARGET" ]; then
+          sudo apt-get update
+          sudo apt-get install -y chromium-chromedriver || sudo apt-get install -y chromium-driver
+          CHROMEDRIVER_PATH="$(command -v chromedriver || find /usr -type f -name chromedriver | head -n 1)"
+          test -n "$CHROMEDRIVER_PATH"
+          ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
+        fi
+
+        test -f "$TARGET"
+        test -x "$TARGET"
+        if [ ! -f "$TARGET" ]; then
+          sudo apt-get update
+          sudo apt-get install -y chromium-chromedriver || sudo apt-get install -y chromium-driver
+          CHROMEDRIVER_PATH="$(command -v chromedriver || find /usr -type f -name chromedriver | head -n 1)"
+          test -n "$CHROMEDRIVER_PATH"
+          ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
+        fi
+
     
     - name: Setup environment
       run: |
+        mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions bootstrap/cache
+        chmod -R 777 storage bootstrap/cache
         cp .env.example .env.testing
+        echo "APP_URL=http://127.0.0.1:8000" >> .env.testing
+        echo "DUSK_URL=http://127.0.0.1:8000" >> .env.testing
         echo "DB_CONNECTION=mysql" >> .env.testing
         echo "DB_HOST=127.0.0.1" >> .env.testing
         echo "DB_PORT=3306" >> .env.testing
         echo "DB_DATABASE=zenamanage_test" >> .env.testing
         echo "DB_USERNAME=root" >> .env.testing
         echo "DB_PASSWORD=password" >> .env.testing
+        echo "CACHE_DRIVER=array" >> .env.testing
+        echo "SESSION_DRIVER=file" >> .env.testing
+        echo "QUEUE_CONNECTION=sync" >> .env.testing
+        echo "BROADCAST_DRIVER=log" >> .env.testing
+        echo "MAIL_MAILER=log" >> .env.testing
+        echo "LOG_CHANNEL=stderr" >> .env.testing
+        echo "LOG_LEVEL=debug" >> .env.testing
+        echo "APP_DEBUG=true" >> .env.testing
+        echo "VIEW_COMPILED_PATH=${GITHUB_WORKSPACE}/storage/framework/views" >> .env.testing
     
     - name: Generate application key
-      run: php artisan key:generate --env=testing
+      run: |
+        APP_KEY="$(php artisan key:generate --show --env=testing)"
+        sed -i '/^APP_KEY=/d' .env.testing
+        echo "APP_KEY=$APP_KEY" >> .env.testing
+        cp .env.testing .env
+        grep -n '^APP_KEY=' .env.testing .env || true
     
     - name: Run migrations
       run: php artisan migrate --env=testing
@@ -176,13 +282,185 @@ jobs:
       run: php artisan db:seed --env=testing
     
     - name: Start Laravel server
-      run: php artisan serve --env=testing &
+      run: |
+        php artisan config:clear --env=testing
+        php artisan view:clear --env=testing
+        # ensure previous server (if any) is stopped
+        if [ -f /tmp/laravel-serve.pid ]; then
+          kill "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1 || true
+        fi
+        rm -f /tmp/laravel-serve.pid /tmp/laravel-serve.log /tmp/php-server.log || true
+
+        # Laravel repos may not ship server.php; use public front-controller instead
+        # Create a router script that mimics Laravel's server.php (serve static if exists, else front-controller)
+        cat >/tmp/dusk-router.php <<'PHP'
+        <?php
+        // Prefer DOCUMENT_ROOT (set by php -S -t) to avoid relying on cwd/env
+        $public = rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', '/');
+        if ($public === '') {
+            $root = getenv('GITHUB_WORKSPACE') ?: getcwd();
+            $public = rtrim($root, '/') . '/public';
+        }
+        $uri = urldecode(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/');
+        if ($uri !== '/' && file_exists($public . $uri)) {
+            return false;
+        }
+        require $public . '/index.php';
+        PHP
+
+        echo "== router sanity =="
+        ls -la "$GITHUB_WORKSPACE/public/index.php" /tmp/dusk-router.php || true
+
+        # Start PHP built-in server with absolute docroot + router
+        # Force Laravel to load .env.testing (APP_ENV=testing) to match migrate/seed steps.
+        # Also raise execution/socket timeouts to avoid killing the server on slow first boot.
+        APP_ENV=testing APP_DEBUG=true nohup php \
+          -d pcov.enabled=0 \
+          -d xdebug.mode=off \
+          -d opcache.enable_cli=0 \
+          -d pcre.jit=0 \
+          -d max_execution_time=120 \
+          -d default_socket_timeout=120 \
+          -S 127.0.0.1:8000 -t "$GITHUB_WORKSPACE/public" /tmp/dusk-router.php \
+          >/tmp/laravel-serve.log 2>&1 &
+        echo $! > /tmp/laravel-serve.pid
+        sleep 1
+        echo "serve pid=$(cat /tmp/laravel-serve.pid)"
+        # quick sanity: server process still alive + port listener
+        kill -0 "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1 || (echo "Server process died immediately" && tail -n 200 /tmp/laravel-serve.log || true && exit 1)
+        echo "== check LISTEN 8000 =="
+        ss -ltnp | grep ':8000' || true
+        echo "== serve log (tail 80) =="
+        tail -n 80 /tmp/laravel-serve.log || true
     
-    - name: Wait for server
-      run: sleep 10
+    - name: Wait for server healthcheck
+      run: |
+        for i in $(seq 1 180); do
+          # if server process is gone, fail early with diagnostics
+          if [ -f /tmp/laravel-serve.pid ] && ! kill -0 "$(cat /tmp/laravel-serve.pid)" >/dev/null 2>&1; then
+            echo "Server process not running (pid=$(cat /tmp/laravel-serve.pid))"
+            ss -ltnp | grep ':8000' || true
+            tail -n 200 /tmp/laravel-serve.log || true
+            exit 1
+          fi
+
+          set +e
+          code="$(curl -sS --connect-timeout 1 --max-time 10 -o /dev/null -w "%{http_code}" http://127.0.0.1:8000)"
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ]; then code="000"; fi
+          if [ "$code" != "000" ]; then
+            # If app returns 5xx, fail fast (don't let Dusk run against a broken server)
+            if echo "$code" | grep -qE '^5'; then
+              echo "Server reachable but unhealthy (HTTP $code) - failing fast"
+              curl -sS --connect-timeout 1 --max-time 10 -i http://127.0.0.1:8000 | sed -n '1,160p' || true
+              tail -n 200 /tmp/laravel-serve.log || true
+              exit 1
+            fi
+            echo "Server reachable (HTTP $code)"
+            exit 0
+          fi
+
+          echo "Not ready yet (rc=$rc HTTP 000) - retry $i/180"
+
+          if [ "$i" = "10" ] || [ "$i" = "60" ] || [ "$i" = "120" ]; then
+            echo "== debug @ retry $i =="
+            ps aux | grep -E 'artisan serve|php -S' || true
+            ss -ltnp | grep ':8000' || true
+            tail -n 200 /tmp/laravel-serve.log || true
+            echo "== end debug =="
+          fi
+
+          sleep 1
+        done
+
+        echo "Laravel server did not become reachable within 180 seconds" >&2
+        curl -sS --connect-timeout 1 --max-time 10 -i http://127.0.0.1:8000 | sed -n '1,160p' || true
+        ls -la storage/logs || true
+        tail -n 300 storage/logs/*.log || true
+        php -v || true
+        php artisan --version || true
+        tail -n 200 /tmp/laravel-serve.log || true
+        exit 1
+
+    - name: Verify Dusk driver path
+      run: |
+        ls -la vendor/laravel/dusk/bin
+        test -f vendor/laravel/dusk/bin/chromedriver-linux
+        test -x vendor/laravel/dusk/bin/chromedriver-linux
     
+    - name: Start ChromeDriver (CI)
+      run: |
+        set -euxo pipefail
+        TARGET="vendor/laravel/dusk/bin/chromedriver-linux"
+        "$TARGET" --version || true
+        : > /tmp/chromedriver.log
+        nohup "$TARGET" --port=9515 --verbose --log-path=/tmp/chromedriver.log >/tmp/chromedriver.out 2>&1 &
+
+        DRIVER_URL=""
+        for i in $(seq 1 60); do
+          STATUS_BODY="$(curl -fsS http://127.0.0.1:9515/status 2>/dev/null || true)"
+          if printf '%s' "$STATUS_BODY" | grep -q "ChromeDriver"; then
+            DRIVER_URL="http://127.0.0.1:9515"
+            break
+          fi
+
+          sleep 1
+        done
+
+        if [ -z "$DRIVER_URL" ]; then
+          echo "ChromeDriver did not expose a valid status endpoint within 60 seconds" >&2
+          tail -n 200 /tmp/chromedriver.log || true
+          exit 1
+        fi
+
+        echo "DUSK_DRIVER_URL=$DRIVER_URL" >> "$GITHUB_ENV"
+        echo "ChromeDriver ready at $DRIVER_URL"
+
     - name: Run Browser Tests
-      run: php artisan dusk tests/Browser/Buttons/ --env=testing
+      run: php artisan dusk tests/Browser/Buttons/ --env=testing --without-tty --stop-on-failure
+
+    - name: Prepare Dusk artifacts (always)
+      if: ${{ always() }}
+      run: |
+        mkdir -p /tmp/dusk-artifacts
+        {
+          echo "run_id=$GITHUB_RUN_ID"
+          echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+          echo "sha=$GITHUB_SHA"
+          echo "ref=$GITHUB_REF"
+          date -u
+        } > /tmp/dusk-artifacts/meta.txt
+
+        # Dusk outputs (only exist when failures happen)
+        cp -R tests/Browser/screenshots /tmp/dusk-artifacts/ 2>/dev/null || true
+        cp -R tests/Browser/console /tmp/dusk-artifacts/ 2>/dev/null || true
+        cp -R tests/Browser/source /tmp/dusk-artifacts/ 2>/dev/null || true
+
+        # Laravel logs (may be empty if LOG_CHANNEL=stderr, but keep anyway)
+        cp -R storage/logs /tmp/dusk-artifacts/ 2>/dev/null || true
+
+        # Server logs (depending on how you start the server)
+        cp /tmp/laravel-serve.log /tmp/dusk-artifacts/ 2>/dev/null || true
+        cp /tmp/php-server.log /tmp/dusk-artifacts/ 2>/dev/null || true
+
+        echo "== dusk-artifacts tree =="
+        find /tmp/dusk-artifacts -maxdepth 3 -type f -print || true
+
+    - name: Upload Dusk artifacts
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: dusk-artifacts
+        path: /tmp/dusk-artifacts
+        if-no-files-found: error
+
+    - name: Browser test diagnostics
+      if: failure()
+      run: |
+        tail -n 200 /tmp/laravel-serve.log || true
+        tail -n 200 /tmp/chromedriver.log || true
+        ps aux | grep -E 'artisan serve|chromedriver|chrome' || true
     
     - name: Upload Browser Test Results
       uses: actions/upload-artifact@v4

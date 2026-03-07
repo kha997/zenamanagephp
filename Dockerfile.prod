@@ -46,8 +46,8 @@ RUN apk add --no-cache \
     freetype-dev \
     libzip-dev \
     icu-dev \
-    imagemagick-dev \
     imagemagick \
+    linux-headers \
     redis \
     mysql-client \
     && rm -rf /var/cache/apk/*
@@ -65,13 +65,13 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         bcmath \
         sockets
 
-# Install Redis extension
-RUN pecl install redis \
-    && docker-php-ext-enable redis
-
-# Install Imagick extension
-RUN pecl install imagick \
-    && docker-php-ext-enable imagick
+# Install PECL extensions with temporary phpize build deps
+RUN apk add --no-cache --virtual .phpize-deps \
+        $PHPIZE_DEPS \
+        imagemagick-dev \
+    && pecl install redis imagick \
+    && docker-php-ext-enable redis imagick \
+    && apk del .phpize-deps
 
 # Install Composer
 COPY --from=composer:2.6 /usr/bin/composer /usr/bin/composer
@@ -104,7 +104,8 @@ COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Create nginx user
-RUN adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx
+RUN (grep -q '^nginx:' /etc/group || addgroup -S nginx) \
+ && (id -u nginx >/dev/null 2>&1 || adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx)
 
 # Create nginx directories
 RUN mkdir -p /var/cache/nginx /var/log/nginx /var/run/nginx

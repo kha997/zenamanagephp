@@ -86,20 +86,6 @@ return new class extends Migration
     {
         Schema::table('invitations', function (Blueprint $table): void {
             foreach ([
-                'invitations_tenant_status_idx',
-                'invitations_tenant_team_status_idx',
-                'invitations_invited_by_user_idx',
-                'invitations_accepted_by_user_idx',
-                'invitations_revoked_by_user_idx',
-            ] as $indexName) {
-                try {
-                    $table->dropIndex($indexName);
-                } catch (\Throwable $e) {
-                    // ignore
-                }
-            }
-
-            foreach ([
                 'invitations_tenant_id_foreign',
                 'invitations_team_id_foreign',
                 'invitations_invited_by_user_id_foreign',
@@ -108,6 +94,20 @@ return new class extends Migration
             ] as $foreignName) {
                 try {
                     $table->dropForeign($foreignName);
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+
+            foreach ([
+                'invitations_tenant_status_idx',
+                'invitations_tenant_team_status_idx',
+                'invitations_invited_by_user_idx',
+                'invitations_accepted_by_user_idx',
+                'invitations_revoked_by_user_idx',
+            ] as $indexName) {
+                try {
+                    $table->dropIndex($indexName);
                 } catch (\Throwable $e) {
                     // ignore
                 }

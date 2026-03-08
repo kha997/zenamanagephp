@@ -82,34 +82,93 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('projects', function (Blueprint $table) {
-            $table->dropIndex('projects_created_at_index');
-            $table->dropIndex('projects_tenant_status_index');
+            try {
+                $table->dropIndex('projects_created_at_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
+
+            try {
+                $table->dropIndex('projects_tenant_status_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
         });
         
         Schema::table('tasks', function (Blueprint $table) {
-            $table->dropIndex('tasks_created_at_index');
-            $table->dropIndex('tasks_project_status_index');
-            $table->dropIndex('tasks_assignee_status_index');
+            try {
+                $table->dropIndex('tasks_created_at_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
+
+            try {
+                $table->dropIndex('tasks_project_status_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
+
+            try {
+                $table->dropIndex('tasks_assignee_status_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
         });
         
         Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex('users_created_at_index');
-            $table->dropIndex('users_tenant_status_index');
+            try {
+                $table->dropIndex('users_created_at_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
+
+            try {
+                $table->dropIndex('users_tenant_status_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
         });
         
         Schema::table('document_versions', function (Blueprint $table) {
-            $table->dropIndex('document_versions_document_created_index');
-            $table->dropIndex('document_versions_created_by_created_index');
+            try {
+                $table->dropIndex('document_versions_document_created_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
+
+            try {
+                $table->dropIndex('document_versions_created_by_created_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
         });
         
         Schema::table('task_assignments', function (Blueprint $table) {
-            $table->dropIndex('task_assignments_task_user_index');
-            $table->dropIndex('task_assignments_user_created_index');
+            try {
+                $table->dropIndex('task_assignments_task_user_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
+
+            try {
+                $table->dropIndex('task_assignments_user_created_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
         });
         
         Schema::table('project_team_members', function (Blueprint $table) {
-            $table->dropIndex('project_team_members_project_user_index');
-            $table->dropIndex('project_team_members_user_created_index');
+            try {
+                $table->dropIndex('project_team_members_project_user_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
+
+            try {
+                $table->dropIndex('project_team_members_user_created_index');
+            } catch (\Exception $e) {
+                // Index might not exist
+            }
         });
     }
 };

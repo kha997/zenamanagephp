@@ -166,7 +166,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Budget</label>
                             <input 
                                 type="number" 
-                                name="budget" 
+                                name="budget_total" 
                                 dusk="project-budget-total"
                                 class="zena-input"
                                 placeholder="Enter project budget"

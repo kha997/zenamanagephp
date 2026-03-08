@@ -68,8 +68,8 @@ class ButtonFormSubmissionTest extends DuskTestCase
             $endDate = now()->addDays(7)->toDateString();
 
             $browser->loginAs($this->user)
-                    ->visit('/app/projects/create')
-                    ->waitFor('@project-name')
+                    ->visitRoute('app.projects.create')
+                    ->waitFor('@project-name', 15)
                     ->type('@project-name', 'New Project')
                     ->type('@project-description', 'New project description')
                     ->type('@project-code', 'NEW-' . uniqid())

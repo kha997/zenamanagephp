@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 
 use App\Http\Controllers\Controller; // Thêm import này
@@ -45,9 +46,15 @@ class ProjectController extends Controller // Thêm extends Controller
         return view('projects.index', compact('projects'));
     }
 
-    public function create()
+    public function create(): View
     {
-        return view('layouts.app-layout');
+        $user = Auth::user();
+
+        return view('projects.create', [
+            'currentRoute' => 'projects',
+            'user' => $user,
+            'tenant' => $user?->tenant,
+        ]);
     }
 
     /**

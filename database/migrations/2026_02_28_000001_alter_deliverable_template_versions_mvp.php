@@ -92,6 +92,18 @@ return new class extends Migration
         }
 
         Schema::table('deliverable_template_versions', function (Blueprint $table): void {
+            // MySQL can bind the tenant_id FK to the composite index below.
+            // Ensure a dedicated tenant_id index exists before dropping it.
+            if (Schema::hasColumn('deliverable_template_versions', 'tenant_id')) {
+                try {
+                    $table->index('tenant_id', 'dt_versions_tenant_id_index');
+                } catch (\Throwable) {
+                    // Ignore if it already exists.
+                }
+            }
+        });
+
+        Schema::table('deliverable_template_versions', function (Blueprint $table): void {
             try {
                 $table->dropUnique('dt_versions_template_semver_unique');
             } catch (\Throwable) {

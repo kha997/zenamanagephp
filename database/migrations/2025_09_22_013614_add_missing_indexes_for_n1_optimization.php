@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -81,94 +82,56 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('projects', function (Blueprint $table) {
-            try {
-                $table->dropIndex('projects_created_at_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
+        $this->dropIndexIfExists('projects', 'projects_created_at_index');
+        $this->dropIndexIfExists('projects', 'projects_tenant_status_index');
+        $this->dropIndexIfExists('tasks', 'tasks_created_at_index');
+        $this->dropIndexIfExists('tasks', 'tasks_project_status_index');
+        $this->dropIndexIfExists('tasks', 'tasks_assignee_status_index');
+        $this->dropIndexIfExists('users', 'users_created_at_index');
+        $this->dropIndexIfExists('users', 'users_tenant_status_index');
+        $this->dropIndexIfExists('document_versions', 'document_versions_document_created_index');
+        $this->dropIndexIfExists('document_versions', 'document_versions_created_by_created_index');
+        $this->dropIndexIfExists('task_assignments', 'task_assignments_task_user_index');
+        $this->dropIndexIfExists('task_assignments', 'task_assignments_user_created_index');
+        $this->dropIndexIfExists('project_team_members', 'project_team_members_project_user_index');
+        $this->dropIndexIfExists('project_team_members', 'project_team_members_user_created_index');
+    }
 
-            try {
-                $table->dropIndex('projects_tenant_status_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
+    private function dropIndexIfExists(string $tableName, string $indexName): void
+    {
+        if (! $this->indexExists($tableName, $indexName)) {
+            return;
+        }
+
+        Schema::table($tableName, function (Blueprint $table) use ($indexName) {
+            $table->dropIndex($indexName);
         });
-        
-        Schema::table('tasks', function (Blueprint $table) {
-            try {
-                $table->dropIndex('tasks_created_at_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
+    }
 
-            try {
-                $table->dropIndex('tasks_project_status_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
+    private function indexExists(string $tableName, string $indexName): bool
+    {
+        $driver = Schema::getConnection()->getDriverName();
 
-            try {
-                $table->dropIndex('tasks_assignee_status_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
-        });
-        
-        Schema::table('users', function (Blueprint $table) {
-            try {
-                $table->dropIndex('users_created_at_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
+        if (in_array($driver, ['mysql', 'mariadb'], true)) {
+            $databaseName = Schema::getConnection()->getDatabaseName();
+            $result = DB::selectOne(
+                'SELECT 1 FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ? LIMIT 1',
+                [$databaseName, $tableName, $indexName]
+            );
 
-            try {
-                $table->dropIndex('users_tenant_status_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
-        });
-        
-        Schema::table('document_versions', function (Blueprint $table) {
-            try {
-                $table->dropIndex('document_versions_document_created_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
+            return $result !== null;
+        }
 
-            try {
-                $table->dropIndex('document_versions_created_by_created_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
-        });
-        
-        Schema::table('task_assignments', function (Blueprint $table) {
-            try {
-                $table->dropIndex('task_assignments_task_user_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
+        if ($driver === 'sqlite') {
+            $indexes = DB::select("PRAGMA index_list('{$tableName}')");
 
-            try {
-                $table->dropIndex('task_assignments_user_created_index');
-            } catch (\Exception $e) {
-                // Index might not exist
+            foreach ($indexes as $index) {
+                if (isset($index->name) && $index->name === $indexName) {
+                    return true;
+                }
             }
-        });
-        
-        Schema::table('project_team_members', function (Blueprint $table) {
-            try {
-                $table->dropIndex('project_team_members_project_user_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
+        }
 
-            try {
-                $table->dropIndex('project_team_members_user_created_index');
-            } catch (\Exception $e) {
-                // Index might not exist
-            }
-        });
+        return false;
     }
 };

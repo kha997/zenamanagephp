@@ -64,16 +64,22 @@ class ButtonFormSubmissionTest extends DuskTestCase
     public function test_project_creation_form(): void
     {
         $this->browse(function (Browser $browser) {
+            $today = now()->toDateString();
+            $endDate = now()->addDays(7)->toDateString();
+
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
-                    ->type('name', 'New Project')
-                    ->type('description', 'New project description')
-                    ->type('code', 'NEW-' . uniqid())
-                    ->select('status', 'active')
-                    ->type('budget_total', '75000')
-                    ->click('.submit-button')
-                    ->assertPathIs('/projects')
-                    ->assertSee('New Project');
+                    ->visit('/app/projects/create')
+                    ->waitFor('@project-name')
+                    ->type('@project-name', 'New Project')
+                    ->type('@project-description', 'New project description')
+                    ->type('@project-code', 'NEW-' . uniqid())
+                    ->type('@project-start-date', $today)
+                    ->type('@project-end-date', $endDate)
+                    ->select('@project-status', 'active')
+                    ->type('@project-budget-total', '75000')
+                    ->click('@project-submit')
+                    ->waitForLocation('/projects')
+                    ->assertPathIs('/projects');
         });
     }
 
@@ -84,14 +90,15 @@ class ButtonFormSubmissionTest extends DuskTestCase
     {
         $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/' . $this->project->id . '/edit')
-                    ->clear('name')
-                    ->type('name', 'Updated Project')
-                    ->clear('description')
-                    ->type('description', 'Updated project description')
-                    ->click('.submit-button')
-                    ->assertPathIs('/projects/' . $this->project->id)
-                    ->assertSee('Updated Project');
+                    ->visit('/app/projects/' . $this->project->id . '/edit')
+                    ->waitFor('@project-name')
+                    ->clear('@project-name')
+                    ->type('@project-name', 'Updated Project')
+                    ->clear('@project-description')
+                    ->type('@project-description', 'Updated project description')
+                    ->click('@project-submit')
+                    ->waitForLocation('/projects/' . $this->project->id)
+                    ->assertPathIs('/projects/' . $this->project->id);
         });
     }
 
@@ -101,17 +108,23 @@ class ButtonFormSubmissionTest extends DuskTestCase
     public function test_task_creation_form(): void
     {
         $this->browse(function (Browser $browser) {
+            $today = now()->toDateString();
+            $endDate = now()->addDays(7)->toDateString();
+
             $browser->loginAs($this->user)
-                    ->visit('/tasks/create')
-                    ->type('name', 'New Task')
-                    ->type('description', 'New task description')
-                    ->select('project_id', $this->project->id)
-                    ->select('status', 'pending')
-                    ->select('priority', 'medium')
-                    ->type('estimated_hours', '8')
-                    ->click('.submit-button')
-                    ->assertPathIs('/tasks')
-                    ->assertSee('New Task');
+                    ->visit('/app/tasks/create')
+                    ->waitFor('@task-name')
+                    ->type('@task-name', 'New Task')
+                    ->type('@task-description', 'New task description')
+                    ->select('@task-project', (string) $this->project->id)
+                    ->select('@task-status', 'pending')
+                    ->select('@task-priority', 'medium')
+                    ->type('@task-start-date', $today)
+                    ->type('@task-end-date', $endDate)
+                    ->type('@task-estimated-hours', '8')
+                    ->click('@task-submit')
+                    ->waitForLocation('/tasks')
+                    ->assertPathIs('/tasks');
         });
     }
 

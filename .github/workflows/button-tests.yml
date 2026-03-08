@@ -184,52 +184,52 @@ jobs:
           fi
 
           # Build a CI Vite config so Vite doesn't look for index.html
-          python3 - <<'PYCI' | tee -a /tmp/npm-build.log
-          import json, re
-          from pathlib import Path
-          
-          views = Path('resources/views')
-          candidates = []
-          if views.exists():
-            for p in views.rglob('*.blade.php'):
-              txt = p.read_text(errors='ignore')
-              if '@vite' not in txt:
-                continue
-              # collect 'resources/..' and "resources/.." strings near @vite
-              for m in re.findall(r"['\"](resources/[^'\"]+)['\"]", txt):
-                candidates.append(m)
-          
-          # fallback common Laravel entries
-          fallback = [
-            'resources/js/app.js','resources/js/app.ts','resources/js/app.jsx','resources/js/app.tsx',
-            'resources/js/main.js','resources/js/main.ts','resources/js/main.jsx','resources/js/main.tsx',
-            'resources/css/app.css','resources/sass/app.scss'
-          ]
-          candidates = candidates or fallback
-          
-          # keep only existing files
-          inputs = []
-          for c in dict.fromkeys(candidates):
-            if Path(c).exists():
-              inputs.append(c)
-          
-          print('CI Vite inputs:', inputs)
-          if not inputs:
-            raise SystemExit('No existing Vite inputs found under resources/. Cannot build manifest.')
-          
-          cfg = f"""import {{ defineConfig }} from 'vite';
-          export default defineConfig({{
-            build: {{
-              manifest: true,
-              outDir: 'public/build',
-              emptyOutDir: true,
-              rollupOptions: {{ input: {json.dumps(inputs)} }},
-            }},
-          }});
-          """
-          Path('vite.ci.config.mjs').write_text(cfg)
-          print('Wrote vite.ci.config.mjs')
-          PYCI
+        python3 - <<'PYCI' | tee -a /tmp/npm-build.log
+        import json, re
+        from pathlib import Path
+        
+        views = Path('resources/views')
+        candidates = []
+        if views.exists():
+          for p in views.rglob('*.blade.php'):
+            txt = p.read_text(errors='ignore')
+            if '@vite' not in txt:
+              continue
+            # collect 'resources/..' and "resources/.." strings near @vite
+            for m in re.findall(r"['\"](resources/[^'\"]+)['\"]", txt):
+              candidates.append(m)
+        
+        # fallback common Laravel entries
+        fallback = [
+          'resources/js/app.js','resources/js/app.ts','resources/js/app.jsx','resources/js/app.tsx',
+          'resources/js/main.js','resources/js/main.ts','resources/js/main.jsx','resources/js/main.tsx',
+          'resources/css/app.css','resources/sass/app.scss'
+        ]
+        candidates = candidates or fallback
+        
+        # keep only existing files
+        inputs = []
+        for c in dict.fromkeys(candidates):
+          if Path(c).exists():
+            inputs.append(c)
+        
+        print('CI Vite inputs:', inputs)
+        if not inputs:
+          raise SystemExit('No existing Vite inputs found under resources/. Cannot build manifest.')
+        
+        cfg = f"""import {{ defineConfig }} from 'vite';
+        export default defineConfig({{
+          build: {{
+            manifest: true,
+            outDir: 'public/build',
+            emptyOutDir: true,
+            rollupOptions: {{ input: {json.dumps(inputs)} }},
+          }},
+        }});
+        """
+        Path('vite.ci.config.mjs').write_text(cfg)
+        print('Wrote vite.ci.config.mjs')
+        PYCI
           
           ./node_modules/.bin/vite build --config vite.ci.config.mjs 2>&1 | tee -a /tmp/npm-build.log
 

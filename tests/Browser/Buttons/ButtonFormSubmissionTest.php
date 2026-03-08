@@ -78,8 +78,8 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->select('@project-status', 'active')
                     ->type('@project-budget-total', '75000')
                     ->click('@project-submit')
-                    ->waitForLocation('/projects')
-                    ->assertPathIs('/projects');
+                    ->waitForLocation('/app/projects')
+                    ->assertPathIs('/app/projects');
         });
     }
 

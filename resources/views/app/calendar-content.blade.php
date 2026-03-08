@@ -1,5 +1,5 @@
 <!-- App Calendar Content - Tenant Calendar for Project & Task Scheduling -->
-<div x-data="appCalendar()" x-init="init()">
+<div x-data="appCalendar()" x-init="init()" x-ref="calendarRoot" data-events-url="/api/v1/app/calendar">
     <!-- Loading State -->
     <div x-show="loading" class="flex justify-center items-center py-8">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -228,16 +228,35 @@ function appCalendar() {
         
         async loadCalendarEvents() {
             try {
+                const calendarRoot = this.$refs.calendarRoot;
+                if (!calendarRoot) {
+                    this.events = [];
+                    return;
+                }
+
+                const eventsUrl = calendarRoot.getAttribute('data-events-url');
+                if (!eventsUrl) {
+                    this.events = [];
+                    return;
+                }
+
+                const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
+                if (!csrfToken) {
+                    this.events = [];
+                    return;
+                }
+
                 // Get current month date range
                 const startDate = this.currentDate.toISOString().split('T')[0];
                 const endDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
                 
-                const response = await fetch(`/api/v1/app/calendar?start_date=${startDate}&end_date=${endDate}`, {
+                const response = await fetch(`${eventsUrl}?start_date=${startDate}&end_date=${endDate}`, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        'X-CSRF-TOKEN': csrfToken
                     }
                 });
                 

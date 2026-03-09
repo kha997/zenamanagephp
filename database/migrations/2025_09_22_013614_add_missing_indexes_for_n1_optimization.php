@@ -93,8 +93,60 @@ return new class extends Migration
         $this->dropIndexIfExists('document_versions', 'document_versions_created_by_created_index');
         $this->dropIndexIfExists('task_assignments', 'task_assignments_task_user_index');
         $this->dropIndexIfExists('task_assignments', 'task_assignments_user_created_index');
+        $this->ensureFkLeadingColumnIndexBeforeDrop('project_team_members', 'project_team_members_project_user_index');
+        $this->ensureFkLeadingColumnIndexBeforeDrop('project_team_members', 'project_team_members_user_created_index');
         $this->dropIndexIfExists('project_team_members', 'project_team_members_project_user_index');
         $this->dropIndexIfExists('project_team_members', 'project_team_members_user_created_index');
+    }
+
+    private function ensureFkLeadingColumnIndexBeforeDrop(string $tableName, string $indexName): void
+    {
+        $driver = Schema::getConnection()->getDriverName();
+        if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+            return;
+        }
+
+        if (! $this->indexExists($tableName, $indexName)) {
+            return;
+        }
+
+        $databaseName = Schema::getConnection()->getDatabaseName();
+        $firstIndexColumn = DB::selectOne(
+            'SELECT column_name FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ? AND seq_in_index = 1 LIMIT 1',
+            [$databaseName, $tableName, $indexName]
+        );
+
+        if (! isset($firstIndexColumn->column_name)) {
+            return;
+        }
+
+        $columnName = (string) $firstIndexColumn->column_name;
+        $fkOnLeadingColumn = DB::selectOne(
+            'SELECT 1 FROM information_schema.key_column_usage WHERE table_schema = ? AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL LIMIT 1',
+            [$databaseName, $tableName, $columnName]
+        );
+
+        if ($fkOnLeadingColumn === null) {
+            return;
+        }
+
+        $alternateLeadingIndex = DB::selectOne(
+            'SELECT 1 FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND column_name = ? AND seq_in_index = 1 AND index_name <> ? LIMIT 1',
+            [$databaseName, $tableName, $columnName, $indexName]
+        );
+
+        if ($alternateLeadingIndex !== null) {
+            return;
+        }
+
+        $fallbackIndexName = $this->fallbackFkIndexName($tableName, $columnName);
+        if ($this->indexExists($tableName, $fallbackIndexName)) {
+            return;
+        }
+
+        Schema::table($tableName, function (Blueprint $table) use ($columnName, $fallbackIndexName) {
+            $table->index([$columnName], $fallbackIndexName);
+        });
     }
 
     private function dropIndexIfExists(string $tableName, string $indexName): void
@@ -133,5 +185,17 @@ return new class extends Migration
         }
 
         return false;
+    }
+
+    private function fallbackFkIndexName(string $tableName, string $columnName): string
+    {
+        $base = "{$tableName}_{$columnName}_fk_index";
+        if (strlen($base) <= 64) {
+            return $base;
+        }
+
+        $hash = substr(md5($base), 0, 8);
+
+        return substr($base, 0, 55) . '_' . $hash;
     }
 };

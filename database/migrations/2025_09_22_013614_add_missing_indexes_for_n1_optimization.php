@@ -83,6 +83,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        $this->ensureSingleColumnIndexExists('project_team_members', 'project_id', 'project_team_members_project_id_fk_idx');
+        $this->ensureSingleColumnIndexExists('project_team_members', 'user_id', 'project_team_members_user_id_fk_idx');
+
         $indexesToDrop = [
             'projects' => [
                 'projects_created_at_index',
@@ -105,10 +108,6 @@ return new class extends Migration
                 'task_assignments_task_user_index',
                 'task_assignments_user_created_index',
             ],
-            'project_team_members' => [
-                'project_team_members_project_user_index',
-                'project_team_members_user_created_index',
-            ],
         ];
 
         foreach ($indexesToDrop as $tableName => $indexNames) {
@@ -116,9 +115,9 @@ return new class extends Migration
                 $this->dropIndexIfExists($tableName, $indexName);
             }
         }
-
-        $this->ensureSingleColumnIndexExists('project_team_members', 'project_id', 'project_team_members_project_id_fk_idx');
-        $this->ensureSingleColumnIndexExists('project_team_members', 'user_id', 'project_team_members_user_id_fk_idx');
+        
+        $this->dropIndexIfExists('project_team_members', 'project_team_members_project_user_index');
+        $this->dropIndexIfExists('project_team_members', 'project_team_members_user_created_index');
     }
 
     private function ensureSingleColumnIndexExists(string $tableName, string $columnName, string $indexName): void

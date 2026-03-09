@@ -45,6 +45,38 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('change_request_comments');
+        $this->dropForeignIfExists('change_request_comments', ['parent_id']);
+        $this->dropTableIfExists('change_request_comments');
+
+        $this->dropForeignIfExists('zena_change_request_comments', ['parent_id']);
+        $this->dropTableIfExists('zena_change_request_comments');
+    }
+
+    private function dropTableIfExists(string $tableName): void
+    {
+        if (!Schema::hasTable($tableName)) {
+            return;
+        }
+
+        try {
+            Schema::dropIfExists($tableName);
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+    }
+
+    private function dropForeignIfExists(string $tableName, array|string $foreign): void
+    {
+        if (!Schema::hasTable($tableName)) {
+            return;
+        }
+
+        try {
+            Schema::table($tableName, function (Blueprint $table) use ($foreign) {
+                $table->dropForeign($foreign);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

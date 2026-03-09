@@ -24,12 +24,30 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('zena_notifications', function (Blueprint $table) {
-            // Drop index first
-            $table->dropIndex(['is_read']);
-            
-            // Drop column
-            $table->dropColumn('is_read');
-        });
+        if (!Schema::hasTable('zena_notifications')) {
+            return;
+        }
+
+        if (!Schema::hasColumn('zena_notifications', 'is_read')) {
+            return;
+        }
+
+        try {
+            Schema::table('zena_notifications', function (Blueprint $table) {
+                // Drop index first
+                $table->dropIndex(['is_read']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('zena_notifications', function (Blueprint $table) {
+                // Drop column
+                $table->dropColumn('is_read');
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

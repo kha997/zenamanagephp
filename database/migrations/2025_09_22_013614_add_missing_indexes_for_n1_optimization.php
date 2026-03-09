@@ -142,8 +142,8 @@ return new class extends Migration
                 $table->dropIndex($indexName);
             });
         } catch (QueryException $exception) {
-            // Another migration/process might have dropped it after existence check.
-            if (! $this->indexExists($tableName, $indexName) && $this->isMissingIndexError($exception)) {
+            // Trust the database error for idempotent missing-index drops.
+            if ($this->isMissingIndexError($exception)) {
                 return;
             }
 

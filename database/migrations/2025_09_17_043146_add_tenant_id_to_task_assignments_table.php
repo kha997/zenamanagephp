@@ -34,21 +34,63 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('task_assignments', function (Blueprint $table) {
-            // Drop foreign keys first
-            $table->dropForeign(['tenant_id']);
-            $table->dropForeign(['assigned_by']);
-            
-            // Drop indexes
-            $table->dropIndex(['tenant_id', 'status']);
-            $table->dropIndex(['priority']);
-            $table->dropIndex(['due_date']);
-            
-            // Drop columns
-            $table->dropColumn([
-                'tenant_id', 'priority', 
-                'estimated_hours', 'assigned_by', 'due_date'
-            ]);
-        });
+        if (!Schema::hasTable('task_assignments')) {
+            return;
+        }
+
+        if (!Schema::hasColumn('task_assignments', 'tenant_id')) {
+            return;
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table) {
+                $table->dropForeign(['tenant_id']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table) {
+                $table->dropForeign(['assigned_by']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table) {
+                $table->dropIndex(['tenant_id', 'status']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table) {
+                $table->dropIndex(['priority']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table) {
+                $table->dropIndex(['due_date']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table) {
+                $table->dropColumn([
+                    'tenant_id', 'priority',
+                    'estimated_hours', 'assigned_by', 'due_date',
+                ]);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

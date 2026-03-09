@@ -93,59 +93,20 @@ return new class extends Migration
         $this->dropIndexIfExists('document_versions', 'document_versions_created_by_created_index');
         $this->dropIndexIfExists('task_assignments', 'task_assignments_task_user_index');
         $this->dropIndexIfExists('task_assignments', 'task_assignments_user_created_index');
-        $this->ensureFkLeadingColumnIndexBeforeDrop('project_team_members', 'project_team_members_project_user_index');
-        $this->ensureFkLeadingColumnIndexBeforeDrop('project_team_members', 'project_team_members_user_created_index');
+        $this->ensureSingleColumnIndexExists('project_team_members', 'project_id', 'project_team_members_project_id_fk_idx');
+        $this->ensureSingleColumnIndexExists('project_team_members', 'user_id', 'project_team_members_user_id_fk_idx');
         $this->dropIndexIfExists('project_team_members', 'project_team_members_project_user_index');
         $this->dropIndexIfExists('project_team_members', 'project_team_members_user_created_index');
     }
 
-    private function ensureFkLeadingColumnIndexBeforeDrop(string $tableName, string $indexName): void
+    private function ensureSingleColumnIndexExists(string $tableName, string $columnName, string $indexName): void
     {
-        $driver = Schema::getConnection()->getDriverName();
-        if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+        if ($this->singleColumnIndexExists($tableName, $columnName, $indexName)) {
             return;
         }
 
-        if (! $this->indexExists($tableName, $indexName)) {
-            return;
-        }
-
-        $databaseName = Schema::getConnection()->getDatabaseName();
-        $firstIndexColumn = DB::selectOne(
-            'SELECT column_name FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ? AND seq_in_index = 1 LIMIT 1',
-            [$databaseName, $tableName, $indexName]
-        );
-
-        if (! isset($firstIndexColumn->column_name)) {
-            return;
-        }
-
-        $columnName = (string) $firstIndexColumn->column_name;
-        $fkOnLeadingColumn = DB::selectOne(
-            'SELECT 1 FROM information_schema.key_column_usage WHERE table_schema = ? AND table_name = ? AND column_name = ? AND referenced_table_name IS NOT NULL LIMIT 1',
-            [$databaseName, $tableName, $columnName]
-        );
-
-        if ($fkOnLeadingColumn === null) {
-            return;
-        }
-
-        $alternateLeadingIndex = DB::selectOne(
-            'SELECT 1 FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND column_name = ? AND seq_in_index = 1 AND index_name <> ? LIMIT 1',
-            [$databaseName, $tableName, $columnName, $indexName]
-        );
-
-        if ($alternateLeadingIndex !== null) {
-            return;
-        }
-
-        $fallbackIndexName = $this->fallbackFkIndexName($tableName, $columnName);
-        if ($this->indexExists($tableName, $fallbackIndexName)) {
-            return;
-        }
-
-        Schema::table($tableName, function (Blueprint $table) use ($columnName, $fallbackIndexName) {
-            $table->index([$columnName], $fallbackIndexName);
+        Schema::table($tableName, function (Blueprint $table) use ($columnName, $indexName) {
+            $table->index([$columnName], $indexName);
         });
     }
 
@@ -187,15 +148,35 @@ return new class extends Migration
         return false;
     }
 
-    private function fallbackFkIndexName(string $tableName, string $columnName): string
+    private function singleColumnIndexExists(string $tableName, string $columnName, string $indexName): bool
     {
-        $base = "{$tableName}_{$columnName}_fk_index";
-        if (strlen($base) <= 64) {
-            return $base;
+        $driver = Schema::getConnection()->getDriverName();
+
+        if (in_array($driver, ['mysql', 'mariadb'], true)) {
+            $databaseName = Schema::getConnection()->getDatabaseName();
+            $result = DB::selectOne(
+                'SELECT 1 FROM information_schema.statistics WHERE table_schema = ? AND table_name = ? AND index_name = ? AND seq_in_index = 1 AND column_name = ? LIMIT 1',
+                [$databaseName, $tableName, $indexName, $columnName]
+            );
+
+            return $result !== null;
         }
 
-        $hash = substr(md5($base), 0, 8);
+        if ($driver === 'sqlite') {
+            if (! $this->indexExists($tableName, $indexName)) {
+                return false;
+            }
 
-        return substr($base, 0, 55) . '_' . $hash;
+            $indexColumns = DB::select("PRAGMA index_info('{$indexName}')");
+            if (count($indexColumns) !== 1) {
+                return false;
+            }
+
+            $firstColumn = $indexColumns[0]->name ?? null;
+
+            return $firstColumn === $columnName;
+        }
+
+        return false;
     }
 };

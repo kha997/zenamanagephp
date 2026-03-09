@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\QueryException;
 
 return new class extends Migration
 {
@@ -82,21 +83,42 @@ return new class extends Migration
      */
     public function down(): void
     {
-        $this->dropIndexIfExists('projects', 'projects_created_at_index');
-        $this->dropIndexIfExists('projects', 'projects_tenant_status_index');
-        $this->dropIndexIfExists('tasks', 'tasks_created_at_index');
-        $this->dropIndexIfExists('tasks', 'tasks_project_status_index');
-        $this->dropIndexIfExists('tasks', 'tasks_assignee_status_index');
-        $this->dropIndexIfExists('users', 'users_created_at_index');
-        $this->dropIndexIfExists('users', 'users_tenant_status_index');
-        $this->dropIndexIfExists('document_versions', 'document_versions_document_created_index');
-        $this->dropIndexIfExists('document_versions', 'document_versions_created_by_created_index');
-        $this->dropIndexIfExists('task_assignments', 'task_assignments_task_user_index');
-        $this->dropIndexIfExists('task_assignments', 'task_assignments_user_created_index');
+        $indexesToDrop = [
+            'projects' => [
+                'projects_created_at_index',
+                'projects_tenant_status_index',
+            ],
+            'tasks' => [
+                'tasks_created_at_index',
+                'tasks_project_status_index',
+                'tasks_assignee_status_index',
+            ],
+            'users' => [
+                'users_created_at_index',
+                'users_tenant_status_index',
+            ],
+            'document_versions' => [
+                'document_versions_document_created_index',
+                'document_versions_created_by_created_index',
+            ],
+            'task_assignments' => [
+                'task_assignments_task_user_index',
+                'task_assignments_user_created_index',
+            ],
+            'project_team_members' => [
+                'project_team_members_project_user_index',
+                'project_team_members_user_created_index',
+            ],
+        ];
+
+        foreach ($indexesToDrop as $tableName => $indexNames) {
+            foreach ($indexNames as $indexName) {
+                $this->dropIndexIfExists($tableName, $indexName);
+            }
+        }
+
         $this->ensureSingleColumnIndexExists('project_team_members', 'project_id', 'project_team_members_project_id_fk_idx');
         $this->ensureSingleColumnIndexExists('project_team_members', 'user_id', 'project_team_members_user_id_fk_idx');
-        $this->dropIndexIfExists('project_team_members', 'project_team_members_project_user_index');
-        $this->dropIndexIfExists('project_team_members', 'project_team_members_user_created_index');
     }
 
     private function ensureSingleColumnIndexExists(string $tableName, string $columnName, string $indexName): void
@@ -116,9 +138,18 @@ return new class extends Migration
             return;
         }
 
-        Schema::table($tableName, function (Blueprint $table) use ($indexName) {
-            $table->dropIndex($indexName);
-        });
+        try {
+            Schema::table($tableName, function (Blueprint $table) use ($indexName) {
+                $table->dropIndex($indexName);
+            });
+        } catch (QueryException $exception) {
+            // Another migration/process might have dropped it after existence check.
+            if (! $this->indexExists($tableName, $indexName) && $this->isMissingIndexError($exception)) {
+                return;
+            }
+
+            throw $exception;
+        }
     }
 
     private function indexExists(string $tableName, string $indexName): bool
@@ -136,7 +167,8 @@ return new class extends Migration
         }
 
         if ($driver === 'sqlite') {
-            $indexes = DB::select("PRAGMA index_list('{$tableName}')");
+            $quotedTableName = str_replace("'", "''", $tableName);
+            $indexes = DB::select("PRAGMA index_list('{$quotedTableName}')");
 
             foreach ($indexes as $index) {
                 if (isset($index->name) && $index->name === $indexName) {
@@ -167,7 +199,8 @@ return new class extends Migration
                 return false;
             }
 
-            $indexColumns = DB::select("PRAGMA index_info('{$indexName}')");
+            $quotedIndexName = str_replace("'", "''", $indexName);
+            $indexColumns = DB::select("PRAGMA index_info('{$quotedIndexName}')");
             if (count($indexColumns) !== 1) {
                 return false;
             }
@@ -178,5 +211,13 @@ return new class extends Migration
         }
 
         return false;
+    }
+
+    private function isMissingIndexError(QueryException $exception): bool
+    {
+        $sqlState = $exception->errorInfo[0] ?? null;
+        $driverCode = $exception->errorInfo[1] ?? null;
+
+        return $sqlState === '42000' && (int) $driverCode === 1091;
     }
 };

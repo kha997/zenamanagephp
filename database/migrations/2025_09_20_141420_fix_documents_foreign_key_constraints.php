@@ -47,11 +47,24 @@ return new class extends Migration
      */
     public function down()
     {
-        if (Schema::hasTable('documents')) {
+        if (!Schema::hasTable('documents')) {
+            return;
+        }
+
+        try {
             Schema::table('documents', function (Blueprint $table) {
                 $table->dropForeign(['project_id']);
+            });
+        } catch (\Throwable $e) {
+            // Foreign key might already be missing during rollback.
+        }
+
+        try {
+            Schema::table('documents', function (Blueprint $table) {
                 $table->dropForeign(['uploaded_by']);
             });
+        } catch (\Throwable $e) {
+            // Foreign key might already be missing during rollback.
         }
     }
 };

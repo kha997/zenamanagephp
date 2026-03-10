@@ -33,14 +33,51 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('task_assignments', function (Blueprint $table) {
-            // Drop foreign key and indexes
-            $table->dropForeign(['team_id']);
-            $table->dropIndex(['team_id', 'assignment_type']);
-            $table->dropIndex(['assignment_type']);
-            
-            // Drop columns
-            $table->dropColumn(['team_id', 'assignment_type']);
-        });
+        if (!Schema::hasTable('task_assignments')) {
+            return;
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table): void {
+                $table->dropForeign(['team_id']);
+            });
+        } catch (\Throwable) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table): void {
+                $table->dropIndex(['team_id', 'assignment_type']);
+            });
+        } catch (\Throwable) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table): void {
+                $table->dropIndex(['assignment_type']);
+            });
+        } catch (\Throwable) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        $existingColumns = [];
+        foreach (['team_id', 'assignment_type'] as $column) {
+            if (Schema::hasColumn('task_assignments', $column)) {
+                $existingColumns[] = $column;
+            }
+        }
+
+        if ($existingColumns === []) {
+            return;
+        }
+
+        try {
+            Schema::table('task_assignments', function (Blueprint $table) use ($existingColumns): void {
+                $table->dropColumn($existingColumns);
+            });
+        } catch (\Throwable) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

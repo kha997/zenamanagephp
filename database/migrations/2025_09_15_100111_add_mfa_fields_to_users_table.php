@@ -35,16 +35,43 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex(['mfa_enabled']);
-            
-            $table->dropColumn([
-                'mfa_enabled',
-                'mfa_secret',
-                'mfa_recovery_codes',
-                'mfa_enabled_at',
-                'mfa_backup_codes_used'
-            ]);
-        });
+        if (!Schema::hasTable('users')) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex(['mfa_enabled']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        $columns = [
+            'mfa_enabled',
+            'mfa_secret',
+            'mfa_recovery_codes',
+            'mfa_enabled_at',
+            'mfa_backup_codes_used',
+        ];
+
+        $existingColumns = [];
+        foreach ($columns as $column) {
+            if (Schema::hasColumn('users', $column)) {
+                $existingColumns[] = $column;
+            }
+        }
+
+        if ($existingColumns === []) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) use ($existingColumns) {
+                $table->dropColumn($existingColumns);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

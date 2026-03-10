@@ -25,9 +25,35 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('project_milestones', function (Blueprint $table) {
-            $table->dropForeign(['created_by']);
-            $table->dropColumn(['metadata', 'created_by']);
-        });
+        if (!Schema::hasTable('project_milestones')) {
+            return;
+        }
+
+        try {
+            Schema::table('project_milestones', function (Blueprint $table): void {
+                $table->dropForeign(['created_by']);
+            });
+        } catch (\Throwable) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        $existingColumns = [];
+        foreach (['metadata', 'created_by'] as $column) {
+            if (Schema::hasColumn('project_milestones', $column)) {
+                $existingColumns[] = $column;
+            }
+        }
+
+        if ($existingColumns === []) {
+            return;
+        }
+
+        try {
+            Schema::table('project_milestones', function (Blueprint $table) use ($existingColumns): void {
+                $table->dropColumn($existingColumns);
+            });
+        } catch (\Throwable) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

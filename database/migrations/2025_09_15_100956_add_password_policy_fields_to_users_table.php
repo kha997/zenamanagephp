@@ -34,17 +34,51 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex(['password_expires_at']);
-            $table->dropIndex(['password_locked_until']);
-            
-            $table->dropColumn([
-                'password_changed_at',
-                'password_expires_at',
-                'password_failed_attempts',
-                'password_locked_until',
-                'password_history'
-            ]);
-        });
+        if (!Schema::hasTable('users')) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex(['password_expires_at']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex(['password_locked_until']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        $columns = [
+            'password_changed_at',
+            'password_expires_at',
+            'password_failed_attempts',
+            'password_locked_until',
+            'password_history',
+        ];
+
+        $existingColumns = [];
+        foreach ($columns as $column) {
+            if (Schema::hasColumn('users', $column)) {
+                $existingColumns[] = $column;
+            }
+        }
+
+        if ($existingColumns === []) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) use ($existingColumns) {
+                $table->dropColumn($existingColumns);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

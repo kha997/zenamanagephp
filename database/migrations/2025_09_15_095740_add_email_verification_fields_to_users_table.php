@@ -104,7 +104,23 @@ return new class extends Migration
 
         try {
             Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex('users_email_verification_token_index');
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
                 $table->dropIndex(['email_verification_token']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex('users_email_change_token_index');
             });
         } catch (\Throwable $e) {
             // Intentionally swallow for idempotent rollback in partial DB states.

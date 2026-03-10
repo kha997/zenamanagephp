@@ -43,6 +43,28 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('project_templates');
+        if (Schema::hasTable('template_tasks')) {
+            try {
+                Schema::drop('template_tasks');
+            } catch (\Throwable) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+        }
+
+        if (Schema::hasTable('zena_template_tasks')) {
+            try {
+                Schema::drop('zena_template_tasks');
+            } catch (\Throwable) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+        }
+
+        if (Schema::hasTable('project_templates')) {
+            try {
+                Schema::drop('project_templates');
+            } catch (\Throwable) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+        }
     }
 };

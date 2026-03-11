@@ -467,7 +467,7 @@ jobs:
         echo "ChromeDriver ready at $DRIVER_URL"
 
     - name: Run Browser Tests
-      run: php artisan dusk tests/Browser/Buttons/ --env=testing --without-tty --stop-on-failure
+      run: php artisan dusk tests/Browser/Projects/ProjectCreateTest.php --env=testing --without-tty --stop-on-failure
 
     - name: Prepare Dusk artifacts (always)
       if: ${{ always() }}

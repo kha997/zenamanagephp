@@ -35,6 +35,24 @@ return new class extends Migration
      */
     public function down()
     {
+        if (Schema::hasTable('zena_audit_logs') && Schema::hasColumn('zena_audit_logs', 'tenant_id')) {
+            try {
+                Schema::table('zena_audit_logs', function (Blueprint $table) {
+                    $table->dropForeign('audit_logs_tenant_id_foreign');
+                });
+            } catch (\Throwable $e) {
+                // Ignore if FK is already absent or named differently in partial rollback states.
+            }
+
+            try {
+                Schema::table('zena_audit_logs', function (Blueprint $table) {
+                    $table->dropForeign(['tenant_id']);
+                });
+            } catch (\Throwable $e) {
+                // Ignore if FK is already absent or named differently in partial rollback states.
+            }
+        }
+
         Schema::dropIfExists('tenants');
     }
 };

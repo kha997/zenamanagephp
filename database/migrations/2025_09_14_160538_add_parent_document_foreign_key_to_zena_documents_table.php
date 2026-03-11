@@ -25,8 +25,20 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('zena_documents', function (Blueprint $table) {
-            $table->dropForeign(['parent_document_id']);
-        });
+        if (! Schema::hasTable('zena_documents')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('zena_documents', 'parent_document_id')) {
+            return;
+        }
+
+        try {
+            Schema::table('zena_documents', function (Blueprint $table) {
+                $table->dropForeign(['parent_document_id']);
+            });
+        } catch (\Throwable $e) {
+            // Ignore missing foreign key in partial rollback states.
+        }
     }
 };

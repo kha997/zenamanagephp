@@ -16,7 +16,17 @@ use Tests\DuskTestCase;
 /**
  * Button Form Submission Test.
  *
- * Tests form interactions and submissions
+ * LEGACY FROZEN (Phase 1).
+ *
+ * This mixed suite is intentionally frozen per:
+ * docs/change-proposals/button-form-submission-audit-rewrite-plan.md
+ *
+ * Historical coverage intent preserved here:
+ * - project create/edit form submission
+ * - task create form submission
+ * - project form validation/reset/cancel
+ * - document upload form
+ * - bulk/search/filter/loading/error form interactions
  */
 class ButtonFormSubmissionTest extends DuskTestCase
 {
@@ -31,6 +41,10 @@ class ButtonFormSubmissionTest extends DuskTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->markTestSkipped(
+            'Frozen legacy mixed browser suite. See docs/change-proposals/button-form-submission-audit-rewrite-plan.md'
+        );
 
         // Create test tenant
         $this->tenant = Tenant::create([

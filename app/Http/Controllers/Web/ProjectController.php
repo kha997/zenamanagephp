@@ -6,6 +6,7 @@ use Illuminate\View\View;
 
 
 use App\Http\Controllers\Controller; // Thêm import này
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Src\CoreProject\Models\Project;
@@ -54,6 +55,28 @@ class ProjectController extends Controller // Thêm extends Controller
             'currentRoute' => 'projects',
             'user' => $user,
             'tenant' => $user?->tenant,
+        ]);
+    }
+
+    public function edit(string $projectId): View
+    {
+        $user = Auth::user();
+
+        $projectData = Project::query()
+            ->whereTenantId($user?->tenant_id)
+            ->findOrFail($projectId);
+
+        $users = User::query()
+            ->where('tenant_id', $user?->tenant_id)
+            ->select(['id', 'name'])
+            ->get();
+
+        return view('projects.edit', [
+            'currentRoute' => 'projects',
+            'user' => $user,
+            'tenant' => $user?->tenant,
+            'projectData' => $projectData,
+            'users' => $users,
         ]);
     }
 

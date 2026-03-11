@@ -17,13 +17,14 @@ on:
 
 env:
   COMPOSER_PROCESS_TIMEOUT: 0
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   button-inventory-check:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -59,7 +60,7 @@ jobs:
         fi
     
     - name: Upload Button Inventory
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: button-inventory
         path: docs/testing/button-inventory.csv
@@ -79,7 +80,7 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -123,7 +124,7 @@ jobs:
       run: php artisan test tests/Feature/Buttons/ --env=testing --coverage
     
     - name: Upload Feature Test Results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: feature-test-results
@@ -144,7 +145,7 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -248,7 +249,7 @@ jobs:
 
     - name: Upload npm build log
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: dusk-npm-build-log
         path: /tmp/npm-build.log
@@ -497,7 +498,7 @@ jobs:
 
     - name: Upload Dusk artifacts
       if: ${{ always() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: dusk-artifacts
         path: /tmp/dusk-artifacts
@@ -511,7 +512,7 @@ jobs:
         ps aux | grep -E 'artisan serve|chromedriver|chrome' || true
     
     - name: Upload Browser Test Results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: browser-test-results
@@ -532,7 +533,7 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
@@ -572,7 +573,7 @@ jobs:
       run: php artisan test tests/Feature/SecurityFeaturesSimpleTest.php --env=testing
     
     - name: Upload Security Test Results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: security-test-results
@@ -583,7 +584,7 @@ jobs:
     needs: [feature-tests, browser-tests, security-tests]
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     
     - name: Download all artifacts
       uses: actions/download-artifact@v4
@@ -610,7 +611,7 @@ jobs:
         echo "3. Add accessibility tests" >> coverage-report.md
     
     - name: Upload Coverage Report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: coverage-report
         path: coverage-report.md
@@ -620,7 +621,7 @@ jobs:
     needs: [feature-tests, browser-tests, security-tests, coverage-report]
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     
     - name: Download all artifacts
       uses: actions/download-artifact@v4

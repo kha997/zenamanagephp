@@ -96,6 +96,8 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->type('@project-name', 'Updated Project')
                     ->clear('@project-description')
                     ->type('@project-description', 'Updated project description')
+                    ->scrollIntoView('@project-submit')
+                    ->pause(100)
                     ->click('@project-submit')
                     ->waitForLocation('/projects/' . $this->project->id)
                     ->assertPathIs('/projects/' . $this->project->id);

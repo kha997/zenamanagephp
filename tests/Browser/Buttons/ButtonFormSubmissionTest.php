@@ -138,7 +138,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
     {
         $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->click('@project-submit')
                     ->assertSee('The name field is required')
                     ->assertSee('The code field is required')
@@ -153,7 +153,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
     {
         $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->type('description', 'Test description')
                     ->click('.reset-button')
@@ -169,7 +169,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
     {
         $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->click('.cancel-button')
                     ->assertPathIs('/projects');
@@ -269,7 +269,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
     {
         $this->browse(function ($browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->type('description', 'Test description')
                     ->type('code', 'TEST-' . uniqid())
@@ -289,7 +289,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
     {
         $this->browse(function ($browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->type('description', 'Test description')
                     ->type('code', 'INVALID_CODE_FORMAT')

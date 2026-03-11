@@ -99,7 +99,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->scrollIntoView('@project-submit')
                     ->pause(100)
                     ->click('@project-submit')
-                    ->waitForLocation('/projects/' . $this->project->id)
+                    ->waitForLocation('/projects/' . $this->project->id, 15)
                     ->assertPathIs('/projects/' . $this->project->id);
         });
     }

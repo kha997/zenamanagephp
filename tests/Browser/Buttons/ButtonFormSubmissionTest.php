@@ -96,6 +96,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->type('@project-name', 'Updated Project')
                     ->clear('@project-description')
                     ->type('@project-description', 'Updated project description')
+                    ->select('select[x-model="formData.pm_id"]', (string) $this->user->id)
                     ->scrollIntoView('@project-submit')
                     ->pause(100)
                     ->click('@project-submit')

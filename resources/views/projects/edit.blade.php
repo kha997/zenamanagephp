@@ -330,18 +330,18 @@ function editProject() {
         isSubmitting: false,
         newTag: '',
         formData: {
-            id: {{ $projectData->id ?? 1 }},
-            code: '{{ $projectData->code ?? "PROJ-001" }}',
-            name: '{{ $projectData->name ?? "Sample Project" }}',
-            description: '{{ $projectData->description ?? "" }}',
-            client_id: {{ $projectData->client_id ?? 1 }},
-            pm_id: {{ $projectData->pm_id ?? 2 }},
-            status: '{{ $projectData->status ?? "active" }}',
-            start_date: '{{ $projectData->start_date ?? "" }}',
-            end_date: '{{ $projectData->end_date ?? "" }}',
-            budget_total: {{ $projectData->budget_total ?? 0 }},
-            progress: {{ $projectData->progress ?? 0 }},
-            tags: @json($projectData->tags ?? [])
+            id: @js($projectData->id ?? 1),
+            code: @js($projectData->code ?? "PROJ-001"),
+            name: @js($projectData->name ?? "Sample Project"),
+            description: @js($projectData->description ?? ""),
+            client_id: @js($projectData->client_id ?? 1),
+            pm_id: @js($projectData->pm_id ?? 2),
+            status: @js($projectData->status ?? "active"),
+            start_date: @js($projectData->start_date ?? ""),
+            end_date: @js($projectData->end_date ?? ""),
+            budget_total: @js($projectData->budget_total ?? 0),
+            progress: @js($projectData->progress ?? 0),
+            tags: @js($projectData->tags ?? [])
         },
         
         addTag() {

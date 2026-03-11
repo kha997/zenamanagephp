@@ -140,9 +140,11 @@ class ButtonFormSubmissionTest extends DuskTestCase
             $browser->loginAs($this->user)
                     ->visit('/app/projects/create')
                     ->click('@project-submit')
-                    ->assertSee('The name field is required')
-                    ->assertSee('The code field is required')
-                    ->assertSee('The budget total field is required');
+                    ->pause(500)
+                    ->assertPathIs('/app/projects/create')
+                    ->assertScript("return document.querySelector('input[name=\"name\"]').matches(':invalid');", true)
+                    ->assertScript("return document.querySelector('input[name=\"start_date\"]').matches(':invalid');", true)
+                    ->assertScript("return document.querySelector('input[name=\"end_date\"]').matches(':invalid');", true);
         });
     }
 

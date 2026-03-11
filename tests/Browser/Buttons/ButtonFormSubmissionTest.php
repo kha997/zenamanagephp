@@ -159,8 +159,8 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->type('name', 'Test Project')
                     ->type('description', 'Test description')
                     ->click('@project-cancel')
-                    ->waitForLocation('/projects')
-                    ->assertPathIs('/projects')
+                    ->waitForLocation('/app/projects')
+                    ->assertPathIs('/app/projects')
                     ->visit('/app/projects/create')
                     ->assertInputValue('name', '')
                     ->assertInputValue('description', '');
@@ -177,8 +177,8 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->click('@project-cancel')
-                    ->waitForLocation('/projects')
-                    ->assertPathIs('/projects');
+                    ->waitForLocation('/app/projects')
+                    ->assertPathIs('/app/projects');
         });
     }
 
@@ -284,7 +284,8 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->click('@project-submit')
                     ->assertVisible('.loading-spinner')
                     ->waitUntilMissing('.loading-spinner')
-                    ->assertPathIs('/projects');
+                    ->waitForLocation('/app/projects', 10)
+                    ->assertPathIs('/app/projects');
         });
     }
 

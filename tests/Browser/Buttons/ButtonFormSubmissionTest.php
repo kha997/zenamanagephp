@@ -158,7 +158,10 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->type('description', 'Test description')
-                    ->click('.reset-button')
+                    ->click('@project-cancel')
+                    ->waitForLocation('/projects')
+                    ->assertPathIs('/projects')
+                    ->visit('/app/projects/create')
                     ->assertInputValue('name', '')
                     ->assertInputValue('description', '');
         });
@@ -173,7 +176,8 @@ class ButtonFormSubmissionTest extends DuskTestCase
             $browser->loginAs($this->user)
                     ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
-                    ->click('.cancel-button')
+                    ->click('@project-cancel')
+                    ->waitForLocation('/projects')
                     ->assertPathIs('/projects');
         });
     }

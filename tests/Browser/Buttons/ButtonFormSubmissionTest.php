@@ -139,7 +139,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
         $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects/create')
-                    ->click('.submit-button')
+                    ->click('@project-submit')
                     ->assertSee('The name field is required')
                     ->assertSee('The code field is required')
                     ->assertSee('The budget total field is required');
@@ -188,7 +188,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->type('description', 'Test document description')
                     ->select('project_id', $this->project->id)
                     ->attach('file', __DIR__ . '/test-file.txt')
-                    ->click('.submit-button')
+                    ->click('form[action="/api/v1/upload-document"] button[type="submit"]')
                     ->assertPathIs('/documents')
                     ->assertSee('Test Document');
         });
@@ -275,7 +275,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->type('code', 'TEST-' . uniqid())
                     ->select('status', 'active')
                     ->type('budget_total', '50000')
-                    ->click('.submit-button')
+                    ->click('@project-submit')
                     ->assertVisible('.loading-spinner')
                     ->waitUntilMissing('.loading-spinner')
                     ->assertPathIs('/projects');
@@ -295,7 +295,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->type('code', 'INVALID_CODE_FORMAT')
                     ->select('status', 'invalid_status')
                     ->type('budget_total', '-1000')
-                    ->click('.submit-button')
+                    ->click('@project-submit')
                     ->assertSee('The code format is invalid')
                     ->assertSee('The status field is invalid')
                     ->assertSee('The budget total must be positive');

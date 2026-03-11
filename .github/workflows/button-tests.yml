@@ -630,22 +630,21 @@ jobs:
       run: |
         echo "🔍 Checking Quality Gates..."
         
-        # Check if all tests passed
-        if [ -f "feature-test-results/results.xml" ]; then
+        if [ "${{ needs.feature-tests.result }}" = "success" ]; then
           echo "✅ Feature tests completed"
         else
           echo "❌ Feature tests failed"
           exit 1
         fi
         
-        if [ -f "browser-test-results/results.xml" ]; then
+        if [ "${{ needs.browser-tests.result }}" = "success" ]; then
           echo "✅ Browser tests completed"
         else
           echo "❌ Browser tests failed"
           exit 1
         fi
         
-        if [ -f "security-test-results/results.xml" ]; then
+        if [ "${{ needs.security-tests.result }}" = "success" ]; then
           echo "✅ Security tests completed"
         else
           echo "❌ Security tests failed"

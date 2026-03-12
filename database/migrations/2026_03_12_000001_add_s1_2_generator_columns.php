@@ -58,14 +58,14 @@ return new class extends Migration
     {
         Schema::table('tasks', function (Blueprint $table): void {
             if (Schema::hasColumn('tasks', 'work_instance_step_id')) {
-                $table->dropUnique('tasks_work_instance_step_unique');
                 $table->dropForeign(['work_instance_step_id']);
+                $table->dropUnique('tasks_work_instance_step_unique');
                 $table->dropColumn('work_instance_step_id');
             }
 
             if (Schema::hasColumn('tasks', 'work_instance_id')) {
-                $table->dropIndex('tasks_tenant_work_instance_index');
                 $table->dropForeign(['work_instance_id']);
+                $table->dropIndex('tasks_tenant_work_instance_index');
                 $table->dropColumn('work_instance_id');
             }
         });

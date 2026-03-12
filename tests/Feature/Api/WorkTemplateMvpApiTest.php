@@ -4,9 +4,14 @@ namespace Tests\Feature\Api;
 
 use App\Http\Middleware\RoleBasedAccessControlMiddleware;
 use App\Models\AuditLog;
+use App\Models\Component;
 use App\Models\Project;
+use App\Models\Role;
+use App\Models\Task;
+use App\Models\TaskAssignment;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\UserRoleProject;
 use App\Models\WorkInstance;
 use App\Models\WorkInstanceStep;
 use App\Models\WorkInstanceStepAttachment;
@@ -303,6 +308,240 @@ class WorkTemplateMvpApiTest extends TestCase
         $this->assertSame('Initial Step', $snapshotStep->name);
     }
 
+    public function test_apply_project_generates_tasks_assignments_due_dates_and_checklist_snapshot(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $reviewer = User::factory()->create(['tenant_id' => (string) $tenant->id, 'is_active' => true]);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+            'start_date' => now()->toDateString(),
+        ]);
+
+        $role = Role::query()->create([
+            'name' => 'qc_lead',
+            'scope' => 'project',
+            'allow_override' => false,
+            'is_active' => true,
+        ]);
+
+        UserRoleProject::query()->create([
+            'project_id' => (string) $project->id,
+            'user_id' => (string) $reviewer->id,
+            'role_id' => (string) $role->id,
+        ]);
+
+        $template = $this->createDraftTemplate($tenant, $user, [
+            'key' => 'qa-check',
+            'name' => 'QA Check',
+            'sla_hours' => 24,
+            'config' => [
+                'description' => 'Checklist task',
+                'checklist_items' => [
+                    ['key' => 'safety', 'label' => 'Safety checklist complete', 'required' => true],
+                ],
+                'required_docs' => [
+                    ['key' => 'inspection-report', 'label' => 'Inspection Report', 'required' => true],
+                ],
+                'assignment_rules' => [
+                    'reviewers' => [
+                        ['project_role' => 'qc_lead'],
+                    ],
+                    'watchers' => [],
+                ],
+            ],
+        ]);
+
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
+            ->assertStatus(200);
+
+        $apply = $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
+            'work_template_id' => (string) $template->id,
+        ], $this->authHeaders($user));
+
+        $apply->assertStatus(201)
+            ->assertJsonPath('data.scope_type', 'project')
+            ->assertJsonPath('data.duplicate', false)
+            ->assertJsonPath('data.tasks_created', 1);
+
+        $instanceId = (string) $apply->json('data.id');
+        $task = Task::query()->where('work_instance_id', $instanceId)->firstOrFail();
+        $step = WorkInstanceStep::query()->where('work_instance_id', $instanceId)->firstOrFail();
+
+        $this->assertSame((string) $project->id, (string) $task->project_id);
+        $this->assertNull($task->component_id);
+        $this->assertNotNull($task->end_date);
+        $this->assertSame((string) $user->id, (string) $task->assigned_to);
+
+        $assignments = TaskAssignment::query()->where('task_id', $task->id)->orderBy('role')->get();
+        $this->assertCount(2, $assignments);
+        $this->assertTrue($assignments->pluck('role')->contains('assignee'));
+        $this->assertTrue($assignments->pluck('role')->contains('reviewer'));
+
+        $snapshot = $step->snapshot_fields_json ?? [];
+        $this->assertNotEmpty(array_filter($snapshot, static fn (array $field): bool => str_starts_with((string) ($field['field_key'] ?? ''), 'checklist:')));
+        $this->assertNotEmpty(array_filter($snapshot, static fn (array $field): bool => str_starts_with((string) ($field['field_key'] ?? ''), 'required-doc:')));
+    }
+
+    public function test_apply_component_generates_component_scoped_tasks(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+        ]);
+        $component = Component::factory()->create([
+            'project_id' => (string) $project->id,
+            'tenant_id' => (string) $tenant->id,
+        ]);
+
+        $template = $this->createDraftTemplate($tenant, $user);
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
+            ->assertStatus(200);
+
+        $apply = $this->postJson($this->componentApplyTemplateRoute((string) $component->id), [
+            'work_template_id' => (string) $template->id,
+        ], $this->authHeaders($user));
+
+        $apply->assertStatus(201)
+            ->assertJsonPath('data.scope_type', 'component')
+            ->assertJsonPath('data.scope_id', (string) $component->id)
+            ->assertJsonPath('data.project_id', (string) $project->id);
+
+        $instanceId = (string) $apply->json('data.id');
+        $task = Task::query()->where('work_instance_id', $instanceId)->firstOrFail();
+        $this->assertSame((string) $component->id, (string) $task->component_id);
+        $this->assertSame((string) $project->id, (string) $task->project_id);
+    }
+
+    public function test_apply_remains_idempotent_even_with_different_idempotency_keys(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+        ]);
+        $template = $this->createDraftTemplate($tenant, $user);
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
+            ->assertStatus(200);
+
+        $first = $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
+            'work_template_id' => (string) $template->id,
+            'idempotency_key' => 'k1',
+        ], $this->authHeaders($user));
+        $first->assertStatus(201);
+
+        $second = $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
+            'work_template_id' => (string) $template->id,
+            'idempotency_key' => 'k2',
+        ], $this->authHeaders($user));
+
+        $second->assertStatus(200)
+            ->assertJsonPath('data.duplicate', true)
+            ->assertJsonPath('data.tasks_created', 0)
+            ->assertJsonPath('data.assignments_created', 0);
+
+        $instanceId = (string) $first->json('data.id');
+        $this->assertSame($instanceId, (string) $second->json('data.id'));
+        $this->assertSame(1, WorkInstance::query()->where('tenant_id', (string) $tenant->id)->count());
+        $this->assertSame(1, Task::query()->where('tenant_id', (string) $tenant->id)->count());
+    }
+
+    public function test_apply_fails_atomically_when_secondary_assignment_rule_unresolved(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+        ]);
+
+        $template = $this->createDraftTemplate($tenant, $user, [
+            'key' => 'qa-check',
+            'name' => 'QA Check',
+            'config' => [
+                'assignment_rules' => [
+                    'reviewers' => [
+                        ['project_role' => 'missing-role'],
+                    ],
+                    'watchers' => [],
+                ],
+            ],
+        ]);
+
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
+            ->assertStatus(200);
+
+        $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
+            'work_template_id' => (string) $template->id,
+        ], $this->authHeaders($user))
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Unresolved assignment rule for step "qa-check".');
+
+        $this->assertSame(0, WorkInstance::query()->where('tenant_id', (string) $tenant->id)->count());
+        $this->assertSame(0, Task::query()->where('tenant_id', (string) $tenant->id)->count());
+        $this->assertSame(0, TaskAssignment::query()->where('tenant_id', (string) $tenant->id)->count());
+    }
+
+    public function test_export_import_schema_version_2_round_trip_preserves_generator_metadata(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish']);
+
+        $template = $this->createDraftTemplate($tenant, $user, [
+            'key' => 'qa-check',
+            'name' => 'QA Check',
+            'config' => [
+                'checklist_items' => [
+                    ['key' => 'safety', 'label' => 'Safety checklist complete', 'required' => true],
+                ],
+                'required_docs' => [
+                    ['key' => 'inspection-report', 'label' => 'Inspection Report', 'required' => true],
+                ],
+                'assignment_rules' => [
+                    'reviewers' => [['project_role' => 'qc_lead']],
+                    'watchers' => [['project_role' => 'site_engineer']],
+                ],
+            ],
+        ]);
+
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
+            ->assertStatus(200);
+
+        $export = $this->getJson(
+            route('api.zena.work-templates.package.export', ['wtId' => $template->id, 'schema_version' => WorkTemplatePackageService::SCHEMA_VERSION_V2]),
+            $this->authHeaders($user)
+        );
+
+        $export->assertStatus(200)
+            ->assertJsonPath('data.schema_version', WorkTemplatePackageService::SCHEMA_VERSION_V2);
+
+        $package = $export->json('data');
+        $this->assertIsArray($package['manifest']['capabilities'] ?? null);
+
+        $import = $this->postJson($this->workTemplatePackageImportRoute(), $package, $this->authHeaders($user));
+        $import->assertStatus(201);
+
+        $importedTemplateId = (string) $import->json('data.id');
+        $reExport = $this->getJson(
+            route('api.zena.work-templates.package.export', ['wtId' => $importedTemplateId, 'schema_version' => WorkTemplatePackageService::SCHEMA_VERSION_V2]),
+            $this->authHeaders($user)
+        );
+        $reExport->assertStatus(200);
+
+        $stepConfig = $reExport->json('data.template.versions.0.steps.0.config');
+        $this->assertIsArray($stepConfig['checklist_items'] ?? null);
+        $this->assertIsArray($stepConfig['required_docs'] ?? null);
+        $this->assertIsArray($stepConfig['assignment_rules'] ?? null);
+    }
+
     public function test_publish_apply_approve_write_audit_logs(): void
     {
         $tenant = Tenant::factory()->create();
@@ -515,7 +754,7 @@ class WorkTemplateMvpApiTest extends TestCase
 
         $this->postJson($this->workTemplatePackageImportRoute(), $payload, $this->authHeaders($user))
             ->assertStatus(422)
-            ->assertJsonPath('message', 'Unsupported schema_version "0.9.0". Expected "' . WorkTemplatePackageService::SCHEMA_VERSION . '".');
+            ->assertJsonPath('message', 'Unsupported schema_version "0.9.0". Expected one of: "' . WorkTemplatePackageService::SCHEMA_VERSION . '", "' . WorkTemplatePackageService::SCHEMA_VERSION_V2 . '".');
     }
 
     public function test_template_package_import_export_rbac_enforced(): void
@@ -614,6 +853,7 @@ class WorkTemplateMvpApiTest extends TestCase
             'depends_on' => $step['depends_on'] ?? [],
             'assignee_rule_json' => $step['assignee_rule'] ?? null,
             'sla_hours' => $step['sla_hours'] ?? null,
+            'config_json' => $step['config'] ?? null,
         ]);
 
         foreach (($step['fields'] ?? []) as $field) {
@@ -764,6 +1004,11 @@ class WorkTemplateMvpApiTest extends TestCase
     private function projectWorkInstancesRoute(string $projectId): string
     {
         return route('api.zena.projects.work-instances.index', ['project' => $projectId], false);
+    }
+
+    private function componentApplyTemplateRoute(string $componentId): string
+    {
+        return route('api.zena.components.apply-template', ['id' => $componentId], false);
     }
 
     private function workInstanceRoute(string $name, array $parameters = []): string

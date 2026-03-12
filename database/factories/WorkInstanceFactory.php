@@ -21,8 +21,11 @@ class WorkInstanceFactory extends Factory
         return [
             'tenant_id' => Tenant::factory(),
             'project_id' => Project::factory(),
+            'scope_type' => 'project',
+            'scope_id' => fn (array $attributes): string => (string) $attributes['project_id'],
             'work_template_version_id' => WorkTemplateVersion::factory(),
             'status' => 'pending',
+            'apply_fingerprint' => null,
             'created_by' => User::factory(),
         ];
     }

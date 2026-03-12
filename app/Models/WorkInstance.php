@@ -20,9 +20,16 @@ class WorkInstance extends Model
     protected $fillable = [
         'tenant_id',
         'project_id',
+        'scope_type',
+        'scope_id',
         'work_template_version_id',
         'status',
+        'apply_fingerprint',
         'created_by',
+    ];
+
+    protected $casts = [
+        'scope_type' => 'string',
     ];
 
     public function project(): BelongsTo

@@ -50,6 +50,8 @@ class Task extends Model
         'tenant_id',
         'project_id',
         'component_id',
+        'work_instance_id',
+        'work_instance_step_id',
         'phase_id',
         'name',
         'title',
@@ -178,6 +180,16 @@ class Task extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function workInstance(): BelongsTo
+    {
+        return $this->belongsTo(WorkInstance::class, 'work_instance_id');
+    }
+
+    public function workInstanceStep(): BelongsTo
+    {
+        return $this->belongsTo(WorkInstanceStep::class, 'work_instance_step_id');
     }
 
     /**

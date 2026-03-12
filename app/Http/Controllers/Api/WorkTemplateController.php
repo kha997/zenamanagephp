@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Component;
 use App\Models\Project;
+use App\Models\Task;
+use App\Models\User;
+use App\Models\UserRoleProject;
 use App\Models\WorkInstance;
 use App\Models\WorkInstanceStep;
 use App\Models\WorkTemplate;
@@ -11,11 +15,14 @@ use App\Models\WorkTemplateStep;
 use App\Models\WorkTemplateVersion;
 use App\Services\WorkTemplatePackageService;
 use App\Services\ZenaAuditLogger;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 
 class WorkTemplateController extends BaseApiController
@@ -273,17 +280,7 @@ class WorkTemplateController extends BaseApiController
 
     public function applyToProject(Request $request, string $projectId): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'work_template_id' => 'nullable|string',
-            'work_template_version_id' => 'nullable|string',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->validationError($validator->errors());
-        }
-
         $tenantId = $this->tenantId();
-        $userId = (string) Auth::id();
 
         $project = Project::query()
             ->where('tenant_id', $tenantId)
@@ -294,56 +291,263 @@ class WorkTemplateController extends BaseApiController
             return $this->notFound('Project not found');
         }
 
-        $version = $this->resolveVersionForApply($request, $tenantId);
+        return $this->applyTemplateToScope($request, $project, 'project', (string) $project->id, null);
+    }
+
+    public function applyToComponent(Request $request, string $componentId): JsonResponse
+    {
+        $tenantId = $this->tenantId();
+
+        $component = Component::query()
+            ->with('project')
+            ->whereKey($componentId)
+            ->first();
+
+        if (!$component || !$component->project || (string) $component->project->tenant_id !== $tenantId) {
+            return $this->notFound('Component not found');
+        }
+
+        return $this->applyTemplateToScope(
+            $request,
+            $component->project,
+            'component',
+            (string) $component->id,
+            $component
+        );
+    }
+
+    private function applyTemplateToScope(
+        Request $request,
+        Project $project,
+        string $scopeType,
+        string $scopeId,
+        ?Component $component
+    ): JsonResponse {
+        $validator = Validator::make($request->all(), [
+            'work_template_id' => 'nullable|string|required_without:work_template_version_id',
+            'work_template_version_id' => 'nullable|string|required_without:work_template_id',
+            'idempotency_key' => 'nullable|string|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        if (!in_array($scopeType, ['project', 'component'], true)) {
+            return $this->errorResponse('Unsupported scope_type internal value', 422);
+        }
+
+        $tenantId = $this->tenantId();
+        $userId = (string) Auth::id();
+
+        try {
+            $version = $this->resolveVersionForApply($request, $tenantId);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
+
         if (!$version) {
             return $this->notFound('Published work template version not found');
         }
 
-        $instance = DB::transaction(function () use ($tenantId, $project, $version, $userId): WorkInstance {
-            $instance = WorkInstance::create([
-                'tenant_id' => $tenantId,
-                'project_id' => $project->id,
-                'work_template_version_id' => $version->id,
-                'status' => 'pending',
-                'created_by' => $userId,
-            ]);
+        $fingerprint = $this->buildApplyFingerprint($tenantId, $scopeType, $scopeId, (string) $version->id);
+        $existing = WorkInstance::query()
+            ->where('tenant_id', $tenantId)
+            ->where('apply_fingerprint', $fingerprint)
+            ->first();
 
-            $steps = WorkTemplateStep::query()
-                ->with('fields')
-                ->where('tenant_id', $tenantId)
-                ->where('work_template_version_id', $version->id)
-                ->orderBy('step_order')
-                ->get();
+        if ($existing) {
+            $duplicatePayload = $this->buildApplyResponsePayload($existing, true, 0, 0);
+            $this->auditLogger->log(
+                $request,
+                'zena.work-template.apply',
+                'work_instance',
+                (string) $existing->id,
+                200,
+                (string) $project->id,
+                $tenantId,
+                $userId,
+                [
+                    'entity_id' => (string) $version->id,
+                    'scope_type' => $scopeType,
+                    'scope_id' => $scopeId,
+                    'project_id' => (string) $project->id,
+                    'work_template_version_id' => (string) $version->id,
+                    'apply_fingerprint' => $fingerprint,
+                    'duplicate' => true,
+                    'tasks_created' => 0,
+                    'assignments_created' => 0,
+                    'idempotency_key' => $request->input('idempotency_key'),
+                ]
+            );
 
-            foreach ($steps as $step) {
-                WorkInstanceStep::create([
-                    'tenant_id' => $tenantId,
-                    'work_instance_id' => $instance->id,
-                    'work_template_step_id' => $step->id,
-                    'step_key' => $step->step_key,
-                    'name' => $step->name,
-                    'type' => $step->type,
-                    'step_order' => $step->step_order,
-                    'depends_on' => $step->depends_on,
-                    'assignee_rule_json' => $step->assignee_rule_json,
-                    'sla_hours' => $step->sla_hours,
-                    'snapshot_fields_json' => $step->fields->map(static fn (WorkTemplateField $field): array => [
-                        'field_key' => $field->field_key,
-                        'label' => $field->label,
-                        'type' => $field->type,
-                        'required' => (bool) $field->is_required,
-                        'default' => $field->default_value,
-                        'validation' => $field->validation_json,
-                        'enum_options' => $field->enum_options_json,
-                        'visibility_rule' => $field->visibility_rule_json,
-                    ])->values()->all(),
-                    'status' => 'pending',
-                    'deadline_at' => $step->sla_hours ? now()->addHours((int) $step->sla_hours) : null,
-                ]);
+            return $this->successResponse($duplicatePayload, 'Work template already applied for this scope', 200);
+        }
+
+        try {
+            [$instance, $tasksCreated, $assignmentsCreated] = DB::transaction(
+                function () use ($tenantId, $userId, $project, $scopeType, $scopeId, $component, $version, $fingerprint): array {
+                    $instance = WorkInstance::create([
+                        'tenant_id' => $tenantId,
+                        'project_id' => $project->id,
+                        'scope_type' => $scopeType,
+                        'scope_id' => $scopeId,
+                        'work_template_version_id' => $version->id,
+                        'status' => 'pending',
+                        'apply_fingerprint' => $fingerprint,
+                        'created_by' => $userId,
+                    ]);
+
+                    $steps = WorkTemplateStep::query()
+                        ->with('fields')
+                        ->where('tenant_id', $tenantId)
+                        ->where('work_template_version_id', $version->id)
+                        ->orderBy('step_order')
+                        ->get()
+                        ->values();
+
+                    $stepsByKey = [];
+                    foreach ($steps as $step) {
+                        $stepKey = (string) $step->step_key;
+                        $this->assertStepConfigValid($step);
+                        $stepsByKey[$stepKey] = $step;
+                    }
+
+                    $baseAnchor = $this->resolveBaseAnchor($project, $component);
+                    $startAtByStepKey = [];
+                    $deadlineByStepKey = [];
+                    $resolving = [];
+
+                    foreach ($stepsByKey as $stepKey => $step) {
+                        $this->resolveTimelineForStep(
+                            $stepKey,
+                            $stepsByKey,
+                            $baseAnchor,
+                            $startAtByStepKey,
+                            $deadlineByStepKey,
+                            $resolving
+                        );
+                    }
+
+                    $stepInstanceIdByKey = [];
+                    foreach ($steps as $step) {
+                        $stepKey = (string) $step->step_key;
+                        $instanceStep = WorkInstanceStep::create([
+                            'tenant_id' => $tenantId,
+                            'work_instance_id' => $instance->id,
+                            'work_template_step_id' => $step->id,
+                            'step_key' => $stepKey,
+                            'name' => $step->name,
+                            'type' => $step->type,
+                            'step_order' => $step->step_order,
+                            'depends_on' => $step->depends_on,
+                            'assignee_rule_json' => $step->assignee_rule_json,
+                            'sla_hours' => $step->sla_hours,
+                            'snapshot_fields_json' => $this->buildSnapshotFields($step),
+                            'status' => 'pending',
+                            'deadline_at' => $deadlineByStepKey[$stepKey] ?? null,
+                        ]);
+                        $stepInstanceIdByKey[$stepKey] = (string) $instanceStep->id;
+                    }
+
+                    $taskIdByStepKey = [];
+                    foreach ($steps as $step) {
+                        $taskIdByStepKey[(string) $step->step_key] = (string) Str::ulid();
+                    }
+
+                    $now = now();
+                    $taskRows = [];
+                    $assignmentRows = [];
+
+                    foreach ($steps as $step) {
+                        $stepKey = (string) $step->step_key;
+                        $config = is_array($step->config_json) ? $step->config_json : [];
+                        $startAt = $startAtByStepKey[$stepKey] ?? $baseAnchor;
+                        $deadlineAt = $deadlineByStepKey[$stepKey] ?? null;
+
+                        $dependsOn = is_array($step->depends_on) ? $step->depends_on : [];
+                        $dependencyTaskIds = [];
+                        foreach ($dependsOn as $dependencyKey) {
+                            if (!is_string($dependencyKey) || !isset($taskIdByStepKey[$dependencyKey])) {
+                                throw new \RuntimeException(sprintf('Invalid step dependency for step "%s".', $stepKey));
+                            }
+                            $dependencyTaskIds[] = $taskIdByStepKey[$dependencyKey];
+                        }
+
+                        $primaryAssignees = $this->resolveUsersForSelector(
+                            $step->assignee_rule_json,
+                            $tenantId,
+                            $project
+                        );
+                        if ($primaryAssignees === []) {
+                            throw new \RuntimeException(sprintf('Unresolved assignment rule for step "%s".', $stepKey));
+                        }
+
+                        $secondary = $this->resolveSecondaryAssignments($config, $tenantId, $project, $stepKey);
+                        $taskId = $taskIdByStepKey[$stepKey];
+
+                        $taskRows[] = [
+                            'id' => $taskId,
+                            'tenant_id' => $tenantId,
+                            'project_id' => (string) $project->id,
+                            'component_id' => $scopeType === 'component' ? $scopeId : null,
+                            'work_instance_id' => (string) $instance->id,
+                            'work_instance_step_id' => $stepInstanceIdByKey[$stepKey] ?? null,
+                            'name' => (string) ($step->name ?? $stepKey),
+                            'title' => (string) ($step->name ?? $stepKey),
+                            'description' => is_string($config['description'] ?? null) ? $config['description'] : null,
+                            'status' => Task::STATUS_PENDING,
+                            'priority' => is_string($config['priority'] ?? null) ? $config['priority'] : Task::PRIORITY_MEDIUM,
+                            'assigned_to' => $primaryAssignees[0],
+                            'assignee_id' => $primaryAssignees[0],
+                            'start_date' => $startAt->toDateString(),
+                            'end_date' => $deadlineAt ? $deadlineAt->toDateString() : null,
+                            'order' => (int) $step->step_order,
+                            'dependencies_json' => json_encode($dependencyTaskIds),
+                            'created_by' => $userId,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+
+                        $assignmentRows = array_merge(
+                            $assignmentRows,
+                            $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'assignee', $primaryAssignees, $now),
+                            $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'reviewer', $secondary['reviewers'], $now),
+                            $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'watcher', $secondary['watchers'], $now)
+                        );
+                    }
+
+                    if ($taskRows !== []) {
+                        DB::table('tasks')->insert($taskRows);
+                    }
+
+                    if ($assignmentRows !== []) {
+                        DB::table('task_assignments')->insert($assignmentRows);
+                    }
+
+                    return [$instance->fresh(['steps']), count($taskRows), count($assignmentRows)];
+                }
+            );
+        } catch (QueryException $queryException) {
+            if (str_contains(strtolower($queryException->getMessage()), 'wi_tenant_apply_fingerprint_unique')) {
+                $existing = WorkInstance::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('apply_fingerprint', $fingerprint)
+                    ->first();
+
+                if ($existing) {
+                    return $this->successResponse(
+                        $this->buildApplyResponsePayload($existing, true, 0, 0),
+                        'Work template already applied for this scope',
+                        200
+                    );
+                }
             }
 
-            return $instance->fresh(['steps']);
-        });
+            throw $queryException;
+        } catch (\RuntimeException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
 
         $this->auditLogger->log(
             $request,
@@ -354,10 +558,25 @@ class WorkTemplateController extends BaseApiController
             (string) $project->id,
             $tenantId,
             $userId,
-            ['entity_id' => (string) $version->id]
+            [
+                'entity_id' => (string) $version->id,
+                'scope_type' => $scopeType,
+                'scope_id' => $scopeId,
+                'project_id' => (string) $project->id,
+                'work_template_version_id' => (string) $version->id,
+                'apply_fingerprint' => $fingerprint,
+                'duplicate' => false,
+                'tasks_created' => $tasksCreated,
+                'assignments_created' => $assignmentsCreated,
+                'idempotency_key' => $request->input('idempotency_key'),
+            ]
         );
 
-        return $this->successResponse($instance, 'Work template applied successfully', 201);
+        return $this->successResponse(
+            $this->buildApplyResponsePayload($instance, false, $tasksCreated, $assignmentsCreated),
+            'Work template applied successfully',
+            201
+        );
     }
 
     public function exportTemplatePackage(Request $request, string $wtId): JsonResponse
@@ -376,7 +595,18 @@ class WorkTemplateController extends BaseApiController
                 ->orderByDesc('created_at')
                 ->get();
 
-            $package = $this->templatePackageService->buildExportPayload($template, $versions);
+            $schemaVersion = $request->query('schema_version', WorkTemplatePackageService::SCHEMA_VERSION);
+            if (!is_string($schemaVersion)) {
+                $schemaVersion = WorkTemplatePackageService::SCHEMA_VERSION;
+            }
+
+            try {
+                $this->templatePackageService->assertSupportedSchemaVersion($schemaVersion);
+            } catch (\InvalidArgumentException $exception) {
+                return $this->errorResponse($exception->getMessage(), 422);
+            }
+
+            $package = $this->templatePackageService->buildExportPayload($template, $versions, $schemaVersion);
 
             $this->auditLogger->log(
                 $request,
@@ -414,6 +644,126 @@ class WorkTemplateController extends BaseApiController
             'template.versions.*.steps' => 'nullable|array',
         ]);
 
+        $schemaVersion = $request->input('schema_version', WorkTemplatePackageService::SCHEMA_VERSION);
+        if (!is_string($schemaVersion)) {
+            $schemaVersion = WorkTemplatePackageService::SCHEMA_VERSION;
+        }
+
+        try {
+            $this->templatePackageService->assertSupportedSchemaVersion($schemaVersion);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
+
+        $validator->after(function ($validator) use ($request, $schemaVersion): void {
+            if ($schemaVersion !== WorkTemplatePackageService::SCHEMA_VERSION_V2) {
+                return;
+            }
+
+            $manifest = $request->input('manifest');
+            if (!is_array($manifest) || !is_array($manifest['capabilities'] ?? null)) {
+                $validator->errors()->add('manifest.capabilities', 'The manifest.capabilities field must be an array.');
+            }
+
+            $template = $request->input('template');
+            if (!is_array($template)) {
+                return;
+            }
+
+            foreach (($template['versions'] ?? []) as $versionIndex => $versionData) {
+                if (!is_array($versionData)) {
+                    continue;
+                }
+
+                $steps = null;
+                if (is_array($versionData['steps'] ?? null)) {
+                    $steps = $versionData['steps'];
+                } elseif (is_array($versionData['content_json'] ?? null) && is_array($versionData['content_json']['steps'] ?? null)) {
+                    $steps = $versionData['content_json']['steps'];
+                }
+
+                if (!is_array($steps)) {
+                    $validator->errors()->add(
+                        "template.versions.$versionIndex.steps",
+                        'Template version payload requires steps data for schema_version "2.0.0".'
+                    );
+                    continue;
+                }
+
+                foreach ($steps as $stepIndex => $stepData) {
+                    if (!is_array($stepData)) {
+                        $validator->errors()->add(
+                            "template.versions.$versionIndex.steps.$stepIndex",
+                            'The step payload must be an object.'
+                        );
+                        continue;
+                    }
+
+                    $config = $stepData['config'] ?? [];
+                    if (!is_array($config)) {
+                        $validator->errors()->add(
+                            "template.versions.$versionIndex.steps.$stepIndex.config",
+                            'Invalid checklist config shape.'
+                        );
+                        continue;
+                    }
+
+                    $checklists = $config['checklist_items'] ?? [];
+                    if (!is_array($checklists)) {
+                        $validator->errors()->add(
+                            "template.versions.$versionIndex.steps.$stepIndex.config.checklist_items",
+                            'Invalid checklist config shape.'
+                        );
+                    } else {
+                        foreach ($checklists as $itemIndex => $item) {
+                            if (!is_array($item)) {
+                                $validator->errors()->add(
+                                    "template.versions.$versionIndex.steps.$stepIndex.config.checklist_items.$itemIndex",
+                                    'Invalid checklist config shape.'
+                                );
+                            }
+                        }
+                    }
+
+                    $requiredDocs = $config['required_docs'] ?? [];
+                    if (!is_array($requiredDocs)) {
+                        $validator->errors()->add(
+                            "template.versions.$versionIndex.steps.$stepIndex.config.required_docs",
+                            'Invalid checklist config shape.'
+                        );
+                    }
+
+                    $assignmentRules = $config['assignment_rules'] ?? ['reviewers' => [], 'watchers' => []];
+                    if (!is_array($assignmentRules)) {
+                        $validator->errors()->add(
+                            "template.versions.$versionIndex.steps.$stepIndex.config.assignment_rules",
+                            'Invalid assignment selector grammar.'
+                        );
+                        continue;
+                    }
+
+                    foreach (['reviewers', 'watchers'] as $bucket) {
+                        if (!is_array($assignmentRules[$bucket] ?? [])) {
+                            $validator->errors()->add(
+                                "template.versions.$versionIndex.steps.$stepIndex.config.assignment_rules.$bucket",
+                                'Invalid assignment selector grammar.'
+                            );
+                            continue;
+                        }
+
+                        foreach (($assignmentRules[$bucket] ?? []) as $selectorIndex => $selector) {
+                            if (!is_array($selector) || !$this->isValidSelectorShape($selector)) {
+                                $validator->errors()->add(
+                                    "template.versions.$versionIndex.steps.$stepIndex.config.assignment_rules.$bucket.$selectorIndex",
+                                    'Invalid assignment selector grammar.'
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         if ($validator->fails()) {
             return $this->validationError($validator->errors());
         }
@@ -422,16 +772,8 @@ class WorkTemplateController extends BaseApiController
         $userId = (string) Auth::id();
         $payload = $request->input('template');
 
-        try {
-            $this->templatePackageService->assertSupportedSchemaVersion(
-                $request->string('schema_version')->toString()
-            );
-        } catch (\InvalidArgumentException $exception) {
-            return $this->errorResponse($exception->getMessage(), 422);
-        }
-
         $template = DB::transaction(
-            fn (): WorkTemplate => $this->templatePackageService->importTemplate($tenantId, $userId, $payload)
+            fn (): WorkTemplate => $this->templatePackageService->importTemplate($tenantId, $userId, $payload, $schemaVersion)
         );
 
         $this->auditLogger->log(
@@ -495,6 +837,342 @@ class WorkTemplateController extends BaseApiController
         $content['rules'] = $content['rules'] ?? [];
 
         return $content;
+    }
+
+    private function buildApplyFingerprint(string $tenantId, string $scopeType, string $scopeId, string $versionId): string
+    {
+        return sha1(sprintf('%s|%s|%s|%s', $tenantId, $scopeType, $scopeId, $versionId));
+    }
+
+    private function buildApplyResponsePayload(
+        WorkInstance $instance,
+        bool $duplicate,
+        int $tasksCreated,
+        int $assignmentsCreated
+    ): array {
+        return [
+            'id' => (string) $instance->id,
+            'scope_type' => (string) ($instance->scope_type ?? 'project'),
+            'scope_id' => (string) ($instance->scope_id ?? $instance->project_id),
+            'project_id' => (string) $instance->project_id,
+            'work_template_version_id' => (string) $instance->work_template_version_id,
+            'status' => (string) $instance->status,
+            'duplicate' => $duplicate,
+            'tasks_created' => $tasksCreated,
+            'assignments_created' => $assignmentsCreated,
+        ];
+    }
+
+    private function resolveBaseAnchor(Project $project, ?Component $component): CarbonImmutable
+    {
+        if ($component && $component->start_date) {
+            return CarbonImmutable::parse($component->start_date)->startOfDay();
+        }
+
+        if ($project->start_date) {
+            return CarbonImmutable::parse($project->start_date)->startOfDay();
+        }
+
+        return CarbonImmutable::now()->startOfDay();
+    }
+
+    /**
+     * @param array<string, WorkTemplateStep> $stepsByKey
+     * @param array<string, CarbonImmutable> $startAtByStepKey
+     * @param array<string, CarbonImmutable|null> $deadlineByStepKey
+     * @param array<string, bool> $resolving
+     */
+    private function resolveTimelineForStep(
+        string $stepKey,
+        array $stepsByKey,
+        CarbonImmutable $baseAnchor,
+        array &$startAtByStepKey,
+        array &$deadlineByStepKey,
+        array &$resolving
+    ): void {
+        if (array_key_exists($stepKey, $startAtByStepKey)) {
+            return;
+        }
+
+        if (($resolving[$stepKey] ?? false) === true) {
+            throw new \RuntimeException(sprintf('Invalid step dependency for step "%s".', $stepKey));
+        }
+
+        $step = $stepsByKey[$stepKey] ?? null;
+        if (!$step) {
+            throw new \RuntimeException(sprintf('Invalid step dependency for step "%s".', $stepKey));
+        }
+
+        $resolving[$stepKey] = true;
+        $dependsOn = is_array($step->depends_on) ? $step->depends_on : [];
+        $startAt = $baseAnchor;
+
+        if ($dependsOn !== []) {
+            $anchors = [];
+            foreach ($dependsOn as $dependencyStepKey) {
+                if (!is_string($dependencyStepKey) || !isset($stepsByKey[$dependencyStepKey])) {
+                    throw new \RuntimeException(sprintf('Invalid step dependency for step "%s".', $stepKey));
+                }
+
+                $this->resolveTimelineForStep(
+                    $dependencyStepKey,
+                    $stepsByKey,
+                    $baseAnchor,
+                    $startAtByStepKey,
+                    $deadlineByStepKey,
+                    $resolving
+                );
+
+                $anchors[] = $deadlineByStepKey[$dependencyStepKey] ?? $baseAnchor;
+            }
+
+            if ($anchors !== []) {
+                usort(
+                    $anchors,
+                    static fn (CarbonImmutable $left, CarbonImmutable $right): int => $left->getTimestamp() <=> $right->getTimestamp()
+                );
+                $startAt = end($anchors) ?: $baseAnchor;
+            }
+        }
+
+        $startAtByStepKey[$stepKey] = $startAt;
+        $deadlineByStepKey[$stepKey] = $step->sla_hours !== null
+            ? $startAt->addHours((int) $step->sla_hours)
+            : null;
+
+        $resolving[$stepKey] = false;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildSnapshotFields(WorkTemplateStep $step): array
+    {
+        $fields = $step->fields->map(static fn (WorkTemplateField $field): array => [
+            'field_key' => $field->field_key,
+            'label' => $field->label,
+            'type' => $field->type,
+            'required' => (bool) $field->is_required,
+            'default' => $field->default_value,
+            'validation' => $field->validation_json,
+            'enum_options' => $field->enum_options_json,
+            'visibility_rule' => $field->visibility_rule_json,
+        ])->values()->all();
+
+        $config = is_array($step->config_json) ? $step->config_json : [];
+        $checklistItems = $config['checklist_items'] ?? [];
+        if (is_array($checklistItems)) {
+            foreach ($checklistItems as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $itemKey = (string) ($item['key'] ?? Str::ulid());
+                $fields[] = [
+                    'field_key' => 'checklist:' . $itemKey,
+                    'label' => (string) ($item['label'] ?? $itemKey),
+                    'type' => 'checklist_boolean',
+                    'required' => (bool) ($item['required'] ?? false),
+                    'default' => null,
+                    'validation' => null,
+                    'enum_options' => null,
+                    'visibility_rule' => null,
+                ];
+            }
+        }
+
+        $requiredDocs = $config['required_docs'] ?? [];
+        if (is_array($requiredDocs)) {
+            foreach ($requiredDocs as $doc) {
+                if (!is_array($doc)) {
+                    continue;
+                }
+
+                $docKey = (string) ($doc['key'] ?? Str::ulid());
+                $fields[] = [
+                    'field_key' => 'required-doc:' . $docKey,
+                    'label' => (string) ($doc['label'] ?? $docKey),
+                    'type' => 'required_doc_meta',
+                    'required' => (bool) ($doc['required'] ?? false),
+                    'default' => null,
+                    'validation' => null,
+                    'enum_options' => null,
+                    'visibility_rule' => null,
+                ];
+            }
+        }
+
+        return $fields;
+    }
+
+    private function assertStepConfigValid(WorkTemplateStep $step): void
+    {
+        $config = $step->config_json;
+        if ($config === null) {
+            return;
+        }
+
+        if (!is_array($config)) {
+            throw new \RuntimeException('Invalid checklist config shape.');
+        }
+
+        $checklistItems = $config['checklist_items'] ?? [];
+        if (!is_array($checklistItems)) {
+            throw new \RuntimeException('Invalid checklist config shape.');
+        }
+
+        foreach ($checklistItems as $item) {
+            if (!is_array($item)) {
+                throw new \RuntimeException('Invalid checklist config shape.');
+            }
+        }
+
+        $assignmentRules = $config['assignment_rules'] ?? ['reviewers' => [], 'watchers' => []];
+        if (!is_array($assignmentRules)) {
+            throw new \RuntimeException('Invalid assignment selector grammar.');
+        }
+
+        foreach (['reviewers', 'watchers'] as $bucket) {
+            if (!is_array($assignmentRules[$bucket] ?? [])) {
+                throw new \RuntimeException('Invalid assignment selector grammar.');
+            }
+
+            foreach ($assignmentRules[$bucket] as $selector) {
+                if (!is_array($selector) || !$this->isValidSelectorShape($selector)) {
+                    throw new \RuntimeException('Invalid assignment selector grammar.');
+                }
+            }
+        }
+    }
+
+    private function isValidSelectorShape(array $selector): bool
+    {
+        return (
+            (isset($selector['role']) && is_string($selector['role']))
+            || (isset($selector['project_role']) && is_string($selector['project_role']))
+            || (isset($selector['user_id']) && is_string($selector['user_id']))
+        );
+    }
+
+    /**
+     * @return array{reviewers: array<int, string>, watchers: array<int, string>}
+     */
+    private function resolveSecondaryAssignments(array $config, string $tenantId, Project $project, string $stepKey): array
+    {
+        $assignmentRules = $config['assignment_rules'] ?? ['reviewers' => [], 'watchers' => []];
+        if (!is_array($assignmentRules)) {
+            throw new \RuntimeException('Invalid assignment selector grammar.');
+        }
+
+        $result = ['reviewers' => [], 'watchers' => []];
+
+        foreach (['reviewers', 'watchers'] as $bucket) {
+            $selectors = $assignmentRules[$bucket] ?? [];
+            if (!is_array($selectors)) {
+                throw new \RuntimeException('Invalid assignment selector grammar.');
+            }
+
+            foreach ($selectors as $selector) {
+                $resolved = $this->resolveUsersForSelector($selector, $tenantId, $project);
+                if ($resolved === []) {
+                    throw new \RuntimeException(sprintf('Unresolved assignment rule for step "%s".', $stepKey));
+                }
+
+                $result[$bucket] = array_values(array_unique(array_merge($result[$bucket], $resolved)));
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param mixed $selector
+     * @return array<int, string>
+     */
+    private function resolveUsersForSelector($selector, string $tenantId, Project $project): array
+    {
+        if (!is_array($selector) || !$this->isValidSelectorShape($selector)) {
+            return [];
+        }
+
+        if (is_string($selector['role'] ?? null)) {
+            if ($selector['role'] !== 'project_manager') {
+                return [];
+            }
+
+            if (!$project->pm_id) {
+                return [];
+            }
+
+            $exists = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey((string) $project->pm_id)
+                ->exists();
+
+            return $exists ? [(string) $project->pm_id] : [];
+        }
+
+        if (is_string($selector['project_role'] ?? null)) {
+            return UserRoleProject::query()
+                ->join('roles', 'roles.id', '=', 'project_user_roles.role_id')
+                ->join('users', 'users.id', '=', 'project_user_roles.user_id')
+                ->where('project_user_roles.project_id', (string) $project->id)
+                ->where('roles.name', $selector['project_role'])
+                ->where('users.tenant_id', $tenantId)
+                ->whereNull('project_user_roles.deleted_at')
+                ->distinct()
+                ->pluck('project_user_roles.user_id')
+                ->map(static fn ($id): string => (string) $id)
+                ->values()
+                ->all();
+        }
+
+        if (is_string($selector['user_id'] ?? null)) {
+            $exists = User::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($selector['user_id'])
+                ->exists();
+
+            return $exists ? [(string) $selector['user_id']] : [];
+        }
+
+        return [];
+    }
+
+    /**
+     * @param array<int, string> $userIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildAssignmentRows(
+        string $taskId,
+        string $tenantId,
+        string $userId,
+        ?CarbonImmutable $deadlineAt,
+        string $role,
+        array $userIds,
+        \Illuminate\Support\Carbon $now
+    ): array {
+        $rows = [];
+
+        foreach (array_values(array_unique($userIds)) as $assigneeId) {
+            $rows[] = [
+                'id' => (string) Str::ulid(),
+                'tenant_id' => $tenantId,
+                'task_id' => $taskId,
+                'user_id' => $assigneeId,
+                'assignment_type' => 'user',
+                'role' => $role,
+                'status' => 'assigned',
+                'assigned_at' => $now,
+                'assigned_by' => $userId,
+                'due_date' => $deadlineAt?->toDateTimeString(),
+                'actual_hours' => 0,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        return $rows;
     }
 
     private function syncStepsAndFields(WorkTemplateVersion $version, array $steps): void
@@ -640,15 +1318,32 @@ class WorkTemplateController extends BaseApiController
     private function resolveVersionForApply(Request $request, string $tenantId): ?WorkTemplateVersion
     {
         $versionId = $request->input('work_template_version_id');
+        $templateId = $request->input('work_template_id');
+
+        if ((!is_string($versionId) || $versionId === '') && (!is_string($templateId) || $templateId === '')) {
+            return null;
+        }
+
         if (is_string($versionId) && $versionId !== '') {
-            return WorkTemplateVersion::query()
+            $version = WorkTemplateVersion::query()
                 ->where('tenant_id', $tenantId)
                 ->whereKey($versionId)
                 ->whereNotNull('published_at')
                 ->first();
+
+            if (!$version) {
+                return null;
+            }
+
+            if (is_string($templateId) && $templateId !== '' && (string) $version->work_template_id !== $templateId) {
+                throw new \InvalidArgumentException(
+                    'work_template_id and work_template_version_id must reference the same template lineage.'
+                );
+            }
+
+            return $version;
         }
 
-        $templateId = $request->input('work_template_id');
         if (!is_string($templateId) || $templateId === '') {
             return null;
         }

@@ -13,6 +13,7 @@ class WorkTemplatePackageServiceTest extends TestCase
         $service = new WorkTemplatePackageService();
 
         $service->assertSupportedSchemaVersion(WorkTemplatePackageService::SCHEMA_VERSION);
+        $service->assertSupportedSchemaVersion(WorkTemplatePackageService::SCHEMA_VERSION_V2);
 
         $this->assertTrue(true);
     }

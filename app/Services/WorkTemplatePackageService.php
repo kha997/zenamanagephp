@@ -13,12 +13,22 @@ use InvalidArgumentException;
 class WorkTemplatePackageService
 {
     public const SCHEMA_VERSION = '1.0.0';
+    public const SCHEMA_VERSION_V2 = '2.0.0';
+    public const SUPPORTED_SCHEMA_VERSIONS = [
+        self::SCHEMA_VERSION,
+        self::SCHEMA_VERSION_V2,
+    ];
 
     public function assertSupportedSchemaVersion(string $schemaVersion): void
     {
-        if ($schemaVersion !== self::SCHEMA_VERSION) {
+        if (!in_array($schemaVersion, self::SUPPORTED_SCHEMA_VERSIONS, true)) {
             throw new InvalidArgumentException(
-                sprintf('Unsupported schema_version "%s". Expected "%s".', $schemaVersion, self::SCHEMA_VERSION)
+                sprintf(
+                    'Unsupported schema_version "%s". Expected one of: "%s", "%s".',
+                    $schemaVersion,
+                    self::SCHEMA_VERSION,
+                    self::SCHEMA_VERSION_V2
+                )
             );
         }
     }
@@ -26,31 +36,48 @@ class WorkTemplatePackageService
     /**
      * @param Collection<int, WorkTemplateVersion> $versions
      */
-    public function buildExportPayload(WorkTemplate $template, Collection $versions): array
+    public function buildExportPayload(WorkTemplate $template, Collection $versions, string $schemaVersion = self::SCHEMA_VERSION): array
     {
+        $this->assertSupportedSchemaVersion($schemaVersion);
+
+        $manifest = [
+            'format' => 'json',
+            'exported_at' => now()->toIso8601String(),
+            'work_template_id' => (string) $template->id,
+            'code' => $template->code,
+            'name' => $template->name,
+        ];
+
+        if ($schemaVersion === self::SCHEMA_VERSION_V2) {
+            $manifest['capabilities'] = [
+                'generator.project-scope',
+                'generator.component-scope',
+                'generator.idempotent-apply',
+                'generator.checklist-items',
+            ];
+        }
+
         return [
-            'manifest' => [
-                'format' => 'json',
-                'exported_at' => now()->toIso8601String(),
-                'work_template_id' => (string) $template->id,
-                'code' => $template->code,
-                'name' => $template->name,
-            ],
-            'schema_version' => self::SCHEMA_VERSION,
+            'manifest' => $manifest,
+            'schema_version' => $schemaVersion,
             'template' => [
                 'code' => $template->code,
                 'name' => $template->name,
                 'description' => $template->description,
                 'status' => $template->status,
-                'versions' => $versions->map(fn (WorkTemplateVersion $version): array => $this->exportVersion($version))
+                'versions' => $versions->map(
+                    fn (WorkTemplateVersion $version): array => $this->exportVersion($version)
+                )
                     ->values()
                     ->all(),
             ],
         ];
     }
 
-    public function importTemplate(string $tenantId, string $userId, array $payload): WorkTemplate
+    public function importTemplate(string $tenantId, string $userId, array $payload, string $schemaVersion = self::SCHEMA_VERSION): WorkTemplate
     {
+        $this->assertSupportedSchemaVersion($schemaVersion);
+
         $code = $this->resolveUniqueCode(
             $tenantId,
             (string) ($payload['code'] ?? 'WT-IMPORTED')
@@ -71,7 +98,11 @@ class WorkTemplatePackageService
                 ? CarbonImmutable::parse($versionData['published_at'])
                 : null;
 
-            $content = $this->buildVersionContent($versionData);
+            $canonicalSteps = $this->resolveCanonicalSteps(
+                $versionData,
+                $schemaVersion === self::SCHEMA_VERSION_V2
+            );
+            $content = $this->buildVersionContent($versionData, $canonicalSteps);
             $version = WorkTemplateVersion::create([
                 'tenant_id' => $tenantId,
                 'work_template_id' => $template->id,
@@ -84,7 +115,7 @@ class WorkTemplatePackageService
                 'updated_by' => $userId,
             ]);
 
-            $this->createStepsAndFields($version, $versionData['steps'] ?? $content['steps'] ?? []);
+            $this->createStepsAndFields($version, $canonicalSteps);
         }
 
         return $template->fresh(['versions.steps.fields']);
@@ -92,16 +123,23 @@ class WorkTemplatePackageService
 
     private function exportVersion(WorkTemplateVersion $version): array
     {
+        $steps = $version->steps
+            ->sortBy('step_order')
+            ->values()
+            ->map(fn (WorkTemplateStep $step): array => $this->exportStep($step))
+            ->all();
+
+        $content = $version->content_json ?? ['steps' => [], 'approvals' => [], 'rules' => []];
+        $content['steps'] = $steps;
+        $content['approvals'] = is_array($content['approvals'] ?? null) ? $content['approvals'] : [];
+        $content['rules'] = is_array($content['rules'] ?? null) ? $content['rules'] : [];
+
         return [
             'semver' => $version->semver,
             'is_immutable' => (bool) $version->is_immutable,
             'published_at' => $version->published_at?->toIso8601String(),
-            'content_json' => $version->content_json ?? ['steps' => [], 'approvals' => [], 'rules' => []],
-            'steps' => $version->steps
-                ->sortBy('step_order')
-                ->values()
-                ->map(fn (WorkTemplateStep $step): array => $this->exportStep($step))
-                ->all(),
+            'content_json' => $content,
+            'steps' => $steps,
         ];
     }
 
@@ -131,22 +169,41 @@ class WorkTemplatePackageService
         ];
     }
 
-    private function buildVersionContent(array $versionData): array
+    private function buildVersionContent(array $versionData, array $canonicalSteps): array
     {
         $content = $versionData['content_json'] ?? [];
         if (!is_array($content)) {
             $content = [];
         }
 
-        if (isset($versionData['steps']) && is_array($versionData['steps'])) {
-            $content['steps'] = $versionData['steps'];
-        }
+        $content['steps'] = $canonicalSteps;
 
         $content['steps'] = is_array($content['steps'] ?? null) ? $content['steps'] : [];
         $content['approvals'] = is_array($content['approvals'] ?? null) ? $content['approvals'] : [];
         $content['rules'] = is_array($content['rules'] ?? null) ? $content['rules'] : [];
 
         return $content;
+    }
+
+    private function resolveCanonicalSteps(array $versionData, bool $required): array
+    {
+        $steps = $versionData['steps'] ?? null;
+        if (is_array($steps)) {
+            return array_values($steps);
+        }
+
+        $content = $versionData['content_json'] ?? null;
+        if (is_array($content) && is_array($content['steps'] ?? null)) {
+            return array_values($content['steps']);
+        }
+
+        if ($required) {
+            throw new InvalidArgumentException(
+                'Template version payload requires steps data for schema_version "2.0.0".'
+            );
+        }
+
+        return [];
     }
 
     private function createStepsAndFields(WorkTemplateVersion $version, array $steps): void

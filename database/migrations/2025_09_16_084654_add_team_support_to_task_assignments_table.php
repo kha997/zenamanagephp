@@ -37,12 +37,16 @@ return new class extends Migration
             return;
         }
 
-        try {
-            Schema::table('task_assignments', function (Blueprint $table): void {
-                $table->dropForeign(['team_id']);
-            });
-        } catch (\Throwable) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            try {
+                Schema::table('task_assignments', function (Blueprint $table): void {
+                    $table->dropForeign(['team_id']);
+                });
+            } catch (\Throwable) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
         }
 
         try {
@@ -61,23 +65,18 @@ return new class extends Migration
             // Intentionally swallow for idempotent rollback in partial DB states.
         }
 
-        $existingColumns = [];
         foreach (['team_id', 'assignment_type'] as $column) {
-            if (Schema::hasColumn('task_assignments', $column)) {
-                $existingColumns[] = $column;
+            if (!Schema::hasColumn('task_assignments', $column)) {
+                continue;
             }
-        }
 
-        if ($existingColumns === []) {
-            return;
-        }
-
-        try {
-            Schema::table('task_assignments', function (Blueprint $table) use ($existingColumns): void {
-                $table->dropColumn($existingColumns);
-            });
-        } catch (\Throwable) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
+            try {
+                Schema::table('task_assignments', function (Blueprint $table) use ($column): void {
+                    $table->dropColumn($column);
+                });
+            } catch (\Throwable) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
         }
     }
 };

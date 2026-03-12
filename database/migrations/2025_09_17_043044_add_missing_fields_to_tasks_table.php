@@ -53,44 +53,48 @@ return new class extends Migration
             return;
         }
 
-        try {
-            Schema::table('tasks', function (Blueprint $table) {
-                $table->dropForeign(['component_id']);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
-        }
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        try {
-            Schema::table('tasks', function (Blueprint $table) {
-                $table->dropForeign(['assigned_to']);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
-        }
+        if (! $isSqlite) {
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['component_id']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
 
-        try {
-            Schema::table('tasks', function (Blueprint $table) {
-                $table->dropForeign(['parent_id']);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
-        }
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['assigned_to']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
 
-        try {
-            Schema::table('tasks', function (Blueprint $table) {
-                $table->dropForeign(['created_by']);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
-        }
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['parent_id']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
 
-        try {
-            Schema::table('tasks', function (Blueprint $table) {
-                $table->dropForeign(['updated_by']);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['created_by']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['updated_by']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
         }
 
         try {
@@ -139,23 +143,18 @@ return new class extends Migration
             'order', 'conditional_tag', 'created_by', 'updated_by', 'watchers',
         ];
 
-        $existingColumns = [];
         foreach ($columns as $column) {
-            if (Schema::hasColumn('tasks', $column)) {
-                $existingColumns[] = $column;
+            if (!Schema::hasColumn('tasks', $column)) {
+                continue;
             }
-        }
 
-        if ($existingColumns === []) {
-            return;
-        }
-
-        try {
-            Schema::table('tasks', function (Blueprint $table) use ($existingColumns) {
-                $table->dropColumn($existingColumns);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
+            try {
+                Schema::table('tasks', function (Blueprint $table) use ($column) {
+                    $table->dropColumn($column);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
         }
     }
 };

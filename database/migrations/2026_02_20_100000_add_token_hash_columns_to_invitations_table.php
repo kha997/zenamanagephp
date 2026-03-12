@@ -55,25 +55,29 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('invitations', function (Blueprint $table): void {
-            foreach ([
-                'invitations_token_hash_idx',
-                'invitations_tenant_team_status_expiry_idx',
-            ] as $indexName) {
+        foreach ([
+            'invitations_token_hash_idx',
+            'invitations_tenant_team_status_expiry_idx',
+        ] as $indexName) {
+            Schema::table('invitations', function (Blueprint $table) use ($indexName): void {
                 try {
                     $table->dropIndex($indexName);
                 } catch (\Throwable $e) {
                     // no-op for idempotent rollback
                 }
-            }
+            });
+        }
 
-            if (Schema::hasColumn('invitations', 'token_version')) {
+        if (Schema::hasColumn('invitations', 'token_version')) {
+            Schema::table('invitations', function (Blueprint $table): void {
                 $table->dropColumn('token_version');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('invitations', 'token_hash')) {
+        if (Schema::hasColumn('invitations', 'token_hash')) {
+            Schema::table('invitations', function (Blueprint $table): void {
                 $table->dropColumn('token_hash');
-            }
-        });
+            });
+        }
     }
 };

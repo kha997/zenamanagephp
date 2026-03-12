@@ -42,20 +42,24 @@ return new class extends Migration
             return;
         }
 
-        try {
-            Schema::table('task_assignments', function (Blueprint $table) {
-                $table->dropForeign(['tenant_id']);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
-        }
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-        try {
-            Schema::table('task_assignments', function (Blueprint $table) {
-                $table->dropForeign(['assigned_by']);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
+        if (! $isSqlite) {
+            try {
+                Schema::table('task_assignments', function (Blueprint $table) {
+                    $table->dropForeign(['tenant_id']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            try {
+                Schema::table('task_assignments', function (Blueprint $table) {
+                    $table->dropForeign(['assigned_by']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
         }
 
         try {
@@ -82,15 +86,18 @@ return new class extends Migration
             // Intentionally swallow for idempotent rollback in partial DB states.
         }
 
-        try {
-            Schema::table('task_assignments', function (Blueprint $table) {
-                $table->dropColumn([
-                    'tenant_id', 'priority',
-                    'estimated_hours', 'assigned_by', 'due_date',
-                ]);
-            });
-        } catch (\Throwable $e) {
-            // Intentionally swallow for idempotent rollback in partial DB states.
+        foreach (['tenant_id', 'priority', 'estimated_hours', 'assigned_by', 'due_date'] as $column) {
+            if (!Schema::hasColumn('task_assignments', $column)) {
+                continue;
+            }
+
+            try {
+                Schema::table('task_assignments', function (Blueprint $table) use ($column) {
+                    $table->dropColumn($column);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
         }
     }
 };

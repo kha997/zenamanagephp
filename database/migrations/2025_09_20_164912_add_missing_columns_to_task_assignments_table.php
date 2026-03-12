@@ -62,20 +62,43 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('task_assignments', function (Blueprint $table) {
-            // Drop foreign keys
-            $table->dropForeign(['team_id']);
-            $table->dropForeign(['created_by']);
-            $table->dropForeign(['updated_by']);
-            
-            // Drop indexes
-            $table->dropIndex(['team_id']);
-            $table->dropIndex(['assignment_type']);
-            $table->dropIndex(['created_by']);
-            
-            // Drop columns
-            $table->dropColumn(['team_id', 'assignment_type', 'created_by', 'updated_by']);
-        });
+        if (!Schema::hasTable('task_assignments')) {
+            return;
+        }
+
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            foreach (['team_id', 'created_by', 'updated_by'] as $column) {
+                Schema::table('task_assignments', function (Blueprint $table) use ($column) {
+                    try {
+                        $table->dropForeign([$column]);
+                    } catch (\Throwable $e) {
+                        // no-op for idempotent rollback
+                    }
+                });
+            }
+        }
+
+        foreach (['team_id', 'assignment_type', 'created_by'] as $column) {
+            Schema::table('task_assignments', function (Blueprint $table) use ($column) {
+                try {
+                    $table->dropIndex([$column]);
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+        }
+
+        foreach (['team_id', 'assignment_type', 'created_by', 'updated_by'] as $column) {
+            if (!Schema::hasColumn('task_assignments', $column)) {
+                continue;
+            }
+
+            Schema::table('task_assignments', function (Blueprint $table) use ($column) {
+                $table->dropColumn($column);
+            });
+        }
     }
 
     /**

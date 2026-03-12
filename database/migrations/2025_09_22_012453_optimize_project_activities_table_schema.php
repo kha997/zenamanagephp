@@ -30,17 +30,36 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('project_activities', function (Blueprint $table) {
-            // Drop foreign key constraint
-            $table->dropForeign(['tenant_id']);
-            
-            // Drop indexes
-            $table->dropIndex('project_activities_entity_history_index');
-            $table->dropIndex('project_activities_action_created_index');
-            $table->dropIndex('project_activities_tenant_created_index');
-            
-            // Drop column
-            $table->dropColumn('tenant_id');
-        });
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            Schema::table('project_activities', function (Blueprint $table) {
+                try {
+                    $table->dropForeign(['tenant_id']);
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+        }
+
+        foreach ([
+            'project_activities_entity_history_index',
+            'project_activities_action_created_index',
+            'project_activities_tenant_created_index',
+        ] as $indexName) {
+            Schema::table('project_activities', function (Blueprint $table) use ($indexName) {
+                try {
+                    $table->dropIndex($indexName);
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+        }
+
+        if (Schema::hasColumn('project_activities', 'tenant_id')) {
+            Schema::table('project_activities', function (Blueprint $table) {
+                $table->dropColumn('tenant_id');
+            });
+        }
     }
 };

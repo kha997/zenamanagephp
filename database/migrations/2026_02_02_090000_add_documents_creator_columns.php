@@ -46,24 +46,53 @@ return new class extends Migration
             return;
         }
 
-        if ($this->usersTableSupportsUlid()) {
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if ($this->usersTableSupportsUlid() && !$isSqlite) {
             Schema::table('documents', function (Blueprint $table) {
-                $table->dropForeign('documents_created_by_foreign');
-                $table->dropForeign('documents_updated_by_foreign');
+                try {
+                    $table->dropForeign('documents_created_by_foreign');
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+
+            Schema::table('documents', function (Blueprint $table) {
+                try {
+                    $table->dropForeign('documents_updated_by_foreign');
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
             });
         }
 
-        Schema::table('documents', function (Blueprint $table) {
-            if (Schema::hasColumn('documents', 'created_by')) {
-                $table->dropIndex('documents_created_by_index');
-                $table->dropColumn('created_by');
-            }
+        if (Schema::hasColumn('documents', 'created_by')) {
+            Schema::table('documents', function (Blueprint $table) {
+                try {
+                    $table->dropIndex('documents_created_by_index');
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
 
-            if (Schema::hasColumn('documents', 'updated_by')) {
-                $table->dropIndex('documents_updated_by_index');
+            Schema::table('documents', function (Blueprint $table) {
+                $table->dropColumn('created_by');
+            });
+        }
+
+        if (Schema::hasColumn('documents', 'updated_by')) {
+            Schema::table('documents', function (Blueprint $table) {
+                try {
+                    $table->dropIndex('documents_updated_by_index');
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+
+            Schema::table('documents', function (Blueprint $table) {
                 $table->dropColumn('updated_by');
-            }
-        });
+            });
+        }
     }
 
     private function usersTableSupportsUlid(): bool

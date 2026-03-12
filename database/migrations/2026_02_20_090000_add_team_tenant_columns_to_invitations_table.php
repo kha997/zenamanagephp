@@ -84,7 +84,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('invitations', function (Blueprint $table): void {
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (!$isSqlite) {
             foreach ([
                 'invitations_tenant_id_foreign',
                 'invitations_team_id_foreign',
@@ -92,50 +94,66 @@ return new class extends Migration
                 'invitations_accepted_by_user_id_foreign',
                 'invitations_revoked_by_user_id_foreign',
             ] as $foreignName) {
-                try {
-                    $table->dropForeign($foreignName);
-                } catch (\Throwable $e) {
-                    // ignore
-                }
+                Schema::table('invitations', function (Blueprint $table) use ($foreignName): void {
+                    try {
+                        $table->dropForeign($foreignName);
+                    } catch (\Throwable $e) {
+                        // ignore
+                    }
+                });
             }
+        }
 
-            foreach ([
-                'invitations_tenant_status_idx',
-                'invitations_tenant_team_status_idx',
-                'invitations_invited_by_user_idx',
-                'invitations_accepted_by_user_idx',
-                'invitations_revoked_by_user_idx',
-            ] as $indexName) {
+        foreach ([
+            'invitations_tenant_status_idx',
+            'invitations_tenant_team_status_idx',
+            'invitations_invited_by_user_idx',
+            'invitations_accepted_by_user_idx',
+            'invitations_revoked_by_user_idx',
+        ] as $indexName) {
+            Schema::table('invitations', function (Blueprint $table) use ($indexName): void {
                 try {
                     $table->dropIndex($indexName);
                 } catch (\Throwable $e) {
                     // ignore
                 }
-            }
+            });
+        }
 
-            if (Schema::hasColumn('invitations', 'revoked_by_user_id')) {
+        if (Schema::hasColumn('invitations', 'revoked_by_user_id')) {
+            Schema::table('invitations', function (Blueprint $table): void {
                 $table->dropColumn('revoked_by_user_id');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('invitations', 'revoked_at')) {
+        if (Schema::hasColumn('invitations', 'revoked_at')) {
+            Schema::table('invitations', function (Blueprint $table): void {
                 $table->dropColumn('revoked_at');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('invitations', 'accepted_by_user_id')) {
+        if (Schema::hasColumn('invitations', 'accepted_by_user_id')) {
+            Schema::table('invitations', function (Blueprint $table): void {
                 $table->dropColumn('accepted_by_user_id');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('invitations', 'invited_by_user_id')) {
+        if (Schema::hasColumn('invitations', 'invited_by_user_id')) {
+            Schema::table('invitations', function (Blueprint $table): void {
                 $table->dropColumn('invited_by_user_id');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('invitations', 'team_id')) {
+        if (Schema::hasColumn('invitations', 'team_id')) {
+            Schema::table('invitations', function (Blueprint $table): void {
                 $table->dropColumn('team_id');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('invitations', 'tenant_id')) {
+        if (Schema::hasColumn('invitations', 'tenant_id')) {
+            Schema::table('invitations', function (Blueprint $table): void {
                 $table->dropColumn('tenant_id');
-            }
-        });
+            });
+        }
     }
 };

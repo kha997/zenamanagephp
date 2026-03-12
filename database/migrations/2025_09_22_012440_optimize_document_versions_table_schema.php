@@ -50,6 +50,7 @@ return new class extends Migration
 
         return (isset($errorInfo[1]) && (int) $errorInfo[1] === 1091)
             || str_contains($message, "Can't DROP")
-            || str_contains($message, 'check that column/key exists');
+            || str_contains($message, 'check that column/key exists')
+            || str_contains($message, 'no such index');
     }
 };

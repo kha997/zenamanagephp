@@ -26,8 +26,23 @@ return new class extends Migration
      */
     public function down()
     {
+        if (!Schema::hasTable('projects') || !Schema::hasColumn('projects', 'created_by')) {
+            return;
+        }
+
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            Schema::table('projects', function (Blueprint $table) {
+                try {
+                    $table->dropForeign(['created_by']);
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+        }
+
         Schema::table('projects', function (Blueprint $table) {
-            $table->dropForeign(['created_by']);
             $table->dropColumn('created_by');
         });
     }

@@ -34,27 +34,40 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('change_requests', function (Blueprint $table) {
-            if (Schema::hasColumn('change_requests', 'impact_kpi')) {
+        if (Schema::hasColumn('change_requests', 'impact_kpi')) {
+            Schema::table('change_requests', function (Blueprint $table) {
                 $table->dropColumn('impact_kpi');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('change_requests', 'impact_days')) {
+        if (Schema::hasColumn('change_requests', 'impact_days')) {
+            Schema::table('change_requests', function (Blueprint $table) {
                 $table->dropColumn('impact_days');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('change_requests', 'impact_cost')) {
+        if (Schema::hasColumn('change_requests', 'impact_cost')) {
+            Schema::table('change_requests', function (Blueprint $table) {
                 $table->dropColumn('impact_cost');
-            }
-            if (Schema::hasColumn('change_requests', 'created_by')) {
+            });
+        }
+
+        if (Schema::hasColumn('change_requests', 'created_by')) {
+            Schema::table('change_requests', function (Blueprint $table) {
                 $table->dropColumn('created_by');
-            }
-            if (Schema::hasColumn('change_requests', 'decided_by')) {
+            });
+        }
+
+        if (Schema::hasColumn('change_requests', 'decided_by')) {
+            Schema::table('change_requests', function (Blueprint $table) {
                 $table->dropColumn('decided_by');
-            }
-            if (Schema::hasColumn('change_requests', 'decided_at')) {
+            });
+        }
+
+        if (Schema::hasColumn('change_requests', 'decided_at')) {
+            Schema::table('change_requests', function (Blueprint $table) {
                 $table->dropColumn('decided_at');
-            }
-        });
+            });
+        }
     }
 };

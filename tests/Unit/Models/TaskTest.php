@@ -193,6 +193,8 @@ class TaskTest extends TestCase
             'tenant_id',
             'project_id',
             'component_id',
+            'work_instance_id',
+            'work_instance_step_id',
             'phase_id',
             'name',
             'title',

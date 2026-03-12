@@ -1,13 +1,10 @@
-cd /Applications/XAMPP/xamppfiles/htdocs/zenamanage-golden || exit 1
-set -euo pipefail
-
-cat > docs/roadmap/backlog.yaml <<'YAML'
 version: 1
 project: ZenaManage
 repo: zenamanage-golden
 purpose: >
   Single Source of Truth (SSOT) backlog for AEC + Interior + Inspection platform.
   Codex must reference this file and implement Stories in order of priority, without violating invariants.
+canonical_execution_roadmap: docs/roadmap/canonical-roadmap.md
 
 governance:
   invariants:
@@ -264,8 +261,3 @@ epics:
         status: todo
         acceptance_criteria:
           - "Docs map endpoints/screens/workflows; includes project template walkthrough."
-YAML
-
-git add docs/roadmap/backlog.yaml
-git commit -m "docs: populate SSOT backlog roadmap YAML"
-git push origin HEAD

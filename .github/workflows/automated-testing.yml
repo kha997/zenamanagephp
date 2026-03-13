@@ -1004,8 +1004,16 @@ jobs:
         } >> "$GITHUB_STEP_SUMMARY"
 
   performance-tests:
-    name: Performance Tests
+    name: Performance Tests (${{ matrix.perf_file }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - perf_file: tests/Performance/PerformanceMonitoringTest.php
+            perf_slug: monitoring
+          - perf_file: tests/Performance/DashboardPerformanceTest.php
+            perf_slug: dashboard
     env:
       APP_ENV: testing
       DB_CONNECTION: mysql
@@ -1049,7 +1057,7 @@ jobs:
         php-version: ${{ env.PHP_VERSION }}
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
         ini-values: |
-          pcov.enabled=1
+          pcov.enabled=0
           pcov.directory=app
           pcov.exclude="~vendor~"
 
@@ -1110,7 +1118,7 @@ jobs:
         APP_ENV: testing
       run: |
         echo "::group::Performance tests"
-        php artisan test tests/Performance
+        php artisan test "${{ matrix.perf_file }}"
         echo "::endgroup::"
 
     - name: Generate Performance Report
@@ -1124,7 +1132,7 @@ jobs:
     - name: Upload Performance Report
       uses: actions/upload-artifact@v4
       with:
-        name: performance-report
+        name: performance-report-${{ matrix.perf_slug }}
         path: performance-report.txt
 
     - name: Failure context
@@ -1160,8 +1168,8 @@ jobs:
           echo "- Suite: ${SUITE_NAME:-n/a}"
           echo "- DB connection: ${DB_CONNECTION:-n/a}"
           echo "- Docs lint: executed"
-          echo "- Test command: php artisan test tests/Performance"
-          echo "- Artifact: performance-report.txt"
+          echo "- Test command: php artisan test ${{ matrix.perf_file }}"
+          echo "- Artifact: performance-report-${{ matrix.perf_slug }}"
         } >> "$GITHUB_STEP_SUMMARY"
 
   security-tests:

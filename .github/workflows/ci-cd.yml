@@ -20,6 +20,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     
     services:
       mysql:
@@ -76,10 +78,10 @@ jobs:
       run: php artisan test --coverage --coverage-clover=coverage.xml
 
     - name: Upload coverage reports to Codecov
-      if: ${{ secrets.CODECOV_TOKEN != '' }}
+      if: ${{ env.CODECOV_TOKEN != '' }}
       uses: codecov/codecov-action@v3
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ env.CODECOV_TOKEN }}
         file: ./coverage.xml
         flags: unittests
         name: codecov-umbrella

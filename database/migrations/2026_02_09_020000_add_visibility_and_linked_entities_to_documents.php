@@ -43,22 +43,28 @@ return new class extends Migration
             return;
         }
 
-        Schema::table('documents', function (Blueprint $table) {
-            if (Schema::hasColumn('documents', 'linked_entity_id')) {
+        if (Schema::hasColumn('documents', 'linked_entity_id')) {
+            Schema::table('documents', function (Blueprint $table) {
                 $table->dropColumn('linked_entity_id');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('documents', 'linked_entity_type')) {
+        if (Schema::hasColumn('documents', 'linked_entity_type')) {
+            Schema::table('documents', function (Blueprint $table) {
                 $table->dropColumn('linked_entity_type');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('documents', 'client_approved')) {
+        if (Schema::hasColumn('documents', 'client_approved')) {
+            Schema::table('documents', function (Blueprint $table) {
                 $table->dropColumn('client_approved');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('documents', 'visibility')) {
+        if (Schema::hasColumn('documents', 'visibility')) {
+            Schema::table('documents', function (Blueprint $table) {
                 $table->dropColumn('visibility');
-            }
-        });
+            });
+        }
     }
 };

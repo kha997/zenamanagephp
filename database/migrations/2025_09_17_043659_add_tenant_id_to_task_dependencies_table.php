@@ -27,12 +27,31 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('task_dependencies') || !Schema::hasColumn('task_dependencies', 'tenant_id')) {
+            return;
+        }
+
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            Schema::table('task_dependencies', function (Blueprint $table) {
+                try {
+                    $table->dropForeign(['tenant_id']);
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+        }
+
         Schema::table('task_dependencies', function (Blueprint $table) {
-            // Drop foreign key and index first
-            $table->dropForeign(['tenant_id']);
-            $table->dropIndex(['tenant_id']);
-            
-            // Drop column
+            try {
+                $table->dropIndex(['tenant_id']);
+            } catch (\Throwable $e) {
+                // no-op for idempotent rollback
+            }
+        });
+
+        Schema::table('task_dependencies', function (Blueprint $table) {
             $table->dropColumn('tenant_id');
         });
     }

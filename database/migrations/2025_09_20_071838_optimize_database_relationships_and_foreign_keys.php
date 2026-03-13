@@ -150,8 +150,40 @@ return new class extends Migration
      */
     private function revertForeignKeyOptimizations(): void
     {
-        // This method can be used to revert specific optimizations if needed
-        // For now, we'll leave it empty as most optimizations are additive
+        $this->dropForeignIfExists('users', ['tenant_id']);
+        $this->dropForeignIfExists('users', ['organization_id']);
+
+        $this->dropForeignIfExists('projects', ['client_id']);
+        $this->dropForeignIfExists('projects', ['pm_id']);
+        $this->dropForeignIfExists('projects', ['tenant_id']);
+
+        $this->dropForeignIfExists('tasks', ['project_id']);
+        $this->dropForeignIfExists('tasks', ['assignee_id']);
+        $this->dropForeignIfExists('tasks', ['tenant_id']);
+        $this->dropForeignIfExists('tasks', ['component_id']);
+
+        $this->dropForeignIfExists('task_assignments', ['task_id']);
+        $this->dropForeignIfExists('task_assignments', ['user_id']);
+        $this->dropForeignIfExists('task_assignments', ['tenant_id']);
+
+        $this->dropForeignIfExists('change_requests', ['project_id']);
+        $this->dropForeignIfExists('change_requests', ['requested_by']);
+        $this->dropForeignIfExists('change_requests', ['tenant_id']);
+    }
+
+    private function dropForeignIfExists(string $tableName, array $columns): void
+    {
+        if (!Schema::hasTable($tableName)) {
+            return;
+        }
+
+        try {
+            Schema::table($tableName, function (Blueprint $table) use ($columns) {
+                $table->dropForeign($columns);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow to keep rollback idempotent in partial DB states.
+        }
     }
 
     /**

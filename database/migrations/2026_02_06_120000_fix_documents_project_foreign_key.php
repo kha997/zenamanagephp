@@ -111,6 +111,7 @@ return new class extends Migration
             'documents_project_category_status_index',
             'documents_parent_document_id_version_index',
             'documents_created_at_index',
+            'documents_file_hash_index',
             'documents_file_hash_unique',
             'idx_documents_tenant_id',
             'documents_created_by_index',

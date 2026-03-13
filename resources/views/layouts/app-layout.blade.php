@@ -3,7 +3,7 @@
 @section('title', 'App Dashboard')
 
 @section('content')
-<div x-data="appSPA()" class="min-h-screen bg-gray-50">
+<div x-data="{{ request()->routeIs('app.dashboard') ? 'appSPA()' : '{}' }}" class="min-h-screen bg-gray-50">
     <!-- SECURITY WARNING BANNER -->
     @if(!app()->environment('production'))
     <div class="bg-red-600 text-white px-4 py-2 text-center text-sm font-semibold">
@@ -141,6 +141,7 @@
     }
 </style>
 
+@if(request()->routeIs('app.dashboard'))
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('appSPA', () => ({
@@ -181,6 +182,7 @@
             charts: {},
             chartsInitialized: false,
             customizeMode: false,
+            refreshing: false,
             
             // Search & Filter State
             globalSearchQuery: '',
@@ -1339,6 +1341,10 @@
             sortDirection: 'asc',
             
             sortBy(columnKey) {
+                if (!columnKey) {
+                    return;
+                }
+
                 if (this.sortColumn === columnKey) {
                     this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
                 } else {
@@ -1399,6 +1405,11 @@
             },
             
             toggleSelectAll() {
+                if (!Array.isArray(this.sortedProjects)) {
+                    this.selectedProjects = [];
+                    return;
+                }
+
                 // Toggle select all projects
                 if (this.selectedProjects.length === this.sortedProjects.length) {
                     this.selectedProjects = [];
@@ -1408,6 +1419,11 @@
             },
             
             viewProject(projectId) {
+                if (!Array.isArray(this.sortedProjects)) {
+                    this.selectedProject = null;
+                    return;
+                }
+
                 // View project details
                 console.log('Viewing project:', projectId);
                 // Set selected project for details view
@@ -1537,4 +1553,5 @@
         console.log('✅ All Alpine.js data functions loaded successfully');
     });
 </script>
+@endif
 @endsection

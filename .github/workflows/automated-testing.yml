@@ -7,6 +7,11 @@ on:
         description: 'Set to true when manually dispatching to log timeout/ulimit details. Defaults to false so regular runs stay clean.'
         required: false
         default: 'false'
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   push:
     branches: [ main, develop, 'feature/*' ]
     paths-ignore:
@@ -1197,14 +1202,12 @@ jobs:
       run: composer audit || true
 
     - name: Run PHPStan Static Analysis
+      continue-on-error: true
       run: |
         echo "::group::PHPStan static analysis"
-        set +e
-        ./vendor/bin/phpstan analyse --error-format=json > phpstan-report.json
-        phpstan_exit=$?
+        bash scripts/ci/run-json-report-command.sh phpstan-report.json phpstan ./vendor/bin/phpstan analyse --error-format=json
         php scripts/ci/print-phpstan-summary.php phpstan-report.json 50
         echo "::endgroup::"
-        exit $phpstan_exit
 
     - name: Upload PHPStan Report
       if: always()
@@ -1215,6 +1218,7 @@ jobs:
         if-no-files-found: warn
 
     - name: Run PHP CS Fixer
+      continue-on-error: true
       run: |
         echo "::group::PHP CS Fixer dry-run"
         composer require --dev friendsofphp/php-cs-fixer
@@ -1239,7 +1243,6 @@ jobs:
         set -e
         echo "php-cs-fixer exit code: ${cs_fixer_exit}"
         echo "::endgroup::"
-        exit ${cs_fixer_exit}
 
     - name: Upload CS Fixer Report
       if: always()

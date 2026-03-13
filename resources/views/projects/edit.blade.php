@@ -79,6 +79,7 @@ $currentRoute = 'projects';
                         <input 
                             type="text" 
                             x-model="formData.code"
+                            dusk="project-code"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             placeholder="Enter project code"
                             required
@@ -94,6 +95,7 @@ $currentRoute = 'projects';
                         <input 
                             type="text" 
                             x-model="formData.name"
+                            dusk="project-name"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             placeholder="Enter project name"
                             required
@@ -108,6 +110,7 @@ $currentRoute = 'projects';
                         </label>
                         <textarea 
                             x-model="formData.description"
+                            dusk="project-description"
                             rows="4"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-vertical"
                             placeholder="Enter project description"
@@ -160,6 +163,7 @@ $currentRoute = 'projects';
                         </label>
                         <select 
                             x-model="formData.status"
+                            dusk="project-status"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                             required
                         >
@@ -206,6 +210,7 @@ $currentRoute = 'projects';
                         <input 
                             type="number" 
                             x-model="formData.budget_total"
+                            dusk="project-budget-total"
                             min="0"
                             step="0.01"
                             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -305,6 +310,7 @@ $currentRoute = 'projects';
                     </a>
                     <button 
                         type="submit" 
+                        dusk="project-submit"
                         class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                         :disabled="isSubmitting"
                     >
@@ -324,18 +330,18 @@ function editProject() {
         isSubmitting: false,
         newTag: '',
         formData: {
-            id: {{ $projectData->id ?? 1 }},
-            code: '{{ $projectData->code ?? "PROJ-001" }}',
-            name: '{{ $projectData->name ?? "Sample Project" }}',
-            description: '{{ $projectData->description ?? "" }}',
-            client_id: {{ $projectData->client_id ?? 1 }},
-            pm_id: {{ $projectData->pm_id ?? 2 }},
-            status: '{{ $projectData->status ?? "active" }}',
-            start_date: '{{ $projectData->start_date ?? "" }}',
-            end_date: '{{ $projectData->end_date ?? "" }}',
-            budget_total: {{ $projectData->budget_total ?? 0 }},
-            progress: {{ $projectData->progress ?? 0 }},
-            tags: @json($projectData->tags ?? [])
+            id: @js($projectData->id ?? 1),
+            code: @js($projectData->code ?? "PROJ-001"),
+            name: @js($projectData->name ?? "Sample Project"),
+            description: @js($projectData->description ?? ""),
+            client_id: @js($projectData->client_id ?? 1),
+            pm_id: @js($projectData->pm_id ?? 2),
+            status: @js($projectData->status ?? "active"),
+            start_date: @js($projectData->start_date ?? ""),
+            end_date: @js($projectData->end_date ?? ""),
+            budget_total: @js($projectData->budget_total ?? 0),
+            progress: @js($projectData->progress ?? 0),
+            tags: @js($projectData->tags ?? [])
         },
         
         addTag() {

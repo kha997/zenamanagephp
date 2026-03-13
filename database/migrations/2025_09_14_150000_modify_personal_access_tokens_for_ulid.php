@@ -21,8 +21,16 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasTable('personal_access_tokens')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('personal_access_tokens', 'tokenable_id')) {
+            return;
+        }
+
         Schema::table('personal_access_tokens', function (Blueprint $table) {
-            $table->morphs('tokenable');
+            $table->unsignedBigInteger('tokenable_id')->change();
         });
     }
 };

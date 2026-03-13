@@ -183,31 +183,108 @@ return new class extends Migration
      */
     public function down()
     {
+        if (!Schema::hasTable('documents')) {
+            return;
+        }
+
         // Drop audit_logs table
         Schema::dropIfExists('audit_logs');
 
         // Drop foreign keys and indexes
-        Schema::table('documents', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropIndex('idx_documents_tenant_id');
-            $table->dropColumn('tenant_id');
-        });
+        try {
+            Schema::table('documents', function (Blueprint $table) {
+                $table->dropForeign(['tenant_id']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
 
-        Schema::table('tasks', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropIndex('idx_tasks_tenant_id');
-            $table->dropColumn('tenant_id');
-        });
+        try {
+            Schema::table('documents', function (Blueprint $table) {
+                $table->dropIndex('idx_documents_tenant_id');
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
 
-        Schema::table('projects', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropIndex('idx_projects_tenant_id');
-            $table->dropColumn('tenant_id');
-        });
+        $this->dropExistingColumns('documents', ['tenant_id']);
+
+        if (Schema::hasTable('tasks')) {
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['tenant_id']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropIndex('idx_tasks_tenant_id');
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            $this->dropExistingColumns('tasks', ['tenant_id']);
+        }
+
+        if (Schema::hasTable('projects')) {
+            try {
+                Schema::table('projects', function (Blueprint $table) {
+                    $table->dropForeign(['tenant_id']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            try {
+                Schema::table('projects', function (Blueprint $table) {
+                    $table->dropIndex('idx_projects_tenant_id');
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            $this->dropExistingColumns('projects', ['tenant_id']);
+        }
 
         // Drop unique constraint
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropUnique('ux_users_email_tenant');
-        });
+        if (Schema::hasTable('users')) {
+            try {
+                Schema::table('users', function (Blueprint $table) {
+                    $table->dropUnique('ux_users_email_tenant');
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+        }
+    }
+
+    /**
+     * Drop only columns that still exist to keep rollback idempotent.
+     *
+     * @param array<int, string> $columns
+     */
+    private function dropExistingColumns(string $tableName, array $columns): void
+    {
+        $existingColumns = [];
+        foreach ($columns as $column) {
+            if (Schema::hasColumn($tableName, $column)) {
+                $existingColumns[] = $column;
+            }
+        }
+
+        if ($existingColumns === []) {
+            return;
+        }
+
+        try {
+            Schema::table($tableName, function (Blueprint $table) use ($existingColumns) {
+                $table->dropColumn($existingColumns);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

@@ -101,6 +101,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('notifications')) {
+            return;
+        }
+
         Schema::table('notifications', function (Blueprint $table) {
             // Drop foreign keys
             $table->dropForeign(['project_id']);

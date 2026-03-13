@@ -133,27 +133,50 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('components', function (Blueprint $table) {
-            // Drop foreign keys first
-            $table->dropForeign(['tenant_id']);
-            $table->dropForeign(['created_by']);
-            
-            // Drop indexes
-            $table->dropIndex(['tenant_id']);
-            $table->dropIndex(['priority']);
-            $table->dropIndex(['start_date']);
-            $table->dropIndex(['end_date']);
-            
-            // Drop columns
-            $table->dropColumn([
-                'tenant_id',
-                'priority',
-                'start_date',
-                'end_date',
-                'budget',
-                'dependencies',
-                'created_by'
-            ]);
-        });
+        if (!Schema::hasTable('components')) {
+            return;
+        }
+
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            foreach (['tenant_id', 'created_by'] as $column) {
+                Schema::table('components', function (Blueprint $table) use ($column) {
+                    try {
+                        $table->dropForeign([$column]);
+                    } catch (\Throwable $e) {
+                        // no-op for idempotent rollback
+                    }
+                });
+            }
+        }
+
+        foreach (['tenant_id', 'priority', 'start_date', 'end_date'] as $column) {
+            Schema::table('components', function (Blueprint $table) use ($column) {
+                try {
+                    $table->dropIndex([$column]);
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+        }
+
+        foreach ([
+            'tenant_id',
+            'priority',
+            'start_date',
+            'end_date',
+            'budget',
+            'dependencies',
+            'created_by',
+        ] as $column) {
+            if (!Schema::hasColumn('components', $column)) {
+                continue;
+            }
+
+            Schema::table('components', function (Blueprint $table) use ($column) {
+                $table->dropColumn($column);
+            });
+        }
     }
 };

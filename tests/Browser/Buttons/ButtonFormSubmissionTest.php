@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Tests\Browser\Buttons;
 
@@ -6,32 +8,49 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
-use Laravel\Dusk\TestCase;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Dusk\Browser;
+use Tests\DuskTestCase;
 
 /**
- * Button Form Submission Test
- * 
- * Tests form interactions and submissions
+ * Button Form Submission Test.
+ *
+ * LEGACY FROZEN (Phase 1).
+ *
+ * This mixed suite is intentionally frozen per:
+ * docs/change-proposals/button-form-submission-audit-rewrite-plan.md
+ *
+ * Historical coverage intent preserved here:
+ * - project create/edit form submission
+ * - task create form submission
+ * - project form validation/reset/cancel
+ * - document upload form
+ * - bulk/search/filter/loading/error form interactions
  */
-class ButtonFormSubmissionTest extends TestCase
+class ButtonFormSubmissionTest extends DuskTestCase
 {
     use DatabaseMigrations;
 
     protected $tenant;
+
     protected $user;
+
     protected $project;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
+        $this->markTestSkipped(
+            'Frozen legacy mixed browser suite. See docs/change-proposals/button-form-submission-audit-rewrite-plan.md'
+        );
+
         // Create test tenant
         $this->tenant = Tenant::create([
             'name' => 'Test Company',
             'slug' => 'test-company-' . uniqid(),
-            'status' => 'active'
+            'status' => 'active',
         ]);
 
         // Create test user
@@ -39,7 +58,7 @@ class ButtonFormSubmissionTest extends TestCase
             'name' => 'Test User',
             'email' => 'test@test-' . uniqid() . '.com',
             'password' => Hash::make('password'),
-            'tenant_id' => $this->tenant->id
+            'tenant_id' => $this->tenant->id,
         ]);
 
         // Create test project
@@ -49,132 +68,154 @@ class ButtonFormSubmissionTest extends TestCase
             'name' => 'Test Project',
             'description' => 'Test project for form submission',
             'status' => 'active',
-            'budget_total' => 100000.00
+            'budget_total' => 100000.00,
         ]);
     }
 
     /**
-     * Test project creation form
+     * Test project creation form.
      */
     public function test_project_creation_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
+            $today = now()->toDateString();
+            $endDate = now()->addDays(7)->toDateString();
+
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
-                    ->type('name', 'New Project')
-                    ->type('description', 'New project description')
-                    ->type('code', 'NEW-' . uniqid())
-                    ->select('status', 'active')
-                    ->type('budget_total', '75000')
-                    ->click('.submit-button')
-                    ->assertPathIs('/projects')
-                    ->assertSee('New Project');
+                    ->visitRoute('app.projects.create')
+                    ->waitFor('@project-name', 15)
+                    ->type('@project-name', 'New Project')
+                    ->type('@project-description', 'New project description')
+                    ->type('@project-code', 'NEW-' . uniqid())
+                    ->type('@project-start-date', $today)
+                    ->type('@project-end-date', $endDate)
+                    ->select('@project-status', 'active')
+                    ->type('@project-budget-total', '75000')
+                    ->click('@project-submit')
+                    ->waitForLocation('/app/projects')
+                    ->assertPathIs('/app/projects');
         });
     }
 
     /**
-     * Test project edit form
+     * Test project edit form.
      */
     public function test_project_edit_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/' . $this->project->id . '/edit')
-                    ->clear('name')
-                    ->type('name', 'Updated Project')
-                    ->clear('description')
-                    ->type('description', 'Updated project description')
-                    ->click('.submit-button')
-                    ->assertPathIs('/projects/' . $this->project->id)
-                    ->assertSee('Updated Project');
+                    ->visit('/app/projects/' . $this->project->id . '/edit')
+                    ->waitFor('@project-name')
+                    ->clear('@project-name')
+                    ->type('@project-name', 'Updated Project')
+                    ->clear('@project-description')
+                    ->type('@project-description', 'Updated project description')
+                    ->select('select[x-model="formData.pm_id"]', (string) $this->user->id)
+                    ->scrollIntoView('@project-submit')
+                    ->pause(100)
+                    ->click('@project-submit')
+                    ->waitForLocation('/projects/' . $this->project->id, 15)
+                    ->assertPathIs('/projects/' . $this->project->id);
         });
     }
 
     /**
-     * Test task creation form
+     * Test task creation form.
      */
     public function test_task_creation_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
+            $today = now()->toDateString();
+            $endDate = now()->addDays(7)->toDateString();
+
             $browser->loginAs($this->user)
-                    ->visit('/tasks/create')
-                    ->type('name', 'New Task')
-                    ->type('description', 'New task description')
-                    ->select('project_id', $this->project->id)
-                    ->select('status', 'pending')
-                    ->select('priority', 'medium')
-                    ->type('estimated_hours', '8')
-                    ->click('.submit-button')
-                    ->assertPathIs('/tasks')
-                    ->assertSee('New Task');
+                    ->visit('/app/tasks/create')
+                    ->waitFor('@task-name')
+                    ->type('@task-name', 'New Task')
+                    ->type('@task-description', 'New task description')
+                    ->select('@task-project', (string) $this->project->id)
+                    ->select('@task-status', 'pending')
+                    ->select('@task-priority', 'medium')
+                    ->type('@task-start-date', $today)
+                    ->type('@task-end-date', $endDate)
+                    ->type('@task-estimated-hours', '8')
+                    ->click('@task-submit')
+                    ->waitForLocation('/tasks')
+                    ->assertPathIs('/tasks');
         });
     }
 
     /**
-     * Test form validation
+     * Test form validation.
      */
     public function test_form_validation(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
-                    ->click('.submit-button')
-                    ->assertSee('The name field is required')
-                    ->assertSee('The code field is required')
-                    ->assertSee('The budget total field is required');
+                    ->visit('/app/projects/create')
+                    ->click('@project-submit')
+                    ->pause(500)
+                    ->assertPathIs('/app/projects/create')
+                    ->assertScript("return document.querySelector('input[name=\"name\"]').matches(':invalid');", true)
+                    ->assertScript("return document.querySelector('input[name=\"start_date\"]').matches(':invalid');", true)
+                    ->assertScript("return document.querySelector('input[name=\"end_date\"]').matches(':invalid');", true);
         });
     }
 
     /**
-     * Test form reset
+     * Test form reset.
      */
     public function test_form_reset(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->type('description', 'Test description')
-                    ->click('.reset-button')
+                    ->click('@project-cancel')
+                    ->waitForLocation('/app/projects')
+                    ->assertPathIs('/app/projects')
+                    ->visit('/app/projects/create')
                     ->assertInputValue('name', '')
                     ->assertInputValue('description', '');
         });
     }
 
     /**
-     * Test form cancel
+     * Test form cancel.
      */
     public function test_form_cancel(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
-                    ->click('.cancel-button')
-                    ->assertPathIs('/projects');
+                    ->click('@project-cancel')
+                    ->waitForLocation('/app/projects')
+                    ->assertPathIs('/app/projects');
         });
     }
 
     /**
-     * Test file upload form
+     * Test file upload form.
      */
     public function test_file_upload_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/documents/create')
                     ->type('name', 'Test Document')
                     ->type('description', 'Test document description')
                     ->select('project_id', $this->project->id)
                     ->attach('file', __DIR__ . '/test-file.txt')
-                    ->click('.submit-button')
+                    ->click('form[action="/api/v1/upload-document"] button[type="submit"]')
                     ->assertPathIs('/documents')
                     ->assertSee('Test Document');
         });
     }
 
     /**
-     * Test bulk action form
+     * Test bulk action form.
      */
     public function test_bulk_action_form(): void
     {
@@ -188,12 +229,12 @@ class ButtonFormSubmissionTest extends TestCase
                 'description' => "Bulk task description {$i}",
                 'status' => 'pending',
                 'priority' => 'medium',
-                'estimated_hours' => 8.0
+                'estimated_hours' => 8.0,
             ]);
             $tasks[] = $task;
         }
 
-        $this->browse(function ($browser) use ($tasks) {
+        $this->browse(function (Browser $browser) use ($tasks) {
             $browser->loginAs($this->user)
                     ->visit('/tasks')
                     ->click('.select-all-checkbox')
@@ -207,11 +248,11 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test search form
+     * Test search form.
      */
     public function test_search_form(): void
     {
-        $this->browse(function ($browser) {
+        $this->browse(function (Browser $browser) {
             $browser->loginAs($this->user)
                     ->visit('/projects')
                     ->type('.search-input', $this->project->name)
@@ -225,7 +266,7 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test filter form
+     * Test filter form.
      */
     public function test_filter_form(): void
     {
@@ -242,39 +283,40 @@ class ButtonFormSubmissionTest extends TestCase
     }
 
     /**
-     * Test form loading states
+     * Test form loading states.
      */
     public function test_form_loading_states(): void
     {
         $this->browse(function ($browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->type('description', 'Test description')
                     ->type('code', 'TEST-' . uniqid())
                     ->select('status', 'active')
                     ->type('budget_total', '50000')
-                    ->click('.submit-button')
+                    ->click('@project-submit')
                     ->assertVisible('.loading-spinner')
                     ->waitUntilMissing('.loading-spinner')
-                    ->assertPathIs('/projects');
+                    ->waitForLocation('/app/projects', 10)
+                    ->assertPathIs('/app/projects');
         });
     }
 
     /**
-     * Test form error handling
+     * Test form error handling.
      */
     public function test_form_error_handling(): void
     {
         $this->browse(function ($browser) {
             $browser->loginAs($this->user)
-                    ->visit('/projects/create')
+                    ->visit('/app/projects/create')
                     ->type('name', 'Test Project')
                     ->type('description', 'Test description')
                     ->type('code', 'INVALID_CODE_FORMAT')
                     ->select('status', 'invalid_status')
                     ->type('budget_total', '-1000')
-                    ->click('.submit-button')
+                    ->click('@project-submit')
                     ->assertSee('The code format is invalid')
                     ->assertSee('The status field is invalid')
                     ->assertSee('The budget total must be positive');

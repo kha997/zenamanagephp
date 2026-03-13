@@ -98,19 +98,69 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropIndex(['email_verification_token']);
-            $table->dropIndex(['email_change_token']);
-            
-            $table->dropColumn([
-                'email_verified',
-                'email_verified_at',
-                'email_verification_token',
-                'email_verification_token_expires_at',
-                'pending_email',
-                'email_change_token',
-                'email_change_token_expires_at'
-            ]);
-        });
+        if (!Schema::hasTable('users')) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex('users_email_verification_token_index');
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex(['email_verification_token']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex('users_email_change_token_index');
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex(['email_change_token']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        $columns = [
+            'email_verified',
+            'email_verified_at',
+            'email_verification_token',
+            'email_verification_token_expires_at',
+            'pending_email',
+            'email_change_token',
+            'email_change_token_expires_at',
+        ];
+
+        $existingColumns = [];
+        foreach ($columns as $column) {
+            if (Schema::hasColumn('users', $column)) {
+                $existingColumns[] = $column;
+            }
+        }
+
+        if ($existingColumns === []) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) use ($existingColumns) {
+                $table->dropColumn($existingColumns);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

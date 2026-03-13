@@ -85,9 +85,21 @@
                             <input 
                                 type="text" 
                                 name="name" 
+                                dusk="project-name"
                                 required 
                                 class="zena-input"
                                 placeholder="Enter project name"
+                            >
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Project Code</label>
+                            <input
+                                type="text"
+                                name="code"
+                                dusk="project-code"
+                                class="zena-input"
+                                placeholder="Enter project code"
                             >
                         </div>
                         
@@ -95,6 +107,7 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Project Description</label>
                             <textarea 
                                 name="description" 
+                                dusk="project-description"
                                 rows="3"
                                 class="zena-textarea"
                                 placeholder="Describe the project..."
@@ -107,6 +120,7 @@
                                 <input 
                                     type="date" 
                                     name="start_date" 
+                                    dusk="project-start-date"
                                     required 
                                     class="zena-input"
                                 >
@@ -116,6 +130,7 @@
                                 <input 
                                     type="date" 
                                     name="end_date" 
+                                    dusk="project-end-date"
                                     required 
                                     class="zena-input"
                                 >
@@ -129,7 +144,7 @@
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Project Status</label>
-                            <select name="status" class="zena-select">
+                            <select name="status" dusk="project-status" class="zena-select">
                                 <option value="planning">Planning</option>
                                 <option value="active">Active</option>
                                 <option value="on_hold">On Hold</option>
@@ -151,7 +166,8 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Budget</label>
                             <input 
                                 type="number" 
-                                name="budget" 
+                                name="budget_total" 
+                                dusk="project-budget-total"
                                 class="zena-input"
                                 placeholder="Enter project budget"
                             >
@@ -260,12 +276,14 @@
                 <button 
                     type="button" 
                     @click="cancelCreate()"
+                    dusk="project-cancel"
                     class="zena-btn zena-btn-outline"
                 >
                     Cancel
                 </button>
                 <button 
                     type="submit" 
+                    dusk="project-submit"
                     class="zena-btn zena-btn-primary"
                     :disabled="creating"
                 >

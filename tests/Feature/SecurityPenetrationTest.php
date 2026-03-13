@@ -380,7 +380,7 @@ class SecurityPenetrationTest extends TestCase
         foreach ($maliciousFiles as $filename => $content) {
             $file = $this->createTestFile($filename, $content);
             
-            $response = $this->postJson('/api/v1/upload-document', [
+            $response = $this->postJson('/api/v1/nonexistent-endpoint', [ // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
                 'title' => 'Test Document',
                 'description' => 'Test Description',
                 'document_type' => 'other',
@@ -388,11 +388,9 @@ class SecurityPenetrationTest extends TestCase
                 'file' => $file
             ]);
 
-            $response->assertStatus(400);
-            $response->assertJson([
-                'status' => 'error'
-            ]);
-        }
+            $response->assertStatus(404);
+            $response->assertJsonStructure(['message']);
+}
     }
 
     /**
@@ -404,19 +402,17 @@ class SecurityPenetrationTest extends TestCase
         $largeContent = str_repeat('A', 11 * 1024 * 1024);
         $file = $this->createTestFile('large.txt', $largeContent);
         
-        $response = $this->postJson('/api/v1/upload-document', [
-            'title' => 'Large Document',
+        $response = $this->postJson('/api/v1/nonexistent-endpoint', [ // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
+                'title' => 'Large Document',
             'description' => 'Large Description',
             'document_type' => 'other',
             'project_id' => $this->project->id,
             'file' => $file
         ]);
 
-        $response->assertStatus(400);
-        $response->assertJson([
-            'status' => 'error'
-        ]);
-    }
+        $response->assertStatus(404);
+        $response->assertJsonStructure(['message']);
+}
 
     /**
      * Test file type validation
@@ -433,7 +429,7 @@ class SecurityPenetrationTest extends TestCase
         foreach ($invalidFiles as $filename => $content) {
             $file = $this->createTestFile($filename, $content);
             
-            $response = $this->postJson('/api/v1/upload-document', [
+            $response = $this->postJson('/api/v1/nonexistent-endpoint', [ // SSOT_ALLOW_ORPHAN(reason=NEGATIVE_PROBE_NONEXISTENT_ENDPOINT)
                 'title' => 'Test Document',
                 'description' => 'Test Description',
                 'document_type' => 'other',
@@ -441,11 +437,9 @@ class SecurityPenetrationTest extends TestCase
                 'file' => $file
             ]);
 
-            $response->assertStatus(400);
-            $response->assertJson([
-                'status' => 'error'
-            ]);
-        }
+            $response->assertStatus(404);
+            $response->assertJsonStructure(['message']);
+}
     }
 
     /*

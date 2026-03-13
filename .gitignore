@@ -58,3 +58,6 @@ logs/events.log
 frontend/dist/
 route-surface.current.json
 ts-build.log
+
+# tooling caches
+.php-cs-fixer.cache

@@ -26,84 +26,44 @@
     <link rel="stylesheet" href="{{ asset('css/design-system.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <!-- Chart.js - Multiple CDN fallbacks with different versions -->
+    <!-- Chart.js (UMD build to avoid ESM import errors in non-module scripts) -->
+    @if(request()->routeIs('app.dashboard') || request()->routeIs('app.projects'))
     <script>
-        // Try multiple Chart.js versions and CDNs
         const chartJsSources = [
-            'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js',
-            'https://unpkg.com/chart.js@4.4.0/dist/chart.min.js',
-            'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js',
-            'https://unpkg.com/chart.js@3.9.1/dist/chart.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js'
+            'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
+            'https://unpkg.com/chart.js@4.4.0/dist/chart.umd.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js',
         ];
-        
+
         let currentSourceIndex = 0;
-        
+
         function loadChartJS() {
             if (currentSourceIndex >= chartJsSources.length) {
-                console.log('❌ All Chart.js sources failed, creating mock Chart object');
-                createMockChart();
                 return;
             }
-            
+
             const script = document.createElement('script');
             script.src = chartJsSources[currentSourceIndex];
-            
-            script.onload = function() {
-                console.log('✅ Chart.js loaded from:', chartJsSources[currentSourceIndex]);
-                if (typeof Chart !== 'undefined') {
-                    console.log('✅ Chart object available:', Chart.version);
-                } else {
-                    console.log('⚠️ Chart.js loaded but Chart object not available');
+            script.defer = true;
+
+            script.onload = function () {
+                if (typeof Chart === 'undefined') {
                     currentSourceIndex++;
                     loadChartJS();
                 }
             };
-            
-            script.onerror = function() {
-                console.log('❌ Failed to load:', chartJsSources[currentSourceIndex]);
+
+            script.onerror = function () {
                 currentSourceIndex++;
                 loadChartJS();
             };
-            
+
             document.head.appendChild(script);
         }
-        
-        function createMockChart() {
-            window.Chart = function(ctx, config) {
-                console.log('📊 Using mock Chart object');
-                // Create a simple fallback visualization
-                if (ctx && ctx.canvas) {
-                    const canvas = ctx.canvas;
-                    const width = canvas.width;
-                    const height = canvas.height;
-                    
-                    // Clear canvas
-                    ctx.clearRect(0, 0, width, height);
-                    
-                    // Draw background
-                    ctx.fillStyle = '#f3f4f6';
-                    ctx.fillRect(0, 0, width, height);
-                    
-                    // Draw title
-                    ctx.fillStyle = '#374151';
-                    ctx.font = '14px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(config?.options?.plugins?.title?.text || 'Chart', width/2, height/2 - 10);
-                    
-                    // Draw fallback message
-                    ctx.fillStyle = '#6b7280';
-                    ctx.font = '12px Arial';
-                    ctx.fillText('Chart.js not available', width/2, height/2 + 10);
-                }
-            };
-            window.Chart.version = '4.4.0-mock';
-            console.log('✅ Mock Chart object created');
-        }
-        
-        // Start loading Chart.js
+
         loadChartJS();
     </script>
+    @endif
     
     <!-- PWA Service Worker Registration -->
     <script>
@@ -136,7 +96,11 @@
                 console.log('Connection restored');
                 // Trigger background sync
                 navigator.serviceWorker.ready.then(registration => {
-                    return registration.sync.register('dashboard-sync');
+                    if (registration.sync && typeof registration.sync.register === 'function') {
+                        return registration.sync.register('dashboard-sync');
+                    }
+
+                    return Promise.resolve();
                 });
             });
             

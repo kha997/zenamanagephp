@@ -25,8 +25,20 @@ return new class extends Migration
      */
     public function down()
     {
+        if (!Schema::hasTable('zena_components')) {
+            return;
+        }
+
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('zena_components', function (Blueprint $table) {
-            $table->dropForeign(['parent_id']);
+            try {
+                $table->dropForeign(['parent_id']);
+            } catch (\Throwable $e) {
+                // no-op for idempotent rollback
+            }
         });
     }
 };

@@ -27,10 +27,36 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropIndex(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+        if (! Schema::hasTable('users')) {
+            return;
+        }
+
+        if (! Schema::hasColumn('users', 'tenant_id')) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropForeign(['tenant_id']);
+            });
+        } catch (\Throwable $e) {
+            // Ignore missing foreign key in partial rollback states.
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropIndex(['tenant_id']);
+            });
+        } catch (\Throwable $e) {
+            // Ignore missing index in partial rollback states.
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('tenant_id');
+            });
+        } catch (\Throwable $e) {
+            // Ignore missing column changes in partial rollback states.
+        }
     }
 };

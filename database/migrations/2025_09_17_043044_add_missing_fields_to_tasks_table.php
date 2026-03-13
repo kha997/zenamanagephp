@@ -49,27 +49,112 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tasks', function (Blueprint $table) {
-            // Drop foreign keys first
-            $table->dropForeign(['component_id']);
-            $table->dropForeign(['assigned_to']);
-            $table->dropForeign(['parent_id']);
-            $table->dropForeign(['created_by']);
-            $table->dropForeign(['updated_by']);
-            
-            // Drop indexes
-            $table->dropIndex(['component_id', 'status']);
-            $table->dropIndex(['assigned_to', 'status']);
-            $table->dropIndex(['parent_id']);
-            $table->dropIndex(['is_hidden']);
-            $table->dropIndex(['visibility']);
-            
-            // Drop columns
-            $table->dropColumn([
-                'is_hidden', 'visibility', 'client_approved', 'component_id', 
-                'phase_id', 'title', 'assigned_to', 'spent_hours', 'parent_id', 
-                'order', 'conditional_tag', 'created_by', 'updated_by', 'watchers'
-            ]);
-        });
+        if (!Schema::hasTable('tasks')) {
+            return;
+        }
+
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['component_id']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['assigned_to']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['parent_id']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['created_by']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+
+            try {
+                Schema::table('tasks', function (Blueprint $table) {
+                    $table->dropForeign(['updated_by']);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+        }
+
+        try {
+            Schema::table('tasks', function (Blueprint $table) {
+                $table->dropIndex(['component_id', 'status']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('tasks', function (Blueprint $table) {
+                $table->dropIndex(['assigned_to', 'status']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('tasks', function (Blueprint $table) {
+                $table->dropIndex(['parent_id']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('tasks', function (Blueprint $table) {
+                $table->dropIndex(['is_hidden']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('tasks', function (Blueprint $table) {
+                $table->dropIndex(['visibility']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        $columns = [
+            'is_hidden', 'visibility', 'client_approved', 'component_id',
+            'phase_id', 'title', 'assigned_to', 'spent_hours', 'parent_id',
+            'order', 'conditional_tag', 'created_by', 'updated_by', 'watchers',
+        ];
+
+        foreach ($columns as $column) {
+            if (!Schema::hasColumn('tasks', $column)) {
+                continue;
+            }
+
+            try {
+                Schema::table('tasks', function (Blueprint $table) use ($column) {
+                    $table->dropColumn($column);
+                });
+            } catch (\Throwable $e) {
+                // Intentionally swallow for idempotent rollback in partial DB states.
+            }
+        }
     }
 };

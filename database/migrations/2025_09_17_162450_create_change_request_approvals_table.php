@@ -41,6 +41,20 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('change_request_approvals');
+        $this->dropTableIfExists('change_request_approvals');
+        $this->dropTableIfExists('zena_change_request_approvals');
+    }
+
+    private function dropTableIfExists(string $tableName): void
+    {
+        if (!Schema::hasTable($tableName)) {
+            return;
+        }
+
+        try {
+            Schema::dropIfExists($tableName);
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

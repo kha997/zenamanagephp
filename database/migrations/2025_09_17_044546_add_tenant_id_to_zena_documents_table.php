@@ -22,9 +22,36 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('zena_documents', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+        if (!Schema::hasTable('zena_documents')) {
+            return;
+        }
+
+        if (!Schema::hasColumn('zena_documents', 'tenant_id')) {
+            return;
+        }
+
+        try {
+            Schema::table('zena_documents', function (Blueprint $table) {
+                $table->dropForeign(['tenant_id']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('zena_documents', function (Blueprint $table) {
+                $table->dropIndex(['tenant_id']);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+
+        try {
+            Schema::table('zena_documents', function (Blueprint $table) {
+                $table->dropColumn('tenant_id');
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

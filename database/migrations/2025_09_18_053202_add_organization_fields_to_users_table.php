@@ -92,28 +92,83 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['organization_id']);
-            $table->dropForeign(['invitation_id']);
-            $table->dropColumn([
-                'organization_id',
-                'first_name',
-                'last_name',
-                'phone',
-                'avatar_url',
-                'job_title',
-                'department',
-                'status',
-                'email_verified_at',
-                'last_login_at',
-                'password_changed_at',
-                'invitation_id',
-                'invited_at',
-                'joined_at',
-                'timezone',
-                'language',
-                'preferences'
-            ]);
-        });
+        if (!Schema::hasTable('users')) {
+            return;
+        }
+
+        $this->dropForeignIfExists('users', ['organization_id']);
+        $this->dropForeignIfExists('users', ['invitation_id']);
+
+        $this->dropIndexIfExists('users', ['organization_id', 'status']);
+        $this->dropIndexIfExists('users', ['email_verified_at']);
+
+        $columns = [
+            'organization_id',
+            'first_name',
+            'last_name',
+            'phone',
+            'avatar_url',
+            'job_title',
+            'department',
+            'status',
+            'email_verified_at',
+            'last_login_at',
+            'password_changed_at',
+            'invitation_id',
+            'invited_at',
+            'joined_at',
+            'timezone',
+            'language',
+            'preferences',
+        ];
+
+        $existingColumns = [];
+        foreach ($columns as $column) {
+            if (Schema::hasColumn('users', $column)) {
+                $existingColumns[] = $column;
+            }
+        }
+
+        if ($existingColumns === []) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) use ($existingColumns) {
+                $table->dropColumn($existingColumns);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+    }
+
+    private function dropForeignIfExists(string $tableName, array $columns): void
+    {
+        if (!Schema::hasTable($tableName)) {
+            return;
+        }
+
+        try {
+            Schema::table($tableName, function (Blueprint $table) use ($columns) {
+                $table->dropForeign($columns);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
+    }
+
+    private function dropIndexIfExists(string $tableName, string|array $index): void
+    {
+        if (!Schema::hasTable($tableName)) {
+            return;
+        }
+
+        try {
+            Schema::table($tableName, function (Blueprint $table) use ($index) {
+                $table->dropIndex($index);
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

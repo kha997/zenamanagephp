@@ -30,10 +30,30 @@ return new class extends Migration
      */
     public function down(): void
     {
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            Schema::table('notification_rules', function (Blueprint $table) {
+                try {
+                    $table->dropForeign('notification_rules_tenant_id_foreign');
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+        }
+
         Schema::table('notification_rules', function (Blueprint $table) {
-            $table->dropForeign('notification_rules_tenant_id_foreign');
-            $table->dropIndex('notification_rules_tenant_id_index');
-            $table->dropColumn('tenant_id');
+            try {
+                $table->dropIndex('notification_rules_tenant_id_index');
+            } catch (\Throwable $e) {
+                // no-op for idempotent rollback
+            }
         });
+
+        if (Schema::hasColumn('notification_rules', 'tenant_id')) {
+            Schema::table('notification_rules', function (Blueprint $table) {
+                $table->dropColumn('tenant_id');
+            });
+        }
     }
 };

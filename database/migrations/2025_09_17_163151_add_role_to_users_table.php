@@ -25,8 +25,16 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('role');
-        });
+        if (!Schema::hasTable('users') || !Schema::hasColumn('users', 'role')) {
+            return;
+        }
+
+        try {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('role');
+            });
+        } catch (\Throwable $e) {
+            // Intentionally swallow for idempotent rollback in partial DB states.
+        }
     }
 };

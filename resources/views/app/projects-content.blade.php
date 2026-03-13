@@ -2641,12 +2641,12 @@ function projectsPage() {
             console.log('Exporting data as:', format);
             
             const data = this.filteredProjects.map(project => ({
-                Name: project.name,
-                Status: project.status,
-                Progress: project.progress + '%',
-                Due Date: project.due_date,
-                Team: project.team,
-                Priority: project.priority
+                name: project.name,
+                status: project.status,
+                progress: project.progress + '%',
+                due_date: project.due_date,
+                team: project.team,
+                priority: project.priority
             }));
 
             if (format === 'csv') {

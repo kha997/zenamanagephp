@@ -29,22 +29,28 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
-            if (Schema::hasColumn('audit_logs', 'meta')) {
+        if (Schema::hasColumn('audit_logs', 'meta')) {
+            Schema::table('audit_logs', function (Blueprint $table) {
                 $table->dropColumn('meta');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('audit_logs', 'status_code')) {
+        if (Schema::hasColumn('audit_logs', 'status_code')) {
+            Schema::table('audit_logs', function (Blueprint $table) {
                 $table->dropColumn('status_code');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('audit_logs', 'method')) {
+        if (Schema::hasColumn('audit_logs', 'method')) {
+            Schema::table('audit_logs', function (Blueprint $table) {
                 $table->dropColumn('method');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('audit_logs', 'route')) {
+        if (Schema::hasColumn('audit_logs', 'route')) {
+            Schema::table('audit_logs', function (Blueprint $table) {
                 $table->dropColumn('route');
-            }
-        });
+            });
+        }
     }
 };

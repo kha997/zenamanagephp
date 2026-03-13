@@ -75,7 +75,7 @@ return new class extends Migration
         ];
 
         foreach ($tableMappings as $oldTable => $newTable) {
-            if (Schema::hasTable($oldTable)) {
+            if (Schema::hasTable($oldTable) && !Schema::hasTable($newTable)) {
                 Schema::rename($oldTable, $newTable);
             }
         }

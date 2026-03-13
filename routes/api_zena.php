@@ -222,6 +222,10 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/apply-template', [\App\Http\Controllers\Api\WorkTemplateController::class, 'applyToProject'])->middleware('rbac:template.apply')->name('projects.apply-template');
         });
 
+        Route::group(['prefix' => 'components'], function () {
+            Route::post('/{id}/apply-template', [\App\Http\Controllers\Api\WorkTemplateController::class, 'applyToComponent'])->middleware('rbac:template.apply')->name('components.apply-template');
+        });
+
         // Work template routes
         Route::group(['prefix' => 'work-templates'], function () {
             Route::get('/', [\App\Http\Controllers\Api\WorkTemplateController::class, 'index'])->middleware('rbac:template.view')->name('work-templates.index');

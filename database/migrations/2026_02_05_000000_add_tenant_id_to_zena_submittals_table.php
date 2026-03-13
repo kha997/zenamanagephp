@@ -25,9 +25,27 @@ return new class extends Migration
             return;
         }
 
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        if (! $isSqlite) {
+            Schema::table('zena_submittals', function (Blueprint $table) {
+                try {
+                    $table->dropForeign(['tenant_id']);
+                } catch (\Throwable $e) {
+                    // no-op for idempotent rollback
+                }
+            });
+        }
+
         Schema::table('zena_submittals', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropIndex(['tenant_id']);
+            try {
+                $table->dropIndex(['tenant_id']);
+            } catch (\Throwable $e) {
+                // no-op for idempotent rollback
+            }
+        });
+
+        Schema::table('zena_submittals', function (Blueprint $table) {
             $table->dropColumn('tenant_id');
         });
     }

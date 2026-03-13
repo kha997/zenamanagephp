@@ -1,0 +1,59 @@
+name: CI/CD Code Quality Debug
+
+on:
+  workflow_dispatch:
+
+env:
+  COMPOSER_PROCESS_TIMEOUT: 0
+
+jobs:
+  code-quality-debug:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, fileinfo, mysql, sqlite3, pdo_sqlite
+          ini-values: |
+            pcov.enabled=1
+            pcov.directory=app
+            pcov.exclude="~vendor~"
+
+      - name: Install Dependencies
+        run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
+
+      - name: Prepare environment
+        run: |
+          mkdir -p database storage/framework/views storage/framework/cache storage/framework/sessions bootstrap/cache
+          touch database/database.sqlite
+          php -r 'file_put_contents(".env", "APP_NAME=ZenaManage\nAPP_ENV=ci\nAPP_KEY=base64:".base64_encode(random_bytes(32))."\nAPP_DEBUG=true\nAPP_URL=http://localhost\nLOG_CHANNEL=stack\nCACHE_STORE=file\nCACHE_DRIVER=file\nQUEUE_CONNECTION=sync\nSESSION_DRIVER=file\nDB_CONNECTION=sqlite\nDB_DATABASE=".getcwd()."/database/database.sqlite\n");'
+
+      - name: Show view.compiled config
+        continue-on-error: true
+        run: php artisan tinker --execute="dump(config('view.compiled'));"
+
+      - name: List runtime dirs
+        continue-on-error: true
+        run: |
+          pwd
+          ls -la
+          ls -la storage || true
+          ls -la storage/framework || true
+          ls -la storage/framework/views || true
+          ls -la bootstrap || true
+          ls -la bootstrap/cache || true
+
+      - name: Run php artisan view:clear -vvv
+        continue-on-error: true
+        run: php artisan view:clear -vvv
+
+      - name: Run php artisan optimize:clear -vvv
+        continue-on-error: true
+        run: php artisan optimize:clear -vvv
+
+      - name: Run composer ssot:lint
+        run: composer ssot:lint

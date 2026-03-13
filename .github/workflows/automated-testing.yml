@@ -1009,9 +1009,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        perf_file:
-          - tests/Performance/PerformanceMonitoringTest.php
-          - tests/Performance/DashboardPerformanceTest.php
+        include:
+          - perf_file: tests/Performance/PerformanceMonitoringTest.php
+            perf_slug: monitoring
+          - perf_file: tests/Performance/DashboardPerformanceTest.php
+            perf_slug: dashboard
     env:
       APP_ENV: testing
       DB_CONNECTION: mysql
@@ -1130,7 +1132,7 @@ jobs:
     - name: Upload Performance Report
       uses: actions/upload-artifact@v4
       with:
-        name: performance-report-${{ matrix.perf_file }}
+        name: performance-report-${{ matrix.perf_slug }}
         path: performance-report.txt
 
     - name: Failure context
@@ -1167,7 +1169,7 @@ jobs:
           echo "- DB connection: ${DB_CONNECTION:-n/a}"
           echo "- Docs lint: executed"
           echo "- Test command: php artisan test ${{ matrix.perf_file }}"
-          echo "- Artifact: performance-report-${{ matrix.perf_file }}"
+          echo "- Artifact: performance-report-${{ matrix.perf_slug }}"
         } >> "$GITHUB_STEP_SUMMARY"
 
   security-tests:

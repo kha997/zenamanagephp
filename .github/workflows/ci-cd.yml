@@ -127,6 +127,9 @@ jobs:
       run: |
         composer audit || true
 
+    - name: Diagnostic optimize:clear
+      run: php artisan optimize:clear -vvv
+
     - name: Run SSOT Lint
       run: composer ssot:lint
 

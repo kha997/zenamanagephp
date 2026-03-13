@@ -2,6 +2,11 @@ name: CI/CD Code Quality Debug
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ codex/fix-ci-cd-push-workflow-debt ]
+    paths:
+      - '.github/workflows/ci-cd-code-quality-debug.yml'
+      - '.github/workflows/ci-cd.yml'
 
 env:
   COMPOSER_PROCESS_TIMEOUT: 0

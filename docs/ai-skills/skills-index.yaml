@@ -1,0 +1,44 @@
+pack_name: ZenaManage AI Skills Pack
+version: v1
+repo_path: docs/ai-skills
+source_of_truth: repo
+skills:
+- name: repo-bootstrap-ssot
+  title: Repo Bootstrap SSOT
+  path: docs/ai-skills/repo-bootstrap-ssot/SKILL.md
+  priority: 1
+- name: ci-triage-lane-selector
+  title: CI Triage Lane Selector
+  path: docs/ai-skills/ci-triage-lane-selector/SKILL.md
+  priority: 2
+- name: ssot-lint-triage
+  title: SSOT Lint Triage
+  path: docs/ai-skills/ssot-lint-triage/SKILL.md
+  priority: 3
+- name: route-surface-guard
+  title: Route Surface Guard
+  path: docs/ai-skills/route-surface-guard/SKILL.md
+  priority: 4
+- name: safe-baseline-change
+  title: Safe Baseline Change
+  path: docs/ai-skills/safe-baseline-change/SKILL.md
+  priority: 5
+- name: zena-invariants-parity
+  title: Zena Invariants Parity
+  path: docs/ai-skills/zena-invariants-parity/SKILL.md
+  priority: 6
+- name: repo-handoff-evidence-pack
+  title: Repo Handoff Evidence Pack
+  path: docs/ai-skills/repo-handoff-evidence-pack/SKILL.md
+  priority: 7
+- name: smoke-handoff-pack
+  title: Smoke Handoff Pack
+  path: docs/ai-skills/smoke-handoff-pack/SKILL.md
+  priority: 8
+global_laws:
+- Do not guess. Unknown stays UNKNOWN until proven.
+- Route and middleware claims require route:list evidence.
+- Do not change domain logic just to satisfy tests or CI.
+- Prefer narrow debug lanes before full matrix reruns.
+- Baseline files are first-class SSOT inputs.
+- Separate Codex work from Terminal work.

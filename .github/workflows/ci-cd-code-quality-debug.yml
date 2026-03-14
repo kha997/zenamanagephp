@@ -62,3 +62,5 @@ jobs:
 
       - name: Run composer ssot:lint
         run: composer ssot:lint
+
+# debug trigger bump

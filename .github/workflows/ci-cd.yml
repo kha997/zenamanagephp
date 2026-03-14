@@ -20,6 +20,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     if: github.event_name != 'push' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     
     services:
       mysql:
@@ -76,10 +78,10 @@ jobs:
       run: php artisan test --coverage --coverage-clover=coverage.xml
 
     - name: Upload coverage reports to Codecov
-      if: ${{ secrets.CODECOV_TOKEN != '' }}
+      if: ${{ env.CODECOV_TOKEN != '' }}
       uses: codecov/codecov-action@v3
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ env.CODECOV_TOKEN }}
         file: ./coverage.xml
         flags: unittests
         name: codecov-umbrella
@@ -96,7 +98,7 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: '8.2'
-        extensions: mbstring, dom, fileinfo, mysql
+        extensions: mbstring, dom, fileinfo, mysql, sqlite3, pdo_sqlite
         ini-values: |
           pcov.enabled=1
           pcov.directory=app
@@ -107,7 +109,7 @@ jobs:
 
     - name: Prepare environment for SSOT lint
       run: |
-        mkdir -p database
+        mkdir -p database storage/framework/views storage/framework/cache storage/framework/sessions bootstrap/cache
         touch database/database.sqlite
         php -r 'file_put_contents(".env", "APP_NAME=ZenaManage\nAPP_ENV=ci\nAPP_KEY=base64:".base64_encode(random_bytes(32))."\nAPP_DEBUG=true\nAPP_URL=http://localhost\nLOG_CHANNEL=stack\nCACHE_STORE=file\nCACHE_DRIVER=file\nQUEUE_CONNECTION=sync\nSESSION_DRIVER=file\nDB_CONNECTION=sqlite\nDB_DATABASE=".getcwd()."/database/database.sqlite\n");'
     
@@ -124,6 +126,9 @@ jobs:
     - name: Run Security Check
       run: |
         composer audit || true
+
+    - name: Diagnostic optimize:clear
+      run: php artisan optimize:clear -vvv
 
     - name: Run SSOT Lint
       run: composer ssot:lint

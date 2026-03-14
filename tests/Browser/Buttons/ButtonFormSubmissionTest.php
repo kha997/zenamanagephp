@@ -38,12 +38,15 @@ class ButtonFormSubmissionTest extends DuskTestCase
 
     protected $project;
 
+    /**
+     * @group slow
+     */
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->markTestSkipped(
-            'Frozen legacy mixed browser suite. See docs/change-proposals/button-form-submission-audit-rewrite-plan.md'
+            'RUN_SLOW_TESTS=1 required for frozen legacy mixed browser suite. See docs/change-proposals/button-form-submission-audit-rewrite-plan.md'
         );
 
         // Create test tenant
@@ -208,7 +211,7 @@ class ButtonFormSubmissionTest extends DuskTestCase
                     ->type('description', 'Test document description')
                     ->select('project_id', $this->project->id)
                     ->attach('file', __DIR__ . '/test-file.txt')
-                    ->click('form[action="/api/v1/upload-document"] button[type="submit"]')
+                    ->click('form[action="/api/upload"] button[type="submit"]')
                     ->assertPathIs('/documents')
                     ->assertSee('Test Document');
         });

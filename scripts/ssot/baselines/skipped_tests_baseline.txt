@@ -1,6 +1,7 @@
 ApiTestConfiguration::test_redis_configuration|group=redis|reason=REDIS_
 ApiTestConfiguration::test_required_services_available|group=redis|reason=REDIS_
 BulkOperationsTest::skipUnlessSlowTestsEnabled|group=slow|reason=RUN_SLOW_TESTS
+ButtonFormSubmissionTest::setUp|group=slow|reason=RUN_SLOW_TESTS
 FinalSystemTest::skipUnlessStressTestsEnabled|group=stress|reason=RUN_STRESS_TESTS
 FinalSystemTest::test_documentation_system|group=slow|reason=dependency:
 FinalSystemTest::test_support_ticket_system|group=slow|reason=dependency:

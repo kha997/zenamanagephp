@@ -64,8 +64,8 @@ jobs:
 
       - name: Bootstrap application env
         run: |
-          cp .env.example .env
-          php artisan key:generate
+          cp .env.example .env.testing
+          php artisan key:generate --env=testing --force
 
       - name: Run tests
         run: |

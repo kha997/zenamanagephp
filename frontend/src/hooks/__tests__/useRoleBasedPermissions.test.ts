@@ -3,9 +3,45 @@ import { useRoleBasedPermissions, getRoleColor, getRoleIcon, getRoleDisplayName,
 import { useAuth } from '../useAuth';
 
 // Mock the useAuth hook
-jest.mock('../useAuth');
+jest.mock('../useAuth', () => ({
+  useAuth: jest.fn(),
+}));
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+
+const createMockAuthReturn = (
+  role = 'project_manager',
+  overrides: Partial<ReturnType<typeof useAuth>> = {}
+): ReturnType<typeof useAuth> => ({
+  user: {
+    id: 'user-1',
+    name: 'Test User',
+    email: 'test@example.com',
+    tenant_id: 'tenant-1',
+    roles: [
+      {
+        id: `role-${role}`,
+        name: role,
+        scope: 'system',
+        permissions: [],
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+    ],
+    permissions: [],
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    role,
+  } as ReturnType<typeof useAuth>['user'] & { role: string },
+  isAuthenticated: true,
+  isLoading: false,
+  login: jest.fn(),
+  register: jest.fn(),
+  logout: jest.fn(),
+  refreshToken: jest.fn(),
+  updateProfile: jest.fn(),
+  ...overrides,
+});
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -45,19 +81,7 @@ const mockRoleConfig = {
 describe('useRoleBasedPermissions', () => {
   beforeEach(() => {
     // Mock auth hook
-    mockUseAuth.mockReturnValue({
-      user: {
-        id: 'user-1',
-        name: 'Test User',
-        email: 'test@example.com',
-        role: 'project_manager',
-        tenant_id: 'tenant-1'
-      },
-      login: jest.fn(),
-      logout: jest.fn(),
-      isLoading: false,
-      error: null
-    });
+    mockUseAuth.mockReturnValue(createMockAuthReturn());
 
     // Mock fetch
     (global.fetch as jest.Mock).mockResolvedValue({
@@ -133,19 +157,28 @@ describe('useRoleBasedPermissions', () => {
 
   it('handles different user roles correctly', async () => {
     // Test QC Inspector role
-    mockUseAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue(createMockAuthReturn('qc_inspector', {
       user: {
         id: 'user-2',
         name: 'QC Inspector',
         email: 'qc@example.com',
+        tenant_id: 'tenant-1',
+        roles: [
+          {
+            id: 'role-qc_inspector',
+            name: 'qc_inspector',
+            scope: 'system',
+            permissions: [],
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+        ],
+        permissions: [],
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
         role: 'qc_inspector',
-        tenant_id: 'tenant-1'
-      },
-      login: jest.fn(),
-      logout: jest.fn(),
-      isLoading: false,
-      error: null
-    });
+      } as ReturnType<typeof useAuth>['user'] & { role: string },
+    }));
 
     const qcPermissions = {
       dashboard: ['view'],
@@ -275,10 +308,13 @@ describe('useRoleBasedPermissions', () => {
   it('handles missing user gracefully', () => {
     mockUseAuth.mockReturnValue({
       user: null,
-      login: jest.fn(),
-      logout: jest.fn(),
+      isAuthenticated: false,
       isLoading: false,
-      error: null
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+      refreshToken: jest.fn(),
+      updateProfile: jest.fn(),
     });
 
     const { result } = renderHook(() => useRoleBasedPermissions());
@@ -288,19 +324,28 @@ describe('useRoleBasedPermissions', () => {
   });
 
   it('handles unknown role gracefully', async () => {
-    mockUseAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue(createMockAuthReturn('unknown_role', {
       user: {
         id: 'user-3',
         name: 'Unknown User',
         email: 'unknown@example.com',
+        tenant_id: 'tenant-1',
+        roles: [
+          {
+            id: 'role-unknown_role',
+            name: 'unknown_role',
+            scope: 'system',
+            permissions: [],
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+        ],
+        permissions: [],
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
         role: 'unknown_role',
-        tenant_id: 'tenant-1'
-      },
-      login: jest.fn(),
-      logout: jest.fn(),
-      isLoading: false,
-      error: null
-    });
+      } as ReturnType<typeof useAuth>['user'] & { role: string },
+    }));
 
     // Mock default role config for unknown role
     const defaultRoleConfig = {

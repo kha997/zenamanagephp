@@ -62,6 +62,11 @@ jobs:
           composer install --prefer-dist --no-progress
           npm ci
 
+      - name: Bootstrap application env
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
       - name: Run tests
         run: |
           php artisan test --coverage --min=80

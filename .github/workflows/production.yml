@@ -70,7 +70,7 @@ jobs:
       - name: Run tests
         run: |
           php artisan test
-          npm run test
+          npx jest --config frontend/jest.config.js --runInBand --no-cache
 
   build:
     needs: test

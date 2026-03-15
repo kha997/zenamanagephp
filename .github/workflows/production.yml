@@ -80,8 +80,8 @@ jobs:
       
       - name: Build assets
         run: |
-          npm ci
-          npm run build
+          npm ci --prefix frontend
+          npm run build --prefix frontend
           
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

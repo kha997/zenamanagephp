@@ -231,6 +231,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/', [\App\Http\Controllers\Api\WorkTemplateController::class, 'index'])->middleware('rbac:template.view')->name('work-templates.index');
             Route::post('/', [\App\Http\Controllers\Api\WorkTemplateController::class, 'store'])->middleware('rbac:template.edit_draft')->name('work-templates.store');
             Route::get('/{id}', [\App\Http\Controllers\Api\WorkTemplateController::class, 'show'])->middleware('rbac:template.view')->name('work-templates.show');
+            Route::post('/{id}/preview', [\App\Http\Controllers\Api\WorkTemplateController::class, 'preview'])->middleware('rbac:template.view')->name('work-templates.preview');
             Route::put('/{id}', [\App\Http\Controllers\Api\WorkTemplateController::class, 'update'])->middleware('rbac:template.edit_draft')->name('work-templates.update');
             Route::post('/{id}/publish', [\App\Http\Controllers\Api\WorkTemplateController::class, 'publish'])->middleware('rbac:template.publish')->name('work-templates.publish');
         });

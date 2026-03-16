@@ -278,6 +278,56 @@ class WorkTemplateController extends BaseApiController
         }
     }
 
+    public function preview(Request $request, string $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'project_id' => 'nullable|string|required_without:component_id',
+            'component_id' => 'nullable|string|required_without:project_id',
+            'work_template_version_id' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        try {
+            $template = $this->templateForTenant($id)->firstOrFail();
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Work template not found');
+        }
+
+        if ($request->filled('component_id')) {
+            $component = Component::query()
+                ->with('project')
+                ->whereKey((string) $request->input('component_id'))
+                ->first();
+
+            if (!$component || !$component->project || (string) $component->project->tenant_id !== $this->tenantId()) {
+                return $this->notFound('Component not found');
+            }
+
+            return $this->previewTemplateForScope(
+                $request,
+                $template,
+                $component->project,
+                'component',
+                (string) $component->id,
+                $component
+            );
+        }
+
+        $project = Project::query()
+            ->where('tenant_id', $this->tenantId())
+            ->whereKey((string) $request->input('project_id'))
+            ->first();
+
+        if (!$project) {
+            return $this->notFound('Project not found');
+        }
+
+        return $this->previewTemplateForScope($request, $template, $project, 'project', (string) $project->id, null);
+    }
+
     public function applyToProject(Request $request, string $projectId): JsonResponse
     {
         $tenantId = $this->tenantId();
@@ -327,6 +377,7 @@ class WorkTemplateController extends BaseApiController
             'work_template_id' => 'nullable|string|required_without:work_template_version_id',
             'work_template_version_id' => 'nullable|string|required_without:work_template_id',
             'idempotency_key' => 'nullable|string|max:100',
+            'dry_run' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -355,6 +406,36 @@ class WorkTemplateController extends BaseApiController
             ->where('tenant_id', $tenantId)
             ->where('apply_fingerprint', $fingerprint)
             ->first();
+
+        try {
+            $plan = $this->buildTemplateApplicationPlan(
+                $tenantId,
+                $userId,
+                $project,
+                $scopeType,
+                $scopeId,
+                $component,
+                $version
+            );
+        } catch (\RuntimeException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
+
+        if ($request->boolean('dry_run')) {
+            return $this->successResponse(
+                $this->buildPreviewResponsePayload(
+                    $project,
+                    $scopeType,
+                    $scopeId,
+                    $version,
+                    $plan,
+                    $fingerprint,
+                    $existing !== null,
+                    true
+                ),
+                'Work template dry-run generated successfully'
+            );
+        }
 
         if ($existing) {
             $duplicatePayload = $this->buildApplyResponsePayload($existing, true, 0, 0);
@@ -386,7 +467,7 @@ class WorkTemplateController extends BaseApiController
 
         try {
             [$instance, $tasksCreated, $assignmentsCreated] = DB::transaction(
-                function () use ($tenantId, $userId, $project, $scopeType, $scopeId, $component, $version, $fingerprint): array {
+                function () use ($tenantId, $userId, $project, $scopeType, $scopeId, $version, $fingerprint, $plan): array {
                     $instance = WorkInstance::create([
                         'tenant_id' => $tenantId,
                         'project_id' => $project->id,
@@ -398,134 +479,43 @@ class WorkTemplateController extends BaseApiController
                         'created_by' => $userId,
                     ]);
 
-                    $steps = WorkTemplateStep::query()
-                        ->with('fields')
-                        ->where('tenant_id', $tenantId)
-                        ->where('work_template_version_id', $version->id)
-                        ->orderBy('step_order')
-                        ->get()
-                        ->values();
-
-                    $stepsByKey = [];
-                    foreach ($steps as $step) {
-                        $stepKey = (string) $step->step_key;
-                        $this->assertStepConfigValid($step);
-                        $stepsByKey[$stepKey] = $step;
-                    }
-
-                    $baseAnchor = $this->resolveBaseAnchor($project, $component);
-                    $startAtByStepKey = [];
-                    $deadlineByStepKey = [];
-                    $resolving = [];
-
-                    foreach ($stepsByKey as $stepKey => $step) {
-                        $this->resolveTimelineForStep(
-                            $stepKey,
-                            $stepsByKey,
-                            $baseAnchor,
-                            $startAtByStepKey,
-                            $deadlineByStepKey,
-                            $resolving
-                        );
-                    }
-
                     $stepInstanceIdByKey = [];
-                    foreach ($steps as $step) {
-                        $stepKey = (string) $step->step_key;
+                    foreach ($plan['persist']['steps'] as $stepPayload) {
                         $instanceStep = WorkInstanceStep::create([
                             'tenant_id' => $tenantId,
                             'work_instance_id' => $instance->id,
-                            'work_template_step_id' => $step->id,
-                            'step_key' => $stepKey,
-                            'name' => $step->name,
-                            'type' => $step->type,
-                            'step_order' => $step->step_order,
-                            'depends_on' => $step->depends_on,
-                            'assignee_rule_json' => $step->assignee_rule_json,
-                            'sla_hours' => $step->sla_hours,
-                            'snapshot_fields_json' => $this->buildSnapshotFields($step),
-                            'status' => 'pending',
-                            'deadline_at' => $deadlineByStepKey[$stepKey] ?? null,
+                            'work_template_step_id' => $stepPayload['work_template_step_id'],
+                            'step_key' => $stepPayload['step_key'],
+                            'name' => $stepPayload['name'],
+                            'type' => $stepPayload['type'],
+                            'step_order' => $stepPayload['step_order'],
+                            'depends_on' => $stepPayload['depends_on'],
+                            'assignee_rule_json' => $stepPayload['assignee_rule_json'],
+                            'sla_hours' => $stepPayload['sla_hours'],
+                            'snapshot_fields_json' => $stepPayload['snapshot_fields_json'],
+                            'status' => $stepPayload['status'],
+                            'deadline_at' => $stepPayload['deadline_at'],
                         ]);
-                        $stepInstanceIdByKey[$stepKey] = (string) $instanceStep->id;
+                        $stepInstanceIdByKey[$stepPayload['step_key']] = (string) $instanceStep->id;
                     }
 
-                    $taskIdByStepKey = [];
-                    foreach ($steps as $step) {
-                        $taskIdByStepKey[(string) $step->step_key] = (string) Str::ulid();
-                    }
+                    $taskRows = array_map(function (array $taskRow) use ($instance, $stepInstanceIdByKey): array {
+                        $taskRow['work_instance_id'] = (string) $instance->id;
+                        $taskRow['work_instance_step_id'] = $stepInstanceIdByKey[$taskRow['_step_key']] ?? null;
+                        unset($taskRow['_step_key']);
 
-                    $now = now();
-                    $taskRows = [];
-                    $assignmentRows = [];
-
-                    foreach ($steps as $step) {
-                        $stepKey = (string) $step->step_key;
-                        $config = is_array($step->config_json) ? $step->config_json : [];
-                        $startAt = $startAtByStepKey[$stepKey] ?? $baseAnchor;
-                        $deadlineAt = $deadlineByStepKey[$stepKey] ?? null;
-
-                        $dependsOn = is_array($step->depends_on) ? $step->depends_on : [];
-                        $dependencyTaskIds = [];
-                        foreach ($dependsOn as $dependencyKey) {
-                            if (!is_string($dependencyKey) || !isset($taskIdByStepKey[$dependencyKey])) {
-                                throw new \RuntimeException(sprintf('Invalid step dependency for step "%s".', $stepKey));
-                            }
-                            $dependencyTaskIds[] = $taskIdByStepKey[$dependencyKey];
-                        }
-
-                        $primaryAssignees = $this->resolveUsersForSelector(
-                            $step->assignee_rule_json,
-                            $tenantId,
-                            $project
-                        );
-                        if ($primaryAssignees === []) {
-                            throw new \RuntimeException(sprintf('Unresolved assignment rule for step "%s".', $stepKey));
-                        }
-
-                        $secondary = $this->resolveSecondaryAssignments($config, $tenantId, $project, $stepKey);
-                        $taskId = $taskIdByStepKey[$stepKey];
-
-                        $taskRows[] = [
-                            'id' => $taskId,
-                            'tenant_id' => $tenantId,
-                            'project_id' => (string) $project->id,
-                            'component_id' => $scopeType === 'component' ? $scopeId : null,
-                            'work_instance_id' => (string) $instance->id,
-                            'work_instance_step_id' => $stepInstanceIdByKey[$stepKey] ?? null,
-                            'name' => (string) ($step->name ?? $stepKey),
-                            'title' => (string) ($step->name ?? $stepKey),
-                            'description' => is_string($config['description'] ?? null) ? $config['description'] : null,
-                            'status' => Task::STATUS_PENDING,
-                            'priority' => is_string($config['priority'] ?? null) ? $config['priority'] : Task::PRIORITY_MEDIUM,
-                            'assigned_to' => $primaryAssignees[0],
-                            'assignee_id' => $primaryAssignees[0],
-                            'start_date' => $startAt->toDateString(),
-                            'end_date' => $deadlineAt ? $deadlineAt->toDateString() : null,
-                            'order' => (int) $step->step_order,
-                            'dependencies_json' => json_encode($dependencyTaskIds),
-                            'created_by' => $userId,
-                            'created_at' => $now,
-                            'updated_at' => $now,
-                        ];
-
-                        $assignmentRows = array_merge(
-                            $assignmentRows,
-                            $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'assignee', $primaryAssignees, $now),
-                            $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'reviewer', $secondary['reviewers'], $now),
-                            $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'watcher', $secondary['watchers'], $now)
-                        );
-                    }
+                        return $taskRow;
+                    }, $plan['persist']['tasks']);
 
                     if ($taskRows !== []) {
                         DB::table('tasks')->insert($taskRows);
                     }
 
-                    if ($assignmentRows !== []) {
-                        DB::table('task_assignments')->insert($assignmentRows);
+                    if ($plan['persist']['assignments'] !== []) {
+                        DB::table('task_assignments')->insert($plan['persist']['assignments']);
                     }
 
-                    return [$instance->fresh(['steps']), count($taskRows), count($assignmentRows)];
+                    return [$instance->fresh(['steps']), count($taskRows), count($plan['persist']['assignments'])];
                 }
             );
         } catch (QueryException $queryException) {
@@ -576,6 +566,70 @@ class WorkTemplateController extends BaseApiController
             $this->buildApplyResponsePayload($instance, false, $tasksCreated, $assignmentsCreated),
             'Work template applied successfully',
             201
+        );
+    }
+
+    private function previewTemplateForScope(
+        Request $request,
+        WorkTemplate $template,
+        Project $project,
+        string $scopeType,
+        string $scopeId,
+        ?Component $component
+    ): JsonResponse {
+        $tenantId = $this->tenantId();
+
+        $versionId = $request->input('work_template_version_id');
+        $version = WorkTemplateVersion::query()
+            ->where('tenant_id', $tenantId)
+            ->where('work_template_id', $template->id)
+            ->when(
+                is_string($versionId) && $versionId !== '',
+                fn ($query) => $query->whereKey($versionId),
+                fn ($query) => $query->whereNotNull('published_at')->orderByDesc('published_at')
+            )
+            ->when(
+                is_string($versionId) && $versionId !== '',
+                fn ($query) => $query->whereNotNull('published_at')
+            )
+            ->first();
+
+        if (!$version) {
+            return $this->notFound('Published work template version not found');
+        }
+
+        $fingerprint = $this->buildApplyFingerprint($tenantId, $scopeType, $scopeId, (string) $version->id);
+        $existing = WorkInstance::query()
+            ->where('tenant_id', $tenantId)
+            ->where('apply_fingerprint', $fingerprint)
+            ->first();
+
+        try {
+            $plan = $this->buildTemplateApplicationPlan(
+                $tenantId,
+                (string) Auth::id(),
+                $project,
+                $scopeType,
+                $scopeId,
+                $component,
+                $version
+            );
+        } catch (\RuntimeException $exception) {
+            return $this->errorResponse($exception->getMessage(), 422);
+        }
+
+        return $this->successResponse(
+            $this->buildPreviewResponsePayload(
+                $project,
+                $scopeType,
+                $scopeId,
+                $version,
+                $plan,
+                $fingerprint,
+                $existing !== null,
+                false
+            ),
+            'Work template preview generated successfully'
         );
     }
 
@@ -860,6 +914,303 @@ class WorkTemplateController extends BaseApiController
             'duplicate' => $duplicate,
             'tasks_created' => $tasksCreated,
             'assignments_created' => $assignmentsCreated,
+        ];
+    }
+
+    /**
+     * @return array{
+     *   planned_phases: array<int, array<string, mixed>>,
+     *   planned_tasks: array<int, array<string, mixed>>,
+     *   planned_checklists: array<int, array<string, mixed>>,
+     *   planned_docs: array<int, array<string, mixed>>,
+     *   tasks_created: int,
+     *   assignments_created: int,
+     *   persist: array{
+     *     steps: array<int, array<string, mixed>>,
+     *     tasks: array<int, array<string, mixed>>,
+     *     assignments: array<int, array<string, mixed>>
+     *   }
+     * }
+     */
+    private function buildTemplateApplicationPlan(
+        string $tenantId,
+        string $userId,
+        Project $project,
+        string $scopeType,
+        string $scopeId,
+        ?Component $component,
+        WorkTemplateVersion $version
+    ): array {
+        $steps = WorkTemplateStep::query()
+            ->with('fields')
+            ->where('tenant_id', $tenantId)
+            ->where('work_template_version_id', $version->id)
+            ->orderBy('step_order')
+            ->get()
+            ->values();
+
+        $stepsByKey = [];
+        foreach ($steps as $step) {
+            $stepKey = (string) $step->step_key;
+            $this->assertStepConfigValid($step);
+            $stepsByKey[$stepKey] = $step;
+        }
+
+        $baseAnchor = $this->resolveBaseAnchor($project, $component);
+        $startAtByStepKey = [];
+        $deadlineByStepKey = [];
+        $resolving = [];
+
+        foreach ($stepsByKey as $stepKey => $step) {
+            $this->resolveTimelineForStep(
+                $stepKey,
+                $stepsByKey,
+                $baseAnchor,
+                $startAtByStepKey,
+                $deadlineByStepKey,
+                $resolving
+            );
+        }
+
+        $taskIdByStepKey = [];
+        foreach ($steps as $step) {
+            $taskIdByStepKey[(string) $step->step_key] = (string) Str::ulid();
+        }
+
+        $now = now();
+        $phaseOrder = 1;
+        $phases = [];
+        $tasks = [];
+        $checklists = [];
+        $docs = [];
+        $persistSteps = [];
+        $persistTasks = [];
+        $persistAssignments = [];
+
+        foreach ($steps as $step) {
+            $stepKey = (string) $step->step_key;
+            $config = is_array($step->config_json) ? $step->config_json : [];
+            $startAt = $startAtByStepKey[$stepKey] ?? $baseAnchor;
+            $deadlineAt = $deadlineByStepKey[$stepKey] ?? null;
+            $dependsOn = is_array($step->depends_on) ? array_values($step->depends_on) : [];
+
+            $primaryAssignees = $this->resolveUsersForSelector($step->assignee_rule_json, $tenantId, $project);
+            if ($primaryAssignees === []) {
+                throw new \RuntimeException(sprintf('Unresolved assignment rule for step "%s".', $stepKey));
+            }
+
+            $secondary = $this->resolveSecondaryAssignments($config, $tenantId, $project, $stepKey);
+            $phaseMeta = $this->resolvePhaseMeta($config, $phaseOrder);
+            $phaseKey = $phaseMeta['phase_key'];
+
+            if (!isset($phases[$phaseKey])) {
+                $phases[$phaseKey] = [
+                    'phase_key' => $phaseMeta['phase_key'],
+                    'name' => $phaseMeta['name'],
+                    'order' => $phaseMeta['order'],
+                    'task_keys' => [],
+                ];
+                $phaseOrder++;
+            }
+
+            $taskKey = $stepKey;
+            $phases[$phaseKey]['task_keys'][] = $taskKey;
+
+            $checklistItems = [];
+            foreach (($config['checklist_items'] ?? []) as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $checklist = [
+                    'task_key' => $taskKey,
+                    'step_key' => $stepKey,
+                    'item_key' => (string) ($item['key'] ?? Str::ulid()),
+                    'label' => (string) ($item['label'] ?? ($item['key'] ?? 'Checklist Item')),
+                    'required' => (bool) ($item['required'] ?? false),
+                ];
+                $checklistItems[] = $checklist;
+                $checklists[] = $checklist;
+            }
+
+            $requiredDocs = [];
+            foreach (($config['required_docs'] ?? []) as $doc) {
+                if (!is_array($doc)) {
+                    continue;
+                }
+
+                $requiredDoc = [
+                    'task_key' => $taskKey,
+                    'step_key' => $stepKey,
+                    'doc_key' => (string) ($doc['key'] ?? Str::ulid()),
+                    'label' => (string) ($doc['label'] ?? ($doc['key'] ?? 'Required Document')),
+                    'required' => (bool) ($doc['required'] ?? false),
+                ];
+                $requiredDocs[] = $requiredDoc;
+                $docs[] = $requiredDoc;
+            }
+
+            $taskPreview = [
+                'task_key' => $taskKey,
+                'step_key' => $stepKey,
+                'phase_key' => $phaseMeta['phase_key'],
+                'phase_name' => $phaseMeta['name'],
+                'phase_order' => $phaseMeta['order'],
+                'name' => (string) ($step->name ?? $stepKey),
+                'type' => (string) $step->type,
+                'order' => (int) $step->step_order,
+                'scope_type' => $scopeType,
+                'scope_id' => $scopeId,
+                'project_id' => (string) $project->id,
+                'depends_on' => $dependsOn,
+                'start_date' => $startAt->toDateString(),
+                'deadline_at' => $deadlineAt?->toIso8601String(),
+                'primary_assignees' => array_values($primaryAssignees),
+                'reviewers' => array_values($secondary['reviewers']),
+                'watchers' => array_values($secondary['watchers']),
+                'fields' => $this->buildSnapshotFields($step),
+                'checklists' => $checklistItems,
+                'required_docs' => $requiredDocs,
+            ];
+            $tasks[] = $taskPreview;
+
+            $persistSteps[] = [
+                'work_template_step_id' => (string) $step->id,
+                'step_key' => $stepKey,
+                'name' => $step->name,
+                'type' => $step->type,
+                'step_order' => $step->step_order,
+                'depends_on' => $step->depends_on,
+                'assignee_rule_json' => $step->assignee_rule_json,
+                'sla_hours' => $step->sla_hours,
+                'snapshot_fields_json' => $taskPreview['fields'],
+                'status' => 'pending',
+                'deadline_at' => $deadlineAt,
+            ];
+
+            $dependencyTaskIds = [];
+            foreach ($dependsOn as $dependencyKey) {
+                if (!is_string($dependencyKey) || !isset($taskIdByStepKey[$dependencyKey])) {
+                    throw new \RuntimeException(sprintf('Invalid step dependency for step "%s".', $stepKey));
+                }
+                $dependencyTaskIds[] = $taskIdByStepKey[$dependencyKey];
+            }
+
+            $taskId = $taskIdByStepKey[$stepKey];
+            $persistTasks[] = [
+                'id' => $taskId,
+                'tenant_id' => $tenantId,
+                'project_id' => (string) $project->id,
+                'component_id' => $scopeType === 'component' ? $scopeId : null,
+                'work_instance_id' => null,
+                'work_instance_step_id' => null,
+                '_step_key' => $stepKey,
+                'name' => (string) ($step->name ?? $stepKey),
+                'title' => (string) ($step->name ?? $stepKey),
+                'description' => is_string($config['description'] ?? null) ? $config['description'] : null,
+                'status' => Task::STATUS_PENDING,
+                'priority' => is_string($config['priority'] ?? null) ? $config['priority'] : Task::PRIORITY_MEDIUM,
+                'assigned_to' => $primaryAssignees[0],
+                'assignee_id' => $primaryAssignees[0],
+                'start_date' => $startAt->toDateString(),
+                'end_date' => $deadlineAt ? $deadlineAt->toDateString() : null,
+                'order' => (int) $step->step_order,
+                'dependencies_json' => json_encode($dependencyTaskIds),
+                'created_by' => $userId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            $persistAssignments = array_merge(
+                $persistAssignments,
+                $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'assignee', $primaryAssignees, $now),
+                $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'reviewer', $secondary['reviewers'], $now),
+                $this->buildAssignmentRows($taskId, $tenantId, $userId, $deadlineAt, 'watcher', $secondary['watchers'], $now)
+            );
+        }
+
+        usort($tasks, static fn (array $left, array $right): int => ($left['order'] ?? 0) <=> ($right['order'] ?? 0));
+        usort($checklists, static fn (array $left, array $right): int => strcmp((string) ($left['task_key'] ?? ''), (string) ($right['task_key'] ?? '')));
+        usort($docs, static fn (array $left, array $right): int => strcmp((string) ($left['task_key'] ?? ''), (string) ($right['task_key'] ?? '')));
+
+        return [
+            'planned_phases' => array_values($phases),
+            'planned_tasks' => array_values($tasks),
+            'planned_checklists' => array_values($checklists),
+            'planned_docs' => array_values($docs),
+            'tasks_created' => count($persistTasks),
+            'assignments_created' => count($persistAssignments),
+            'persist' => [
+                'steps' => $persistSteps,
+                'tasks' => $persistTasks,
+                'assignments' => $persistAssignments,
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     * @return array{phase_key: string, name: string, order: int}
+     */
+    private function resolvePhaseMeta(array $config, int $fallbackOrder): array
+    {
+        $phaseKey = is_string($config['phase_key'] ?? null) && $config['phase_key'] !== ''
+            ? $config['phase_key']
+            : 'default';
+        $phaseName = is_string($config['phase_name'] ?? null) && $config['phase_name'] !== ''
+            ? $config['phase_name']
+            : 'Default Phase';
+        $phaseOrder = is_numeric($config['phase_order'] ?? null)
+            ? (int) $config['phase_order']
+            : $fallbackOrder;
+
+        return [
+            'phase_key' => $phaseKey,
+            'name' => $phaseName,
+            'order' => $phaseOrder,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @return array<string, mixed>
+     */
+    private function buildPreviewResponsePayload(
+        Project $project,
+        string $scopeType,
+        string $scopeId,
+        WorkTemplateVersion $version,
+        array $plan,
+        string $fingerprint,
+        bool $duplicate,
+        bool $dryRun
+    ): array {
+        return [
+            'template_id' => (string) $version->work_template_id,
+            'work_template_version_id' => (string) $version->id,
+            'project_id' => (string) $project->id,
+            'scope_type' => $scopeType,
+            'scope_id' => $scopeId,
+            'apply_fingerprint' => $fingerprint,
+            'duplicate' => $duplicate,
+            'dry_run' => $dryRun,
+            'planned_phases' => $plan['planned_phases'],
+            'planned_tasks' => $plan['planned_tasks'],
+            'planned_checklists' => $plan['planned_checklists'],
+            'planned_docs' => $plan['planned_docs'],
+            'summary' => [
+                'phases' => count($plan['planned_phases']),
+                'tasks' => count($plan['planned_tasks']),
+                'checklists' => count($plan['planned_checklists']),
+                'docs' => count($plan['planned_docs']),
+                'assignments' => $plan['assignments_created'],
+            ],
+            'would_create' => [
+                'work_instances' => $duplicate ? 0 : 1,
+                'work_instance_steps' => $duplicate ? 0 : count($plan['persist']['steps']),
+                'tasks' => $duplicate ? 0 : $plan['tasks_created'],
+                'task_assignments' => $duplicate ? 0 : $plan['assignments_created'],
+            ],
         ];
     }
 

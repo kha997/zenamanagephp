@@ -114,6 +114,49 @@ class WorkTemplateMvpApiTest extends TestCase
             ->assertStatus(404);
     }
 
+    public function test_preview_endpoint_respects_tenant_scope_with_anti_enumeration(): void
+    {
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+
+        $actorA = $this->createTenantUser($tenantA, [], ['member'], ['template.view']);
+        $actorB = $this->createTenantUser($tenantB, [], ['member'], ['template.view']);
+
+        $projectA = Project::factory()->create([
+            'tenant_id' => (string) $tenantA->id,
+            'created_by' => (string) $actorA->id,
+            'pm_id' => (string) $actorA->id,
+        ]);
+        $projectB = Project::factory()->create([
+            'tenant_id' => (string) $tenantB->id,
+            'created_by' => (string) $actorB->id,
+            'pm_id' => (string) $actorB->id,
+        ]);
+
+        $templateA = $this->createDraftTemplate($tenantA, $actorA);
+        $templateB = $this->createDraftTemplate($tenantB, $actorB);
+
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $templateA->id]), [], $this->authHeaders($actorA))
+            ->assertStatus(403);
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $templateB->id]), [], $this->authHeaders($actorB))
+            ->assertStatus(403);
+
+        WorkTemplateVersion::query()
+            ->where('work_template_id', $templateA->id)
+            ->update(['published_at' => now(), 'is_immutable' => true, 'published_by' => (string) $actorA->id]);
+        WorkTemplateVersion::query()
+            ->where('work_template_id', $templateB->id)
+            ->update(['published_at' => now(), 'is_immutable' => true, 'published_by' => (string) $actorB->id]);
+
+        $this->postJson($this->workTemplatePreviewRoute((string) $templateB->id), [
+            'project_id' => (string) $projectA->id,
+        ], $this->authHeaders($actorA))->assertStatus(404);
+
+        $this->postJson($this->workTemplatePreviewRoute((string) $templateA->id), [
+            'project_id' => (string) $projectB->id,
+        ], $this->authHeaders($actorA))->assertStatus(404);
+    }
+
     public function test_rbac_denies_publish_apply_and_approve_without_permissions(): void
     {
         $tenant = Tenant::factory()->create();
@@ -127,6 +170,11 @@ class WorkTemplateMvpApiTest extends TestCase
 
         $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
             'work_template_id' => (string) $template->id,
+        ], $this->authHeaders($user))->assertStatus(403);
+
+        $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
+            'work_template_id' => (string) $template->id,
+            'dry_run' => true,
         ], $this->authHeaders($user))->assertStatus(403);
 
         $instance = WorkInstance::factory()->create([
@@ -385,6 +433,85 @@ class WorkTemplateMvpApiTest extends TestCase
         $this->assertNotEmpty(array_filter($snapshot, static fn (array $field): bool => str_starts_with((string) ($field['field_key'] ?? ''), 'required-doc:')));
     }
 
+    public function test_preview_returns_stable_shape_for_planned_phases_tasks_checklists_and_docs(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.publish']);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+            'start_date' => now()->toDateString(),
+        ]);
+
+        $template = $this->createDraftTemplate($tenant, $user, [
+            'key' => 'qa-check',
+            'name' => 'QA Check',
+            'config' => [
+                'phase_key' => 'execution',
+                'phase_name' => 'Execution',
+                'phase_order' => 1,
+                'checklist_items' => [
+                    ['key' => 'safety', 'label' => 'Safety checklist complete', 'required' => true],
+                ],
+                'required_docs' => [
+                    ['key' => 'inspection-report', 'label' => 'Inspection Report', 'required' => true],
+                ],
+            ],
+        ]);
+
+        WorkTemplateVersion::query()
+            ->where('work_template_id', $template->id)
+            ->update(['published_at' => now(), 'is_immutable' => true, 'published_by' => (string) $user->id]);
+
+        $response = $this->postJson($this->workTemplatePreviewRoute((string) $template->id), [
+            'project_id' => (string) $project->id,
+        ], $this->authHeaders($user));
+
+        $response->assertOk()
+            ->assertJsonPath('data.template_id', (string) $template->id)
+            ->assertJsonPath('data.project_id', (string) $project->id)
+            ->assertJsonPath('data.scope_type', 'project')
+            ->assertJsonPath('data.scope_id', (string) $project->id)
+            ->assertJsonPath('data.dry_run', false)
+            ->assertJsonPath('data.summary.phases', 1)
+            ->assertJsonPath('data.summary.tasks', 1)
+            ->assertJsonPath('data.summary.checklists', 1)
+            ->assertJsonPath('data.summary.docs', 1)
+            ->assertJsonPath('data.planned_phases.0.phase_key', 'execution')
+            ->assertJsonPath('data.planned_phases.0.name', 'Execution')
+            ->assertJsonPath('data.planned_phases.0.task_keys.0', 'qa-check')
+            ->assertJsonPath('data.planned_tasks.0.task_key', 'qa-check')
+            ->assertJsonPath('data.planned_tasks.0.phase_key', 'execution')
+            ->assertJsonPath('data.planned_tasks.0.checklists.0.item_key', 'safety')
+            ->assertJsonPath('data.planned_tasks.0.required_docs.0.doc_key', 'inspection-report')
+            ->assertJsonPath('data.planned_checklists.0.item_key', 'safety')
+            ->assertJsonPath('data.planned_docs.0.doc_key', 'inspection-report')
+            ->assertJsonPath('data.would_create.work_instances', 1)
+            ->assertJsonPath('data.would_create.tasks', 1);
+
+        $response->assertJsonStructure([
+            'success',
+            'status',
+            'data' => [
+                'template_id',
+                'work_template_version_id',
+                'project_id',
+                'scope_type',
+                'scope_id',
+                'apply_fingerprint',
+                'duplicate',
+                'dry_run',
+                'planned_phases',
+                'planned_tasks',
+                'planned_checklists',
+                'planned_docs',
+                'summary' => ['phases', 'tasks', 'checklists', 'docs', 'assignments'],
+                'would_create' => ['work_instances', 'work_instance_steps', 'tasks', 'task_assignments'],
+            ],
+        ]);
+    }
+
     public function test_apply_component_generates_component_scoped_tasks(): void
     {
         $tenant = Tenant::factory()->create();
@@ -451,6 +578,53 @@ class WorkTemplateMvpApiTest extends TestCase
         $this->assertSame($instanceId, (string) $second->json('data.id'));
         $this->assertSame(1, WorkInstance::query()->where('tenant_id', (string) $tenant->id)->count());
         $this->assertSame(1, Task::query()->where('tenant_id', (string) $tenant->id)->count());
+    }
+
+    public function test_apply_dry_run_does_not_write_database(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+        ]);
+        $template = $this->createDraftTemplate($tenant, $user, [
+            'key' => 'qa-check',
+            'name' => 'QA Check',
+            'config' => [
+                'checklist_items' => [
+                    ['key' => 'safety', 'label' => 'Safety checklist complete', 'required' => true],
+                ],
+                'required_docs' => [
+                    ['key' => 'inspection-report', 'label' => 'Inspection Report', 'required' => true],
+                ],
+            ],
+        ]);
+
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $template->id]), [], $this->authHeaders($user))
+            ->assertStatus(200);
+
+        $auditCountBeforeDryRun = AuditLog::query()->where('tenant_id', (string) $tenant->id)->count();
+
+        $response = $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
+            'work_template_id' => (string) $template->id,
+            'dry_run' => true,
+        ], $this->authHeaders($user));
+
+        $response->assertOk()
+            ->assertJsonPath('data.dry_run', true)
+            ->assertJsonPath('data.summary.tasks', 1)
+            ->assertJsonPath('data.summary.checklists', 1)
+            ->assertJsonPath('data.summary.docs', 1)
+            ->assertJsonPath('data.would_create.work_instances', 1)
+            ->assertJsonPath('data.would_create.tasks', 1);
+
+        $this->assertSame(0, WorkInstance::query()->where('tenant_id', (string) $tenant->id)->count());
+        $this->assertSame(0, WorkInstanceStep::query()->where('tenant_id', (string) $tenant->id)->count());
+        $this->assertSame(0, Task::query()->where('tenant_id', (string) $tenant->id)->count());
+        $this->assertSame(0, TaskAssignment::query()->where('tenant_id', (string) $tenant->id)->count());
+        $this->assertSame($auditCountBeforeDryRun, AuditLog::query()->where('tenant_id', (string) $tenant->id)->count());
     }
 
     public function test_apply_fails_atomically_when_secondary_assignment_rule_unresolved(): void
@@ -994,6 +1168,11 @@ class WorkTemplateMvpApiTest extends TestCase
     private function workTemplateRoute(string $name, array $parameters = []): string
     {
         return route('api.zena.work-templates.' . $name, $parameters, false);
+    }
+
+    private function workTemplatePreviewRoute(string $templateId): string
+    {
+        return route('api.zena.work-templates.preview', ['id' => $templateId], false);
     }
 
     private function projectApplyTemplateRoute(string $projectId): string

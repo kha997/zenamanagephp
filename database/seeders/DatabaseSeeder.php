@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             ZenaPermissionsSeeder::class,
             ZenaAdminRolePermissionSeeder::class,
             UserRoleSeeder::class,
+            WorkTemplateBaselineSeeder::class,
             
             // Sidebar Configuration
             // SidebarConfigSeeder::class, // Commented out - table doesn't exist yet

@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "Dashboard System for ZenaManage",
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --watchAll=false",
-    "test:unit": "jest --testPathPattern=__tests__",
-    "test:integration": "jest --testPathPattern=integration",
-    "test:e2e": "jest --testPathPattern=e2e",
+    "test": "npx jest --config frontend/jest.config.js --runInBand --no-cache",
+    "test:watch": "npx jest --config frontend/jest.config.js --runInBand --no-cache --watch",
+    "test:coverage": "npx jest --config frontend/jest.config.js --runInBand --no-cache --coverage",
+    "test:ci": "npx jest --config frontend/jest.config.js --runInBand --no-cache --ci --coverage --watchAll=false",
+    "test:unit": "npx jest --config frontend/jest.config.js --runInBand --no-cache --testPathPattern=__tests__",
+    "test:integration": "npx jest --config frontend/jest.config.js --runInBand --no-cache --testPathPattern=integration",
+    "test:e2e": "npx jest --config frontend/jest.config.js --runInBand --no-cache --testPathPattern=e2e",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
     "type-check": "tsc --noEmit",
@@ -58,49 +58,5 @@
     "ts-jest": "^29.1.1",
     "typescript": "^5.2.2",
     "vite": "^4.5.0"
-  },
-  "jest": {
-    "testEnvironment": "jsdom",
-    "setupFilesAfterEnv": [
-      "<rootDir>/frontend/src/setupTests.ts"
-    ],
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/frontend/src/$1"
-    },
-    "roots": [
-      "<rootDir>/frontend/src"
-    ],
-    "modulePathIgnorePatterns": [
-      "<rootDir>/_repo_review_pack_.*"
-    ],
-    "collectCoverageFrom": [
-      "frontend/src/**/*.{ts,tsx}",
-      "!frontend/src/**/*.d.ts",
-      "!frontend/src/index.tsx",
-      "!frontend/src/reportWebVitals.ts"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    },
-    "testMatch": [
-      "<rootDir>/frontend/src/**/__tests__/**/*.{ts,tsx}",
-      "<rootDir>/frontend/src/**/*.{test,spec}.{ts,tsx}"
-    ],
-    "transform": {
-      "^.+\\.(ts|tsx)$": "ts-jest"
-    },
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ]
   }
 }

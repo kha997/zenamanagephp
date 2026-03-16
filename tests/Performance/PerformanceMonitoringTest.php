@@ -8,7 +8,10 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Support\SSOT\FixtureFactory;
 use Tests\Traits\AuthenticationTrait;
 
@@ -355,21 +358,117 @@ class PerformanceMonitoringTest extends TestCase
      */
     private function createTestData(int $projectCount, int $taskCount): void
     {
-        // Create projects
-        $projects = Project::factory()->count($projectCount)->create([
-            'tenant_id' => $this->tenant->id,
-            'pm_id' => $this->user->id,
-            'budget_planned' => rand(10000, 100000),
-            'budget_actual' => rand(5000, 80000)
-        ]);
+        $now = now();
+        $projectColumns = array_flip(Schema::getColumnListing('projects'));
+        $projectDefaults = $this->tableInsertDefaults('projects');
+        $taskColumns = array_flip(Schema::getColumnListing('tasks'));
+        $taskDefaults = $this->tableInsertDefaults('tasks');
+        $projectIds = [];
+        $projectRows = [];
+        $taskRows = [];
+        $taskStatuses = ['pending', 'in_progress', 'completed'];
 
-        // Create tasks
-        $tasksPerProject = intval($taskCount / $projectCount);
-        foreach ($projects as $project) {
-            Task::factory()->count($tasksPerProject)->create([
-                'project_id' => $project->id,
-                'status' => ['pending', 'in_progress', 'completed'][rand(0, 2)]
-            ]);
+        DB::transaction(function () use (
+            $projectCount,
+            $taskCount,
+            $now,
+            $projectColumns,
+            $projectDefaults,
+            $taskColumns,
+            $taskDefaults,
+            &$projectIds,
+            &$projectRows,
+            &$taskRows,
+            $taskStatuses
+        ): void {
+            for ($index = 0; $index < $projectCount; $index++) {
+                $project = Project::factory()->make([
+                    'tenant_id' => $this->tenant->id,
+                    'pm_id' => $this->user->id,
+                    'created_by' => $this->user->id,
+                    'budget_planned' => random_int(10000, 100000),
+                    'budget_actual' => random_int(5000, 80000),
+                ]);
+
+                $project->id = $project->getKey() ?: $this->newModelKey($project);
+                $project->created_at = $now;
+                $project->updated_at = $now;
+
+                $projectIds[] = (string) $project->id;
+                $projectRows[] = $this->modelToInsertRow($project, $projectColumns, $projectDefaults);
+            }
+
+            $this->insertChunked('projects', $projectRows);
+
+            for ($index = 0; $index < $taskCount; $index++) {
+                $task = Task::factory()->make([
+                    'tenant_id' => $this->tenant->id,
+                    'project_id' => $projectIds[$index % count($projectIds)],
+                    'assignee_id' => $this->user->id,
+                    'created_by' => $this->user->id,
+                    'status' => $taskStatuses[$index % count($taskStatuses)],
+                ]);
+
+                $task->id = $task->getKey() ?: $this->newModelKey($task);
+                $task->created_at = $now;
+                $task->updated_at = $now;
+
+                if ($task->status === 'completed' && array_key_exists('completed_at', $taskColumns)) {
+                    $task->completed_at = $now;
+                }
+
+                $taskRows[] = $this->modelToInsertRow($task, $taskColumns, $taskDefaults);
+            }
+
+            $this->insertChunked('tasks', $taskRows);
+        });
+    }
+
+    private function modelToInsertRow(Model $model, array $columns, array $defaults = []): array
+    {
+        $attributes = $model->getAttributes();
+        $attributes['id'] = $attributes['id'] ?? $this->newModelKey($model);
+        $attributes['created_at'] = $attributes['created_at'] ?? now();
+        $attributes['updated_at'] = $attributes['updated_at'] ?? $attributes['created_at'];
+        $attributes['deleted_at'] = $attributes['deleted_at'] ?? null;
+
+        return array_replace(
+            array_fill_keys(array_keys($columns), null),
+            $defaults,
+            array_intersect_key($attributes, $columns)
+        );
+    }
+
+    private function tableInsertDefaults(string $table): array
+    {
+        $defaults = [];
+
+        foreach (DB::select("PRAGMA table_info({$table})") as $column) {
+            $default = $column->dflt_value;
+
+            if ($default === null || strtoupper((string) $default) === 'NULL') {
+                continue;
+            }
+
+            $defaults[$column->name] = preg_replace("/^'(.*)'$/", '$1', (string) $default);
         }
+
+        return $defaults;
+    }
+
+    private function insertChunked(string $table, array $rows, int $chunkSize = 500): void
+    {
+        foreach (array_chunk($rows, $chunkSize) as $chunk) {
+            DB::table($table)->insert($chunk);
+        }
+    }
+
+    private function newModelKey(Model $model): string
+    {
+        if (method_exists($model, 'newUniqueId')) {
+            return (string) $model->newUniqueId();
+        }
+
+        return (string) Str::uuid();
     }
 }

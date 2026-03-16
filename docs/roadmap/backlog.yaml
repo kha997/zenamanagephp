@@ -94,8 +94,8 @@ epics:
           dry_run: "project/component apply routes support dry_run=true with no DB writes"
           tests: "php artisan test tests/Feature/Api/WorkTemplateMvpApiTest.php (20 passed)"
         notes:
-          "Preview returns planned_phases/planned_tasks/planned_checklists/planned_docs"
-          "Dry-run reuses apply planning path but does not create work_instances, work_instance_steps, tasks, task_assignments, or audit rows"
+          - "Preview returns planned_phases/planned_tasks/planned_checklists/planned_docs"
+          - "Dry-run reuses apply planning path but does not create work_instances, work_instance_steps, tasks, task_assignments, or audit rows"
       - id: S1.4
         title: "Seed 3 baseline templates: Design / Construction / Inspection"
         priority: P1

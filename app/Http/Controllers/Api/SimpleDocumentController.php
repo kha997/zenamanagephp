@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Models\DocumentVersion;
 use Src\CoreProject\Models\LegacyProjectAdapter as Project;
 use App\Services\ErrorEnvelopeService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -27,20 +30,31 @@ class SimpleDocumentController extends Controller
     public function index(Request $request)
     {
         $perPage = $this->resolvePerPage($request);
-        $page = max(1, (int) $request->input('page', 1));
-        $documents = Document::forCurrentTenant()->orderBy('created_at', 'desc')->get();
+        $paginator = Document::query()
+            ->with('currentVersion')
+            ->when($request->filled('project_id'), fn (Builder $query) => $query->where('project_id', $request->string('project_id')))
+            ->when($request->filled('document_type'), fn (Builder $query) => $query->where('document_type', $request->string('document_type')))
+            ->when($request->filled('discipline'), fn (Builder $query) => $query->where('discipline', $request->string('discipline')))
+            ->when($request->filled('package'), fn (Builder $query) => $query->where('package', $request->string('package')))
+            ->when($request->filled('status'), fn (Builder $query) => $query->where('status', $request->string('status')))
+            ->when($request->filled('revision'), fn (Builder $query) => $query->where('revision', $request->string('revision')))
+            ->when($request->filled('q'), function (Builder $query) use ($request) {
+                $search = '%' . $request->string('q')->trim() . '%';
 
-        if ($request->filled('document_type')) {
-            $documentType = $request->input('document_type');
-            $documents = $documents->filter(fn ($document) => $document->document_type === $documentType)->values();
-        }
-
-        $total = $documents->count();
-        $items = $documents->slice(($page - 1) * $perPage, $perPage)->values();
-        $paginator = new LengthAwarePaginator($items, $total, $perPage, $page, [
-            'path' => $request->url(),
-            'query' => $request->query(),
-        ]);
+                $query->where(function (Builder $nested) use ($search) {
+                    $nested->where('title', 'like', $search)
+                        ->orWhere('name', 'like', $search)
+                        ->orWhere('original_name', 'like', $search)
+                        ->orWhere('description', 'like', $search)
+                        ->orWhere('document_type', 'like', $search)
+                        ->orWhere('discipline', 'like', $search)
+                        ->orWhere('package', 'like', $search)
+                        ->orWhere('revision', 'like', $search);
+                });
+            })
+            ->orderByDesc('created_at')
+            ->paginate($perPage)
+            ->appends($request->query());
 
         return $this->zenaSuccessResponse($paginator);
     }
@@ -50,16 +64,21 @@ class SimpleDocumentController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'project_id' => 'required|string|exists:projects,id',
-            'document_type' => 'required|in:drawing,specification,contract,report,photo,other',
+            'document_type' => 'required|string|max:100',
+            'discipline' => 'nullable|string|max:100',
+            'package' => 'nullable|string|max:100',
+            'status' => 'nullable|string|max:100',
+            'revision' => 'nullable|string|max:50',
             'file' => 'required|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar,7z',
             'name' => 'sometimes|string|max:255',
             'file_hash' => 'nullable|string|max:255',
             'file_type' => 'nullable|string|max:255',
             'category' => 'nullable|string|max:255',
             'description' => 'nullable|string',
+            'tags' => 'nullable|array',
+            'tags.*' => 'string|max:50',
             'metadata' => 'nullable|array',
             'version' => 'sometimes|integer|min:1',
-            'parent_document_id' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -110,8 +129,8 @@ class SimpleDocumentController extends Controller
             }
 
             $fileInfo = $uploadResult['file'];
-            $metadata = $data['metadata'] ?? [];
-            $metadata['document_type'] = $data['document_type'];
+            $versionNumber = (int) ($data['version'] ?? 1);
+            $metadata = $this->buildMetadata($data);
 
             $documentName = $data['name'] ??
                 $data['title'] ??
@@ -123,27 +142,49 @@ class SimpleDocumentController extends Controller
                 $fileType = 'document';
             }
 
-            $version = (int) ($data['version'] ?? 1);
+            $document = DB::transaction(function () use ($data, $documentName, $fileInfo, $fileType, $metadata, $projectId, $tenantId, $user, $versionNumber) {
+                $document = Document::create([
+                    'tenant_id' => $tenantId,
+                    'project_id' => $projectId,
+                    'uploaded_by' => $user->id,
+                    'created_by' => $user->id,
+                    'updated_by' => $user->id,
+                    'name' => $documentName,
+                    'title' => $data['title'],
+                    'document_type' => $data['document_type'],
+                    'discipline' => $data['discipline'] ?? null,
+                    'package' => $data['package'] ?? null,
+                    'revision' => $data['revision'] ?? null,
+                    'original_name' => $fileInfo['original_name'],
+                    'file_path' => $fileInfo['path'],
+                    'file_type' => $fileType,
+                    'mime_type' => $fileInfo['mime_type'],
+                    'file_size' => (int) $fileInfo['size'],
+                    'file_hash' => $data['file_hash'] ?? Str::ulid(),
+                    'category' => $data['document_type'] ?? $data['category'] ?? 'general',
+                    'description' => $data['description'] ?? null,
+                    'metadata' => $metadata,
+                    'status' => $data['status'] ?? 'active',
+                    'version' => $versionNumber,
+                    'is_current_version' => true,
+                ]);
 
-            $document = Document::create([
-                'tenant_id' => $tenantId,
-                'project_id' => $projectId,
-                'uploaded_by' => $user->id,
-                'name' => $documentName,
-                'original_name' => $fileInfo['original_name'],
-                'file_path' => $fileInfo['path'],
-                'file_type' => $fileType,
-                'mime_type' => $fileInfo['mime_type'],
-                'file_size' => (int) $fileInfo['size'],
-                'file_hash' => $data['file_hash'] ?? Str::ulid(),
-                'category' => $data['document_type'] ?? $data['category'] ?? 'general',
-                'description' => $data['description'] ?? null,
-                'metadata' => $metadata,
-                'status' => 'active',
-                'version' => $version,
-                'is_current_version' => true,
-                'parent_document_id' => $data['parent_document_id'] ?? null,
-            ]);
+                $version = $this->createVersionRecord(
+                    $document,
+                    $versionNumber,
+                    $user->id,
+                    $fileInfo['path'],
+                    $fileInfo['original_name'],
+                    $fileInfo['mime_type'],
+                    (int) $fileInfo['size'],
+                    $metadata,
+                    null
+                );
+
+                $document->forceFill(['current_version_id' => $version->id])->save();
+
+                return $document->fresh(['currentVersion']);
+            });
 
             return $this->zenaSuccessResponse($document, 'Document uploaded successfully', 201);
         } catch (Throwable $e) {
@@ -154,7 +195,7 @@ class SimpleDocumentController extends Controller
 
     public function show(Request $request, $id)
     {
-        $document = Document::find($id);
+        $document = $this->findDocument($id);
 
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
@@ -165,7 +206,7 @@ class SimpleDocumentController extends Controller
 
     public function download(string $id)
     {
-        $document = Document::find($id);
+        $document = $this->findDocument($id);
 
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
@@ -185,8 +226,13 @@ class SimpleDocumentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'file' => 'required|file|max:10240|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,zip,rar,7z',
-            'version' => 'required|integer|min:1',
+            'version' => 'nullable|integer|min:1',
             'change_notes' => 'nullable|string|max:1000',
+            'document_type' => 'nullable|string|max:100',
+            'discipline' => 'nullable|string|max:100',
+            'package' => 'nullable|string|max:100',
+            'status' => 'nullable|string|max:100',
+            'revision' => 'nullable|string|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -198,7 +244,7 @@ class SimpleDocumentController extends Controller
             return ErrorEnvelopeService::authenticationError();
         }
 
-        $document = Document::find($id);
+        $document = $this->findDocument($id);
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
@@ -221,10 +267,17 @@ class SimpleDocumentController extends Controller
         }
 
         $fileInfo = $uploadResult['file'];
-        $version = (int) $request->input('version');
+        $requestedVersion = $request->input('version');
+        $nextVersion = $this->nextVersionNumber($document);
 
-        $metadata = $document->metadata ?? [];
-        $metadata['document_type'] = $document->document_type;
+        if ($requestedVersion !== null && (int) $requestedVersion !== $nextVersion) {
+            return ErrorEnvelopeService::validationError([
+                'version' => ['Version must match the next sequential version number.'],
+            ]);
+        }
+
+        $versionNumber = $nextVersion;
+        $metadata = $this->buildMetadata($request->all(), $document->metadata ?? []);
         $metadata['change_notes'] = $request->input('change_notes');
 
         $fileType = strtolower(trim((string) ($fileInfo['extension'] ?? '')));
@@ -232,50 +285,64 @@ class SimpleDocumentController extends Controller
             $fileType = 'document';
         }
 
-        $newVersion = Document::create([
-            'tenant_id' => $document->tenant_id,
-            'project_id' => $document->project_id,
-            'uploaded_by' => $user->id,
-            'name' => $document->name,
-            'original_name' => $fileInfo['original_name'],
-            'file_path' => $fileInfo['path'],
-            'file_type' => $fileType,
-            'mime_type' => $fileInfo['mime_type'],
-            'file_size' => (int) $fileInfo['size'],
-            'file_hash' => Str::ulid(),
-            'category' => $document->category ?: ($document->document_type ?: 'general'),
-            'description' => $request->input('change_notes') ?? $document->description,
-            'metadata' => $metadata,
-            'status' => $document->status,
-            'version' => $version,
-            'is_current_version' => true,
-            'parent_document_id' => $document->id,
-        ]);
+        $document = DB::transaction(function () use ($document, $fileInfo, $fileType, $metadata, $request, $user, $versionNumber) {
+            $version = $this->createVersionRecord(
+                $document,
+                $versionNumber,
+                $user->id,
+                $fileInfo['path'],
+                $fileInfo['original_name'],
+                $fileInfo['mime_type'],
+                (int) $fileInfo['size'],
+                $metadata,
+                $request->input('change_notes')
+            );
 
-        return $this->zenaSuccessResponse($newVersion, 'Document version created successfully', 201);
+            $document->forceFill([
+                'uploaded_by' => $user->id,
+                'updated_by' => $user->id,
+                'original_name' => $fileInfo['original_name'],
+                'file_path' => $fileInfo['path'],
+                'file_type' => $fileType,
+                'mime_type' => $fileInfo['mime_type'],
+                'file_size' => (int) $fileInfo['size'],
+                'file_hash' => Str::ulid(),
+                'document_type' => $request->input('document_type', $document->document_type),
+                'discipline' => $request->input('discipline', $document->discipline),
+                'package' => $request->input('package', $document->package),
+                'revision' => $request->input('revision', $document->revision),
+                'status' => $request->input('status', $document->status),
+                'category' => $request->input('document_type', $document->document_type) ?: $document->category,
+                'description' => $document->description,
+                'metadata' => $metadata,
+                'version' => $versionNumber,
+                'current_version_id' => $version->id,
+            ])->save();
+
+            return $document->fresh(['currentVersion']);
+        });
+
+        return $this->zenaSuccessResponse($document, 'Document version created successfully', 201);
     }
 
     public function getVersions(string $id)
     {
-        $document = Document::find($id);
+        $document = $this->findDocument($id);
 
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
 
-        $versions = Document::where(function ($query) use ($document) {
-                $query->where('id', $document->id)
-                      ->orWhere('parent_document_id', $document->id);
-            })
-            ->orderBy('version', 'desc')
+        $versions = $document->versions()
+            ->orderByVersion()
             ->get();
 
         return $this->zenaSuccessResponse($versions);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
-        $document = Document::find($id);
+        $document = $this->findDocument($id);
 
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
@@ -286,7 +353,11 @@ class SimpleDocumentController extends Controller
             'description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string|max:50',
-            'document_type' => 'nullable|in:drawing,specification,contract,report,photo,other',
+            'document_type' => 'nullable|string|max:100',
+            'discipline' => 'nullable|string|max:100',
+            'package' => 'nullable|string|max:100',
+            'status' => 'nullable|string|max:100',
+            'revision' => 'nullable|string|max:50',
         ]);
 
         if ($validator->fails()) {
@@ -299,6 +370,7 @@ class SimpleDocumentController extends Controller
 
         if (isset($data['title'])) {
             $updatePayload['name'] = $data['title'];
+            $updatePayload['title'] = $data['title'];
         }
 
         if (array_key_exists('description', $data)) {
@@ -306,8 +378,29 @@ class SimpleDocumentController extends Controller
         }
 
         if (isset($data['document_type'])) {
+            $updatePayload['document_type'] = $data['document_type'];
             $metadata['document_type'] = $data['document_type'];
             $updatePayload['category'] = $data['document_type'];
+        }
+
+        if (array_key_exists('discipline', $data)) {
+            $updatePayload['discipline'] = $data['discipline'];
+            $metadata['discipline'] = $data['discipline'];
+        }
+
+        if (array_key_exists('package', $data)) {
+            $updatePayload['package'] = $data['package'];
+            $metadata['package'] = $data['package'];
+        }
+
+        if (array_key_exists('status', $data)) {
+            $updatePayload['status'] = $data['status'];
+            $metadata['status'] = $data['status'];
+        }
+
+        if (array_key_exists('revision', $data)) {
+            $updatePayload['revision'] = $data['revision'];
+            $metadata['revision'] = $data['revision'];
         }
 
         if (isset($data['tags'])) {
@@ -319,6 +412,7 @@ class SimpleDocumentController extends Controller
         }
 
         if (!empty($updatePayload)) {
+            $updatePayload['updated_by'] = Auth::id();
             $document->update($updatePayload);
         }
 
@@ -327,20 +421,35 @@ class SimpleDocumentController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        $document = Document::find($id);
+        $document = $this->findDocument($id);
 
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
 
         $disk = config('filesystems.default', 'local');
-        if ($document->file_path && Storage::disk($disk)->exists($document->file_path)) {
-            Storage::disk($disk)->delete($document->file_path);
+        $paths = $document->versions()->pluck('file_path')
+            ->push($document->file_path)
+            ->filter()
+            ->unique()
+            ->values();
+
+        foreach ($paths as $path) {
+            if (Storage::disk($disk)->exists($path)) {
+                Storage::disk($disk)->delete($path);
+            }
         }
 
         $document->delete();
 
         return $this->zenaSuccessResponse(null, 'Document deleted successfully');
+    }
+
+    private function findDocument(string $id): ?Document
+    {
+        return Document::query()
+            ->with('currentVersion')
+            ->find($id);
     }
 
     private function resolvePerPage(Request $request): int
@@ -351,5 +460,60 @@ class SimpleDocumentController extends Controller
         }
 
         return min($perPage, self::MAX_PER_PAGE);
+    }
+
+    private function buildMetadata(array $input, array $base = []): array
+    {
+        $metadata = $base;
+
+        if (isset($input['metadata']) && is_array($input['metadata'])) {
+            $metadata = array_merge($metadata, $input['metadata']);
+        }
+
+        foreach (['document_type', 'discipline', 'package', 'status', 'revision'] as $field) {
+            if (array_key_exists($field, $input)) {
+                $metadata[$field] = $input[$field];
+            }
+        }
+
+        if (array_key_exists('tags', $input)) {
+            $metadata['tags'] = $input['tags'] ?? [];
+        }
+
+        return $metadata;
+    }
+
+    private function nextVersionNumber(Document $document): int
+    {
+        $latestVersion = (int) $document->versions()->max('version_number');
+        $currentVersion = (int) $document->version;
+
+        return max($latestVersion, $currentVersion) + 1;
+    }
+
+    private function createVersionRecord(
+        Document $document,
+        int $versionNumber,
+        string $userId,
+        string $filePath,
+        string $originalName,
+        string $mimeType,
+        int $fileSize,
+        array $metadata,
+        ?string $comment
+    ): DocumentVersion {
+        return DocumentVersion::create([
+            'document_id' => $document->id,
+            'version_number' => $versionNumber,
+            'file_path' => $filePath,
+            'storage_driver' => config('filesystems.default', 'local'),
+            'comment' => $comment,
+            'metadata' => array_merge($metadata, [
+                'original_filename' => $originalName,
+                'mime_type' => $mimeType,
+                'size' => $fileSize,
+            ]),
+            'created_by' => $userId,
+        ]);
     }
 }

@@ -493,11 +493,16 @@ Route::group([], function () {
         | Document Management Routes
         |--------------------------------------------------------------------------
         */
-        Route::apiResource('documents', \App\Http\Controllers\Api\SimpleDocumentController::class);
         Route::prefix('documents')->group(function () {
-            Route::get('{document}/download', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'download']);
-            Route::post('{document}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'createVersion']);
-            Route::get('{document}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'getVersions']);
+            Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])->middleware('rbac:document.view');
+            Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])->middleware('rbac:document.create');
+            Route::get('{document}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])->middleware('rbac:document.view');
+            Route::put('{document}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->middleware('rbac:document.update');
+            Route::patch('{document}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->middleware('rbac:document.update');
+            Route::delete('{document}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->middleware('rbac:document.delete');
+            Route::get('{document}/download', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'download'])->middleware('rbac:document.view');
+            Route::post('{document}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'createVersion'])->middleware('rbac:document.update');
+            Route::get('{document}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'getVersions'])->middleware('rbac:document.view');
         });
         
         /*

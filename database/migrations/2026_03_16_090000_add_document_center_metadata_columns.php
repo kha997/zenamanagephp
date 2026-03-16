@@ -15,19 +15,19 @@ return new class extends Migration
 
         Schema::table('documents', function (Blueprint $table) {
             if (!Schema::hasColumn('documents', 'document_type')) {
-                $table->string('document_type')->nullable()->after('title');
+                $table->string('document_type')->nullable();
             }
 
             if (!Schema::hasColumn('documents', 'discipline')) {
-                $table->string('discipline')->nullable()->after('document_type');
+                $table->string('discipline')->nullable();
             }
 
             if (!Schema::hasColumn('documents', 'package')) {
-                $table->string('package')->nullable()->after('discipline');
+                $table->string('package')->nullable();
             }
 
             if (!Schema::hasColumn('documents', 'revision')) {
-                $table->string('revision')->nullable()->after('status');
+                $table->string('revision')->nullable();
             }
         });
 
@@ -50,12 +50,17 @@ return new class extends Migration
         $this->dropIndex('documents', 'documents_tenant_status_lookup_index');
         $this->dropIndex('documents', 'documents_tenant_revision_index');
 
-        Schema::table('documents', function (Blueprint $table) {
-            foreach (['revision', 'package', 'discipline', 'document_type'] as $column) {
-                if (Schema::hasColumn('documents', $column)) {
-                    $table->dropColumn($column);
-                }
-            }
+        $columnsToDrop = array_values(array_filter(
+            ['revision', 'package', 'discipline', 'document_type'],
+            fn (string $column): bool => Schema::hasColumn('documents', $column)
+        ));
+
+        if ($columnsToDrop === []) {
+            return;
+        }
+
+        Schema::table('documents', function (Blueprint $table) use ($columnsToDrop) {
+            $table->dropColumn($columnsToDrop);
         });
     }
 

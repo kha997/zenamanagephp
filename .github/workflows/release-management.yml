@@ -56,7 +56,7 @@ jobs:
         echo "VERSION=$VERSION" >> $GITHUB_ENV
 
     - name: Create release
-      uses: actions/github-script@v6
+      uses: actions/github-script@v8
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -166,7 +166,7 @@ jobs:
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Update release with changelog
-      uses: actions/github-script@v6
+      uses: actions/github-script@v8
       with:
         script: |
           const { data: release } = await github.rest.repos.getReleaseByTag({

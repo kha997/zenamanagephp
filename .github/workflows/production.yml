@@ -153,13 +153,32 @@ jobs:
       - name: Notify deployment status
         if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
-        uses: 8398a7/action-slack@v3
+        uses: slackapi/slack-github-action@v2
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,workflow,job,ref,took
-          success_message: ":white_check_mark: Succeeded GitHub Actions"
-          cancelled_message: ":warning: Cancelled GitHub Actions"
-          failure_message: ":no_entry: Failed GitHub Actions"
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "${{ job.status == 'success' && ':white_check_mark: Succeeded GitHub Actions' || job.status == 'cancelled' && ':warning: Cancelled GitHub Actions' || ':no_entry: Failed GitHub Actions' }}"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: "${{ job.status == 'success' && ':white_check_mark: Succeeded GitHub Actions' || job.status == 'cancelled' && ':warning: Cancelled GitHub Actions' || ':no_entry: Failed GitHub Actions' }}"
+              - type: section
+                fields:
+                  - type: mrkdwn
+                    text: "*repo:*\n${{ github.repository }}"
+                  - type: mrkdwn
+                    text: "*message:*\n${{ github.event.head_commit.message || github.event.release.name || github.event_name }}"
+                  - type: mrkdwn
+                    text: "*commit:*\n${{ github.sha }}"
+                  - type: mrkdwn
+                    text: "*author:*\n${{ github.actor }}"
+                  - type: mrkdwn
+                    text: "*workflow:*\n${{ github.workflow }}"
+                  - type: mrkdwn
+                    text: "*job:*\n${{ github.job }}"
+                  - type: mrkdwn
+                    text: "*ref:*\n${{ github.ref }}"

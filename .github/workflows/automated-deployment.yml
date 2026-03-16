@@ -124,17 +124,38 @@ jobs:
     - name: Notify deployment success
       if: ${{ steps.check-staging-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
-      uses: 8398a7/action-slack@v3
+      uses: slackapi/slack-github-action@v2
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        status: success
-        channel: '#deployments'
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-        success_message: ":white_check_mark: Succeeded GitHub Actions"
-        cancelled_message: ":warning: Cancelled GitHub Actions"
-        failure_message: ":no_entry: Failed GitHub Actions"
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        webhook-type: incoming-webhook
+        payload: |
+          channel: "#deployments"
+          text: ":white_check_mark: Succeeded GitHub Actions"
+          blocks:
+            - type: section
+              text:
+                type: mrkdwn
+                text: ":white_check_mark: Succeeded GitHub Actions"
+            - type: section
+              fields:
+                - type: mrkdwn
+                  text: "*repo:*\n${{ github.repository }}"
+                - type: mrkdwn
+                  text: "*message:*\n${{ github.event.head_commit.message || github.event.release.name || github.event_name }}"
+                - type: mrkdwn
+                  text: "*commit:*\n${{ github.sha }}"
+                - type: mrkdwn
+                  text: "*author:*\n${{ github.actor }}"
+                - type: mrkdwn
+                  text: "*action:*\n${{ github.action }}"
+                - type: mrkdwn
+                  text: "*eventName:*\n${{ github.event_name }}"
+                - type: mrkdwn
+                  text: "*ref:*\n${{ github.ref }}"
+                - type: mrkdwn
+                  text: "*workflow:*\n${{ github.workflow }}"
 
   deploy-production:
     name: Deploy to Production
@@ -255,17 +276,38 @@ jobs:
     - name: Notify deployment success
       if: ${{ steps.check-production-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
-      uses: 8398a7/action-slack@v3
+      uses: slackapi/slack-github-action@v2
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        status: success
-        channel: '#deployments'
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-        success_message: ":white_check_mark: Succeeded GitHub Actions"
-        cancelled_message: ":warning: Cancelled GitHub Actions"
-        failure_message: ":no_entry: Failed GitHub Actions"
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        webhook-type: incoming-webhook
+        payload: |
+          channel: "#deployments"
+          text: ":white_check_mark: Succeeded GitHub Actions"
+          blocks:
+            - type: section
+              text:
+                type: mrkdwn
+                text: ":white_check_mark: Succeeded GitHub Actions"
+            - type: section
+              fields:
+                - type: mrkdwn
+                  text: "*repo:*\n${{ github.repository }}"
+                - type: mrkdwn
+                  text: "*message:*\n${{ github.event.head_commit.message || github.event.release.name || github.event_name }}"
+                - type: mrkdwn
+                  text: "*commit:*\n${{ github.sha }}"
+                - type: mrkdwn
+                  text: "*author:*\n${{ github.actor }}"
+                - type: mrkdwn
+                  text: "*action:*\n${{ github.action }}"
+                - type: mrkdwn
+                  text: "*eventName:*\n${{ github.event_name }}"
+                - type: mrkdwn
+                  text: "*ref:*\n${{ github.ref }}"
+                - type: mrkdwn
+                  text: "*workflow:*\n${{ github.workflow }}"
 
   rollback:
     name: Rollback Deployment
@@ -320,17 +362,38 @@ jobs:
     - name: Notify rollback
       if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
-      uses: 8398a7/action-slack@v3
+      uses: slackapi/slack-github-action@v2
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        status: failure
-        channel: '#deployments'
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-        success_message: ":white_check_mark: Succeeded GitHub Actions"
-        cancelled_message: ":warning: Cancelled GitHub Actions"
-        failure_message: ":no_entry: Failed GitHub Actions"
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        webhook-type: incoming-webhook
+        payload: |
+          channel: "#deployments"
+          text: ":no_entry: Failed GitHub Actions"
+          blocks:
+            - type: section
+              text:
+                type: mrkdwn
+                text: ":no_entry: Failed GitHub Actions"
+            - type: section
+              fields:
+                - type: mrkdwn
+                  text: "*repo:*\n${{ github.repository }}"
+                - type: mrkdwn
+                  text: "*message:*\n${{ github.event.head_commit.message || github.event.release.name || github.event_name }}"
+                - type: mrkdwn
+                  text: "*commit:*\n${{ github.sha }}"
+                - type: mrkdwn
+                  text: "*author:*\n${{ github.actor }}"
+                - type: mrkdwn
+                  text: "*action:*\n${{ github.action }}"
+                - type: mrkdwn
+                  text: "*eventName:*\n${{ github.event_name }}"
+                - type: mrkdwn
+                  text: "*ref:*\n${{ github.ref }}"
+                - type: mrkdwn
+                  text: "*workflow:*\n${{ github.workflow }}"
 
   blue-green-deployment:
     name: Blue-Green Deployment
@@ -461,17 +524,38 @@ jobs:
     - name: Notify blue-green deployment success
       if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
-      uses: 8398a7/action-slack@v3
+      uses: slackapi/slack-github-action@v2
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        status: success
-        channel: '#deployments'
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-        success_message: ":white_check_mark: Succeeded GitHub Actions"
-        cancelled_message: ":warning: Cancelled GitHub Actions"
-        failure_message: ":no_entry: Failed GitHub Actions"
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        webhook-type: incoming-webhook
+        payload: |
+          channel: "#deployments"
+          text: ":white_check_mark: Succeeded GitHub Actions"
+          blocks:
+            - type: section
+              text:
+                type: mrkdwn
+                text: ":white_check_mark: Succeeded GitHub Actions"
+            - type: section
+              fields:
+                - type: mrkdwn
+                  text: "*repo:*\n${{ github.repository }}"
+                - type: mrkdwn
+                  text: "*message:*\n${{ github.event.head_commit.message || github.event.release.name || github.event_name }}"
+                - type: mrkdwn
+                  text: "*commit:*\n${{ github.sha }}"
+                - type: mrkdwn
+                  text: "*author:*\n${{ github.actor }}"
+                - type: mrkdwn
+                  text: "*action:*\n${{ github.action }}"
+                - type: mrkdwn
+                  text: "*eventName:*\n${{ github.event_name }}"
+                - type: mrkdwn
+                  text: "*ref:*\n${{ github.ref }}"
+                - type: mrkdwn
+                  text: "*workflow:*\n${{ github.workflow }}"
 
   canary-deployment:
     name: Canary Deployment
@@ -620,14 +704,35 @@ jobs:
     - name: Notify canary deployment success
       if: ${{ steps.check-canary-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
       continue-on-error: true
-      uses: 8398a7/action-slack@v3
+      uses: slackapi/slack-github-action@v2
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        status: success
-        channel: '#deployments'
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-        success_message: ":white_check_mark: Succeeded GitHub Actions"
-        cancelled_message: ":warning: Cancelled GitHub Actions"
-        failure_message: ":no_entry: Failed GitHub Actions"
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+        webhook-type: incoming-webhook
+        payload: |
+          channel: "#deployments"
+          text: ":white_check_mark: Succeeded GitHub Actions"
+          blocks:
+            - type: section
+              text:
+                type: mrkdwn
+                text: ":white_check_mark: Succeeded GitHub Actions"
+            - type: section
+              fields:
+                - type: mrkdwn
+                  text: "*repo:*\n${{ github.repository }}"
+                - type: mrkdwn
+                  text: "*message:*\n${{ github.event.head_commit.message || github.event.release.name || github.event_name }}"
+                - type: mrkdwn
+                  text: "*commit:*\n${{ github.sha }}"
+                - type: mrkdwn
+                  text: "*author:*\n${{ github.actor }}"
+                - type: mrkdwn
+                  text: "*action:*\n${{ github.action }}"
+                - type: mrkdwn
+                  text: "*eventName:*\n${{ github.event_name }}"
+                - type: mrkdwn
+                  text: "*ref:*\n${{ github.ref }}"
+                - type: mrkdwn
+                  text: "*workflow:*\n${{ github.workflow }}"

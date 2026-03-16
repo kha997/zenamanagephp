@@ -81,10 +81,21 @@ epics:
       - id: S1.3
         title: "Template preview & dry-run"
         priority: P1
-        status: todo
+        status: done
         acceptance_criteria:
           - "Preview returns planned phases/tasks/checklists/docs."
           - "Dry-run does not write DB."
+        updated_at: 2026-03-16
+        evidence:
+          pr: "#132"
+          pr_url: "https://github.com/kha997/zenamanagephp/pull/132"
+          merged_main_head: "b0b72f4053421496aadab3a2b3a888f696f1495b"
+          route: "POST /api/zena/work-templates/{id}/preview"
+          dry_run: "project/component apply routes support dry_run=true with no DB writes"
+          tests: "php artisan test tests/Feature/Api/WorkTemplateMvpApiTest.php (20 passed)"
+        notes:
+          "Preview returns planned_phases/planned_tasks/planned_checklists/planned_docs"
+          "Dry-run reuses apply planning path but does not create work_instances, work_instance_steps, tasks, task_assignments, or audit rows"
       - id: S1.4
         title: "Seed 3 baseline templates: Design / Construction / Inspection"
         priority: P1

@@ -86,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: build-assets
-          path: public/build/
+          path: frontend/dist/
 
   deploy:
     needs: [test, build]

@@ -99,9 +99,21 @@ epics:
       - id: S1.4
         title: "Seed 3 baseline templates: Design / Construction / Inspection"
         priority: P1
-        status: todo
+        status: done
         acceptance_criteria:
           - "Applying each template yields an end-to-end runnable workflow with notifications."
+        updated_at: 2026-03-16
+        evidence:
+          pr: "#134"
+          pr_url: "https://github.com/kha997/zenamanagephp/pull/134"
+          merged_main_head: "6c202e1b64541b27c2d685f897e63b7ed7b1b9ef"
+          seeder: "database/seeders/WorkTemplateBaselineSeeder.php"
+          templates: "WT-BL-DESIGN, WT-BL-CONSTRUCTION, WT-BL-INSPECTION"
+          tests: "php artisan test tests/Feature/Api/WorkTemplateBaselineSeederTest.php (2 passed); WorkTemplateMvpApiTest.php (20 passed); ZenaSeederWiringInvariantTest.php (1 passed)"
+        notes:
+          - "Seeds exactly 3 published immutable baseline templates with stable keys"
+          - "Templates support existing preview, dry-run, and apply flows without WT/WI path changes"
+          - "DatabaseSeeder now wires WorkTemplateBaselineSeeder"
 
   - id: EPIC-2
     name: Document Center (DocumentManagement v2)

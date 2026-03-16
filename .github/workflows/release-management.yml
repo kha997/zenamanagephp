@@ -408,7 +408,7 @@ jobs:
 
     - name: Clean up old Docker images
       if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -421,7 +421,7 @@ jobs:
 
     - name: Clean up old backups
       if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}

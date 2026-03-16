@@ -92,7 +92,7 @@ jobs:
 
     - name: Deploy to staging server
       if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.STAGING_HOST }}
         username: ${{ secrets.STAGING_USERNAME }}

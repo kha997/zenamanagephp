@@ -36,7 +36,7 @@ jobs:
 
     - name: Deploy to production server
       if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v0.1.5
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USER }}

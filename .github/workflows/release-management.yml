@@ -36,7 +36,7 @@ jobs:
     steps:
     - name: Checkout code
       if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -88,7 +88,7 @@ jobs:
     steps:
     - name: Checkout code
       if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -141,7 +141,7 @@ jobs:
     steps:
     - name: Checkout code
       if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -193,7 +193,7 @@ jobs:
     steps:
     - name: Checkout code
       if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -263,7 +263,7 @@ jobs:
 
     - name: Checkout code
       if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Deploy to production server
       if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
@@ -340,7 +340,7 @@ jobs:
 
     - name: Checkout code
       if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Rollback to previous version
       if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
@@ -404,7 +404,7 @@ jobs:
         fi
 
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Clean up old Docker images
       if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}

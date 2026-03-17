@@ -433,7 +433,7 @@ jobs:
         TARGET="vendor/laravel/dusk/bin/chromedriver-linux"
         "$TARGET" --version || true
         : > /tmp/chromedriver.log
-        nohup "$TARGET" --port=9515 --verbose --log-path=/tmp/chromedriver.log >/tmp/chromedriver.out 2>&1 &
+        nohup "$TARGET" --port=9515 --verbose --browser-path="$CHROME_BIN" --log-path=/tmp/chromedriver.log >/tmp/chromedriver.out 2>&1 &
 
         DRIVER_URL=""
         for i in $(seq 1 60); do

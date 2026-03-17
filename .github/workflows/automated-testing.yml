@@ -164,9 +164,9 @@ jobs:
       run: echo "::group::Upload coverage"
 
     - name: Upload Unit Test Coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
-        file: coverage-unit.xml
+        files: coverage-unit.xml
         flags: unittests
         name: unit-tests
 
@@ -520,9 +520,9 @@ jobs:
       run: echo "::group::Upload coverage"
 
     - name: Upload Feature Test Coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
-        file: coverage-feature.xml
+        files: coverage-feature.xml
         flags: featuretests
         name: feature-tests
 
@@ -950,9 +950,9 @@ jobs:
       run: echo "::group::Upload coverage"
 
     - name: Upload Integration Test Coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
-        file: coverage-integration.xml
+        files: coverage-integration.xml
         flags: integrationtests
         name: integration-tests
 

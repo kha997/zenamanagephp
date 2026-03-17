@@ -20,29 +20,38 @@ Route::prefix('v1/documents')
         
         // Simple Document CRUD routes (no middleware for testing)
         Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])
+            ->middleware('rbac:document.view')
             ->name('documents.index');
             
         Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])
+            ->middleware('rbac:document.create')
             ->name('documents.store');
             
         Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])
+            ->middleware('rbac:document.view')
             ->name('documents.show');
 
         Route::get('/{id}/download', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'download'])
+            ->middleware('rbac:document.view')
             ->name('documents.download');
 
         Route::post('/{id}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'createVersion'])
+            ->middleware('rbac:document.update')
             ->name('documents.versions.store');
 
         Route::get('/{id}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'getVersions'])
+            ->middleware('rbac:document.view')
             ->name('documents.versions.index');
         
         Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])
+            ->middleware('rbac:document.update')
             ->name('documents.update');
             
         Route::patch('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])
+            ->middleware('rbac:document.update')
             ->name('documents.update.patch');
             
         Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])
+            ->middleware('rbac:document.delete')
             ->name('documents.destroy');
     });

@@ -40,9 +40,14 @@ class DocumentApiTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->user = $this->createRbacAdminUser($this->tenant, [
+        $this->user = $this->createTenantUser($this->tenant, [
             'name' => 'Document User',
             'email' => 'documents@example.com',
+        ], ['designer'], [
+            'document.view',
+            'document.create',
+            'document.update',
+            'document.delete',
         ]);
 
         $token = $this->user->createToken('document-test-token')->plainTextToken;

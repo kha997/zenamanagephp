@@ -6,6 +6,7 @@ namespace Src\Foundation;
 use Src\Foundation\Helpers\AuthHelper;
 
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 /**
  * Event Bus cho hệ thống sự kiện chuẩn zenamanage
@@ -146,6 +147,27 @@ class EventBus {
         }
         
         return $results;
+    }
+
+    /**
+     * Phát sự kiện sau khi transaction hiện tại commit xong.
+     * Nếu không có transaction đang mở thì phát ngay lập tức.
+     *
+     * @param string $eventName
+     * @param mixed $payload
+     * @return void
+     */
+    public static function publishAfterCommit(string $eventName, $payload): void {
+        self::validateEventName($eventName);
+
+        if (DB::transactionLevel() <= 0) {
+            self::publish($eventName, $payload);
+            return;
+        }
+
+        DB::afterCommit(static function () use ($eventName, $payload): void {
+            self::publish($eventName, $payload);
+        });
     }
     
     /**

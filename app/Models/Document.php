@@ -79,6 +79,10 @@ class Document extends Model
         'updated_by',
         'name',
         'title',
+        'document_type',
+        'discipline',
+        'package',
+        'revision',
         'original_name',
         'file_path',
         'file_type',
@@ -162,7 +166,7 @@ class Document extends Model
      */
     public function versions(): HasMany
     {
-        return $this->hasMany(DocumentVersion::class)->orderBy('version_number', 'desc');
+        return $this->hasMany(DocumentVersion::class, 'document_id')->orderBy('version_number', 'desc');
     }
 
     /**
@@ -326,6 +330,33 @@ class Document extends Model
         }
 
         return $this->attributes['category'] ?? null;
+    }
+
+    public function getDisciplineAttribute(): ?string
+    {
+        if (!empty($this->attributes['discipline'])) {
+            return $this->attributes['discipline'];
+        }
+
+        return $this->metadata['discipline'] ?? null;
+    }
+
+    public function getPackageAttribute(): ?string
+    {
+        if (!empty($this->attributes['package'])) {
+            return $this->attributes['package'];
+        }
+
+        return $this->metadata['package'] ?? null;
+    }
+
+    public function getRevisionAttribute(): ?string
+    {
+        if (!empty($this->attributes['revision'])) {
+            return $this->attributes['revision'];
+        }
+
+        return $this->metadata['revision'] ?? null;
     }
 
     /**

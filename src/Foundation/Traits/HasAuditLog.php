@@ -93,6 +93,6 @@ trait HasAuditLog {
             'action' => $action
         ];
         
-        EventBus::publish($eventName, $payload);
+        EventBus::publishAfterCommit($eventName, $payload);
     }
 }

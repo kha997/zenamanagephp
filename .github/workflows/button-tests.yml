@@ -256,41 +256,30 @@ jobs:
         if-no-files-found: ignore
 
     - name: Setup Chrome
-      uses: browser-actions/setup-chrome@v1
+      id: setup-chrome
+      uses: browser-actions/setup-chrome@v2
+      with:
+        install-chromedriver: true
 
-    - name: Install ChromeDriver
+    - name: Wire Chrome and ChromeDriver
       run: |
         set -euxo pipefail
-
-        php artisan dusk:chrome-driver --detect || true
-        ls -la vendor/laravel/dusk/bin || true
-
+        mkdir -p vendor/laravel/dusk/bin
         TARGET="vendor/laravel/dusk/bin/chromedriver-linux"
-        CANDIDATE="vendor/laravel/dusk/bin/chromedriver-linux64/chromedriver"
+        CHROME_BIN="${{ steps.setup-chrome.outputs.chrome-path }}"
+        CHROMEDRIVER_PATH="${{ steps.setup-chrome.outputs.chromedriver-path }}"
 
-        # Prefer the binary installed by dusk (linux64) if present
-        if [ ! -f "$TARGET" ] && [ -f "$CANDIDATE" ]; then
-          ln -sf "$CANDIDATE" "$TARGET"
-        fi
+        test -n "$CHROME_BIN"
+        test -x "$CHROME_BIN"
+        test -n "$CHROMEDRIVER_PATH"
+        test -x "$CHROMEDRIVER_PATH"
 
-        # Fallback: install system chromedriver and link it to the path Dusk expects
-        if [ ! -f "$TARGET" ]; then
-          sudo apt-get update
-          sudo apt-get install -y chromium-chromedriver || sudo apt-get install -y chromium-driver
-          CHROMEDRIVER_PATH="$(command -v chromedriver || find /usr -type f -name chromedriver | head -n 1)"
-          test -n "$CHROMEDRIVER_PATH"
-          ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
-        fi
+        echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
+        echo "CHROMEDRIVER_PATH=$CHROMEDRIVER_PATH" >> "$GITHUB_ENV"
+        ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
 
         test -f "$TARGET"
         test -x "$TARGET"
-        if [ ! -f "$TARGET" ]; then
-          sudo apt-get update
-          sudo apt-get install -y chromium-chromedriver || sudo apt-get install -y chromium-driver
-          CHROMEDRIVER_PATH="$(command -v chromedriver || find /usr -type f -name chromedriver | head -n 1)"
-          test -n "$CHROMEDRIVER_PATH"
-          ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
-        fi
 
     
     - name: Setup environment

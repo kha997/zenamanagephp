@@ -153,13 +153,30 @@ jobs:
       - name: Notify deployment status
         if: ${{ always() && env.SLACK_WEBHOOK_URL != '' }}
         continue-on-error: true
-        uses: 8398a7/action-slack@v3
+        uses: slackapi/slack-github-action@v2.1.1
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,workflow,job,ref,took
-          success_message: ":white_check_mark: Succeeded GitHub Actions"
-          cancelled_message: ":warning: Cancelled GitHub Actions"
-          failure_message: ":no_entry: Failed GitHub Actions"
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: ":information_source: Production deployment status: ${{ needs.deploy.result }}"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: "*Production deployment status*: `${{ needs.deploy.result }}`"
+              - type: section
+                fields:
+                  - type: mrkdwn
+                    text: "*Repository:*\n${{ github.repository }}"
+                  - type: mrkdwn
+                    text: "*Workflow:*\n${{ github.workflow }}"
+                  - type: mrkdwn
+                    text: "*Job:*\nnotify"
+                  - type: mrkdwn
+                    text: "*Ref:*\n${{ github.ref_name }}"
+                  - type: mrkdwn
+                    text: "*Actor:*\n${{ github.actor }}"
+                  - type: mrkdwn
+                    text: "*SHA:*\n${{ github.sha }}"

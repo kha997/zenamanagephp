@@ -32,13 +32,13 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Verify SSOT baselines are tracked
       run: bash scripts/ci/verify-ssot-baselines.sh
 
     - name: Setup Node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v5
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: npm
@@ -82,7 +82,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -102,7 +102,7 @@ jobs:
       run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -225,7 +225,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -237,7 +237,7 @@ jobs:
         extensions: mbstring, xml, ctype, iconv, intl, redis, gd, zip, bcmath, opcache, pdo_sqlite, sqlite3
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -318,7 +318,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -330,7 +330,7 @@ jobs:
         extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, redis, gd, zip, bcmath, opcache
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -437,7 +437,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -457,7 +457,7 @@ jobs:
       run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -608,7 +608,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -628,7 +628,7 @@ jobs:
       run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -731,7 +731,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -751,7 +751,7 @@ jobs:
       run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -867,7 +867,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -887,7 +887,7 @@ jobs:
       run: php -r "if (!extension_loaded('pcov')) { fwrite(STDERR, 'PCOV missing\n'); exit(1);} echo 'PCOV loaded\n';"
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -1046,7 +1046,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -1062,7 +1062,7 @@ jobs:
           pcov.exclude="~vendor~"
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -1180,7 +1180,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh
@@ -1196,7 +1196,7 @@ jobs:
           pcov.exclude="~vendor~"
 
     - name: Cache Composer dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: vendor
         key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
@@ -1306,7 +1306,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Docs lint (no unsupported commands)
       run: bash scripts/ci/docs-lint.sh

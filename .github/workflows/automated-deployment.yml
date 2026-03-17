@@ -54,7 +54,7 @@ jobs:
 
     - name: Checkout code
       if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
       if: ${{ steps.check-staging-secrets.outputs.ready == 'true' }}
@@ -165,7 +165,7 @@ jobs:
 
     - name: Checkout code
       if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
       if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
@@ -296,7 +296,7 @@ jobs:
 
     - name: Checkout code
       if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Rollback to previous version
       if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
@@ -361,7 +361,7 @@ jobs:
 
     - name: Checkout code
       if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
       if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
@@ -502,7 +502,7 @@ jobs:
 
     - name: Checkout code
       if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
       if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}

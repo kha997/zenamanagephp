@@ -38,6 +38,10 @@ abstract class DuskTestCase extends BaseTestCase
                 '--headless=new',
             ]);
         })->all());
+        $chromeBinary = $_ENV['CHROME_BIN'] ?? $_SERVER['CHROME_BIN'] ?? getenv('CHROME_BIN');
+        if (is_string($chromeBinary) && $chromeBinary !== '') {
+            $options->setBinary($chromeBinary);
+        }
 
         $this->waitForChromeDriver($driverUrl);
         return RemoteWebDriver::create(

@@ -270,7 +270,7 @@ jobs:
 
     - name: Deploy to production server
       if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -361,7 +361,7 @@ jobs:
 
     - name: Rollback to previous version
       if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}

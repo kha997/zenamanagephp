@@ -220,7 +220,7 @@ jobs:
 
     - name: Create backup before deployment
       if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -231,7 +231,7 @@ jobs:
 
     - name: Deploy to production server
       if: ${{ steps.check-production-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -329,7 +329,7 @@ jobs:
 
     - name: Rollback to previous version
       if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -441,7 +441,7 @@ jobs:
 
     - name: Deploy to green environment
       if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -471,7 +471,7 @@ jobs:
 
     - name: Switch traffic to green environment
       if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -491,7 +491,7 @@ jobs:
 
     - name: Clean up blue environment
       if: ${{ steps.check-blue-green-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -596,7 +596,7 @@ jobs:
 
     - name: Deploy canary version
       if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -630,7 +630,7 @@ jobs:
 
     - name: Increase canary traffic to 50%
       if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}
@@ -655,7 +655,7 @@ jobs:
 
     - name: Promote canary to full deployment
       if: ${{ steps.check-canary-secrets.outputs.ready == 'true' }}
-      uses: appleboy/ssh-action@v1.0.0
+      uses: appleboy/ssh-action@v1.2.4
       with:
         host: ${{ secrets.PRODUCTION_HOST }}
         username: ${{ secrets.PRODUCTION_USERNAME }}

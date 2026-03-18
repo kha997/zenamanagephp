@@ -32,12 +32,18 @@ abstract class DuskTestCase extends BaseTestCase
         $driverUrl = $this->driverUrl();
         $options = (new ChromeOptions)->addArguments(collect([
             $this->shouldStartMaximized() ? '--start-maximized' : '--window-size=1920,1080',
+            '--no-sandbox',
+            '--disable-dev-shm-usage',
         ])->unless($this->hasHeadlessDisabled(), function (Collection $items) {
             return $items->merge([
                 '--disable-gpu',
                 '--headless=new',
             ]);
         })->all());
+        $chromeBinary = $_ENV['CHROME_BIN'] ?? $_SERVER['CHROME_BIN'] ?? getenv('CHROME_BIN');
+        if (is_string($chromeBinary) && $chromeBinary !== '') {
+            $options->setBinary($chromeBinary);
+        }
 
         $this->waitForChromeDriver($driverUrl);
         return RemoteWebDriver::create(

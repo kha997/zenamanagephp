@@ -13,6 +13,8 @@ class TenantIsolationV1ContractTest extends TestCase
         'api/v1/notifications',
         'api/v1/notification-rules',
         'api/v1/work-template/api-info',
+        'api/v1/universal-frame',
+        'api/v1/final-integration',
     ];
 
     public function test_v1_target_anchors_require_tenant_isolation_middleware(): void

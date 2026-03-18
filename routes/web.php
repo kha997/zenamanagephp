@@ -74,8 +74,10 @@ if (app()->environment(['local', 'testing'])) {
 
 // Universal Frame API Routes (moved to /api/v1/universal-frame)
 Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function () {
+    $universalFrameHardeningStack = ['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'];
+
     // KPI Routes
-    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::get('/kpis', [App\Http\Controllers\KpiController::class, 'index'])->name('api.kpis.index');
         Route::get('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'preferences'])->name('api.kpis.preferences');
         Route::post('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'savePreferences'])->name('api.kpis.save-preferences');
@@ -84,17 +86,17 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     });
     
     // Alert Routes
-    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::get('/alerts', [App\Http\Controllers\AlertController::class, 'index'])->name('api.alerts.index');
         Route::get('/alerts/stats', [App\Http\Controllers\AlertController::class, 'stats'])->name('api.alerts.stats');
         Route::post('/alerts/acknowledge', [App\Http\Controllers\AlertController::class, 'acknowledge'])->name('api.alerts.acknowledge');
         Route::post('/alerts/mute', [App\Http\Controllers\AlertController::class, 'mute'])->name('api.alerts.mute');
         Route::post('/alerts/dismiss-all', [App\Http\Controllers\AlertController::class, 'dismissAll'])->name('api.alerts.dismiss-all');
+        Route::post('/alerts/create', [App\Http\Controllers\AlertController::class, 'create'])->name('api.alerts.create');
     });
-    Route::post('/alerts/create', [App\Http\Controllers\AlertController::class, 'create'])->name('api.alerts.create');
     
     // Activity Routes
-    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::get('/activities', [App\Http\Controllers\ActivityController::class, 'index'])->name('api.activities.index');
         Route::get('/activities/by-type', [App\Http\Controllers\ActivityController::class, 'byType'])->name('api.activities.by-type');
         Route::get('/activities/stats', [App\Http\Controllers\ActivityController::class, 'stats'])->name('api.activities.stats');
@@ -102,7 +104,7 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     
     // Smart Tools Routes
     // Search Routes
-    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::post('/search', [App\Http\Controllers\SearchController::class, 'search'])->name('api.search.index');
         Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class, 'suggestions'])->name('api.search.suggestions');
         Route::get('/search/recent', [App\Http\Controllers\SearchController::class, 'recent'])->name('api.search.recent');
@@ -110,20 +112,18 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     });
     
     // Filter Routes
-    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::get('/filters/presets', [App\Http\Controllers\FilterController::class, 'presets'])->name('api.filters.presets');
         Route::get('/filters/deep', [App\Http\Controllers\FilterController::class, 'deepFilters'])->name('api.filters.deep');
         Route::get('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'savedViews'])->name('api.filters.saved-views');
-    });
-    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
         Route::post('/filters/saved-views', [App\Http\Controllers\FilterController::class, 'saveView'])->name('api.filters.save-view');
         Route::delete('/filters/saved-views/{viewId}', [App\Http\Controllers\FilterController::class, 'deleteView'])->name('api.filters.delete-view');
+        Route::post('/filters/apply', [App\Http\Controllers\FilterController::class, 'applyFilters'])->name('api.filters.apply');
     });
-    Route::post('/filters/apply', [App\Http\Controllers\FilterController::class, 'applyFilters'])->name('api.filters.apply');
     
     // Analysis Routes
-    Route::post('/analysis', [App\Http\Controllers\AnalysisController::class, 'index'])->name('api.analysis.index');
-    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::middleware($universalFrameHardeningStack)->group(function () {
+        Route::post('/analysis', [App\Http\Controllers\AnalysisController::class, 'index'])->name('api.analysis.index');
         Route::get('/analysis/{context}', [App\Http\Controllers\AnalysisController::class, 'context'])->name('api.analysis.context');
         Route::get('/analysis/{context}/metrics', [App\Http\Controllers\AnalysisController::class, 'metrics'])->name('api.analysis.metrics');
         Route::get('/analysis/{context}/charts', [App\Http\Controllers\AnalysisController::class, 'charts'])->name('api.analysis.charts');
@@ -131,18 +131,18 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     });
     
     // Export Routes
-    Route::post('/export', [App\Http\Controllers\ExportController::class, 'index'])->name('api.export.index');
-    Route::post('/export/projects', [App\Http\Controllers\ExportController::class, 'projects'])->name('api.export.projects');
-    Route::post('/export/tasks', [App\Http\Controllers\ExportController::class, 'tasks'])->name('api.export.tasks');
-    Route::post('/export/documents', [App\Http\Controllers\ExportController::class, 'documents'])->name('api.export.documents');
-    Route::post('/export/users', [App\Http\Controllers\ExportController::class, 'users'])->name('api.export.users');
-    Route::post('/export/tenants', [App\Http\Controllers\ExportController::class, 'tenants'])->name('api.export.tenants');
-    Route::middleware(['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
+    Route::middleware($universalFrameHardeningStack)->group(function () {
+        Route::post('/export', [App\Http\Controllers\ExportController::class, 'index'])->name('api.export.index');
+        Route::post('/export/projects', [App\Http\Controllers\ExportController::class, 'projects'])->name('api.export.projects');
+        Route::post('/export/tasks', [App\Http\Controllers\ExportController::class, 'tasks'])->name('api.export.tasks');
+        Route::post('/export/documents', [App\Http\Controllers\ExportController::class, 'documents'])->name('api.export.documents');
+        Route::post('/export/users', [App\Http\Controllers\ExportController::class, 'users'])->name('api.export.users');
+        Route::post('/export/tenants', [App\Http\Controllers\ExportController::class, 'tenants'])->name('api.export.tenants');
         Route::get('/export/history', [App\Http\Controllers\ExportController::class, 'history'])->name('api.export.history');
-    });
-    Route::delete('/export/{filename}', [App\Http\Controllers\ExportController::class, 'delete'])->name('api.export.delete');
+        Route::delete('/export/{filename}', [App\Http\Controllers\ExportController::class, 'delete'])->name('api.export.delete');
         Route::post('/export/clean-old', [App\Http\Controllers\ExportController::class, 'cleanOld'])->name('api.export.clean-old');
     });
+});
 
     // Accessibility API Routes (moved to /api/v1/accessibility)
     Route::prefix('api/v1/accessibility')->middleware(['auth', 'tenant.isolation', 'rbac', 'input.sanitization', 'error.envelope'])->group(function () {
@@ -169,7 +169,7 @@ Route::prefix('api/v1/performance')->middleware(['auth', 'tenant.isolation', 'rb
 });
 
 // Final Integration & Launch API Routes (moved to /api/v1/final-integration)
-Route::prefix('api/v1/final-integration')->middleware(['auth'])->group(function () {
+Route::prefix('api/v1/final-integration')->middleware(['auth', 'tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'])->group(function () {
     Route::get('/launch-status', [App\Http\Controllers\FinalIntegrationController::class, 'getLaunchStatus'])->name('api.final-integration.launch-status');
     Route::post('/system-integration-checks', [App\Http\Controllers\FinalIntegrationController::class, 'runSystemIntegrationChecks'])->name('api.final-integration.system-integration-checks');
     Route::post('/production-readiness-checks', [App\Http\Controllers\FinalIntegrationController::class, 'runProductionReadinessChecks'])->name('api.final-integration.production-readiness-checks');

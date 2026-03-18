@@ -26,6 +26,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  SLACK_WEBHOOK_RELEASES: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
 
 jobs:
   create-release:
@@ -303,19 +304,33 @@ jobs:
         curl -f https://ws.zenamanage.com/health || exit 1
 
     - name: Notify release deployment success
-      if: ${{ steps.check-release-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_RELEASES != '' }}
       continue-on-error: true
-      uses: 8398a7/action-slack@v3
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: slackapi/slack-github-action@v2.1.1
       with:
-        status: success
-        channel: '#releases'
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-        success_message: ":white_check_mark: Succeeded GitHub Actions"
-        cancelled_message: ":warning: Cancelled GitHub Actions"
-        failure_message: ":no_entry: Failed GitHub Actions"
+        webhook: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
+        webhook-type: incoming-webhook
+        payload: |
+          text: ":white_check_mark: Release deployment succeeded"
+          blocks:
+            - type: section
+              text:
+                type: mrkdwn
+                text: "*Release deployment*: `success`"
+            - type: section
+              fields:
+                - type: mrkdwn
+                  text: "*Repository:*\n${{ github.repository }}"
+                - type: mrkdwn
+                  text: "*Workflow:*\n${{ github.workflow }}"
+                - type: mrkdwn
+                  text: "*Job:*\ndeploy-release"
+                - type: mrkdwn
+                  text: "*Ref:*\n${{ github.ref_name }}"
+                - type: mrkdwn
+                  text: "*Actor:*\n${{ github.actor }}"
+                - type: mrkdwn
+                  text: "*SHA:*\n${{ github.sha }}"
 
   rollback-release:
     name: Rollback Release
@@ -368,19 +383,33 @@ jobs:
         curl -f https://dashboard.zenamanage.com/health || exit 1
 
     - name: Notify rollback
-      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_URL != '' }}
+      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' && env.SLACK_WEBHOOK_RELEASES != '' }}
       continue-on-error: true
-      uses: 8398a7/action-slack@v3
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: slackapi/slack-github-action@v2.1.1
       with:
-        status: failure
-        channel: '#releases'
-        fields: repo,message,commit,author,action,eventName,ref,workflow
-        success_message: ":white_check_mark: Succeeded GitHub Actions"
-        cancelled_message: ":warning: Cancelled GitHub Actions"
-        failure_message: ":no_entry: Failed GitHub Actions"
+        webhook: ${{ secrets.SLACK_WEBHOOK_RELEASES }}
+        webhook-type: incoming-webhook
+        payload: |
+          text: ":no_entry: Release rollback triggered"
+          blocks:
+            - type: section
+              text:
+                type: mrkdwn
+                text: "*Release rollback*: `failure`"
+            - type: section
+              fields:
+                - type: mrkdwn
+                  text: "*Repository:*\n${{ github.repository }}"
+                - type: mrkdwn
+                  text: "*Workflow:*\n${{ github.workflow }}"
+                - type: mrkdwn
+                  text: "*Job:*\nrollback-release"
+                - type: mrkdwn
+                  text: "*Ref:*\n${{ github.ref_name }}"
+                - type: mrkdwn
+                  text: "*Actor:*\n${{ github.actor }}"
+                - type: mrkdwn
+                  text: "*SHA:*\n${{ github.sha }}"
 
   cleanup-release:
     name: Cleanup Release

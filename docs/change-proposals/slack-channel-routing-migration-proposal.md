@@ -2,7 +2,7 @@
 
 ## Context
 
-This round is docs-first only. No workflow runtime behavior changes are included in this round.
+This document is the SSOT for the notify-only migration round that standardizes remaining Slack steps on channel-specific incoming webhooks.
 
 The canonical SSOT rules for this round are in `docs/agent-ssot-rules.md`, especially the requirement to mark missing evidence as `UNKNOWN`. `docs/agent-ssot-rules.md:1-30`
 
@@ -126,6 +126,19 @@ Reasoning:
 - It removes the channel-routing ambiguity caused by `channel:` override on a shared webhook secret.
 - It minimizes change surface for notify-only workflows.
 
+## Secret naming strategy
+
+Recommended names:
+
+- `SLACK_WEBHOOK_DEPLOYMENTS` for all notify steps that currently target `#deployments` in YAML.
+- `SLACK_WEBHOOK_RELEASES` for all notify steps that currently target `#releases` in YAML.
+- Keep existing `SLACK_WEBHOOK_URL` unchanged for now because `production.yml` already uses it and the actual channel binding remains `UNKNOWN` from repo evidence.
+
+Replacement policy:
+
+- The seven `8398a7/action-slack@v3` steps should stop reading `SLACK_WEBHOOK_URL`.
+- `production.yml` should not be remapped in this round unless operators confirm which channel its existing webhook targets.
+
 Exception:
 
 - If platform owners already have an approved Slack app, bot token, and channel ID inventory outside repo, Option B can be reconsidered. Current repo evidence for that readiness is `UNKNOWN`.
@@ -134,28 +147,53 @@ Exception:
 
 - Confirm actual Slack destinations currently receiving posts from `secrets.SLACK_WEBHOOK_URL`; repo evidence is `UNKNOWN`.
 - Decide whether separate destination channels must remain `#deployments` and `#releases` as encoded today. `.github/workflows/automated-deployment.yml:133`, `.github/workflows/automated-deployment.yml:264`, `.github/workflows/automated-deployment.yml:329`, `.github/workflows/automated-deployment.yml:470`, `.github/workflows/automated-deployment.yml:629`, `.github/workflows/release-management.yml:314`, `.github/workflows/release-management.yml:379`
-- Provision target secrets for the chosen design.
-- Decide naming convention for new secrets or variables.
+- Provision `SLACK_WEBHOOK_DEPLOYMENTS` and `SLACK_WEBHOOK_RELEASES`.
+- Leave `SLACK_WEBHOOK_URL` in place until `production.yml` routing is externally confirmed.
+
+## Step-by-step migration plan
+
+1. Provision `SLACK_WEBHOOK_DEPLOYMENTS` and bind it to the Slack destination that should replace all current `#deployments` overrides.
+2. Provision `SLACK_WEBHOOK_RELEASES` and bind it to the Slack destination that should replace all current `#releases` overrides.
+3. Migrate the five notify steps in `automated-deployment.yml` from `8398a7/action-slack@v3` to `slackapi/slack-github-action@v2.1.1`.
+4. Migrate the two notify steps in `release-management.yml` from `8398a7/action-slack@v3` to `slackapi/slack-github-action@v2.1.1`.
+5. Remove all legacy `channel:` overrides from those seven steps.
+6. Validate that the `deployments` webhook reaches the intended deployment channel and that the `releases` webhook reaches the intended release channel.
+7. Revisit `production.yml` only after the current `SLACK_WEBHOOK_URL` channel mapping is confirmed; until then its correct target remains `UNKNOWN`.
+
+## Immediate migration status by step
+
+Ready immediately if the new secrets exist:
+
+- `automated-deployment.yml` / `deploy-staging` / `Notify deployment success` -> `SLACK_WEBHOOK_DEPLOYMENTS`
+- `automated-deployment.yml` / `deploy-production` / `Notify deployment success` -> `SLACK_WEBHOOK_DEPLOYMENTS`
+- `automated-deployment.yml` / `rollback` / `Notify rollback` -> `SLACK_WEBHOOK_DEPLOYMENTS`
+- `automated-deployment.yml` / `blue-green-deployment` / `Notify blue-green deployment success` -> `SLACK_WEBHOOK_DEPLOYMENTS`
+- `automated-deployment.yml` / `canary-deployment` / `Notify canary deployment success` -> `SLACK_WEBHOOK_DEPLOYMENTS`
+- `release-management.yml` / `deploy-release` / `Notify release deployment success` -> `SLACK_WEBHOOK_RELEASES`
+- `release-management.yml` / `rollback-release` / `Notify rollback` -> `SLACK_WEBHOOK_RELEASES`
+
+Blocked until secret or config evidence exists:
+
+- `production.yml` / `notify` / `Notify deployment status` remains blocked for remapping because the real channel behind `SLACK_WEBHOOK_URL` is `UNKNOWN`.
 
 ## Rollout plan
 
-1. Confirm channel-routing design decision: Option A or Option B.
-2. Inventory and provision required Slack secrets/config outside repo.
-3. Migrate blocked workflow steps in a separate implementation round.
-4. Validate that each migrated step preserves its intended destination channel.
-5. Remove legacy channel override usage only after successful validation.
+1. Confirm that `SLACK_WEBHOOK_DEPLOYMENTS` and `SLACK_WEBHOOK_RELEASES` exist in the target GitHub environment or repository scope.
+2. Merge the notify-only workflow patch for `automated-deployment.yml` and `release-management.yml`.
+3. Trigger one deployment-path run and one release-path run to confirm webhook routing.
+4. Keep `SLACK_WEBHOOK_URL` only for `production.yml` until its destination channel is externally verified.
+5. Remove the shared secret from other notify steps after operational confirmation.
 
 ## Done criteria
 
 - Design choice between webhook-per-channel and bot-token/channel-ID is documented and approved.
 - Required Slack secret/config prerequisites are explicitly identified.
 - Remaining notify steps are inventoried with migration status and blockers.
-- No workflow YAML behavior is changed in this round.
+- Seven legacy `8398a7/action-slack@v3` notify steps are migrated without changing non-notify workflow behavior.
 
 ## Explicit non-goals
 
-- No workflow YAML edits in this round.
-- No migration of `8398a7/action-slack@v3` steps in this round.
 - No appleboy/ssh-action changes.
 - No schema, RBAC, tenant isolation, route contract, or CI behavior changes.
+- No remap of `production.yml` without external evidence for the current `SLACK_WEBHOOK_URL` destination.
 - No external Slack workspace verification from this repo-only pass.

@@ -36,7 +36,6 @@ jobs:
     
     steps:
     - name: Checkout code
-      if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v5
       with:
         fetch-depth: 0
@@ -94,7 +93,6 @@ jobs:
     
     steps:
     - name: Checkout code
-      if: ${{ steps.check-rollback-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
@@ -147,7 +145,6 @@ jobs:
     
     steps:
     - name: Checkout code
-      if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v5
       with:
         fetch-depth: 0
@@ -199,7 +196,6 @@ jobs:
     
     steps:
     - name: Checkout code
-      if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v5
 
     - name: Set up Docker Buildx
@@ -269,7 +265,7 @@ jobs:
         fi
 
     - name: Checkout code
-      if: ${{ steps.check-cleanup-secrets.outputs.ready == 'true' }}
+      if: ${{ steps.check-release-secrets.outputs.ready == 'true' }}
       uses: actions/checkout@v5
 
     - name: Deploy to production server

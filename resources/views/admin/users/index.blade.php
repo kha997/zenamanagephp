@@ -1,3 +1,6 @@
+{{-- ORPHAN ADMIN ARTIFACT / NON-CANONICAL --}}
+{{-- Extends layouts/universal-frame, but current GET /admin/users runtime renders view('admin.users'), not this file. --}}
+{{-- Retained only for audit visibility and debug/archive reference unless a future ownership decision explicitly remounts it. --}}
 {{-- Admin User Management Page --}}
 @extends('layouts.universal-frame')
 

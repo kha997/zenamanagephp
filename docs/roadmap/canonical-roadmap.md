@@ -5,6 +5,7 @@ Role: execution sequencing SSOT
 Companion docs:
 
 - `docs/product-purpose-ssot.md` = product-purpose SSOT
+- `docs/architecture/module-ownership-ssot.md` = canonical runtime ownership SSOT
 - `docs/roadmap/backlog.yaml` = backlog and governance SSOT
 - `docs/agent-ssot-rules.md` = evidence/verification law
 - `docs/engineering/testing-matrix.md` = verify-order SSOT
@@ -131,6 +132,7 @@ Backlog alignment:
 Exit criteria:
 
 - one module-ownership map exists for active business modules
+- `docs/architecture/module-ownership-ssot.md` is the canonical ownership map
 - new work stops introducing fresh split ownership
 - compatibility aliases are explicitly marked as such
 - route/middleware evidence is attached for each changed module

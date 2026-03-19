@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Models\Document;
 use App\Models\DocumentVersion;
-use Src\CoreProject\Models\LegacyProjectAdapter as Project;
+use App\Models\Project;
 use App\Services\ErrorEnvelopeService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Src\DocumentManagement\Models\LegacyDocumentAdapter as Document;
 use Src\Foundation\Services\FileStorageService;
 use Throwable;
 

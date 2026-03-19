@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProjectFormRequest;
-use Src\CoreProject\Models\LegacyProjectAdapter as Project;
+use App\Models\Project;
 use App\Repositories\ProjectRepository;
 use Src\CoreProject\Services\LegacyProjectServiceAdapter as ProjectService;
 use App\Services\TenantContext;

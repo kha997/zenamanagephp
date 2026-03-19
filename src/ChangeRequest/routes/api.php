@@ -10,6 +10,8 @@ use Src\ChangeRequest\Controllers\ChangeRequestController;
 |
 | Định nghĩa các route API cho module Change Request
 | Các route này được gắn vào prefix /api/v1 trong routes/api.php và hưởng middleware bảo mật chung.
+| Compatibility surface only: canonical forward owner is
+| App\Http\Controllers\Api\ChangeRequestController on /api/zena/change-requests.
 |
 */
 

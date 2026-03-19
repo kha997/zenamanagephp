@@ -92,7 +92,7 @@ export const useApi = () => {
 
   // Dashboard API methods
   const getAdminDashboard = useCallback(async (): Promise<ApiResponse> => {
-    const response = await fetch('/test-api-admin-dashboard', {
+    const response = await fetch('/_debug/test-api-admin-stats', {
       method: 'GET',
       headers: getHeaders(true),
     });

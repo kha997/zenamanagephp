@@ -41,3 +41,4 @@ Scope: narrow audit of public static demo/test artifacts, prioritizing `public/a
 - This round intentionally does not invent a replacement endpoint or re-home the removed artifact into a new archive surface.
 - This round intentionally does not change runtime business behavior.
 - `VIEW_TESTING_REPORT.md` is treated here as historical manual-test evidence, not as proof of a current runtime owner.
+- `VIEW_TESTING_REPORT.md` was reconciled on 2026-03-19 to preserve the September 21, 2025 observations only as historical notes and to remove stale current-state/runtime claims tied to the retired artifacts.

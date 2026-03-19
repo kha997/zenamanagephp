@@ -272,7 +272,7 @@ function taskCreate() {
         },
         
         cancelCreate() {
-            window.location.href = '/tasks';
+            window.location.href = '/app/tasks';
         }
     }
 }

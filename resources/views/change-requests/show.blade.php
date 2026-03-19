@@ -240,7 +240,7 @@ class ChangeRequestDetailManager {
                     </div>
                     <div class="info-item">
                         <label>Dự án:</label>
-                        <span><a href="/projects/${cr.project.id}">${cr.project.name}</a></span>
+                        <span><a href="/app/projects/${cr.project.id}">${cr.project.name}</a></span>
                     </div>
                     <div class="info-item">
                         <label>Mức độ ưu tiên:</label>
@@ -473,7 +473,7 @@ class ChangeRequestDetailManager {
                     ${items.tasks.map(task => `
                         <div class="related-item">
                             <i class="icon-check-square"></i>
-                            <a href="/tasks/${task.id}">${task.name}</a>
+                            <a href="/app/tasks/${task.id}">${task.name}</a>
                         </div>
                     `).join('')}
                 </div>
@@ -604,7 +604,7 @@ function exportCR() {
 
 function linkToTask() {
     // Open task linking modal or redirect to task creation with CR pre-filled
-    window.location.href = `/tasks/create?change_request=${crDetailManager.crId}`;
+    window.location.href = `/app/tasks/create?change_request=${crDetailManager.crId}`;
 }
 
 function addComment() {

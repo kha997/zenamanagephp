@@ -14,13 +14,13 @@ This document identifies buttons, views, and actions that could not be mapped to
 
 ### 1. Navigation Demo Buttons
 **View**: `navigation-demo.blade.php`
-**Issue**: Demo buttons without actual functionality
+**Issue**: Archived demo buttons in an unmounted historical artifact, not a current runtime page
 
 | Button | Selector | Issue | Recommendation |
 |--------|----------|-------|----------------|
-| User Button | `.zena-nav-user-button` | No route defined | Add user profile route |
-| Mobile Toggle | `.zena-nav-mobile-toggle` | No Alpine action | Add mobile menu toggle |
-| Refresh Button | `.zena-btn` | No refresh action | Add data refresh functionality |
+| User Button | `.zena-nav-user-button` | Archived demo-only control | Keep as archived reference; do not treat as missing live route |
+| Mobile Toggle | `.zena-nav-mobile-toggle` | Archived demo-only control | Keep as archived reference; do not treat as missing live behavior |
+| Refresh Button | `.zena-btn` | Archived demo-only control | Keep as archived reference; do not treat as missing live action |
 
 ### 2. Dashboard Widget Buttons
 **View**: `dashboards/admin.blade.php`
@@ -49,8 +49,8 @@ This document identifies buttons, views, and actions that could not be mapped to
 - `demo.blade.php`
 - `navigation-demo.blade.php`
 
-**Issue**: Demo views without proper routing
-**Recommendation**: Add demo routes or remove from production
+**Issue**: Demo views retained as historical artifacts without runtime mounts
+**Recommendation**: Keep documented as archived/unmounted unless a deliberate debug surface is reintroduced
 
 ### 2. Placeholder Views
 **Views**:

@@ -461,12 +461,12 @@ function projectCreate() {
             setTimeout(() => {
                 this.creating = false;
                 alert('Project created successfully!');
-                window.location.href = '/projects';
+                window.location.href = '/app/projects';
             }, 2000);
         },
         
         cancelCreate() {
-            window.location.href = '/projects';
+            window.location.href = '/app/projects';
         }
     }
 }

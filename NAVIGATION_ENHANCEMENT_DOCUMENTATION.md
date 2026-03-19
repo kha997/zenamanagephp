@@ -397,7 +397,11 @@ x-transition:enter-end="opacity-100 transform translate-y-0"
 
 ## 🎯 **Demo Page**
 
-Navigation demo page available at: `http://localhost:8000/navigation-demo`
+`navigation-demo.blade.php` is now an archived, unmounted demo artifact.
+
+- No active `routes/web.php` mount exists for `/navigation-demo`.
+- The file remains as a historical styling reference only.
+- Canonical mounted HTML ownership for these navigation targets is `/app/projects` and `/app/tasks`.
 
 Features showcased:
 - Complete navigation system

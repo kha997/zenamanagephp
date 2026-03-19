@@ -460,13 +460,13 @@ Route::get('/admin/users', function() {
         return view('settings.index');
     })->name('settings');
     Route::get('/settings/general', function () {
-        return view('settings.general');
+        return redirect()->route('app.settings');
     })->name('settings.general');
     Route::get('/settings/security', function () {
-        return view('settings.security');
+        return redirect()->route('app.settings');
     })->name('settings.security');
     Route::get('/settings/notifications', function () {
-        return view('settings.notifications');
+        return redirect()->route('app.settings');
     })->name('settings.notifications');
     
     // Profile Routes
@@ -495,7 +495,6 @@ Route::permanentRedirect('/invite/decline/{token}', '/invitations/decline/{token
 // Legacy Redirects (301 Permanent Redirects) - Minimal set
 // Phase 1: Essential routes only
 Route::permanentRedirect('/dashboard', '/app/dashboard');
-Route::permanentRedirect('/projects', '/app/projects');
 Route::permanentRedirect('/tasks', '/app/tasks'); // Keep based on traffic analysis
 
 $projectRouteMiddleware = ['auth', 'tenant.isolation'];
@@ -526,7 +525,7 @@ Route::post('/projects', function (Request $request) {
 })->middleware($projectRouteMiddleware)->name('projects.store');
 
 Route::get('/projects/create', function () {
-    return response('<form method="POST">' . csrf_field() . '</form><span hidden>name=&quot;_token&quot;</span>');
+    return redirect('/app/projects/create', 301);
 })->middleware(['auth', 'tenant.isolation'])->name('projects.create.form');
 
 Route::get('/projects/{project}', function (Project $project) {
@@ -565,7 +564,7 @@ Route::put('/profile', function (Request $request) {
 })->middleware(['auth', 'tenant.isolation'])->name('profile.update');
 
 Route::get('/tasks/create', function () {
-    return response('<form method="POST">' . csrf_field() . '</form><span hidden>name=&quot;_token&quot;</span>');
+    return redirect('/app/tasks/create', 301);
 })->middleware(['auth', 'tenant.isolation'])->name('tasks.create.form');
 
 Route::get('/documents/create', function () {

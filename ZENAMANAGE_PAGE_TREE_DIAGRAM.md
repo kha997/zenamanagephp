@@ -96,7 +96,7 @@ graph TD
     DEBUG --> DEBUG_FRONTEND["/_debug/frontend-test<br/>Frontend Test"]
     DEBUG --> DEBUG_LOGIN["/_debug/test-login/{email}<br/>Test Login"]
     DEBUG --> DEBUG_SIMPLE["/_debug/simple-login<br/>Simple Login"]
-    DEBUG --> DEBUG_NAV["/_debug/navigation-demo<br/>Navigation Demo"]
+    DEBUG --> DEBUG_NAV["archived docs artifact only<br/>`/_debug/navigation-demo` not mounted"]
     
     %% Legacy Routes (Backward Compatibility)
     ROOT --> LEGACY["🔄 Legacy Routes<br/>Backward Compatibility"]
@@ -170,7 +170,7 @@ graph TD
 4. **🔌 API Routes (5 nhóm)**
    - Admin API, App API, Public API, Auth API, Invitation API
 
-5. **🐛 Debug Routes (8 trang)**
+5. **🐛 Debug Routes (7 live pages + 1 archived doc claim)**
    - Development và testing tools
 
 6. **🔄 Legacy Routes (14 trang)**
@@ -192,6 +192,12 @@ graph TD
 - **Cấu trúc:** Hierarchical tree structure với clear separation
 - **Navigation:** Parent-child relationships rõ ràng
 - **Permissions:** Role-based access control
+
+### ⚠️ Documentation Correction
+
+- `/_debug/navigation-demo` is not a current runtime surface.
+- `routes/web.php` does not register an active debug mount for that path.
+- Treat this node as a historical documentation artifact tied to the archived `navigation-demo.blade.php` demo, not as a live page.
 
 ### 🔗 **QUAN HỆ CHA-CON CHÍNH:**
 

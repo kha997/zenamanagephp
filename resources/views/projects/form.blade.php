@@ -7,7 +7,7 @@
     <div class="page-header-content">
         <h1 class="page-title">{{ isset($project) ? 'Chỉnh sửa Dự án' : 'Tạo Dự án Mới' }}</h1>
         <div class="page-actions">
-            <button class="btn btn-outline-secondary" onclick="window.location.href='/projects'">
+            <button class="btn btn-outline-secondary" onclick="window.location.href='/app/projects'">
                 <i class="icon-arrow-left"></i> Quay lại
             </button>
         </div>
@@ -309,7 +309,7 @@ class ProjectFormManager {
                 );
                 
                 setTimeout(() => {
-                    window.location.href = `/projects/${response.data.id}`;
+                    window.location.href = `/app/projects/${response.data.id}`;
                 }, 1500);
             }
         } catch (error) {
@@ -323,7 +323,7 @@ class ProjectFormManager {
 
 // Global functions
 function viewProject(id) {
-    window.location.href = `/projects/${id}`;
+    window.location.href = `/app/projects/${id}`;
 }
 
 async function duplicateProject() {
@@ -338,7 +338,7 @@ async function duplicateProject() {
         if (response.status === 'success') {
             zenaApp.showNotification('Nhân bản dự án thành công', 'success');
             setTimeout(() => {
-                window.location.href = `/projects/${response.data.id}/edit`;
+                window.location.href = `/app/projects/${response.data.id}/edit`;
             }, 1500);
         }
     } catch (error) {

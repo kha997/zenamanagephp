@@ -11,16 +11,16 @@
 $breadcrumb = [
     [
         'label' => 'Dashboard',
-        'url' => '/dashboard',
+        'url' => '/app/dashboard',
         'icon' => 'fas fa-home'
     ],
     [
         'label' => 'Projects Management',
-        'url' => '/projects'
+        'url' => '/app/projects'
     ],
     [
         'label' => 'Edit Project',
-        'url' => '/projects/' . ($projectData->id ?? '1') . '/edit'
+        'url' => '/app/projects/' . ($projectData->id ?? '1') . '/edit'
     ]
 ];
 $currentRoute = 'projects';
@@ -295,14 +295,14 @@ $currentRoute = 'projects';
                 
                 <div class="flex space-x-3">
                     <a 
-                        href="/projects" 
+                        href="/app/projects" 
                         class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors flex items-center"
                     >
                         <i class="fas fa-times mr-2"></i>
                         Cancel
                     </a>
                     <a 
-                        :href="`/projects/${formData.id}`"
+                        :href="`/app/projects/${formData.id}`"
                         class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
                     >
                         <i class="fas fa-eye mr-2"></i>
@@ -364,7 +364,7 @@ function editProject() {
         previewProject() {
             this.showNotification('Opening project preview...', 'info');
             setTimeout(() => {
-                window.open(`/projects/${this.formData.id}`, '_blank');
+                window.open(`/app/projects/${this.formData.id}`, '_blank');
             }, 1000);
         },
         
@@ -381,7 +381,7 @@ function editProject() {
                 
                 // Redirect to project view
                 setTimeout(() => {
-                    window.location.href = `/projects/${this.formData.id}`;
+                    window.location.href = `/app/projects/${this.formData.id}`;
                 }, 1500);
             }, 2000);
         },

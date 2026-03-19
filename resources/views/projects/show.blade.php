@@ -14,7 +14,7 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center py-4">
                     <div class="flex items-center space-x-4">
-                        <a href="{{ route('projects.index') }}" class="text-gray-500 hover:text-gray-700">
+                        <a href="{{ route('app.projects') }}" class="text-gray-500 hover:text-gray-700">
                             <i class="fas fa-arrow-left"></i>
                         </a>
                         <h1 class="text-2xl font-bold text-gray-900">{{ $project->name }}</h1>
@@ -28,7 +28,7 @@
                         </span>
                     </div>
                     <div class="flex space-x-2">
-                        <a href="{{ route('projects.edit', $project) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        <a href="{{ route('app.projects.edit', $project) }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                             <i class="fas fa-edit mr-2"></i>Edit Project
                         </a>
                     </div>
@@ -83,13 +83,13 @@
                     <div class="bg-white rounded-lg shadow-sm p-6">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">Team Members</h2>
                         <div class="space-y-3">
-                            @if($project->pm)
+                            @if($project->manager)
                             <div class="flex items-center space-x-3">
                                 <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                    {{ substr($project->pm->name, 0, 1) }}
+                                    {{ substr($project->manager->name, 0, 1) }}
                                 </div>
                                 <div>
-                                    <p class="font-medium text-gray-900">{{ $project->pm->name }}</p>
+                                    <p class="font-medium text-gray-900">{{ $project->manager->name }}</p>
                                     <p class="text-sm text-gray-500">Project Manager</p>
                                 </div>
                             </div>
@@ -113,7 +113,7 @@
                     <div class="bg-white rounded-lg shadow-sm p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-lg font-semibold text-gray-900">Tasks</h2>
-                            <a href="{{ route('tasks.create') }}?project_id={{ $project->id }}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                            <a href="{{ route('app.tasks.create', ['project_id' => $project->id]) }}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
                                 <i class="fas fa-plus mr-1"></i>Add Task
                             </a>
                         </div>
@@ -139,7 +139,7 @@
                             @endforeach
                         </div>
                         @else
-                        <p class="text-gray-500 text-center py-8">No tasks yet. <a href="{{ route('tasks.create') }}?project_id={{ $project->id }}" class="text-blue-600 hover:text-blue-800">Create the first task</a></p>
+                        <p class="text-gray-500 text-center py-8">No tasks yet. <a href="{{ route('app.tasks.create', ['project_id' => $project->id]) }}" class="text-blue-600 hover:text-blue-800">Create the first task</a></p>
                         @endif
                     </div>
                 </div>
@@ -166,13 +166,13 @@
                     <div class="bg-white rounded-lg shadow-sm p-6">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                         <div class="space-y-2">
-                            <a href="{{ route('tasks.create') }}?project_id={{ $project->id }}" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center">
+                            <a href="{{ route('app.tasks.create', ['project_id' => $project->id]) }}" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center">
                                 <i class="fas fa-plus mr-2"></i>Add Task
                             </a>
-                            <a href="{{ route('documents.create') }}?project_id={{ $project->id }}" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center justify-center">
+                            <a href="{{ route('app.documents.create', ['project_id' => $project->id]) }}" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center justify-center">
                                 <i class="fas fa-upload mr-2"></i>Upload Document
                             </a>
-                            <a href="{{ route('projects.edit', $project) }}" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center justify-center">
+                            <a href="{{ route('app.projects.edit', $project) }}" class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center justify-center">
                                 <i class="fas fa-edit mr-2"></i>Edit Project
                             </a>
                         </div>

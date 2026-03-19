@@ -227,10 +227,10 @@ function renderDefaultSidebar() {
         <a href="/dashboard" class="nav-item ${window.location.pathname === '/dashboard' ? 'active' : ''}">
             <span>Dashboard</span>
         </a>
-        <a href="/projects" class="nav-item ${window.location.pathname.startsWith('/projects') ? 'active' : ''}">
+        <a href="/app/projects" class="nav-item ${window.location.pathname.startsWith('/app/projects') ? 'active' : ''}">
             <span>Projects</span>
         </a>
-        <a href="/tasks" class="nav-item ${window.location.pathname.startsWith('/tasks') ? 'active' : ''}">
+        <a href="/app/tasks" class="nav-item ${window.location.pathname.startsWith('/app/tasks') ? 'active' : ''}">
             <span>Tasks</span>
         </a>
         <a href="/team" class="nav-item ${window.location.pathname.startsWith('/team') ? 'active' : ''}">

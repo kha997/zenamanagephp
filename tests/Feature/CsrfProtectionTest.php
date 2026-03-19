@@ -105,7 +105,7 @@ class CsrfProtectionTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->get('/projects/create');
+        $response = $this->get('/app/projects/create');
         $csrfToken = $this->extractCsrfToken($response->getContent());
 
         $response = $this->post('/projects', [
@@ -133,13 +133,13 @@ class CsrfProtectionTest extends TestCase
     {
         $this->actingAs($this->user);
 
-        $response = $this->get('/projects/create');
-        $response->assertSee('name="_token"');
+        $response = $this->get('/app/projects/create');
+        $response->assertSee('name="_token"', false);
 
-        $response = $this->get('/tasks/create');
-        $response->assertSee('name="_token"');
+        $response = $this->get('/app/tasks/create');
+        $response->assertSee('name="_token"', false);
 
         $response = $this->get('/documents/create');
-        $response->assertSee('name="_token"');
+        $response->assertSee('name="_token"', false);
     }
 }

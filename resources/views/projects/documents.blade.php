@@ -11,16 +11,16 @@
 $breadcrumb = [
     [
         'label' => 'Dashboard',
-        'url' => '/dashboard',
+        'url' => '/app/dashboard',
         'icon' => 'fas fa-home'
     ],
     [
         'label' => 'Projects Management',
-        'url' => '/projects'
+        'url' => '/app/projects'
     ],
     [
         'label' => 'Project Documents',
-        'url' => '/projects/' . ($projectData->id ?? '1') . '/documents'
+        'url' => '/app/projects/' . ($projectData->id ?? '1') . '/documents'
     ]
 ];
 $currentRoute = 'projects';

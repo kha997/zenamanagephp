@@ -13,6 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="bg-gray-50">
+    {{-- Archived demo only: intentionally unmounted and non-canonical for route ownership. --}}
     <div class="min-h-screen">
         <!-- Main Navigation -->
         <nav class="zena-main-nav" role="navigation" aria-label="Main navigation">
@@ -41,18 +42,22 @@
                         </li>
 
                         <li class="zena-nav-item-wrapper">
-                            <a href="/tasks" 
-                               class="zena-nav-item">
+                            <a href="#archived-demo-tasks"
+                               class="zena-nav-item"
+                               aria-disabled="true"
+                               title="Archived demo only; /app/tasks is the canonical mounted HTML surface">
                                 <i class="fas fa-tasks zena-nav-icon"></i>
-                                <span class="zena-nav-label">Tasks</span>
+                                <span class="zena-nav-label">Tasks (Demo only)</span>
                             </a>
                         </li>
 
                         <li class="zena-nav-item-wrapper">
-                            <a href="/projects" 
-                               class="zena-nav-item">
+                            <a href="#archived-demo-projects"
+                               class="zena-nav-item"
+                               aria-disabled="true"
+                               title="Archived demo only; /app/projects is the canonical mounted HTML surface">
                                 <i class="fas fa-project-diagram zena-nav-icon"></i>
-                                <span class="zena-nav-label">Projects</span>
+                                <span class="zena-nav-label">Projects (Demo only)</span>
                             </a>
                         </li>
 
@@ -178,18 +183,22 @@
                         </li>
 
                         <li class="zena-nav-mobile-item">
-                            <a href="/tasks" 
-                               class="zena-nav-mobile-link">
+                            <a href="#archived-demo-tasks"
+                               class="zena-nav-mobile-link"
+                               aria-disabled="true"
+                               title="Archived demo only; /app/tasks is canonical">
                                 <i class="fas fa-tasks zena-nav-mobile-icon"></i>
-                                <span>Tasks</span>
+                                <span>Tasks (Demo only)</span>
                             </a>
                         </li>
 
                         <li class="zena-nav-mobile-item">
-                            <a href="/projects" 
-                               class="zena-nav-mobile-link">
+                            <a href="#archived-demo-projects"
+                               class="zena-nav-mobile-link"
+                               aria-disabled="true"
+                               title="Archived demo only; /app/projects is canonical">
                                 <i class="fas fa-project-diagram zena-nav-mobile-icon"></i>
-                                <span>Projects</span>
+                                <span>Projects (Demo only)</span>
                             </a>
                         </li>
 
@@ -277,7 +286,10 @@
                 <div class="flex justify-between items-center py-6">
                     <div>
                         <h1 class="text-3xl font-bold text-gray-900">Navigation Demo</h1>
-                        <p class="text-gray-600 mt-1">Showcase of enhanced navigation features</p>
+                        <p class="text-gray-600 mt-1">Archived, unmounted demo for historical navigation styling reference only.</p>
+                        <p class="text-amber-700 text-sm mt-2">
+                            Non-canonical demo surface. Do not use this file to infer live HTML ownership for Projects or Tasks.
+                        </p>
                     </div>
                     <div class="flex items-center space-x-4">
                         <button class="zena-btn zena-btn-primary" onclick="location.reload()">
@@ -313,7 +325,7 @@
                                             <i class="fas fa-chevron-right"></i>
                                         </li>
                                         <li class="zena-breadcrumb-item">
-                                            <a href="/projects" class="zena-breadcrumb-link">Projects</a>
+                                            <span class="zena-breadcrumb-link" aria-disabled="true" title="Archived demo breadcrumb only">Projects (Demo only)</span>
                                         </li>
                                         <li class="zena-breadcrumb-separator">
                                             <i class="fas fa-chevron-right"></i>

@@ -1,5 +1,6 @@
-{{-- Smart Filters Component --}}
-{{-- Role-aware filter presets, deep filters, and saved views --}}
+{{-- DEPRECATED / NON-CANONICAL: Smart Tools Blade stack --}}
+{{-- Archive target only. Confirmed consumer was test-smart-tools.blade.php, which has no runtime route. --}}
+{{-- Calls legacy /api/universal-frame/* paths; do not revive without a new ownership decision and route/API reconciliation. --}}
 
 <div class="smart-filters" x-data="smartFilters()">
     <!-- Filter Controls -->

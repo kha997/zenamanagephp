@@ -1,5 +1,6 @@
-{{-- Analysis Drawer Component --}}
-{{-- Right drawer with charts for current filter context --}}
+{{-- DEPRECATED / NON-CANONICAL: Smart Tools Blade stack --}}
+{{-- Archive target only. Confirmed consumer was test-smart-tools.blade.php, which has no runtime route. --}}
+{{-- Calls legacy /api/universal-frame/* paths plus orphan /export/analysis; do not revive without a new ownership decision. --}}
 
 <div class="analysis-drawer" x-data="analysisDrawer()">
     <!-- Analysis Toggle Button -->

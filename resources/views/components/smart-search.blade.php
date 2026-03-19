@@ -1,5 +1,6 @@
-{{-- Smart Search Component --}}
-{{-- Intelligent search with fuzzy matching, recent searches, and suggestions --}}
+{{-- DEPRECATED / NON-CANONICAL: Smart Tools Blade stack --}}
+{{-- Archive target only. Confirmed consumer was test-smart-tools.blade.php, which has no runtime route. --}}
+{{-- Calls legacy /api/universal-frame/* paths; do not revive without a new ownership decision and route/API reconciliation. --}}
 
 <div class="smart-search relative" x-data="smartSearch()">
     <!-- Search Input -->

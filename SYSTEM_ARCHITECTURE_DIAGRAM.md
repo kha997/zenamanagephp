@@ -328,7 +328,7 @@
 │  ├── API Routes: 19 routes                                                      │
 │  ├── Debug Routes: 16 routes                                                    │
 │  ├── Legacy Redirects: 30 routes                                                 │
-│  ├── Authentication: 3 routes (login, logout, api-demo)                          │
+│  ├── Authentication: local/testing auth entry points; `/api-demo` retired        │
 │  └── Other Routes: 49 routes (projects, tasks, documents, etc.)                  │
 │                                                                                 │
 │  🎯 MIDDLEWARE: 6 middleware types                                             │

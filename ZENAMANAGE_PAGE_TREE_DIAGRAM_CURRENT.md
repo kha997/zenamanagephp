@@ -263,7 +263,7 @@ graph TD
 - **API Routes:** 19 routes (app API: 15, admin API: 4)
 - **Debug Routes:** historical note only in this file; do not interpret this count as current runtime inventory
 - **Legacy Redirects:** 30 routes (301 redirects)
-- **Authentication:** 3 routes (login, logout, api-demo)
+- **Authentication:** local/testing auth entry points only (`/login`, `/logout`, `/password/reset`); retired `/api-demo` is historical-only. See `docs/audits/2026-03-19-public-demo-artifact-audit.md`.
 - **Other Routes:** 49 routes (projects, tasks, documents, team, templates, settings, profile, etc.)
 
 ### ✅ **TRẠNG THÁI HOÀN THÀNH:**

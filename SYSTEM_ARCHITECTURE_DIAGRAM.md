@@ -15,13 +15,16 @@ Boundary note: this diagram is a schematic architecture summary, not a full runt
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              AUTHENTICATION LAYER                               │
+│                         CURRENT AUTH SURFACE SUMMARY                            │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│  🔑 Login (/login)                    🔓 Logout (/logout)                      │
+│  🌐 Interactive web entry points                                              │
+│  🔑 /login                        🔓 /logout                     🧾 /password/reset │
 │                                                                                 │
-│  Purpose: Standard Laravel authentication for web routes                       │
-│  Middleware: Standard Laravel auth middleware                                  │
-│  Scope: Web application only (not for API or debug)                            │
+│  Purpose: Browser/session entry points for the web auth flow                   │
+│  Runtime note: Mounted in current `routes/web.php` for local/testing runtime   │
+│  Boundary: This web subset is not the full current auth inventory              │
+│  Also mounted: `/api/auth/*`, `/api/v1/auth/*`, `/api/zena/auth/*`,            │
+│                and debug-only auth helpers under `/_debug/*`                   │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -68,6 +71,11 @@ Boundary note: this diagram is a schematic architecture summary, not a full runt
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                              API ENDPOINTS                                     │
 ├─────────────────────────────────────────────────────────────────────────────────┤
+│  🔐 API AUTH FAMILIES (current-backed namespaces; not exhaustive endpoint list)│
+│  ├── /api/auth/* - Primary broad auth/token/security namespace in runtime      │
+│  ├── /api/v1/auth/* - Compatibility/historical auth namespace still mounted    │
+│  └── /api/zena/auth/* - ZENA contract auth namespace                           │
+│                                                                                 │
 │  🌐 PUBLIC API (/api/v1/public)                                                │
 │  ├── /health - System liveness check                                           │
 │  └── Middleware: throttle:public (no session)                                  │

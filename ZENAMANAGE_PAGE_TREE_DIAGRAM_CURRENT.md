@@ -10,6 +10,7 @@ Tài liệu này được giữ lại như historical snapshot của page-tree n
 **🧾 Canonical `_debug/*` runtime snapshot:** `docs/audits/2026-03-19-debug-route-inventory.md`
 **🚫 Boundary:** Do not use this file as the runtime source of truth for `/_debug/*` claims.
 **📏 Count boundary:** Route/page totals in this file are historical/manual snapshot labels unless explicitly tied to 2026-03-19 runtime evidence.
+**🔐 Auth boundary:** This snapshot keeps the older web/page-tree auth narrative only. Current runtime auth entry points also span `/api/auth/*`, `/api/v1/auth/*`, `/api/zena/auth/*`, and debug-only helpers under `/_debug/*`.
 
 ---
 
@@ -21,7 +22,7 @@ graph TD
     ROOT["🏠 ZenaManage System<br/>Root Domain"]
     
     %% Authentication Level
-    ROOT --> AUTH["🔐 Authentication<br/>Historical web snapshot (2 entries)"]
+    ROOT --> AUTH["🔐 Authentication<br/>Historical web auth subset (2 shown)<br/>Not full current auth surface"]
     AUTH --> LOGIN["/login<br/>Login Page"]
     AUTH --> LOGOUT["/logout<br/>Logout"]
     
@@ -91,7 +92,7 @@ graph TD
     API_V1 --> API_ADMIN["/api/v1/admin<br/>Admin API"]
     API_V1 --> API_APP["/api/v1/app<br/>App API"]
     API_V1 --> API_PUBLIC["/api/v1/public<br/>✅ Public API<br/>Health Check"]
-    API_V1 --> API_AUTH["/api/v1/auth<br/>Auth API"]
+    API_V1 --> API_AUTH["/api/v1/auth<br/>Historical/high-level auth API node<br/>Not sole current auth namespace"]
     API_V1 --> API_INVITATIONS["/api/v1/invitations<br/>Invitation API"]
     API_V1 --> API_TASKS["/api/v1/app/tasks<br/>✅ Tasks API<br/>CRUD + Move + Archive"]
     API_V1 --> API_PROJECTS["/api/v1/app/projects<br/>✅ Projects API<br/>CRUD + Metrics + History"]
@@ -208,6 +209,8 @@ graph TD
 
 1. **🔐 Authentication (historical/manual count)**
    - This snapshot only illustrates the older web auth narrative and should not be read as the full current auth route inventory.
+   - Current runtime auth entry points split across:
+     interactive web login/logout/reset, API auth/token namespaces, and debug-only auth helpers.
 
 2. **👑 Admin Routes (historical page snapshot) - ✅ HOÀN THÀNH**
    - ✅ **Admin Dashboard** - KPI Cards, System Status, Quick Actions
@@ -226,6 +229,7 @@ graph TD
 
 4. **🔌 API Routes (historical schematic grouping)**
    - Admin API, App API, Public API, Auth API, Invitation API
+   - The `/api/v1/auth` node here is a historical/high-level grouping, not a claim that current runtime auth only lives there.
    - ✅ **Added:** Tasks API với Move & Archive endpoints
    - ✅ **Added:** Public Health API với throttle protection
    - ✅ **Added:** Admin Performance API với auth + admin ability
@@ -261,7 +265,7 @@ graph TD
 - **Historical/manual snapshot counts only:** the old narrative referenced `151+ / 12 / 25 / 19 / 30 / 49`, but these should not be read as current runtime totals.
 - **Current runtime boundary:** `php artisan route:list --json` on 2026-03-19 returns a much larger repo-wide route inventory, so this file is not a reliable source for full runtime counts.
 - **Legacy redirect plan still evidenced in `routes/web.php`:** 3 essential paths (`/dashboard`, `/projects`, `/tasks`) + 7 performance paths + 2 invitation paths.
-- **Authentication current-state note:** the web/debug entry points discussed here are narrower than the full auth surface; retired `/api-demo` is historical-only. See `docs/audits/2026-03-19-public-demo-artifact-audit.md`.
+- **Authentication current-state note:** the web/debug entry points discussed here are narrower than the full auth surface. Current runtime evidence also shows mounted API auth families under `/api/auth/*`, `/api/v1/auth/*`, and `/api/zena/auth/*`; retired `/api-demo` is historical-only. See `docs/audits/2026-03-19-public-demo-artifact-audit.md`.
 - **Debug boundary:** historical note only in this file; use `docs/audits/2026-03-19-debug-route-inventory.md` for current `_debug/*` inventory.
 
 ### ✅ **TRẠNG THÁI HOÀN THÀNH:**

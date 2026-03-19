@@ -4,10 +4,12 @@
 
 This document provides comprehensive API documentation for the ZenaManage system, including all endpoints, authentication, error handling, and examples.
 
+Auth boundary note: this file is not the canonical runtime auth route manifest. Current runtime evidence shows multiple mounted auth families under `/api/auth/*`, `/api/v1/auth/*`, and `/api/zena/auth/*`; use `php artisan route:list --json` for exact current inventory and `docs/zena/contract/API_CONTRACT.md` for the ZENA contract surface.
+
 ## 🔐 **AUTHENTICATION**
 
 ### **API Authentication**
-ZenaManage uses Laravel Sanctum for API authentication with token-based authentication.
+ZenaManage uses token-based API authentication, but the current runtime auth surface is split across multiple namespaces. The example below is a compatibility/historical subset example, not a claim that `/api/v1/auth/*` is the only current auth namespace.
 
 ```bash
 # Login to get token
@@ -25,11 +27,15 @@ curl -H "Authorization: Bearer <token>" \
 ```
 
 ### **Authentication Endpoints**
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/logout` - User logout
-- `POST /api/v1/auth/refresh` - Refresh token
-- `GET /api/v1/auth/me` - Get current user
-- `GET /api/v1/auth/permissions` - Get user permissions
+- Current-backed runtime families:
+  - `/api/auth/*` - broad auth, password reset, security, and related protected auth-prefixed routes
+  - `/api/v1/auth/*` - compatibility/historical auth namespace still mounted in runtime
+  - `/api/zena/auth/*` - ZENA contract auth namespace
+- Compatibility subset examples shown in this document:
+  - `POST /api/v1/auth/login` - User login
+  - `POST /api/v1/auth/logout` - User logout
+  - `POST /api/v1/auth/refresh` - Refresh token
+  - `GET /api/v1/auth/me` - Get current user
 
 ## 📊 **DASHBOARD API**
 

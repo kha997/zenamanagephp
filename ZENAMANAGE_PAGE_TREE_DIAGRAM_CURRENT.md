@@ -9,6 +9,7 @@ Tài liệu này được giữ lại như historical snapshot của page-tree n
 **🧭 Canonical page tree:** `ZENAMANAGE_PAGE_TREE_DIAGRAM.md`
 **🧾 Canonical `_debug/*` runtime snapshot:** `docs/audits/2026-03-19-debug-route-inventory.md`
 **🚫 Boundary:** Do not use this file as the runtime source of truth for `/_debug/*` claims.
+**📏 Count boundary:** Route/page totals in this file are historical/manual snapshot labels unless explicitly tied to 2026-03-19 runtime evidence.
 
 ---
 
@@ -20,7 +21,7 @@ graph TD
     ROOT["🏠 ZenaManage System<br/>Root Domain"]
     
     %% Authentication Level
-    ROOT --> AUTH["🔐 Authentication (2 trang)"]
+    ROOT --> AUTH["🔐 Authentication<br/>Historical web snapshot (2 entries)"]
     AUTH --> LOGIN["/login<br/>Login Page"]
     AUTH --> LOGOUT["/logout<br/>Logout"]
     
@@ -128,7 +129,7 @@ graph TD
     DEBUG --> DEBUG_MOVED["Historical moved-root claims in this snapshot are not canonical current `_debug` docs<br/>/dashboard-data legacy redirect still exists<br/>/_debug/test-api-admin-dashboard not mounted<br/>/_debug/api-docs and /_debug/api-docs.json not mounted"]
     
     %% Legacy Routes (OPTIMIZED - 3-Phase Strategy)
-    ROOT --> LEGACY["🔄 Legacy Routes<br/>OPTIMIZED - 12 Routes Total"]
+    ROOT --> LEGACY["🔄 Legacy Routes<br/>Historical redirect plan (12 claimed paths)"]
     LEGACY --> LEGACY_ESSENTIAL["✅ Essential Routes (3)<br/>High/Medium Traffic"]
     LEGACY_ESSENTIAL --> LEGACY_DASH["✅ /dashboard → /app/dashboard<br/>Essential - High Traffic"]
     LEGACY_ESSENTIAL --> LEGACY_PROJECTS["✅ /projects → /app/projects<br/>Essential - High Traffic"]
@@ -147,7 +148,7 @@ graph TD
     LEGACY_INVITATION --> LEGACY_INVITE_ACCEPT["/invite/accept/{token} → /invitations/accept/{token}"]
     LEGACY_INVITATION --> LEGACY_INVITE_DECLINE["/invite/decline/{token} → /invitations/decline/{token}"]
     
-    LEGACY --> LEGACY_REMOVED["❌ REMOVED (9 routes)<br/>Low/Very Low Traffic"]
+    LEGACY --> LEGACY_REMOVED["🗃️ Historical removal set (9 claimed paths)<br/>Low/Very Low Traffic"]
     LEGACY_REMOVED --> LEGACY_USERS["❌ /users<br/>REMOVED - Low Traffic"]
     LEGACY_REMOVED --> LEGACY_TENANTS["❌ /tenants<br/>REMOVED - Low Traffic"]
     LEGACY_REMOVED --> LEGACY_DOCUMENTS["❌ /documents<br/>REMOVED - Low Traffic"]
@@ -205,10 +206,10 @@ graph TD
 
 #### **📊 CÁC MODULE CHÍNH:**
 
-1. **🔐 Authentication (3 trang)**
-   - Login, Logout, Debug Login
+1. **🔐 Authentication (historical/manual count)**
+   - This snapshot only illustrates the older web auth narrative and should not be read as the full current auth route inventory.
 
-2. **👑 Admin Routes (12 trang) - ✅ HOÀN THÀNH**
+2. **👑 Admin Routes (historical page snapshot) - ✅ HOÀN THÀNH**
    - ✅ **Admin Dashboard** - KPI Cards, System Status, Quick Actions
    - ✅ **System-wide Task Monitoring** - Investigation & Intervention, Tenant Filter Required
    - User Management, Tenant Management, Project Oversight
@@ -216,14 +217,14 @@ graph TD
    - Advanced Analytics, System Maintenance, Settings
    - Sidebar Builder
 
-3. **📱 App Routes (39 trang)**
+3. **📱 App Routes (historical page snapshot)**
    - ✅ **My Tasks** - Tenant Internal Operations, Daily Task Management
    - Tenant Dashboard + 38 Feature Pages
    - Project Management, Document Management
    - Team Management, Template Library, Settings
    - ❌ **Removed:** 2 UI routes (move, archive) - Now use API
 
-4. **🔌 API Routes (5 nhóm + Tasks API + Performance API)**
+4. **🔌 API Routes (historical schematic grouping)**
    - Admin API, App API, Public API, Auth API, Invitation API
    - ✅ **Added:** Tasks API với Move & Archive endpoints
    - ✅ **Added:** Public Health API với throttle protection
@@ -236,35 +237,32 @@ graph TD
    - 🗃️ **Archived/historical from this snapshot:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
    - 🧭 **Current source of truth:** `docs/audits/2026-03-19-debug-route-inventory.md`
 
-6. **🔄 Legacy Routes (12 trang - OPTIMIZED)**
+6. **🔄 Legacy Routes (12 claimed historical redirect paths)**
    - ✅ **Essential:** /dashboard, /projects, /tasks (high/medium traffic)
-   - ❌ **Removed:** 9 routes với low/very low traffic
+   - 🗃️ **Historical removal claim:** older docs grouped 9 low/very-low-traffic paths here; verify individual root paths against runtime before treating them as removed.
    - ✅ **Strategy:** 3-phase removal (Announce → 301 → 410)
    - ✅ **Benefits:** Reduced maintenance burden, clearer architecture
 
-7. **📊 Performance & Monitoring (4 trang - MOVED TO API)**
+7. **📊 Performance & Monitoring (historical web paths moved to API)**
    - ❌ **Moved:** All routes moved to proper API endpoints
    - ✅ **Public:** /api/v1/public/health (throttled)
    - ✅ **Admin:** /api/v1/admin/perf/* (authenticated + admin ability)
 
-8. **📧 Invitations (2 trang + 2 legacy redirects)**
+8. **📧 Invitations (2 web paths + 2 legacy redirects)**
    - ✅ **Standardized:** /invitations/accept/{token}, /invitations/decline/{token}
    - ❌ **Legacy:** /invite/* routes with 301 redirects
    - ✅ **Consistent:** Web routes match API naming convention
 
-9. **📅 Calendar (1 trang)**
+9. **📅 Calendar (single page in this snapshot)**
    - Tenant-scoped calendar view
 
 ### 📈 **THỐNG KÊ TỔNG QUAN:**
 
-- **Tổng số trang:** 151+ routes (tăng từ 81+ do thêm API routes)
-- **Admin Routes:** 12 routes (dashboard, users, tenants, security, alerts, activities, analytics, projects, tasks, settings, maintenance, sidebar-builder)
-- **App Routes:** 25 routes (projects, tasks, documents, team, templates, settings, profile, calendar)
-- **API Routes:** 19 routes (app API: 15, admin API: 4)
-- **Debug Routes:** historical note only in this file; do not interpret this count as current runtime inventory
-- **Legacy Redirects:** 30 routes (301 redirects)
-- **Authentication:** local/testing auth entry points only (`/login`, `/logout`, `/password/reset`); retired `/api-demo` is historical-only. See `docs/audits/2026-03-19-public-demo-artifact-audit.md`.
-- **Other Routes:** 49 routes (projects, tasks, documents, team, templates, settings, profile, etc.)
+- **Historical/manual snapshot counts only:** the old narrative referenced `151+ / 12 / 25 / 19 / 30 / 49`, but these should not be read as current runtime totals.
+- **Current runtime boundary:** `php artisan route:list --json` on 2026-03-19 returns a much larger repo-wide route inventory, so this file is not a reliable source for full runtime counts.
+- **Legacy redirect plan still evidenced in `routes/web.php`:** 3 essential paths (`/dashboard`, `/projects`, `/tasks`) + 7 performance paths + 2 invitation paths.
+- **Authentication current-state note:** the web/debug entry points discussed here are narrower than the full auth surface; retired `/api-demo` is historical-only. See `docs/audits/2026-03-19-public-demo-artifact-audit.md`.
+- **Debug boundary:** historical note only in this file; use `docs/audits/2026-03-19-debug-route-inventory.md` for current `_debug/*` inventory.
 
 ### ✅ **TRẠNG THÁI HOÀN THÀNH:**
 
@@ -334,10 +332,10 @@ graph TD
 - ✅ **Consistency:** Web và API routes đồng bộ naming convention
 
 #### **🔄 Legacy Route Optimization (100% Complete):**
-- ✅ **Reduced:** Từ 19 legacy routes xuống 3 essential routes
+- ⚠️ **Historical reduction claim only:** older narrative described a reduction down to 3 essential legacy paths; use `routes/web.php` for the current redirect set.
 - ✅ **Strategy:** 3-phase removal (Announce → 301 → 410)
 - ✅ **Essential Routes:** /dashboard, /projects, /tasks (high/medium traffic)
-- ✅ **Removed Routes:** 9 routes với low/very low traffic
+- 🗃️ **Historical removal claim:** older docs grouped 9 low/very-low-traffic paths here; verify individual root paths against runtime before treating them as removed.
 - ✅ **Benefits:** Reduced maintenance burden, clearer architecture
 - ✅ **Documentation:** legacy-map.json với detailed tracking
 

@@ -2,6 +2,8 @@
 
 ## 📋 TỔNG QUAN HỆ THỐNG
 
+Boundary note: this diagram is a schematic architecture summary, not a full runtime route manifest. Exact route totals should be verified against `php artisan route:list`.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                              ZENAMANAGE SYSTEM                                 │
@@ -123,17 +125,17 @@
 │                              DEBUG NAMESPACE                                   │
 │                         /_debug/* (Protected Routes)                           │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│  📊 /dashboard-data - Mock dashboard data                                      │
-│  📚 /api-docs - API documentation                                             │
-│  🧪 /test-api-admin-dashboard - Admin API testing                             │
-│  🔍 /test-permissions - Permission testing                                     │
-│  🔐 /test-login-simple - Simple login testing                                  │
-│  📝 /test-session-auth - Session auth testing                                  │
-│  🔑 /test-login/{email} - Debug login with email                               │
+│  📊 /dashboard-data - Still evidenced in current runtime                       │
+│  🔍 /test-permissions - Still evidenced in current runtime                     │
+│  🔐 /test-login-simple - Still evidenced in current runtime                    │
+│  📝 /test-session-auth - Still evidenced in current runtime                    │
+│  🔑 /test-login/{email} - Still evidenced in current runtime                   │
+│  🗃️ Historical-only in older docs: /api-docs, /test-api-admin-dashboard       │
 │                                                                                 │
 │  Middleware: DebugGate (env check + IP allowlist)                             │
 │  Access: Local/Testing only OR IP allowlist                                    │
 │  Purpose: Development and debugging tools (NOT production)                     │
+│  Source of truth: docs/audits/2026-03-19-debug-route-inventory.md             │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -163,9 +165,11 @@
 │  └── /invite/decline/{token} → /invitations/decline/{token}                    │
 │  └── 410 Removal Date: 2025-05-21                                              │
 │                                                                                 │
-│  ❌ REMOVED: Non-essential routes (14 → 3 routes)                              │
-│  ├── /users, /tenants, /admin-dashboard, /role-dashboard                       │
-│  └── /documents, /templates, /settings, /profile, /team                        │
+│  ❌ REMOVED: Historical reduction note from older docs                          │
+│  ├── Historical candidate paths: /users, /tenants, /admin-dashboard,           │
+│  │   /role-dashboard                                                            │
+│  └── Historical candidate paths: /documents, /templates, /settings,            │
+│      /profile, /team                                                            │
 │                                                                                 │
 │  📊 TOTAL LEGACY REDIRECTS: 12 routes (3 + 7 + 2)                             │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -322,14 +326,13 @@
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                              SYSTEM STATS                                      │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│  📊 TOTAL ROUTES: 151 routes                                                    │
-│  ├── Admin Routes: 12 routes                                                    │
-│  ├── App Routes: 25 routes                                                      │
-│  ├── API Routes: 19 routes                                                      │
-│  ├── Debug Routes: 16 routes                                                    │
-│  ├── Legacy Redirects: 30 routes                                                 │
-│  ├── Authentication: local/testing auth entry points; `/api-demo` retired        │
-│  └── Other Routes: 49 routes (projects, tasks, documents, etc.)                  │
+│  📊 ROUTE COUNT BOUNDARY                                                        │
+│  ├── Legacy totals like 151 / 12 / 25 / 19 / 16 / 30 are manual snapshot labels │
+│  ├── They should not be read as current runtime totals                          │
+│  ├── Runtime verification on 2026-03-19: php artisan route:list --json          │
+│  ├── Repo-wide route inventory is much larger than this diagram summary         │
+│  ├── Legacy redirect plan still evidenced: 3 + 7 + 2 claimed paths             │
+│  └── `/api-demo` is retired historical-only; see public demo artifact audit     │
 │                                                                                 │
 │  🎯 MIDDLEWARE: 6 middleware types                                             │
 │  ├── auth (Laravel Standard)                                                    │

@@ -64,13 +64,13 @@
                             <p class="text-sm text-gray-500">Tenant-scoped project and task data</p>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <div class="w-2 h-2 bg-green-400 rounded-full"></div>
-                            <span class="text-sm text-green-600">Active</span>
+                            <div class="w-2 h-2 bg-red-400 rounded-full"></div>
+                            <span class="text-sm text-red-600">Archived</span>
                         </div>
                     </div>
                     <div class="mt-4">
                         <p class="text-sm text-gray-600">Endpoint: <code class="bg-gray-100 px-2 py-1 rounded">/test-api-app-dashboard</code></p>
-                        <p class="text-sm text-gray-600 mt-1">Auth: Bearer Token</p>
+                        <p class="text-sm text-red-600 mt-1">Retired demo endpoint: no mounted runtime target</p>
                     </div>
                 </div>
             </div>
@@ -279,29 +279,7 @@
                         this.appLoading = true;
                         this.appError = null;
                         
-                        const token = 'eyJ1c2VyX2lkIjoyOTE0LCJlbWFpbCI6InN1cGVyYWRtaW5AemVuYS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJleHBpcmVzIjoxNzU4NjE2OTIwfQ==';
-                        
-                        const response = await fetch('/test-api-app-dashboard', {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        
-                        const data = await response.json();
-                        console.log('App API Response:', data);
-                        
-                        if (data.success && data.stats) {
-                            this.appData = data.stats;
-                        }
-                        
+                        this.appData = {};
                         this.appLoading = false;
                         
                     } catch (error) {
@@ -309,6 +287,8 @@
                         this.appError = error.message;
                         this.appLoading = false;
                     }
+                    
+                    this.appError = 'Archived demo endpoint: /test-api-app-dashboard is retired and has no mounted runtime target.';
                 }
             }
         }

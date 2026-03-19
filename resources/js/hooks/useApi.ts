@@ -100,22 +100,12 @@ export const useApi = () => {
     return handleResponse(response);
   }, []);
 
-  const getAppDashboard = useCallback(async (): Promise<ApiResponse> => {
-    const response = await fetch('/test-api-app-dashboard', {
-      method: 'GET',
-      headers: getHeaders(true),
-    });
-    
-    return handleResponse(response);
-  }, []);
-
   return {
     get,
     post,
     put,
     delete: del,
     getAdminDashboard,
-    getAppDashboard,
     getAuthToken,
   };
 };

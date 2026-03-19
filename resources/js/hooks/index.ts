@@ -1,2 +1,2 @@
 export { useApi } from './useApi';
-export { useAdminDashboard, useAppDashboard } from './useDashboard';
+export { useAdminDashboard } from './useDashboard';

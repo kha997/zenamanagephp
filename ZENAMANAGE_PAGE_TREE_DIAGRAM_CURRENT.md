@@ -1,15 +1,18 @@
-# 🌳 ZENAMANAGE SYSTEM - PAGE TREE DIAGRAM (CURRENT STATE)
+# 🌳 ZENAMANAGE SYSTEM - PAGE TREE DIAGRAM (HISTORICAL SNAPSHOT - NON-CANONICAL)
 
 ## 📋 OVERVIEW
-Sơ đồ mối quan hệ cha-con của toàn bộ hệ thống ZenaManage Project Management System đến thời điểm hiện tại (sau khi hoàn thành Admin Dashboard và Tasks Management).
+Tài liệu này được giữ lại như historical snapshot của page-tree narrative cũ, phản ánh trạng thái tài liệu khoảng 2025-01-15 chứ không còn là canonical runtime map hiện tại.
 
-**📅 Cập nhật lần cuối:** 2025-01-15  
-**🔄 Phiên bản:** 3.0 - Current State  
-**✅ Trạng thái:** Admin Dashboard hoàn thành, Tasks Management đã tích hợp
+**📅 Snapshot gốc:** 2025-01-15  
+**🔄 Phiên bản gốc:** 3.0 - Current State  
+**⚠️ Trạng thái hiện tại:** Historical snapshot - non-canonical
+**🧭 Canonical page tree:** `ZENAMANAGE_PAGE_TREE_DIAGRAM.md`
+**🧾 Canonical `_debug/*` runtime snapshot:** `docs/audits/2026-03-19-debug-route-inventory.md`
+**🚫 Boundary:** Do not use this file as the runtime source of truth for `/_debug/*` claims.
 
 ---
 
-## 🌳 COMPLETE PAGE TREE STRUCTURE (CURRENT STATE)
+## 🌳 COMPLETE PAGE TREE STRUCTURE (HISTORICAL SNAPSHOT)
 
 ```mermaid
 graph TD
@@ -117,27 +120,12 @@ graph TD
     API_CALENDAR --> API_CAL_DELETE["DELETE /api/v1/app/calendar/{id}<br/>Delete Event"]
     API_CALENDAR --> API_CAL_UPCOMING["GET /api/v1/app/calendar/upcoming<br/>Upcoming Events"]
     
-    %% Debug Routes (OPTIMIZED - Moved from root)
-    ROOT --> DEBUG["🐛 Debug Routes<br/>OPTIMIZED - DebugGate Protected"]
-    DEBUG --> DEBUG_INFO["/_debug/info<br/>System Information"]
-    DEBUG --> DEBUG_PROJECTS["/_debug/projects-test<br/>Project Testing"]
-    DEBUG --> DEBUG_USERS["/_debug/users-debug<br/>User Debugging"]
-    DEBUG --> DEBUG_TASKS["/_debug/tasks-debug<br/>Task Debugging"]
-    DEBUG --> DEBUG_FRONTEND["/_debug/frontend-test<br/>Frontend Testing"]
-    DEBUG --> DEBUG_LOGIN["/_debug/login-test<br/>Login Testing"]
-    DEBUG --> DEBUG_SIMPLE["/_debug/simple-test<br/>Simple Testing"]
-    DEBUG --> DEBUG_NAV["/_debug/navigation-test<br/>Navigation Testing"]
-    DEBUG --> DEBUG_DASHBOARD_DATA["✅ /_debug/dashboard-data<br/>Dashboard Data Test<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_API_DOCS["✅ /_debug/api-docs<br/>API Documentation<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_TEST_PERMISSIONS["✅ /_debug/test-permissions<br/>Permission Testing<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_TEST_LOGIN_SIMPLE["✅ /_debug/test-login-simple<br/>Simple Login Testing<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_TEST_SESSION_AUTH["✅ /_debug/test-session-auth<br/>Session Auth Testing<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_TEST_LOGIN_EMAIL["✅ /_debug/test-login/{email}<br/>Debug Login with Email<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_MOVED["❌ MOVED FROM ROOT<br/>4 routes moved to /_debug"]
-    DEBUG_MOVED --> DEBUG_MOVED_DASHBOARD["❌ /dashboard-data<br/>MOVED TO /_debug/dashboard-data"]
-    DEBUG_MOVED --> DEBUG_MOVED_API_DOCS["❌ /api-docs<br/>MOVED TO /_debug/api-docs"]
-    DEBUG_MOVED --> DEBUG_MOVED_TEST_ADMIN["❌ /test-api-admin-dashboard<br/>MOVED TO /_debug/test-api-admin-dashboard"]
-    DEBUG_MOVED --> DEBUG_MOVED_API_DOCS_JSON["❌ /api-docs.json<br/>MOVED TO /_debug/api-docs.json"]
+    %% Debug Routes (historical note only; not a runtime manifest)
+    ROOT --> DEBUG["🐛 Debug Routes<br/>HISTORICAL SNAPSHOT ONLY"]
+    DEBUG --> DEBUG_CANON["Use canonical docs instead<br/>ZENAMANAGE_PAGE_TREE_DIAGRAM.md<br/>docs/audits/2026-03-19-debug-route-inventory.md"]
+    DEBUG --> DEBUG_ACTIVE["Claims from this snapshot still backed by 2026-03-19 runtime evidence<br/>/_debug/dashboard-data<br/>/_debug/test-permissions<br/>POST /_debug/test-login-simple<br/>/_debug/test-session-auth<br/>/_debug/test-login/{email}"]
+    DEBUG --> DEBUG_ARCHIVED["Claims from this snapshot now archived or unsupported by runtime<br/>/_debug/info<br/>/_debug/projects-test<br/>/_debug/users-debug<br/>/_debug/tasks-debug<br/>/_debug/frontend-test<br/>/_debug/login-test<br/>/_debug/simple-test<br/>/_debug/navigation-test<br/>/_debug/api-docs"]
+    DEBUG --> DEBUG_MOVED["Historical moved-root claims in this snapshot are not canonical current `_debug` docs<br/>/dashboard-data legacy redirect still exists<br/>/_debug/test-api-admin-dashboard not mounted<br/>/_debug/api-docs and /_debug/api-docs.json not mounted"]
     
     %% Legacy Routes (OPTIMIZED - 3-Phase Strategy)
     ROOT --> LEGACY["🔄 Legacy Routes<br/>OPTIMIZED - 12 Routes Total"]
@@ -242,11 +230,11 @@ graph TD
    - ✅ **Added:** Admin Performance API với auth + admin ability
    - ✅ **Audit Logging:** Tất cả API actions được log
 
-5. **🐛 Debug Routes (15 trang - OPTIMIZED)**
-   - ✅ **Protected:** DebugGate middleware với env + IP allowlist
-   - ✅ **Moved:** 4 routes từ root level vào /_debug namespace
-   - ✅ **Security:** Không deploy prod nếu còn test routes ở root
-   - ✅ **Benefits:** Reduced attack surface, better security
+5. **🐛 Debug Routes (historical snapshot only)**
+   - ⚠️ **Non-canonical:** phần `_debug/*` trong file này khong con la runtime truth
+   - ✅ **Still active from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`, `/_debug/test-login/{email}`
+   - 🗃️ **Archived/historical from this snapshot:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
+   - 🧭 **Current source of truth:** `docs/audits/2026-03-19-debug-route-inventory.md`
 
 6. **🔄 Legacy Routes (12 trang - OPTIMIZED)**
    - ✅ **Essential:** /dashboard, /projects, /tasks (high/medium traffic)
@@ -273,7 +261,7 @@ graph TD
 - **Admin Routes:** 12 routes (dashboard, users, tenants, security, alerts, activities, analytics, projects, tasks, settings, maintenance, sidebar-builder)
 - **App Routes:** 25 routes (projects, tasks, documents, team, templates, settings, profile, calendar)
 - **API Routes:** 19 routes (app API: 15, admin API: 4)
-- **Debug Routes:** 16 routes (moved to /_debug namespace)
+- **Debug Routes:** historical note only in this file; do not interpret this count as current runtime inventory
 - **Legacy Redirects:** 30 routes (301 redirects)
 - **Authentication:** 3 routes (login, logout, api-demo)
 - **Other Routes:** 49 routes (projects, tasks, documents, team, templates, settings, profile, etc.)
@@ -353,13 +341,13 @@ graph TD
 - ✅ **Benefits:** Reduced maintenance burden, clearer architecture
 - ✅ **Documentation:** legacy-map.json với detailed tracking
 
-#### **🐛 Debug Route Optimization (100% Complete):**
-- ✅ **Moved:** 4 test routes từ root level vào /_debug namespace
-- ✅ **Protected:** DebugGate middleware với env + IP allowlist
-- ✅ **Security:** Không deploy prod nếu còn test routes ở root
-- ✅ **Routes:** /dashboard-data, /api-docs, /test-api-admin-dashboard
-- ✅ **Benefits:** Reduced attack surface, better security
-- ✅ **Monitoring:** Log tất cả debug route access
+#### **🐛 Debug Route Snapshot (Historical Only):**
+- ⚠️ **Demoted:** file nay khong con canonical cho `_debug/*`
+- ✅ **Protected runtime group still exists:** `routes/web.php` van mount `/_debug/*` behind `DebugGateMiddleware`
+- ✅ **Still evidenced from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`, `/_debug/test-login/{email}`
+- 🗃️ **Archived snapshot claims:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
+- ❌ **Unsupported moved claim in this snapshot:** `/_debug/test-api-admin-dashboard`
+- 🧾 **Use runtime inventory instead:** `docs/audits/2026-03-19-debug-route-inventory.md`
 
 ### 📋 **LEGACY ROUTE MANAGEMENT:**
 
@@ -383,16 +371,17 @@ graph TD
 ### 🐛 **DEBUG ROUTE MANAGEMENT:**
 
 #### **🔒 DebugGate Middleware:**
+- ✅ **Runtime evidence:** current `routes/web.php` still mounts the active `/_debug/*` surface behind `DebugGateMiddleware`
 - ✅ **Environment Check:** Chỉ allow trong non-production environments
 - ✅ **IP Allowlist:** Production chỉ allow từ specific IPs
 - ✅ **Logging:** Log tất cả debug route access
 - ✅ **Security:** 403 response nếu không được phép
 
 #### **📁 Debug Namespace:**
-- ✅ **Location:** /_debug/* namespace
-- ✅ **Protection:** DebugGate middleware
-- ✅ **Routes:** 12 debug routes (8 existing + 4 moved)
-- ✅ **Benefits:** Centralized debug management
+- ✅ **Location:** `/_debug/*` namespace
+- ✅ **Protection:** `DebugGateMiddleware`
+- ⚠️ **Current inventory lives elsewhere:** `docs/audits/2026-03-19-debug-route-inventory.md`
+- ⚠️ **This file only preserves historical page-tree intent and stale claims**
 
 #### **🚫 Production Safety:**
 - ✅ **No Root Test Routes:** Không deploy prod nếu còn test routes ở root

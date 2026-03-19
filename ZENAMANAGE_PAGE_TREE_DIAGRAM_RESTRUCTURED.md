@@ -89,14 +89,14 @@ graph TD
     
     %% Debug Routes (Local Only)
     ROOT --> DEBUG["🐛 Debug Routes<br/>Local Environment Only"]
-    DEBUG --> DEBUG_INFO["/_debug/info<br/>System Info"]
-    DEBUG --> DEBUG_PROJECTS["/_debug/projects-test<br/>Projects Test"]
-    DEBUG --> DEBUG_USERS["/_debug/users-debug<br/>Users Debug"]
-    DEBUG --> DEBUG_TASKS["/_debug/tasks/{task}/edit-debug<br/>Task Edit Debug"]
-    DEBUG --> DEBUG_FRONTEND["/_debug/frontend-test<br/>Frontend Test"]
+    DEBUG --> DEBUG_TEST["/_debug/test<br/>Debug Test"]
+    DEBUG --> DEBUG_PERM["/_debug/test-permissions<br/>Permission Test"]
     DEBUG --> DEBUG_LOGIN["/_debug/test-login/{email}<br/>Test Login"]
-    DEBUG --> DEBUG_SIMPLE["/_debug/simple-login<br/>Simple Login"]
-    DEBUG --> DEBUG_NAV["archived docs artifact only<br/>`/_debug/navigation-demo` not mounted"]
+    DEBUG --> DEBUG_LOGIN_SIMPLE["POST /_debug/test-login-simple<br/>Simple Login"]
+    DEBUG --> DEBUG_SESSION["/_debug/test-session-auth<br/>Session Auth Debug"]
+    DEBUG --> DEBUG_DASH["/_debug/dashboard-data<br/>Dashboard Data"]
+    DEBUG --> DEBUG_STATS["/_debug/test-api-admin-stats<br/>Admin Stats Debug"]
+    DEBUG --> DEBUG_HIST["historical docs artifacts only<br/>`/_debug/navigation-demo`, `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks/{task}/edit-debug`, `/_debug/frontend-test`, `/_debug/simple-login` not mounted"]
     
     %% Legacy Routes (Backward Compatibility)
     ROOT --> LEGACY["🔄 Legacy Routes<br/>Backward Compatibility"]
@@ -142,7 +142,7 @@ graph TD
     class ADMIN,ADMIN_DASH,ADMIN_USERS,ADMIN_TENANTS,ADMIN_PROJECTS,ADMIN_SECURITY,ADMIN_ALERTS,ADMIN_ACTIVITIES,ADMIN_SETTINGS,ADMIN_MAINTENANCE,ADMIN_SIDEBAR adminRoute
     class APP,APP_DASH,APP_PROJECTS,APP_PROJ_CREATE,APP_PROJ_SHOW,APP_PROJ_EDIT,APP_PROJ_DOCS,APP_PROJ_HISTORY,APP_PROJ_DESIGN,APP_PROJ_CONSTRUCTION,APP_TASKS,APP_TASK_CREATE,APP_TASK_SHOW,APP_TASK_EDIT,APP_TASK_MOVE,APP_TASK_ARCHIVE,APP_TASK_DOCS,APP_TASK_HISTORY,APP_DOCUMENTS,APP_DOC_CREATE,APP_DOC_APPROVALS,APP_TEAM,APP_TEAM_USERS,APP_TEAM_INVITE,APP_TEMPLATES,APP_TEMP_CREATE,APP_TEMP_SHOW,APP_TEMP_BUILDER,APP_TEMP_CONSTRUCTION,APP_TEMP_ANALYTICS,APP_SETTINGS,APP_SETTINGS_GENERAL,APP_SETTINGS_SECURITY,APP_SETTINGS_NOTIFICATIONS,APP_PROFILE appRoute
     class API,API_V1,API_ADMIN,API_APP,API_PUBLIC,API_AUTH,API_INVITATIONS apiRoute
-    class DEBUG,DEBUG_INFO,DEBUG_PROJECTS,DEBUG_USERS,DEBUG_TASKS,DEBUG_FRONTEND,DEBUG_LOGIN,DEBUG_SIMPLE,DEBUG_NAV debugRoute
+    class DEBUG,DEBUG_TEST,DEBUG_PERM,DEBUG_LOGIN,DEBUG_LOGIN_SIMPLE,DEBUG_SESSION,DEBUG_DASH,DEBUG_STATS,DEBUG_HIST debugRoute
     class LEGACY,LEGACY_DASH,LEGACY_ADMIN,LEGACY_ROLE,LEGACY_PROJECTS,LEGACY_TASKS,LEGACY_USERS,LEGACY_TENANTS,LEGACY_DOCUMENTS,LEGACY_TEMPLATES,LEGACY_SETTINGS,LEGACY_PROFILE,LEGACY_CALENDAR,LEGACY_TEAM,LEGACY_DEBUG legacyRoute
     class PERF,PERF_HEALTH,PERF_METRICS,PERF_HEALTH_CHECK,PERF_CLEAR_CACHE perfRoute
 ```
@@ -170,8 +170,8 @@ graph TD
 4. **🔌 API Routes (5 nhóm)**
    - Admin API, App API, Public API, Auth API, Invitation API
 
-5. **🐛 Debug Routes (7 live pages + 1 archived doc claim)**
-   - Development và testing tools
+5. **🐛 Debug Routes (active mounts + archived doc claims)**
+   - Development và testing tools with route-list-backed reconciliation
 
 6. **🔄 Legacy Routes (14 trang)**
    - Backward compatibility
@@ -193,11 +193,26 @@ graph TD
 - **Navigation:** Parent-child relationships rõ ràng
 - **Permissions:** Role-based access control
 
-### ⚠️ Documentation Correction
+### ⚠️ Debug Surface Reconciliation
 
-- `/_debug/navigation-demo` is not a current runtime surface.
-- `routes/web.php` does not register an active debug mount for that path.
-- Treat this node as a historical documentation artifact tied to the archived `navigation-demo.blade.php` demo, not as a live page.
+- Runtime evidence source: `php artisan route:list --json --path=_debug`
+- Active debug mounts explicitly claimed in this page tree:
+  - `/_debug/test`
+  - `/_debug/test-permissions`
+  - `/_debug/test-login/{email}`
+  - `POST /_debug/test-login-simple`
+  - `/_debug/test-session-auth`
+  - `/_debug/dashboard-data`
+  - `/_debug/test-api-admin-stats`
+- Archived or historical docs artifacts, not current runtime mounts:
+  - `/_debug/navigation-demo`
+  - `/_debug/info`
+  - `/_debug/projects-test`
+  - `/_debug/users-debug`
+  - `/_debug/tasks/{task}/edit-debug`
+  - `/_debug/frontend-test`
+  - `/_debug/simple-login`
+- This page tree is intentionally not a full inventory of every active `/_debug/*` route. It only claims the subset above.
 
 ### 🔗 **QUAN HỆ CHA-CON CHÍNH:**
 

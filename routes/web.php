@@ -806,12 +806,11 @@ Route::prefix('_debug')->middleware([\App\Http\Middleware\DebugGateMiddleware::c
 
 // Legacy redirects for test routes (moved to debug namespace)
 Route::permanentRedirect('/dashboard-data', '/_debug/dashboard-data');
-Route::permanentRedirect('/test-api-admin-dashboard', '/_debug/test-api-admin-dashboard');
+Route::permanentRedirect('/test-api-admin-dashboard', '/_debug/test-api-admin-stats');
 // Route::permanentRedirect('/api-docs', '/_debug/api-docs'); - REMOVED: Conflicts with L5Swagger
 // Route::permanentRedirect('/api-docs.json', '/_debug/api-docs.json'); - REMOVED: Conflicts with L5Swagger
 Route::permanentRedirect('/test-permissions', '/_debug/test-permissions');
 Route::permanentRedirect('/test-api-admin-stats', '/_debug/test-api-admin-stats');
-Route::permanentRedirect('/test-login-simple', '/_debug/test-login-simple');
 Route::permanentRedirect('/test-session-auth', '/_debug/test-session-auth');
 Route::permanentRedirect('/test-login/{email}', '/_debug/test-login/{email}');
 

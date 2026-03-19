@@ -14,7 +14,7 @@ This document identifies buttons, views, and actions that could not be mapped to
 
 ### 1. Navigation Demo Buttons
 **View**: `navigation-demo.blade.php`
-**Issue**: Archived demo buttons in an unmounted historical artifact, not a current runtime page
+**Issue**: Archived demo buttons in an unmounted historical artifact, not a current runtime page or `/_debug/*` surface
 
 | Button | Selector | Issue | Recommendation |
 |--------|----------|-------|----------------|
@@ -50,7 +50,7 @@ This document identifies buttons, views, and actions that could not be mapped to
 - `navigation-demo.blade.php`
 
 **Issue**: Demo views retained as historical artifacts without runtime mounts
-**Recommendation**: Keep documented as archived/unmounted unless a deliberate debug surface is reintroduced
+**Recommendation**: Keep documented as archived/unmounted unless a deliberate debug surface is reintroduced; specifically do not treat `/_debug/navigation-demo` as a current route claim
 
 ### 2. Placeholder Views
 **Views**:

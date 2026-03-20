@@ -74,49 +74,13 @@ Route::prefix('v1/work-template')->middleware(['auth:api', 'tenant.isolation'])-
         // Task operations
         Route::prefix('tasks')->group(function () {
             // CRUD operations
-            Route::post('/', [ProjectTaskController::class, 'store'])->middleware('rbac:task.create');
             Route::get('conditional', [ProjectTaskController::class, 'conditionalTasks'])->middleware('rbac:task.view');
             Route::get('{taskId}', [ProjectTaskController::class, 'show'])->middleware('rbac:task.view');
             Route::put('{taskId}', [ProjectTaskController::class, 'update'])->middleware('rbac:task.edit');
-            Route::delete('{taskId}', [ProjectTaskController::class, 'destroy'])->middleware('rbac:task.delete');
             
             // Task specific actions
             Route::put('{taskId}/progress', [ProjectTaskController::class, 'updateProgress'])->middleware('rbac:task.edit');
-            Route::put('{taskId}/status', [ProjectTaskController::class, 'updateStatus'])->middleware('rbac:task.edit');
             Route::post('{taskId}/toggle-conditional', [ProjectTaskController::class, 'toggleConditional'])->middleware('rbac:task.edit');
-            
-            // Bulk operations
-            Route::post('bulk-update', [ProjectTaskController::class, 'bulkUpdate'])->middleware('rbac:task.edit');
-            Route::post('bulk-toggle-conditional', [ProjectTaskController::class, 'bulkToggleConditional'])->middleware('rbac:task.edit');
-        });
-        
-        // Project phases management
-        Route::prefix('phases')->group(function () {
-            Route::get('/', [ProjectTaskController::class, 'getPhases'])->middleware('rbac:task.view');
-            Route::get('{phaseId}/tasks', [ProjectTaskController::class, 'getPhaseTask'])->middleware('rbac:task.view');
-            Route::put('{phaseId}/reorder', [ProjectTaskController::class, 'reorderPhase'])->middleware('rbac:task.edit');
-        });
-        
-        // Conditional tags management
-        Route::prefix('conditional-tags')->group(function () {
-            Route::get('/', [ProjectTaskController::class, 'getConditionalTags'])->middleware('rbac:task.view');
-            Route::get('statistics', [ProjectTaskController::class, 'getConditionalTagStats'])->middleware('rbac:task.view');
-            Route::post('{tag}/toggle', [ProjectTaskController::class, 'toggleConditionalTag'])->middleware('rbac:task.edit');
-            Route::post('bulk-toggle', [ProjectTaskController::class, 'bulkToggleConditionalTags'])->middleware('rbac:task.edit');
-        });
-        
-        // Project template sync
-        Route::prefix('template-sync')->group(function () {
-            Route::post('partial', [ProjectTaskController::class, 'partialSync'])->middleware('rbac:template.apply');
-            Route::get('diff', [ProjectTaskController::class, 'getTemplateDiff'])->middleware('rbac:template.view');
-            Route::post('apply-diff', [ProjectTaskController::class, 'applyTemplateDiff'])->middleware('rbac:template.apply');
-        });
-        
-        // Project statistics và reports
-        Route::prefix('reports')->group(function () {
-            Route::get('progress', [ProjectTaskController::class, 'getProgressReport'])->middleware('rbac:task.view');
-            Route::get('tasks-summary', [ProjectTaskController::class, 'getTasksSummary'])->middleware('rbac:task.view');
-            Route::get('conditional-usage', [ProjectTaskController::class, 'getConditionalUsageReport'])->middleware('rbac:task.view');
         });
     });
     

@@ -9,7 +9,6 @@ use Src\WorkTemplate\Models\ProjectTask;
 use Src\WorkTemplate\Requests\UpdateTaskRequest;
 use Src\WorkTemplate\Requests\ToggleConditionalRequest;
 use Src\WorkTemplate\Resources\ProjectTaskResource;
-use Src\WorkTemplate\Resources\ProjectTaskCollection;
 use Src\WorkTemplate\Services\ProjectTaskService;
 use Src\Foundation\Utils\JSendResponse;
 
@@ -82,7 +81,7 @@ class ProjectTaskController extends Controller
         $tasks = $query->paginate($perPage);
         
         return JSendResponse::success(
-            new ProjectTaskCollection($tasks)
+            ProjectTaskResource::collection($tasks)
         );
     }
 
@@ -202,7 +201,7 @@ class ProjectTaskController extends Controller
         $task = ProjectTask::byProject($projectId)->find($taskId);
         
         if (!$task) {
-            return $this->errorResponse('Task not found', 404);
+            return JSendResponse::error('Task không tồn tại trong project này', 404);
         }
         
         try {

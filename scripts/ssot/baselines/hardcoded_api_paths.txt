@@ -1,0 +1,17 @@
+tests/Feature/Api/V1DashboardTaskAssignmentsCompatibilityTest.php:115:            ->postJson("/api/v1/dashboard/tasks/{$this->task->id}/assignments", [
+tests/Feature/Api/V1DashboardTaskAssignmentsCompatibilityTest.php:143:            ->putJson("/api/v1/dashboard/assignments/{$this->assignmentId}", [
+tests/Feature/Api/V1DashboardTaskAssignmentsCompatibilityTest.php:158:            ->deleteJson("/api/v1/dashboard/assignments/{$this->assignmentId}");
+tests/Feature/Api/V1DashboardTaskAssignmentsCompatibilityTest.php:173:            ->getJson("/api/v1/dashboard/users/{$this->user->id}/assignments/stats");
+tests/Feature/Api/V1DashboardTaskAssignmentsCompatibilityTest.php:99:            ->getJson("/api/v1/dashboard/tasks/{$this->task->id}/assignments?task_id={$this->otherTask->id}");
+tests/Feature/Api/V1TaskAssignmentsCompatibilityTest.php:116:            ->postJson('/api/v1/task-assignments', [
+tests/Feature/Api/V1TaskAssignmentsCompatibilityTest.php:137:            ->getJson("/api/v1/task-assignments/{$this->assignmentId}");
+tests/Feature/Api/V1TaskAssignmentsCompatibilityTest.php:148:            ->putJson("/api/v1/task-assignments/{$this->assignmentId}", [
+tests/Feature/Api/V1TaskAssignmentsCompatibilityTest.php:162:            ->patchJson("/api/v1/task-assignments/{$this->assignmentId}", [
+tests/Feature/Api/V1TaskAssignmentsCompatibilityTest.php:176:            ->deleteJson("/api/v1/task-assignments/{$this->assignmentId}");
+tests/Feature/Api/V1TaskAssignmentsCompatibilityTest.php:94:            ->getJson("/api/v1/task-assignments?task_id={$this->task->id}");
+tests/Feature/Api/V1TasksCompatibilityCrudTest.php:111:        $response = $this->apiPut("/api/v1/tasks/{$task->id}?project_id={$secondaryProject->id}", [
+tests/Feature/Api/V1TasksCompatibilityCrudTest.php:140:        $response = $this->apiPatch("/api/v1/tasks/{$task->id}?project_id={$secondaryProject->id}", [
+tests/Feature/Api/V1TasksCompatibilityCrudTest.php:169:        $response = $this->apiDelete("/api/v1/tasks/{$task->id}?project_id={$secondaryProject->id}");
+tests/Feature/Api/V1TasksCompatibilityCrudTest.php:188:            ->getJson("/api/v1/tasks/{$task->id}");
+tests/Feature/Api/V1TasksCompatibilityCrudTest.php:65:        $response = $this->apiGet('/api/v1/tasks?per_page=50');
+tests/Feature/Api/V1TasksCompatibilityCrudTest.php:95:        $response = $this->apiGet("/api/v1/tasks/{$task->id}?project_id={$secondaryProject->id}");

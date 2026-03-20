@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ProjectFormRequest;
 use App\Models\Project;
 use App\Repositories\ProjectRepository;
-use Src\CoreProject\Services\LegacyProjectServiceAdapter as ProjectService;
+use App\Services\ProjectService;
 use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

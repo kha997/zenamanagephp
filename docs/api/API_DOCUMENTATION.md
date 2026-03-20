@@ -6,6 +6,8 @@ This document provides comprehensive API documentation for the ZenaManage system
 
 Auth boundary note: this file is not the canonical runtime auth route manifest. Current runtime evidence shows multiple mounted auth families under `/api/auth/*`, `/api/v1/auth/*`, and `/api/zena/auth/*`; use `php artisan route:list --json` for exact current inventory and `docs/zena/contract/API_CONTRACT.md` for the ZENA contract surface.
 
+Projects ownership note: the canonical business API is `/api/zena/projects` owned by `App\Http\Controllers\Api\ProjectController`, `App\Services\ProjectService`, and `App\Models\Project`; `/api/v1/projects` remains mounted only as compatibility runtime in `Src\CoreProject\Controllers\ProjectController`, and `LegacyProjectServiceAdapter` is removed and must not be reintroduced.
+
 ## 🔐 **AUTHENTICATION**
 
 ### **API Authentication**
@@ -52,18 +54,58 @@ curl -H "Authorization: Bearer <token>" \
 ## 🏗️ **PROJECT MANAGEMENT API**
 
 ### **Projects**
-- `GET /api/v1/projects` - List projects
-- `POST /api/v1/projects` - Create project
-- `GET /api/v1/projects/{id}` - Get project
-- `PUT /api/v1/projects/{id}` - Update project
-- `DELETE /api/v1/projects/{id}` - Delete project
+- Canonical business API: `/api/zena/projects`
+- Canonical owner stack: `App\Http\Controllers\Api\ProjectController` + `App\Services\ProjectService` + `App\Models\Project`
+- Compatibility runtime still mounted: `/api/v1/projects` in `Src\CoreProject\Controllers\ProjectController`
+- Removed adapter policy: `LegacyProjectServiceAdapter` is not active runtime and must not be reintroduced
+- Current forward endpoints:
+  - `GET /api/zena/projects` - List projects
+  - `POST /api/zena/projects` - Create project
+  - `GET /api/zena/projects/{id}` - Get project
+  - `PUT /api/zena/projects/{id}` - Update project
+  - `DELETE /api/zena/projects/{id}` - Delete project
+- Compatibility endpoints still mounted:
+  - `GET /api/v1/projects`
+  - `POST /api/v1/projects`
+  - `GET /api/v1/projects/{project}`
+  - `PUT /api/v1/projects/{project}`
+  - `PATCH /api/v1/projects/{project}`
+  - `DELETE /api/v1/projects/{project}`
+  - Treat these as compatibility/runtime endpoints, not as the forward ownership surface for new Projects business changes
 
 ### **Tasks**
-- `GET /api/v1/tasks` - List tasks
-- `POST /api/v1/tasks` - Create task
-- `GET /api/v1/tasks/{id}` - Get task
-- `PUT /api/v1/tasks/{id}` - Update task
-- `DELETE /api/v1/tasks/{id}` - Delete task
+- Canonical business API: `/api/zena/tasks`
+- Canonical owner stack: `App\Http\Controllers\Api\TaskController` + `App\Models\Task`
+- Current canonical dependency helper: `App\Services\TaskDependencyService` via `App\Models\Task`
+- Compatibility runtime still mounted: `/api/v1/tasks` in `Src\CoreProject\Controllers\TaskController`
+- Adjacent projection runtime still mounted: `/api/v1/work-template/projects/{projectId}/tasks` in `Src\WorkTemplate\Controllers\ProjectTaskController`
+- Thin alias policy: `App\Models\ZenaTask` is compatibility/test alias only; do not add new behavior there
+- Current forward endpoints:
+  - `GET /api/zena/tasks` - List tasks
+  - `POST /api/zena/tasks` - Create task
+  - `GET /api/zena/tasks/{id}` - Get task
+  - `PUT /api/zena/tasks/{id}` - Update task
+  - `DELETE /api/zena/tasks/{id}` - Delete task
+  - `PATCH /api/zena/tasks/{id}/status` - Update task status
+  - `GET /api/zena/tasks/{id}/dependencies` - List dependencies
+  - `POST /api/zena/tasks/{id}/dependencies` - Add dependency
+  - `DELETE /api/zena/tasks/{id}/dependencies/{dependencyId}` - Remove dependency
+- Compatibility endpoints still mounted:
+  - `GET /api/v1/tasks`
+  - `POST /api/v1/tasks`
+  - `GET /api/v1/tasks/{task}`
+  - `PUT /api/v1/tasks/{task}`
+  - `PATCH /api/v1/tasks/{task}`
+  - `DELETE /api/v1/tasks/{task}`
+  - Treat these as compatibility/runtime endpoints, not as the forward ownership surface for new Tasks business changes
+- Work-template projection endpoints still mounted:
+  - `GET /api/v1/work-template/projects/{projectId}/tasks`
+  - `GET /api/v1/work-template/projects/{projectId}/tasks/conditional`
+  - `GET /api/v1/work-template/projects/{projectId}/tasks/{taskId}`
+  - `PUT /api/v1/work-template/projects/{projectId}/tasks/{taskId}`
+  - `PUT /api/v1/work-template/projects/{projectId}/tasks/{taskId}/progress`
+  - `POST /api/v1/work-template/projects/{projectId}/tasks/{taskId}/toggle-conditional`
+  - Treat these as project-template projection APIs, not as a competing canonical Tasks owner
 
 ### **Users**
 - `GET /api/v1/users` - List users
@@ -322,7 +364,7 @@ curl -w "@curl-format.txt" -o /dev/null -s \
 
 ### **Project Creation**
 ```bash
-curl -X POST http://localhost:8000/api/v1/projects \
+curl -X POST http://localhost:8000/api/zena/projects \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \

@@ -46,6 +46,7 @@ class ModuleOwnershipRouteInvariantTest extends TestCase
         $expectedByUri = [
             'api/v1/projects' => 'Src\\CoreProject\\Controllers\\ProjectController',
             'api/v1/tasks' => 'Src\\CoreProject\\Controllers\\TaskController',
+            'api/v1/work-template/projects/{projectId}/tasks' => 'Src\\WorkTemplate\\Controllers\\ProjectTaskController',
             'api/v1/work-templates' => 'Src\\CoreProject\\Controllers\\WorkTemplateController',
             'api/v1/change-requests' => 'Src\\ChangeRequest\\Controllers\\ChangeRequestController',
             'api/v1/notifications' => 'Src\\Notification\\Controllers\\NotificationController',

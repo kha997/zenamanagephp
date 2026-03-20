@@ -1,5 +1,7 @@
 # ZENAMANAGE REPOSITORY AUDIT REPORT
 
+Historical note: this generated audit is not the current runtime ownership SSOT. For Projects, the canonical business API is `/api/zena/projects` owned by `App\Http\Controllers\Api\ProjectController`, `App\Services\ProjectService`, and `App\Models\Project`; `/api/v1/projects` remains mounted only as compatibility runtime in `Src\CoreProject\Controllers\ProjectController`, and `LegacyProjectServiceAdapter` must stay removed.
+
 **Generated:** {{ date('Y-m-d H:i:s') }}  
 **Auditor:** AI Assistant  
 **Scope:** Complete repository analysis for refactoring  
@@ -144,8 +146,8 @@ use App\Http\Controllers\Web\ProjectController;
    // ❌ BAD: POST operation in web route
    Route::post('/projects', [ProjectController::class, 'store']);
    
-   // ✅ GOOD: Should be API-only
-   Route::post('/api/v1/projects', [Api\ProjectController::class, 'store']);
+   // ✅ CURRENT SSOT FOR PROJECTS: canonical business API
+   Route::post('/api/zena/projects', [Api\ProjectController::class, 'store']);
    ```
 
 2. **Missing Tenant Isolation:**

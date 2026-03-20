@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Component;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 use Tests\Traits\DatabaseTrait;
@@ -391,5 +392,177 @@ class ProjectApiTest extends TestCase
             'id' => $project->id,
             'status' => Project::STATUS_PLANNING,
         ]);
+    }
+
+    public function test_recalculate_project_progress_success(): void
+    {
+        $project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'progress' => 5.0,
+        ]);
+
+        $this->createRootComponent($project, [
+            'planned_cost' => 100.0,
+            'progress_percent' => 25.0,
+        ]);
+        $this->createRootComponent($project, [
+            'planned_cost' => 300.0,
+            'progress_percent' => 50.0,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/recalculate-progress");
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Project progress recalculated successfully',
+                'data' => [
+                    'old_progress' => 5.0,
+                ],
+            ])
+            ->assertJsonPath('data.new_progress', 43.75);
+
+        $this->assertEqualsWithDelta(43.75, (float) $project->fresh()->getAttribute('progress'), 0.001);
+    }
+
+    public function test_recalculate_project_progress_rejects_tenant_mismatch(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+        $project = Project::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'progress' => 12.0,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/recalculate-progress");
+
+        $response->assertNotFound()
+            ->assertJsonPath('error.code', 'E404.NOT_FOUND')
+            ->assertJsonPath('error.message', 'Project not found');
+
+        $this->assertSame(12.0, (float) $project->fresh()->getAttribute('progress'));
+    }
+
+    public function test_recalculate_project_progress_rejects_missing_permission(): void
+    {
+        $userWithoutWritePermission = $this->createReadonlyProjectUser();
+        $this->apiAs($userWithoutWritePermission, $this->tenant);
+
+        $project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'progress' => 15.0,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/recalculate-progress");
+
+        $response->assertForbidden()
+            ->assertJsonPath('error.code', 'RBAC_ACCESS_DENIED')
+            ->assertJsonPath('error.message', 'You do not have sufficient RBAC assignments to access this resource');
+
+        $this->assertSame(15.0, (float) $project->fresh()->getAttribute('progress'));
+    }
+
+    public function test_recalculate_project_actual_cost_success(): void
+    {
+        $project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'budget_actual' => 50.0,
+            'actual_cost' => 50.0,
+        ]);
+
+        $this->createRootComponent($project, [
+            'actual_cost' => 125.5,
+        ]);
+        $this->createRootComponent($project, [
+            'actual_cost' => 74.5,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/recalculate-actual-cost");
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Project actual cost recalculated successfully',
+                'data' => [
+                    'old_actual_cost' => 50.0,
+                ],
+            ]);
+
+        $this->assertEqualsWithDelta(200.0, (float) $response->json('data.new_actual_cost'), 0.001);
+
+        $freshProject = $project->fresh();
+        $this->assertEqualsWithDelta(200.0, (float) $freshProject->getAttribute('budget_actual'), 0.001);
+        $this->assertEqualsWithDelta(200.0, (float) $freshProject->getAttribute('actual_cost'), 0.001);
+    }
+
+    public function test_recalculate_project_actual_cost_rejects_tenant_mismatch(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+        $project = Project::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'budget_actual' => 90.0,
+            'actual_cost' => 90.0,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/recalculate-actual-cost");
+
+        $response->assertNotFound()
+            ->assertJsonPath('error.code', 'E404.NOT_FOUND')
+            ->assertJsonPath('error.message', 'Project not found');
+
+        $this->assertSame(90.0, (float) $project->fresh()->getAttribute('budget_actual'));
+    }
+
+    public function test_recalculate_project_actual_cost_rejects_missing_permission(): void
+    {
+        $userWithoutWritePermission = $this->createReadonlyProjectUser();
+        $this->apiAs($userWithoutWritePermission, $this->tenant);
+
+        $project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'budget_actual' => 75.0,
+            'actual_cost' => 75.0,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/recalculate-actual-cost");
+
+        $response->assertForbidden()
+            ->assertJsonPath('error.code', 'RBAC_ACCESS_DENIED')
+            ->assertJsonPath('error.message', 'You do not have sufficient RBAC assignments to access this resource');
+
+        $this->assertSame(75.0, (float) $project->fresh()->getAttribute('budget_actual'));
+    }
+
+    private function createRootComponent(Project $project, array $attributes = []): Component
+    {
+        return Component::factory()->create(array_merge([
+            'project_id' => $project->id,
+            'parent_component_id' => null,
+            'planned_cost' => 100.0,
+            'progress_percent' => 0.0,
+            'actual_cost' => 0.0,
+        ], $attributes));
+    }
+
+    private function createReadonlyProjectUser(): User
+    {
+        $user = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'password' => bcrypt('password'),
+            'is_active' => true,
+        ]);
+
+        $role = Role::firstOrCreate(
+            ['name' => 'project-status-readonly'],
+            [
+                'scope' => Role::SCOPE_SYSTEM,
+                'description' => 'Readonly project status test role',
+                'is_active' => true,
+            ]
+        );
+
+        $user->roles()->syncWithoutDetaching([$role->id]);
+        $user->systemRoles()->syncWithoutDetaching([$role->id]);
+
+        return $user;
     }
 }

@@ -11,6 +11,7 @@ use App\Services\ProjectService;
 use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -338,7 +339,8 @@ class ProjectController extends Controller
                 'message' => 'Project status updated successfully',
                 'data' => $project
             ]);
-            
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Failed to update project status', [
                 'error' => $e->getMessage(),

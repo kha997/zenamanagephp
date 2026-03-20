@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Project;
+use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Tests\TestCase;
@@ -271,5 +272,124 @@ class ProjectApiTest extends TestCase
 
         // Verify project soft deleted
         $this->assertSoftDeleted('projects', ['id' => $project->id]);
+    }
+
+    public function test_can_update_project_status(): void
+    {
+        $project = Project::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'status' => Project::STATUS_PLANNING,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/status", [
+            'status' => Project::STATUS_ACTIVE,
+            'reason' => 'Mobilization approved',
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'message' => 'Project status updated successfully',
+                'data' => [
+                    'id' => $project->id,
+                    'status' => Project::STATUS_ACTIVE,
+                ],
+            ]);
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'status' => Project::STATUS_ACTIVE,
+        ]);
+    }
+
+    public function test_update_project_status_rejects_invalid_status(): void
+    {
+        $project = Project::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'status' => Project::STATUS_PLANNING,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/status", [
+            'status' => 'invalid-status',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonStructure([
+                'error' => [
+                    'id',
+                    'code',
+                    'message',
+                    'details',
+                ],
+            ])
+            ->assertJsonPath('error.code', 'E422.VALIDATION');
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'status' => Project::STATUS_PLANNING,
+        ]);
+    }
+
+    public function test_update_project_status_rejects_tenant_mismatch(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+        $project = Project::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'status' => Project::STATUS_PLANNING,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/status", [
+            'status' => Project::STATUS_ACTIVE,
+        ]);
+
+        $response->assertNotFound()
+            ->assertJsonPath('error.code', 'E404.NOT_FOUND')
+            ->assertJsonPath('error.message', 'Project not found');
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'status' => Project::STATUS_PLANNING,
+        ]);
+    }
+
+    public function test_update_project_status_rejects_missing_permission(): void
+    {
+        $userWithoutWritePermission = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'password' => bcrypt('password'),
+            'is_active' => true,
+        ]);
+
+        $role = Role::firstOrCreate(
+            ['name' => 'project-status-readonly'],
+            [
+                'scope' => Role::SCOPE_SYSTEM,
+                'description' => 'Readonly project status test role',
+                'is_active' => true,
+            ]
+        );
+
+        $userWithoutWritePermission->roles()->syncWithoutDetaching([$role->id]);
+        $userWithoutWritePermission->systemRoles()->syncWithoutDetaching([$role->id]);
+
+        $this->apiAs($userWithoutWritePermission, $this->tenant);
+
+        $project = Project::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'status' => Project::STATUS_PLANNING,
+        ]);
+
+        $response = $this->postJson("/api/projects/{$project->id}/status", [
+            'status' => Project::STATUS_ACTIVE,
+        ]);
+
+        $response->assertForbidden()
+            ->assertJsonPath('error.code', 'RBAC_ACCESS_DENIED')
+            ->assertJsonPath('error.message', 'You do not have sufficient RBAC assignments to access this resource');
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'status' => Project::STATUS_PLANNING,
+        ]);
     }
 }

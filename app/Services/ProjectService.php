@@ -91,6 +91,37 @@ class ProjectService
         return $project->refresh();
     }
 
+    public function updateProjectStatus(Project $project, string $status, string|int $userId, ?string $reason = null): Project
+    {
+        $previousStatus = $project->status;
+
+        $project->update([
+            'status' => $status,
+        ]);
+
+        Event::dispatch('project.updated', $project);
+
+        try {
+            $this->auditService->logCrudOperation('update', 'project', $project->id, [
+                'tenant_id' => $project->tenant_id,
+                'user_id' => $userId,
+                'project_id' => $project->id,
+                'project_name' => $project->name,
+                'project_code' => $project->code,
+                'previous_status' => $previousStatus,
+                'status' => $status,
+                'reason' => $reason,
+            ]);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to log project status update', [
+                'project_id' => $project->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return $project->refresh();
+    }
+
     public function deleteProject(Project $project, string|int $userId): bool
     {
         $deleted = $project->delete();

@@ -22,7 +22,7 @@ Constraints:
 | --- | --- | --- | --- | --- | --- | --- |
 | `GET /app/projects` | `Web\AppController::projects()` returns `view('layouts.app-layout', compact('projects'))` | HTML Blade app surface | HTML route, but backed by layout-level shell rather than `projects.index` | weak ownership signal, not primary mismatch | keep as canonical app entry for project list in this round; reconcile list-page ownership in later round | should remain HTML |
 | `GET /app/projects/create` | `Web\ProjectController::create()` returns `view('projects.create')` | HTML Blade | HTML Blade | no runtime mismatch | keep canonical create page | should remain HTML |
-| `GET /app/projects/{project}` | `Web\ProjectController::show()` returns `JsonResponse` / JSend payload | HTML Blade, because URI is under `/app/*`, route name is `app.projects.show`, and `resources/views/projects/show.blade.php` exists | JSON response | HTML-vs-JSON ownership mismatch | convert runtime owner to HTML Blade detail page; move JSON detail contract fully to `/api/v1/projects/{project}` | should remain HTML |
+| `GET /app/projects/{project}` | `Web\ProjectController::show()` returns `JsonResponse` / JSend payload | HTML Blade, because URI is under `/app/*`, route name is `app.projects.show`, and `resources/views/projects/show.blade.php` exists | JSON response | HTML-vs-JSON ownership mismatch | convert runtime owner to HTML Blade detail page; move canonical JSON detail contract to `/api/zena/projects/{project}` while leaving `/api/v1/projects/{project}` mounted only as compatibility runtime | should remain HTML |
 | `GET /app/projects/{project}/edit` | `Web\ProjectController::edit()` returns `view('projects.edit')` | HTML Blade | HTML Blade | no primary mismatch | keep canonical edit page | should remain HTML |
 | `GET /app/settings` | closure returns `view('settings.index')` | HTML Blade | HTML Blade | no runtime mismatch | keep as canonical settings landing page | should remain HTML |
 | `GET /app/settings/general` | closure returns `view('settings.general')` | HTML Blade | missing Blade target | broken template target | replace with redirect to `/app/settings` or remove until real page exists; do not leave as broken route | should redirect |
@@ -30,10 +30,10 @@ Constraints:
 | `GET /app/settings/notifications` | closure returns `view('settings.notifications')` | HTML Blade | missing Blade target | broken template target | replace with redirect to `/app/settings` or remove until real page exists | should redirect |
 | `GET /projects` | both `legacy.projects` redirect closure and `Route::permanentRedirect('/projects', '/app/projects')` are registered; route list shows legacy + redirect entries | redirect-only legacy surface | redirect surface with duplicated registration | duplicate legacy ownership / route clutter | keep one redirect owner only; remove duplicate registration path in implementation round | should redirect |
 | `GET /projects/create` | closure returns minimal CSRF form stub | either redirect to `/app/projects/create` or archived legacy form, but not canonical UI | stub HTML form | stub-vs-canonical HTML mismatch | retire stub and replace with redirect to `/app/projects/create` | should redirect |
-| `POST /projects` | closure creates project directly and returns JSON; testing env redirects to `/projects` | JSON/API-style if retained anywhere | JSON on web route, plus testing-only redirect branch | web-mounted API ownership mismatch | archive/remove web POST handler and require `/api/v1/projects` for mutation | should remain JSON/API-style, but only under API namespace |
-| `GET /projects/{project}` | closure returns JSON project payload | JSON/API-style if retained anywhere | JSON on web route | web-mounted API ownership mismatch | archive/remove root web GET detail route; HTML ownership should live at `/app/projects/{project}` and API ownership at `/api/v1/projects/{project}` | should be archived/removed |
-| `PUT /projects/{project}` | closure updates model and returns JSON | JSON/API-style | JSON on web route | web-mounted API ownership mismatch | archive/remove root web update route and keep update ownership in `/api/v1/projects/{project}` | should be archived/removed |
-| `DELETE /projects/{project}` | closure deletes model and returns JSON | JSON/API-style | JSON on web route | web-mounted API ownership mismatch | archive/remove root web delete route and keep delete ownership in `/api/v1/projects/{project}` | should be archived/removed |
+| `POST /projects` | closure creates project directly and returns JSON; testing env redirects to `/projects` | JSON/API-style if retained anywhere | JSON on web route, plus testing-only redirect branch | web-mounted API ownership mismatch | archive/remove web POST handler and require canonical mutation ownership at `/api/zena/projects`; `/api/v1/projects` stays mounted only as compatibility runtime | should remain JSON/API-style, but only under API namespace |
+| `GET /projects/{project}` | closure returns JSON project payload | JSON/API-style if retained anywhere | JSON on web route | web-mounted API ownership mismatch | archive/remove root web GET detail route; HTML ownership should live at `/app/projects/{project}` and canonical API ownership at `/api/zena/projects/{project}` while `/api/v1/projects/{project}` stays compatibility-only | should be archived/removed |
+| `PUT /projects/{project}` | closure updates model and returns JSON | JSON/API-style | JSON on web route | web-mounted API ownership mismatch | archive/remove root web update route and keep canonical update ownership in `/api/zena/projects/{project}`; do not treat `/api/v1/projects/{project}` as the forward owner | should be archived/removed |
+| `DELETE /projects/{project}` | closure deletes model and returns JSON | JSON/API-style | JSON on web route | web-mounted API ownership mismatch | archive/remove root web delete route and keep canonical delete ownership in `/api/zena/projects/{project}`; do not treat `/api/v1/projects/{project}` as the forward owner | should be archived/removed |
 | `GET /app/tasks` | `Web\AppController::tasks()` returns `view('tasks.index')` | HTML Blade app surface | HTML Blade | no primary mismatch | keep canonical task list page | should remain HTML |
 | `GET /app/tasks/create` | `Web\TaskController::create()` returns `view('tasks.create')` | HTML Blade | HTML Blade | no route-level mismatch, but its form posts to root `/tasks` | downstream submit-target drift | keep page, but future runtime fix must repoint submit flow to canonical owner | should remain HTML |
 | `GET /app/tasks/{task}` | `Web\TaskController::show()` returns `view('tasks.show')` | HTML Blade | HTML Blade | no primary mismatch | keep canonical detail page | should remain HTML |
@@ -60,7 +60,7 @@ Constraints:
 1. Reconcile project detail ownership first.
    - Make `/app/projects/{project}` the only canonical HTML project detail route.
    - Remove root `/projects/{project}` JSON ownership from web routes.
-   - Keep JSON detail ownership only at `/api/v1/projects/{project}`.
+   - Keep canonical JSON detail ownership at `/api/zena/projects/{project}` and treat `/api/v1/projects/{project}` as compatibility-only.
 2. Collapse root project/task legacy web surfaces into redirects only.
    - `/projects` -> `/app/projects`
    - `/projects/create` -> `/app/projects/create`
@@ -69,7 +69,7 @@ Constraints:
    - Remove duplicate redirect registrations so each legacy URI has exactly one owner.
 3. Remove web-mounted mutation handlers from root routes.
    - retire `POST /projects`, `PUT /projects/{project}`, `DELETE /projects/{project}`, and `POST /tasks`
-   - keep create/update/delete ownership under `/api/v1/*`
+   - keep Project create/update/delete ownership under `/api/zena/projects*`; preserve `/api/v1/projects*` as mounted compatibility runtime
 4. Stop exposing broken settings subpages.
    - redirect `/app/settings/general`, `/app/settings/security`, and `/app/settings/notifications` to `/app/settings` until real pages exist
 
@@ -81,7 +81,7 @@ Execute one narrow runtime PR that rewires only the P0 routes above so every roo
 
 - Medium user-flow risk: project and task Blade pages currently hardcode root `/projects*` and `/tasks*` links/forms in multiple places, so route-level reconciliation will likely require coordinated Blade target updates in the implementation round.
 - Medium test risk: browser and feature suites still encode historical root-route behavior, including redirects and JSON expectations on `/projects*` and `/tasks*`.
-- Low API risk if implementation is disciplined: API ownership already exists under `/api/v1/projects` and `/api/v1/tasks`, so removing root web JSON handlers should reduce ambiguity rather than remove a necessary data surface.
+- Low API risk if implementation is disciplined: canonical Project API ownership exists under `/api/zena/projects`, and `/api/v1/projects` remains mounted for compatibility, so removing root web JSON handlers should reduce ambiguity rather than remove a necessary data surface.
 - Medium operational risk from duplicate route declarations: route precedence is currently harder to reason about because `/projects` and `/tasks` each appear as both legacy routes and permanent redirects.
 
 ## UNKNOWN

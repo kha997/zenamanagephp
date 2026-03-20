@@ -48,7 +48,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Loading dashboard data...');
     
-    fetch('/dashboard-data')
+    fetch('/_debug/dashboard-data')
         .then(response => response.json())
         .then(data => {
             console.log('📊 Dashboard data loaded:', data);

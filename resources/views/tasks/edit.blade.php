@@ -16,11 +16,11 @@ $breadcrumb = [
     ],
     [
         'label' => 'Tasks Management',
-        'url' => '/tasks'
+        'url' => '/app/tasks'
     ],
     [
         'label' => 'Edit Task',
-        'url' => '/tasks/' . ($task->id ?? '1') . '/edit'
+        'url' => '/app/tasks/' . ($task->id ?? '1') . '/edit'
     ]
 ];
 $currentRoute = 'tasks';
@@ -33,7 +33,7 @@ $currentRoute = 'tasks';
         <h3 class="text-lg font-medium text-red-800 mb-2">Error Loading Task</h3>
         <p class="text-red-700">{{ $error }}</p>
         <div class="mt-4">
-            <a href="/tasks" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
+            <a href="/app/tasks" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">
                 Back to Tasks
             </a>
         </div>
@@ -45,7 +45,7 @@ $currentRoute = 'tasks';
         <h3 class="text-lg font-medium text-yellow-800 mb-2">Task Not Found</h3>
         <p class="text-yellow-700">The requested task could not be found.</p>
         <div class="mt-4">
-            <a href="/tasks" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors">
+            <a href="/app/tasks" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors">
                 Back to Tasks
             </a>
         </div>
@@ -326,14 +326,14 @@ $currentRoute = 'tasks';
                 
                 <div class="flex space-x-3">
                     <a 
-                        href="/tasks" 
+                        href="/app/tasks" 
                         class="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors flex items-center"
                     >
                         <i class="fas fa-times mr-2"></i>
                         Cancel
                     </a>
                     <a 
-                        :href="`/tasks/${formData.id}`"
+                        :href="`/app/tasks/${formData.id}`"
                         class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
                     >
                         <i class="fas fa-eye mr-2"></i>
@@ -499,11 +499,11 @@ document.addEventListener('alpine:init', () => {
                 if (response.status === 302) {
                     // Redirect response - success
                     this.showNotification('Task updated successfully!', 'success');
-                    window.location.href = '/tasks';
+                    window.location.href = '/app/tasks';
                 } else if (response.ok) {
                     // Success response
                     this.showNotification('Task updated successfully!', 'success');
-                    window.location.href = '/tasks';
+                    window.location.href = '/app/tasks';
                 } else {
                     // Error response
                     const responseText = await response.text();
@@ -534,7 +534,7 @@ document.addEventListener('alpine:init', () => {
 
         previewTask() {
             // Open task preview in new window
-            window.open(`/tasks/${this.formData.id}`, '_blank');
+            window.open(`/app/tasks/${this.formData.id}`, '_blank');
         },
 
         showNotification(message, type = 'info') {
@@ -665,11 +665,11 @@ window.taskEditData = {
             if (response.status === 302) {
                 // Redirect response - success
                 this.showNotification('Task updated successfully!', 'success');
-                window.location.href = '/tasks';
+                window.location.href = '/app/tasks';
             } else if (response.ok) {
                 // Success response
                 this.showNotification('Task updated successfully!', 'success');
-                window.location.href = '/tasks';
+                window.location.href = '/app/tasks';
             } else {
                 // Error response
                 const responseText = await response.text();

@@ -24,10 +24,7 @@ if (!is_dir($controllersRoot)) {
 $moduleRules = [
     'project' => [
         'canonical_service_file' => $root . '/src/CoreProject/Services/ProjectService.php',
-        'forbidden_tokens' => [
-            'use App\\Models\\Project;',
-            'use App\\Services\\ProjectService;',
-        ],
+        'forbidden_tokens' => [],
     ],
     'document' => [
         'canonical_service_file' => $root . '/src/DocumentManagement/Services/DocumentService.php',
@@ -38,7 +35,12 @@ $moduleRules = [
     ],
 ];
 
-$legacyAllowlist = [];
+$legacyAllowlist = [
+    'app/Http/Controllers/Api/SimpleDocumentController.php' => [
+        'use App\\Models\\Document;',
+        'use App\\Models\\Project;',
+    ],
+];
 
 $canonicalModules = [];
 foreach ($moduleRules as $module => $rule) {
@@ -87,7 +89,7 @@ foreach ($targets as $absolutePath) {
             }
 
             $entry = "{$relativePath}: {$token}";
-            if (in_array($relativePath, $legacyAllowlist, true)) {
+            if (in_array($token, $legacyAllowlist[$relativePath] ?? [], true)) {
                 $legacyDebt[] = $entry;
             } else {
                 $violations[] = $entry;

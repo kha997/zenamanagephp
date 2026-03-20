@@ -1,142 +1,301 @@
-# ZenaManage Canonical Roadmap (Execution + Backlog Reconciliation)
+# ZenaManage Canonical Roadmap
 
-Last updated: 2026-03-12
-Scope: execution sequencing and reconciliation only (does not replace business backlog detail).
+Last updated: 2026-03-19
+Role: execution sequencing SSOT
+Companion docs:
 
-## Context: Current Verified Baseline
-- SSOT policy rules are defined in `docs/agent-ssot-rules.md`.
-- Business/module expansion backlog exists in `docs/roadmap/backlog.yaml` with epic/story IDs (`EPIC-*`, `S*.*`) and acceptance criteria.
-- Existing 7-phase roadmap set in repository root exists, but overlaps heavily and contains stale status assumptions.
-- Near-term browser/testing stabilization intent exists in change proposals:
-  - `docs/change-proposals/button-form-submission-audit-rewrite-plan.md`
-  - `docs/change-proposals/button-form-submission-phase1-freeze-note.md`
-- WorkTemplate v2 has an MVP snapshot documented in `docs/work-templates-ssot.md`.
+- `docs/product-purpose-ssot.md` = product-purpose SSOT
+- `docs/architecture/module-ownership-ssot.md` = canonical runtime ownership SSOT
+- `docs/roadmap/backlog.yaml` = backlog and governance SSOT
+- `docs/agent-ssot-rules.md` = evidence/verification law
+- `docs/engineering/testing-matrix.md` = verify-order SSOT
 
-## SSOT Invariants
-Execution must satisfy these non-negotiables:
-- Evidence-first reporting or mark `UNKNOWN`.
-- Route/middleware claims must be proven via `php artisan route:list`.
-- Migration is schema SSOT.
-- Do not relax tenant isolation or RBAC.
-- Do not change domain logic only to force tests to pass.
-- Keep PR scope minimal and auditable.
+## North Star
 
-Reference sources:
-- `docs/agent-ssot-rules.md`
-- `docs/roadmap/backlog.yaml` governance section
+Build ZenaManage into a multi-tenant enterprise operations platform for architecture, construction, interiors, and inspection-adjacent teams, centered on controlled delivery workflows, evidence-bearing records, and tenant-safe execution.
 
-## Existing Planning Sources (Reconciled View)
-- Canonical now:
-  - `docs/roadmap/canonical-roadmap.md` (this file) = execution sequencing SSOT.
-  - `docs/roadmap/backlog.yaml` = strategic/product backlog SSOT.
-- Historical/non-canonical but still useful as context:
-  - `ROADMAP_7_PHASES_DETAILED.md`
-  - `ROADMAP_MANAGEMENT_SYSTEM.md`
-  - `ROADMAP_EXECUTION_CHECKLIST.md`
-  - `ROADMAP_ACTION_PLAN.md`
-  - `ROADMAP_REVIEW_REPORT.md`
-  - `roadmap-progress/*` generated snapshots
-- Targeted near-term change planning:
-  - `docs/change-proposals/button-form-submission-audit-rewrite-plan.md`
-  - `docs/change-proposals/button-form-submission-phase1-freeze-note.md`
+This repo is not to be steered as a generic dashboard showcase, a universal-frame experiment, or a pure frontend rewrite.
 
-## Priority Order
-1. Stabilization-first execution (tests/browser/workflow safety + CI/guardrails).
-2. Complete platform backbone dependencies (`EPIC-0`, then `EPIC-1..EPIC-3`).
-3. Expand business modules (`EPIC-4..EPIC-6`) only after readiness gates pass.
+## Current Runtime Truth
 
-## Near-Term Execution Phases (Round-Based)
-## Phase R1: Stabilize Test/Browser/Workflow Surfaces
+The strongest current product backbone is:
+
+1. tenant isolation + RBAC invariants
+2. `/app/*` authenticated tenant HTML shell
+3. `/api/zena/*` modern business APIs
+4. WorkTemplate -> WorkInstance -> Deliverable workflow
+5. project/task/document/change/RFI/submittal/inspection/notification modules around that backbone
+
+The largest current product risk is ownership drift:
+
+- `/api/v1/*` remains heavily mounted and business-relevant, but mixes compatibility and legacy modules
+- `src/*` and `app/*` both own parts of the business domain
+- several root docs still advertise stale product identities
+- debug/demo and historical surfaces still create false signals
+
+## Product Pillars
+
+### Pillar A: Platform Trust
+
+- tenant isolation
+- RBAC and auth contract clarity
+- route ownership clarity
+- deterministic verification and SSOT lint discipline
+- contract/payment and notification basics that support real operations
+
+### Pillar B: Delivery Backbone
+
+- projects
+- tasks
+- documents
+- work templates
+- work instances
+- approvals
+- deliverables and exports
+
+### Pillar C: Controlled Change and Field Work
+
+- change requests
+- RFIs
+- submittals
+- inspections
+- NCR / quality follow-up
+
+### Pillar D: Evidence, Reporting, and Role Projections
+
+- audit trail
+- notification rules
+- export/report surfaces
+- PM/designer/site-engineer dashboards as projections over canonical modules
+
+## Architecture Priorities
+
+1. Preserve tenant isolation and RBAC as hard invariants.
+2. Prefer route-list, controller, model, migration, and test evidence over old reports.
+3. Treat `/api/zena/*` as the forward business contract direction.
+4. Keep `/api/v1/*` mounted, but reduce new ownership drift into it unless explicitly compatibility-related.
+5. Preserve `/app/*` as canonical HTML runtime shell until a real replacement is mounted.
+6. Freeze debug/demo/universal-frame surfaces unless a round explicitly targets their retirement.
+
+## Domain / Module Priorities
+
+### Priority P0
+
+- tenant + auth + RBAC contract clarity
+- project/task/document core flows
+- WorkTemplate / WorkInstance / Deliverable backbone
+- change requests
+- contracts/payments where they affect project governance
+
+### Priority P1
+
+- RFIs
+- submittals
+- inspections
+- notification rules and event -> audit -> notification path
+- role dashboards only where they summarize live P0/P1 modules
+
+### Priority P2
+
+- procurement/material expansion
+- deeper QMS-lite capabilities
+- broader analytics/reporting
+- alternate frontend strategy
+
+## Cleanup / Rationalization Priorities
+
+1. Demote historical root docs from planning authority.
+2. Stop universal-frame and smart-tools Blade from re-entering roadmap scope.
+3. Reduce split ownership between `app/*` and `src/*` for active modules.
+4. Clarify which `/api/v1/*` families are compatibility-only versus still product-owned.
+5. Retire or freeze stale admin/demo/test artifacts only after ownership proof is documented.
+
+## Phase Order
+
+## Phase 1: Runtime Ownership Convergence
+
 Goal:
-- Replace frozen mixed legacy browser suite with route-anchored suites and deterministic assertions.
-- Remove blind spots that produce false confidence.
 
-Primary references:
-- `docs/change-proposals/button-form-submission-audit-rewrite-plan.md`
-- `docs/change-proposals/button-form-submission-phase1-freeze-note.md`
-- `docs/testing/button-test-plan.md`
+- Remove ambiguity about which routes/controllers/models are canonical for active business modules.
 
-Backlog mapping:
-- `EPIC-0/S0.2` (CI reliability)
-- `EPIC-0/S0.3` (event/audit/notification verifiable path)
+Focus:
 
-Done criteria:
-- Replacement suites are in place for targeted `/app/*` surfaces.
-- CI test job is deterministic enough to gate PR checks.
-- Evidence included in PR (commands + outputs + CI links).
+- `/api/zena/*` vs `/api/v1/*`
+- `app/*` vs `src/*`
+- `/app/*` vs stale alternative UI surfaces
 
-## Phase R2: Guardrails + Module Skeleton Compliance
-Goal:
-- Enforce module structure, route mounting law, and middleware stack consistency.
+Backlog alignment:
 
-Backlog mapping:
 - `EPIC-0/S0.1`
 - `EPIC-0/S0.2`
 
-Done criteria:
-- `composer ssot:lint` has no new violations beyond baseline.
-- Route inventory and middleware evidence are attached for changed modules.
+Exit criteria:
 
-## Phase R3: Backbone Product Flows (Template -> Document -> Change)
+- one module-ownership map exists for active business modules
+- `docs/architecture/module-ownership-ssot.md` is the canonical ownership map
+- new work stops introducing fresh split ownership
+- compatibility aliases are explicitly marked as such
+- route/middleware evidence is attached for each changed module
+
+## Phase 2: Backbone Completion
+
 Goal:
-- Build/verify end-to-end backbone before expansion modules.
 
-Backlog mapping:
-- Template engine: `EPIC-1` (`S1.1`..`S1.4`)
-- Document center: `EPIC-2` (`S2.1`..`S2.4`)
-- Change order: `EPIC-3` (`S3.1`..`S3.4`)
+- Finish the product backbone already visible in runtime.
 
-Done criteria:
-- One evidence-backed flow works end-to-end:
-  - template apply -> work artifacts -> document workflow -> change approval/audit.
-- Tenant isolation and RBAC checks are proven for all touched endpoints.
+Focus:
 
-## Phase R4: Expansion Modules and Service-Ready Boundaries
+- WorkTemplate data model completion
+- apply/generator parity for project/component scope
+- document metadata/version/search maturity
+- deliverable/export reliability
+
+Backlog alignment:
+
+- `EPIC-1`
+- `EPIC-2`
+
+Exit criteria:
+
+- one tenant-safe flow works end-to-end:
+  - template publish -> apply -> work instance execution -> document linkage -> deliverable export
+- story claims are backed by tests/routes/schema evidence
+- WT/WI/DT remains the canonical process backbone
+
+## Phase 3: Controlled Change and Field Execution
+
 Goal:
-- Add procurement/material, quality/QMS-lite, and analytics in controlled increments.
 
-Backlog mapping:
-- `EPIC-4`, `EPIC-5`, `EPIC-6`
+- Make change and field workflows first-class and tied to the backbone.
 
-Done criteria:
-- Each merged story references backlog ID and evidence.
-- No cross-tenant leakage in search/filter/reporting paths.
-- Event/outbox records remain replayable and auditable.
+Focus:
 
-## How This Roadmap Relates to `backlog.yaml`
-- `docs/roadmap/backlog.yaml` keeps detailed strategic backlog and acceptance criteria.
-- This roadmap defines execution order and readiness gates for near-term rounds.
-- No duplicate story creation: execution tasks must reference existing `S*.*` IDs whenever scope matches.
-- If work is outside current IDs, add as explicit new story with unique ID in the relevant epic (do not create wording-only duplicates).
+- change requests
+- RFIs
+- submittals
+- inspections
+- NCR / quality follow-up
 
-## Reconciliation Notes
-- Reconciled conflict class 1: Multiple 7-phase files compete as execution guidance.
-  - Resolution: treat as historical context; this file is canonical execution sequence.
-- Reconciled conflict class 2: Legacy docs mark some security/policy work as missing while files currently exist.
-  - Resolution: do not trust old completion percentages as SSOT; use evidence-based verification per change.
-- Reconciled conflict class 3: Backlog file previously contained shell script wrappers.
-  - Resolution: normalized `docs/roadmap/backlog.yaml` into clean YAML without changing epic/story meaning.
+Backlog alignment:
 
-## UNKNOWN (Must Be Proven Before Claiming Done)
-- Exact story-level completion state for each `S*.*` item in `backlog.yaml` is `UNKNOWN` until verified by code + tests + route/schema evidence.
-- Full gap matrix between browser stabilization plan and existing Dusk suites is `UNKNOWN` until current suites are re-run and audited.
-- Readiness of all `EPIC-1` acceptance criteria versus MVP implementation is `UNKNOWN` until verified against migrations, routes, requests, and tests.
+- `EPIC-3`
+- `EPIC-5`
+- relevant parts of `EPIC-4`
 
-## Do-Not-Do
-- Do not overwrite `backlog.yaml` role as strategic backlog.
-- Do not copy/paste full backlog content into new roadmap docs.
-- Do not create additional competing roadmap files without explicit reason.
-- Do not mark stories done without reproducible evidence.
-- Do not modify backup files (`*.bak.*`).
+Exit criteria:
 
-## Update Protocol (Changelog Style)
-- Every planning update must add a short note here:
-  - Date
-  - What changed
-  - Which backlog IDs are affected
-  - Evidence links (PR/CI/report)
+- change, question, submittal, and inspection records connect cleanly to project/document/work flows
+- audit and notification evidence exists for at least one end-to-end path per module family
+- tenant leakage and permission gaps are explicitly tested on touched routes
+
+## Phase 4: Role Projections, Reporting, and Bounded Expansion
+
+Goal:
+
+- Improve decision surfaces only after operational modules are trustworthy.
+
+Focus:
+
+- PM / designer / site-engineer dashboards
+- reporting and export contracts
+- procurement/material depth that clearly supports interior/construction delivery
+
+Backlog alignment:
+
+- `EPIC-4`
+- `EPIC-6`
+
+Exit criteria:
+
+- dashboards consume canonical module data instead of mock/demo logic
+- reporting/export paths are tied to operational records
+- new expansion work does not create a second product backbone
+
+## Phase 5: Retirement and Surface Reduction
+
+Goal:
+
+- remove or quarantine stale ownership signals once replacements are proven.
+
+Focus:
+
+- historical docs
+- stale admin variants
+- universal-frame cluster
+- demo/debug/public artifacts outside explicit debug policy
+
+Exit criteria:
+
+- contributors can identify canonical runtime surfaces without reading historical docs
+- stale surfaces are either archived, labeled, or removed
+- roadmap, README, and route docs point to one consistent product direction
+
+## Explicit Not-Now / Out of Scope
+
+- Full standalone SPA migration as the primary delivery goal
+- Microservices decomposition
+- New dashboard/demo shells without explicit ownership
+- Full ERP breadth outside project-delivery needs
+- Full independent QMS platform separate from delivery backbone
+- Broad archive/delete sweeps before route/controller ownership is proven
+
+## Risks and Dependencies
+
+### Risks
+
+- compatibility breakage while rationalizing `/api/v1/*`
+- regressions from `app/*` and `src/*` ownership overlap
+- false progress if role dashboards or debug/demo surfaces are treated as product completion
+- schema ambiguity in legacy alias tables such as submittals
+
+### Dependencies
+
+- route-list proof for every route/middleware claim
+- migration proof for schema claims
+- targeted tests for touched module families
+- backlog updates only when story-level completion is actually verified
+
+## Relation to `docs/roadmap/backlog.yaml`
+
+- `backlog.yaml` remains the backlog/governance SSOT.
+- This roadmap defines execution order, architectural priorities, and phase gates.
+- Do not duplicate stories here.
+- Use existing `EPIC-*` and `S*.*` IDs whenever scope matches.
+- If a new work item is needed, add it to the relevant epic instead of creating a competing planning doc.
+
+## Historical Docs Policy
+
+Treat these as historical/non-canonical planning context only:
+
+- `ROADMAP_7_PHASES_DETAILED.md`
+- `ROADMAP_MANAGEMENT_SYSTEM.md`
+- `ROADMAP_EXECUTION_CHECKLIST.md`
+- `ROADMAP_ACTION_PLAN.md`
+- `ROADMAP_REVIEW_REPORT.md`
+- root completion/overview/report files claiming finished state
+
+## Unknowns
+
+- Exact story-level completion for all backlog items beyond explicitly evidenced stories
+- Exact production owner of the standalone `frontend/` app
+- Full physical table provenance for `submittals`
+- Final target split between compatibility `/api/v1/*` and primary `/api/zena/*`
+
+## Update Protocol
+
+Each roadmap update must append:
+
+- date
+- change summary
+- affected backlog IDs
+- evidence links or commands
 
 ### Change Log
+
+- 2026-03-19:
+  - Reframed roadmap around product-purpose/runtime truth instead of historical roadmap sets.
+  - Chose `/api/zena/*` as forward business API direction and `/app/*` as current canonical HTML shell.
+  - Added explicit product pillars, phase order, not-now boundaries, and retirement priorities.
 - 2026-03-12:
   - Established canonical execution roadmap in this file.
   - Reconciled role split: execution sequencing (this file) vs strategic backlog (`docs/roadmap/backlog.yaml`).

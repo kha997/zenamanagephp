@@ -31,7 +31,7 @@
                 </li>
 
                 <li class="zena-nav-item-wrapper">
-                    <a href="/tasks" 
+                    <a href="/app/tasks" 
                        class="zena-nav-item {{ $currentRoute === 'tasks' ? 'zena-nav-item-active' : '' }}"
                        aria-current="{{ $currentRoute === 'tasks' ? 'page' : 'false' }}">
                         <i class="fas fa-tasks zena-nav-icon"></i>
@@ -43,7 +43,7 @@
                 </li>
 
                 <li class="zena-nav-item-wrapper">
-                    <a href="/projects" 
+                    <a href="/app/projects" 
                        class="zena-nav-item {{ $currentRoute === 'projects' ? 'zena-nav-item-active' : '' }}"
                        aria-current="{{ $currentRoute === 'projects' ? 'page' : 'false' }}">
                         <i class="fas fa-project-diagram zena-nav-icon"></i>
@@ -190,7 +190,7 @@
                 </li>
 
                 <li class="zena-nav-mobile-item">
-                    <a href="/tasks" 
+                    <a href="/app/tasks" 
                        class="zena-nav-mobile-link {{ $currentRoute === 'tasks' ? 'zena-nav-mobile-link-active' : '' }}">
                         <i class="fas fa-tasks zena-nav-mobile-icon"></i>
                         <span>Tasks</span>
@@ -201,7 +201,7 @@
                 </li>
 
                 <li class="zena-nav-mobile-item">
-                    <a href="/projects" 
+                    <a href="/app/projects" 
                        class="zena-nav-mobile-link {{ $currentRoute === 'projects' ? 'zena-nav-mobile-link-active' : '' }}">
                         <i class="fas fa-project-diagram zena-nav-mobile-icon"></i>
                         <span>Projects</span>

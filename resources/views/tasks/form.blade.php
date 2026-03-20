@@ -407,7 +407,7 @@ class TaskFormManager {
                     this.taskId ? 'Cập nhật công việc thành công' : 'Tạo công việc thành công', 
                     'success'
                 );
-                window.location.href = '/tasks';
+                window.location.href = '/app/tasks';
             }
         } catch (error) {
             zenaApp.showNotification('Lỗi khi lưu công việc', 'error');
@@ -425,7 +425,7 @@ class TaskFormManager {
             
             if (response.status === 'success') {
                 zenaApp.showNotification('Xóa công việc thành công', 'success');
-                window.location.href = '/tasks';
+                window.location.href = '/app/tasks';
             }
         } catch (error) {
             zenaApp.showNotification('Lỗi khi xóa công việc', 'error');

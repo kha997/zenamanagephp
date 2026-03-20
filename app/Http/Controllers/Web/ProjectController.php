@@ -1,6 +1,7 @@
 <?php declare(strict_types=1);
 
 namespace App\Http\Controllers\Web;
+use App\Models\Project as AppProject;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -122,22 +123,25 @@ class ProjectController extends Controller // Thêm extends Controller
      * @param int $projectId
      * @return JsonResponse
      */
-    public function show(string $projectId): JsonResponse // Đổi từ int thành string
+    public function show(string $projectId): View
     {
         try {
-            $project = Project::with([
-                'rootComponents.childComponents',
-                'tasks.assignments.user',
-                'tasks.component'
-            ])->findOrFail($projectId);
+            $user = Auth::user();
 
-            return JSendResponse::success([
-                'project' => new ProjectResource($project)
+            $project = AppProject::query()
+                ->with([
+                    'manager',
+                    'client',
+                    'tasks',
+                ])
+                ->where('tenant_id', $user?->tenant_id)
+                ->findOrFail($projectId);
+
+            return view('projects.show', [
+                'project' => $project,
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
-        } catch (\Exception $e) {
-            return JSendResponse::error('Không thể lấy thông tin dự án: ' . $e->getMessage(), 500);
+        } catch (\Throwable $e) {
+            abort(404, 'Dự án không tồn tại.');
         }
     }
 

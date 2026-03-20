@@ -1,3 +1,6 @@
+{{-- DEBUG / DEMO ONLY / NON-CANONICAL --}}
+{{-- No registered runtime route was found for this file; it is retained only as a universal-frame demonstration surface. --}}
+{{-- Do not treat this page as a production owner or revive it as a canonical shell without a new ownership decision. --}}
 {{-- Test Page for Universal Page Frame --}}
 {{-- This page demonstrates the Universal Page Frame structure --}}
 

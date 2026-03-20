@@ -1,6 +1,7 @@
 {{-- Universal Page Frame Template --}}
-{{-- Follows ZenaManage UX/UI Design Rules --}}
-{{-- Structure: Header → Global Nav → Page Nav → KPI Strip → Alert Bar → Main Content → Activity --}}
+{{-- OWNERSHIP STATUS: UNKNOWN / NON-CANONICAL-UNTIL-PROVEN --}}
+{{-- Still extended by some legacy admin/demo views, but no single canonical runtime owner is currently documented. --}}
+{{-- Do not expand ownership claims or revive dependent demo stacks without a new ownership decision. --}}
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" x-data="universalFrame()">

@@ -358,7 +358,7 @@ function loadAvailableItems() {
             type: 'link',
             label: 'Projects',
             icon: 'fas fa-building',
-            to: '/projects',
+            to: '/app/projects',
             enabled: true
         },
         {
@@ -366,7 +366,7 @@ function loadAvailableItems() {
             type: 'link',
             label: 'Tasks',
             icon: 'fas fa-tasks',
-            to: '/tasks',
+            to: '/app/tasks',
             enabled: true
         },
         {

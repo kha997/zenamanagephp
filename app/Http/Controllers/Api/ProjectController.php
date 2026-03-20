@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProjectFormRequest;
-use Src\CoreProject\Models\LegacyProjectAdapter as Project;
+use App\Models\Project;
 use App\Repositories\ProjectRepository;
-use Src\CoreProject\Services\LegacyProjectServiceAdapter as ProjectService;
+use App\Services\ProjectService;
 use App\Services\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -187,7 +188,8 @@ class ProjectController extends Controller
         try {
             $user = Auth::user();
             
-            $project = Project::find($id);
+            /** @var Project|null $project */
+            $project = Project::query()->find($id);
             
             if (!$project) {
                 return response()->json([
@@ -244,7 +246,8 @@ class ProjectController extends Controller
         try {
             $user = Auth::user();
             
-            $project = Project::find($id);
+            /** @var Project|null $project */
+            $project = Project::query()->find($id);
             
             if (!$project) {
                 return response()->json([
@@ -301,7 +304,8 @@ class ProjectController extends Controller
                 'reason' => 'nullable|string|max:500'
             ]);
             
-            $project = Project::find($id);
+            /** @var Project|null $project */
+            $project = Project::query()->find($id);
             
             if (!$project) {
                 return response()->json([
@@ -338,7 +342,8 @@ class ProjectController extends Controller
                 'message' => 'Project status updated successfully',
                 'data' => $project
             ]);
-            
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Failed to update project status', [
                 'error' => $e->getMessage(),
@@ -421,7 +426,8 @@ class ProjectController extends Controller
         try {
             $user = Auth::user();
             
-            $project = Project::forTenant($user->tenant_id)->find($id);
+            /** @var Project|null $project */
+            $project = Project::query()->where('tenant_id', $user->tenant_id)->find($id);
             
             if (!$project) {
                 return response()->json([
@@ -438,14 +444,16 @@ class ProjectController extends Controller
                 ], 403);
             }
             
-            $oldProgress = $project->progress;
-            $project->updateProgress();
+            $oldProgress = $project->getAttribute('progress');
+            $project->recalculateProgress();
+            $freshProject = $project->fresh();
+            $newProgress = $freshProject?->getAttribute('progress');
             
             Log::info('Project progress recalculated', [
                 'project_id' => $project->id,
                 'user_id' => $user->id,
                 'old_progress' => $oldProgress,
-                'new_progress' => $project->fresh()->progress
+                'new_progress' => $newProgress
             ]);
             
             return response()->json([
@@ -453,7 +461,7 @@ class ProjectController extends Controller
                 'message' => 'Project progress recalculated successfully',
                 'data' => [
                     'old_progress' => $oldProgress,
-                    'new_progress' => $project->fresh()->progress
+                    'new_progress' => $newProgress
                 ]
             ]);
             
@@ -480,7 +488,8 @@ class ProjectController extends Controller
         try {
             $user = Auth::user();
             
-            $project = Project::forTenant($user->tenant_id)->find($id);
+            /** @var Project|null $project */
+            $project = Project::query()->where('tenant_id', $user->tenant_id)->find($id);
             
             if (!$project) {
                 return response()->json([
@@ -497,22 +506,16 @@ class ProjectController extends Controller
                 ], 403);
             }
             
-            $oldActualCost = $project->budget_actual;
-            
-            // Calculate actual cost from tasks and other project expenses
-            $taskCosts = $project->tasks()->sum('actual_cost') ?? 0;
-            $otherExpenses = $project->settings['other_expenses'] ?? 0;
-            $newActualCost = $taskCosts + $otherExpenses;
-            
-            $project->update(['budget_actual' => $newActualCost]);
+            $oldActualCost = $project->getAttribute('budget_actual');
+            $project->recalculateActualCost();
+            $freshProject = $project->fresh();
+            $newActualCost = $freshProject?->getAttribute('budget_actual');
             
             Log::info('Project actual cost recalculated', [
                 'project_id' => $project->id,
                 'user_id' => $user->id,
                 'old_actual_cost' => $oldActualCost,
                 'new_actual_cost' => $newActualCost,
-                'task_costs' => $taskCosts,
-                'other_expenses' => $otherExpenses
             ]);
             
             return response()->json([
@@ -521,8 +524,6 @@ class ProjectController extends Controller
                 'data' => [
                     'old_actual_cost' => $oldActualCost,
                     'new_actual_cost' => $newActualCost,
-                    'task_costs' => $taskCosts,
-                    'other_expenses' => $otherExpenses
                 ]
             ]);
             

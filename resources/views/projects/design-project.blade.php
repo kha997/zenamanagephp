@@ -973,7 +973,7 @@ function designProject() {
         },
         
         createTask() {
-            window.location.href = '/tasks/create?project=1';
+            window.location.href = '/app/tasks/create?project=1';
         },
         
         uploadDocument() {

@@ -4,9 +4,9 @@ This file defines canonical ownership between `src/*` (domain) and `app/*` (adap
 
 ## Global Rules
 
-- `src/*` is canonical for domain models, domain services, and domain events.
-- `app/*` is adapter/integration only (HTTP, framework glue, policy wiring, repository plumbing, view/API shaping).
-- `app/*` controllers must call canonical `src/*` services when those services exist.
+- `src/*` remains canonical for compatibility-domain modules that have not yet converged to an app-owned `/api/zena/*` business runtime.
+- `app/*` remains adapter/integration by default, but it is also the canonical business owner for modules explicitly converged in the runtime ownership SSOT.
+- `app/*` controllers must call the canonical owner for the module in the runtime ownership SSOT; do not route converged app-owned modules back through legacy `src/*` adapters.
 - Cross-module writes must flow through the owning module service, not direct model writes from another module.
 - SSOT invariants remain mandatory: tenancy deny/hide, reject-first sanitization, RBAC, named routes, strict baseline rules.
 
@@ -14,14 +14,27 @@ This file defines canonical ownership between `src/*` (domain) and `app/*` (adap
 
 ### CoreProject
 
-- Canonical `src/*`:
-  - `src/CoreProject/Models/Project.php`
-  - `src/CoreProject/Models/Task.php`
+- Canonical app-owned Projects runtime:
+  - Route family: `/api/zena/projects`
+  - Controller/service/model owner: `app/Http/Controllers/Api/ProjectController.php`, `app/Services/ProjectService.php`, `app/Models/Project.php`
+- Canonical app-owned Tasks runtime:
+  - Route family: `/api/zena/tasks`
+  - Controller/model owner: `app/Http/Controllers/Api/TaskController.php`, `app/Models/Task.php`
+  - Current dependency helper in canonical stack: `app/Services/TaskDependencyService.php` via `app/Models/Task.php`
+- Canonical `src/*` compatibility runtime still mounted:
+  - Route family: `/api/v1/projects`
+  - Controller owner: `Src/CoreProject/Controllers/ProjectController.php`
+  - Route family: `/api/v1/tasks`
+  - Controller owner: `Src/CoreProject/Controllers/TaskController.php`
+- Compatibility runtime still mounted: `/api/v1/tasks` in `Src/CoreProject/Controllers/TaskController.php`
+- Canonical `src/*` adjacent projection runtime still mounted:
+  - Route family: `/api/v1/work-template/projects/{projectId}/tasks`
+  - Controller/service/model owner: `Src/WorkTemplate/Controllers/ProjectTaskController.php`, `Src/WorkTemplate/Services/ProjectTaskService.php`, `Src/WorkTemplate/Models/ProjectTask.php`
+- Projection runtime still mounted: `/api/v1/work-template/projects/{projectId}/tasks` in `Src/WorkTemplate/Controllers/ProjectTaskController.php`
+- Canonical `src/*` for remaining CoreProject compatibility/domain surfaces:
   - `src/CoreProject/Models/Component.php`
-  - `src/CoreProject/Services/ProjectService.php`
-  - `src/CoreProject/Services/TaskService.php`
   - `src/CoreProject/Services/ComponentService.php`
-- Allowed `app/*` adapters:
+- Allowed `app/*` adapters and owners:
   - `app/Http/Controllers/**/Project*Controller.php`
   - `app/Http/Controllers/**/Task*Controller.php`
   - `app/Http/Controllers/**/Component*Controller.php`
@@ -29,7 +42,10 @@ This file defines canonical ownership between `src/*` (domain) and `app/*` (adap
   - `app/Repositories/TaskRepository.php`
 - Forbidden cross-calls:
   - Document/Notification/Support modules must not directly mutate `Project/Task/Component` models.
-  - `app/*` controllers must not prefer `App\Models\Project` or `App\Services\ProjectService` when `src/CoreProject/Services/ProjectService.php` is the canonical service.
+  - Do not reintroduce `LegacyProjectServiceAdapter`; Projects canonical `/api/zena/*` flow is app-owned.
+  - Do not remount `/api/v1/projects`; keep it as compatibility-owned by `Src/CoreProject`.
+  - Do not route canonical `/api/zena/tasks` changes back through `Src/CoreProject/Services/TaskService.php`.
+  - Do not expand `/api/v1/work-template/projects/{projectId}/tasks` into a second general-purpose task owner; keep it projection-scoped to work-template flows.
 
 ### DocumentManagement
 

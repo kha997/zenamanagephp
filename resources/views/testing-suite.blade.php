@@ -34,6 +34,24 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div class="flex items-start gap-3">
+                <i class="fas fa-triangle-exclamation text-amber-600 mt-1"></i>
+                <div>
+                    <h2 class="text-lg font-semibold text-amber-900">Non-canonical demo notice</h2>
+                    <p class="text-sm text-amber-800 mt-1">
+                        Smart Tools Blade surfaces are deprecated and archived. The former <code>/test-smart-tools</code>
+                        demo is intentionally excluded here because it has no runtime route and depended on stale
+                        non-v1 <code>/api/universal-frame/*</code> endpoints.
+                    </p>
+                    <p class="text-sm text-amber-800 mt-2">
+                        <code>layouts/universal-frame.blade.php</code> remains <strong>UNKNOWN</strong> and
+                        non-canonical-until-proven. Demo references to it should not be treated as current product ownership.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Test Summary -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div class="bg-white border border-gray-200 rounded-lg p-6">
@@ -304,14 +322,8 @@
 
                 routeTests: [
                     {
-                        name: 'Universal Frame Test',
+                        name: 'Universal Frame Demo (UNKNOWN ownership)',
                         url: '/test-universal-frame',
-                        method: 'GET',
-                        status: 'pending'
-                    },
-                    {
-                        name: 'Smart Tools Test',
-                        url: '/test-smart-tools',
                         method: 'GET',
                         status: 'pending'
                     },

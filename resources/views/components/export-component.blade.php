@@ -1,5 +1,6 @@
-{{-- Export Component --}}
-{{-- Export functionality with role and tenant awareness --}}
+{{-- DEPRECATED / NON-CANONICAL: Smart Tools Blade stack --}}
+{{-- Archive target only. Confirmed consumer was test-smart-tools.blade.php, which has no runtime route. --}}
+{{-- Calls legacy /api/universal-frame/* paths plus orphan /user/role; do not revive without a new ownership decision. --}}
 
 <div class="export-component" x-data="exportComponent()">
     <!-- Export Button -->

@@ -51,7 +51,7 @@ console.log('🚀 Dashboard script loaded');
 async function loadDashboardData() {
     try {
         console.log('📊 Fetching dashboard data...');
-        const response = await fetch('/dashboard-data');
+        const response = await fetch('/_debug/dashboard-data');
         const data = await response.json();
         
         console.log('📊 Dashboard data received:', data);

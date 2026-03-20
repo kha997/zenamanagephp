@@ -1,5 +1,7 @@
 # 🎮 **CONTROLLERS COMPLETION - BÁO CÁO HOÀN THÀNH**
 
+Historical note: this completion snapshot is not the current runtime ownership SSOT. For Projects, `/api/zena/projects` is the canonical business API owned by `App\Http\Controllers\Api\ProjectController`, `App\Services\ProjectService`, and `App\Models\Project`; `/api/v1/projects` remains mounted only as compatibility runtime in `Src\CoreProject\Controllers\ProjectController`.
+
 ## ✅ **TÌNH TRẠNG HOÀN THÀNH**
 
 ### **1. 🏗️ Core Controllers - ✅ HOÀN THÀNH**
@@ -112,9 +114,10 @@
 ### **5. 🛣️ Routes - ✅ HOÀN THÀNH**
 
 #### **A. Project Routes**
-- ✅ **GET /api/v1/projects**: List projects với filtering
-- ✅ **POST /api/v1/projects**: Create project
-- ✅ **PUT /api/v1/projects/{id}**: Update project
+- ✅ **GET /api/zena/projects**: Canonical business list route
+- ✅ **POST /api/zena/projects**: Canonical business create route
+- ✅ **PUT /api/zena/projects/{id}**: Canonical business update route
+- ℹ️ **Compatibility runtime still mounted**: `/api/v1/projects*` via `Src\CoreProject\Controllers\ProjectController`
 
 #### **B. Task Routes**
 - ✅ **GET /api/v1/projects/{project}/tasks**: List tasks

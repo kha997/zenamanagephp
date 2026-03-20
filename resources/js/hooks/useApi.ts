@@ -92,16 +92,7 @@ export const useApi = () => {
 
   // Dashboard API methods
   const getAdminDashboard = useCallback(async (): Promise<ApiResponse> => {
-    const response = await fetch('/test-api-admin-dashboard', {
-      method: 'GET',
-      headers: getHeaders(true),
-    });
-    
-    return handleResponse(response);
-  }, []);
-
-  const getAppDashboard = useCallback(async (): Promise<ApiResponse> => {
-    const response = await fetch('/test-api-app-dashboard', {
+    const response = await fetch('/_debug/test-api-admin-stats', {
       method: 'GET',
       headers: getHeaders(true),
     });
@@ -115,7 +106,6 @@ export const useApi = () => {
     put,
     delete: del,
     getAdminDashboard,
-    getAppDashboard,
     getAuthToken,
   };
 };

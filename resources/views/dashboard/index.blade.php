@@ -79,11 +79,11 @@
     <div class="zena-card zena-p-lg">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <button @click="navigateTo('/tasks/create')" class="zena-btn zena-btn-outline zena-flex-col zena-p-lg">
+            <button @click="navigateTo('/app/tasks/create')" class="zena-btn zena-btn-outline zena-flex-col zena-p-lg">
                 <i class="fas fa-plus text-xl mb-2"></i>
                 <span>New Task</span>
             </button>
-            <button @click="navigateTo('/projects/create')" class="zena-btn zena-btn-outline zena-flex-col zena-p-lg">
+            <button @click="navigateTo('/app/projects/create')" class="zena-btn zena-btn-outline zena-flex-col zena-p-lg">
                 <i class="fas fa-project-diagram text-xl mb-2"></i>
                 <span>New Project</span>
             </button>
@@ -139,7 +139,7 @@
         <div class="zena-card zena-p-lg">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Project Status</h3>
-                <button @click="navigateTo('/projects')" class="zena-btn zena-btn-ghost zena-btn-sm">
+                <button @click="navigateTo('/app/projects')" class="zena-btn zena-btn-ghost zena-btn-sm">
                     View All
                 </button>
             </div>

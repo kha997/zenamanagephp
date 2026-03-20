@@ -174,13 +174,13 @@
         
         <div class="demo-users">
             <h3>Demo Users (Click to login):</h3>
-            <a href="/test-login/superadmin@zena.com" class="demo-user">
+            <a href="/_debug/test-login/superadmin@zena.com" class="demo-user">
                 🔑 Super Admin (superadmin@zena.com)
             </a>
-            <a href="/test-login/pm@zena.com" class="demo-user">
+            <a href="/_debug/test-login/pm@zena.com" class="demo-user">
                 👨‍💼 Project Manager (pm@zena.com)
             </a>
-            <a href="/test-login/user@zena.com" class="demo-user">
+            <a href="/_debug/test-login/user@zena.com" class="demo-user">
                 👤 Regular User (user@zena.com)
             </a>
         </div>

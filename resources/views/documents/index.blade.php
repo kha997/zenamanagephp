@@ -181,11 +181,11 @@
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-900">Recent Documents</h3>
                         <div class="flex items-center gap-2">
-                            <a href="/projects" class="zena-btn zena-btn-outline zena-btn-sm">
+                            <a href="/app/projects" class="zena-btn zena-btn-outline zena-btn-sm">
                                 <i class="fas fa-project-diagram mr-2"></i>
                                 View Projects
                             </a>
-                            <a href="/tasks" class="zena-btn zena-btn-outline zena-btn-sm">
+                            <a href="/app/tasks" class="zena-btn zena-btn-outline zena-btn-sm">
                                 <i class="fas fa-tasks mr-2"></i>
                                 View Tasks
                             </a>
@@ -334,7 +334,7 @@
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <!-- Projects Card -->
-                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/projects'">
+                    <div class="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/app/projects'">
                         <div class="flex items-center justify-between">
                             <div>
                                 <h4 class="font-semibold text-blue-900">My Projects</h4>
@@ -349,7 +349,7 @@
                     </div>
                     
                     <!-- Tasks Card -->
-                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/tasks'">
+                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="window.location.href='/app/tasks'">
                         <div class="flex items-center justify-between">
                             <div>
                                 <h4 class="font-semibold text-green-900">Task Documents</h4>

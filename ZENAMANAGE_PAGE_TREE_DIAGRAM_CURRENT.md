@@ -1,15 +1,20 @@
-# 🌳 ZENAMANAGE SYSTEM - PAGE TREE DIAGRAM (CURRENT STATE)
+# 🌳 ZENAMANAGE SYSTEM - PAGE TREE DIAGRAM (HISTORICAL SNAPSHOT - NON-CANONICAL)
 
 ## 📋 OVERVIEW
-Sơ đồ mối quan hệ cha-con của toàn bộ hệ thống ZenaManage Project Management System đến thời điểm hiện tại (sau khi hoàn thành Admin Dashboard và Tasks Management).
+Tài liệu này được giữ lại như historical snapshot của page-tree narrative cũ, phản ánh trạng thái tài liệu khoảng 2025-01-15 chứ không còn là canonical runtime map hiện tại.
 
-**📅 Cập nhật lần cuối:** 2025-01-15  
-**🔄 Phiên bản:** 3.0 - Current State  
-**✅ Trạng thái:** Admin Dashboard hoàn thành, Tasks Management đã tích hợp
+**📅 Snapshot gốc:** 2025-01-15  
+**🔄 Phiên bản gốc:** 3.0 - Current State  
+**⚠️ Trạng thái hiện tại:** Historical snapshot - non-canonical
+**🧭 Canonical page tree:** `ZENAMANAGE_PAGE_TREE_DIAGRAM.md`
+**🧾 Canonical `_debug/*` runtime snapshot:** `docs/audits/2026-03-19-debug-route-inventory.md`
+**🚫 Boundary:** Do not use this file as the runtime source of truth for `/_debug/*` claims.
+**📏 Count boundary:** Route/page totals in this file are historical/manual snapshot labels unless explicitly tied to 2026-03-19 runtime evidence.
+**🔐 Auth boundary:** This snapshot keeps the older web/page-tree auth narrative only. Current runtime auth entry points also span `/api/auth/*`, `/api/v1/auth/*`, `/api/zena/auth/*`, and debug-only helpers under `/_debug/*`.
 
 ---
 
-## 🌳 COMPLETE PAGE TREE STRUCTURE (CURRENT STATE)
+## 🌳 COMPLETE PAGE TREE STRUCTURE (HISTORICAL SNAPSHOT)
 
 ```mermaid
 graph TD
@@ -17,7 +22,7 @@ graph TD
     ROOT["🏠 ZenaManage System<br/>Root Domain"]
     
     %% Authentication Level
-    ROOT --> AUTH["🔐 Authentication (2 trang)"]
+    ROOT --> AUTH["🔐 Authentication<br/>Historical web auth subset (2 shown)<br/>Not full current auth surface"]
     AUTH --> LOGIN["/login<br/>Login Page"]
     AUTH --> LOGOUT["/logout<br/>Logout"]
     
@@ -87,7 +92,7 @@ graph TD
     API_V1 --> API_ADMIN["/api/v1/admin<br/>Admin API"]
     API_V1 --> API_APP["/api/v1/app<br/>App API"]
     API_V1 --> API_PUBLIC["/api/v1/public<br/>✅ Public API<br/>Health Check"]
-    API_V1 --> API_AUTH["/api/v1/auth<br/>Auth API"]
+    API_V1 --> API_AUTH["/api/v1/auth<br/>Historical/high-level auth API node<br/>Not sole current auth namespace"]
     API_V1 --> API_INVITATIONS["/api/v1/invitations<br/>Invitation API"]
     API_V1 --> API_TASKS["/api/v1/app/tasks<br/>✅ Tasks API<br/>CRUD + Move + Archive"]
     API_V1 --> API_PROJECTS["/api/v1/app/projects<br/>✅ Projects API<br/>CRUD + Metrics + History"]
@@ -117,30 +122,15 @@ graph TD
     API_CALENDAR --> API_CAL_DELETE["DELETE /api/v1/app/calendar/{id}<br/>Delete Event"]
     API_CALENDAR --> API_CAL_UPCOMING["GET /api/v1/app/calendar/upcoming<br/>Upcoming Events"]
     
-    %% Debug Routes (OPTIMIZED - Moved from root)
-    ROOT --> DEBUG["🐛 Debug Routes<br/>OPTIMIZED - DebugGate Protected"]
-    DEBUG --> DEBUG_INFO["/_debug/info<br/>System Information"]
-    DEBUG --> DEBUG_PROJECTS["/_debug/projects-test<br/>Project Testing"]
-    DEBUG --> DEBUG_USERS["/_debug/users-debug<br/>User Debugging"]
-    DEBUG --> DEBUG_TASKS["/_debug/tasks-debug<br/>Task Debugging"]
-    DEBUG --> DEBUG_FRONTEND["/_debug/frontend-test<br/>Frontend Testing"]
-    DEBUG --> DEBUG_LOGIN["/_debug/login-test<br/>Login Testing"]
-    DEBUG --> DEBUG_SIMPLE["/_debug/simple-test<br/>Simple Testing"]
-    DEBUG --> DEBUG_NAV["/_debug/navigation-test<br/>Navigation Testing"]
-    DEBUG --> DEBUG_DASHBOARD_DATA["✅ /_debug/dashboard-data<br/>Dashboard Data Test<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_API_DOCS["✅ /_debug/api-docs<br/>API Documentation<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_TEST_PERMISSIONS["✅ /_debug/test-permissions<br/>Permission Testing<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_TEST_LOGIN_SIMPLE["✅ /_debug/test-login-simple<br/>Simple Login Testing<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_TEST_SESSION_AUTH["✅ /_debug/test-session-auth<br/>Session Auth Testing<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_TEST_LOGIN_EMAIL["✅ /_debug/test-login/{email}<br/>Debug Login with Email<br/>DebugGate Protected"]
-    DEBUG --> DEBUG_MOVED["❌ MOVED FROM ROOT<br/>4 routes moved to /_debug"]
-    DEBUG_MOVED --> DEBUG_MOVED_DASHBOARD["❌ /dashboard-data<br/>MOVED TO /_debug/dashboard-data"]
-    DEBUG_MOVED --> DEBUG_MOVED_API_DOCS["❌ /api-docs<br/>MOVED TO /_debug/api-docs"]
-    DEBUG_MOVED --> DEBUG_MOVED_TEST_ADMIN["❌ /test-api-admin-dashboard<br/>MOVED TO /_debug/test-api-admin-dashboard"]
-    DEBUG_MOVED --> DEBUG_MOVED_API_DOCS_JSON["❌ /api-docs.json<br/>MOVED TO /_debug/api-docs.json"]
+    %% Debug Routes (historical note only; not a runtime manifest)
+    ROOT --> DEBUG["🐛 Debug Routes<br/>HISTORICAL SNAPSHOT ONLY"]
+    DEBUG --> DEBUG_CANON["Use canonical docs instead<br/>ZENAMANAGE_PAGE_TREE_DIAGRAM.md<br/>docs/audits/2026-03-19-debug-route-inventory.md"]
+    DEBUG --> DEBUG_ACTIVE["Claims from this snapshot still backed by 2026-03-19 runtime evidence<br/>/_debug/dashboard-data<br/>/_debug/test-permissions<br/>POST /_debug/test-login-simple<br/>/_debug/test-session-auth<br/>/_debug/test-login/{email}"]
+    DEBUG --> DEBUG_ARCHIVED["Claims from this snapshot now archived or unsupported by runtime<br/>/_debug/info<br/>/_debug/projects-test<br/>/_debug/users-debug<br/>/_debug/tasks-debug<br/>/_debug/frontend-test<br/>/_debug/login-test<br/>/_debug/simple-test<br/>/_debug/navigation-test<br/>/_debug/api-docs"]
+    DEBUG --> DEBUG_MOVED["Historical moved-root claims in this snapshot are not canonical current `_debug` docs<br/>/dashboard-data legacy redirect still exists<br/>/_debug/test-api-admin-dashboard not mounted<br/>/_debug/api-docs and /_debug/api-docs.json not mounted"]
     
     %% Legacy Routes (OPTIMIZED - 3-Phase Strategy)
-    ROOT --> LEGACY["🔄 Legacy Routes<br/>OPTIMIZED - 12 Routes Total"]
+    ROOT --> LEGACY["🔄 Legacy Routes<br/>Historical redirect plan (12 claimed paths)"]
     LEGACY --> LEGACY_ESSENTIAL["✅ Essential Routes (3)<br/>High/Medium Traffic"]
     LEGACY_ESSENTIAL --> LEGACY_DASH["✅ /dashboard → /app/dashboard<br/>Essential - High Traffic"]
     LEGACY_ESSENTIAL --> LEGACY_PROJECTS["✅ /projects → /app/projects<br/>Essential - High Traffic"]
@@ -159,7 +149,7 @@ graph TD
     LEGACY_INVITATION --> LEGACY_INVITE_ACCEPT["/invite/accept/{token} → /invitations/accept/{token}"]
     LEGACY_INVITATION --> LEGACY_INVITE_DECLINE["/invite/decline/{token} → /invitations/decline/{token}"]
     
-    LEGACY --> LEGACY_REMOVED["❌ REMOVED (9 routes)<br/>Low/Very Low Traffic"]
+    LEGACY --> LEGACY_REMOVED["🗃️ Historical removal set (9 claimed paths)<br/>Low/Very Low Traffic"]
     LEGACY_REMOVED --> LEGACY_USERS["❌ /users<br/>REMOVED - Low Traffic"]
     LEGACY_REMOVED --> LEGACY_TENANTS["❌ /tenants<br/>REMOVED - Low Traffic"]
     LEGACY_REMOVED --> LEGACY_DOCUMENTS["❌ /documents<br/>REMOVED - Low Traffic"]
@@ -217,10 +207,12 @@ graph TD
 
 #### **📊 CÁC MODULE CHÍNH:**
 
-1. **🔐 Authentication (3 trang)**
-   - Login, Logout, Debug Login
+1. **🔐 Authentication (historical/manual count)**
+   - This snapshot only illustrates the older web auth narrative and should not be read as the full current auth route inventory.
+   - Current runtime auth entry points split across:
+     interactive web login/logout/reset, API auth/token namespaces, and debug-only auth helpers.
 
-2. **👑 Admin Routes (12 trang) - ✅ HOÀN THÀNH**
+2. **👑 Admin Routes (historical page snapshot) - ✅ HOÀN THÀNH**
    - ✅ **Admin Dashboard** - KPI Cards, System Status, Quick Actions
    - ✅ **System-wide Task Monitoring** - Investigation & Intervention, Tenant Filter Required
    - User Management, Tenant Management, Project Oversight
@@ -228,55 +220,53 @@ graph TD
    - Advanced Analytics, System Maintenance, Settings
    - Sidebar Builder
 
-3. **📱 App Routes (39 trang)**
+3. **📱 App Routes (historical page snapshot)**
    - ✅ **My Tasks** - Tenant Internal Operations, Daily Task Management
    - Tenant Dashboard + 38 Feature Pages
    - Project Management, Document Management
    - Team Management, Template Library, Settings
    - ❌ **Removed:** 2 UI routes (move, archive) - Now use API
 
-4. **🔌 API Routes (5 nhóm + Tasks API + Performance API)**
+4. **🔌 API Routes (historical schematic grouping)**
    - Admin API, App API, Public API, Auth API, Invitation API
+   - The `/api/v1/auth` node here is a historical/high-level grouping, not a claim that current runtime auth only lives there.
    - ✅ **Added:** Tasks API với Move & Archive endpoints
    - ✅ **Added:** Public Health API với throttle protection
    - ✅ **Added:** Admin Performance API với auth + admin ability
    - ✅ **Audit Logging:** Tất cả API actions được log
 
-5. **🐛 Debug Routes (15 trang - OPTIMIZED)**
-   - ✅ **Protected:** DebugGate middleware với env + IP allowlist
-   - ✅ **Moved:** 4 routes từ root level vào /_debug namespace
-   - ✅ **Security:** Không deploy prod nếu còn test routes ở root
-   - ✅ **Benefits:** Reduced attack surface, better security
+5. **🐛 Debug Routes (historical snapshot only)**
+   - ⚠️ **Non-canonical:** phần `_debug/*` trong file này khong con la runtime truth
+   - ✅ **Still active from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`, `/_debug/test-login/{email}`
+   - 🗃️ **Archived/historical from this snapshot:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
+   - 🧭 **Current source of truth:** `docs/audits/2026-03-19-debug-route-inventory.md`
 
-6. **🔄 Legacy Routes (12 trang - OPTIMIZED)**
+6. **🔄 Legacy Routes (12 claimed historical redirect paths)**
    - ✅ **Essential:** /dashboard, /projects, /tasks (high/medium traffic)
-   - ❌ **Removed:** 9 routes với low/very low traffic
+   - 🗃️ **Historical removal claim:** older docs grouped 9 low/very-low-traffic paths here; verify individual root paths against runtime before treating them as removed.
    - ✅ **Strategy:** 3-phase removal (Announce → 301 → 410)
    - ✅ **Benefits:** Reduced maintenance burden, clearer architecture
 
-7. **📊 Performance & Monitoring (4 trang - MOVED TO API)**
+7. **📊 Performance & Monitoring (historical web paths moved to API)**
    - ❌ **Moved:** All routes moved to proper API endpoints
    - ✅ **Public:** /api/v1/public/health (throttled)
    - ✅ **Admin:** /api/v1/admin/perf/* (authenticated + admin ability)
 
-8. **📧 Invitations (2 trang + 2 legacy redirects)**
+8. **📧 Invitations (2 web paths + 2 legacy redirects)**
    - ✅ **Standardized:** /invitations/accept/{token}, /invitations/decline/{token}
    - ❌ **Legacy:** /invite/* routes with 301 redirects
    - ✅ **Consistent:** Web routes match API naming convention
 
-9. **📅 Calendar (1 trang)**
+9. **📅 Calendar (single page in this snapshot)**
    - Tenant-scoped calendar view
 
 ### 📈 **THỐNG KÊ TỔNG QUAN:**
 
-- **Tổng số trang:** 151+ routes (tăng từ 81+ do thêm API routes)
-- **Admin Routes:** 12 routes (dashboard, users, tenants, security, alerts, activities, analytics, projects, tasks, settings, maintenance, sidebar-builder)
-- **App Routes:** 25 routes (projects, tasks, documents, team, templates, settings, profile, calendar)
-- **API Routes:** 19 routes (app API: 15, admin API: 4)
-- **Debug Routes:** 16 routes (moved to /_debug namespace)
-- **Legacy Redirects:** 30 routes (301 redirects)
-- **Authentication:** 3 routes (login, logout, api-demo)
-- **Other Routes:** 49 routes (projects, tasks, documents, team, templates, settings, profile, etc.)
+- **Historical/manual snapshot counts only:** the old narrative referenced `151+ / 12 / 25 / 19 / 30 / 49`, but these should not be read as current runtime totals.
+- **Current runtime boundary:** `php artisan route:list --json` on 2026-03-19 returns a much larger repo-wide route inventory, so this file is not a reliable source for full runtime counts.
+- **Legacy redirect plan still evidenced in `routes/web.php`:** 3 essential paths (`/dashboard`, `/projects`, `/tasks`) + 7 performance paths + 2 invitation paths.
+- **Authentication current-state note:** the web/debug entry points discussed here are narrower than the full auth surface. Current runtime evidence also shows mounted API auth families under `/api/auth/*`, `/api/v1/auth/*`, and `/api/zena/auth/*`; retired `/api-demo` is historical-only. See `docs/audits/2026-03-19-public-demo-artifact-audit.md`.
+- **Debug boundary:** historical note only in this file; use `docs/audits/2026-03-19-debug-route-inventory.md` for current `_debug/*` inventory.
 
 ### ✅ **TRẠNG THÁI HOÀN THÀNH:**
 
@@ -346,20 +336,20 @@ graph TD
 - ✅ **Consistency:** Web và API routes đồng bộ naming convention
 
 #### **🔄 Legacy Route Optimization (100% Complete):**
-- ✅ **Reduced:** Từ 19 legacy routes xuống 3 essential routes
+- ⚠️ **Historical reduction claim only:** older narrative described a reduction down to 3 essential legacy paths; use `routes/web.php` for the current redirect set.
 - ✅ **Strategy:** 3-phase removal (Announce → 301 → 410)
 - ✅ **Essential Routes:** /dashboard, /projects, /tasks (high/medium traffic)
-- ✅ **Removed Routes:** 9 routes với low/very low traffic
+- 🗃️ **Historical removal claim:** older docs grouped 9 low/very-low-traffic paths here; verify individual root paths against runtime before treating them as removed.
 - ✅ **Benefits:** Reduced maintenance burden, clearer architecture
 - ✅ **Documentation:** legacy-map.json với detailed tracking
 
-#### **🐛 Debug Route Optimization (100% Complete):**
-- ✅ **Moved:** 4 test routes từ root level vào /_debug namespace
-- ✅ **Protected:** DebugGate middleware với env + IP allowlist
-- ✅ **Security:** Không deploy prod nếu còn test routes ở root
-- ✅ **Routes:** /dashboard-data, /api-docs, /test-api-admin-dashboard
-- ✅ **Benefits:** Reduced attack surface, better security
-- ✅ **Monitoring:** Log tất cả debug route access
+#### **🐛 Debug Route Snapshot (Historical Only):**
+- ⚠️ **Demoted:** file nay khong con canonical cho `_debug/*`
+- ✅ **Protected runtime group still exists:** `routes/web.php` van mount `/_debug/*` behind `DebugGateMiddleware`
+- ✅ **Still evidenced from this snapshot:** `/_debug/dashboard-data`, `/_debug/test-permissions`, `POST /_debug/test-login-simple`, `/_debug/test-session-auth`, `/_debug/test-login/{email}`
+- 🗃️ **Archived snapshot claims:** `/_debug/info`, `/_debug/projects-test`, `/_debug/users-debug`, `/_debug/tasks-debug`, `/_debug/frontend-test`, `/_debug/login-test`, `/_debug/simple-test`, `/_debug/navigation-test`, `/_debug/api-docs`
+- ❌ **Unsupported moved claim in this snapshot:** `/_debug/test-api-admin-dashboard`
+- 🧾 **Use runtime inventory instead:** `docs/audits/2026-03-19-debug-route-inventory.md`
 
 ### 📋 **LEGACY ROUTE MANAGEMENT:**
 
@@ -383,16 +373,17 @@ graph TD
 ### 🐛 **DEBUG ROUTE MANAGEMENT:**
 
 #### **🔒 DebugGate Middleware:**
+- ✅ **Runtime evidence:** current `routes/web.php` still mounts the active `/_debug/*` surface behind `DebugGateMiddleware`
 - ✅ **Environment Check:** Chỉ allow trong non-production environments
 - ✅ **IP Allowlist:** Production chỉ allow từ specific IPs
 - ✅ **Logging:** Log tất cả debug route access
 - ✅ **Security:** 403 response nếu không được phép
 
 #### **📁 Debug Namespace:**
-- ✅ **Location:** /_debug/* namespace
-- ✅ **Protection:** DebugGate middleware
-- ✅ **Routes:** 12 debug routes (8 existing + 4 moved)
-- ✅ **Benefits:** Centralized debug management
+- ✅ **Location:** `/_debug/*` namespace
+- ✅ **Protection:** `DebugGateMiddleware`
+- ⚠️ **Current inventory lives elsewhere:** `docs/audits/2026-03-19-debug-route-inventory.md`
+- ⚠️ **This file only preserves historical page-tree intent and stale claims**
 
 #### **🚫 Production Safety:**
 - ✅ **No Root Test Routes:** Không deploy prod nếu còn test routes ở root

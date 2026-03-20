@@ -54,8 +54,8 @@
                     <li class="nav-item"><a href="/dashboard/performance" class="nav-link"><i class="fas fa-tachometer-alt nav-icon"></i>Performance</a></li>
                     <li class="nav-item"><a href="/dashboard/marketing" class="nav-link"><i class="fas fa-bullhorn nav-icon"></i>Marketing</a></li>
                     <li class="nav-item"><a href="/dashboard/financial" class="nav-link"><i class="fas fa-dollar-sign nav-icon"></i>Financial</a></li>
-                    <li class="nav-item"><a href="/dashboard/projects" class="nav-link"><i class="fas fa-project-diagram nav-icon"></i>Projects</a></li>
-                    <li class="nav-item"><a href="/tasks" class="nav-link active"><i class="fas fa-tasks nav-icon"></i>Tasks</a></li>
+                    <li class="nav-item"><a href="/app/projects" class="nav-link"><i class="fas fa-project-diagram nav-icon"></i>Projects</a></li>
+                    <li class="nav-item"><a href="/app/tasks" class="nav-link active"><i class="fas fa-tasks nav-icon"></i>Tasks</a></li>
                     <li class="nav-item"><a href="/team" class="nav-link"><i class="fas fa-users nav-icon"></i>Team</a></li>
                     <li class="nav-item"><a href="/admin" class="nav-link"><i class="fas fa-cog nav-icon"></i>Admin</a></li>
                 </ul>
@@ -130,7 +130,7 @@
     </div>
     <script>
         function editTask() {
-            window.location.href = "/tasks/{{ $task->id }}/edit";
+            window.location.href = "/app/tasks/{{ $task->id }}/edit";
         }
         function changeStatus() {
             alert("Change status functionality will be implemented");

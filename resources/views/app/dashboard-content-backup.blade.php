@@ -871,36 +871,17 @@ function dashboardData() {
             try {
                 this.loading = true;
                 this.error = null;
-                console.log('📊 Loading dashboard data...');
-                
-                // Get auth token from localStorage or session
-                const token = localStorage.getItem('auth_token') || 'eyJ1c2VyX2lkIjoyOTE0LCJlbWFpbCI6InN1cGVyYWRtaW5AemVuYS5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJleHBpcmVzIjoxNzU4NjE2OTIwfQ==';
-                
-                // Fetch real data from API
-                const response = await fetch('/test-api-app-dashboard', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('📊 API Response:', data);
-                
-                // Map API data to KPI format
+                console.log('📦 Loading archived backup dashboard data...');
+
+                // This backup artifact used the retired /test-api-app-dashboard demo endpoint.
+                // Keep the view self-describing without calling a non-mounted runtime target.
                 this.kpis = {
-                    'Active Tasks': data.stats.totalTasks || 0,
-                    'Completed Today': data.stats.completedTasks || 0,
-                    'Team Members': data.stats.teamMembers || 0,
-                    'Projects': data.stats.totalProjects || 0
+                    'Active Tasks': 0,
+                    'Completed Today': 0,
+                    'Team Members': 0,
+                    'Projects': 0
                 };
+                this.error = 'Archived backup artifact: /test-api-app-dashboard is retired and has no mounted runtime target.';
                 
                 this.alerts = [
                     {

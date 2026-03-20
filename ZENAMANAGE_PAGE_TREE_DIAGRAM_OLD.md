@@ -175,7 +175,7 @@ graph TD
     TEST --> TEST_ROUTE["/test<br/>Test Route"]
     TEST --> TEST_PROJECTS["/projects-test<br/>Projects Test"]
     TEST --> TEST_TASK_UPDATE["/test-task-update (POST)<br/>Task Update Test"]
-    TEST --> NAV_DEMO["/navigation-demo<br/>Navigation Demo"]
+    TEST --> NAV_DEMO["historical doc artifact only<br/>`/navigation-demo` not mounted"]
     
     %% Frontend Routes (React)
     ROOT --> FRONTEND["⚛️ Frontend Routes (React)"]
@@ -255,6 +255,12 @@ graph TD
 ---
 
 ## 📊 PAGE STATISTICS
+
+### ⚠️ Historical Note
+
+- `/navigation-demo` in this diagram is a legacy documentation artifact, not a current runtime route.
+- The current application no longer mounts `/navigation-demo` or `/_debug/navigation-demo`.
+- Keep this file as historical architecture context only.
 
 ### 🎯 **TOTAL PAGES BY CATEGORY:**
 

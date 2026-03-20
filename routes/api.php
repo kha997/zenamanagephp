@@ -592,17 +592,6 @@ Route::group([], function () {
         
         // Task-specific routes
         Route::prefix('tasks')->group(function () {
-            Route::patch('{task}/status', [TaskController::class, 'updateStatus']);
-            Route::post('{task}/assign', [TaskController::class, 'assignUser']);
-            Route::post('{task}/assign-team', [TaskController::class, 'assignTeam']);
-            Route::post('{task}/dependencies', [TaskController::class, 'updateDependencies']);
-            Route::get('{task}/dependencies', [TaskController::class, 'getDependencies']);
-            Route::post('{task}/dependencies/{dependencyId}', [TaskController::class, 'addDependency']);
-            Route::delete('{task}/dependencies/{dependencyId}', [TaskController::class, 'removeDependency']);
-            Route::get('{task}/watchers', [TaskController::class, 'getWatchers']);
-            Route::post('{task}/watchers', [TaskController::class, 'addWatcher']);
-            Route::delete('{task}/watchers', [TaskController::class, 'removeWatcher']);
-            Route::get('statistics', [TaskController::class, 'statistics']);
         });
         
         Route::prefix('tasks/{taskId}')->group(function () {
@@ -785,7 +774,7 @@ Route::prefix('dashboard')->group(function () {
             |--------------------------------------------------------------------------
             */
             Route::prefix('tasks')->group(function () {
-                Route::get('/{taskId}/assignments', [TaskAssignmentController::class, 'index']);
+                Route::get('/{taskId}/assignments', [TaskAssignmentController::class, 'getTaskAssignments']);
                 Route::post('/{taskId}/assignments', [TaskAssignmentController::class, 'store']);
             });
 
@@ -958,7 +947,7 @@ Route::prefix('v1')->as('api.v1.')->middleware(['auth:sanctum', 'tenant.isolatio
         |--------------------------------------------------------------------------
         */
         Route::prefix('tasks')->group(function () {
-            Route::get('/{taskId}/assignments', [TaskAssignmentController::class, 'index']);
+            Route::get('/{taskId}/assignments', [TaskAssignmentController::class, 'getTaskAssignments']);
             Route::post('/{taskId}/assignments', [TaskAssignmentController::class, 'store']);
         });
 

@@ -3,7 +3,6 @@
 namespace Src\CoreProject\Requests;
 
 use App\Http\Requests\BaseApiRequest;
-use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\TaskAssignment;
 use Src\CoreProject\Models\Task;
 
@@ -43,7 +42,7 @@ class StoreTaskAssignmentRequest extends BaseApiRequest
             'role' => [
                 'required',
                 'string',
-                'in:' . implode(',', array_keys(TaskAssignment::ROLES))
+                'in:' . implode(',', $this->validRoles())
             ]
         ];
     }
@@ -93,5 +92,17 @@ class StoreTaskAssignmentRequest extends BaseApiRequest
                 }
             }
         });
+    }
+
+    private function validRoles(): array
+    {
+        if (defined(TaskAssignment::class . '::ROLES')) {
+            /** @var array<string, mixed> $roles */
+            $roles = TaskAssignment::ROLES;
+
+            return array_keys($roles);
+        }
+
+        return ['assignee', 'reviewer', 'watcher'];
     }
 }

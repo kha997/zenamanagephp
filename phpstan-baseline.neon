@@ -6223,24 +6223,6 @@ parameters:
 			path: app/Http/Controllers/Api/ProjectController.php
 
 		-
-			message: '#^Call to an undefined method Src\\CoreProject\\Services\\LegacyProjectServiceAdapter\:\:updateProjectStatus\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/Api/ProjectController.php
-
-		-
-			message: '#^Call to an undefined static method Src\\CoreProject\\Models\\LegacyProjectAdapter\:\:find\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 3
-			path: app/Http/Controllers/Api/ProjectController.php
-
-		-
-			message: '#^Call to an undefined static method Src\\CoreProject\\Models\\LegacyProjectAdapter\:\:forTenant\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 2
-			path: app/Http/Controllers/Api/ProjectController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Api\\ProjectController\:\:normalizeData\(\) has no return type specified\.$#'
 			identifier: missingType.return
 			count: 1

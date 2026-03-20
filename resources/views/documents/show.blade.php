@@ -35,7 +35,7 @@
                             <div class="info-item">
                                 <label>Dự án:</label>
                                 <span class="info-value">
-                                    <a href="/projects/{{ $document->project->id }}">{{ $document->project->name }}</a>
+                                    <a href="/app/projects/{{ $document->project->id }}">{{ $document->project->name }}</a>
                                 </span>
                             </div>
                         </div>
@@ -70,7 +70,7 @@
                                 <span class="info-value">
                                     @switch($document->linked_entity_type)
                                         @case('task')
-                                            <a href="/tasks/{{ $document->linked_entity_id }}">Công việc: {{ $document->linked_entity->name ?? 'N/A' }}</a>
+                                            <a href="/app/tasks/{{ $document->linked_entity_id }}">Công việc: {{ $document->linked_entity->name ?? 'N/A' }}</a>
                                             @break
                                         @case('diary')
                                             <a href="/interaction-logs/{{ $document->linked_entity_id }}">Nhật ký: {{ $document->linked_entity->description ?? 'N/A' }}</a>

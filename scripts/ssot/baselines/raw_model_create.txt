@@ -3,3 +3,5 @@ tests/Feature/Api/SupportTenantIsolationTest.php:119:        SupportDocumentatio
 tests/Feature/Api/SupportTenantIsolationTest.php:49:        $ticket = SupportTicket::create([
 tests/Feature/Api/SupportTenantIsolationTest.php:76:        $ticket = SupportTicket::create([
 tests/Feature/Api/TaskDependenciesTest.php:327:        return TaskDependency::create([
+tests/Feature/Api/V1DashboardTaskAssignmentsCompatibilityTest.php:188:        $request = \Illuminate\Http\Request::create("/api/v1/dashboard/users/{$this->user->id}/assignments/stats", 'GET');
+tests/Feature/Api/V1TaskAssignmentsCompatibilityTest.php:188:        $request = \Illuminate\Http\Request::create("/api/v1/task-assignments/{$this->assignmentId}", 'GET');

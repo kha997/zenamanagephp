@@ -3,7 +3,6 @@
 namespace Src\CoreProject\Requests;
 
 use App\Http\Requests\BaseApiRequest;
-use Illuminate\Validation\Rule;
 use Src\CoreProject\Models\TaskAssignment;
 
 class UpdateTaskAssignmentRequest extends BaseApiRequest
@@ -34,7 +33,7 @@ class UpdateTaskAssignmentRequest extends BaseApiRequest
                 'sometimes',
                 'required',
                 'string',
-                'in:' . implode(',', array_keys(TaskAssignment::ROLES))
+                'in:' . implode(',', $this->validRoles())
             ]
         ];
     }
@@ -70,8 +69,13 @@ class UpdateTaskAssignmentRequest extends BaseApiRequest
             // Cảnh báo khi thay đổi role của primary assignee
             if ($this->has('role') && $assignmentId) {
                 $assignment = TaskAssignment::find($assignmentId);
-                if ($assignment && $assignment->isPrimaryAssignee() && 
-                    $this->input('role') !== 'assignee') {
+                if (
+                    $assignment
+                    && method_exists($assignment, 'isPrimaryAssignee')
+                    && $assignment->isPrimaryAssignee()
+                    && $this->input('role') !== 'assignee'
+                    && method_exists($validator, 'warnings')
+                ) {
                     $validator->warnings()->add(
                         'role',
                         'Bạn đang thay đổi vai trò của assignee chính. ' .
@@ -80,5 +84,17 @@ class UpdateTaskAssignmentRequest extends BaseApiRequest
                 }
             }
         });
+    }
+
+    private function validRoles(): array
+    {
+        if (defined(TaskAssignment::class . '::ROLES')) {
+            /** @var array<string, mixed> $roles */
+            $roles = TaskAssignment::ROLES;
+
+            return array_keys($roles);
+        }
+
+        return ['assignee', 'reviewer', 'watcher'];
     }
 }

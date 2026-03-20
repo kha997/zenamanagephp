@@ -68,12 +68,12 @@ class UpdateTaskRequest extends BaseApiRequest
             'status' => [
                 'nullable',
                 'string',
-                Rule::in(array_keys(Task::STATUSES))
+                Rule::in($this->validStatuses())
             ],
             'priority' => [
                 'nullable',
                 'string',
-                Rule::in(array_keys(Task::PRIORITIES))
+                Rule::in($this->validPriorities())
             ],
             'dependencies' => [
                 'nullable',
@@ -145,6 +145,41 @@ class UpdateTaskRequest extends BaseApiRequest
                 'nullable',
                 'boolean'
             ]
+        ];
+    }
+
+    private function validStatuses(): array
+    {
+        if (defined(Task::class . '::VALID_STATUSES')) {
+            /** @var array<int, string> $statuses */
+            $statuses = Task::VALID_STATUSES;
+
+            return $statuses;
+        }
+
+        return [
+            Task::STATUS_PENDING,
+            Task::STATUS_IN_PROGRESS,
+            Task::STATUS_COMPLETED,
+            Task::STATUS_ON_HOLD,
+            Task::STATUS_CANCELLED,
+        ];
+    }
+
+    private function validPriorities(): array
+    {
+        if (defined(Task::class . '::VALID_PRIORITIES')) {
+            /** @var array<int, string> $priorities */
+            $priorities = Task::VALID_PRIORITIES;
+
+            return $priorities;
+        }
+
+        return [
+            Task::PRIORITY_LOW,
+            Task::PRIORITY_MEDIUM,
+            Task::PRIORITY_HIGH,
+            Task::PRIORITY_CRITICAL,
         ];
     }
 

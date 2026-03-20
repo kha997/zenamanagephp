@@ -119,7 +119,7 @@ class TaskService
      */
     public function updateTask(string $taskId, array $data): Task
     {
-        $task = Task::where('ulid', $taskId)->firstOrFail();
+        $task = Task::where('id', $taskId)->firstOrFail();
         $oldData = $task->toArray();
         
         // Validate dữ liệu cập nhật
@@ -385,12 +385,21 @@ class TaskService
         $endDate = $data['end_date'] ?? $task->end_date;
         
         if ($startDate && $endDate) {
-            $start = new \DateTime($startDate);
-            $end = new \DateTime($endDate);
+            $start = $this->normalizeDateTime($startDate);
+            $end = $this->normalizeDateTime($endDate);
             if ($start > $end) {
                 throw new \InvalidArgumentException('Ngày bắt đầu không thể sau ngày kết thúc.');
             }
         }
+    }
+
+    private function normalizeDateTime($value): \DateTimeInterface
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value;
+        }
+
+        return new \DateTime((string) $value);
     }
     
     /**

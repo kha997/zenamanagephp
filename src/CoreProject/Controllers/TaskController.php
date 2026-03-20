@@ -4,6 +4,8 @@ namespace Src\CoreProject\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Src\CoreProject\Models\Task;
 use Src\CoreProject\Resources\TaskResource;
 use Src\CoreProject\Requests\StoreTaskRequest;
@@ -13,6 +15,7 @@ use Src\CoreProject\Services\ConditionalTagService;
 use Src\RBAC\Middleware\RBACMiddleware;
 use Src\Foundation\Utils\JSendResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 /**
@@ -42,10 +45,9 @@ class TaskController
      * Lấy danh sách tasks của một project với filtering và pagination
      *
      * @param Request $request
-     * @param string $projectId
      * @return JsonResponse
      */
-    public function index(Request $request, string $projectId): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         // Thêm validation để chặn SQL injection
         $validated = $request->validate([
@@ -60,7 +62,8 @@ class TaskController
         ]);
 
         try {
-            $query = Task::where('project_id', $projectId)
+            $query = Task::query()
+                ->where('tenant_id', $this->currentTenantId())
                 ->with(['component', 'assignments.user']);
 
             // Sử dụng validated data thay vì raw request
@@ -161,15 +164,14 @@ class TaskController
     /**
      * Lấy thông tin chi tiết của một task
      *
-     * @param string $projectId
-     * @param string $taskId
+     * @param string $task
      * @return JsonResponse
      */
-    public function show(string $projectId, string $taskId): JsonResponse
+    public function show(string $task): JsonResponse
     {
         try {
-            $task = Task::where('project_id', $projectId)
-                ->where('id', $taskId)
+            $task = Task::where('tenant_id', $this->currentTenantId())
+                ->where('id', $task)
                 ->with(['component', 'assignments.user', 'project'])
                 ->firstOrFail();
 
@@ -187,21 +189,20 @@ class TaskController
      * Cập nhật task sử dụng TaskService
      *
      * @param UpdateTaskRequest $request
-     * @param string $projectId
-     * @param string $taskId
+     * @param string $task
      * @return JsonResponse
      */
-    public function update(UpdateTaskRequest $request, string $projectId, string $taskId): JsonResponse
+    public function update(UpdateTaskRequest $request, string $task): JsonResponse
     {
         try {
-            $task = Task::where('project_id', $projectId)
-                ->where('id', $taskId)
+            $taskModel = Task::where('tenant_id', $this->currentTenantId())
+                ->where('id', $task)
                 ->firstOrFail();
 
             $data = $request->validated();
 
             // Sử dụng TaskService để update với validation dependencies
-            $updatedTask = $this->taskService->updateTask($task, $data);
+            $updatedTask = $this->taskService->updateTask($taskModel->id, $data);
 
             // Load relationships
             $updatedTask->load(['component', 'assignments.user', 'project']);
@@ -222,15 +223,14 @@ class TaskController
     /**
      * Xóa task với validation dependencies
      *
-     * @param string $projectId
-     * @param string $taskId
+     * @param string $task
      * @return JsonResponse
      */
-    public function destroy(string $projectId, string $taskId): JsonResponse
+    public function destroy(string $task): JsonResponse
     {
         try {
-            $task = Task::where('project_id', $projectId)
-                ->where('id', $taskId)
+            $task = Task::where('tenant_id', $this->currentTenantId())
+                ->where('id', $task)
                 ->firstOrFail();
 
             // Kiểm tra assignments
@@ -239,9 +239,7 @@ class TaskController
             }
 
             // Kiểm tra dependencies từ tasks khác
-            $dependentTasks = Task::where('project_id', $projectId)
-                ->whereJsonContains('dependencies_json', $taskId)
-                ->exists();
+            $dependentTasks = $this->dependentTasksExist($task);
 
             if ($dependentTasks) {
                 return JSendResponse::error('Không thể xóa task vì có tasks khác phụ thuộc vào nó.', 400);
@@ -292,6 +290,34 @@ class TaskController
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể lấy dependency graph: ' . $e->getMessage());
         }
+    }
+
+    private function currentTenantId(): ?string
+    {
+        $tenantId = app()->bound('current_tenant_id')
+            ? app('current_tenant_id')
+            : request()->attributes->get('tenant_id');
+
+        return $tenantId !== null ? (string) $tenantId : null;
+    }
+
+    private function dependentTasksExist(Task $task): bool
+    {
+        $query = Task::where('tenant_id', $this->currentTenantId())
+            ->where('project_id', $task->project_id)
+            ->whereKeyNot($task->getKey());
+
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            return (clone $query)
+                ->whereJsonContains('dependencies_json', $task->id)
+                ->exists();
+        }
+
+        return $query
+            ->get(['id', 'dependencies_json'])
+            ->contains(static function (Task $candidate) use ($task): bool {
+                return in_array($task->id, $candidate->dependencies_json ?? [], true);
+            });
     }
 
     /**

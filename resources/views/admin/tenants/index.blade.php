@@ -1,3 +1,6 @@
+{{-- ORPHAN ADMIN ARTIFACT / NON-CANONICAL --}}
+{{-- Extends layouts/universal-frame, but current GET /admin/tenants runtime renders view('admin.tenants'), not this file. --}}
+{{-- Retained only for audit visibility and debug/archive reference unless a future ownership decision explicitly remounts it. --}}
 {{-- Admin Tenant Management Page --}}
 @extends('layouts.universal-frame')
 

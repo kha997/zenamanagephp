@@ -129,6 +129,16 @@ epics:
           - "Doc types/metadata (discipline/package/status/revision) stored and searchable."
           - "Versioning retains history."
           - "Permission matrix enforced (role/tenant + scope)."
+        updated_at: 2026-03-20
+        evidence:
+          routes: "GET /api/v1/documents/{id}/versions; POST /api/v1/documents/{id}/versions; GET /api/zena/documents/{id}/versions; POST /api/zena/documents/{id}/versions"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/DocumentManagementTest.php (8 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/DocumentVersioningTest.php (8 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
+          lint: "composer ssot:lint"
+        notes:
+          - "Canonical /api/zena/documents now exposes version list/create using the same SimpleDocumentController runtime as v1 compatibility routes."
+          - "Current evidence proves canonical version list/create and tenant-safe route ownership for document versions."
+          - "Story remains todo until permission-matrix scope is proven strongly enough for full acceptance."
+          - "DocumentApiTest currently has a separate download-path failure and is not used as positive evidence for this story."
       - id: S2.2
         title: "Link docs ↔ Task/Component/CR"
         priority: P0

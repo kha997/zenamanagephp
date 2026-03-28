@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api;
 
 use Tests\TestCase;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\ZenaProject;
@@ -134,10 +135,15 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_submit_change_request()
     {
+        $approver = User::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+        ]);
+
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
+            'assigned_to' => $approver->id,
             'status' => 'draft'
         ]);
 
@@ -152,6 +158,13 @@ class ChangeRequestApiTest extends TestCase
             'id' => $changeRequest->id,
             'status' => 'submitted'
         ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => $this->user->tenant_id,
+            'user_id' => $approver->id,
+            'type' => 'change_request_submitted',
+            'channel' => Notification::CHANNEL_INAPP,
+        ]);
     }
 
     /**
@@ -159,9 +172,13 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_approve_change_request()
     {
+        $requester = User::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+        ]);
+
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'requested_by' => $this->user->id,
+            'requested_by' => $requester->id,
             'tenant_id' => $this->user->tenant_id,
             'status' => 'submitted'
         ]);
@@ -183,6 +200,13 @@ class ChangeRequestApiTest extends TestCase
             'status' => 'approved',
             'approved_by' => $this->user->id
         ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => $this->user->tenant_id,
+            'user_id' => $requester->id,
+            'type' => 'change_request_approved',
+            'channel' => Notification::CHANNEL_INAPP,
+        ]);
     }
 
     /**
@@ -190,9 +214,13 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_reject_change_request()
     {
+        $requester = User::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+        ]);
+
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'requested_by' => $this->user->id,
+            'requested_by' => $requester->id,
             'tenant_id' => $this->user->tenant_id,
             'status' => 'submitted'
         ]);
@@ -213,6 +241,13 @@ class ChangeRequestApiTest extends TestCase
             'id' => $changeRequest->id,
             'status' => 'rejected',
             'rejection_reason' => 'Cost impact too high'
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => $this->user->tenant_id,
+            'user_id' => $requester->id,
+            'type' => 'change_request_rejected',
+            'channel' => Notification::CHANNEL_INAPP,
         ]);
     }
 
@@ -242,6 +277,12 @@ class ChangeRequestApiTest extends TestCase
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
             'status' => 'implemented'
+        ]);
+
+        $this->assertDatabaseMissing('notifications', [
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $this->project->id,
+            'type' => 'change_request_implemented',
         ]);
     }
 

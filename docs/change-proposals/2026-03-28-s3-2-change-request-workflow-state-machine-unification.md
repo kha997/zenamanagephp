@@ -21,11 +21,11 @@ Current runtime route surface from `php artisan route:list --path=api/zena/chang
 
 ## Problem Statement
 
-The canonical change-request workflow is carrying state and proof drift in three places:
+The canonical change-request workflow on `/api/zena/change-requests` is carrying state and proof drift in three places:
 
 - runtime status vocabulary is inconsistent across controller, model, form request, and tests
-- canonical audit proof is not clearly unified on the active Zena path
-- canonical notification proof is not strong enough to justify broad fan-out behavior
+- active-owner transition proof is only partial: `submit` currently proves `draft -> submitted`, and `apply` currently proves `approved -> implemented`, while `approve/reject` do not yet prove explicit status guards
+- canonical audit proof is not yet aligned on the active Zena path, and notification proof is only capability-level rather than canonical end-to-end proof
 
 Without resolving those drifts first, any additional workflow work risks encoding the wrong state machine, the wrong audit source of truth, or notification behavior that the repo does not actually prove.
 
@@ -60,14 +60,14 @@ Observed live vocabulary set from repo evidence:
 
 - `app/Http/Controllers/Api/ChangeRequestController.php` does not inject or call `App\Services\ZenaAuditLogger`
 - other canonical Zena controllers such as `RfiController`, `SubmittalController`, `WorkTemplateController`, `WorkInstanceController`, and `DeliverableTemplateController` do use `ZenaAuditLogger`
-- this means the repo has an established canonical audit pattern, but the active change-request path is not aligned with it
+- this means the repo has an established canonical audit pattern, but the active owner controller is not yet aligned with it
 
 ### Notification proof is insufficient on canonical Zena path
 
 - `app/Models/NotificationRule.php` defines `EVENT_CHANGE_REQUEST_SUBMITTED`
 - `app/Http/Controllers/Api/NotificationController.php` can create notifications including `change_request_submitted` and `change_request_approved`
 - current evidence does not show `App\Http\Controllers\Api\ChangeRequestController` dispatching canonical notification events or directly creating notifications on submit/approve/reject
-- current evidence therefore proves notification capability exists in the repo, but not a strong end-to-end canonical CR workflow notification path
+- current evidence therefore proves notification capability exists in the repo, but not canonical end-to-end CR workflow notification proof
 
 ## Decision Drivers
 
@@ -99,7 +99,17 @@ The model/form-request constants support this direction, but runtime controller/
 
 ## Recommended Decision
 
-Adopt one canonical CR state machine for `/api/zena/change-requests`:
+Treat current runtime truth and implementation target as separate facts.
+
+Current runtime truth on the active owner path:
+
+- `submit` currently proves `draft -> submitted`
+- `apply` currently proves `approved -> implemented`
+- `approve/reject` currently do not prove explicit transition guards
+- canonical audit is not yet aligned to `App\Services\ZenaAuditLogger` on `App\Http\Controllers\Api\ChangeRequestController`
+- notifications are only proven at repo capability level, not as canonical end-to-end workflow behavior
+
+Proposed implementation target for `/api/zena/change-requests`:
 
 - `draft -> submitted -> approved|rejected`
 
@@ -117,11 +127,11 @@ This keeps the runtime contract aligned with the currently observed controller b
 ## Smallest Safe Slice
 
 - choose one canonical vocabulary and remove the `submitted` vs `pending_approval` vs `awaiting_approval` drift from active controller/model/request/test surfaces
-- make `submit`, `approve`, and `reject` transition rules explicit on the canonical controller
+- make `submit`, `approve`, and `reject` transition rules explicit on the canonical controller, while leaving `apply` outside this proposal target state machine
 - wire canonical audit logging for those workflow mutations through `ZenaAuditLogger`
 - update or add only the smallest test coverage needed to prove:
-  - allowed transitions
-  - rejected invalid transitions
+  - `submit` still proves `draft -> submitted`
+  - `approve/reject` gain explicit valid and invalid transition proof
   - canonical audit rows written on the chosen path
 - keep notification work limited to proof-backed behavior only
 
@@ -129,6 +139,7 @@ This keeps the runtime contract aligned with the currently observed controller b
 
 - no new workflow engine
 - no new module
+- no changes to `/api/v1/*` compatibility surfaces in this round
 - no broad notification-rule fan-out redesign
 - no backlog rewrite in this round
 - no migration unless implementation evidence later proves it is strictly required
@@ -147,19 +158,21 @@ Before implementation:
 Implementation acceptance should require proof for:
 
 - one canonical status vocabulary across active controller/model/validation/tests
-- one canonical audit path on `/api/zena/change-requests`
-- notification behavior either proven narrowly or explicitly deferred
+- explicit `approve/reject` transition guard behavior on `/api/zena/change-requests`
+- one canonical audit path on `/api/zena/change-requests` via `App\Services\ZenaAuditLogger`
+- notification behavior either proven narrowly on the canonical path or explicitly deferred
 
 ## Risks / Rollback
 
 Risks:
 
 - test expectations currently disagree on pre-approval status naming
-- downstream consumers may depend on mixed status strings
-- changing notification assumptions without proof would create new narrative debt
+- downstream consumers may depend on mixed status strings or on `implemented` remaining reachable through `apply`
+- changing audit or notification wording without runtime proof would create new narrative debt
 
 Rollback:
 
 - keep the slice isolated to the canonical `App\Http\Controllers\Api\ChangeRequestController` path
+- keep `/api/v1/*` compatibility surfaces out of scope for this round
 - if audit or status unification regresses behavior, revert that narrow slice without touching unrelated modules
 - if notification proof is weak during implementation, ship the state-machine and audit unification first and defer notifications explicitly

@@ -47,9 +47,12 @@ class ChangeRequestApiTest extends TestCase
         $permissionCodes = $permissionCodes ?? [
             'change-request.create',
             'change-request.view',
+            'change-request.update',
+            'change-request.delete',
             'change-request.submit',
             'change-request.approve',
             'change-request.reject',
+            'change-request.apply',
         ];
 
         $role = Role::firstOrCreate(
@@ -291,6 +294,95 @@ class ChangeRequestApiTest extends TestCase
                  ]);
     }
 
+    public function test_approve_requires_submitted_status(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/approve", [
+                'approval_comments' => 'Attempted approval from draft',
+            ]);
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Only submitted change requests can be approved',
+            ]);
+    }
+
+    public function test_reject_requires_submitted_status(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/reject", [
+                'rejection_reason' => 'Attempted rejection from draft',
+            ]);
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Only submitted change requests can be rejected',
+            ]);
+    }
+
+    public function test_apply_requires_approved_status(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'submitted',
+        ]);
+
+        $response = $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/apply", [
+                'implementation_notes' => 'Attempted apply from submitted',
+            ]);
+
+        $response->assertStatus(400)
+            ->assertJson([
+                'status' => 'error',
+                'message' => 'Only approved change requests can be applied',
+            ]);
+    }
+
+    public function test_update_cannot_mutate_workflow_status_directly(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withHeaders($this->headers)
+            ->putJson("/api/zena/change-requests/{$changeRequest->id}", [
+                'status' => 'approved',
+                'title' => 'Attempted direct workflow mutation',
+            ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('error.details.data.status.0', 'validation.prohibited');
+
+        $this->assertDatabaseHas('change_requests', [
+            'id' => $changeRequest->id,
+            'status' => 'draft',
+            'title' => $changeRequest->title,
+        ]);
+    }
+
     public function test_cross_tenant_change_request_show_returns_not_found(): void
     {
         $tenantB = Tenant::factory()->create();
@@ -379,5 +471,48 @@ class ChangeRequestApiTest extends TestCase
             ->assertJsonFragment([
                 'message' => 'Change request not found',
             ]);
+    }
+
+    public function test_cross_tenant_change_request_approve_returns_not_found(): void
+    {
+        $tenantB = Tenant::factory()->create();
+        $userB = $this->createTenantUser($tenantB, [], null, ['change-request.approve']);
+        $tokenB = $this->apiLoginToken($userB, $tenantB);
+
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'submitted',
+        ]);
+
+        $response = $this->withHeaders($this->authHeadersForUser($userB, $tokenB))
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/approve", [
+                'approval_comments' => 'Cross-tenant approval attempt',
+            ]);
+
+        $response->assertStatus(404)
+            ->assertJsonFragment([
+                'message' => 'Change request not found',
+            ]);
+    }
+
+    public function test_approve_requires_rbac_permission(): void
+    {
+        $restrictedUser = $this->createTenantUser($this->tenant, [], [], ['change-request.view']);
+        $restrictedToken = $this->apiLoginToken($restrictedUser, $this->tenant);
+
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'submitted',
+        ]);
+
+        $this->withHeaders($this->authHeadersForUser($restrictedUser, $restrictedToken))
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/approve", [
+                'approval_comments' => 'RBAC denied approval attempt',
+            ])
+            ->assertStatus(403);
     }
 }

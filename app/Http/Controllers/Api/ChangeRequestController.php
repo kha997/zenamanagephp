@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BaseApiController;
 use App\Models\ChangeRequest;
 use App\Models\Project;
 use App\Services\ErrorEnvelopeService;
+use App\Services\ZenaAuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +18,10 @@ use Illuminate\Validation\Rule;
 class ChangeRequestController extends BaseApiController
 {
     use ZenaContractResponseTrait;
+
+    public function __construct(private ZenaAuditLogger $auditLogger)
+    {
+    }
 
     private function tenantId(Request $request): string
     {
@@ -239,7 +244,7 @@ class ChangeRequestController extends BaseApiController
                 'priority' => 'sometimes|in:low,medium,high,urgent',
                 'justification' => 'sometimes|string',
                 'alternatives_considered' => 'nullable|string',
-                'status' => 'sometimes|in:draft,submitted,pending_approval,approved,rejected,implemented',
+                'status' => 'prohibited',
             ]);
 
             if ($validator->fails()) {
@@ -249,7 +254,7 @@ class ChangeRequestController extends BaseApiController
             $changeRequest->update($request->only([
                 'title', 'description', 'change_type', 'impact_analysis',
                 'cost_impact', 'schedule_impact_days', 'priority',
-                'justification', 'alternatives_considered', 'status'
+                'justification', 'alternatives_considered'
             ]));
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
@@ -343,6 +348,17 @@ class ChangeRequestController extends BaseApiController
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name']);
 
+            $this->auditLogger->log(
+                $request,
+                'zena.change_request.submit',
+                'change_request',
+                (string) $changeRequest->id,
+                200,
+                $changeRequest->project_id,
+                $tenantId,
+                (string) $user->id
+            );
+
             return $this->successResponse($changeRequest, 'Change request submitted successfully');
         } catch (\Exception $e) {
             return $this->serverError('Failed to submit change request: ' . $e->getMessage());
@@ -391,6 +407,10 @@ class ChangeRequestController extends BaseApiController
                 return $this->validationError($validator->errors());
             }
 
+            if ($changeRequest->status !== ChangeRequest::STATUS_SUBMITTED) {
+                return $this->errorResponse('Only submitted change requests can be approved', 400);
+            }
+
             DB::beginTransaction();
 
             $changeRequest->update([
@@ -418,6 +438,17 @@ class ChangeRequestController extends BaseApiController
             DB::commit();
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.change_request.approve',
+                'change_request',
+                (string) $changeRequest->id,
+                200,
+                $changeRequest->project_id,
+                $tenantId,
+                (string) $user->id
+            );
 
             return $this->successResponse($changeRequest, 'Change request approved successfully');
         } catch (\Exception $e) {
@@ -467,6 +498,10 @@ class ChangeRequestController extends BaseApiController
                 return $this->validationError($validator->errors());
             }
 
+            if ($changeRequest->status !== ChangeRequest::STATUS_SUBMITTED) {
+                return $this->errorResponse('Only submitted change requests can be rejected', 400);
+            }
+
             $changeRequest->update([
                 'status' => 'rejected',
                 'rejection_reason' => $request->input('rejection_reason'),
@@ -476,6 +511,17 @@ class ChangeRequestController extends BaseApiController
             ]);
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.change_request.reject',
+                'change_request',
+                (string) $changeRequest->id,
+                200,
+                $changeRequest->project_id,
+                $tenantId,
+                (string) $user->id
+            );
 
             return $this->successResponse($changeRequest, 'Change request rejected successfully');
         } catch (\Exception $e) {
@@ -533,6 +579,17 @@ class ChangeRequestController extends BaseApiController
             DB::commit();
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.change_request.apply',
+                'change_request',
+                (string) $changeRequest->id,
+                200,
+                $changeRequest->project_id,
+                $tenantId,
+                (string) $user->id
+            );
 
             return $this->successResponse($changeRequest, 'Change request applied successfully');
         } catch (\Exception $e) {

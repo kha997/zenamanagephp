@@ -162,13 +162,13 @@ class ChangeRequestWorkflowTest extends TestCase
 
         // Kiểm tra submit thành công
         $this->assertTrue($result);
-        $this->assertEquals(ChangeRequest::STATUS_AWAITING_APPROVAL, $changeRequest->fresh()->status);
+        $this->assertEquals(ChangeRequest::STATUS_SUBMITTED, $changeRequest->fresh()->status);
         $this->assertTrue($changeRequest->fresh()->isPending());
 
         // Kiểm tra database
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'status' => ChangeRequest::STATUS_AWAITING_APPROVAL,
+            'status' => ChangeRequest::STATUS_SUBMITTED,
         ]);
     }
 
@@ -202,7 +202,7 @@ class ChangeRequestWorkflowTest extends TestCase
 
         // Submit để phê duyệt
         $changeRequest->submitForApproval();
-        $this->assertEquals(ChangeRequest::STATUS_AWAITING_APPROVAL, $changeRequest->fresh()->status);
+        $this->assertEquals(ChangeRequest::STATUS_SUBMITTED, $changeRequest->fresh()->status);
 
         // Client Rep approve với note
         $approvalResult = $changeRequest->approve(
@@ -250,7 +250,7 @@ class ChangeRequestWorkflowTest extends TestCase
 
         // Submit để phê duyệt
         $changeRequest->submitForApproval();
-        $this->assertEquals(ChangeRequest::STATUS_AWAITING_APPROVAL, $changeRequest->fresh()->status);
+        $this->assertEquals(ChangeRequest::STATUS_SUBMITTED, $changeRequest->fresh()->status);
 
         // Client Rep reject với reason
         $rejectResult = $changeRequest->reject(

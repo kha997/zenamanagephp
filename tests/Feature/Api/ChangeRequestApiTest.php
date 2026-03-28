@@ -163,7 +163,7 @@ class ChangeRequestApiTest extends TestCase
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'pending_approval'
+            'status' => 'submitted'
         ]);
 
         $approvalData = [
@@ -194,7 +194,7 @@ class ChangeRequestApiTest extends TestCase
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'pending_approval'
+            'status' => 'submitted'
         ]);
 
         $rejectionData = [

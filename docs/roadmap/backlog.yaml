@@ -197,6 +197,8 @@ epics:
         notes:
           - "Locked runtime slice already proves canonical submit/approve/reject/apply guards and audit alignment on /api/zena/change-requests."
           - "Story remains todo because notification proof is still deferred and acceptance is not yet fully met."
+          - "Notification planning is now locked to a minimal canonical in-app proof boundary: submit -> one explicit approver recipient fixture, approve/reject -> requester, apply -> deferred until a later round proves broader recipient semantics."
+          - "Broad stakeholder fan-out remains UNKNOWN on the canonical path and must not be invented during the next proof round."
       - id: S3.3
         title: "Approved CR creates delta tasks + baseline delta"
         priority: P0

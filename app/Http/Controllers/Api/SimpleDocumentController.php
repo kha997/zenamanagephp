@@ -26,6 +26,10 @@ class SimpleDocumentController extends Controller
 
     private const DEFAULT_PER_PAGE = 15;
     private const MAX_PER_PAGE = 100;
+    private const STATUS_DRAFT = 'draft';
+    private const STATUS_SUBMITTED = 'submitted';
+    private const STATUS_APPROVED = 'approved';
+    private const STATUS_REJECTED = 'rejected';
 
     public function index(Request $request)
     {
@@ -202,6 +206,72 @@ class SimpleDocumentController extends Controller
         }
 
         return $this->zenaSuccessResponse($document);
+    }
+
+    public function submit(string $id): JsonResponse
+    {
+        $document = $this->findDocument($id);
+
+        if (!$document) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+
+        if ($document->status !== self::STATUS_DRAFT) {
+            return ErrorEnvelopeService::conflictError('Document can only be submitted from draft status');
+        }
+
+        $userId = Auth::id();
+        $metadata = $document->metadata ?? [];
+        $metadata['status'] = self::STATUS_SUBMITTED;
+        $metadata['submitted_at'] = now()->toISOString();
+        $metadata['submitted_by'] = $userId;
+
+        $document->forceFill([
+            'status' => self::STATUS_SUBMITTED,
+            'metadata' => $metadata,
+            'updated_by' => $userId,
+        ])->save();
+
+        return $this->zenaSuccessResponse($document->fresh(['currentVersion']), 'Document submitted successfully');
+    }
+
+    public function decision(Request $request, string $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'decision' => 'required|string|in:' . implode(',', [self::STATUS_APPROVED, self::STATUS_REJECTED]),
+        ]);
+
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+
+        $document = $this->findDocument($id);
+
+        if (!$document) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+
+        $this->authorize('approve', $document);
+
+        if ($document->status !== self::STATUS_SUBMITTED) {
+            return ErrorEnvelopeService::conflictError('Document can only be decided from submitted status');
+        }
+
+        $decision = $validator->validated()['decision'];
+        $userId = Auth::id();
+        $metadata = $document->metadata ?? [];
+        $metadata['status'] = $decision;
+        $metadata['decision'] = $decision;
+        $metadata['decision_at'] = now()->toISOString();
+        $metadata['decision_by'] = $userId;
+
+        $document->forceFill([
+            'status' => $decision,
+            'metadata' => $metadata,
+            'updated_by' => $userId,
+        ])->save();
+
+        return $this->zenaSuccessResponse($document->fresh(['currentVersion']), 'Document decision recorded successfully');
     }
 
     public function download(string $id)

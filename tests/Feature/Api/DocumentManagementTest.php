@@ -194,6 +194,175 @@ class DocumentManagementTest extends TestCase
         $this->assertSame(2, DocumentVersion::where('document_id', $documentId)->count());
     }
 
+    public function test_canonical_submit_transitions_document_from_draft_to_submitted(): void
+    {
+        $document = $this->createDocument([
+            'status' => 'draft',
+            'metadata' => [
+                'status' => 'draft',
+            ],
+        ]);
+
+        $this->apiPost($this->zena('documents.submit', ['id' => $document->id]), [])
+            ->assertOk()
+            ->assertJsonPath('data.id', $document->id)
+            ->assertJsonPath('data.status', 'submitted')
+            ->assertJsonPath('data.metadata.status', 'submitted')
+            ->assertJsonPath('data.metadata.submitted_by', $this->user->id);
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'tenant_id' => $this->tenant->id,
+            'status' => 'submitted',
+            'updated_by' => $this->user->id,
+        ]);
+    }
+
+    public function test_canonical_decision_can_approve_submitted_document(): void
+    {
+        $approver = $this->createTenantUser($this->tenant, [], ['admin'], [
+            'document.view',
+            'document.update',
+        ]);
+        $this->apiAs($approver, $this->tenant);
+
+        $document = $this->createDocument([
+            'status' => 'submitted',
+            'metadata' => [
+                'status' => 'submitted',
+                'submitted_by' => $this->user->id,
+                'submitted_at' => now()->subMinute()->toISOString(),
+            ],
+        ]);
+
+        $this->apiPost($this->zena('documents.decision', ['id' => $document->id]), [
+            'decision' => 'approved',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.metadata.status', 'approved')
+            ->assertJsonPath('data.metadata.decision', 'approved')
+            ->assertJsonPath('data.metadata.decision_by', $approver->id);
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'status' => 'approved',
+            'updated_by' => $approver->id,
+        ]);
+    }
+
+    public function test_canonical_decision_can_reject_submitted_document(): void
+    {
+        $approver = $this->createTenantUser($this->tenant, [], ['admin'], [
+            'document.view',
+            'document.update',
+        ]);
+        $this->apiAs($approver, $this->tenant);
+
+        $document = $this->createDocument([
+            'status' => 'submitted',
+            'metadata' => [
+                'status' => 'submitted',
+                'submitted_by' => $this->user->id,
+            ],
+        ]);
+
+        $this->apiPost($this->zena('documents.decision', ['id' => $document->id]), [
+            'decision' => 'rejected',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'rejected')
+            ->assertJsonPath('data.metadata.decision', 'rejected');
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'status' => 'rejected',
+            'updated_by' => $approver->id,
+        ]);
+    }
+
+    public function test_canonical_workflow_rejects_invalid_transitions(): void
+    {
+        $approvedDocument = $this->createDocument([
+            'status' => 'approved',
+            'metadata' => [
+                'status' => 'approved',
+            ],
+        ]);
+
+        $this->apiPost($this->zena('documents.submit', ['id' => $approvedDocument->id]), [])
+            ->assertStatus(409)
+            ->assertJsonPath('error.code', 'E409.CONFLICT');
+
+        $submittedDocument = $this->createDocument([
+            'status' => 'draft',
+            'metadata' => [
+                'status' => 'draft',
+            ],
+        ]);
+
+        $this->user->assignRole('admin');
+        $this->apiAs($this->user, $this->tenant);
+
+        $this->apiPost($this->zena('documents.decision', ['id' => $submittedDocument->id]), [
+            'decision' => 'approved',
+        ])
+            ->assertStatus(409)
+            ->assertJsonPath('error.code', 'E409.CONFLICT');
+    }
+
+    public function test_canonical_document_workflow_routes_are_tenant_safe(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+        $otherApprover = $this->createTenantUser($otherTenant, [], ['pm'], [
+            'document.view',
+            'document.update',
+        ]);
+        $otherProject = Project::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'created_by' => $otherApprover->id,
+        ]);
+
+        $foreignDocument = Document::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'project_id' => $otherProject->id,
+            'uploaded_by' => $otherApprover->id,
+            'created_by' => $otherApprover->id,
+            'updated_by' => $otherApprover->id,
+            'status' => 'submitted',
+            'metadata' => [
+                'status' => 'submitted',
+            ],
+        ]);
+
+        $this->apiPost($this->zena('documents.submit', ['id' => $foreignDocument->id]), [])
+            ->assertNotFound();
+
+        $this->apiPost($this->zena('documents.decision', ['id' => $foreignDocument->id]), [
+            'decision' => 'approved',
+        ])->assertNotFound();
+    }
+
+    public function test_canonical_document_decision_requires_management_policy_authorization(): void
+    {
+        $nonApprover = $this->createTenantUser($this->tenant, [], ['engineer'], [
+            'document.view',
+            'document.update',
+        ]);
+        $this->apiAs($nonApprover, $this->tenant);
+
+        $document = $this->createDocument([
+            'status' => 'submitted',
+            'metadata' => [
+                'status' => 'submitted',
+            ],
+        ]);
+
+        $this->apiPost($this->zena('documents.decision', ['id' => $document->id]), [
+            'decision' => 'approved',
+        ])->assertForbidden();
+    }
+
     public function test_cross_tenant_document_requests_return_not_found(): void
     {
         $otherTenant = Tenant::factory()->create();
@@ -247,13 +416,13 @@ class DocumentManagementTest extends TestCase
             'document_type' => 'drawing',
             'discipline' => 'structural',
             'package' => 'PKG-01',
-            'status' => 'active',
+            'status' => 'draft',
             'revision' => '0',
             'metadata' => [
                 'document_type' => 'drawing',
                 'discipline' => 'structural',
                 'package' => 'PKG-01',
-                'status' => 'active',
+                'status' => 'draft',
                 'revision' => '0',
             ],
         ], $overrides));

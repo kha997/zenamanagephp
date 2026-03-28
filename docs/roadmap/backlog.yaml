@@ -73,11 +73,19 @@ epics:
       - id: S1.2
         title: "Apply template to Project/Component (generator)"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Apply endpoint creates tasks + checklists + due dates + assignments by role."
           - "Supports scope: Project and Component."
           - "Idempotent behavior is defined (no accidental duplicates)."
+        updated_at: 2026-03-20
+        evidence:
+          routes: "POST /api/zena/projects/{id}/apply-template; POST /api/zena/components/{id}/apply-template"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateMvpApiTest.php (20 passed); tests/Feature/Api/WorkTemplateBaselineSeederTest.php (2 passed)"
+        notes:
+          - "Apply creates tasks, task assignments, due dates, and checklist/required-doc snapshots."
+          - "Supports both project and component scope."
+          - "Fingerprint-based idempotency prevents duplicate applies for the same scope/version."
       - id: S1.3
         title: "Template preview & dry-run"
         priority: P1
@@ -156,9 +164,16 @@ epics:
       - id: S2.4
         title: "Document search & filters"
         priority: P1
-        status: todo
+        status: done
         acceptance_criteria:
           - "Search supports keyword + filters; no cross-tenant leakage."
+        updated_at: 2026-03-20
+        evidence:
+          routes: "GET /api/zena/documents"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/DocumentManagementTest.php (6 passed)"
+        notes:
+          - "Search supports q plus filters for document_type, discipline, package, status, revision, and project_id."
+          - "Cross-tenant leakage is blocked by tenant-scoped document queries and route middleware."
 
   - id: EPIC-3
     name: Change Order (ChangeRequest v2)

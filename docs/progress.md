@@ -97,7 +97,8 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
 - Outcome: locked
 - Key files:
   - `app/Http/Controllers/Api/ChangeRequestController.php`
-  - `tests/Feature/Api/ChangeRequestWorkflowTest.php`
+  - `tests/Feature/Api/ChangeRequestApiTest.php`
+  - `tests/Feature/ChangeRequestApiTest.php`
   - `docs/progress.md`
 - Evidence:
   - commit: `fb45a35ab6ebd3a7177a7d1317a459c7d416e270`
@@ -214,9 +215,9 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
 
 ## 6. Next Action Queue
 
-1. Decide whether `S3.2` backlog acceptance should stay broad or be narrowed/split to match the now-proved canonical runtime slice.
-2. Add notification work for the canonical `/api/zena/change-requests` path only if direct end-to-end proof can be produced.
-3. Preserve the current canonical guards and audit behavior without reopening `/api/v1/*` compatibility surfaces.
+1. Add notification work for the canonical `/api/zena/change-requests` path only if direct end-to-end proof can be produced.
+2. Preserve the current canonical guards and audit behavior without reopening `/api/v1/*` compatibility surfaces.
+3. Keep backlog status conservative until canonical notification proof satisfies the remaining `S3.2` acceptance.
 
 ## 7. Out Of Scope / Deferred
 

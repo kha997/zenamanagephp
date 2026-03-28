@@ -192,8 +192,11 @@ epics:
         priority: P0
         status: todo
         acceptance_criteria:
-          - "Draft→Awaiting→Approved/Rejected supported with full audit."
-          - "Notify approvers and stakeholders."
+          - "Draft→Submitted→Approved/Rejected supported with full audit on canonical /api/zena/change-requests."
+          - "Canonical notifications for approvers and stakeholders are proved end-to-end on state changes."
+        notes:
+          - "Locked runtime slice already proves canonical submit/approve/reject/apply guards and audit alignment on /api/zena/change-requests."
+          - "Story remains todo because notification proof is still deferred and acceptance is not yet fully met."
       - id: S3.3
         title: "Approved CR creates delta tasks + baseline delta"
         priority: P0

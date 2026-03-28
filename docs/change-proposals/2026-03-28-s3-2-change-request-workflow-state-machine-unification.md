@@ -3,6 +3,25 @@
 Date: 2026-03-28
 Status: proposal only, no implementation in this round
 
+## Post-Lock Note
+
+Later on 2026-03-28, the narrow canonical runtime slice proposed here was implemented and locked at `fb45a35ab6ebd3a7177a7d1317a459c7d416e270`.
+
+That locked slice proved on `/api/zena/change-requests`:
+
+- `submit: draft -> submitted`
+- `approve: only from submitted`
+- `reject: only from submitted`
+- `apply: only from approved -> implemented`
+- `update()` blocks direct workflow status mutation
+- canonical audit alignment via `App\Services\ZenaAuditLogger` for `submit`, `approve`, `reject`, and `apply`
+
+What remains outside the proved slice:
+
+- canonical notification proof is still deferred
+- backlog story `S3.2` therefore remains `todo`
+- this proposal now serves as planning context for acceptance-boundary alignment rather than pending runtime implementation
+
 ## Context Snapshot
 
 Canonical runtime for change requests currently lives on `/api/zena/change-requests` and is owned by `App\Http\Controllers\Api\ChangeRequestController`.

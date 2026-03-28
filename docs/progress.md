@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, and wrote the first implementation-ready proposal for `S3.2` without overclaiming runtime proof. The open work is now concentrated in change-request workflow unification, where runtime routes exist but status vocabulary, transition-guard proof, canonical audit alignment, and notification proof still drift. The next focus should stay narrow: patch `S3.2` on the active owner path, prove the smallest valid state machine, and defer anything not supported by route/test/runtime evidence.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, and then implemented the narrow runtime slice for `S3.2` on the canonical change-request owner path without overclaiming broader workflow or notification completion. The open work is now concentrated in evidence gaps that remain outside that locked slice, especially notification proof and any broader acceptance still expressed in backlog wording. The next focus should stay narrow: keep the canonical state machine stable, do not expand claims beyond evidence, and defer anything not supported by route/test/runtime proof.
 
 ## 3. Operating Rules
 
@@ -90,6 +90,27 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
 - Notes:
   - The wording now explicitly states that `approve/reject` lack strong transition-guard proof and that notifications are only capability-level proven.
 
+### Round 5
+
+- Date: 2026-03-28
+- Scope: `S3.2` canonical change-request workflow runtime slice and audit alignment on `/api/zena/change-requests`
+- Outcome: locked
+- Key files:
+  - `app/Http/Controllers/Api/ChangeRequestController.php`
+  - `tests/Feature/Api/ChangeRequestWorkflowTest.php`
+  - `docs/progress.md`
+- Evidence:
+  - commit: `fb45a35ab6ebd3a7177a7d1317a459c7d416e270`
+  - canonical owner path: `/api/zena/change-requests`
+  - runtime proof: `submit: draft -> submitted`; `approve: only from submitted`; `reject: only from submitted`; `apply: only from approved -> implemented`
+  - guard proof: generic update-status bypass is blocked on the canonical path
+  - audit proof: canonical audit coverage added for `submit`, `approve`, `reject`, and `apply`
+- Deferred:
+  - notifications remain deferred
+  - `/api/v1/*` compatibility surface remains untouched
+- Notes:
+  - This round proves a narrow canonical runtime slice, not the full story acceptance as currently written in backlog.
+
 ## 5. Progress By Roadmap
 
 ### EPIC-1: Process Template Engine (WorkTemplate v2)
@@ -169,33 +190,33 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
 #### S3.2 Change Request workflow state machine unification
 
 - Roadmap status: todo
-- Progress status: planning-ready
+- Progress status: locked-runtime-slice
 - Current state:
-  - This story is not implemented in the current round.
-  - Runtime truth currently proves `submit: draft -> submitted`.
-  - Runtime truth currently proves `apply: approved -> implemented`.
-  - `approve/reject` do not yet have explicit transition-guard proof on the canonical path.
-  - Canonical audit via `ZenaAuditLogger` is not yet aligned on the active owner controller.
-  - Notifications are only capability-level proven, not canonical end-to-end proven on `/api/zena/change-requests`.
+  - A narrow canonical runtime slice is now implemented and proved on `/api/zena/change-requests`.
+  - Runtime truth now proves `submit: draft -> submitted`.
+  - Runtime truth now proves `approve` and `reject` are only allowed from `submitted`.
+  - Runtime truth now proves `apply: approved -> implemented`.
+  - Generic update-status bypass is blocked on the canonical path.
+  - Canonical audit proof exists for `submit`, `approve`, `reject`, and `apply`.
+  - Notifications remain deferred and are not canonically proved end-to-end in this round.
+  - `/api/v1/*` compatibility routes were not touched in this round.
 - Evidence:
   - proposal commit: `a16ed7c4b62bfc1a7c125bd505e6c5dd507628a4`
   - wording-tighten commit: `9600ef0c814b016a1caf92e646967bc77025f9e1`
+  - runtime-lock commit: `fb45a35ab6ebd3a7177a7d1317a459c7d416e270`
   - routes: `php artisan route:list --path=api/zena/change-requests` shows `submit`, `approve`, `reject`, `apply`
 - Deferred / remaining:
-  - status vocabulary unification across controller/model/request/tests
-  - explicit valid and invalid transition proof for `approve/reject`
-  - canonical audit alignment through `App\Services\ZenaAuditLogger`
-  - notification work unless direct proof exists on the canonical path
+  - notification proof on the canonical path
+  - any broader backlog acceptance beyond the locked runtime slice
+  - confirmation of whether backlog wording should be narrowed or story split if partial-scope completion needs to be represented
 - Next action:
-  - move from proposal to a narrow implementation plan targeting only the active `App\Http\Controllers\Api\ChangeRequestController` path and the smallest provable state machine.
+  - keep backlog status conservative until notification evidence and any remaining acceptance wording gaps are resolved or explicitly narrowed in planning.
 
 ## 6. Next Action Queue
 
-1. Plan `S3.2` implementation against the canonical `/api/zena/change-requests` owner path.
-2. Run a status-vocabulary inventory across controller, model, request, and tests to define one patch plan.
-3. Add explicit transition guards for `submit`, `approve`, and `reject` with positive and negative proof.
-4. Align canonical audit logging through `App\Services\ZenaAuditLogger` on the active owner controller.
-5. Add notification behavior only if direct canonical proof can be established during implementation; otherwise defer it explicitly.
+1. Decide whether `S3.2` backlog acceptance should stay broad or be narrowed/split to match the now-proved canonical runtime slice.
+2. Add notification work for the canonical `/api/zena/change-requests` path only if direct end-to-end proof can be produced.
+3. Preserve the current canonical guards and audit behavior without reopening `/api/v1/*` compatibility surfaces.
 
 ## 7. Out Of Scope / Deferred
 

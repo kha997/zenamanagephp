@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ChangeRequest;
+use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Tenant;
 use App\Models\User;
@@ -154,10 +155,13 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_submit_change_request_for_approval()
     {
+        $approver = $this->createTenantUser($this->tenant);
+
         $changeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
+            'assigned_to' => $approver->id,
             'status' => 'draft'
         ]);
 
@@ -175,6 +179,13 @@ class ChangeRequestApiTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'status' => 'submitted'
         ]);
+
+        $this->assertSame(1, Notification::query()
+            ->where('tenant_id', $this->tenant->id)
+            ->where('user_id', $approver->id)
+            ->where('type', 'change_request_submitted')
+            ->where('channel', Notification::CHANNEL_INAPP)
+            ->count());
     }
 
     /**
@@ -182,10 +193,12 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_approve_change_request()
     {
+        $requester = $this->createTenantUser($this->tenant);
+
         $changeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'requested_by' => $this->user->id,
+            'requested_by' => $requester->id,
             'status' => 'submitted'
         ]);
 
@@ -212,6 +225,13 @@ class ChangeRequestApiTest extends TestCase
             'status' => 'approved',
             'approved_by' => $this->user->id,
         ]);
+
+        $this->assertSame(1, Notification::query()
+            ->where('tenant_id', $this->tenant->id)
+            ->where('user_id', $requester->id)
+            ->where('type', 'change_request_approved')
+            ->where('channel', Notification::CHANNEL_INAPP)
+            ->count());
     }
 
     /**
@@ -219,10 +239,12 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_reject_change_request()
     {
+        $requester = $this->createTenantUser($this->tenant);
+
         $changeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
-            'requested_by' => $this->user->id,
+            'requested_by' => $requester->id,
             'status' => 'submitted'
         ]);
 
@@ -251,6 +273,13 @@ class ChangeRequestApiTest extends TestCase
             'rejection_reason' => $payload['rejection_reason'],
             'rejected_by' => $this->user->id
         ]);
+
+        $this->assertSame(1, Notification::query()
+            ->where('tenant_id', $this->tenant->id)
+            ->where('user_id', $requester->id)
+            ->where('type', 'change_request_rejected')
+            ->where('channel', Notification::CHANNEL_INAPP)
+            ->count());
     }
 
     /**
@@ -355,6 +384,36 @@ class ChangeRequestApiTest extends TestCase
                 'status' => 'error',
                 'message' => 'Only approved change requests can be applied',
             ]);
+    }
+
+    public function test_apply_does_not_create_notification_in_this_round(): void
+    {
+        $requester = $this->createTenantUser($this->tenant);
+
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $requester->id,
+            'status' => 'approved',
+        ]);
+
+        $response = $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/apply", [
+                'implementation_notes' => 'Implemented without notification proof expansion',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.status', 'implemented');
+
+        $this->assertSame(0, Notification::query()
+            ->where('tenant_id', $this->tenant->id)
+            ->where('project_id', $this->project->id)
+            ->whereIn('type', [
+                'change_request_submitted',
+                'change_request_approved',
+                'change_request_rejected',
+            ])
+            ->count());
     }
 
     public function test_update_cannot_mutate_workflow_status_directly(): void

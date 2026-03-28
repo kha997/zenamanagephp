@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Api\BaseApiController;
 use App\Models\ChangeRequest;
+use App\Models\Notification;
 use App\Models\Project;
 use App\Services\ErrorEnvelopeService;
 use App\Services\ZenaAuditLogger;
@@ -21,6 +22,31 @@ class ChangeRequestController extends BaseApiController
 
     public function __construct(private ZenaAuditLogger $auditLogger)
     {
+    }
+
+    private function createWorkflowNotification(
+        ChangeRequest $changeRequest,
+        string $recipientUserId,
+        string $type,
+        string $title,
+        ?string $body,
+        string $eventKey
+    ): void {
+        Notification::create([
+            'tenant_id' => (string) $changeRequest->tenant_id,
+            'user_id' => $recipientUserId,
+            'type' => $type,
+            'priority' => Notification::PRIORITY_NORMAL,
+            'title' => $title,
+            'body' => $body,
+            'channel' => Notification::CHANNEL_INAPP,
+            'event_key' => $eventKey,
+            'project_id' => $changeRequest->project_id,
+            'data' => [
+                'change_request_id' => (string) $changeRequest->id,
+                'change_request_status' => (string) $changeRequest->status,
+            ],
+        ]);
     }
 
     private function tenantId(Request $request): string
@@ -346,6 +372,17 @@ class ChangeRequestController extends BaseApiController
                 'submitted_at' => now(),
             ]);
 
+            if (is_string($changeRequest->assigned_to) && $changeRequest->assigned_to !== '') {
+                $this->createWorkflowNotification(
+                    $changeRequest,
+                    $changeRequest->assigned_to,
+                    'change_request_submitted',
+                    'Change request submitted for approval',
+                    $changeRequest->title,
+                    'change_request.submitted'
+                );
+            }
+
             $changeRequest->load(['project:id,name', 'requestedBy:id,name']);
 
             $this->auditLogger->log(
@@ -435,6 +472,17 @@ class ChangeRequestController extends BaseApiController
                 }
             }
 
+            if (is_string($changeRequest->requested_by) && $changeRequest->requested_by !== '') {
+                $this->createWorkflowNotification(
+                    $changeRequest,
+                    $changeRequest->requested_by,
+                    'change_request_approved',
+                    'Change request approved',
+                    $changeRequest->title,
+                    'change_request.approved'
+                );
+            }
+
             DB::commit();
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
@@ -509,6 +557,17 @@ class ChangeRequestController extends BaseApiController
                 'rejected_by' => $user->id,
                 'rejected_at' => now(),
             ]);
+
+            if (is_string($changeRequest->requested_by) && $changeRequest->requested_by !== '') {
+                $this->createWorkflowNotification(
+                    $changeRequest,
+                    $changeRequest->requested_by,
+                    'change_request_rejected',
+                    'Change request rejected',
+                    $changeRequest->title,
+                    'change_request.rejected'
+                );
+            }
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);
 

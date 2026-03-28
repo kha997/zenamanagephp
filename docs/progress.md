@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, and then implemented the narrow runtime slice for `S3.2` on the canonical change-request owner path without overclaiming broader workflow or notification completion. The open work is now concentrated in evidence gaps that remain outside that locked slice, especially notification proof and any broader acceptance still expressed in backlog wording. The next focus should stay narrow: keep the canonical state machine stable, do not expand claims beyond evidence, and defer anything not supported by route/test/runtime proof.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, and then implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership. The latest runtime round now proves the minimal canonical in-app notification contract for `submit`, `approve`, and `reject`, while keeping `apply` notification and broad stakeholder semantics explicitly deferred. The open work is now concentrated in evidence gaps that remain outside that locked slice, especially broader recipient semantics and any backlog acceptance beyond the minimal proved contract.
 
 ## 3. Operating Rules
 
@@ -133,6 +133,29 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
   - This round locks a minimal canonical proof contract only: `submit -> one explicit approver recipient fixture`, `approve/reject -> requester`, `apply -> deferred`.
   - Broad stakeholder recipient semantics remain `UNKNOWN` and must not be invented in the next runtime round.
 
+### Round 7
+
+- Date: 2026-03-28
+- Scope: `S3.2` minimal canonical in-app notification proof on `/api/zena/change-requests`
+- Outcome: locked runtime slice
+- Key files:
+  - `app/Http/Controllers/Api/ChangeRequestController.php`
+  - `tests/Feature/Api/ChangeRequestApiTest.php`
+  - `tests/Feature/ChangeRequestApiTest.php`
+- Evidence:
+  - commit: `a41ee056`
+  - routes: `php artisan route:list | grep change-requests`
+  - tests: `php artisan test tests/Feature/Api/ChangeRequestApiTest.php` -> `11 passed`; `php artisan test tests/Feature/ChangeRequestApiTest.php` -> `18 passed`; `php artisan test tests/Feature/Zena/ZenaAuditInvariantTest.php --filter=change_request_workflow_mutations_write_audit_logs` -> `1 passed`
+  - lint: `composer ssot:lint`
+- Deferred:
+  - `apply` notification
+  - broad stakeholder fan-out semantics
+  - `/api/v1/*`
+- Notes:
+  - Canonical `submit` now writes exactly one direct in-app notification to an explicit approver fixture via `change_requests.assigned_to`.
+  - Canonical `approve` and `reject` now write one direct in-app notification to `change_requests.requested_by`.
+  - This round intentionally does not prove broad stakeholder semantics and does not change backlog story status.
+
 ## 5. Progress By Roadmap
 
 ### EPIC-1: Process Template Engine (WorkTemplate v2)
@@ -212,7 +235,7 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
 #### S3.2 Change Request workflow state machine unification
 
 - Roadmap status: todo
-- Progress status: planning-locked-for-notification-proof
+- Progress status: minimal-notification-slice-locked
 - Current state:
   - A narrow canonical runtime slice is now implemented and proved on `/api/zena/change-requests`.
   - Runtime truth now proves `submit: draft -> submitted`.
@@ -220,28 +243,29 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
   - Runtime truth now proves `apply: approved -> implemented`.
   - Generic update-status bypass is blocked on the canonical path.
   - Canonical audit proof exists for `submit`, `approve`, `reject`, and `apply`.
-  - Notifications remain unproved at runtime, but the minimal canonical notification contract is now planning-locked for the next round.
-  - The planned minimal proof boundary is `submit -> one explicit approver recipient fixture`, `approve/reject -> requester`, `apply -> deferred`.
+  - Minimal canonical in-app notification proof now exists at runtime for `submit`, `approve`, and `reject`.
+  - The proved notification boundary is `submit -> one explicit approver recipient fixture`, `approve/reject -> requester`, `apply -> deferred`.
   - Broad stakeholder recipient semantics remain `UNKNOWN` on the canonical path and stay deferred.
   - `/api/v1/*` compatibility routes were not touched in this round.
 - Evidence:
   - proposal commit: `a16ed7c4b62bfc1a7c125bd505e6c5dd507628a4`
   - wording-tighten commit: `9600ef0c814b016a1caf92e646967bc77025f9e1`
   - runtime-lock commit: `fb45a35ab6ebd3a7177a7d1317a459c7d416e270`
+  - notification runtime commit: `a41ee056`
   - routes: `php artisan route:list --path=api/zena/change-requests` shows `submit`, `approve`, `reject`, `apply`
   - planning lock: `docs/change-proposals/2026-03-28-s3-2-canonical-change-request-notification-contract.md`
 - Deferred / remaining:
-  - runtime proof of canonical in-app notifications on the canonical path
   - any broader stakeholder fan-out beyond the locked minimal recipient contract
+  - any notification proof beyond the minimal in-app canonical slice, including `apply`
   - any broader backlog acceptance beyond the locked runtime slice
 - Next action:
-  - implement the smallest canonical in-app notification proof on `/api/zena/change-requests` without touching `/api/v1/*` or inventing stakeholder semantics.
+  - decide whether to split broader stakeholder or apply-notification semantics into a separate planning round before expanding `S3.2` acceptance claims.
 
 ## 6. Next Action Queue
 
-1. Add direct canonical in-app notification proof on `/api/zena/change-requests` only: `submit -> one explicit approver recipient fixture`, `approve/reject -> requester`.
-2. Preserve the current canonical guards and audit behavior without reopening `/api/v1/*` compatibility surfaces.
-3. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
+1. Preserve the current canonical notification write path on `/api/zena/change-requests` without reopening `/api/v1/*` compatibility surfaces.
+2. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
+3. If backlog acceptance needs expansion later, lock recipient semantics first instead of inferring them from current runtime.
 
 ## 7. Out Of Scope / Deferred
 

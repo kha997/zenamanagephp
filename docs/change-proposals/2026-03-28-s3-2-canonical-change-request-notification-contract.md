@@ -3,6 +3,24 @@
 Date: 2026-03-28
 Status: docs-only planning lock, no runtime implementation in this round
 
+## Post-Lock Note
+
+Later on 2026-03-28, the minimal canonical in-app notification slice defined here was implemented and locked at `a41ee056`.
+
+What is now proved on `/api/zena/change-requests`:
+
+- `submit` creates exactly one direct in-app notification to an explicit approver fixture via `change_requests.assigned_to`
+- `approve` creates one direct in-app notification to `change_requests.requested_by`
+- `reject` creates one direct in-app notification to `change_requests.requested_by`
+
+What remains unproved:
+
+- any notification claim for `apply`
+- any broader approver discovery rule beyond the explicit fixture used for proof
+- stakeholder recipient semantics and broad fan-out
+
+Therefore `S3.2` still remains `todo`, and the cleanest next planning move is to split the already-proved direct-recipient notification slice from the still-unknown stakeholder/broader notification acceptance surface.
+
 ## Context Snapshot
 
 Canonical change-request workflow runtime is already locked on `/api/zena/change-requests` under `App\Http\Controllers\Api\ChangeRequestController`.

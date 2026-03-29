@@ -11,6 +11,8 @@
 
 The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, and then implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership. The latest runtime round now proves the minimal canonical in-app notification contract for `submit`, `approve`, and `reject`, while keeping `apply` notification and broad stakeholder semantics explicitly deferred. The open work is now concentrated in evidence gaps that remain outside that locked slice, especially broader recipient semantics and any backlog acceptance beyond the minimal proved contract.
 
+For `S3.2`, the main remaining planning issue is not workflow mechanics anymore. The unresolved acceptance gap is that backlog wording still asks for notifications to `approvers and stakeholders`, while the canonical path only proves one explicit approver fixture and requester-directed notifications, and still leaves stakeholder semantics `UNKNOWN`.
+
 ## 3. Operating Rules
 
 - `docs/roadmap/backlog.yaml` is the story-status and planning SSOT.
@@ -259,13 +261,13 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
   - any notification proof beyond the minimal in-app canonical slice, including `apply`
   - any broader backlog acceptance beyond the locked runtime slice
 - Next action:
-  - decide whether to split broader stakeholder or apply-notification semantics into a separate planning round before expanding `S3.2` acceptance claims.
+  - split the already-proved canonical workflow + minimal direct-recipient notification slice from the still-unknown stakeholder/broader notification semantics before expanding `S3.2` acceptance claims.
 
 ## 6. Next Action Queue
 
 1. Preserve the current canonical notification write path on `/api/zena/change-requests` without reopening `/api/v1/*` compatibility surfaces.
 2. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
-3. If backlog acceptance needs expansion later, lock recipient semantics first instead of inferring them from current runtime.
+3. Prefer a backlog/planning split for `S3.2`: keep the proved canonical workflow + minimal direct-recipient notification slice separate from stakeholder/broader notification semantics that remain `UNKNOWN`.
 
 ## 7. Out Of Scope / Deferred
 

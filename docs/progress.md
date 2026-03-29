@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, and now proves `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface. With the acceptance boundary narrowed to already-proved canonical slices, `S2.1`, `S3.2`, and `S3.4` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, and now proves `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets. With the acceptance boundary narrowed to already-proved canonical slices, `S2.1`, `S2.2`, `S3.2`, and `S3.4` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
@@ -258,6 +258,31 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
   - `docs/progress.md`
 - Evidence:
   - runtime commit: `88f3872c68b590e3e8d309f480a2774f89505114`
+
+### Round 13
+
+- Date: 2026-03-29
+- Scope: `S2.2` canonical document linking on `/api/zena/documents*`
+- Outcome: locked runtime slice + done verdict
+- Key files:
+  - `app/Http/Controllers/Api/SimpleDocumentController.php`
+  - `app/Models/Document.php`
+  - `routes/api_zena.php`
+  - `tests/Feature/Api/DocumentManagementTest.php`
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+- Evidence:
+  - routes: `GET /api/zena/documents`; `GET /api/zena/documents/{id}`; `POST /api/zena/documents/{id}/link`; `DELETE /api/zena/documents/{id}/link`
+  - tests: `php artisan test tests/Feature/Api/DocumentManagementTest.php` -> `25 passed`; `php artisan test tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php` -> `2 passed`
+  - lint: `composer ssot:lint`
+- Deferred:
+  - no `/api/v1/*` changes
+  - no broad document/media/storage cleanup
+  - no second document-owner surface outside Document Center
+- Notes:
+  - Canonical link contract is `documents.linked_entity_type` + `documents.linked_entity_id`.
+  - Canonical runtime now proves tenant-safe attach/detach to `task`, `component`, and `cr` targets on the Document Center owner path.
+  - Reverse lookup proof stays on `GET /api/zena/documents` with explicit link filters instead of introducing a second file-owner API.
   - routes: `GET /api/zena/documents`; `POST /api/zena/documents`; `PUT /api/zena/documents/{id}`; `GET /api/zena/documents/{id}/versions`; `POST /api/zena/documents/{id}/versions`
   - tests: `php artisan test tests/Feature/Api/DocumentManagementTest.php` -> `19 passed`; `php artisan test tests/Feature/DocumentVersioningTest.php` -> `8 passed`; `php artisan test tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php` -> `2 passed`
   - lint: `composer ssot:lint`

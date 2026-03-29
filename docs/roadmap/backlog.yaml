@@ -151,10 +151,20 @@ epics:
       - id: S2.2
         title: "Link docs ↔ Task/Component/CR"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Attach/detach APIs exist and audited."
           - "Query surfaces related entities both directions."
+        updated_at: 2026-03-29
+        evidence:
+          routes: "GET /api/zena/documents; GET /api/zena/documents/{id}; POST /api/zena/documents/{id}/link; DELETE /api/zena/documents/{id}/link"
+          tests: "php artisan test tests/Feature/Api/DocumentManagementTest.php (25 passed); php artisan test tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
+          lint: "composer ssot:lint"
+        notes:
+          - "Canonical link contract is owned by Document Center through documents.linked_entity_type and documents.linked_entity_id."
+          - "Canonical runtime now proves attach/detach mutations for task, component, and change request targets on /api/zena/documents/{id}/link with same-tenant and same-project validation."
+          - "Canonical reverse lookup is proved through GET /api/zena/documents filters using linked_entity_type and linked_entity_id; no /api/v1/* path is used as proof."
+          - "This slice intentionally avoids creating a second file-owner surface outside Document Center."
       - id: S2.3
         title: "Workflow Submit → Review → Approve/Reject"
         priority: P1

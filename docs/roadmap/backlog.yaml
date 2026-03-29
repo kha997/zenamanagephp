@@ -195,16 +195,24 @@ epics:
       - id: S3.1
         title: "CR affected scope split: task/component via cr_links, documents via Document Center"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Canonical mutation surface is limited to /api/zena/change-requests/{id}/links for task and component affected scope only."
           - "Canonical affected task/component links use cr_links and validate same tenant and same project."
           - "Affected documents do not use cr_links; document ownership remains in Document Center through documents.linked_entity_type = 'cr' and documents.linked_entity_id = {changeRequestId}."
           - "If canonical GET /api/zena/change-requests/{id} includes affected scope summary, document scope is materialized from canonical document query semantics rather than cr_links."
           - "No /api/v1/* path is used as proof for this story."
+        updated_at: 2026-03-29
+        evidence:
+          head: "1a83a8c408fc53b99adfa216345709b26940989b"
+          routes: "php artisan route:list | grep -E \"change-requests|documents|tasks|components|link\" || true"
+          tests: "php artisan test tests/Feature/ChangeRequestApiTest.php (24 passed); php artisan test tests/Feature/Api/ChangeRequestApiTest.php (13 passed); php artisan test tests/Feature/Api/DocumentManagementTest.php (25 passed)"
         notes:
           - "Do not create overlapping canonical ownership between cr_links(document) and documents.linked_entity_*."
           - "Broader reverse-query shapes and richer document semantics remain deferred until separately evidenced."
+          - "Canonical /api/zena/change-requests/{id}/links now exists for task/component only, with tests proving attach/detach plus same-tenant and same-project enforcement."
+          - "Canonical /api/zena/change-requests/{id} now returns affected_scope_summary with tasks/components from cr_links and documents from Document Center ownership."
+          - "Document rejection on the CR-owned mutation path is explicitly tested; legacy cr_links(document) residue is not used as canonical proof."
       - id: S3.2
         title: "Canonical approval workflow + audit + minimal direct-recipient notifications"
         priority: P0

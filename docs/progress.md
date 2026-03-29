@@ -293,6 +293,30 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
   - This round closed a real runtime gap: canonical `/api/zena/documents/{id}/versions` was missing from mounted route truth even though backlog evidence already referenced it.
   - Canonical proof now covers metadata store/search/update, version history retention, tenant-safe version access, and permission enforcement on canonical version read/write paths.
 
+### Round 14
+
+- Date: 2026-03-29
+- Scope: `S3.1` acceptance review against canonical runtime and tests
+- Outcome: docs-only done verdict
+- Key files:
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+  - `docs/change-proposals/2026-03-29-s3-1-affected-scope-contract.md`
+- Evidence:
+  - head reviewed: `1a83a8c408fc53b99adfa216345709b26940989b`
+  - routes: `php artisan route:list | grep -E "change-requests|documents|tasks|components|link" || true`
+  - tests: `php artisan test tests/Feature/ChangeRequestApiTest.php` -> `24 passed`; `php artisan test tests/Feature/Api/ChangeRequestApiTest.php` -> `13 passed`; `php artisan test tests/Feature/Api/DocumentManagementTest.php` -> `25 passed`
+- Deferred:
+  - broader reverse-query surfaces beyond `GET /api/zena/change-requests/{id}` summary
+  - richer affected-scope payload semantics beyond the current minimal summary
+  - any cleanup/removal of legacy `CrLink::LINKED_TYPE_DOCUMENT`
+  - any `/api/v1/*` work
+- Notes:
+  - Canonical `/api/zena/change-requests/{id}/links` now exists and is tested for attach/detach on `task` and `component` only.
+  - Canonical same-tenant and same-project enforcement is proved on the CR-owned link mutation path.
+  - Canonical `GET /api/zena/change-requests/{id}` now returns `affected_scope_summary` with tasks/components resolved from `cr_links` and documents resolved from Document Center ownership.
+  - Explicit test evidence proves `type=document` is rejected on the CR-owned mutation path and that ignored `cr_links(document)` residue is not used as canonical document proof.
+
 ## 5. Progress By Roadmap
 
 ### EPIC-1: Process Template Engine (WorkTemplate v2)
@@ -437,26 +461,27 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 
 #### S3.1 CR affected scope split
 
-- Roadmap status: todo
-- Progress status: proposal-only
+- Roadmap status: done
+- Progress status: done
 - Current state:
   - `S2.2` and `S3.4` already lock document ownership to Document Center through `documents.linked_entity_type` and `documents.linked_entity_id`.
   - `S3.3` already proves canonical task link-back through `cr_links` from `apply()`.
-  - `App\Models\CrLink` still exposes `document` as a link type, but current canonical evidence does not justify using `cr_links(document)` as forward proof.
-  - Canonical `/api/zena/change-requests` currently has no `links` mutation route, so `S3.1` still needs a runtime slice after this planning lock.
+  - Canonical `/api/zena/change-requests/{id}/links` now exists for CR-owned affected-scope mutation and is explicitly limited to `task|component`.
+  - Canonical `GET /api/zena/change-requests/{id}` now exposes `affected_scope_summary`, with document scope sourced from Document Center ownership instead of `cr_links(document)`.
+  - `App\Models\CrLink` still exposes `document` as a legacy link type, but current canonical proof explicitly ignores it for `S3.1`.
 - Evidence:
   - route truth: `php artisan route:list | grep -E "change-requests|documents|tasks|components|link" || true`
-  - canonical CR owner: `app/Http/Controllers/Api/ChangeRequestController.php`
-  - canonical document owner: `app/Http/Controllers/Api/SimpleDocumentController.php`
-  - model truth: `app/Models/ChangeRequest.php`; `app/Models/CrLink.php`; `app/Models/Document.php`
+  - controller truth: `app/Http/Controllers/Api/ChangeRequestController.php`
+  - canonical document owner path: `app/Http/Controllers/Api/SimpleDocumentController.php`
   - planning lock: `docs/change-proposals/2026-03-29-s3-1-affected-scope-contract.md`
+  - tests: `php artisan test tests/Feature/ChangeRequestApiTest.php` -> `24 passed`; `php artisan test tests/Feature/Api/ChangeRequestApiTest.php` -> `13 passed`; `php artisan test tests/Feature/Api/DocumentManagementTest.php` -> `25 passed`
 - Deferred / remaining:
-  - runtime `POST`/`DELETE` links contract on `/api/zena/change-requests/{id}/links`
-  - exact `affected_scope_summary` response shape beyond a minimal first slice
+  - exact `affected_scope_summary` response shape beyond the current minimal first slice
   - any broader reverse-query family
   - any cleanup of legacy/web controllers
+  - any runtime removal of legacy `CrLink::LINKED_TYPE_DOCUMENT`
 - Next action:
-  - keep the first runtime slice narrow: task/component mutations on `cr_links`, document scope read-through on Document Center ownership, and no `/api/v1/*` proof.
+  - keep the canonical split stable: task/component affected scope on `cr_links`, document ownership on Document Center, and no `/api/v1/*` proof.
 
 #### S3.3 Approved CR creates delta tasks + baseline delta
 

@@ -103,6 +103,39 @@ class DocumentManagementTest extends TestCase
             ->assertJsonPath('data.0.id', $documentId);
     }
 
+    public function test_zena_documents_index_can_filter_change_request_linked_documents(): void
+    {
+        $changeRequestId = '01HZYCRFILTERTARGET0000000001';
+
+        $matchingDocument = $this->createDocument([
+            'linked_entity_type' => 'cr',
+            'linked_entity_id' => $changeRequestId,
+            'title' => 'CR linked document',
+        ]);
+
+        $this->createDocument([
+            'linked_entity_type' => 'cr',
+            'linked_entity_id' => '01HZYCRFILTEROTHER0000000002',
+            'title' => 'Other CR document',
+        ]);
+
+        $this->createDocument([
+            'linked_entity_type' => 'task',
+            'linked_entity_id' => $changeRequestId,
+            'title' => 'Task linked document',
+        ]);
+
+        $this->apiGet($this->zena('documents.index', query: [
+            'linked_entity_type' => 'cr',
+            'linked_entity_id' => $changeRequestId,
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $matchingDocument->id)
+            ->assertJsonPath('data.0.linked_entity_type', 'cr')
+            ->assertJsonPath('data.0.linked_entity_id', $changeRequestId);
+    }
+
     public function test_can_update_document_metadata_fields(): void
     {
         $document = $this->createDocument([

@@ -42,6 +42,8 @@ class SimpleDocumentController extends Controller
             ->when($request->filled('package'), fn (Builder $query) => $query->where('package', $request->string('package')))
             ->when($request->filled('status'), fn (Builder $query) => $query->where('status', $request->string('status')))
             ->when($request->filled('revision'), fn (Builder $query) => $query->where('revision', $request->string('revision')))
+            ->when($request->filled('linked_entity_type'), fn (Builder $query) => $query->where('linked_entity_type', strtolower($request->string('linked_entity_type')->trim()->toString())))
+            ->when($request->filled('linked_entity_id'), fn (Builder $query) => $query->where('linked_entity_id', $request->string('linked_entity_id')))
             ->when($request->filled('q'), function (Builder $query) use ($request) {
                 $search = '%' . $request->string('q')->trim() . '%';
 

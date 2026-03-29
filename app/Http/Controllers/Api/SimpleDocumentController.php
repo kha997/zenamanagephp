@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Controller;
+use App\Models\ChangeRequest;
+use App\Models\Component;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Models\Project;
+use App\Models\Task;
 use App\Services\ErrorEnvelopeService;
+use App\Services\ZenaAuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +20,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Src\Foundation\Services\FileStorageService;
 use Throwable;
@@ -30,6 +35,11 @@ class SimpleDocumentController extends Controller
     private const STATUS_SUBMITTED = 'submitted';
     private const STATUS_APPROVED = 'approved';
     private const STATUS_REJECTED = 'rejected';
+    private const LINKABLE_MODELS = [
+        Document::ENTITY_TYPE_TASK => Task::class,
+        Document::ENTITY_TYPE_COMPONENT => Component::class,
+        Document::ENTITY_TYPE_CR => ChangeRequest::class,
+    ];
 
     public function index(Request $request)
     {
@@ -208,6 +218,84 @@ class SimpleDocumentController extends Controller
         }
 
         return $this->zenaSuccessResponse($document);
+    }
+
+    public function attachLink(Request $request, string $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'linked_entity_type' => ['required', 'string', Rule::in(array_keys(self::LINKABLE_MODELS))],
+            'linked_entity_id' => ['required', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return ErrorEnvelopeService::validationError($validator->errors()->toArray());
+        }
+
+        $document = $this->findDocument($id);
+
+        if (!$document) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+
+        $this->authorize('update', $document);
+
+        $data = $validator->validated();
+        $linkedEntityType = $data['linked_entity_type'];
+        $linkedEntityId = $data['linked_entity_id'];
+        $linkedEntity = $this->findLinkableEntity($document, $linkedEntityType, $linkedEntityId);
+
+        if (!$linkedEntity) {
+            return ErrorEnvelopeService::notFoundError('Linked entity');
+        }
+
+        $document->forceFill([
+            'linked_entity_type' => $linkedEntityType,
+            'linked_entity_id' => $linkedEntityId,
+            'updated_by' => Auth::id(),
+        ])->save();
+
+        app(ZenaAuditLogger::class)->log(
+            $request,
+            'zena.document.link.attach',
+            'document',
+            (string) $document->id,
+            200,
+            $document->project_id !== null ? (string) $document->project_id : null,
+            (string) $document->tenant_id,
+            Auth::id()
+        );
+
+        return $this->zenaSuccessResponse($document->fresh(['currentVersion']), 'Document link attached successfully');
+    }
+
+    public function detachLink(Request $request, string $id): JsonResponse
+    {
+        $document = $this->findDocument($id);
+
+        if (!$document) {
+            return ErrorEnvelopeService::notFoundError('Document');
+        }
+
+        $this->authorize('update', $document);
+
+        $document->forceFill([
+            'linked_entity_type' => null,
+            'linked_entity_id' => null,
+            'updated_by' => Auth::id(),
+        ])->save();
+
+        app(ZenaAuditLogger::class)->log(
+            $request,
+            'zena.document.link.detach',
+            'document',
+            (string) $document->id,
+            200,
+            $document->project_id !== null ? (string) $document->project_id : null,
+            (string) $document->tenant_id,
+            Auth::id()
+        );
+
+        return $this->zenaSuccessResponse($document->fresh(['currentVersion']), 'Document link detached successfully');
     }
 
     public function submit(string $id): JsonResponse
@@ -526,6 +614,25 @@ class SimpleDocumentController extends Controller
         return Document::query()
             ->with('currentVersion')
             ->find($id);
+    }
+
+    private function findLinkableEntity(Document $document, string $linkedEntityType, string $linkedEntityId): ?object
+    {
+        $modelClass = self::LINKABLE_MODELS[$linkedEntityType] ?? null;
+
+        if ($modelClass === null) {
+            return null;
+        }
+
+        $query = $modelClass::query()
+            ->where('tenant_id', $document->tenant_id)
+            ->whereKey($linkedEntityId);
+
+        if ($document->project_id !== null) {
+            $query->where('project_id', $document->project_id);
+        }
+
+        return $query->first();
     }
 
     private function resolvePerPage(Request $request): int

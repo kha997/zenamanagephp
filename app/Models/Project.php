@@ -239,6 +239,11 @@ class Project extends Model
         return $this->hasMany(\Src\CoreProject\Models\Task::class);
     }
 
+    public function boqs(): HasMany
+    {
+        return $this->hasMany(Boq::class);
+    }
+
     /**
      * Relationship: Project có nhiều user roles
      */

@@ -332,12 +332,17 @@ epics:
       - id: S4.2
         title: "BOQ line items linked to Project/Component"
         priority: P1
-        status: todo
+        status: done
+        updated_at: 2026-03-29
         acceptance_criteria:
           - "Canonical owner surface is limited to `/api/zena/boqs`."
           - "First slice proves tenant-safe BOQ CRUD plus nested line-item CRUD on the BOQ owner path."
           - "Every BOQ belongs to one project; each line item may optionally link one component in the same project."
           - "Do not use `MaterialRequest`, `/api/zena/submittals`, or `/api/v1/*` as proof of canonical BOQ ownership."
+        evidence:
+          routes: "GET /api/zena/boqs; POST /api/zena/boqs; GET /api/zena/boqs/{id}; PUT /api/zena/boqs/{id}; DELETE /api/zena/boqs/{id}; GET /api/zena/boqs/{boq}/line-items; POST /api/zena/boqs/{boq}/line-items; GET /api/zena/boqs/{boq}/line-items/{lineItem}; PUT /api/zena/boqs/{boq}/line-items/{lineItem}; DELETE /api/zena/boqs/{boq}/line-items/{lineItem}"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Boq (4 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Project (35 passed)"
+          lint: "composer ssot:lint; php artisan optimize:clear"
         notes:
           - "This first slice is limited to BOQ + line-item ownership and project/component linkage only."
           - "Task linkage, pricing rollups, approvals, notifications, delivery/receipt, compensation, and submittal semantics are deferred outside S4.2 until separately evidenced."

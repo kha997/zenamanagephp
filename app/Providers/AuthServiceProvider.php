@@ -16,6 +16,7 @@ class AuthServiceProvider extends ServiceProvider
         'App\Models\Contract' => 'App\Policies\ContractPolicy',
         'App\Models\ContractPayment' => 'App\Policies\ContractPaymentPolicy',
         'App\Models\Material' => 'App\Policies\MaterialPolicy',
+        'App\Models\Boq' => 'App\Policies\BoqPolicy',
         'App\Models\Task' => 'App\Policies\TaskPolicy',
         'App\Models\User' => 'App\Policies\UserPolicy',
         'App\Models\Vendor' => 'App\Policies\VendorPolicy',

@@ -193,11 +193,18 @@ epics:
     dependencies: [EPIC-1, EPIC-2]
     stories:
       - id: S3.1
-        title: "CR links affected scope (components/tasks/docs)"
+        title: "CR affected scope split: task/component via cr_links, documents via Document Center"
         priority: P0
         status: todo
         acceptance_criteria:
-          - "CR stores affected items and validates same tenant/project."
+          - "Canonical mutation surface is limited to /api/zena/change-requests/{id}/links for task and component affected scope only."
+          - "Canonical affected task/component links use cr_links and validate same tenant and same project."
+          - "Affected documents do not use cr_links; document ownership remains in Document Center through documents.linked_entity_type = 'cr' and documents.linked_entity_id = {changeRequestId}."
+          - "If canonical GET /api/zena/change-requests/{id} includes affected scope summary, document scope is materialized from canonical document query semantics rather than cr_links."
+          - "No /api/v1/* path is used as proof for this story."
+        notes:
+          - "Do not create overlapping canonical ownership between cr_links(document) and documents.linked_entity_*."
+          - "Broader reverse-query shapes and richer document semantics remain deferred until separately evidenced."
       - id: S3.2
         title: "Canonical approval workflow + audit + minimal direct-recipient notifications"
         priority: P0

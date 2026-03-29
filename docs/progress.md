@@ -435,6 +435,29 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 - Next action:
   - do not implement this slice until the repo has explicit canonical evidence for broader recipient semantics.
 
+#### S3.1 CR affected scope split
+
+- Roadmap status: todo
+- Progress status: proposal-only
+- Current state:
+  - `S2.2` and `S3.4` already lock document ownership to Document Center through `documents.linked_entity_type` and `documents.linked_entity_id`.
+  - `S3.3` already proves canonical task link-back through `cr_links` from `apply()`.
+  - `App\Models\CrLink` still exposes `document` as a link type, but current canonical evidence does not justify using `cr_links(document)` as forward proof.
+  - Canonical `/api/zena/change-requests` currently has no `links` mutation route, so `S3.1` still needs a runtime slice after this planning lock.
+- Evidence:
+  - route truth: `php artisan route:list | grep -E "change-requests|documents|tasks|components|link" || true`
+  - canonical CR owner: `app/Http/Controllers/Api/ChangeRequestController.php`
+  - canonical document owner: `app/Http/Controllers/Api/SimpleDocumentController.php`
+  - model truth: `app/Models/ChangeRequest.php`; `app/Models/CrLink.php`; `app/Models/Document.php`
+  - planning lock: `docs/change-proposals/2026-03-29-s3-1-affected-scope-contract.md`
+- Deferred / remaining:
+  - runtime `POST`/`DELETE` links contract on `/api/zena/change-requests/{id}/links`
+  - exact `affected_scope_summary` response shape beyond a minimal first slice
+  - any broader reverse-query family
+  - any cleanup of legacy/web controllers
+- Next action:
+  - keep the first runtime slice narrow: task/component mutations on `cr_links`, document scope read-through on Document Center ownership, and no `/api/v1/*` proof.
+
 #### S3.3 Approved CR creates delta tasks + baseline delta
 
 - Roadmap status: done
@@ -490,8 +513,9 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 1. Preserve the current canonical notification write path on `/api/zena/change-requests` without reopening `/api/v1/*` compatibility surfaces.
 2. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
 3. Keep `S3.2` closed at the proved canonical slice and treat stakeholder/broader notification semantics as deferred `S3.2a` work.
-4. Treat S3.3 as complete at the proved minimal canonical `apply()` slice and avoid reopening it for broader baseline or compatibility redesign.
-5. Keep `S3.4` closed at the proved canonical slice: timeline from audit-backed workflow history and attachments from Document Center CR links, with richer semantics deferred to later stories if needed.
+4. Use the `S3.1` proposal lock before any runtime work: task/component affected scope via `cr_links`, document scope via Document Center ownership, and no overlapping canonical document contract.
+5. Treat S3.3 as complete at the proved minimal canonical `apply()` slice and avoid reopening it for broader baseline or compatibility redesign.
+6. Keep `S3.4` closed at the proved canonical slice: timeline from audit-backed workflow history and attachments from Document Center CR links, with richer semantics deferred to later stories if needed.
 
 ## 7. Out Of Scope / Deferred
 

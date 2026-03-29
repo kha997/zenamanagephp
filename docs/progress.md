@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, and implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership. With the acceptance boundary now narrowed to the already-proved canonical slice, `S3.2` is evidence-complete and can be marked done, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, and now proves `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface. With the acceptance boundary narrowed to already-proved canonical slices, `S3.2` and `S3.4` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
@@ -222,6 +222,28 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
   - This round locks the planning contract only: timeline source should come from canonical audit-backed workflow history, and CR attachments should stay owned by Document Center through `documents.linked_entity_type = 'cr'` plus `documents.linked_entity_id = {changeRequestId}`.
   - The round intentionally does not claim a runtime endpoint already exists for either surface.
 
+### Round 11
+
+- Date: 2026-03-29
+- Scope: `S3.4` acceptance review against canonical runtime and tests
+- Outcome: docs-only done verdict
+- Key files:
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+  - `docs/change-proposals/2026-03-29-s3-4-cr-timeline-attachments-contract.md`
+- Evidence:
+  - head reviewed: `c9f2b89225aeff3e6b6b0a8b13d8ed8f15f8d765`
+  - routes: `php artisan route:list | grep -E "change-requests|timeline|documents" || true`
+  - tests: `php artisan test tests/Feature/Api/ChangeRequestApiTest.php` -> `12 passed`; `php artisan test tests/Feature/Api/DocumentManagementTest.php` -> `13 passed`; `php artisan test tests/Feature/Zena/ZenaAuditInvariantTest.php` -> `4 passed`
+- Deferred:
+  - timeline payload enrichment beyond audit-backed workflow history
+  - attachment delete/upload/version semantics beyond current Document Center ownership
+  - any `/api/v1/*`
+- Notes:
+  - Canonical `/api/zena/change-requests/{id}/timeline` now exists and is tested as an audit-backed workflow-history surface.
+  - Canonical `/api/zena/documents` now proves CR-link discovery via `linked_entity_type=cr` and `linked_entity_id={changeRequestId}`.
+  - No proof in this verdict depends on `change_requests.attachments`.
+
 ## 5. Progress By Roadmap
 
 ### EPIC-1: Process Template Engine (WorkTemplate v2)
@@ -370,30 +392,29 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 
 #### S3.4 CR timeline + attachments
 
-- Roadmap status: todo
-- Progress status: proposal-only
+- Roadmap status: done
+- Progress status: locked
 - Current state:
-  - Canonical `/api/zena/change-requests` currently exposes CRUD plus `submit`, `approve`, `reject`, and `apply`, but no timeline or attachment endpoints.
-  - The strongest current timeline source is canonical audit history written by `App\Services\ZenaAuditLogger` for change-request workflow mutations.
-  - The strongest current attachment ownership evidence is the canonical `documents` table and `App\Models\Document` link fields `linked_entity_type` and `linked_entity_id`.
-  - `App\Models\ChangeRequest` does carry an `attachments` JSON field, but current canonical controller/runtime evidence does not prove that field as the forward attachment contract.
-  - Canonical `/api/zena/documents` runtime exists, but it does not yet expose an explicit CR-link API contract.
+  - Canonical `/api/zena/change-requests/{id}/timeline` exists and is backed by audit-log workflow history for `submit`, `approve`, `reject`, and `apply`.
+  - Canonical `/api/zena/documents` supports CR-link query proof through `linked_entity_type=cr` and `linked_entity_id={changeRequestId}`.
+  - `App\Models\ChangeRequest` does carry an `attachments` JSON field, but current canonical acceptance does not use that field as the forward attachment proof surface.
+  - Current evidence is sufficient for the narrowed `S3.4` acceptance wording in backlog and does not require any `/api/v1/*` proof.
 - Evidence:
-  - route truth: `php artisan route:list | grep -E "change-requests|attachment|attachments|timeline|documents|files|media" || true`
+  - route truth: `php artisan route:list | grep -E "change-requests|timeline|documents" || true`
   - canonical CR owner: `app/Http/Controllers/Api/ChangeRequestController.php`
   - canonical document owner: `app/Http/Controllers/Api/SimpleDocumentController.php`
-  - audit source: `app/Services/ZenaAuditLogger.php`; `tests/Feature/Zena/ZenaAuditInvariantTest.php`
-  - document link fields: `app/Models/Document.php`; `tests/Feature/DocumentVersioningTest.php`
+  - timeline proof: `tests/Feature/Api/ChangeRequestApiTest.php`
+  - audit source proof: `tests/Feature/Zena/ZenaAuditInvariantTest.php`
+  - CR-link filter proof: `tests/Feature/Api/DocumentManagementTest.php`
   - proposal lock: `docs/change-proposals/2026-03-29-s3-4-cr-timeline-attachments-contract.md`
 - Deferred / remaining:
   - exact timeline inclusion rules beyond audit-backed workflow history
   - exact timeline ordering and response schema details
-  - explicit canonical document filter parameters or nested attachment write/delete routes
+  - nested attachment write/delete routes
   - attachment delete/version semantics
-  - any `/api/v1/*` involvement
   - any broad document/media/storage cleanup
 - Next action:
-  - keep the next runtime round narrow: add a dedicated canonical timeline read endpoint and a Document Center-backed CR attachment query contract without using `change_requests.attachments` as proof.
+  - keep any future work narrow: extend timeline or attachment semantics only with fresh canonical evidence, without reopening `/api/v1/*` or using `change_requests.attachments` as proof.
 
 ## 6. Next Action Queue
 
@@ -401,7 +422,7 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 2. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
 3. Keep `S3.2` closed at the proved canonical slice and treat stakeholder/broader notification semantics as deferred `S3.2a` work.
 4. Treat S3.3 as complete at the proved minimal canonical `apply()` slice and avoid reopening it for broader baseline or compatibility redesign.
-5. Treat S3.4 as a narrow canonical contract-definition story first: timeline from audit-backed workflow history, attachments from Document Center CR links, and all unresolved semantics explicitly deferred.
+5. Keep `S3.4` closed at the proved canonical slice: timeline from audit-backed workflow history and attachments from Document Center CR links, with richer semantics deferred to later stories if needed.
 
 ## 7. Out Of Scope / Deferred
 

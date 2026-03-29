@@ -190,14 +190,19 @@ epics:
       - id: S3.2
         title: "Canonical approval workflow + audit + minimal direct-recipient notifications"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Draft→Submitted→Approved/Rejected supported with full audit on canonical /api/zena/change-requests."
           - "Canonical minimal direct-recipient in-app notifications are proved end-to-end on state changes: submit -> one explicit approver fixture via assigned_to; approve/reject -> requester via requested_by."
           - "This slice does not claim broad approver discovery, stakeholder fan-out, or apply notification semantics."
+        updated_at: 2026-03-29
+        evidence:
+          head: "9bf27efbb2437cd37fa0f7c8cd6f730523bab92a"
+          routes: "php artisan route:list | grep change-requests || true"
+          tests: "php artisan test tests/Feature/Api/ChangeRequestApiTest.php (11 passed); php artisan test tests/Feature/ChangeRequestApiTest.php (18 passed); php artisan test tests/Feature/Zena/ZenaAuditInvariantTest.php --filter=change_request_workflow_mutations_write_audit_logs (1 passed)"
         notes:
           - "Locked runtime slice already proves canonical submit/approve/reject/apply guards, direct workflow-status bypass blocking, audit alignment, and the minimal direct-recipient notification contract on /api/zena/change-requests."
-          - "Status remains todo in this planning round; acceptance is now narrowed to the proved canonical slice, but no done claim is made here."
+          - "Acceptance is now narrowed to the proved canonical slice, so this story is evidence-complete on the canonical /api/zena/change-requests path."
           - "Apply notification remains deferred even though apply state transition proof exists."
           - "Broad stakeholder fan-out remains UNKNOWN on the canonical path and is intentionally carved into follow-up story S3.2a."
       - id: S3.2a

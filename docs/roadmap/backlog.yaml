@@ -220,7 +220,7 @@ epics:
       - id: S3.3
         title: "Approved CR creates delta tasks + baseline delta"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Canonical implementation boundary is `POST /api/zena/change-requests/{id}/apply`; `approve()` remains approval-only and does not own delta-task generation."
           - "Applying an approved CR generates at least one evidence-backed canonical task delta on the same tenant/project, with change-request link-back recorded on canonical tables."

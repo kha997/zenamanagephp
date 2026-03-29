@@ -323,34 +323,34 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 
 #### S3.3 Approved CR creates delta tasks + baseline delta
 
-- Roadmap status: todo
-- Progress status: proposal-ready
+- Roadmap status: done
+- Progress status: done
 - Current state:
-  - Backlog text exists, but the current acceptance was too underspecified for a safe runtime round.
   - Canonical runtime truth places downstream implementation at `POST /api/zena/change-requests/{id}/apply`, not at `approve()`.
-  - Current runtime only proves `apply: approved -> implemented`.
-  - `createBaselineSnapshot()` is currently a log-only stub.
-  - No current evidence proves canonical task delta persistence, baseline delta persistence, or canonical link-back for those artifacts.
+  - `apply()` now keeps `approve()` approval-only while persisting one canonical task delta, one canonical task link-back, and one canonical baseline delta on the same canonical runtime path.
+  - `apply()` still proves `approved -> implemented`, now with persisted `implementation_notes`.
+  - Baseline proof anchor is a canonical `baselines.linked_contract_id` row created from the applied change request, with matching `baseline_history` evidence.
 - Evidence:
   - route surface: `routes/api_zena.php` exposes canonical `change-requests` actions plus canonical `/api/zena/tasks`
-  - controller truth: `app/Http/Controllers/Api/ChangeRequestController.php` keeps budget/schedule mutation in `approve()` and calls log-only `createBaselineSnapshot()` from `apply()`
-  - model truth: `app/Models/ChangeRequest.php` exposes canonical workflow transitions and existing `cr_links` task link relation
-  - baseline truth: `app/Models/Baseline.php` already has `linked_contract_id`; `app/Models/BaselineHistory.php` only proves version-note history
+  - controller truth: `app/Http/Controllers/Api/ChangeRequestController.php` keeps budget/schedule mutation in `approve()` and creates the minimal canonical task + `cr_links` + baseline artifacts from `apply()`
+  - persistence truth: `database/migrations/2026_03_29_000000_create_canonical_change_request_delta_tables.php` creates the canonical `cr_links`, `baselines`, and `baseline_history` tables missing from the current migration set
+  - model truth: `app/Models/BaselineHistory.php` now matches the canonical ULID/string baseline foreign key used by `baselines`
   - proposal lock: `docs/change-proposals/2026-03-29-s3-3-apply-boundary-delta-contract.md`
+  - tests: `php artisan test tests/Feature/Api/ChangeRequestApiTest.php` -> `11 passed`; `php artisan test tests/Feature/ChangeRequestApiTest.php` -> `19 passed`; `composer ssot:lint` -> passed
 - Deferred / remaining:
   - exact task-delta semantics beyond minimal persisted create-or-update proof
-  - exact baseline-delta shape beyond minimal persisted baseline artifact proof
+  - exact baseline-delta shape beyond minimal persisted baseline row + history proof
   - any `/api/v1/*` involvement
   - any broad baseline architecture cleanup
 - Next action:
-  - implement the narrow runtime slice at `apply()` only, with tests proving one canonical task delta path and one canonical baseline link-back path.
+  - keep later CR delta semantics, richer baseline behavior, and any notification follow-up as separate stories.
 
 ## 6. Next Action Queue
 
 1. Preserve the current canonical notification write path on `/api/zena/change-requests` without reopening `/api/v1/*` compatibility surfaces.
 2. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
 3. Keep `S3.2` closed at the proved canonical slice and treat stakeholder/broader notification semantics as deferred `S3.2a` work.
-4. Use the locked `S3.3` proposal boundary at `apply()` before opening any runtime delta-task or baseline-delta work.
+4. Treat S3.3 as complete at the proved minimal canonical `apply()` slice and avoid reopening it for broader baseline or compatibility redesign.
 
 ## 7. Out Of Scope / Deferred
 

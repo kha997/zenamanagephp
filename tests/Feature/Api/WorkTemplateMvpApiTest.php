@@ -200,6 +200,231 @@ class WorkTemplateMvpApiTest extends TestCase
         ], $this->authHeaders($user))->assertStatus(403);
     }
 
+    public function test_canonical_work_template_crud_round_trips_persisted_contract_through_show(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft']);
+
+        $createPayload = $this->canonicalTemplatePayload((string) $user->id, [
+            'code' => 'WT-CANONICAL-CRUD',
+            'name' => 'Canonical CRUD Template',
+        ]);
+
+        $create = $this->postJson($this->workTemplateRoute('store'), $createPayload, $this->authHeaders($user));
+        $create->assertCreated()
+            ->assertJsonPath('data.code', 'WT-CANONICAL-CRUD')
+            ->assertJsonPath('data.versions.0.content_json.steps.0.key', 'qa-check')
+            ->assertJsonPath('data.versions.0.content_json.steps.0.config.checklist_items.0.key', 'check-rebar')
+            ->assertJsonPath('data.versions.0.content_json.approvals.0.key', 'pm-approval')
+            ->assertJsonPath('data.versions.0.content_json.rules.0.key', 'auto-start');
+
+        $templateId = (string) $create->json('data.id');
+
+        $version = WorkTemplateVersion::query()
+            ->with('steps.fields')
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('work_template_id', $templateId)
+            ->firstOrFail();
+
+        $this->assertSame('pm-approval', $version->content_json['approvals'][0]['key'] ?? null);
+        $this->assertSame('auto-start', $version->content_json['rules'][0]['key'] ?? null);
+        $this->assertCount(2, $version->steps);
+
+        $firstStep = $version->steps->sortBy('step_order')->values()->firstOrFail();
+        $this->assertSame('qa-check', $firstStep->step_key);
+        $this->assertSame(['role' => 'project_manager'], $firstStep->assignee_rule_json);
+        $this->assertSame('check-rebar', $firstStep->config_json['checklist_items'][0]['key'] ?? null);
+        $this->assertSame('inspection-report', $firstStep->config_json['required_docs'][0]['key'] ?? null);
+        $this->assertTrue($firstStep->fields->pluck('field_key')->contains('review_notes'));
+
+        $show = $this->getJson($this->workTemplateRoute('show', ['id' => $templateId]), $this->authHeaders($user));
+        $show->assertOk()
+            ->assertJsonPath('data.id', $templateId)
+            ->assertJsonPath('data.versions.0.content_json.steps.0.key', 'qa-check')
+            ->assertJsonPath('data.versions.0.content_json.steps.1.key', 'approve-package')
+            ->assertJsonPath('data.versions.0.content_json.approvals.0.key', 'pm-approval')
+            ->assertJsonPath('data.versions.0.content_json.rules.0.key', 'auto-start')
+            ->assertJsonPath('data.versions.0.steps.0.step_key', 'qa-check')
+            ->assertJsonPath('data.versions.0.steps.0.assignee_rule_json.role', 'project_manager')
+            ->assertJsonPath('data.versions.0.steps.0.config_json.assignment_rules.reviewers.0.project_role', 'qc_lead')
+            ->assertJsonPath('data.versions.0.steps.0.fields.0.field_key', 'discipline')
+            ->assertJsonPath('data.versions.0.steps.0.fields.1.field_key', 'review_notes')
+            ->assertJsonPath('data.versions.0.steps.0.fields.1.validation_json.max', 500);
+
+        $update = $this->putJson($this->workTemplateRoute('update', ['id' => $templateId]), [
+            'description' => 'Updated canonical CRUD contract',
+            'steps' => [
+                [
+                    'key' => 'qa-check',
+                    'name' => 'QA Checklist Revised',
+                    'type' => 'task',
+                    'order' => 1,
+                    'depends_on' => [],
+                    'assignee_rule' => ['role' => 'project_manager'],
+                    'sla_hours' => 36,
+                    'config' => [
+                        'phase_key' => 'execution',
+                        'phase_name' => 'Execution',
+                        'phase_order' => 1,
+                        'checklist_items' => [
+                            ['key' => 'check-rebar', 'label' => 'Check rebar spacing', 'required' => true],
+                            ['key' => 'check-cover', 'label' => 'Check concrete cover', 'required' => false],
+                        ],
+                        'required_docs' => [
+                            ['key' => 'inspection-report', 'label' => 'Inspection Report', 'required' => true],
+                        ],
+                        'assignment_rules' => [
+                            'reviewers' => [
+                                ['project_role' => 'qc_lead'],
+                            ],
+                            'watchers' => [
+                                ['user_id' => (string) $user->id],
+                            ],
+                        ],
+                    ],
+                    'fields' => [
+                        [
+                            'key' => 'review_notes',
+                            'label' => 'Review Notes',
+                            'type' => 'string',
+                            'required' => true,
+                            'default' => 'Updated note',
+                            'validation' => ['max' => 750],
+                            'visibility_rule' => ['when' => 'always'],
+                        ],
+                    ],
+                ],
+            ],
+            'approvals' => [
+                ['key' => 'site-approval', 'label' => 'Site approval', 'type' => 'approval'],
+            ],
+            'rules' => [
+                ['key' => 'notify-site', 'event' => 'task.completed'],
+            ],
+        ], $this->authHeaders($user));
+
+        $update->assertOk()
+            ->assertJsonPath('data.description', 'Updated canonical CRUD contract')
+            ->assertJsonPath('data.versions.0.content_json.steps.0.name', 'QA Checklist Revised')
+            ->assertJsonPath('data.versions.0.content_json.approvals.0.key', 'site-approval')
+            ->assertJsonPath('data.versions.0.content_json.rules.0.key', 'notify-site');
+
+        $updatedVersion = WorkTemplateVersion::query()
+            ->with('steps.fields')
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('work_template_id', $templateId)
+            ->whereNull('published_at')
+            ->latest('created_at')
+            ->firstOrFail();
+
+        $this->assertCount(1, $updatedVersion->steps);
+        $this->assertSame('site-approval', $updatedVersion->content_json['approvals'][0]['key'] ?? null);
+        $this->assertSame('notify-site', $updatedVersion->content_json['rules'][0]['key'] ?? null);
+        $this->assertSame('check-cover', $updatedVersion->steps->first()->config_json['checklist_items'][1]['key'] ?? null);
+        $this->assertSame('review_notes', $updatedVersion->steps->first()->fields->first()->field_key);
+    }
+
+    public function test_api_created_template_contract_survives_publish_preview_and_apply(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft', 'template.publish', 'template.apply']);
+        $reviewer = User::factory()->create(['tenant_id' => (string) $tenant->id, 'is_active' => true]);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $user->id,
+            'pm_id' => (string) $user->id,
+            'start_date' => now()->toDateString(),
+        ]);
+
+        $role = Role::query()->create([
+            'name' => 'qc_lead',
+            'scope' => 'project',
+            'allow_override' => false,
+            'is_active' => true,
+        ]);
+
+        UserRoleProject::query()->create([
+            'project_id' => (string) $project->id,
+            'user_id' => (string) $reviewer->id,
+            'role_id' => (string) $role->id,
+        ]);
+
+        $create = $this->postJson($this->workTemplateRoute('store'), $this->canonicalTemplatePayload((string) $user->id), $this->authHeaders($user));
+        $create->assertCreated();
+        $templateId = (string) $create->json('data.id');
+
+        $this->postJson($this->workTemplateRoute('publish', ['id' => $templateId]), [], $this->authHeaders($user))
+            ->assertOk()
+            ->assertJsonPath('data.content_json.steps.0.key', 'qa-check');
+
+        $preview = $this->postJson($this->workTemplatePreviewRoute($templateId), [
+            'project_id' => (string) $project->id,
+        ], $this->authHeaders($user));
+
+        $preview->assertOk()
+            ->assertJsonPath('data.summary.phases', 2)
+            ->assertJsonPath('data.summary.tasks', 2)
+            ->assertJsonPath('data.summary.checklists', 2)
+            ->assertJsonPath('data.summary.docs', 2)
+            ->assertJsonPath('data.planned_tasks.0.task_key', 'qa-check')
+            ->assertJsonPath('data.planned_tasks.0.checklists.0.item_key', 'check-rebar')
+            ->assertJsonPath('data.planned_tasks.0.required_docs.0.doc_key', 'inspection-report')
+            ->assertJsonPath('data.planned_tasks.0.reviewers.0', (string) $reviewer->id)
+            ->assertJsonPath('data.planned_tasks.1.task_key', 'approve-package');
+
+        $apply = $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
+            'work_template_id' => $templateId,
+        ], $this->authHeaders($user));
+
+        $apply->assertCreated()
+            ->assertJsonPath('data.tasks_created', 2)
+            ->assertJsonPath('data.assignments_created', 3);
+
+        $instanceId = (string) $apply->json('data.id');
+        $step = WorkInstanceStep::query()
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('work_instance_id', $instanceId)
+            ->where('step_key', 'qa-check')
+            ->firstOrFail();
+
+        $task = Task::query()
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('work_instance_id', $instanceId)
+            ->where('work_instance_step_id', $step->id)
+            ->firstOrFail();
+
+        $this->assertSame((string) $user->id, (string) $task->assigned_to);
+        $this->assertTrue(collect($step->snapshot_fields_json ?? [])->pluck('field_key')->contains('checklist:check-rebar'));
+        $this->assertTrue(collect($step->snapshot_fields_json ?? [])->pluck('field_key')->contains('required-doc:inspection-report'));
+
+        $assignments = TaskAssignment::query()->where('task_id', (string) $task->id)->orderBy('role')->pluck('role')->all();
+        $this->assertSame(['assignee', 'reviewer'], $assignments);
+    }
+
+    public function test_rbac_denies_canonical_work_template_crud_without_required_permissions(): void
+    {
+        $tenant = Tenant::factory()->create();
+        $authorized = $this->createTenantUser($tenant, [], ['member'], ['template.view', 'template.edit_draft']);
+        $unauthorized = User::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'is_active' => true,
+        ]);
+
+        $template = $this->createDraftTemplate($tenant, $authorized);
+
+        $this->getJson($this->workTemplateRoute('index'), $this->authHeaders($unauthorized))
+            ->assertStatus(403);
+        $this->getJson($this->workTemplateRoute('show', ['id' => (string) $template->id]), $this->authHeaders($unauthorized))
+            ->assertStatus(403);
+        $this->postJson($this->workTemplateRoute('store'), $this->canonicalTemplatePayload((string) $authorized->id, [
+            'code' => 'WT-NOPE',
+            'name' => 'No Permission',
+        ]), $this->authHeaders($unauthorized))->assertStatus(403);
+        $this->putJson($this->workTemplateRoute('update', ['id' => (string) $template->id]), [
+            'description' => 'No permission',
+        ], $this->authHeaders($unauthorized))->assertStatus(403);
+    }
+
     public function test_project_work_instances_list_requires_work_view_permission(): void
     {
         $tenant = Tenant::factory()->create();
@@ -1116,6 +1341,98 @@ class WorkTemplateMvpApiTest extends TestCase
                 ],
             ],
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $overrides
+     * @return array<string, mixed>
+     */
+    private function canonicalTemplatePayload(string $userId, array $overrides = []): array
+    {
+        return array_replace_recursive([
+            'code' => 'WT-CANONICAL',
+            'name' => 'Canonical Work Template',
+            'description' => 'Canonical persisted contract for S1.1',
+            'status' => 'draft',
+            'steps' => [
+                [
+                    'key' => 'qa-check',
+                    'name' => 'QA Check',
+                    'type' => 'task',
+                    'order' => 1,
+                    'depends_on' => [],
+                    'assignee_rule' => ['role' => 'project_manager'],
+                    'sla_hours' => 24,
+                    'config' => [
+                        'phase_key' => 'execution',
+                        'phase_name' => 'Execution',
+                        'phase_order' => 1,
+                        'checklist_items' => [
+                            ['key' => 'check-rebar', 'label' => 'Check rebar spacing', 'required' => true],
+                            ['key' => 'check-cover', 'label' => 'Check concrete cover', 'required' => false],
+                        ],
+                        'required_docs' => [
+                            ['key' => 'inspection-report', 'label' => 'Inspection Report', 'required' => true],
+                        ],
+                        'assignment_rules' => [
+                            'reviewers' => [
+                                ['project_role' => 'qc_lead'],
+                            ],
+                            'watchers' => [],
+                        ],
+                    ],
+                    'fields' => [
+                        [
+                            'key' => 'review_notes',
+                            'label' => 'Review Notes',
+                            'type' => 'string',
+                            'required' => true,
+                            'default' => 'Initial note',
+                            'validation' => ['max' => 500],
+                            'visibility_rule' => ['when' => 'always'],
+                        ],
+                        [
+                            'key' => 'discipline',
+                            'label' => 'Discipline',
+                            'type' => 'enum',
+                            'required' => false,
+                            'enum_options' => ['structural', 'architectural'],
+                        ],
+                    ],
+                ],
+                [
+                    'key' => 'approve-package',
+                    'name' => 'Approve Package',
+                    'type' => 'approval',
+                    'order' => 2,
+                    'depends_on' => ['qa-check'],
+                    'assignee_rule' => ['user_id' => $userId],
+                    'sla_hours' => 12,
+                    'config' => [
+                        'phase_key' => 'approval',
+                        'phase_name' => 'Approval',
+                        'phase_order' => 2,
+                        'required_docs' => [
+                            ['key' => 'approval-memo', 'label' => 'Approval Memo', 'required' => true],
+                        ],
+                    ],
+                    'fields' => [
+                        [
+                            'key' => 'decision_note',
+                            'label' => 'Decision Note',
+                            'type' => 'text',
+                            'required' => false,
+                        ],
+                    ],
+                ],
+            ],
+            'approvals' => [
+                ['key' => 'pm-approval', 'label' => 'Project manager approval', 'step_key' => 'approve-package'],
+            ],
+            'rules' => [
+                ['key' => 'auto-start', 'event' => 'template.applied', 'step_key' => 'qa-check'],
+            ],
+        ], $overrides);
     }
 
     private function normalizeTemplatePackageTemplate(array $template): array

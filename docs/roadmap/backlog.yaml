@@ -65,11 +65,21 @@ epics:
       - id: S1.1
         title: "WorkTemplate v2 data model (phases/tasks/checklists/docs/roles)"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Template schema supports phases → tasks → checklist items → required docs → roles/approvers → triggers."
           - "CRUD API exists with validation."
           - "RBAC/tenant isolation applied to all endpoints."
+        updated_at: 2026-03-29
+        evidence:
+          routes: "GET /api/zena/work-templates; POST /api/zena/work-templates; GET /api/zena/work-templates/{id}; PUT /api/zena/work-templates/{id}; POST /api/zena/work-templates/{id}/preview; POST /api/zena/work-templates/{id}/publish"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateMvpApiTest.php (23 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateBaselineSeederTest.php (3 passed)"
+          lint: "composer ssot:lint"
+        notes:
+          - "Canonical proof is limited to the persisted WorkTemplate v2 contract on `/api/zena/work-templates`: `content_json`, `work_template_versions`, `work_template_steps`, and `work_template_fields` round-trip `steps`, `fields`, `assignee_rule`, checklist/docs config, `approvals`, and `rules`."
+          - "Canonical `show()` now returns nested `versions.steps.fields`, which closes the runtime gap between persisted template data and the canonical CRUD response surface."
+          - "Preview and apply continue to consume the same persisted contract after canonical create/update/publish; no `/api/v1/*` path is used as proof."
+          - "This story does not claim broader reviewer/approver semantics, workflow decision semantics, notification fan-out, or any WorkTemplate architecture redesign."
       - id: S1.2
         title: "Apply template to Project/Component (generator)"
         priority: P0

@@ -291,6 +291,8 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'index'])->middleware('rbac:change-request.view')->name('change-requests.index');
             Route::post('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'store'])->middleware('rbac:change-request.create')->name('change-requests.store');
             Route::get('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'show'])->middleware('rbac:change-request.view')->name('change-requests.show');
+            Route::post('/{id}/links', [\App\Http\Controllers\Api\ChangeRequestController::class, 'attachLink'])->middleware('rbac:change-request.update')->name('change-requests.links.attach');
+            Route::delete('/{id}/links', [\App\Http\Controllers\Api\ChangeRequestController::class, 'detachLink'])->middleware('rbac:change-request.update')->name('change-requests.links.detach');
             Route::get('/{id}/timeline', [\App\Http\Controllers\Api\ChangeRequestController::class, 'timeline'])->middleware('rbac:change-request.view')->name('change-requests.timeline');
             Route::put('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'update'])->middleware('rbac:change-request.update')->name('change-requests.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'destroy'])->middleware('rbac:change-request.delete')->name('change-requests.destroy');

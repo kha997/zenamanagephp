@@ -8,7 +8,9 @@ use App\Models\AuditLog;
 use App\Models\Baseline;
 use App\Models\BaselineHistory;
 use App\Models\ChangeRequest;
+use App\Models\Component;
 use App\Models\CrLink;
+use App\Models\Document;
 use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Task;
@@ -30,6 +32,11 @@ class ChangeRequestController extends BaseApiController
         'zena.change_request.approve' => ChangeRequest::STATUS_APPROVED,
         'zena.change_request.reject' => ChangeRequest::STATUS_REJECTED,
         'zena.change_request.apply' => ChangeRequest::STATUS_IMPLEMENTED,
+    ];
+
+    private const MUTABLE_LINK_TYPES = [
+        CrLink::LINKED_TYPE_TASK,
+        CrLink::LINKED_TYPE_COMPONENT,
     ];
 
     public function __construct(private ZenaAuditLogger $auditLogger)
@@ -234,9 +241,163 @@ class ChangeRequestController extends BaseApiController
                 return $this->notFound('Change request not found');
             }
 
-            return $this->successResponse($changeRequest, 'Change request retrieved successfully');
+            $payload = $changeRequest->toArray();
+            $payload['affected_scope_summary'] = $this->buildAffectedScopeSummary($changeRequest, $tenantId);
+
+            return $this->successResponse($payload, 'Change request retrieved successfully');
         } catch (\Exception $e) {
             return $this->serverError('Failed to retrieve change request: ' . $e->getMessage());
+        }
+    }
+
+    public function attachLink(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+
+            if (!$changeRequest) {
+                return $this->notFound('Change request not found');
+            }
+
+            $validator = Validator::make($request->all(), [
+                'linked_type' => ['required', 'string', Rule::in(CrLink::VALID_LINKED_TYPES)],
+                'linked_id' => ['required', 'string'],
+                'link_description' => ['nullable', 'string'],
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            $linkedType = (string) $request->input('linked_type');
+            if (!in_array($linkedType, self::MUTABLE_LINK_TYPES, true)) {
+                return $this->validationError([
+                    'linked_type' => ['Only task and component links can be mutated on this path.'],
+                ]);
+            }
+
+            $target = $this->resolveLinkableTarget(
+                $changeRequest,
+                $tenantId,
+                $linkedType,
+                (string) $request->input('linked_id')
+            );
+
+            if ($target === null) {
+                return $this->notFound(ucfirst($linkedType) . ' not found');
+            }
+
+            $link = CrLink::firstOrCreate(
+                [
+                    'change_request_id' => (string) $changeRequest->id,
+                    'linked_type' => $linkedType,
+                    'linked_id' => (string) $target->getKey(),
+                ],
+                [
+                    'link_description' => $request->input('link_description'),
+                ]
+            );
+
+            if ($link->wasRecentlyCreated === false && $request->filled('link_description') && $link->link_description !== $request->input('link_description')) {
+                $link->forceFill([
+                    'link_description' => $request->input('link_description'),
+                ])->save();
+            }
+
+            return $this->successResponse([
+                'change_request_id' => (string) $changeRequest->id,
+                'linked_type' => $link->linked_type,
+                'linked_id' => (string) $link->linked_id,
+                'link_description' => $link->link_description,
+            ], 'Change request link attached successfully');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to attach change request link: ' . $e->getMessage());
+        }
+    }
+
+    public function detachLink(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+
+            if (!$changeRequest) {
+                return $this->notFound('Change request not found');
+            }
+
+            $validator = Validator::make($request->all(), [
+                'linked_type' => ['required', 'string', Rule::in(CrLink::VALID_LINKED_TYPES)],
+                'linked_id' => ['required', 'string'],
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            $linkedType = (string) $request->input('linked_type');
+            if (!in_array($linkedType, self::MUTABLE_LINK_TYPES, true)) {
+                return $this->validationError([
+                    'linked_type' => ['Only task and component links can be mutated on this path.'],
+                ]);
+            }
+
+            $deleted = CrLink::query()
+                ->where('change_request_id', (string) $changeRequest->id)
+                ->where('linked_type', $linkedType)
+                ->where('linked_id', (string) $request->input('linked_id'))
+                ->delete();
+
+            if ($deleted === 0) {
+                return $this->notFound('Change request link not found');
+            }
+
+            return $this->successResponse([
+                'change_request_id' => (string) $changeRequest->id,
+                'linked_type' => $linkedType,
+                'linked_id' => (string) $request->input('linked_id'),
+                'removed' => true,
+            ], 'Change request link detached successfully');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to detach change request link: ' . $e->getMessage());
         }
     }
 
@@ -968,6 +1129,97 @@ class ChangeRequestController extends BaseApiController
             'high' => Task::PRIORITY_HIGH,
             'low' => Task::PRIORITY_LOW,
             default => Task::PRIORITY_MEDIUM,
+        };
+    }
+
+    private function buildAffectedScopeSummary(ChangeRequest $changeRequest, string $tenantId): array
+    {
+        $taskIds = CrLink::query()
+            ->where('change_request_id', (string) $changeRequest->id)
+            ->where('linked_type', CrLink::LINKED_TYPE_TASK)
+            ->pluck('linked_id');
+
+        $componentIds = CrLink::query()
+            ->where('change_request_id', (string) $changeRequest->id)
+            ->where('linked_type', CrLink::LINKED_TYPE_COMPONENT)
+            ->pluck('linked_id');
+
+        $tasks = Task::query()
+            ->where('tenant_id', $tenantId)
+            ->where('project_id', (string) $changeRequest->project_id)
+            ->whereIn('id', $taskIds)
+            ->get(['id', 'project_id', 'component_id', 'name', 'title', 'status', 'priority'])
+            ->map(fn (Task $task): array => [
+                'id' => (string) $task->id,
+                'project_id' => (string) $task->project_id,
+                'component_id' => $task->component_id !== null ? (string) $task->component_id : null,
+                'name' => $task->name,
+                'title' => $task->title,
+                'status' => $task->status,
+                'priority' => $task->priority,
+            ])
+            ->values()
+            ->all();
+
+        $components = Component::query()
+            ->where('tenant_id', $tenantId)
+            ->where('project_id', (string) $changeRequest->project_id)
+            ->whereIn('id', $componentIds)
+            ->get(['id', 'project_id', 'parent_component_id', 'name', 'status', 'type'])
+            ->map(fn (Component $component): array => [
+                'id' => (string) $component->id,
+                'project_id' => (string) $component->project_id,
+                'parent_component_id' => $component->parent_component_id !== null ? (string) $component->parent_component_id : null,
+                'name' => $component->name,
+                'status' => $component->status,
+                'type' => $component->type,
+            ])
+            ->values()
+            ->all();
+
+        $documents = Document::query()
+            ->where('tenant_id', $tenantId)
+            ->where('project_id', (string) $changeRequest->project_id)
+            ->where('linked_entity_type', Document::ENTITY_TYPE_CR)
+            ->where('linked_entity_id', (string) $changeRequest->id)
+            ->get(['id', 'project_id', 'title', 'linked_entity_type', 'linked_entity_id', 'status', 'document_type'])
+            ->map(fn (Document $document): array => [
+                'id' => (string) $document->id,
+                'project_id' => (string) $document->project_id,
+                'title' => $document->title,
+                'linked_entity_type' => $document->linked_entity_type,
+                'linked_entity_id' => $document->linked_entity_id,
+                'status' => $document->status,
+                'document_type' => $document->document_type,
+            ])
+            ->values()
+            ->all();
+
+        return [
+            'tasks' => $tasks,
+            'components' => $components,
+            'documents' => $documents,
+        ];
+    }
+
+    private function resolveLinkableTarget(
+        ChangeRequest $changeRequest,
+        string $tenantId,
+        string $linkedType,
+        string $linkedId
+    ): Task|Component|null {
+        return match ($linkedType) {
+            CrLink::LINKED_TYPE_TASK => Task::query()
+                ->where('tenant_id', $tenantId)
+                ->where('project_id', (string) $changeRequest->project_id)
+                ->whereKey($linkedId)
+                ->first(),
+            CrLink::LINKED_TYPE_COMPONENT => Component::query()
+                ->where('tenant_id', $tenantId)
+                ->where('project_id', (string) $changeRequest->project_id)
+                ->whereKey($linkedId)
+                ->first(),
+            default => null,
         };
     }
 }

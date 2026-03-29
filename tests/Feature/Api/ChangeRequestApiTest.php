@@ -4,7 +4,9 @@ namespace Tests\Feature\Api;
 
 use App\Models\AuditLog;
 use App\Models\Baseline;
+use App\Models\Component;
 use App\Models\CrLink;
+use App\Models\Document;
 use App\Models\Task;
 use Tests\TestCase;
 use App\Models\Notification;
@@ -14,6 +16,8 @@ use App\Models\ZenaProject;
 use App\Models\ZenaChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Traits\RouteNameTrait;
 use Tests\Traits\SchemaAwareChangeRequestAssertions;
 
@@ -377,6 +381,78 @@ class ChangeRequestApiTest extends TestCase
                 ->pluck('entity_id')
                 ->all()
         );
+    }
+
+    public function test_show_exposes_minimal_affected_scope_summary_from_canonical_surfaces(): void
+    {
+        $changeRequest = ZenaChangeRequest::factory()->create([
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
+        ]);
+
+        $task = Task::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+        ]);
+
+        $component = Component::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $document = Document::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'uploaded_by' => $this->user->id,
+            'linked_entity_type' => Document::ENTITY_TYPE_CR,
+            'linked_entity_id' => $changeRequest->id,
+            'title' => 'CR owner-surface document',
+        ]);
+
+        $now = now();
+        DB::table('cr_links')->insert([
+            [
+                'id' => (string) Str::ulid(),
+                'change_request_id' => $changeRequest->id,
+                'linked_type' => CrLink::LINKED_TYPE_TASK,
+                'linked_id' => $task->id,
+                'link_description' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => (string) Str::ulid(),
+                'change_request_id' => $changeRequest->id,
+                'linked_type' => CrLink::LINKED_TYPE_COMPONENT,
+                'linked_id' => $component->id,
+                'link_description' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => (string) Str::ulid(),
+                'change_request_id' => $changeRequest->id,
+                'linked_type' => CrLink::LINKED_TYPE_DOCUMENT,
+                'linked_id' => '01HZYIGNOREDDOCLINK0000000002',
+                'link_description' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ]);
+
+        $this->withHeaders($this->getAuthHeaders())
+            ->getJson($this->zena('change-requests.show', ['id' => $changeRequest->id]))
+            ->assertOk()
+            ->assertJsonPath('data.affected_scope_summary.tasks.0.id', (string) $task->id)
+            ->assertJsonPath('data.affected_scope_summary.components.0.id', (string) $component->id)
+            ->assertJsonPath('data.affected_scope_summary.documents.0.id', (string) $document->id)
+            ->assertJsonCount(1, 'data.affected_scope_summary.documents');
     }
 
     /**

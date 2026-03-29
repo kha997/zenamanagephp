@@ -1,7 +1,7 @@
 # S4.1 Material Catalog + Vendor Owner Contract
 
 Date: 2026-03-29
-Status: docs-only planning lock
+Status: proved canonical slice
 Story: `S4.1`
 Story title: `Material catalog + vendor list`
 
@@ -235,6 +235,40 @@ Deferred:
 - no proof depending on `/api/zena/site-engineer/material-requests`
 - no proof depending on `/api/v1/*`
 
+## Runtime Outcome
+
+The narrowed runtime round is now proved on the canonical owner paths only:
+
+- `/api/zena/materials`
+- `/api/zena/vendors`
+
+What runtime evidence now proves:
+
+- both owner families expose minimal canonical CRUD only
+- both owner families are tenant-safe and return `404` across tenant boundaries
+- both owner families are RBAC-safe through dedicated canonical permissions:
+  - `material.view|create|update|delete`
+  - `vendor.view|create|update|delete`
+- route ownership stays on `App\Http\Controllers\Api\MaterialController` and `App\Http\Controllers\Api\VendorController`
+
+What this runtime round still does not prove:
+
+- BOQ linkage
+- submittal package ownership or approvals
+- delivery/receipt
+- notifications
+- compensation linkage
+- any canonical `MaterialRequest` workflow
+
+Runtime evidence:
+
+- `php artisan route:list | grep -E "materials|vendors" || true`
+- `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Material`
+- `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Vendor`
+- `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php`
+- `composer ssot:lint`
+- `php artisan optimize:clear`
+
 ## Verdict
 
-The next safe `S4.1` runtime slice is a new canonical master-data contract on `/api/zena/materials` and `/api/zena/vendors`, with `MaterialRequest` explicitly kept out of owner scope for this round.
+`S4.1` is now proved at the narrowed canonical master-data slice on `/api/zena/materials` and `/api/zena/vendors`, with `MaterialRequest` explicitly kept out of owner scope.

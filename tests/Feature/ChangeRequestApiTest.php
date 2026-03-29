@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Baseline;
 use App\Models\ChangeRequest;
+use App\Models\CrLink;
 use App\Models\Notification;
 use App\Models\Project;
+use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -414,6 +417,49 @@ class ChangeRequestApiTest extends TestCase
                 'change_request_rejected',
             ])
             ->count());
+    }
+
+    public function test_apply_creates_canonical_task_and_baseline_artifacts(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => 'approved',
+            'impact_days' => 5,
+            'impact_cost' => 4200,
+            'change_number' => 'CR-S3-3-0001',
+        ]);
+
+        $response = $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/apply", [
+                'implementation_notes' => 'S3.3 canonical delta proof',
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.status', 'implemented');
+
+        $task = Task::query()
+            ->where('project_id', $this->project->id)
+            ->where('tenant_id', $this->tenant->id)
+            ->where('name', 'CR delta: ' . $changeRequest->title)
+            ->first();
+
+        $this->assertNotNull($task, 'Expected canonical task delta to be persisted.');
+
+        $this->assertDatabaseHas('cr_links', [
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_TASK,
+            'linked_id' => $task->id,
+        ]);
+
+        $baseline = Baseline::query()
+            ->where('project_id', $this->project->id)
+            ->where('linked_contract_id', $changeRequest->id)
+            ->first();
+
+        $this->assertNotNull($baseline, 'Expected canonical baseline delta to be persisted.');
+        $this->assertSame('contract', $baseline->type);
     }
 
     public function test_update_cannot_mutate_workflow_status_directly(): void

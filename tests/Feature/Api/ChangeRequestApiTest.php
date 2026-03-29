@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\Baseline;
+use App\Models\CrLink;
+use App\Models\Task;
 use Tests\TestCase;
 use App\Models\Notification;
 use App\Models\User;
@@ -276,13 +279,40 @@ class ChangeRequestApiTest extends TestCase
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'status' => 'implemented'
+            'status' => 'implemented',
+            'implementation_notes' => $implementationData['implementation_notes'],
         ]);
 
         $this->assertDatabaseMissing('notifications', [
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'type' => 'change_request_implemented',
+        ]);
+
+        $task = Task::query()
+            ->where('project_id', $this->project->id)
+            ->where('tenant_id', $this->user->tenant_id)
+            ->where('name', 'CR delta: ' . $changeRequest->title)
+            ->first();
+
+        $this->assertNotNull($task, 'Expected canonical task delta to be created.');
+
+        $this->assertDatabaseHas('cr_links', [
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_TASK,
+            'linked_id' => $task->id,
+        ]);
+
+        $baseline = Baseline::query()
+            ->where('project_id', $this->project->id)
+            ->where('linked_contract_id', $changeRequest->id)
+            ->first();
+
+        $this->assertNotNull($baseline, 'Expected canonical baseline delta to be created.');
+
+        $this->assertDatabaseHas('baseline_history', [
+            'baseline_id' => $baseline->id,
+            'to_version' => $baseline->version,
         ]);
     }
 

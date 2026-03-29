@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Models\Baseline;
+use App\Models\BaselineHistory;
 use App\Models\ChangeRequest;
+use App\Models\CrLink;
 use App\Models\Notification;
 use App\Models\Project;
+use App\Models\Task;
 use App\Services\ErrorEnvelopeService;
 use App\Services\ZenaAuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -624,16 +628,26 @@ class ChangeRequestController extends BaseApiController
                 return $this->errorResponse('Only approved change requests can be applied', 400);
             }
 
+            $validator = Validator::make($request->all(), [
+                'implementation_notes' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
             DB::beginTransaction();
 
             $changeRequest->update([
                 'status' => 'implemented',
+                'implementation_notes' => $request->input('implementation_notes'),
                 'implemented_by' => $user->id,
                 'implemented_at' => now(),
             ]);
 
-            // Create baseline snapshot before applying changes
-            $this->createBaselineSnapshot($changeRequest);
+            $task = $this->createCanonicalTaskDelta($changeRequest, (string) $user->id);
+            $this->createTaskLinkBack($changeRequest, $task);
+            $this->createBaselineSnapshot($changeRequest, (string) $user->id);
 
             DB::commit();
 
@@ -806,11 +820,89 @@ class ChangeRequestController extends BaseApiController
     /**
      * Create baseline snapshot before applying changes.
      */
-    private function createBaselineSnapshot(ChangeRequest $changeRequest): void
+    private function createCanonicalTaskDelta(ChangeRequest $changeRequest, string $userId): Task
     {
-        // This would create a snapshot of the current project state
-        // Implementation depends on the baseline management system
-        // For now, we'll just log the action
-        \Log::info('Creating baseline snapshot for change request: ' . $changeRequest->id);
+        $approvedDays = (int) ($changeRequest->approved_schedule_days ?? $changeRequest->impact_days ?? 0);
+
+        $task = Task::create([
+            'tenant_id' => (string) $changeRequest->tenant_id,
+            'project_id' => (string) $changeRequest->project_id,
+            'name' => 'CR delta: ' . $changeRequest->title,
+            'description' => $changeRequest->implementation_notes
+                ?? $changeRequest->description
+                ?? 'Canonical delta task created from applied change request.',
+            'status' => Task::STATUS_PENDING,
+            'priority' => $this->normalizeTaskPriority((string) $changeRequest->priority),
+            'start_date' => now()->toDateString(),
+            'end_date' => $approvedDays > 0 ? now()->addDays($approvedDays)->toDateString() : now()->toDateString(),
+        ]);
+
+        if ($changeRequest->task_id !== $task->id) {
+            $changeRequest->forceFill(['task_id' => $task->id])->save();
+        }
+
+        return $task;
+    }
+
+    private function createTaskLinkBack(ChangeRequest $changeRequest, Task $task): void
+    {
+        CrLink::firstOrCreate(
+            [
+                'change_request_id' => (string) $changeRequest->id,
+                'linked_type' => CrLink::LINKED_TYPE_TASK,
+                'linked_id' => (string) $task->id,
+            ],
+            [
+                'link_description' => 'Canonical task delta created during apply()',
+            ]
+        );
+    }
+
+    private function createBaselineSnapshot(ChangeRequest $changeRequest, string $userId): Baseline
+    {
+        $project = $changeRequest->project;
+        $latestBaselineVersion = (int) Baseline::query()
+            ->where('project_id', $changeRequest->project_id)
+            ->where('type', Baseline::TYPE_CONTRACT)
+            ->max('version');
+
+        $approvedDays = (int) ($changeRequest->approved_schedule_days ?? $changeRequest->impact_days ?? 0);
+        $startDate = $project?->start_date?->toDateString() ?? now()->toDateString();
+        $endDate = $project?->end_date?->copy()?->addDays($approvedDays)->toDateString()
+            ?? now()->addDays(max($approvedDays, 1))->toDateString();
+        $cost = (float) ($changeRequest->approved_cost ?? $changeRequest->impact_cost ?? 0);
+
+        $baseline = Baseline::create([
+            'project_id' => (string) $changeRequest->project_id,
+            'type' => Baseline::TYPE_CONTRACT,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'cost' => $cost,
+            'linked_contract_id' => (string) $changeRequest->id,
+            'version' => $latestBaselineVersion + 1,
+            'note' => 'Applied from change request ' . ($changeRequest->change_number ?? $changeRequest->id),
+            'created_by' => $userId,
+        ]);
+
+        BaselineHistory::create([
+            'baseline_id' => (string) $baseline->id,
+            'from_version' => $latestBaselineVersion,
+            'to_version' => (int) $baseline->version,
+            'note' => 'Canonical baseline delta recorded during apply()',
+            'created_by' => $userId,
+        ]);
+
+        return $baseline;
+    }
+
+    private function normalizeTaskPriority(string $priority): string
+    {
+        return match ($priority) {
+            'urgent' => Task::PRIORITY_CRITICAL,
+            'critical' => Task::PRIORITY_CRITICAL,
+            'high' => Task::PRIORITY_HIGH,
+            'low' => Task::PRIORITY_LOW,
+            default => Task::PRIORITY_MEDIUM,
+        };
     }
 }

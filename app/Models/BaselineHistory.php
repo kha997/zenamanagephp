@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Model BaselineHistory để theo dõi lịch sử thay đổi baseline
  * 
  * @property int $id
- * @property int $baseline_id
+ * @property string $baseline_id
  * @property int $from_version
  * @property int $to_version
  * @property string|null $note
@@ -34,7 +34,7 @@ class BaselineHistory extends Model
     ];
 
     protected $casts = [
-        'baseline_id' => 'integer',
+        'baseline_id' => 'string',
         'from_version' => 'integer',
         'to_version' => 'integer',
         'created_at' => 'datetime',
@@ -60,7 +60,7 @@ class BaselineHistory extends Model
     /**
      * Scope để lọc theo baseline
      */
-    public function scopeForBaseline(Builder $query, int $baselineId): Builder
+    public function scopeForBaseline(Builder $query, string $baselineId): Builder
     {
         return $query->where('baseline_id', $baselineId);
     }
@@ -86,7 +86,7 @@ class BaselineHistory extends Model
      * Tạo bản ghi lịch sử khi baseline được re-baseline
      */
     public static function recordRebaseline(
-        int $baselineId,
+        string $baselineId,
         int $fromVersion,
         int $toVersion,
         string $note,
@@ -104,7 +104,7 @@ class BaselineHistory extends Model
     /**
      * Lấy lịch sử thay đổi của một baseline
      */
-    public static function getHistoryForBaseline(int $baselineId): \Illuminate\Database\Eloquent\Collection
+    public static function getHistoryForBaseline(string $baselineId): \Illuminate\Database\Eloquent\Collection
     {
         return static::forBaseline($baselineId)
                     ->latest()

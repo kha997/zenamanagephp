@@ -1,7 +1,7 @@
 # S3.1 Affected Scope Contract
 
 Date: 2026-03-29
-Status: proposal-only
+Status: accepted-by-runtime
 Story: `S3.1`
 Story title: `CR links affected scope`
 
@@ -133,4 +133,4 @@ Minimum verify target for a later runtime round:
 
 ## Verdict
 
-`S3.1` is ready for a narrow runtime round only if task/component stay on `cr_links`, documents stay on Document Center ownership, and the first read surface remains a minimal summary rather than a broad reverse-query contract.
+`S3.1` acceptance is now satisfied by canonical runtime evidence: task/component affected scope mutates on `/api/zena/change-requests/{id}/links`, documents stay owned by Document Center, and `GET /api/zena/change-requests/{id}` materializes document scope from canonical document query semantics rather than `cr_links(document)`.

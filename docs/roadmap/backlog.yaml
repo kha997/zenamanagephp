@@ -351,8 +351,10 @@ epics:
         priority: P1
         status: todo
         acceptance_criteria:
-          - "Submittal package uses Document Center workflow."
-          - "Notify on review/approval."
+          - "Canonical package owner surface is limited to `/api/zena/submittals`; Document Center remains the canonical file owner surface."
+          - "First slice proves `draft -> submitted -> approved|rejected` on `/api/zena/submittals`; `review` is optional/intermediate or `UNKNOWN` unless separately evidenced."
+          - "Document linkage must use Document Center query/link semantics; do not use `submittals.attachments` or `file_url` as canonical file ownership proof."
+          - "Notification claims are limited to direct-recipient proof only if runtime evidence appears; otherwise notifications stay deferred."
       - id: S4.4
         title: "Delivery/Receipt + acceptance checklist"
         priority: P2

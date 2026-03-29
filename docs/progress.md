@@ -3,15 +3,15 @@
 ## 1. Project Header
 
 - Project: Build zena webapp / zenamanage-golden
-- Last updated: 2026-03-28
+- Last updated: 2026-03-29
 - Branch: main
 - Goal: deploy the real webapp and do not change domain/app logic just to pass test/CI
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, and then implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership. The latest runtime round now proves the minimal canonical in-app notification contract for `submit`, `approve`, and `reject`, while keeping `apply` notification and broad stakeholder semantics explicitly deferred. The open work is now concentrated in evidence gaps that remain outside that locked slice, especially broader recipient semantics and any backlog acceptance beyond the minimal proved contract.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, and then implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership. The latest runtime round now proves the minimal canonical in-app notification contract for `submit`, `approve`, and `reject`, while keeping `apply` notification and broad stakeholder semantics explicitly deferred. The current planning round narrows backlog structure so the already-proved canonical workflow plus minimal direct-recipient notification slice stays separate from the still-undefined broader recipient semantics follow-up.
 
-For `S3.2`, the main remaining planning issue is not workflow mechanics anymore. The unresolved acceptance gap is that backlog wording still asks for notifications to `approvers and stakeholders`, while the canonical path only proves one explicit approver fixture and requester-directed notifications, and still leaves stakeholder semantics `UNKNOWN`.
+For `S3.2`, the main remaining planning issue is not workflow mechanics anymore. The unresolved acceptance gap was that backlog wording asked for notifications to `approvers and stakeholders`, while the canonical path only proves one explicit approver fixture and requester-directed notifications, and still leaves stakeholder semantics `UNKNOWN`. The planning split now treats those as two separate scopes: narrowed `S3.2` for the proved canonical slice and `S3.2a` for broader approver/stakeholder semantics.
 
 ## 3. Operating Rules
 
@@ -158,6 +158,27 @@ For `S3.2`, the main remaining planning issue is not workflow mechanics anymore.
   - Canonical `approve` and `reject` now write one direct in-app notification to `change_requests.requested_by`.
   - This round intentionally does not prove broad stakeholder semantics and does not change backlog story status.
 
+### Round 8
+
+- Date: 2026-03-29
+- Scope: `S3.2` planning split for canonical proved slice vs broader notification semantics
+- Outcome: docs-only
+- Key files:
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+  - `docs/change-proposals/2026-03-28-s3-2-change-request-workflow-state-machine-unification.md`
+  - `docs/change-proposals/2026-03-28-s3-2-canonical-change-request-notification-contract.md`
+- Evidence:
+  - routes: `php artisan route:list | grep change-requests`
+  - backlog split: `S3.2` narrowed to the proved canonical workflow + minimal direct-recipient notification slice; `S3.2a` added for broader approver/stakeholder semantics
+- Deferred:
+  - any runtime/code changes
+  - any `/api/v1/*` work
+  - any stakeholder claim beyond explicit canonical evidence
+- Notes:
+  - This round is planning hygiene only and intentionally does not mark either story done.
+  - `apply` notification remains deferred.
+
 ## 5. Progress By Roadmap
 
 ### EPIC-1: Process Template Engine (WorkTemplate v2)
@@ -234,10 +255,10 @@ For `S3.2`, the main remaining planning issue is not workflow mechanics anymore.
 
 ### EPIC-3: Change Order (ChangeRequest v2)
 
-#### S3.2 Change Request workflow state machine unification
+#### S3.2 Canonical workflow + audit + minimal direct-recipient notifications
 
 - Roadmap status: todo
-- Progress status: minimal-notification-slice-locked
+- Progress status: split-and-locked
 - Current state:
   - A narrow canonical runtime slice is now implemented and proved on `/api/zena/change-requests`.
   - Runtime truth now proves `submit: draft -> submitted`.
@@ -248,26 +269,47 @@ For `S3.2`, the main remaining planning issue is not workflow mechanics anymore.
   - Minimal canonical in-app notification proof now exists at runtime for `submit`, `approve`, and `reject`.
   - The proved notification boundary is `submit -> one explicit approver recipient fixture`, `approve/reject -> requester`, `apply -> deferred`.
   - Broad stakeholder recipient semantics remain `UNKNOWN` on the canonical path and stay deferred.
+  - Backlog planning now narrows `S3.2` to that proved canonical slice instead of bundling broader stakeholder semantics into the same acceptance boundary.
   - `/api/v1/*` compatibility routes were not touched in this round.
 - Evidence:
   - proposal commit: `a16ed7c4b62bfc1a7c125bd505e6c5dd507628a4`
   - wording-tighten commit: `9600ef0c814b016a1caf92e646967bc77025f9e1`
   - runtime-lock commit: `fb45a35ab6ebd3a7177a7d1317a459c7d416e270`
   - notification runtime commit: `a41ee056`
+  - planning split date: `2026-03-29`
   - routes: `php artisan route:list --path=api/zena/change-requests` shows `submit`, `approve`, `reject`, `apply`
   - planning lock: `docs/change-proposals/2026-03-28-s3-2-canonical-change-request-notification-contract.md`
 - Deferred / remaining:
   - any broader stakeholder fan-out beyond the locked minimal recipient contract
   - any notification proof beyond the minimal in-app canonical slice, including `apply`
-  - any broader backlog acceptance beyond the locked runtime slice
+  - any broader approver/stakeholder semantics now carved into `S3.2a`
 - Next action:
-  - split the already-proved canonical workflow + minimal direct-recipient notification slice from the still-unknown stakeholder/broader notification semantics before expanding `S3.2` acceptance claims.
+  - keep `S3.2` scoped to the already-proved canonical slice and use `S3.2a` for any later stakeholder or broader notification work.
+
+#### S3.2a Broader approver/stakeholder notification semantics for canonical change requests
+
+- Roadmap status: todo
+- Progress status: deferred
+- Current state:
+  - This follow-up story exists to isolate semantics that the canonical path does not currently define.
+  - Current evidence does not define broad approver discovery.
+  - Current evidence does not define who counts as a stakeholder on `/api/zena/change-requests`.
+  - `apply` notification remains outside the proved minimal canonical notification boundary.
+- Evidence:
+  - current canonical proof only covers `submit -> assigned_to fixture` and `approve/reject -> requested_by`
+  - planning references: `docs/change-proposals/2026-03-28-s3-2-change-request-workflow-state-machine-unification.md`; `docs/change-proposals/2026-03-28-s3-2-canonical-change-request-notification-contract.md`
+- Deferred / remaining:
+  - define canonical stakeholder semantics from evidence-backed owner fields or route truth
+  - prove any broader fan-out end-to-end on `/api/zena/change-requests`
+  - decide separately whether `apply` notification belongs in this follow-up or another later slice
+- Next action:
+  - do not implement this slice until the repo has explicit canonical evidence for broader recipient semantics.
 
 ## 6. Next Action Queue
 
 1. Preserve the current canonical notification write path on `/api/zena/change-requests` without reopening `/api/v1/*` compatibility surfaces.
 2. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
-3. Prefer a backlog/planning split for `S3.2`: keep the proved canonical workflow + minimal direct-recipient notification slice separate from stakeholder/broader notification semantics that remain `UNKNOWN`.
+3. Keep the backlog/planning split for `S3.2`: preserve the proved canonical workflow + minimal direct-recipient notification slice in `S3.2`, and treat stakeholder/broader notification semantics as deferred `S3.2a` work.
 
 ## 7. Out Of Scope / Deferred
 

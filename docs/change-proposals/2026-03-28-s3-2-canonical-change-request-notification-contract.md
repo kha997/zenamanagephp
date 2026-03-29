@@ -21,6 +21,12 @@ What remains unproved:
 
 Therefore `S3.2` still remains `todo`, and the cleanest next planning move is to split the already-proved direct-recipient notification slice from the still-unknown stakeholder/broader notification acceptance surface.
 
+As of the docs-only planning split on 2026-03-29, that recommendation is now reflected in backlog structure:
+
+- narrowed `S3.2` owns the already-proved canonical workflow + minimal direct-recipient notification slice
+- new follow-up `S3.2a` owns broader approver/stakeholder notification semantics and any later fan-out proof
+- neither story is marked `done` by this planning update
+
 ## Context Snapshot
 
 Canonical change-request workflow runtime is already locked on `/api/zena/change-requests` under `App\Http\Controllers\Api\ChangeRequestController`.

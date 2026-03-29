@@ -31,6 +31,6 @@ class NotificationServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
+        // Routes are mounted explicitly from routes/api.php per routing architecture law.
     }
 }

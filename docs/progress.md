@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, and now proves `S1.1` on the canonical WorkTemplate owner path by round-tripping the persisted data-model contract for `steps`, `fields`, `assignee_rule`, checklist/docs config, `approvals`, and `rules` through canonical create/show/update while keeping preview/publish/apply aligned to the same persisted contract. With the acceptance boundary narrowed to already-proved canonical slices, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, and `S5.1` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, and proved `S0.1`'s first narrow runtime slice by remounting the Notification compatibility module explicitly from `routes/api.php` while disabling provider auto-mount and preserving the `/api/v1/notifications*` plus `/api/v1/notification-rules*` surface without duplicate-prefix drift. With the acceptance boundary narrowed to already-proved canonical slices, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, and `S5.1` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
@@ -24,6 +24,31 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 - Do not change domain/app logic just to pass test or CI.
 
 ## 4. Recent Locked Rounds
+
+### Round 19
+
+- Date: 2026-03-29
+- Scope: `S0.1` narrow Notification route-mounting law slice
+- Outcome: locked runtime slice
+- Key files:
+  - `routes/api.php`
+  - `src/Notification/routes/api.php`
+  - `src/Notification/Providers/NotificationServiceProvider.php`
+  - `tests/Unit/NotificationRouteMountingLawTest.php`
+  - `tests/Feature/Architecture/NotificationRouteInvariantTest.php`
+- Evidence:
+  - head reviewed: `dc40d7d8b7de5a6af1cb43a90c93c02ab3664a6b`
+  - routes: `php artisan route:list --path=api/v1/notifications` -> `10 routes`; `php artisan route:list --path=api/v1/notification-rules` -> `8 routes`
+  - tests: `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Route` -> `OK (67 tests, 2320 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Architecture` -> `OK (20 tests, 364 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Unit/NotificationRouteMountingLawTest.php` -> `OK (2 tests, 4 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/NotificationRouteInvariantTest.php` -> `OK (1 test, 3 assertions)`
+  - lint: `composer ssot:lint`; `php artisan optimize:clear`
+- Deferred:
+  - remaining `S0.1` offenders outside Notification
+  - any repo-wide route cleanup beyond active provider auto-mount inventory
+  - any canonical `/api/zena/*` ownership redesign for notifications
+- Notes:
+  - `routes/api.php` now explicitly mounts `src/Notification/routes/api.php`, and `NotificationServiceProvider` no longer calls `loadRoutesFrom(...)`.
+  - Notification compatibility route files now define `v1/*` prefixes so the runtime surface remains `/api/v1/*` after composition under the root API prefix.
+  - This round proves only the Notification starter slice for `S0.1`; backlog status remains `todo` until broader module-skeleton and route-law coverage is evidenced.
 
 ### Round 1
 

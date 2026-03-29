@@ -222,8 +222,14 @@ epics:
         priority: P0
         status: todo
         acceptance_criteria:
-          - "Approved CR triggers task delta generation."
-          - "Baseline history updated (snapshot or delta) with evidence."
+          - "Canonical implementation boundary is `POST /api/zena/change-requests/{id}/apply`; `approve()` remains approval-only and does not own delta-task generation."
+          - "Applying an approved CR generates at least one evidence-backed canonical task delta on the same tenant/project, with change-request link-back recorded on canonical tables."
+          - "Applying an approved CR writes at least one evidence-backed baseline delta artifact linked back to the change request on canonical baseline tables."
+          - "This story does not claim broad baseline architecture cleanup, `/api/v1/*` involvement, or extra semantics not proved from canonical evidence."
+        notes:
+          - "Current runtime truth proves only that `apply()` transitions `approved -> implemented` and calls a log-only baseline snapshot stub."
+          - "Current runtime truth does not yet prove canonical delta-task persistence, baseline-delta persistence, or change-request link-back for those artifacts."
+          - "Use existing canonical tables first (`change_requests`, `cr_links`, `tasks`, `baselines`, `baseline_history`) unless a later evidence-backed proposal explicitly changes the contract."
       - id: S3.4
         title: "CR timeline + attachments"
         priority: P1

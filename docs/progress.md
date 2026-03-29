@@ -321,15 +321,41 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 - Next action:
   - do not implement this slice until the repo has explicit canonical evidence for broader recipient semantics.
 
+#### S3.3 Approved CR creates delta tasks + baseline delta
+
+- Roadmap status: todo
+- Progress status: proposal-ready
+- Current state:
+  - Backlog text exists, but the current acceptance was too underspecified for a safe runtime round.
+  - Canonical runtime truth places downstream implementation at `POST /api/zena/change-requests/{id}/apply`, not at `approve()`.
+  - Current runtime only proves `apply: approved -> implemented`.
+  - `createBaselineSnapshot()` is currently a log-only stub.
+  - No current evidence proves canonical task delta persistence, baseline delta persistence, or canonical link-back for those artifacts.
+- Evidence:
+  - route surface: `routes/api_zena.php` exposes canonical `change-requests` actions plus canonical `/api/zena/tasks`
+  - controller truth: `app/Http/Controllers/Api/ChangeRequestController.php` keeps budget/schedule mutation in `approve()` and calls log-only `createBaselineSnapshot()` from `apply()`
+  - model truth: `app/Models/ChangeRequest.php` exposes canonical workflow transitions and existing `cr_links` task link relation
+  - baseline truth: `app/Models/Baseline.php` already has `linked_contract_id`; `app/Models/BaselineHistory.php` only proves version-note history
+  - proposal lock: `docs/change-proposals/2026-03-29-s3-3-apply-boundary-delta-contract.md`
+- Deferred / remaining:
+  - exact task-delta semantics beyond minimal persisted create-or-update proof
+  - exact baseline-delta shape beyond minimal persisted baseline artifact proof
+  - any `/api/v1/*` involvement
+  - any broad baseline architecture cleanup
+- Next action:
+  - implement the narrow runtime slice at `apply()` only, with tests proving one canonical task delta path and one canonical baseline link-back path.
+
 ## 6. Next Action Queue
 
 1. Preserve the current canonical notification write path on `/api/zena/change-requests` without reopening `/api/v1/*` compatibility surfaces.
 2. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
 3. Keep `S3.2` closed at the proved canonical slice and treat stakeholder/broader notification semantics as deferred `S3.2a` work.
+4. Use the locked `S3.3` proposal boundary at `apply()` before opening any runtime delta-task or baseline-delta work.
 
 ## 7. Out Of Scope / Deferred
 
 - Broad notification fan-out beyond proof-backed canonical workflow behavior.
+- Broad baseline architecture redesign or cleanup beyond the narrow `S3.3` proposal contract.
 - Full document review matrix until route/runtime/test evidence exists.
 - `/api/v1/*` compatibility remapping or forward-owner expansion.
 - Any implementation claim not backed by route, runtime, test, or lint evidence.

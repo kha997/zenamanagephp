@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\AuditLog;
 use App\Models\Baseline;
 use App\Models\CrLink;
 use App\Models\Task;
@@ -314,6 +315,68 @@ class ChangeRequestApiTest extends TestCase
             'baseline_id' => $baseline->id,
             'to_version' => $baseline->version,
         ]);
+    }
+
+    public function test_can_get_change_request_timeline_from_canonical_audit_logs(): void
+    {
+        $changeRequest = ZenaChangeRequest::factory()->create([
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
+        ]);
+
+        $otherChangeRequest = ZenaChangeRequest::factory()->create([
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
+        ]);
+
+        $this->withHeaders($this->getAuthHeaders())
+            ->postJson($this->zena('change-requests.submit', ['id' => $changeRequest->id]))
+            ->assertStatus(200);
+
+        $this->withHeaders($this->getAuthHeaders())
+            ->postJson($this->zena('change-requests.approve', ['id' => $changeRequest->id]), [
+                'approval_comments' => 'Audit-backed approval',
+            ])
+            ->assertStatus(200);
+
+        AuditLog::query()->create([
+            'user_id' => (string) $this->user->id,
+            'tenant_id' => (string) $this->user->tenant_id,
+            'action' => 'zena.change_request.submit',
+            'entity_type' => 'change_request',
+            'entity_id' => (string) $otherChangeRequest->id,
+            'project_id' => (string) $this->project->id,
+            'route' => 'api/zena/change-requests/' . $otherChangeRequest->id . '/submit',
+            'method' => 'POST',
+            'status_code' => 200,
+        ]);
+
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->getJson($this->zena('change-requests.timeline', ['id' => $changeRequest->id]));
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.action', 'zena.change_request.submit')
+            ->assertJsonPath('data.0.status', 'submitted')
+            ->assertJsonPath('data.0.user_id', (string) $this->user->id)
+            ->assertJsonPath('data.1.action', 'zena.change_request.approve')
+            ->assertJsonPath('data.1.status', 'approved');
+
+        $entityIds = array_column($response->json('data'), 'audit_log_id');
+        $this->assertCount(2, $entityIds);
+        $this->assertSame(
+            [(string) $changeRequest->id, (string) $changeRequest->id],
+            AuditLog::query()
+                ->whereIn('id', $entityIds)
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->pluck('entity_id')
+                ->all()
+        );
     }
 
     /**

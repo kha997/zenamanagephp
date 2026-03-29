@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Models\AuditLog;
 use App\Models\Baseline;
 use App\Models\BaselineHistory;
 use App\Models\ChangeRequest;
@@ -23,6 +24,13 @@ use Illuminate\Validation\Rule;
 class ChangeRequestController extends BaseApiController
 {
     use ZenaContractResponseTrait;
+
+    private const TIMELINE_ACTION_STATUS_MAP = [
+        'zena.change_request.submit' => ChangeRequest::STATUS_SUBMITTED,
+        'zena.change_request.approve' => ChangeRequest::STATUS_APPROVED,
+        'zena.change_request.reject' => ChangeRequest::STATUS_REJECTED,
+        'zena.change_request.apply' => ChangeRequest::STATUS_IMPLEMENTED,
+    ];
 
     public function __construct(private ZenaAuditLogger $auditLogger)
     {
@@ -229,6 +237,63 @@ class ChangeRequestController extends BaseApiController
             return $this->successResponse($changeRequest, 'Change request retrieved successfully');
         } catch (\Exception $e) {
             return $this->serverError('Failed to retrieve change request: ' . $e->getMessage());
+        }
+    }
+
+    public function timeline(Request $request, string $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $tenantId = $this->tenantId($request);
+            if ($tenantId === '') {
+                return ErrorEnvelopeService::error(
+                    'TENANT_REQUIRED',
+                    'Tenant context missing',
+                    [],
+                    400,
+                    ErrorEnvelopeService::getCurrentRequestId()
+                );
+            }
+
+            $changeRequest = ChangeRequest::query()
+                ->where('tenant_id', $tenantId)
+                ->whereKey($id)
+                ->first();
+
+            if (!$changeRequest) {
+                return $this->notFound('Change request not found');
+            }
+
+            $entries = AuditLog::query()
+                ->where('tenant_id', $tenantId)
+                ->where('entity_type', 'change_request')
+                ->where('entity_id', (string) $changeRequest->id)
+                ->whereIn('action', array_keys(self::TIMELINE_ACTION_STATUS_MAP))
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get()
+                ->map(function (AuditLog $auditLog): array {
+                    return [
+                        'audit_log_id' => (string) $auditLog->id,
+                        'action' => (string) $auditLog->action,
+                        'status' => self::TIMELINE_ACTION_STATUS_MAP[$auditLog->action] ?? null,
+                        'occurred_at' => $auditLog->created_at?->toISOString(),
+                        'user_id' => $auditLog->user_id !== null ? (string) $auditLog->user_id : null,
+                        'route' => $auditLog->route,
+                        'method' => $auditLog->method,
+                        'status_code' => $auditLog->status_code,
+                    ];
+                })
+                ->values();
+
+            return $this->zenaSuccessResponse($entries);
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to retrieve change request timeline: ' . $e->getMessage());
         }
     }
 

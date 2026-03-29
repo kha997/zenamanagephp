@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, and now proves `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets. With the acceptance boundary narrowed to already-proved canonical slices, `S2.1`, `S2.2`, `S3.2`, and `S3.4` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, and now proves `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`. With the acceptance boundary narrowed to already-proved canonical slices, `S2.1`, `S2.2`, `S3.2`, `S3.4`, and `S5.1` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
@@ -316,6 +316,35 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
   - Canonical same-tenant and same-project enforcement is proved on the CR-owned link mutation path.
   - Canonical `GET /api/zena/change-requests/{id}` now returns `affected_scope_summary` with tasks/components resolved from `cr_links` and documents resolved from Document Center ownership.
   - Explicit test evidence proves `type=document` is rejected on the CR-owned mutation path and that ignored `cr_links(document)` residue is not used as canonical document proof.
+
+### Round 15
+
+- Date: 2026-03-29
+- Scope: `S5.1` canonical inspection checklist-template slice on `/api/zena/work-templates` and `/api/zena/inspections`
+- Outcome: locked runtime slice + done verdict
+- Key files:
+  - `app/Http/Controllers/Api/InspectionController.php`
+  - `app/Models/QcInspection.php`
+  - `database/migrations/2026_03_29_120000_add_work_instance_step_id_to_qc_inspections_table.php`
+  - `tests/Feature/Api/WorkTemplateBaselineSeederTest.php`
+  - `tests/Feature/Api/InspectionTemplateRuntimeTest.php`
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+- Evidence:
+  - head reviewed: `692aff0f5ff06d9fcc6d83934ea88dd91cb59544`
+  - routes: `php artisan route:list | grep -E "work-template|inspection|checklist" || true`
+  - tests: `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateBaselineSeederTest.php` -> `OK (3 tests, 379 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/InspectionTemplateRuntimeTest.php` -> `OK (3 tests, 30 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Inspection` -> `OK (11 tests, 95 assertions)`
+  - lint: `composer ssot:lint`
+- Deferred:
+  - notification semantics
+  - NCR/CAPA/escalation/dashboard work
+  - `/api/v1/*`
+  - exact status-code semantics for foreign-tenant generated-step linkage
+- Notes:
+  - Canonical proof reuses the existing published baseline template `WT-BL-INSPECTION`; no WorkTemplate redesign was introduced.
+  - Preview/apply prove an `inspection` step generates checklist snapshot artifacts under `work_instance_steps` ownership.
+  - Canonical inspection runtime now persists an optional `work_instance_step_id` link, returns generated checklist metadata, and syncs checklist execution back into `work_instance_field_values`.
+  - `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=WorkTemplateBaselineSeederTest` currently returns `No tests executed!` in this repo, so direct-file execution is the positive evidence path for that suite.
 
 ## 5. Progress By Roadmap
 

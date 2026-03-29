@@ -136,6 +136,59 @@ class DocumentManagementTest extends TestCase
             ->assertJsonPath('data.0.linked_entity_id', $changeRequestId);
     }
 
+    public function test_canonical_documents_store_and_index_prove_metadata_fields(): void
+    {
+        $response = $this->apiPostMultipart($this->zena('documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'A2 Architectural Set',
+            'document_type' => 'specification',
+            'discipline' => 'architectural',
+            'package' => 'SPEC-A2',
+            'status' => 'review',
+            'revision' => 'B',
+            'tags' => ['issued', 'coordination'],
+            'description' => 'Canonical metadata proof',
+            'file' => $this->createValidPdfUploadedFile('a2-architectural.pdf'),
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.document_type', 'specification')
+            ->assertJsonPath('data.discipline', 'architectural')
+            ->assertJsonPath('data.package', 'SPEC-A2')
+            ->assertJsonPath('data.status', 'review')
+            ->assertJsonPath('data.revision', 'B')
+            ->assertJsonPath('data.metadata.document_type', 'specification')
+            ->assertJsonPath('data.metadata.discipline', 'architectural')
+            ->assertJsonPath('data.metadata.package', 'SPEC-A2')
+            ->assertJsonPath('data.metadata.status', 'review')
+            ->assertJsonPath('data.metadata.revision', 'B')
+            ->assertJsonPath('data.metadata.tags.0', 'issued');
+
+        $documentId = $response->json('data.id');
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $documentId,
+            'tenant_id' => $this->tenant->id,
+            'document_type' => 'specification',
+            'discipline' => 'architectural',
+            'package' => 'SPEC-A2',
+            'status' => 'review',
+            'revision' => 'B',
+        ]);
+
+        $this->apiGet($this->zena('documents.index', query: [
+            'document_type' => 'specification',
+            'discipline' => 'architectural',
+            'package' => 'SPEC-A2',
+            'status' => 'review',
+            'revision' => 'B',
+            'q' => 'Architectural',
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $documentId);
+    }
+
     public function test_can_update_document_metadata_fields(): void
     {
         $document = $this->createDocument([
@@ -171,6 +224,53 @@ class DocumentManagementTest extends TestCase
         $this->assertDatabaseHas('documents', [
             'id' => $document->id,
             'title' => 'Updated Spec',
+            'discipline' => 'interior',
+            'package' => 'SPEC-02',
+            'status' => 'approved',
+            'revision' => '1',
+        ]);
+    }
+
+    public function test_canonical_update_persists_document_metadata_fields(): void
+    {
+        $document = $this->createDocument([
+            'document_type' => 'specification',
+            'discipline' => 'architectural',
+            'package' => 'SPEC-01',
+            'status' => 'draft',
+            'revision' => '0',
+            'metadata' => [
+                'document_type' => 'specification',
+                'discipline' => 'architectural',
+                'package' => 'SPEC-01',
+                'status' => 'draft',
+                'revision' => '0',
+            ],
+        ]);
+
+        $this->apiPut($this->zena('documents.update', ['id' => $document->id]), [
+            'title' => 'Canonical Spec',
+            'discipline' => 'interior',
+            'package' => 'SPEC-02',
+            'status' => 'approved',
+            'revision' => '1',
+            'tags' => ['approved'],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Canonical Spec')
+            ->assertJsonPath('data.discipline', 'interior')
+            ->assertJsonPath('data.package', 'SPEC-02')
+            ->assertJsonPath('data.status', 'approved')
+            ->assertJsonPath('data.revision', '1')
+            ->assertJsonPath('data.metadata.discipline', 'interior')
+            ->assertJsonPath('data.metadata.package', 'SPEC-02')
+            ->assertJsonPath('data.metadata.status', 'approved')
+            ->assertJsonPath('data.metadata.revision', '1')
+            ->assertJsonPath('data.metadata.tags.0', 'approved');
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'title' => 'Canonical Spec',
             'discipline' => 'interior',
             'package' => 'SPEC-02',
             'status' => 'approved',
@@ -222,6 +322,65 @@ class DocumentManagementTest extends TestCase
         $versionsResponse->assertOk()
             ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.version_number', 2)
+            ->assertJsonPath('data.1.version_number', 1);
+
+        $this->assertSame(2, DocumentVersion::where('document_id', $documentId)->count());
+    }
+
+    public function test_canonical_version_history_is_retained_on_zena_document_versions_routes(): void
+    {
+        $create = $this->apiPostMultipart($this->zena('documents.store'), [
+            'project_id' => $this->project->id,
+            'title' => 'Canonical Panel Layout',
+            'document_type' => 'drawing',
+            'discipline' => 'electrical',
+            'package' => 'ELEC-01',
+            'status' => 'draft',
+            'revision' => '0',
+            'file' => $this->createValidPdfUploadedFile('canonical-panel-layout-v1.pdf'),
+        ])->assertCreated();
+
+        $documentId = $create->json('data.id');
+
+        $this->apiPostMultipart($this->zena('documents.versions.store', ['id' => $documentId]), [
+            'file' => $this->createValidPdfUploadedFile('canonical-panel-layout-v2.pdf'),
+            'version' => 2,
+            'document_type' => 'drawing',
+            'discipline' => 'electrical',
+            'package' => 'ELEC-02',
+            'status' => 'review',
+            'revision' => '1',
+            'change_notes' => 'Canonical feeder routing update',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.version', 2)
+            ->assertJsonPath('data.package', 'ELEC-02')
+            ->assertJsonPath('data.status', 'review')
+            ->assertJsonPath('data.revision', '1')
+            ->assertJsonPath('data.metadata.package', 'ELEC-02')
+            ->assertJsonPath('data.metadata.status', 'review')
+            ->assertJsonPath('data.metadata.revision', '1')
+            ->assertJsonPath('data.metadata.change_notes', 'Canonical feeder routing update');
+
+        $document = Document::findOrFail($documentId);
+
+        $this->assertSame(2, (int) $document->version);
+        $this->assertNotNull($document->current_version_id);
+        $this->assertDatabaseHas('document_versions', [
+            'document_id' => $documentId,
+            'version_number' => 1,
+        ]);
+        $this->assertDatabaseHas('document_versions', [
+            'document_id' => $documentId,
+            'version_number' => 2,
+            'comment' => 'Canonical feeder routing update',
+        ]);
+
+        $versionsResponse = $this->apiGet($this->zena('documents.versions.index', ['id' => $documentId]));
+        $versionsResponse->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.version_number', 2)
+            ->assertJsonPath('data.0.comment', 'Canonical feeder routing update')
             ->assertJsonPath('data.1.version_number', 1);
 
         $this->assertSame(2, DocumentVersion::where('document_id', $documentId)->count());
@@ -393,6 +552,68 @@ class DocumentManagementTest extends TestCase
 
         $this->apiPost($this->zena('documents.decision', ['id' => $document->id]), [
             'decision' => 'approved',
+        ])->assertForbidden();
+    }
+
+    public function test_canonical_document_version_routes_are_tenant_safe(): void
+    {
+        $otherTenant = Tenant::factory()->create();
+        $otherUser = $this->createTenantUser($otherTenant, [], ['designer'], [
+            'document.view',
+            'document.update',
+        ]);
+        $otherProject = Project::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'created_by' => $otherUser->id,
+        ]);
+
+        $foreignDocument = Document::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'project_id' => $otherProject->id,
+            'uploaded_by' => $otherUser->id,
+            'created_by' => $otherUser->id,
+            'updated_by' => $otherUser->id,
+            'status' => 'draft',
+            'version' => 1,
+        ]);
+
+        $this->apiGet($this->zena('documents.versions.index', ['id' => $foreignDocument->id]))
+            ->assertNotFound();
+
+        $this->apiPostMultipart($this->zena('documents.versions.store', ['id' => $foreignDocument->id]), [
+            'file' => $this->createValidPdfUploadedFile('foreign-version.pdf'),
+            'version' => 2,
+            'revision' => '1',
+            'status' => 'review',
+        ])->assertNotFound();
+    }
+
+    public function test_canonical_document_versions_index_allows_view_access(): void
+    {
+        $document = $this->createDocument();
+
+        $viewOnlyUser = $this->createTenantUser($this->tenant, [], ['engineer'], [
+            'document.view',
+        ]);
+        $this->apiAs($viewOnlyUser, $this->tenant);
+
+        $this->apiGet($this->zena('documents.versions.index', ['id' => $document->id]))
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_canonical_document_versions_store_rejects_missing_update_permission(): void
+    {
+        $document = $this->createDocument();
+
+        $viewOnlyUser = $this->createTenantUser($this->tenant, [], ['engineer'], [
+            'document.view',
+        ]);
+        $this->apiAs($viewOnlyUser, $this->tenant);
+
+        $this->apiPostMultipart($this->zena('documents.versions.store', ['id' => $document->id]), [
+            'file' => $this->createValidPdfUploadedFile('blocked-version.pdf'),
+            'version' => 2,
         ])->assertForbidden();
     }
 

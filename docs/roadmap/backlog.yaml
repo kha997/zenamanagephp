@@ -316,8 +316,14 @@ epics:
         title: "Material catalog + vendor list"
         priority: P1
         status: todo
+        updated_at: 2026-03-29
         acceptance_criteria:
-          - "CRUD material catalog + vendor records with RBAC/tenant."
+          - "Canonical owner surface is limited to `/api/zena/materials` and `/api/zena/vendors`."
+          - "First slice is tenant-safe CRUD only for material catalog + vendor records with RBAC/tenant isolation."
+          - "Do not use `/api/zena/site-engineer/material-requests` or `/api/zena/submittals` as proof of canonical material/vendor ownership."
+        notes:
+          - "Planning lock for the next runtime round: `MaterialRequest` is not part of the first S4.1 owner contract because current evidence only shows model/schema residue plus dashboard projection, not a canonical material/vendor owner path."
+          - "BOQ, submittals, delivery/receipt, approvals, notifications, and compensation linkage are explicitly deferred outside S4.1."
       - id: S4.2
         title: "BOQ line items linked to Project/Component"
         priority: P1

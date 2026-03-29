@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, proved `S5.2` on the same inspection owner path by adding nested `/api/zena/inspections/{inspection}/ncrs` create/list/show/status endpoints plus a minimal task-handoff payload into canonical `/api/zena/tasks`, and completed `S0.1`'s narrowed route-mounting inventory by explicitly composing `src/WorkTemplate/routes/api.php` from `routes/api.php`, disabling provider-based route auto-mount in `Src\WorkTemplate\Providers\WorkTemplateServiceProvider`, and preserving the `/api/v1/work-template*` compatibility surface without duplicate METHOD+URI or double-prefix drift. With the acceptance boundary narrowed to already-proved canonical slices and the active provider offender inventory cleared, `S0.1`, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, `S5.1`, and `S5.2` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, proved `S5.2` on the same inspection owner path by adding nested `/api/zena/inspections/{inspection}/ncrs` create/list/show/status endpoints plus a minimal task-handoff payload into canonical `/api/zena/tasks`, and completed `S0.1`'s narrowed route-mounting inventory by explicitly composing `src/WorkTemplate/routes/api.php` from `routes/api.php`, disabling provider-based route auto-mount in `Src\WorkTemplate\Providers\WorkTemplateServiceProvider`, and preserving the `/api/v1/work-template*` compatibility surface without duplicate METHOD+URI or double-prefix drift. The next planning lock now targets `S4.1`: current evidence supports a narrow master-data owner contract on `/api/zena/materials` and `/api/zena/vendors` only, while `MaterialRequest` remains dashboard/projection residue rather than canonical owner proof. With the acceptance boundary narrowed to already-proved canonical slices and the active provider offender inventory cleared, `S0.1`, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, `S5.1`, and `S5.2` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
@@ -180,6 +180,41 @@ For `S5.2`, the narrowed execution round is now proved: NCR ownership remains on
   - `routes/api.php` now explicitly mounts `src/Notification/routes/api.php`, and `NotificationServiceProvider` no longer calls `loadRoutesFrom(...)`.
   - Notification compatibility route files now define `v1/*` prefixes so the runtime surface remains `/api/v1/*` after composition under the root API prefix.
   - This round proves only the Notification starter slice for `S0.1`; backlog status remains `todo` until broader module-skeleton and route-law coverage is evidenced.
+
+### Round 24
+
+- Date: 2026-03-29
+- Scope: `S4.1` material catalog + vendor owner/contract planning lock
+- Outcome: docs-only planning lock
+- Key files:
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+  - `docs/change-proposals/2026-03-29-s4-1-material-vendor-owner-contract.md`
+  - `routes/api_zena.php`
+  - `app/Models/MaterialRequest.php`
+  - `app/Http/Controllers/Api/SiteEngineerDashboardController.php`
+  - `database/migrations/2025_09_14_110000_create_zena_system_tables.php`
+  - `database/seeders/ZenaRbacSeeder.php`
+  - `database/seeders/ZenaPermissionsSeeder.php`
+  - `app/Services/PresetService.php`
+- Evidence:
+  - head reviewed: `84dd1397713b8cfff086448ee577be3ca9459bc0`
+  - runtime truth: `php artisan route:list | grep -E "material|vendor|submittal|request" || true` shows canonical `/api/zena/site-engineer/material-requests` and `/api/zena/submittals*`, but no canonical `/api/zena/materials*` or `/api/zena/vendors*`
+  - material-request residue: `app/Models/MaterialRequest.php` plus `database/migrations/2025_09_14_110000_create_zena_system_tables.php` define request/workflow fields only, not material catalog or vendor master-data ownership
+  - dashboard projection: `app/Http/Controllers/Api/SiteEngineerDashboardController.php` reads `MaterialRequest` through a site-engineer projection and shows field/status drift relative to the model/schema, so it is not a safe owner contract source
+  - RBAC drift: `database/seeders/ZenaRbacSeeder.php` seeds legacy `material.*`; `database/seeders/ZenaPermissionsSeeder.php` seeds `site-engineer.material-requests`; `app/Services/PresetService.php` expects `material_request.read` and `vendor.read`
+  - proposal lock: `docs/change-proposals/2026-03-29-s4-1-material-vendor-owner-contract.md`
+- Deferred:
+  - `S4.2` BOQ ownership and linkage
+  - `S4.3` submittal package ownership/approvals
+  - `S4.4` delivery/receipt
+  - `S4.5` compensation linkage
+  - procurement approvals
+  - notifications
+- Notes:
+  - The safe first owner surface for `S4.1` is new canonical master-data CRUD on `/api/zena/materials` and `/api/zena/vendors`.
+  - `MaterialRequest` is explicitly out of owner scope for `S4.1`; current evidence supports it only as request/workflow residue plus dashboard projection.
+  - This planning lock intentionally does not infer vendor ownership from menu links, purchase-order `vendor_name` strings, or compatibility/backup routes.
 
 ### Round 1
 
@@ -786,6 +821,31 @@ For `S5.2`, the narrowed execution round is now proved: NCR ownership remains on
 - Next action:
   - keep any future work narrow: extend timeline or attachment semantics only with fresh canonical evidence, without reopening `/api/v1/*` or using `change_requests.attachments` as proof.
 
+#### S4.1 Material catalog + vendor list
+
+- Roadmap status: todo
+- Progress status: planning locked
+- Current state:
+  - Current runtime truth does not expose canonical `/api/zena/materials*` or `/api/zena/vendors*`.
+  - Current repo evidence for materials is limited to `MaterialRequest` residue and the role-specific dashboard projection at `/api/zena/site-engineer/material-requests`.
+  - Current repo evidence for vendors is limited to UI/menu expectations plus `vendor_name` string residue in purchase-order seed data; no canonical vendor model/table/controller/policy/test evidence exists.
+  - `SubmittalController` already owns `/api/zena/submittals`, so submittal package semantics must stay out of `S4.1`.
+- Evidence:
+  - route truth: `php artisan route:list | grep -E "material|vendor|submittal|request" || true`
+  - model/schema residue: `app/Models/MaterialRequest.php`; `database/migrations/2025_09_14_110000_create_zena_system_tables.php`
+  - dashboard projection: `app/Http/Controllers/Api/SiteEngineerDashboardController.php`
+  - RBAC/menu drift: `database/seeders/ZenaRbacSeeder.php`; `database/seeders/ZenaPermissionsSeeder.php`; `app/Services/PresetService.php`
+  - planning lock: `docs/change-proposals/2026-03-29-s4-1-material-vendor-owner-contract.md`
+- Deferred / remaining:
+  - BOQ linkage
+  - submittal ownership or approvals
+  - delivery/receipt
+  - notifications
+  - compensation linkage
+  - any canonical material-request workflow story
+- Next action:
+  - implement only the narrow canonical master-data CRUD slice on `/api/zena/materials` and `/api/zena/vendors`, with tenant safety and RBAC, and keep `MaterialRequest` out of owner scope.
+
 ## 6. Next Action Queue
 
 1. Preserve the current canonical notification write path on `/api/zena/change-requests` without reopening `/api/v1/*` compatibility surfaces.
@@ -794,6 +854,7 @@ For `S5.2`, the narrowed execution round is now proved: NCR ownership remains on
 4. Use the `S3.1` proposal lock before any runtime work: task/component affected scope via `cr_links`, document scope via Document Center ownership, and no overlapping canonical document contract.
 5. Treat S3.3 as complete at the proved minimal canonical `apply()` slice and avoid reopening it for broader baseline or compatibility redesign.
 6. Keep `S3.4` closed at the proved canonical slice: timeline from audit-backed workflow history and attachments from Document Center CR links, with richer semantics deferred to later stories if needed.
+7. Use the `S4.1` planning lock before any procurement runtime work: material/vendor master-data ownership on `/api/zena/materials` and `/api/zena/vendors`, with `MaterialRequest` explicitly treated as non-owner evidence.
 
 ## 7. Out Of Scope / Deferred
 
@@ -802,4 +863,5 @@ For `S5.2`, the narrowed execution round is now proved: NCR ownership remains on
 - Broad document/media/storage architecture cleanup beyond the narrow `S3.4` contract proposal.
 - Full document review matrix until route/runtime/test evidence exists.
 - `/api/v1/*` compatibility remapping or forward-owner expansion.
+- BOQ, submittals, delivery/receipt, procurement approvals, notifications, or compensation linkage inside the first `S4.1` runtime round.
 - Any implementation claim not backed by route, runtime, test, or lint evidence.

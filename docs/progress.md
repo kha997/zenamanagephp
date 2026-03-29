@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, and proved `S0.1`'s first narrow runtime slice by remounting the Notification compatibility module explicitly from `routes/api.php` while disabling provider auto-mount and preserving the `/api/v1/notifications*` plus `/api/v1/notification-rules*` surface without duplicate-prefix drift. With the acceptance boundary narrowed to already-proved canonical slices, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, and `S5.1` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, and completed `S0.1`'s narrowed route-mounting inventory by explicitly composing `src/WorkTemplate/routes/api.php` from `routes/api.php`, disabling provider-based route auto-mount in `Src\WorkTemplate\Providers\WorkTemplateServiceProvider`, and preserving the `/api/v1/work-template*` compatibility surface without duplicate METHOD+URI or double-prefix drift. With the acceptance boundary narrowed to already-proved canonical slices and the active provider offender inventory cleared, `S0.1`, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, and `S5.1` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
@@ -24,6 +24,65 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 - Do not change domain/app logic just to pass test or CI.
 
 ## 4. Recent Locked Rounds
+
+### Round 21
+
+- Date: 2026-03-29
+- Scope: `S0.1` narrow WorkTemplate route-mounting slice
+- Outcome: locked runtime slice
+- Key files:
+  - `routes/api.php`
+  - `src/WorkTemplate/Providers/WorkTemplateServiceProvider.php`
+  - `src/WorkTemplate/routes/api.php`
+  - `tests/Unit/WorkTemplateRouteMountingLawTest.php`
+  - `tests/Feature/Architecture/WorkTemplateRouteInvariantTest.php`
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+- Evidence:
+  - head reviewed: `e069fb2346c7efc38ba561d4816614cd1c30f752`
+  - routing law: `docs/architecture/routing-architecture.md` keeps `routes/api.php` as the sole API composition point and forbids provider route mounting
+  - composition change: `routes/api.php` now explicitly requires `src/WorkTemplate/routes/api.php`
+  - provider change: `src/WorkTemplate/Providers/WorkTemplateServiceProvider.php` no longer mounts routes and only keeps service bindings plus event-listener registration
+  - offender scan: `rg -n 'loadRoutesFrom\\(|Route::middleware\\(\\[.?api.?\\]\\).*prefix\\(.?api.?' src/*/Providers config/app.php` shows only disabled/commented route mounts outside WorkTemplate after this slice
+  - runtime truth: `php artisan route:list --path=api/v1/work-template` still shows the existing `/api/v1/work-template*` compatibility surface; the command also substring-matches `/api/v1/work-templates`, so targeted invariants count the WorkTemplate compatibility subset at `30 routes`
+  - tests: `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Route` -> `OK (70 tests, 2328 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Architecture` -> `OK (21 tests, 367 assertions)`
+  - lint: `composer ssot:lint`; `php artisan optimize:clear`
+- Deferred:
+  - any canonical `/api/zena/*` redesign for WorkTemplate business ownership
+  - any repo-wide route cleanup beyond the now-cleared active provider offender inventory
+  - `S3.2a`
+- Notes:
+  - This round proves routing composition law and compatibility-surface stability only; it does not redesign WorkTemplate business behavior.
+  - New targeted tests lock the explicit mount and the absence of duplicate METHOD+URI or double-prefix drift for `/api/v1/work-template*`.
+
+### Round 20
+
+- Date: 2026-03-29
+- Scope: `S0.1` planning adjustment after the proved Notification route-mounting slice
+- Outcome: docs-only keep-open verdict
+- Key files:
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+  - `docs/architecture/routing-architecture.md`
+  - `routes/api.php`
+  - `src/WorkTemplate/Providers/WorkTemplateServiceProvider.php`
+  - `src/Notification/Providers/NotificationServiceProvider.php`
+  - `tests/Unit/NotificationRouteMountingLawTest.php`
+  - `tests/Feature/Architecture/NotificationRouteInvariantTest.php`
+- Evidence:
+  - head reviewed: `e069fb2346c7efc38ba561d4816614cd1c30f752`
+  - routing law: `docs/architecture/routing-architecture.md` forbids ServiceProvider route mounting and requires explicit composition in `routes/api.php`
+  - explicit mounts present: `routes/api.php` requires `src/ChangeRequest/routes/api.php`, `src/RBAC/routes/api.php`, `src/DocumentManagement/routes/api.php`, `src/Compensation/routes/api.php`, `src/CoreProject/routes/api.php`, and `src/Notification/routes/api.php`
+  - active offender: `src/WorkTemplate/Providers/WorkTemplateServiceProvider.php` still mounts `src/WorkTemplate/routes/api.php` via `Route::middleware(['api'])->prefix('api')->group(...)`
+  - runtime truth: `php artisan route:list --path=api/v1/work-template` -> `30 routes`; `php artisan route:list --path=api/v1/work-templates` -> `6 routes`; `php artisan route:list --path=api/v1/notifications` -> `10 routes`; `php artisan route:list --path=api/v1/notification-rules` -> `8 routes`
+- Deferred:
+  - any implementation work against the remaining `WorkTemplateServiceProvider` offender
+  - any repo-wide route cleanup beyond the active provider auto-mount offender inventory
+  - any canonical `/api/zena/*` redesign for Notification or WorkTemplate compatibility surfaces
+- Notes:
+  - Notification remains the only slice explicitly proved by targeted law/invariant tests in this story at the locked snapshot.
+  - Notification is not the only active offender worth tracking for `S0.1`; `WorkTemplateServiceProvider` remains an evidence-backed active provider-based route composer.
+  - The planning direction is therefore to keep `S0.1` open with a narrowed, evidence-backed offender scope instead of declaring the story effectively complete around Notification alone.
 
 ### Round 19
 

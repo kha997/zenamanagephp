@@ -32,12 +32,21 @@ epics:
       - id: S0.1
         title: "Standard module skeleton + route mounting law"
         priority: P0
-        status: todo
+        status: done
+        updated_at: 2026-03-29
         acceptance_criteria:
           - "New module follows src/<Module>/{Controllers,Services,Models,routes/api.php}."
           - "Routes mounted in routes/api.php; no auto-load via provider."
           - "Routes are in correct middleware stack."
           - "composer ssot:lint passes with no NEW violations."
+        evidence:
+          routes: "Compatibility mount kept at /api/v1/work-template* via explicit require in routes/api.php; php artisan route:list --path=api/v1/work-template"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Route (70 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Architecture (21 passed); tests/Unit/WorkTemplateRouteMountingLawTest.php; tests/Feature/Architecture/WorkTemplateRouteInvariantTest.php"
+          lint: "composer ssot:lint; php artisan optimize:clear"
+        notes:
+          - "The Notification compatibility module is the first proved slice for this story: `routes/api.php` explicitly mounts `src/Notification/routes/api.php`, and `src/Notification/Providers/NotificationServiceProvider.php` no longer auto-mounts routes."
+          - "The final active provider-based route-mount offender in the narrowed runtime inventory was `src/WorkTemplate/Providers/WorkTemplateServiceProvider.php`; this slice moved `src/WorkTemplate/routes/api.php` composition into `routes/api.php` and removed provider-side route mounting while preserving the compatibility `/api/v1/work-template*` runtime surface."
+          - "Provider scan for the mounted module inventory now shows disabled or commented route auto-mounts elsewhere and no remaining active `Route::middleware(['api'])->prefix('api')->group(...)` offender under `src/*/Providers`."
       - id: S0.2
         title: "CI reliability hardening (Dusk/Docker/SSOT)"
         priority: P0

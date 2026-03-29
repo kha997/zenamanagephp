@@ -13,6 +13,8 @@ The repo is in a controlled evidence-locking phase around the canonical `/api/ze
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
+For `S5.2`, planning is now narrowed before execution: current evidence supports NCR ownership only as a child of the canonical inspection owner path, while CAPA execution must reuse the existing canonical `/api/zena/tasks` surface and keep NCR↔task reverse-link semantics, escalations, notifications, dashboards, and broader QMS cleanup explicitly deferred until runtime evidence exists.
+
 ## 3. Operating Rules
 
 - `docs/roadmap/backlog.yaml` is the story-status and planning SSOT.
@@ -24,6 +26,45 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 - Do not change domain/app logic just to pass test or CI.
 
 ## 4. Recent Locked Rounds
+
+### Round 22
+
+- Date: 2026-03-29
+- Scope: `S5.2` NCR + CAPA owner/contract planning lock
+- Outcome: docs-only planning lock
+- Key files:
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+  - `docs/change-proposals/2026-03-29-s5-2-ncr-capa-owner-contract.md`
+  - `app/Models/Ncr.php`
+  - `database/migrations/2025_09_20_142033_create_ncrs_table.php`
+  - `app/Policies/NcrPolicy.php`
+  - `app/Models/QcInspection.php`
+  - `routes/api_zena.php`
+  - `app/Http/Controllers/Api/TaskController.php`
+  - `tests/Feature/InspectionNcrWorkflowTest.php`
+  - `tests/Feature/Api/InspectionTemplateRuntimeTest.php`
+  - `tests/Feature/Api/TaskApiTest.php`
+- Evidence:
+  - head reviewed: `29810a614e9462b09ceb277a276bd23944830559`
+  - runtime truth: `php artisan route:list | grep -E "inspection|ncr|task" || true` shows canonical `/api/zena/inspections*` and `/api/zena/tasks*`, but no canonical `/api/zena/ncr*` route family
+  - NCR inventory: `App\\Models\\Ncr`, `database/migrations/2025_09_20_142033_create_ncrs_table.php`, `App\\Policies\\NcrPolicy`, `Database\\Factories\\NcrFactory`, and `tests/Feature/InspectionNcrWorkflowTest.php`
+  - inspection linkage: `App\\Models\\QcInspection::ncrs()` plus canonical `/api/zena/inspections` ownership already proved in `tests/Feature/Api/InspectionTemplateRuntimeTest.php`
+  - task owner evidence: canonical `/api/zena/tasks` route family in `routes/api_zena.php` and owner/route invariants in `tests/Feature/Architecture/TasksContractParityAuditInvariantTest.php`
+  - contract gap: no active `NcrController`, no canonical NCR route tests, and no current canonical persistent NCR↔task link field/table proof
+- Deferred:
+  - notification semantics
+  - escalation rules
+  - dashboards
+  - broad QMS cleanup
+  - broader NCR↔task reverse-link semantics
+  - standalone dedicated `/api/zena/ncrs/*` owner family
+  - `under_review` semantics as part of the first canonical proof slice
+  - `S3.2a`
+- Notes:
+  - The recommended first owner surface for `S5.2` is nested under inspections because that is the only current NCR linkage grounded by both model evidence and canonical route ownership.
+  - CAPA must stay on the existing canonical task owner path; this planning lock intentionally does not create a second CAPA API family.
+  - The `ncrs.inspection_id` column is nullable in schema, but the first canonical proof slice should not infer standalone NCR ownership from that alone.
 
 ### Round 21
 

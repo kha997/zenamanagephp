@@ -334,7 +334,13 @@ epics:
         priority: P1
         status: todo
         acceptance_criteria:
-          - "BOQ CRUD + line items; each can link component/task."
+          - "Canonical owner surface is limited to `/api/zena/boqs`."
+          - "First slice proves tenant-safe BOQ CRUD plus nested line-item CRUD on the BOQ owner path."
+          - "Every BOQ belongs to one project; each line item may optionally link one component in the same project."
+          - "Do not use `MaterialRequest`, `/api/zena/submittals`, or `/api/v1/*` as proof of canonical BOQ ownership."
+        notes:
+          - "This first slice is limited to BOQ + line-item ownership and project/component linkage only."
+          - "Task linkage, pricing rollups, approvals, notifications, delivery/receipt, compensation, and submittal semantics are deferred outside S4.2 until separately evidenced."
       - id: S4.3
         title: "Material submittal package (docs + approvals)"
         priority: P1

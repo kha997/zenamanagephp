@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Baseline;
 use App\Models\ChangeRequest;
+use App\Models\Component;
 use App\Models\CrLink;
+use App\Models\Document;
 use App\Models\Notification;
 use App\Models\Project;
 use App\Models\Task;
@@ -460,6 +462,232 @@ class ChangeRequestApiTest extends TestCase
 
         $this->assertNotNull($baseline, 'Expected canonical baseline delta to be persisted.');
         $this->assertSame('contract', $baseline->type);
+    }
+
+    public function test_can_attach_and_detach_task_link_on_canonical_change_request_path(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => ChangeRequest::STATUS_DRAFT,
+        ]);
+
+        $task = Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/links", [
+                'linked_type' => CrLink::LINKED_TYPE_TASK,
+                'linked_id' => $task->id,
+                'link_description' => 'Task scope impact',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.linked_type', CrLink::LINKED_TYPE_TASK)
+            ->assertJsonPath('data.linked_id', $task->id);
+
+        $this->assertDatabaseHas('cr_links', [
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_TASK,
+            'linked_id' => $task->id,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->deleteJson("/api/zena/change-requests/{$changeRequest->id}/links", [
+                'linked_type' => CrLink::LINKED_TYPE_TASK,
+                'linked_id' => $task->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.removed', true);
+
+        $this->assertDatabaseMissing('cr_links', [
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_TASK,
+            'linked_id' => $task->id,
+        ]);
+    }
+
+    public function test_can_attach_and_detach_component_link_on_canonical_change_request_path(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => ChangeRequest::STATUS_DRAFT,
+        ]);
+
+        $component = Component::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/links", [
+                'linked_type' => CrLink::LINKED_TYPE_COMPONENT,
+                'linked_id' => $component->id,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.linked_type', CrLink::LINKED_TYPE_COMPONENT)
+            ->assertJsonPath('data.linked_id', (string) $component->id);
+
+        $this->assertDatabaseHas('cr_links', [
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_COMPONENT,
+            'linked_id' => $component->id,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->deleteJson("/api/zena/change-requests/{$changeRequest->id}/links", [
+                'linked_type' => CrLink::LINKED_TYPE_COMPONENT,
+                'linked_id' => $component->id,
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseMissing('cr_links', [
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_COMPONENT,
+            'linked_id' => $component->id,
+        ]);
+    }
+
+    public function test_document_cannot_be_linked_through_change_request_owned_mutation_path(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => ChangeRequest::STATUS_DRAFT,
+        ]);
+
+        $document = Document::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'uploaded_by' => $this->user->id,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/links", [
+                'linked_type' => CrLink::LINKED_TYPE_DOCUMENT,
+                'linked_id' => $document->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('error.details.data.linked_type.0', 'Only task and component links can be mutated on this path.');
+
+        $this->assertDatabaseMissing('cr_links', [
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_DOCUMENT,
+            'linked_id' => $document->id,
+        ]);
+    }
+
+    public function test_canonical_change_request_link_mutation_enforces_same_tenant_and_project(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => ChangeRequest::STATUS_DRAFT,
+        ]);
+
+        $otherProject = Project::factory()->for($this->tenant)->create();
+        $wrongProjectTask = Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $otherProject->id,
+            'created_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/links", [
+                'linked_type' => CrLink::LINKED_TYPE_TASK,
+                'linked_id' => $wrongProjectTask->id,
+            ])
+            ->assertNotFound();
+
+        $otherTenant = Tenant::factory()->create();
+        $foreignProject = Project::factory()->for($otherTenant)->create();
+        $foreignComponent = Component::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'project_id' => $foreignProject->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->postJson("/api/zena/change-requests/{$changeRequest->id}/links", [
+                'linked_type' => CrLink::LINKED_TYPE_COMPONENT,
+                'linked_id' => $foreignComponent->id,
+            ])
+            ->assertNotFound();
+    }
+
+    public function test_show_returns_minimal_affected_scope_summary_from_canonical_owner_surfaces(): void
+    {
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'status' => ChangeRequest::STATUS_DRAFT,
+        ]);
+
+        $task = Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+            'name' => 'Affected task',
+        ]);
+
+        $component = Component::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'name' => 'Affected component',
+        ]);
+
+        $document = Document::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'uploaded_by' => $this->user->id,
+            'title' => 'Affected CR document',
+            'linked_entity_type' => Document::ENTITY_TYPE_CR,
+            'linked_entity_id' => $changeRequest->id,
+        ]);
+
+        CrLink::create([
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_TASK,
+            'linked_id' => $task->id,
+        ]);
+
+        CrLink::create([
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_COMPONENT,
+            'linked_id' => $component->id,
+        ]);
+
+        CrLink::create([
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_DOCUMENT,
+            'linked_id' => '01HZYIGNOREDDOCLINK0000000001',
+        ]);
+
+        $this->withHeaders($this->headers)
+            ->getJson("/api/zena/change-requests/{$changeRequest->id}")
+            ->assertOk()
+            ->assertJsonPath('data.affected_scope_summary.tasks.0.id', (string) $task->id)
+            ->assertJsonPath('data.affected_scope_summary.components.0.id', (string) $component->id)
+            ->assertJsonPath('data.affected_scope_summary.documents.0.id', (string) $document->id)
+            ->assertJsonPath('data.affected_scope_summary.documents.0.linked_entity_type', Document::ENTITY_TYPE_CR)
+            ->assertJsonCount(1, 'data.affected_scope_summary.tasks')
+            ->assertJsonCount(1, 'data.affected_scope_summary.components')
+            ->assertJsonCount(1, 'data.affected_scope_summary.documents');
     }
 
     public function test_update_cannot_mutate_workflow_status_directly(): void

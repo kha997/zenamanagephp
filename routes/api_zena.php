@@ -302,6 +302,20 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::delete('/{id}', [\App\Http\Controllers\Api\VendorController::class, 'destroy'])->middleware('rbac:vendor.delete')->name('vendors.destroy');
         });
 
+        Route::group(['prefix' => 'boqs'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\BoqController::class, 'index'])->middleware('rbac:boq.view')->name('boqs.index');
+            Route::post('/', [\App\Http\Controllers\Api\BoqController::class, 'store'])->middleware('rbac:boq.create')->name('boqs.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\BoqController::class, 'show'])->middleware('rbac:boq.view')->name('boqs.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\BoqController::class, 'update'])->middleware('rbac:boq.update')->name('boqs.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\BoqController::class, 'destroy'])->middleware('rbac:boq.delete')->name('boqs.destroy');
+
+            Route::get('/{boq}/line-items', [\App\Http\Controllers\Api\BoqLineItemController::class, 'index'])->middleware('rbac:boq.view')->name('boqs.line-items.index');
+            Route::post('/{boq}/line-items', [\App\Http\Controllers\Api\BoqLineItemController::class, 'store'])->middleware('rbac:boq.create')->name('boqs.line-items.store');
+            Route::get('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'show'])->middleware('rbac:boq.view')->name('boqs.line-items.show');
+            Route::put('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'update'])->middleware('rbac:boq.update')->name('boqs.line-items.update');
+            Route::delete('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'destroy'])->middleware('rbac:boq.delete')->name('boqs.line-items.destroy');
+        });
+
         // Change Requests routes
         Route::group(['prefix' => 'change-requests'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'index'])->middleware('rbac:change-request.view')->name('change-requests.index');

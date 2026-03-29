@@ -1,7 +1,7 @@
 # S4.2 BOQ Owner Contract
 
 Date: 2026-03-29
-Status: planning lock
+Status: execution proved for narrow canonical slice
 Story: `S4.2`
 Story title: `BOQ line items linked to Project/Component`
 
@@ -258,3 +258,24 @@ Deferred:
 ## Verdict
 
 `S4.2` is ready for a narrow planning-locked runtime round only if BOQ ownership is introduced as a dedicated canonical surface on `/api/zena/boqs`, with project as the required anchor and component as an optional same-project line-item link.
+
+## Execution Outcome
+
+The narrowed runtime round is now proved on the canonical BOQ owner path:
+
+- `/api/zena/boqs` owns minimal BOQ CRUD
+- `/api/zena/boqs/{boq}/line-items` owns nested minimal line-item CRUD
+- `project_id` is required on every BOQ
+- `component_id` remains optional on line items
+- when `component_id` is present, it must belong to the same project as the parent BOQ
+- tenant-safe anti-enumeration and dedicated `boq.*` RBAC are part of the proved slice
+
+Still deferred outside this contract:
+
+- pricing rollups or cost summaries
+- approvals
+- submittal linkage
+- delivery/receipt
+- compensation
+- notifications
+- task linkage

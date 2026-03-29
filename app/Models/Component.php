@@ -201,6 +201,11 @@ class Component extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function boqLineItems(): HasMany
+    {
+        return $this->hasMany(BoqLineItem::class);
+    }
+
     /**
      * Relationship với ComponentKpis
      */

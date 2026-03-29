@@ -6,6 +6,9 @@ use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Models\Project;
 use App\Models\Tenant;
+use App\Models\Task;
+use App\Models\Component;
+use App\Models\ChangeRequest;
 use App\Models\User;
 use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -134,6 +137,186 @@ class DocumentManagementTest extends TestCase
             ->assertJsonPath('data.0.id', $matchingDocument->id)
             ->assertJsonPath('data.0.linked_entity_type', 'cr')
             ->assertJsonPath('data.0.linked_entity_id', $changeRequestId);
+    }
+
+    public function test_canonical_document_can_attach_to_task_on_document_owner_path(): void
+    {
+        $document = $this->createDocument();
+        $task = Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+        ]);
+
+        $this->apiPost($this->zena('documents.link.attach', ['id' => $document->id]), [
+            'linked_entity_type' => Document::ENTITY_TYPE_TASK,
+            'linked_entity_id' => $task->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.linked_entity_type', Document::ENTITY_TYPE_TASK)
+            ->assertJsonPath('data.linked_entity_id', $task->id);
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'linked_entity_type' => Document::ENTITY_TYPE_TASK,
+            'linked_entity_id' => $task->id,
+        ]);
+
+        $this->apiGet($this->zena('documents.index', query: [
+            'linked_entity_type' => Document::ENTITY_TYPE_TASK,
+            'linked_entity_id' => $task->id,
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $document->id);
+    }
+
+    public function test_canonical_document_can_attach_to_component_on_document_owner_path(): void
+    {
+        $document = $this->createDocument();
+        $component = Component::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+        ]);
+        $componentId = (string) $component->id;
+
+        $this->apiPost($this->zena('documents.link.attach', ['id' => $document->id]), [
+            'linked_entity_type' => Document::ENTITY_TYPE_COMPONENT,
+            'linked_entity_id' => $componentId,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.linked_entity_type', Document::ENTITY_TYPE_COMPONENT)
+            ->assertJsonPath('data.linked_entity_id', $componentId);
+
+        $this->apiGet($this->zena('documents.index', query: [
+            'linked_entity_type' => Document::ENTITY_TYPE_COMPONENT,
+            'linked_entity_id' => $componentId,
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $document->id);
+    }
+
+    public function test_canonical_document_can_attach_to_change_request_on_document_owner_path(): void
+    {
+        $document = $this->createDocument();
+        $changeRequest = ChangeRequest::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+            'created_by' => $this->user->id,
+            'status' => ChangeRequest::STATUS_DRAFT,
+        ]);
+
+        $this->apiPost($this->zena('documents.link.attach', ['id' => $document->id]), [
+            'linked_entity_type' => Document::ENTITY_TYPE_CR,
+            'linked_entity_id' => $changeRequest->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.linked_entity_type', Document::ENTITY_TYPE_CR)
+            ->assertJsonPath('data.linked_entity_id', $changeRequest->id);
+
+        $this->apiGet($this->zena('documents.index', query: [
+            'linked_entity_type' => Document::ENTITY_TYPE_CR,
+            'linked_entity_id' => $changeRequest->id,
+        ]))
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $document->id);
+    }
+
+    public function test_canonical_document_link_can_be_detached_and_writes_audit_evidence(): void
+    {
+        $document = $this->createDocument([
+            'linked_entity_type' => Document::ENTITY_TYPE_TASK,
+            'linked_entity_id' => '01HZDETACHLINKTASK0000000001',
+        ]);
+
+        $this->apiDelete($this->zena('documents.link.detach', ['id' => $document->id]))
+            ->assertOk()
+            ->assertJsonPath('data.linked_entity_type', null)
+            ->assertJsonPath('data.linked_entity_id', null);
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'linked_entity_type' => null,
+            'linked_entity_id' => null,
+        ]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => (string) $this->tenant->id,
+            'user_id' => (string) $this->user->id,
+            'action' => 'zena.document.link.detach',
+            'entity_type' => 'document',
+            'entity_id' => (string) $document->id,
+            'project_id' => (string) $this->project->id,
+            'route' => 'api/zena/documents/' . $document->id . '/link',
+            'method' => 'DELETE',
+            'status_code' => 200,
+        ]);
+    }
+
+    public function test_canonical_document_link_attach_is_tenant_safe_for_foreign_targets(): void
+    {
+        $document = $this->createDocument();
+
+        $otherTenant = Tenant::factory()->create();
+        $otherUser = $this->createTenantUser($otherTenant, [], ['designer'], [
+            'task.view',
+            'task.create',
+        ]);
+        $otherProject = Project::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'created_by' => $otherUser->id,
+        ]);
+        $foreignTask = Task::factory()->create([
+            'tenant_id' => $otherTenant->id,
+            'project_id' => $otherProject->id,
+            'created_by' => $otherUser->id,
+            'assigned_to' => $otherUser->id,
+        ]);
+
+        $this->apiPost($this->zena('documents.link.attach', ['id' => $document->id]), [
+            'linked_entity_type' => Document::ENTITY_TYPE_TASK,
+            'linked_entity_id' => $foreignTask->id,
+        ])->assertNotFound();
+
+        $this->assertDatabaseHas('documents', [
+            'id' => $document->id,
+            'linked_entity_type' => null,
+            'linked_entity_id' => null,
+        ]);
+    }
+
+    public function test_canonical_document_link_attach_writes_audit_evidence(): void
+    {
+        $document = $this->createDocument();
+        $task = Task::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+        ]);
+
+        $this->apiPost($this->zena('documents.link.attach', ['id' => $document->id]), [
+            'linked_entity_type' => Document::ENTITY_TYPE_TASK,
+            'linked_entity_id' => $task->id,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => (string) $this->tenant->id,
+            'user_id' => (string) $this->user->id,
+            'action' => 'zena.document.link.attach',
+            'entity_type' => 'document',
+            'entity_id' => (string) $document->id,
+            'project_id' => (string) $this->project->id,
+            'route' => 'api/zena/documents/' . $document->id . '/link',
+            'method' => 'POST',
+            'status_code' => 200,
+        ]);
     }
 
     public function test_canonical_documents_store_and_index_prove_metadata_fields(): void

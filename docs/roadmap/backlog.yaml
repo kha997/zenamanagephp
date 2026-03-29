@@ -235,7 +235,14 @@ epics:
         priority: P1
         status: todo
         acceptance_criteria:
-          - "Timeline API + attachments via Document Center."
+          - "Canonical timeline read surface is defined for /api/zena/change-requests using audit-backed workflow history, without inventing extra semantics not proved from canonical evidence."
+          - "Canonical CR attachments are owned by Document Center and linked via documents.linked_entity_type = 'cr' and documents.linked_entity_id = {changeRequestId}."
+          - "The change_requests.attachments JSON field is not used as canonical proof surface for this story."
+          - "No /api/v1/* route is used as proof for this story."
+        notes:
+          - "Planning lock prefers a dedicated nested timeline endpoint over embedding timeline into show(), because timeline is a derived audit-backed history surface rather than a core persisted CR row contract."
+          - "Planning lock prefers reusing canonical /api/zena/documents with explicit CR-link filters as the first attachment contract, keeping ownership in Document Center and avoiding duplicate CR-specific file APIs."
+          - "Timeline ordering, payload schema details, attachment delete/version semantics, and any broad storage/media cleanup remain deferred until a later evidence-backed runtime round."
 
   - id: EPIC-4
     name: Procurement & Materials

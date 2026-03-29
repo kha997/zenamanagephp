@@ -199,6 +199,29 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
   - Acceptance for `S3.2` is now fully covered by existing canonical controller, audit, and notification evidence.
   - No runtime/code changes were needed for this verdict round.
 
+### Round 10
+
+- Date: 2026-03-29
+- Scope: `S3.4` docs-only planning lock for canonical timeline and attachment contracts
+- Outcome: proposal-only
+- Key files:
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+  - `docs/change-proposals/2026-03-29-s3-4-cr-timeline-attachments-contract.md`
+- Evidence:
+  - head reviewed: `a3a544bc82eb7f868093f86a1fd68ef7afed8315`
+  - routes: `php artisan route:list | grep -E "change-requests|attachment|attachments|timeline|documents|files|media" || true`
+  - inventory: `rg -n "ChangeRequest|timeline|attachment|attachments|file|media|document|audit|linked_entity_type|linked_entity_id" app src tests docs`
+- Deferred:
+  - runtime implementation
+  - timeline payload/order details beyond audit-backed source and dedicated endpoint shape
+  - attachment delete/version semantics
+  - `/api/v1/*`
+  - broad storage/media cleanup
+- Notes:
+  - This round locks the planning contract only: timeline source should come from canonical audit-backed workflow history, and CR attachments should stay owned by Document Center through `documents.linked_entity_type = 'cr'` plus `documents.linked_entity_id = {changeRequestId}`.
+  - The round intentionally does not claim a runtime endpoint already exists for either surface.
+
 ## 5. Progress By Roadmap
 
 ### EPIC-1: Process Template Engine (WorkTemplate v2)
@@ -345,17 +368,46 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 - Next action:
   - keep later CR delta semantics, richer baseline behavior, and any notification follow-up as separate stories.
 
+#### S3.4 CR timeline + attachments
+
+- Roadmap status: todo
+- Progress status: proposal-only
+- Current state:
+  - Canonical `/api/zena/change-requests` currently exposes CRUD plus `submit`, `approve`, `reject`, and `apply`, but no timeline or attachment endpoints.
+  - The strongest current timeline source is canonical audit history written by `App\Services\ZenaAuditLogger` for change-request workflow mutations.
+  - The strongest current attachment ownership evidence is the canonical `documents` table and `App\Models\Document` link fields `linked_entity_type` and `linked_entity_id`.
+  - `App\Models\ChangeRequest` does carry an `attachments` JSON field, but current canonical controller/runtime evidence does not prove that field as the forward attachment contract.
+  - Canonical `/api/zena/documents` runtime exists, but it does not yet expose an explicit CR-link API contract.
+- Evidence:
+  - route truth: `php artisan route:list | grep -E "change-requests|attachment|attachments|timeline|documents|files|media" || true`
+  - canonical CR owner: `app/Http/Controllers/Api/ChangeRequestController.php`
+  - canonical document owner: `app/Http/Controllers/Api/SimpleDocumentController.php`
+  - audit source: `app/Services/ZenaAuditLogger.php`; `tests/Feature/Zena/ZenaAuditInvariantTest.php`
+  - document link fields: `app/Models/Document.php`; `tests/Feature/DocumentVersioningTest.php`
+  - proposal lock: `docs/change-proposals/2026-03-29-s3-4-cr-timeline-attachments-contract.md`
+- Deferred / remaining:
+  - exact timeline inclusion rules beyond audit-backed workflow history
+  - exact timeline ordering and response schema details
+  - explicit canonical document filter parameters or nested attachment write/delete routes
+  - attachment delete/version semantics
+  - any `/api/v1/*` involvement
+  - any broad document/media/storage cleanup
+- Next action:
+  - keep the next runtime round narrow: add a dedicated canonical timeline read endpoint and a Document Center-backed CR attachment query contract without using `change_requests.attachments` as proof.
+
 ## 6. Next Action Queue
 
 1. Preserve the current canonical notification write path on `/api/zena/change-requests` without reopening `/api/v1/*` compatibility surfaces.
 2. Keep `apply` notifications, broad stakeholder fan-out, and email/job/mail paths deferred until separate evidence exists.
 3. Keep `S3.2` closed at the proved canonical slice and treat stakeholder/broader notification semantics as deferred `S3.2a` work.
 4. Treat S3.3 as complete at the proved minimal canonical `apply()` slice and avoid reopening it for broader baseline or compatibility redesign.
+5. Treat S3.4 as a narrow canonical contract-definition story first: timeline from audit-backed workflow history, attachments from Document Center CR links, and all unresolved semantics explicitly deferred.
 
 ## 7. Out Of Scope / Deferred
 
 - Broad notification fan-out beyond proof-backed canonical workflow behavior.
 - Broad baseline architecture redesign or cleanup beyond the narrow `S3.3` proposal contract.
+- Broad document/media/storage architecture cleanup beyond the narrow `S3.4` contract proposal.
 - Full document review matrix until route/runtime/test evidence exists.
 - `/api/v1/*` compatibility remapping or forward-owner expansion.
 - Any implementation claim not backed by route, runtime, test, or lint evidence.

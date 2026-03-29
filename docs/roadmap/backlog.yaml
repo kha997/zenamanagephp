@@ -132,20 +132,21 @@ epics:
       - id: S2.1
         title: "Document types + metadata + versioning"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Doc types/metadata (discipline/package/status/revision) stored and searchable."
           - "Versioning retains history."
           - "Permission matrix enforced (role/tenant + scope)."
-        updated_at: 2026-03-20
+        updated_at: 2026-03-29
         evidence:
-          routes: "GET /api/v1/documents/{id}/versions; POST /api/v1/documents/{id}/versions; GET /api/zena/documents/{id}/versions; POST /api/zena/documents/{id}/versions"
-          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/DocumentManagementTest.php (8 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/DocumentVersioningTest.php (8 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
+          head: "88f3872c68b590e3e8d309f480a2774f89505114"
+          routes: "GET /api/zena/documents; POST /api/zena/documents; PUT /api/zena/documents/{id}; GET /api/zena/documents/{id}/versions; POST /api/zena/documents/{id}/versions"
+          tests: "php artisan test tests/Feature/Api/DocumentManagementTest.php (19 passed); php artisan test tests/Feature/DocumentVersioningTest.php (8 passed); php artisan test tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
           lint: "composer ssot:lint"
         notes:
-          - "Canonical /api/zena/documents now exposes version list/create using the same SimpleDocumentController runtime as v1 compatibility routes."
-          - "Current evidence proves canonical version list/create and tenant-safe route ownership for document versions."
-          - "Story remains todo until permission-matrix scope is proven strongly enough for full acceptance."
+          - "Canonical /api/zena/documents now owns metadata store/search/update plus version list/create using SimpleDocumentController."
+          - "Canonical evidence proves metadata fields are stored, searchable, and preserved across canonical create/update and version-create flows."
+          - "Canonical evidence proves tenant-safe document/version access plus permission-split enforcement for version list/view and version create/update paths."
           - "DocumentApiTest currently has a separate download-path failure and is not used as positive evidence for this story."
       - id: S2.2
         title: "Link docs ↔ Task/Component/CR"

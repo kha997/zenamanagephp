@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, and now proves `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface. With the acceptance boundary narrowed to already-proved canonical slices, `S3.2` and `S3.4` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, and now proves `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface. With the acceptance boundary narrowed to already-proved canonical slices, `S2.1`, `S3.2`, and `S3.4` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
@@ -244,6 +244,30 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
   - Canonical `/api/zena/documents` now proves CR-link discovery via `linked_entity_type=cr` and `linked_entity_id={changeRequestId}`.
   - No proof in this verdict depends on `change_requests.attachments`.
 
+### Round 12
+
+- Date: 2026-03-29
+- Scope: `S2.1` canonical metadata/versioning permission proof on `/api/zena/documents*`
+- Outcome: locked runtime slice + done verdict
+- Key files:
+  - `app/Http/Controllers/Api/SimpleDocumentController.php`
+  - `routes/api_zena.php`
+  - `tests/Feature/Api/DocumentManagementTest.php`
+  - `tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php`
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+- Evidence:
+  - runtime commit: `88f3872c68b590e3e8d309f480a2774f89505114`
+  - routes: `GET /api/zena/documents`; `POST /api/zena/documents`; `PUT /api/zena/documents/{id}`; `GET /api/zena/documents/{id}/versions`; `POST /api/zena/documents/{id}/versions`
+  - tests: `php artisan test tests/Feature/Api/DocumentManagementTest.php` -> `19 passed`; `php artisan test tests/Feature/DocumentVersioningTest.php` -> `8 passed`; `php artisan test tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php` -> `2 passed`
+  - lint: `composer ssot:lint`
+- Deferred:
+  - `DocumentApiTest` download-path failure remains unrelated and is not part of `S2.1` evidence
+  - no `/api/v1/*` changes were used as forward-proof surface
+- Notes:
+  - This round closed a real runtime gap: canonical `/api/zena/documents/{id}/versions` was missing from mounted route truth even though backlog evidence already referenced it.
+  - Canonical proof now covers metadata store/search/update, version history retention, tenant-safe version access, and permission enforcement on canonical version read/write paths.
+
 ## 5. Progress By Roadmap
 
 ### EPIC-1: Process Template Engine (WorkTemplate v2)
@@ -282,6 +306,26 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
   - no new work unless a later epic requires preview/apply parity verification.
 
 ### EPIC-2: Document Center (DocumentManagement v2)
+
+#### S2.1 Document types + metadata + versioning
+
+- Roadmap status: done
+- Progress status: done
+- Current state:
+  - Canonical `/api/zena/documents` now proves metadata store/search/update for `document_type`, `discipline`, `package`, `status`, and `revision`.
+  - Canonical `/api/zena/documents/{id}/versions` now exists in mounted runtime truth and proves version history retention on the forward business surface.
+  - Canonical permission evidence now covers tenant-safe document/version access, version-list read access, and version-create rejection when `document.update` is missing.
+  - No proof for this story depends on `/api/v1/*`.
+- Evidence:
+  - runtime commit: `88f3872c68b590e3e8d309f480a2774f89505114`
+  - routes: `php artisan route:list | grep -E "documents|versions" || true`
+  - tests: `php artisan test tests/Feature/Api/DocumentManagementTest.php` -> `19 passed`; `php artisan test tests/Feature/DocumentVersioningTest.php` -> `8 passed`; `php artisan test tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php` -> `2 passed`
+  - lint: `composer ssot:lint`
+- Deferred / remaining:
+  - `DocumentApiTest` download-path failure remains outside this story
+  - later document workflow expansion stays in `S2.3`
+- Next action:
+  - keep `S2.1` stable and use later stories for linkages, workflow expansion, or broader document-center behavior.
 
 #### S2.3 Document workflow canonical slice
 

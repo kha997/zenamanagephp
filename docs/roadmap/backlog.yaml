@@ -370,17 +370,23 @@ epics:
       - id: S5.2
         title: "NCR + CAPA tasks lifecycle"
         priority: P1
-        status: todo
+        status: done
         updated_at: 2026-03-29
         acceptance_criteria:
           - "First canonical NCR owner surface is limited to `/api/zena/inspections/{inspection}/ncrs`; this story does not yet claim a separate `/api/zena/ncrs` owner family."
           - "First canonical NCR lifecycle proof is limited to `open -> in_progress -> resolved -> closed` on the canonical owner path."
           - "CAPA execution reuses the existing canonical `/api/zena/tasks` surface for create/assign/status; this story does not introduce a separate `/api/zena/capa*` API."
+        evidence:
+          head: "4607e0ea56ce61f5c1ff6721e2d2f47ef67e4c30"
+          routes: "GET /api/zena/inspections/{inspection}/ncrs; POST /api/zena/inspections/{inspection}/ncrs; GET /api/zena/inspections/{inspection}/ncrs/{ncr}; PATCH /api/zena/inspections/{inspection}/ncrs/{ncr}/status; POST /api/zena/tasks"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/InspectionNcrWorkflowTest.php (3 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Task (135 passed)"
+          lint: "composer ssot:lint; php artisan optimize:clear"
         notes:
-          - "Current evidence already proves `App\\Models\\Ncr`, `database/migrations/2025_09_20_142033_create_ncrs_table.php`, `App\\Policies\\NcrPolicy`, `Database\\Factories\\NcrFactory`, and `QcInspection::ncrs()` exist, but no active canonical NCR controller or `/api/zena/ncr*` route family is present in runtime truth."
-          - "Option A nested under the canonical inspection owner path is the only owner surface currently grounded by both route truth and model linkage; a dedicated `/api/zena/ncrs/*` owner would be a new top-level contract rather than an evidence-backed continuation."
-          - "The schema still allows `under_review` and nullable `inspection_id`, but the first canonical proof slice should not overclaim standalone NCR ownership or `under_review` semantics unless runtime evidence is added."
-          - "Current repo evidence does not yet prove a canonical persistent NCR-to-task link field or table. The minimal CAPA contract is therefore a handoff into the already-owned `/api/zena/tasks` lifecycle, while broader reverse-link, dashboards, escalation rules, and notification semantics remain deferred."
+          - "Canonical NCR ownership is now proved only on the nested inspection owner path; no standalone `/api/zena/ncrs/*` family was introduced."
+          - "Runtime proof covers create, list/show, and the narrow transition chain `open -> in_progress -> resolved -> closed` only."
+          - "Minimal CAPA proof is a task handoff payload exposed from the nested NCR resource and executed on the existing `/api/zena/tasks` owner surface; task lifecycle remains owned by `TaskController`."
+          - "The schema still allows `under_review` and nullable `inspection_id`, but this story does not claim those semantics because runtime proof does not require them."
+          - "Canonical persistent NCR-to-task reverse-link storage remains UNKNOWN; dashboards, escalation rules, and notification semantics remain deferred."
       - id: S5.3
         title: "Escalation rules + notifications"
         priority: P2

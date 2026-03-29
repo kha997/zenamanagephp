@@ -9,11 +9,11 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, and completed `S0.1`'s narrowed route-mounting inventory by explicitly composing `src/WorkTemplate/routes/api.php` from `routes/api.php`, disabling provider-based route auto-mount in `Src\WorkTemplate\Providers\WorkTemplateServiceProvider`, and preserving the `/api/v1/work-template*` compatibility surface without duplicate METHOD+URI or double-prefix drift. With the acceptance boundary narrowed to already-proved canonical slices and the active provider offender inventory cleared, `S0.1`, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, and `S5.1` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, proved `S5.2` on the same inspection owner path by adding nested `/api/zena/inspections/{inspection}/ncrs` create/list/show/status endpoints plus a minimal task-handoff payload into canonical `/api/zena/tasks`, and completed `S0.1`'s narrowed route-mounting inventory by explicitly composing `src/WorkTemplate/routes/api.php` from `routes/api.php`, disabling provider-based route auto-mount in `Src\WorkTemplate\Providers\WorkTemplateServiceProvider`, and preserving the `/api/v1/work-template*` compatibility surface without duplicate METHOD+URI or double-prefix drift. With the acceptance boundary narrowed to already-proved canonical slices and the active provider offender inventory cleared, `S0.1`, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, `S5.1`, and `S5.2` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
-For `S5.2`, planning is now narrowed before execution: current evidence supports NCR ownership only as a child of the canonical inspection owner path, while CAPA execution must reuse the existing canonical `/api/zena/tasks` surface and keep NCR↔task reverse-link semantics, escalations, notifications, dashboards, and broader QMS cleanup explicitly deferred until runtime evidence exists.
+For `S5.2`, the narrowed execution round is now proved: NCR ownership remains only as a child of the canonical inspection owner path, CAPA execution is handed off into the existing canonical `/api/zena/tasks` surface through a task payload blueprint rather than a new owner family, and NCR↔task reverse-link semantics, escalations, notifications, dashboards, and broader QMS cleanup remain explicitly deferred until runtime evidence exists.
 
 ## 3. Operating Rules
 
@@ -26,6 +26,37 @@ For `S5.2`, planning is now narrowed before execution: current evidence supports
 - Do not change domain/app logic just to pass test or CI.
 
 ## 4. Recent Locked Rounds
+
+### Round 23
+
+- Date: 2026-03-29
+- Scope: `S5.2` inspection-owned NCR slice + minimal CAPA handoff
+- Outcome: locked runtime slice
+- Key files:
+  - `routes/api_zena.php`
+  - `app/Http/Controllers/Api/InspectionController.php`
+  - `tests/Feature/InspectionNcrWorkflowTest.php`
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+- Evidence:
+  - head reviewed: `4607e0ea56ce61f5c1ff6721e2d2f47ef67e4c30`
+  - runtime truth: `php artisan route:list | grep -E "inspection|ncr|task" || true` now shows canonical nested `/api/zena/inspections/{inspection}/ncrs*` routes alongside the existing canonical `/api/zena/tasks*` family and no standalone `/api/zena/ncrs*` family
+  - NCR proof: `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/InspectionNcrWorkflowTest.php` -> `OK (3 tests, 43 assertions)`
+  - task regression proof: `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Task` -> `OK (135 tests, 843 assertions)`
+  - lint: `composer ssot:lint`; `php artisan optimize:clear`
+- Deferred:
+  - standalone `/api/zena/ncrs/*` owner family
+  - `/api/zena/capa*`
+  - persistent NCR-to-task reverse-link storage
+  - escalation rules
+  - notifications
+  - dashboards
+  - `under_review` as part of the canonical first-slice workflow
+  - `S3.2a`
+- Notes:
+  - Canonical runtime proof is intentionally limited to create, list/show, and `open -> in_progress -> resolved -> closed` on the nested inspection owner path.
+  - CAPA proof is intentionally only a handoff into canonical `/api/zena/tasks`; task lifecycle ownership remains on `TaskController`.
+  - This round does not claim standalone NCR ownership, `under_review`, or broader NCR↔task reporting semantics.
 
 ### Round 22
 

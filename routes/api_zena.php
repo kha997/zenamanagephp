@@ -312,6 +312,10 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/schedule', [\App\Http\Controllers\Api\InspectionController::class, 'schedule'])->middleware('rbac:inspection.schedule')->name('inspections.schedule');
             Route::post('/{id}/conduct', [\App\Http\Controllers\Api\InspectionController::class, 'conduct'])->middleware('rbac:inspection.conduct')->name('inspections.conduct');
             Route::post('/{id}/complete', [\App\Http\Controllers\Api\InspectionController::class, 'complete'])->middleware('rbac:inspection.complete')->name('inspections.complete');
+            Route::get('/{inspection}/ncrs', [\App\Http\Controllers\Api\InspectionController::class, 'listNcrs'])->middleware('rbac:inspection.view')->name('inspections.ncrs.index');
+            Route::post('/{inspection}/ncrs', [\App\Http\Controllers\Api\InspectionController::class, 'storeNcr'])->middleware('rbac:inspection.create')->name('inspections.ncrs.store');
+            Route::get('/{inspection}/ncrs/{ncr}', [\App\Http\Controllers\Api\InspectionController::class, 'showNcr'])->middleware('rbac:inspection.view')->name('inspections.ncrs.show');
+            Route::patch('/{inspection}/ncrs/{ncr}/status', [\App\Http\Controllers\Api\InspectionController::class, 'updateNcrStatus'])->middleware('rbac:inspection.edit')->name('inspections.ncrs.update-status');
         });
 
         // Safety Incidents routes - DISABLED (Controller not implemented)

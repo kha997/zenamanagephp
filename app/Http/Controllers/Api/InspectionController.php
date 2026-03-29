@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\BaseApiController as ApiBaseController;
+use App\Models\Ncr;
 use App\Models\QcInspection;
 use App\Models\QcPlan;
 use App\Models\WorkInstanceFieldValue;
@@ -61,6 +62,25 @@ class InspectionController extends ApiBaseController
     {
         return $this->inspectionQuery($relations)
             ->where('id', $id)
+            ->firstOrFail();
+    }
+
+    private function ncrQuery(QcInspection $inspection): Builder
+    {
+        return Ncr::query()
+            ->with([
+                'creator:id,name,email',
+                'assignee:id,name,email',
+                'inspection:id,qc_plan_id,title,status,inspection_date',
+            ])
+            ->where('tenant_id', $this->tenantId())
+            ->where('inspection_id', (string) $inspection->id);
+    }
+
+    private function ncrForInspection(QcInspection $inspection, string $ncrId): Ncr
+    {
+        return $this->ncrQuery($inspection)
+            ->whereKey($ncrId)
             ->firstOrFail();
     }
 
@@ -572,6 +592,203 @@ class InspectionController extends ApiBaseController
         }
     }
 
+    public function listNcrs(Request $request, string $inspection): JsonResponse
+    {
+        try {
+            if (!Auth::user()) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $inspectionModel = $this->inspectionForTenant($inspection, ['qcPlan:id,project_id,title']);
+            $query = $this->ncrQuery($inspectionModel);
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->input('status'));
+            }
+
+            if ($request->filled('severity')) {
+                $query->where('severity', $request->input('severity'));
+            }
+
+            $perPage = min((int) $request->input('per_page', $this->defaultLimit), $this->maxLimit);
+            $ncrs = $query->orderByDesc('created_at')->paginate($perPage);
+            $ncrs->getCollection()->transform(fn (Ncr $ncr): array => $this->transformNcr($ncr));
+
+            return $this->listSuccessResponse($ncrs, 'Inspection NCRs retrieved successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Inspection not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to retrieve inspection NCRs: ' . $e->getMessage());
+        }
+    }
+
+    public function storeNcr(Request $request, string $inspection): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $inspectionModel = $this->inspectionForTenant($inspection, ['qcPlan:id,project_id,title']);
+
+            $validator = Validator::make($request->all(), [
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'severity' => 'nullable|in:low,medium,high,critical',
+                'assigned_to' => 'nullable|exists:users,id',
+                'root_cause' => 'nullable|string',
+                'corrective_action' => 'nullable|string',
+                'preventive_action' => 'nullable|string',
+                'resolution' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            if ($request->filled('assigned_to') && !$this->userBelongsToTenant((string) $request->input('assigned_to'))) {
+                return $this->forbidden('Assigned user not available in this tenant');
+            }
+
+            $ncr = Ncr::create([
+                'project_id' => (string) $inspectionModel->project_id,
+                'tenant_id' => $this->tenantId(),
+                'inspection_id' => (string) $inspectionModel->id,
+                'ncr_number' => $this->nextNcrNumber($inspectionModel),
+                'title' => (string) $request->input('title'),
+                'description' => (string) $request->input('description'),
+                'status' => 'open',
+                'severity' => (string) $request->input('severity', 'medium'),
+                'created_by' => (string) $user->id,
+                'assigned_to' => $request->input('assigned_to'),
+                'root_cause' => $request->input('root_cause'),
+                'corrective_action' => $request->input('corrective_action'),
+                'preventive_action' => $request->input('preventive_action'),
+                'resolution' => $request->input('resolution'),
+            ]);
+
+            $ncr->load([
+                'creator:id,name,email',
+                'assignee:id,name,email',
+                'inspection:id,qc_plan_id,title,status,inspection_date',
+            ]);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.inspection.ncr.create',
+                'ncr',
+                (string) $ncr->id,
+                201,
+                (string) $inspectionModel->project_id,
+                $this->tenantId()
+            );
+
+            return $this->successResponse($this->transformNcr($ncr), 'Inspection NCR created successfully', 201);
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Inspection not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to create inspection NCR: ' . $e->getMessage());
+        }
+    }
+
+    public function showNcr(string $inspection, string $ncr): JsonResponse
+    {
+        try {
+            if (!Auth::user()) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $inspectionModel = $this->inspectionForTenant($inspection, ['qcPlan:id,project_id,title']);
+            $ncrModel = $this->ncrForInspection($inspectionModel, $ncr);
+
+            return $this->successResponse($this->transformNcr($ncrModel), 'Inspection NCR retrieved successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Inspection NCR not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to retrieve inspection NCR: ' . $e->getMessage());
+        }
+    }
+
+    public function updateNcrStatus(Request $request, string $inspection, string $ncr): JsonResponse
+    {
+        try {
+            if (!Auth::user()) {
+                return $this->unauthorized('Authentication required');
+            }
+
+            $inspectionModel = $this->inspectionForTenant($inspection, ['qcPlan:id,project_id,title']);
+            $ncrModel = $this->ncrForInspection($inspectionModel, $ncr);
+
+            $validator = Validator::make($request->all(), [
+                'status' => 'required|in:open,in_progress,resolved,closed',
+                'root_cause' => 'nullable|string',
+                'corrective_action' => 'nullable|string',
+                'preventive_action' => 'nullable|string',
+                'resolution' => 'nullable|string',
+            ]);
+
+            if ($validator->fails()) {
+                return $this->validationError($validator->errors());
+            }
+
+            $targetStatus = (string) $request->input('status');
+            $allowedTransitions = [
+                'open' => ['in_progress'],
+                'in_progress' => ['resolved'],
+                'resolved' => ['closed'],
+                'closed' => [],
+            ];
+
+            if (!in_array($targetStatus, $allowedTransitions[$ncrModel->status] ?? [], true)) {
+                return $this->errorResponse('Unsupported NCR status transition', 422, [
+                    'current_status' => $ncrModel->status,
+                    'target_status' => $targetStatus,
+                ]);
+            }
+
+            $update = [
+                'status' => $targetStatus,
+                'root_cause' => $request->input('root_cause', $ncrModel->root_cause),
+                'corrective_action' => $request->input('corrective_action', $ncrModel->corrective_action),
+                'preventive_action' => $request->input('preventive_action', $ncrModel->preventive_action),
+                'resolution' => $request->input('resolution', $ncrModel->resolution),
+            ];
+
+            if ($targetStatus === 'resolved') {
+                $update['resolved_at'] = now();
+            }
+
+            if ($targetStatus === 'closed') {
+                $update['closed_at'] = now();
+            }
+
+            $ncrModel->update($update);
+            $ncrModel->load([
+                'creator:id,name,email',
+                'assignee:id,name,email',
+                'inspection:id,qc_plan_id,title,status,inspection_date',
+            ]);
+
+            $this->auditLogger->log(
+                $request,
+                'zena.inspection.ncr.status',
+                'ncr',
+                (string) $ncrModel->id,
+                200,
+                (string) $inspectionModel->project_id,
+                $this->tenantId()
+            );
+
+            return $this->successResponse($this->transformNcr($ncrModel), 'Inspection NCR status updated successfully');
+        } catch (ModelNotFoundException $e) {
+            return $this->notFound('Inspection NCR not found');
+        } catch (\Exception $e) {
+            return $this->serverError('Failed to update inspection NCR status: ' . $e->getMessage());
+        }
+    }
+
     private function resolveInspectionStepForPlan(QcPlan $plan, mixed $stepId): ?WorkInstanceStep
     {
         if (!is_string($stepId) || $stepId === '') {
@@ -746,5 +963,98 @@ class InspectionController extends ApiBaseController
         return array_merge($inspection->toArray(), [
             'generated_checklist' => $this->generatedChecklistPayload($inspection->workInstanceStep),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function transformNcr(Ncr $ncr): array
+    {
+        $projectId = (string) ($ncr->project_id ?? $ncr->inspection?->project_id ?? '');
+        $title = sprintf('CAPA %s %s', (string) $ncr->ncr_number, (string) $ncr->title);
+
+        return [
+            'id' => (string) $ncr->id,
+            'inspection_id' => (string) $ncr->inspection_id,
+            'project_id' => $projectId,
+            'ncr_number' => (string) $ncr->ncr_number,
+            'title' => (string) $ncr->title,
+            'description' => (string) $ncr->description,
+            'status' => (string) $ncr->status,
+            'severity' => (string) $ncr->severity,
+            'root_cause' => $ncr->root_cause,
+            'corrective_action' => $ncr->corrective_action,
+            'preventive_action' => $ncr->preventive_action,
+            'resolution' => $ncr->resolution,
+            'resolved_at' => optional($ncr->resolved_at)->toISOString(),
+            'closed_at' => optional($ncr->closed_at)->toISOString(),
+            'inspection' => [
+                'id' => (string) $ncr->inspection?->id,
+                'title' => $ncr->inspection?->title,
+                'status' => $ncr->inspection?->status,
+                'inspection_date' => optional($ncr->inspection?->inspection_date)->toDateString(),
+            ],
+            'creator' => $ncr->creator ? [
+                'id' => (string) $ncr->creator->id,
+                'name' => $ncr->creator->name,
+                'email' => $ncr->creator->email,
+            ] : null,
+            'assignee' => $ncr->assignee ? [
+                'id' => (string) $ncr->assignee->id,
+                'name' => $ncr->assignee->name,
+                'email' => $ncr->assignee->email,
+            ] : null,
+            'task_handoff' => [
+                'owner_route' => route('api.zena.tasks.store', [], false),
+                'method' => 'POST',
+                'payload' => [
+                    'project_id' => $projectId,
+                    'name' => $title,
+                    'title' => $title,
+                    'description' => trim(implode("\n\n", array_filter([
+                        'Corrective action handoff from inspection-owned NCR.',
+                        'NCR: ' . (string) $ncr->ncr_number,
+                        'Inspection: ' . (string) ($ncr->inspection?->title ?? ''),
+                        (string) $ncr->description,
+                        $ncr->corrective_action ? 'Corrective action: ' . $ncr->corrective_action : null,
+                        $ncr->preventive_action ? 'Preventive action: ' . $ncr->preventive_action : null,
+                    ]))),
+                    'status' => 'pending',
+                    'priority' => $this->mapNcrSeverityToTaskPriority((string) $ncr->severity),
+                    'tags' => ['inspection-ncr-capa'],
+                ],
+            ],
+            'created_at' => optional($ncr->created_at)->toISOString(),
+            'updated_at' => optional($ncr->updated_at)->toISOString(),
+        ];
+    }
+
+    private function nextNcrNumber(QcInspection $inspection): string
+    {
+        $prefix = 'NCR-' . Str::upper(Str::substr((string) $inspection->id, -6));
+        $sequence = Ncr::query()
+            ->where('tenant_id', $this->tenantId())
+            ->where('inspection_id', (string) $inspection->id)
+            ->count() + 1;
+
+        return sprintf('%s-%03d', $prefix, $sequence);
+    }
+
+    private function userBelongsToTenant(string $userId): bool
+    {
+        return \App\Models\User::query()
+            ->where('tenant_id', $this->tenantId())
+            ->whereKey($userId)
+            ->exists();
+    }
+
+    private function mapNcrSeverityToTaskPriority(string $severity): string
+    {
+        return match ($severity) {
+            'critical' => 'critical',
+            'high' => 'high',
+            'low' => 'low',
+            default => 'medium',
+        };
     }
 }

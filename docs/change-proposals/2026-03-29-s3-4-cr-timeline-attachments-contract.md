@@ -1,7 +1,7 @@
 # S3.4 CR Timeline + Attachments Contract
 
 Date: 2026-03-29
-Status: proposal-only
+Status: accepted for proved canonical slice
 Story: `S3.4`
 Story title: `CR timeline + attachments`
 
@@ -29,8 +29,8 @@ Current route truth from `php artisan route:list`:
 
 - canonical CR routes exist on `/api/zena/change-requests`
 - canonical document routes exist on `/api/zena/documents`
-- there is no canonical CR timeline route today
-- there is no canonical CR attachment route today
+- canonical CR timeline route now exists at `GET /api/zena/change-requests/{id}/timeline`
+- there is still no canonical CR-specific attachment route today, because attachment proof is owned by `GET /api/zena/documents` with CR-link filters
 - `/api/v1/change-requests/*` and `/api/v1/documents/*` exist, but they are compatibility-only and not proof surfaces for this story
 
 Current source truth:
@@ -149,4 +149,4 @@ Minimum verify expectations for the later runtime round:
 
 ## Verdict
 
-This story is ready for a narrow proposal-backed runtime round only if timeline stays audit-backed and attachments stay owned by Document Center.
+This story now qualifies as done for the narrowed canonical slice because timeline stays audit-backed and attachments stay owned by Document Center through the canonical document query surface.

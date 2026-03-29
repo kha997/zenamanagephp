@@ -9,7 +9,7 @@
 
 ## 2. Executive Snapshot
 
-The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, and now proves `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`. With the acceptance boundary narrowed to already-proved canonical slices, `S2.1`, `S2.2`, `S3.2`, `S3.4`, and `S5.1` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
+The repo is in a controlled evidence-locking phase around the canonical `/api/zena/*` business surface. Recent work locked backlog-backed completion for `S1.2` and `S2.4`, proved `S2.1` on the canonical document owner path by wiring `/api/zena/documents/{id}/versions` plus metadata/versioning/permission tests, shipped a minimal canonical document workflow slice for `S2.3`, implemented the narrow runtime slices for `S3.2` on the canonical change-request owner path without overclaiming broader workflow ownership, proved `S3.4` on the canonical CR timeline plus Document Center-backed attachment-query surface, proved `S2.2` on the same canonical Document Center owner path through attach/detach plus tenant-safe link-query evidence for task, component, and change request targets, proved `S5.1` on the canonical inspection owner path by linking generated `WT-BL-INSPECTION` checklist instances from the existing WorkTemplate engine into `/api/zena/inspections`, and now proves `S1.1` on the canonical WorkTemplate owner path by round-tripping the persisted data-model contract for `steps`, `fields`, `assignee_rule`, checklist/docs config, `approvals`, and `rules` through canonical create/show/update while keeping preview/publish/apply aligned to the same persisted contract. With the acceptance boundary narrowed to already-proved canonical slices, `S1.1`, `S2.1`, `S2.2`, `S3.2`, `S3.4`, and `S5.1` are evidence-complete, while `S3.2a` remains the explicit follow-up for broader approver/stakeholder semantics and any later notification expansion.
 
 For `S3.2`, the former planning gap was backlog wording that bundled `approvers and stakeholders` into one acceptance surface. That gap is now resolved by the planning split: narrowed `S3.2` owns only the proved canonical workflow + minimal direct-recipient notification slice, and `S3.2a` owns the still-unknown broader approver/stakeholder semantics.
 
@@ -346,9 +346,55 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
   - Canonical inspection runtime now persists an optional `work_instance_step_id` link, returns generated checklist metadata, and syncs checklist execution back into `work_instance_field_values`.
   - `php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=WorkTemplateBaselineSeederTest` currently returns `No tests executed!` in this repo, so direct-file execution is the positive evidence path for that suite.
 
+### Round 16
+
+- Date: 2026-03-29
+- Scope: `S1.1` canonical WorkTemplate v2 data-model contract on `/api/zena/work-templates`
+- Outcome: locked runtime slice + done verdict
+- Key files:
+  - `app/Http/Controllers/Api/WorkTemplateController.php`
+  - `tests/Feature/Api/WorkTemplateMvpApiTest.php`
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+- Evidence:
+  - head reviewed: `635e4bc6c7a2792684ec23ad03afaade9be69330`
+  - routes: `php artisan route:list --path=api/zena/work-templates`
+  - tests: `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateMvpApiTest.php` -> `OK (23 tests, 228 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateBaselineSeederTest.php` -> `OK (3 tests, 379 assertions)`
+  - lint: `composer ssot:lint`
+- Deferred:
+  - broad reviewer/approver semantics beyond the persisted template contract
+  - notification fan-out
+  - `/api/v1/*`
+  - broad WorkTemplate architecture cleanup
+- Notes:
+  - Canonical proof is intentionally limited to the persisted template contract: `content_json`, `work_template_versions`, `work_template_steps`, and `work_template_fields`.
+  - A real runtime gap was closed in the canonical CRUD owner path: `show()` now returns nested `versions.steps.fields`, so API round-trip matches the persisted relational contract instead of exposing only version headers.
+  - New targeted feature coverage proves canonical create/show/update round-trip for `steps`, `fields`, `assignee_rule`, checklist/docs config, `approvals`, and `rules`, plus CRUD RBAC proof.
+  - Preview/publish/apply stay aligned to the same persisted contract after API create/update; this round does not claim broader reviewer/approver decision semantics or notifications.
+
 ## 5. Progress By Roadmap
 
 ### EPIC-1: Process Template Engine (WorkTemplate v2)
+
+#### S1.1 WorkTemplate v2 data model
+
+- Roadmap status: done
+- Progress status: done
+- Current state:
+  - Canonical `/api/zena/work-templates` now proves create/show/update round-trip for the persisted WorkTemplate v2 contract.
+  - Proved contract includes `steps`, nested `fields`, `assignee_rule`, checklist/docs config, `approvals`, and `rules`.
+  - Tenant isolation and CRUD RBAC are now explicitly covered on the canonical owner path.
+  - Preview/publish/apply continue to consume the same persisted contract after canonical create/update without `/api/v1/*` proof.
+- Evidence:
+  - routes: `GET /api/zena/work-templates`; `POST /api/zena/work-templates`; `GET /api/zena/work-templates/{id}`; `PUT /api/zena/work-templates/{id}`; `POST /api/zena/work-templates/{id}/preview`; `POST /api/zena/work-templates/{id}/publish`
+  - tests: `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateMvpApiTest.php` -> `OK (23 tests, 228 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateBaselineSeederTest.php` -> `OK (3 tests, 379 assertions)`
+  - lint: `composer ssot:lint`
+- Deferred / remaining:
+  - semantic meaning of `approvals` and `rules` beyond persisted contract is still `UNKNOWN`
+  - reviewer/approver discovery semantics remain out of scope for this story
+  - notification semantics remain out of scope for this story
+- Next action:
+  - keep WorkTemplate CRUD, preview, publish, and apply aligned to the same canonical persisted contract without widening semantics beyond evidence.
 
 #### S1.2 Apply template to Project/Component
 

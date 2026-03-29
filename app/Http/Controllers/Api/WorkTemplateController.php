@@ -47,8 +47,9 @@ class WorkTemplateController extends BaseApiController
     public function show(string $id): JsonResponse
     {
         try {
-            $template = $this->templateForTenant($id)->firstOrFail()
-                ->load(['versions' => fn ($q) => $q->orderByDesc('created_at')]);
+            $template = $this->loadCanonicalTemplateRelations(
+                $this->templateForTenant($id)->firstOrFail()
+            );
 
             return $this->successResponse($template, 'Work template retrieved successfully');
         } catch (ModelNotFoundException) {
@@ -126,7 +127,7 @@ class WorkTemplateController extends BaseApiController
 
             $this->syncStepsAndFields($version, $content['steps'] ?? []);
 
-            return $template->fresh(['versions']);
+            return $this->loadCanonicalTemplateRelations($template->fresh());
         });
 
         $this->auditLogger->log(
@@ -197,7 +198,7 @@ class WorkTemplateController extends BaseApiController
 
                 $this->syncStepsAndFields($draft, $content['steps'] ?? []);
 
-                return $template->fresh(['versions']);
+                return $this->loadCanonicalTemplateRelations($template->fresh());
             });
 
             $this->auditLogger->log(
@@ -849,6 +850,15 @@ class WorkTemplateController extends BaseApiController
         return WorkTemplate::query()
             ->where('tenant_id', $this->tenantId())
             ->whereKey($id);
+    }
+
+    private function loadCanonicalTemplateRelations(WorkTemplate $template): WorkTemplate
+    {
+        return $template->load([
+            'versions' => fn ($query) => $query
+                ->with('steps.fields')
+                ->orderByDesc('created_at'),
+        ]);
     }
 
     private function tenantId(): string

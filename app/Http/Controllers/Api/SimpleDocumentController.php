@@ -321,6 +321,8 @@ class SimpleDocumentController extends Controller
             return ErrorEnvelopeService::notFoundError('Document');
         }
 
+        $this->authorize('update', $document);
+
         $file = $request->file('file');
         if (!$file) {
             return ErrorEnvelopeService::error('File upload failed', 400);
@@ -404,6 +406,8 @@ class SimpleDocumentController extends Controller
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
+
+        $this->authorize('view', $document);
 
         $versions = $document->versions()
             ->orderByVersion()

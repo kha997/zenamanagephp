@@ -17,6 +17,8 @@ class ModuleOwnershipRouteInvariantTest extends TestCase
             'api.zena.tasks.show' => 'App\\Http\\Controllers\\Api\\TaskController',
             'api.zena.documents.index' => 'App\\Http\\Controllers\\Api\\SimpleDocumentController',
             'api.zena.documents.show' => 'App\\Http\\Controllers\\Api\\SimpleDocumentController',
+            'api.zena.documents.versions.index' => 'App\\Http\\Controllers\\Api\\SimpleDocumentController',
+            'api.zena.documents.versions.store' => 'App\\Http\\Controllers\\Api\\SimpleDocumentController',
             'api.zena.documents.submit' => 'App\\Http\\Controllers\\Api\\SimpleDocumentController',
             'api.zena.documents.decision' => 'App\\Http\\Controllers\\Api\\SimpleDocumentController',
             'api.zena.change-requests.index' => 'App\\Http\\Controllers\\Api\\ChangeRequestController',

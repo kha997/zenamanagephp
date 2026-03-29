@@ -344,6 +344,8 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])->middleware('rbac:document.view')->name('documents.index');
             Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])->middleware('rbac:document.create')->name('documents.store');
             Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])->middleware('rbac:document.view')->name('documents.show');
+            Route::get('/{id}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'getVersions'])->middleware('rbac:document.view')->name('documents.versions.index');
+            Route::post('/{id}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'createVersion'])->middleware('rbac:document.update')->name('documents.versions.store');
             Route::post('/{id}/submit', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'submit'])->middleware('rbac:document.update')->name('documents.submit');
             Route::post('/{id}/decision', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'decision'])->middleware('rbac:document.update')->name('documents.decision');
             Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->middleware('rbac:document.update')->name('documents.update');

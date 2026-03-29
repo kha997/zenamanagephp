@@ -7,6 +7,8 @@ Status: proposal only, no implementation in this round
 
 Later on 2026-03-28, the narrow canonical runtime slice proposed here was implemented and locked at `fb45a35ab6ebd3a7177a7d1317a459c7d416e270`.
 
+Later again on 2026-03-28, the minimal canonical in-app notification slice was implemented and locked at `a41ee056`.
+
 That locked slice proved on `/api/zena/change-requests`:
 
 - `submit: draft -> submitted`
@@ -15,11 +17,17 @@ That locked slice proved on `/api/zena/change-requests`:
 - `apply: only from approved -> implemented`
 - `update()` blocks direct workflow status mutation
 - canonical audit alignment via `App\Services\ZenaAuditLogger` for `submit`, `approve`, `reject`, and `apply`
+- minimal direct-recipient in-app notifications on state change:
+  - `submit -> one explicit approver recipient fixture via assigned_to`
+  - `approve/reject -> requester via requested_by`
 
 What remains outside the proved slice:
 
-- canonical notification proof is still deferred
+- `apply` notification is still deferred
+- stakeholder recipient semantics remain `UNKNOWN`
+- broad stakeholder or fan-out notification proof is still not canonically defined
 - backlog story `S3.2` therefore remains `todo`
+- recommended next planning move is to split the already-proved canonical workflow + minimal direct-recipient notification slice from the still-unknown stakeholder/broader notification slice
 - this proposal now serves as planning context for acceptance-boundary alignment rather than pending runtime implementation
 
 ## Context Snapshot

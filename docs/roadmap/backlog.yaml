@@ -196,9 +196,10 @@ epics:
           - "Canonical notifications for approvers and stakeholders are proved end-to-end on state changes."
         notes:
           - "Locked runtime slice already proves canonical submit/approve/reject/apply guards and audit alignment on /api/zena/change-requests."
-          - "Story remains todo because notification proof is still deferred and acceptance is not yet fully met."
+          - "Story remains todo because the broad acceptance wording still requires stakeholder notification proof that the canonical path does not yet define."
           - "Notification planning is now locked to a minimal canonical in-app proof boundary: submit -> one explicit approver recipient fixture, approve/reject -> requester, apply -> deferred until a later round proves broader recipient semantics."
           - "Broad stakeholder fan-out remains UNKNOWN on the canonical path and must not be invented during the next proof round."
+          - "Recommended planning direction: split the already-proved canonical workflow + minimal direct-recipient notification slice from the still-unknown stakeholder/broader notification semantics before any done claim is considered."
       - id: S3.3
         title: "Approved CR creates delta tasks + baseline delta"
         priority: P0

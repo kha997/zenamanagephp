@@ -166,12 +166,22 @@ epics:
           - "Canonical reverse lookup is proved through GET /api/zena/documents filters using linked_entity_type and linked_entity_id; no /api/v1/* path is used as proof."
           - "This slice intentionally avoids creating a second file-owner surface outside Document Center."
       - id: S2.3
-        title: "Workflow Submit → Review → Approve/Reject"
+        title: "Canonical document workflow submit + decision slice"
         priority: P1
-        status: todo
+        status: done
         acceptance_criteria:
-          - "State machine exists with reviewers/approvers."
-          - "Notifications on state changes."
+          - "Canonical `/api/zena/documents` supports `draft -> submitted -> approved|rejected` through `POST /api/zena/documents/{id}/submit` and `POST /api/zena/documents/{id}/decision`."
+          - "Canonical decision is allowed only from `submitted`, remains tenant-safe, and requires management-policy authorization on the document owner path."
+          - "This slice does not claim a separate `review` route, a broad reviewer/approver matrix, or notification semantics."
+        updated_at: 2026-03-29
+        evidence:
+          head: "a5928953c4f41cacf54bc3630ded1b20e8ca0772"
+          routes: "POST /api/zena/documents/{id}/submit; POST /api/zena/documents/{id}/decision"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/DocumentManagementTest.php (12 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
+        notes:
+          - "Canonical runtime proof covers submit and decision only on the Document Center owner path."
+          - "Current evidence proves invalid-transition guards, tenant safety, and management-policy authorization for `decision()`."
+          - "Separate review-matrix semantics, reviewer/approver expansion, and notifications remain UNKNOWN until a later evidence-backed story or proposal defines them."
       - id: S2.4
         title: "Document search & filters"
         priority: P1

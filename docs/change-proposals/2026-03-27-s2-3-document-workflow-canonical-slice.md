@@ -118,3 +118,22 @@ git diff -- app/Http/Controllers/Api/SimpleDocumentController.php routes/api_zen
 ## Verdict
 
 S2.3 narrative should describe only the canonical `submit` and `decision` workflow slice as the new change proven by the current diff.
+
+## Planning Lock
+
+As of `2026-03-29`, the recommended planning direction is Option A: narrow `S2.3` itself to the already-proved canonical document workflow slice instead of keeping backlog acceptance broad.
+
+Locked acceptance boundary:
+
+- `POST /api/zena/documents/{id}/submit` proves `draft -> submitted`
+- `POST /api/zena/documents/{id}/decision` proves `submitted -> approved|rejected`
+- Canonical `decision()` requires management-policy authorization and rejects invalid transitions
+- Tenant-safe access is covered on the canonical `/api/zena/documents/*` owner path
+
+Explicitly out of scope for this slice:
+
+- any separate `review` route or review-stage matrix
+- any broad reviewer or approver semantics beyond the proved management-policy gate on `decision()`
+- any notification behavior on document workflow state changes
+
+If later planning wants review-matrix or notification semantics, it should do so through a separate evidence-backed story or proposal rather than by stretching this proved slice.

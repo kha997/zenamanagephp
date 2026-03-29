@@ -378,22 +378,44 @@ For `S3.2`, the former planning gap was backlog wording that bundled `approvers 
 
 #### S2.3 Document workflow canonical slice
 
-- Roadmap status: todo
+- Roadmap status: done
 - Progress status: locked
 - Current state:
   - A minimal canonical workflow slice exists on the active owner path.
   - Current proven scope is `draft -> submitted -> approved|rejected` through `submit` and `decision`.
-  - This is narrower than the full backlog story and should not be overclaimed as a full review workflow.
+  - Acceptance is now narrowed to this proved canonical slice and should not be overclaimed as a full review workflow.
 - Evidence:
   - commit: `bba51d3f042633884c1459903c085c9e0415f79f`
   - routes: `POST /api/zena/documents/{id}/submit`; `POST /api/zena/documents/{id}/decision`
   - tests: `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/DocumentManagementTest.php` -> `OK (12 tests, 56 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php` -> `OK (2 tests, 56 assertions)`
 - Deferred / remaining:
-  - full review matrix
-  - reviewer or approver expansion
+  - separate review matrix
+  - reviewer or approver expansion beyond management-policy authorization on `decision()`
   - notifications on state change
 - Next action:
-  - decide whether to keep backlog story status as `todo` until broader acceptance proof exists, or split the minimal slice into its own explicitly accepted sub-scope.
+  - keep `S2.3` closed at the proved canonical slice; require a later evidence-backed story or proposal before claiming review-matrix or notification behavior.
+
+### Round 13
+
+- Date: 2026-03-29
+- Scope: `S2.3` planning adjustment to align backlog acceptance with canonical document workflow proof
+- Outcome: docs-only done verdict
+- Key files:
+  - `docs/roadmap/backlog.yaml`
+  - `docs/progress.md`
+  - `docs/change-proposals/2026-03-27-s2-3-document-workflow-canonical-slice.md`
+- Evidence:
+  - head reviewed: `a5928953c4f41cacf54bc3630ded1b20e8ca0772`
+  - routes: `php artisan route:list | grep -E "documents|submit|decision|review|approve|reject" || true`
+  - tests: `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/DocumentManagementTest.php` -> `OK (12 tests, 56 assertions)`; `php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php` -> `OK (2 tests, 56 assertions)`
+- Deferred:
+  - separate `review` route or matrix semantics on canonical documents
+  - broad reviewer/approver discovery semantics
+  - notification behavior on document state changes
+  - any `/api/v1/*` work
+- Notes:
+  - This round chooses the narrow-first planning adjustment: `S2.3` is now defined only as the already-proved canonical `submit` + `decision` slice on `/api/zena/documents`.
+  - No runtime proof in this verdict claims a separate review stage or any notification contract.
 
 #### S2.4 Document search & filters
 

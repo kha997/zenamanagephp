@@ -27,7 +27,9 @@ What remains outside the proved slice:
 - stakeholder recipient semantics remain `UNKNOWN`
 - broad stakeholder or fan-out notification proof is still not canonically defined
 - backlog story `S3.2` therefore remains `todo`
-- recommended next planning move is to split the already-proved canonical workflow + minimal direct-recipient notification slice from the still-unknown stakeholder/broader notification slice
+- as of the docs-only planning split on 2026-03-29, narrowed `S3.2` now owns the already-proved canonical workflow + minimal direct-recipient notification slice
+- follow-up `S3.2a` now owns the still-unknown stakeholder/broader notification slice
+- neither story is marked `done` by this planning update
 - this proposal now serves as planning context for acceptance-boundary alignment rather than pending runtime implementation
 
 ## Context Snapshot

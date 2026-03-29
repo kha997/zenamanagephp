@@ -188,18 +188,30 @@ epics:
         acceptance_criteria:
           - "CR stores affected items and validates same tenant/project."
       - id: S3.2
-        title: "Approval workflow + audit trail"
+        title: "Canonical approval workflow + audit + minimal direct-recipient notifications"
         priority: P0
         status: todo
         acceptance_criteria:
           - "Draft→Submitted→Approved/Rejected supported with full audit on canonical /api/zena/change-requests."
-          - "Canonical notifications for approvers and stakeholders are proved end-to-end on state changes."
+          - "Canonical minimal direct-recipient in-app notifications are proved end-to-end on state changes: submit -> one explicit approver fixture via assigned_to; approve/reject -> requester via requested_by."
+          - "This slice does not claim broad approver discovery, stakeholder fan-out, or apply notification semantics."
         notes:
-          - "Locked runtime slice already proves canonical submit/approve/reject/apply guards and audit alignment on /api/zena/change-requests."
-          - "Story remains todo because the broad acceptance wording still requires stakeholder notification proof that the canonical path does not yet define."
-          - "Notification planning is now locked to a minimal canonical in-app proof boundary: submit -> one explicit approver recipient fixture, approve/reject -> requester, apply -> deferred until a later round proves broader recipient semantics."
-          - "Broad stakeholder fan-out remains UNKNOWN on the canonical path and must not be invented during the next proof round."
-          - "Recommended planning direction: split the already-proved canonical workflow + minimal direct-recipient notification slice from the still-unknown stakeholder/broader notification semantics before any done claim is considered."
+          - "Locked runtime slice already proves canonical submit/approve/reject/apply guards, direct workflow-status bypass blocking, audit alignment, and the minimal direct-recipient notification contract on /api/zena/change-requests."
+          - "Status remains todo in this planning round; acceptance is now narrowed to the proved canonical slice, but no done claim is made here."
+          - "Apply notification remains deferred even though apply state transition proof exists."
+          - "Broad stakeholder fan-out remains UNKNOWN on the canonical path and is intentionally carved into follow-up story S3.2a."
+      - id: S3.2a
+        title: "Broader approver/stakeholder notification semantics for canonical change requests"
+        priority: P1
+        status: todo
+        acceptance_criteria:
+          - "Canonical approver-discovery and stakeholder recipient semantics are explicitly defined for /api/zena/change-requests using evidence-backed owner fields or routes."
+          - "Any broader notification fan-out beyond the minimal direct-recipient slice is proved end-to-end on the canonical path without touching /api/v1/*."
+          - "Apply notification semantics are either proved in-scope or explicitly deferred again without overclaiming stakeholder behavior."
+        notes:
+          - "This follow-up exists because the canonical path currently proves only one explicit approver fixture on submit and requester-directed notifications on approve/reject."
+          - "Stakeholder semantics remain UNKNOWN until this story defines them from canonical evidence."
+          - "Do not invent broad fan-out rules from compatibility paths or non-canonical notification plumbing."
       - id: S3.3
         title: "Approved CR creates delta tasks + baseline delta"
         priority: P0

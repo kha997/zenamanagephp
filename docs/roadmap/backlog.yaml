@@ -334,9 +334,20 @@ epics:
       - id: S5.1
         title: "Inspection checklist templates (reuse WorkTemplate)"
         priority: P1
-        status: todo
+        status: done
         acceptance_criteria:
           - "Checklist template + instances generated via engine."
+        updated_at: 2026-03-29
+        evidence:
+          head: "692aff0f5ff06d9fcc6d83934ea88dd91cb59544"
+          routes: "POST /api/zena/projects/{id}/apply-template; POST /api/zena/work-templates/{id}/preview; POST /api/zena/inspections; POST /api/zena/inspections/{id}/conduct; POST /api/zena/inspections/{id}/complete"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateBaselineSeederTest.php (3 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/InspectionTemplateRuntimeTest.php (3 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Inspection (11 passed)"
+          lint: "composer ssot:lint"
+        notes:
+          - "Canonical proof uses the published baseline template `WT-BL-INSPECTION` and reuses the existing WorkTemplate engine without touching `/api/v1/*`."
+          - "Preview/apply prove an `inspection` step generates checklist snapshot artifacts under `work_instance_steps` ownership."
+          - "Canonical `/api/zena/inspections` now links to a generated inspection step through `qc_inspections.work_instance_step_id`, returns generated checklist metadata, and syncs checklist execution back into `work_instance_field_values`."
+          - "Foreign-tenant linkage is denied in runtime proof; exact validation-vs-authorization status-code semantics remain `UNKNOWN` and are not part of this slice."
       - id: S5.2
         title: "NCR + CAPA tasks lifecycle"
         priority: P1

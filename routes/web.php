@@ -869,6 +869,14 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/material-requests/{id}/submit', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'submit'])->name('material-requests.submit');
     Route::post('/material-requests/{id}/approve', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'approve'])->name('material-requests.approve');
 
+    // RFIs
+    Route::get('/rfis', [App\Http\Controllers\Web\RfiPageController::class, 'index'])->middleware('rbac:rfi.view')->name('rfis.index');
+    Route::get('/rfis/create', [App\Http\Controllers\Web\RfiPageController::class, 'create'])->middleware('rbac:rfi.create')->name('rfis.create');
+    Route::post('/rfis', [App\Http\Controllers\Web\RfiPageController::class, 'store'])->middleware('rbac:rfi.create')->name('rfis.store');
+    Route::get('/rfis/{id}', [App\Http\Controllers\Web\RfiPageController::class, 'show'])->middleware('rbac:rfi.view')->name('rfis.show');
+    Route::post('/rfis/{id}/respond', [App\Http\Controllers\Web\RfiPageController::class, 'respond'])->middleware('rbac:rfi.respond')->name('rfis.respond');
+    Route::post('/rfis/{id}/close', [App\Http\Controllers\Web\RfiPageController::class, 'close'])->middleware('rbac:rfi.close')->name('rfis.close');
+
     // Receipts
     Route::get('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'index'])->name('receipts.index');
     Route::get('/receipts/create', [App\Http\Controllers\Web\ReceiptPageController::class, 'create'])->name('receipts.create');

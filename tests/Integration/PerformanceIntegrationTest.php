@@ -508,6 +508,10 @@ class PerformanceIntegrationTest extends TestCase
     /** @test */
     public function it_can_handle_stress_testing()
     {
+        if (!env('RUN_STRESS_TESTS')) {
+            $this->markTestSkipped('RUN_STRESS_TESTS=1 is required for wall-clock stress thresholds (hardware dependent)');
+        }
+
         $stressTestCycles = 5;
         $operationsPerCycle = 10;
         

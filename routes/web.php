@@ -895,6 +895,33 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/change-requests/{id}/approve', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'approve'])->middleware('rbac:change-request.approve')->name('change-requests.approve');
     Route::post('/change-requests/{id}/reject', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'reject'])->middleware('rbac:change-request.reject')->name('change-requests.reject');
 
+    // BOQs
+    Route::get('/boqs', [App\Http\Controllers\Web\BoqPageController::class, 'index'])->middleware('rbac:boq.view')->name('boqs.index');
+    Route::get('/boqs/create', [App\Http\Controllers\Web\BoqPageController::class, 'create'])->middleware('rbac:boq.create')->name('boqs.create');
+    Route::post('/boqs', [App\Http\Controllers\Web\BoqPageController::class, 'store'])->middleware('rbac:boq.create')->name('boqs.store');
+    Route::get('/boqs/{id}', [App\Http\Controllers\Web\BoqPageController::class, 'show'])->middleware('rbac:boq.view')->name('boqs.show');
+    Route::post('/boqs/{boq}/lines', [App\Http\Controllers\Web\BoqPageController::class, 'storeLine'])->middleware('rbac:boq.create')->name('boqs.lines.store');
+
+    // Vendors
+    Route::get('/vendors', [App\Http\Controllers\Web\VendorPageController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
+    Route::get('/vendors/create', [App\Http\Controllers\Web\VendorPageController::class, 'create'])->middleware('rbac:vendor.create')->name('vendors.create');
+    Route::post('/vendors', [App\Http\Controllers\Web\VendorPageController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');
+    Route::get('/vendors/{id}', [App\Http\Controllers\Web\VendorPageController::class, 'show'])->middleware('rbac:vendor.view')->name('vendors.show');
+
+    // Contracts
+    Route::get('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'index'])->middleware('rbac:contract.view')->name('contracts.index');
+    Route::get('/contracts/create', [App\Http\Controllers\Web\ContractPageController::class, 'create'])->middleware('rbac:contract.create')->name('contracts.create');
+    Route::post('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'store'])->middleware('rbac:contract.create')->name('contracts.store');
+    Route::get('/contracts/{id}', [App\Http\Controllers\Web\ContractPageController::class, 'show'])->middleware('rbac:contract.view')->name('contracts.show');
+
+    // Inspections
+    Route::get('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'index'])->middleware('rbac:inspection.view')->name('inspections.index');
+    Route::get('/inspections/create', [App\Http\Controllers\Web\InspectionPageController::class, 'create'])->middleware('rbac:inspection.create')->name('inspections.create');
+    Route::post('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'store'])->middleware('rbac:inspection.create')->name('inspections.store');
+    Route::get('/inspections/{id}', [App\Http\Controllers\Web\InspectionPageController::class, 'show'])->middleware('rbac:inspection.view')->name('inspections.show');
+    Route::post('/inspections/{id}/conduct', [App\Http\Controllers\Web\InspectionPageController::class, 'conduct'])->middleware('rbac:inspection.conduct')->name('inspections.conduct');
+    Route::post('/inspections/{id}/complete', [App\Http\Controllers\Web\InspectionPageController::class, 'complete'])->middleware('rbac:inspection.complete')->name('inspections.complete');
+
     // Receipts
     Route::get('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'index'])->name('receipts.index');
     Route::get('/receipts/create', [App\Http\Controllers\Web\ReceiptPageController::class, 'create'])->name('receipts.create');

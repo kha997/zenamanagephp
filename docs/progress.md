@@ -27,6 +27,27 @@ For `S5.2`, the narrowed execution round is now proved: NCR ownership remains on
 
 ## 4. Recent Locked Rounds
 
+### Round 25
+
+- Date: 2026-07-08
+- Scope: framework modernization Laravel 9 → 12 + dependency security closure
+- Outcome: locked runtime slice
+- Key files:
+  - `composer.json` / `composer.lock` (framework ^12.0, sanctum ^4, dusk ^8, collision ^8, phpunit ^11, php-jwt ^7, php ^8.2)
+  - `phpunit.xml` (migrated to PHPUnit 10+ schema)
+  - `database/migrations/2025_09_19_174648_rename_zena_tables_to_standard_names.php` (native Schema::getIndexes replaces removed Doctrine API)
+  - `database/migrations/2025_09_20_160000_fix_notifications_table_schema.php` (drop legacy is_read indexes before native SQLite DROP COLUMN)
+- Evidence:
+  - `php artisan --version` -> Laravel Framework 12.63.0
+  - `composer audit` -> 0 security advisories (was 35 at round start)
+  - JWT surface proof: `php artisan test --filter="RefreshToken|AuthService|ZenaAuth"` -> 23 passed (php-jwt v6 → v7; HS256 encode/decode API unchanged)
+  - operator UI smoke: 5/5 per hop (L10, L11, L12)
+- Deferred:
+  - React/TypeScript layer removal (still CI-coupled)
+  - realtime/PWA/Gantt/BIM feature tracks
+- Notes:
+  - Upgrade path was staged 9→10→11→12 with a full-suite gate at 10 and smoke gates at 11/12; only the two migration fixes above required app-code changes across all three hops.
+
 ### Round 24
 
 - Date: 2026-07-08

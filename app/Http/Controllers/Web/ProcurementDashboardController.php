@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\ChangeRequest;
+use App\Models\Contract;
 use App\Models\MaterialReceipt;
 use App\Models\MaterialRequest;
+use App\Models\Ncr;
+use App\Models\QcInspection;
 use App\Models\Rfi;
 use App\Models\Submittal;
 use Illuminate\Contracts\View\View;
@@ -50,6 +53,21 @@ class ProcurementDashboardController extends Controller
             ->where('status', 'submitted')
             ->count();
 
+        $inspectionScheduledCount = QcInspection::query()
+            ->where('tenant_id', $tenantId)
+            ->where('status', 'scheduled')
+            ->count();
+
+        $ncrOpenCount = Ncr::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('status', ['open', 'in_progress'])
+            ->count();
+
+        $contractActiveCount = Contract::query()
+            ->where('tenant_id', $tenantId)
+            ->where('status', 'active')
+            ->count();
+
         $recentRfis = Rfi::query()
             ->where('tenant_id', $tenantId)
             ->with('project:id,tenant_id,name')
@@ -64,6 +82,9 @@ class ProcurementDashboardController extends Controller
             'rfiOverdueCount' => $rfiOverdueCount,
             'submittalPendingCount' => $submittalPendingCount,
             'changeRequestPendingCount' => $changeRequestPendingCount,
+            'inspectionScheduledCount' => $inspectionScheduledCount,
+            'ncrOpenCount' => $ncrOpenCount,
+            'contractActiveCount' => $contractActiveCount,
             'recentRfis' => $recentRfis,
         ]);
     }

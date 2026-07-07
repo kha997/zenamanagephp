@@ -48,6 +48,34 @@
         </x-ui.card>
     </div>
 
+    <div class="mt-6 grid gap-6 md:grid-cols-3">
+        <x-ui.card title="Kiểm định đã lên lịch">
+            <div class="text-4xl font-semibold text-slate-900">{{ $inspectionScheduledCount }}</div>
+            <div class="mt-4">
+                <x-ui.button-link :href="route('operator.inspections.index', ['status' => 'scheduled'])" variant="inline">Mở danh sách →</x-ui.button-link>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card title="NCR đang mở">
+            <div class="flex items-baseline gap-3">
+                <div class="text-4xl font-semibold {{ $ncrOpenCount > 0 ? 'text-rose-700' : 'text-slate-900' }}">{{ $ncrOpenCount }}</div>
+                @if ($ncrOpenCount > 0)
+                    <span class="inline-flex rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-800">cần xử lý</span>
+                @endif
+            </div>
+            <div class="mt-4">
+                <x-ui.button-link :href="route('operator.inspections.index')" variant="inline">Mở kiểm định →</x-ui.button-link>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card title="Hợp đồng hiệu lực">
+            <div class="text-4xl font-semibold text-slate-900">{{ $contractActiveCount }}</div>
+            <div class="mt-4">
+                <x-ui.button-link :href="route('operator.contracts.index', ['status' => 'active'])" variant="inline">Mở danh sách →</x-ui.button-link>
+            </div>
+        </x-ui.card>
+    </div>
+
     <div class="mt-6">
         <x-ui.card title="RFI gần đây">
             @if ($recentRfis->isEmpty())

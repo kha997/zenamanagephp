@@ -3,7 +3,7 @@
 ## 1. Project Header
 
 - Project: Build zena webapp / zenamanage-golden
-- Last updated: 2026-03-29
+- Last updated: 2026-07-08
 - Branch: main
 - Goal: deploy the real webapp and do not change domain/app logic just to pass test/CI
 
@@ -26,6 +26,33 @@ For `S5.2`, the narrowed execution round is now proved: NCR ownership remains on
 - Do not change domain/app logic just to pass test or CI.
 
 ## 4. Recent Locked Rounds
+
+### Round 24
+
+- Date: 2026-07-08
+- Scope: Operator web UI rollout (all 11 business modules) + security hardening + suite stabilization
+- Outcome: locked runtime slice
+- Key files:
+  - `routes/web.php` (operator.* route family with mirrored `rbac:*` middleware)
+  - `app/Http/Controllers/Web/*PageController.php` (RFI, Submittal, ChangeRequest, Boq, Vendor, Contract, Inspection, Material + Concerns/DelegatesToApiControllers trait)
+  - `resources/views/{rfis,submittals,change-requests,boqs,vendors,contracts,inspections,materials}/`
+  - `resources/css/operator.css` (design-token SSOT), `resources/views/layouts/operator.blade.php`
+  - `app/Http/Controllers/Api/UploadController.php`, `app/Http/Middleware/DebugGateMiddleware.php`, `config/cors.php`, `config/session.php` (security patches)
+  - `tests/Feature/Zena/Operator*UiTest.php` (35 tests)
+- Evidence:
+  - head reviewed: `a6f3ed798bd0139247de8b5b7e54b1763a620b41`
+  - runtime truth: `php artisan route:list --name=operator` shows the full web owner family for dashboard, material-requests, receipts, materials, vendors, boqs (+line-items), contracts, inspections (+ncrs), rfis, submittals, change-requests
+  - UI proof: `php artisan test --filter=Operator` -> 35 passed
+  - suite proof: `php artisan test` -> 1317 passed, 11 skipped, 0 failed
+  - dependency proof: `composer audit` advisories reduced 35 -> 24 after guzzle/psr7/aws-sdk/php-jwt/commonmark updates; framework pinned `^9.52`
+- Deferred:
+  - Laravel 10+ upgrade (required to clear remaining 24 advisories; Laravel 9 EOL)
+  - React/TypeScript layer removal (CI `production.yml`/`system-smoke.yml` still run jest against it)
+  - admin/app layout-zone migration to operator design system
+  - realtime updates, PWA offline, Gantt/BIM viewers
+- Notes:
+  - Web page controllers delegate all writes to the canonical `/api/zena/*` controllers via a shared request-forwarding trait; web routes carry the same `rbac:*` middleware as the API since those controllers enforce RBAC at route level.
+  - Operator dashboard aggregates procurement, document-workflow, quality, and commercial KPIs with overdue/open badges.
 
 ### Round 23
 

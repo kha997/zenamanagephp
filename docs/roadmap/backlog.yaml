@@ -482,15 +482,31 @@ epics:
       - id: S6.2
         title: "Alert taxonomy + rules"
         priority: P2
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Alert types configured and triggered by events."
+        evidence:
+          routes: "GET /api/zena/alerts, PUT /api/zena/alerts/{id}/read — RBAC-gated (alert.view, alert.read)"
+          tests: "php artisan test tests/Feature/Api/AlertTaxonomyApiTest.php (7 passed)"
+        notes:
+          - "DashboardAlert model corrected to match actual dashboard_alerts table schema (severity/triggered_at/context). VALID_SEVERITIES constant seals low/medium/high/critical taxonomy."
+          - "AlertController provides index (user+tenant scoped, filterable by type/severity/is_read) and markAsRead (PUT /{id}/read) with tenant-safe 404 on cross-tenant access."
+          - "Permissions alert.view and alert.read added to ZenaPermissionsSeeder canonical list and pilot role in ZenaRbacSeeder."
       - id: S6.3
         title: "Internal outbox/event record (future microservice boundary)"
         priority: P3
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Events recorded/replayable without breaking tenant/RBAC."
+        evidence:
+          routes: "GET /api/zena/event-records, GET /api/zena/event-records/{id} — RBAC-gated (event-record.view)"
+          tests: "php artisan test tests/Feature/Api/EventRecordOutboxApiTest.php (6 passed)"
+        notes:
+          - "EventRecordController exposes tenant-scoped read-only outbox API with filters on event_key, aggregate_type, aggregate_id, project_id."
+          - "Replay proof: test_escalation_event_record_is_replayable_from_outbox triggers POST /tasks/{id}/escalate-overdue then reads back the recorded EventRecord with full payload (task snapshot + context_tag + notification type)."
+          - "Permission event-record.view added to ZenaPermissionsSeeder and pilot role in ZenaRbacSeeder."
       - id: S6.4
         title: "Documentation coverage: module→API→screens→workflows"
         priority: P3

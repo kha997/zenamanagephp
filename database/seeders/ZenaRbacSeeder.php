@@ -75,6 +75,10 @@ class ZenaRbacSeeder extends Seeder
             'material-receipt.view', 'material-receipt.create',
             'material-receipt-line.view', 'material-receipt-line.create',
             'material-receipt-checklist.view', 'material-receipt-checklist.create',
+            // Alert taxonomy (S6.2)
+            'alert.view', 'alert.read',
+            // Event record outbox (S6.3)
+            'event-record.view',
             // PO / Invoice / Timesheet / Report
             'po.create', 'po.approve', 'po.read',
             'invoice.create', 'invoice.approve', 'invoice.pay', 'invoice.read',

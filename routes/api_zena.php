@@ -467,5 +467,18 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         // Template package import/export routes
         Route::get('/export-template-package/{wtId}', [\App\Http\Controllers\Api\WorkTemplateController::class, 'exportTemplatePackage'])->middleware('rbac:template.view')->name('work-templates.package.export');
         Route::post('/import-template-package', [\App\Http\Controllers\Api\WorkTemplateController::class, 'importTemplatePackage'])->middleware('rbac:template.edit_draft')->name('work-templates.package.import');
+
+        // Alert taxonomy routes (S6.2)
+        Route::prefix('alerts')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\AlertController::class, 'index'])->middleware('rbac:alert.view')->name('alerts.index');
+            Route::get('/{id}', [\App\Http\Controllers\Api\AlertController::class, 'show'])->middleware('rbac:alert.view')->name('alerts.show');
+            Route::put('/{id}/read', [\App\Http\Controllers\Api\AlertController::class, 'markAsRead'])->middleware('rbac:alert.read')->name('alerts.mark-read');
+        });
+
+        // Event record outbox routes (S6.3)
+        Route::prefix('event-records')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\EventRecordController::class, 'index'])->middleware('rbac:event-record.view')->name('event-records.index');
+            Route::get('/{id}', [\App\Http\Controllers\Api\EventRecordController::class, 'show'])->middleware('rbac:event-record.view')->name('event-records.show');
+        });
     });
 });

@@ -167,6 +167,13 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'notification.delete', 'module' => 'notification', 'action' => 'delete', 'description' => 'Delete notifications'],
         ['code' => 'notification.stats', 'module' => 'notification', 'action' => 'stats', 'description' => 'Read notification metrics'],
 
+        // Alert taxonomy (S6.2)
+        ['code' => 'alert.view', 'module' => 'alert', 'action' => 'view', 'description' => 'View dashboard alerts'],
+        ['code' => 'alert.read', 'module' => 'alert', 'action' => 'read', 'description' => 'Mark alert as read'],
+
+        // Event record outbox (S6.3)
+        ['code' => 'event-record.view', 'module' => 'event-record', 'action' => 'view', 'description' => 'Read event records for replayability'],
+
         // Application settings
         ['code' => 'settings.general.read', 'module' => 'settings', 'action' => 'general.read', 'description' => 'View general settings'],
         ['code' => 'settings.general.update', 'module' => 'settings', 'action' => 'general.update', 'description' => 'Update general settings'],

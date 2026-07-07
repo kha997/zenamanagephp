@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class SubmittalController extends ApiBaseController
@@ -498,17 +499,20 @@ class SubmittalController extends ApiBaseController
      */
     private function generateSubmittalNumber(string $projectId, ?Project $project = null): string
     {
-        $project ??= $this->projectForTenant($projectId);
-        $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
-        
-        $lastSubmittal = Submittal::where('tenant_id', $this->tenantId())
-            ->where('project_id', $projectId)
-            ->orderBy('created_at', 'desc')
-            ->first();
-        
-        $sequence = $lastSubmittal ? (int)substr($lastSubmittal->submittal_number, -4) + 1 : 1;
-        
-        return $projectCode . '-SUB-' . sprintf('%04d', $sequence);
+        return DB::transaction(function () use ($projectId, $project): string {
+            $project ??= $this->projectForTenant($projectId);
+            $projectCode = $project ? strtoupper(substr($project->name, 0, 3)) : 'PRJ';
+
+            $lastSubmittal = Submittal::where('tenant_id', $this->tenantId())
+                ->where('project_id', $projectId)
+                ->orderBy('created_at', 'desc')
+                ->lockForUpdate()
+                ->first();
+
+            $sequence = $lastSubmittal ? (int) substr($lastSubmittal->submittal_number, -4) + 1 : 1;
+
+            return $projectCode . '-SUB-' . sprintf('%04d', $sequence);
+        });
     }
 
     private function projectForTenant(string $projectId): ?Project

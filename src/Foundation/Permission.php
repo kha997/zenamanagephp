@@ -142,11 +142,26 @@ class Permission {
      * @return array Mảng chứa permissions và override rules
      */
     private static function getRolePermissions(string $roleId): array {
-        // TODO: Implement database query to get role permissions
-        // Tạm thời return mock data
+        $role = \Src\RBAC\Models\Role::with('permissions')->find($roleId);
+
+        if (!$role) {
+            return [
+                'permissions' => [],
+                'overrides' => []
+            ];
+        }
+
+        $permissions = [];
+        $overrides = [];
+
+        foreach ($role->permissions as $permission) {
+            $permissions[] = $permission->code;
+            $overrides[$permission->code] = (bool) $permission->pivot->allow_override;
+        }
+
         return [
-            'permissions' => [],
-            'overrides' => []
+            'permissions' => $permissions,
+            'overrides' => $overrides
         ];
     }
     

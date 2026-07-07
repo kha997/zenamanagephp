@@ -55,6 +55,19 @@ Route::middleware(['legacy.gone', 'legacy.redirect', 'legacy.route'])->group(fun
 
 // Simple Authentication Routes (available in local/testing environments only)
 if (app()->environment(['local', 'testing'])) {
+    Route::get('/local/dev-login/operator', function (Illuminate\Http\Request $request) {
+        $email = $request->query('email', '');
+        $user = \App\Models\User::where('email', $email)->whereNotNull('tenant_id')->first();
+
+        if (!$user) {
+            return response("No tenant-backed user found for [{$email}].", 404);
+        }
+
+        Auth::login($user);
+
+        return redirect()->route('operator.dashboard');
+    })->name('local.dev-login.operator');
+
     Route::get('/login', function () {
         return view('auth.login');
     })->name('login');
@@ -844,6 +857,25 @@ Route::get('/api/websocket/auth', [WebSocketAuthController::class, 'authenticate
 Route::post('/api/widgets', [WidgetController::class, 'store'])->name('api.legacy.widgets.store');
 Route::put('/api/widgets/{widget}', [WidgetController::class, 'update'])->name('api.legacy.widgets.update');
 Route::delete('/api/widgets/{widget}', [WidgetController::class, 'destroy'])->name('api.legacy.widgets.destroy');
+
+// Operator (Procurement) Routes — canonical web UI for procurement zone
+Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolation'])->group(function () {
+    Route::get('/', App\Http\Controllers\Web\ProcurementDashboardController::class)->name('dashboard');
+
+    // Material Requests
+    Route::get('/material-requests', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'index'])->name('material-requests.index');
+    Route::get('/material-requests/create', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'create'])->name('material-requests.create');
+    Route::post('/material-requests', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'store'])->name('material-requests.store');
+    Route::post('/material-requests/{id}/submit', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'submit'])->name('material-requests.submit');
+    Route::post('/material-requests/{id}/approve', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'approve'])->name('material-requests.approve');
+
+    // Receipts
+    Route::get('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'index'])->name('receipts.index');
+    Route::get('/receipts/create', [App\Http\Controllers\Web\ReceiptPageController::class, 'create'])->name('receipts.create');
+    Route::post('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'store'])->name('receipts.store');
+    Route::get('/receipts/{receipt}', [App\Http\Controllers\Web\ReceiptPageController::class, 'show'])->name('receipts.show');
+    Route::post('/receipts/{receipt}/lines', [App\Http\Controllers\Web\ReceiptPageController::class, 'storeLine'])->name('receipts.lines.store');
+});
 
 Route::middleware(['web', 'auth:sanctum', 'tenant.isolation', 'rbac'])->prefix('api')->as('api.legacy.')->group(function () {
     Route::get('/dashboards', [DashboardResourceController::class, 'index'])->middleware('throttle:dashboards')->name('dashboards.index');

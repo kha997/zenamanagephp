@@ -115,6 +115,7 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'task.dependencies.view', 'module' => 'task', 'action' => 'dependencies.view', 'description' => 'View task dependencies'],
         ['code' => 'task.dependencies.add', 'module' => 'task', 'action' => 'dependencies.add', 'description' => 'Add task dependencies'],
         ['code' => 'task.dependencies.remove', 'module' => 'task', 'action' => 'dependencies.remove', 'description' => 'Remove task dependencies'],
+        ['code' => 'task.escalate-overdue', 'module' => 'task', 'action' => 'escalate-overdue', 'description' => 'Escalate overdue CAPA task'],
 
         // Document management
         ['code' => 'document.view', 'module' => 'document', 'action' => 'view', 'description' => 'View documents'],

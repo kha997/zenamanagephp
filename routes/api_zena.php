@@ -268,6 +268,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/{id}/dependencies', [\App\Http\Controllers\Api\TaskController::class, 'getDependencies'])->middleware('rbac:task.dependencies.view')->name('tasks.dependencies');
             Route::post('/{id}/dependencies', [\App\Http\Controllers\Api\TaskController::class, 'addDependency'])->middleware('rbac:task.dependencies.add')->name('tasks.add-dependency');
             Route::delete('/{id}/dependencies/{dependencyId}', [\App\Http\Controllers\Api\TaskController::class, 'removeDependency'])->middleware('rbac:task.dependencies.remove')->name('tasks.remove-dependency');
+            Route::post('/{id}/escalate-overdue', [\App\Http\Controllers\Api\TaskController::class, 'escalateOverdue'])->middleware('rbac:task.escalate-overdue')->name('tasks.escalate-overdue');
         });
 
         // RFI (Request for Information) routes

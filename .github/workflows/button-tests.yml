@@ -276,16 +276,18 @@ jobs:
 
         echo "CHROME_BIN=$CHROME_BIN" >> "$GITHUB_ENV"
         echo "CHROMEDRIVER_PATH=$CHROMEDRIVER_PATH" >> "$GITHUB_ENV"
-        ln -sf "$CHROMEDRIVER_PATH" "$TARGET"
+        cp "$CHROMEDRIVER_PATH" "$TARGET"
+        chmod 755 "$TARGET"
 
         test -f "$TARGET"
         test -x "$TARGET"
+        "$TARGET" --version
 
     
     - name: Setup environment
       run: |
         mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions bootstrap/cache
-        chmod -R 777 storage bootstrap/cache
+        chmod -R 775 storage bootstrap/cache
         cp .env.example .env.testing
         echo "APP_URL=http://127.0.0.1:8000" >> .env.testing
         echo "DUSK_URL=http://127.0.0.1:8000" >> .env.testing

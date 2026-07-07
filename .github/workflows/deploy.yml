@@ -2,8 +2,6 @@ name: Deploy Z.E.N.A to Production
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
   deploy:

@@ -50,12 +50,20 @@ epics:
       - id: S0.2
         title: "CI reliability hardening (Dusk/Docker/SSOT)"
         priority: P0
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Dusk runs deterministically in CI (chromedriver path stable; no chmod symlink failures)."
           - "Docker scan builds image and scans local image (no unauthorized remote pulls)."
           - "SSOT lint runs in CI with valid env bootstrap."
           - "No 'push misfire' failures polluting PR checks."
+        evidence:
+          workflows: ".github/workflows/button-tests.yml (Dusk); .github/workflows/code-quality-security.yml (Docker Trivy); .github/workflows/ci-cd.yml (SSOT lint); .github/workflows/deploy.yml + automated-deployment.yml (push misfire fix)"
+        notes:
+          - "AC1 Dusk: Replaced ln -sf symlink with cp+chmod 755 physical copy; added '$TARGET --version' binary smoke check. chmod -R 777 narrowed to 775. File: .github/workflows/button-tests.yml."
+          - "AC2 Docker: Already implemented — code-quality-security.yml uses docker/build-push-action with push:false + load:true, scans local image via Trivy, uploads SARIF to GitHub Security. No changes needed."
+          - "AC3 SSOT lint: Already implemented — ci-cd.yml bootstraps .env with APP_ENV=ci + SQLite + required dirs before running composer ssot:lint. No changes needed."
+          - "AC4 Push misfire: Removed push: trigger from deploy.yml (now workflow_dispatch only) and automated-deployment.yml (now release:published + workflow_dispatch only). Deploy jobs can no longer be accidentally triggered by a push."
       - id: S0.3
         title: "Event → Audit → Notification minimal pipeline"
         priority: P1

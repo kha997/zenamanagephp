@@ -44,15 +44,13 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span>RFI</span>
                 </a>
-                <a href="{{ route('api.zena.submittals.index', [], false) }}"
-                   class="operator-nav-link {{ request()->routeIs('operator.submittals.*') ? 'is-active' : '' }}"
-                   title="Xem qua API — trang web đang xây dựng">
+                <a href="{{ route('operator.submittals.index') }}"
+                   class="operator-nav-link {{ request()->routeIs('operator.submittals.*') ? 'is-active' : '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     <span>Submittals</span>
                 </a>
-                <a href="{{ route('api.zena.change-requests.index', [], false) }}"
-                   class="operator-nav-link {{ request()->routeIs('operator.change-requests.*') ? 'is-active' : '' }}"
-                   title="Xem qua API — trang web đang xây dựng">
+                <a href="{{ route('operator.change-requests.index') }}"
+                   class="operator-nav-link {{ request()->routeIs('operator.change-requests.*') ? 'is-active' : '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     <span>Change Requests</span>
                 </a>

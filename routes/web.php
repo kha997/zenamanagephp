@@ -877,6 +877,24 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/rfis/{id}/respond', [App\Http\Controllers\Web\RfiPageController::class, 'respond'])->middleware('rbac:rfi.respond')->name('rfis.respond');
     Route::post('/rfis/{id}/close', [App\Http\Controllers\Web\RfiPageController::class, 'close'])->middleware('rbac:rfi.close')->name('rfis.close');
 
+    // Submittals
+    Route::get('/submittals', [App\Http\Controllers\Web\SubmittalPageController::class, 'index'])->middleware('rbac:submittal.view')->name('submittals.index');
+    Route::get('/submittals/create', [App\Http\Controllers\Web\SubmittalPageController::class, 'create'])->middleware('rbac:submittal.create')->name('submittals.create');
+    Route::post('/submittals', [App\Http\Controllers\Web\SubmittalPageController::class, 'store'])->middleware('rbac:submittal.create')->name('submittals.store');
+    Route::get('/submittals/{id}', [App\Http\Controllers\Web\SubmittalPageController::class, 'show'])->middleware('rbac:submittal.view')->name('submittals.show');
+    Route::post('/submittals/{id}/submit', [App\Http\Controllers\Web\SubmittalPageController::class, 'submit'])->middleware('rbac:submittal.submit')->name('submittals.submit');
+    Route::post('/submittals/{id}/approve', [App\Http\Controllers\Web\SubmittalPageController::class, 'approve'])->middleware('rbac:submittal.approve')->name('submittals.approve');
+    Route::post('/submittals/{id}/reject', [App\Http\Controllers\Web\SubmittalPageController::class, 'reject'])->middleware('rbac:submittal.reject')->name('submittals.reject');
+
+    // Change Requests
+    Route::get('/change-requests', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'index'])->middleware('rbac:change-request.view')->name('change-requests.index');
+    Route::get('/change-requests/create', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'create'])->middleware('rbac:change-request.create')->name('change-requests.create');
+    Route::post('/change-requests', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'store'])->middleware('rbac:change-request.create')->name('change-requests.store');
+    Route::get('/change-requests/{id}', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'show'])->middleware('rbac:change-request.view')->name('change-requests.show');
+    Route::post('/change-requests/{id}/submit', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'submit'])->middleware('rbac:change-request.submit')->name('change-requests.submit');
+    Route::post('/change-requests/{id}/approve', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'approve'])->middleware('rbac:change-request.approve')->name('change-requests.approve');
+    Route::post('/change-requests/{id}/reject', [App\Http\Controllers\Web\ChangeRequestPageController::class, 'reject'])->middleware('rbac:change-request.reject')->name('change-requests.reject');
+
     // Receipts
     Route::get('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'index'])->name('receipts.index');
     Route::get('/receipts/create', [App\Http\Controllers\Web\ReceiptPageController::class, 'create'])->name('receipts.create');

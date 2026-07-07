@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Api\InspectionController as ApiInspectionController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
+use App\Models\Ncr;
 use App\Models\QcInspection;
 use App\Models\QcPlan;
 use App\Models\User;
@@ -99,7 +100,86 @@ class InspectionPageController extends Controller
             ->with(['qcPlan:id,title,project_id', 'inspector:id,name'])
             ->findOrFail($id);
 
-        return view('inspections.show', ['inspection' => $inspection]);
+        $ncrs = Ncr::query()
+            ->where('tenant_id', $tenantId)
+            ->where('inspection_id', (string) $inspection->id)
+            ->with('assignee:id,name')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('inspections.show', [
+            'inspection' => $inspection,
+            'ncrs' => $ncrs,
+            'assignees' => User::query()
+                ->where('tenant_id', $tenantId)
+                ->orderBy('name')
+                ->get(['id', 'tenant_id', 'name']),
+        ]);
+    }
+
+    public function storeNcr(Request $request, string $inspection, ApiInspectionController $apiController): RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['required', 'string'],
+            'severity' => ['nullable', 'in:low,medium,high,critical'],
+            'assigned_to' => ['nullable', 'string'],
+        ]);
+
+        $validated = array_filter($validated, static fn ($value) => $value !== null && $value !== '');
+
+        try {
+            $response = $apiController->storeNcr($this->buildApiRequest($request, $validated), $inspection);
+        } catch (AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->withInput()->with('error', 'Không thể tạo NCR.');
+        }
+
+        return $this->handleMutationResponse($response, route('operator.inspections.show', $inspection), 'Đã tạo NCR');
+    }
+
+    public function showNcr(string $inspection, string $ncr): View
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $ncrModel = Ncr::query()
+            ->where('tenant_id', $tenantId)
+            ->where('inspection_id', $inspection)
+            ->with(['creator:id,name', 'assignee:id,name', 'inspection:id,title'])
+            ->findOrFail($ncr);
+
+        return view('inspections.ncr-show', [
+            'ncr' => $ncrModel,
+            'inspectionId' => $inspection,
+        ]);
+    }
+
+    public function updateNcrStatus(Request $request, string $inspection, string $ncr, ApiInspectionController $apiController): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:open,in_progress,resolved,closed'],
+            'root_cause' => ['nullable', 'string'],
+            'corrective_action' => ['nullable', 'string'],
+            'preventive_action' => ['nullable', 'string'],
+            'resolution' => ['nullable', 'string'],
+        ]);
+
+        $validated = array_filter($validated, static fn ($value) => $value !== null && $value !== '');
+
+        try {
+            $response = $apiController->updateNcrStatus($this->buildApiRequest($request, $validated), $inspection, $ncr);
+        } catch (AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->withInput()->with('error', 'Không thể cập nhật NCR.');
+        }
+
+        return $this->handleMutationResponse(
+            $response,
+            route('operator.inspections.ncrs.show', ['inspection' => $inspection, 'ncr' => $ncr]),
+            'Đã cập nhật trạng thái NCR'
+        );
     }
 
     public function conduct(Request $request, string $id, ApiInspectionController $apiController): RedirectResponse

@@ -921,6 +921,15 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/inspections/{id}', [App\Http\Controllers\Web\InspectionPageController::class, 'show'])->middleware('rbac:inspection.view')->name('inspections.show');
     Route::post('/inspections/{id}/conduct', [App\Http\Controllers\Web\InspectionPageController::class, 'conduct'])->middleware('rbac:inspection.conduct')->name('inspections.conduct');
     Route::post('/inspections/{id}/complete', [App\Http\Controllers\Web\InspectionPageController::class, 'complete'])->middleware('rbac:inspection.complete')->name('inspections.complete');
+    Route::post('/inspections/{inspection}/ncrs', [App\Http\Controllers\Web\InspectionPageController::class, 'storeNcr'])->middleware('rbac:inspection.create')->name('inspections.ncrs.store');
+    Route::get('/inspections/{inspection}/ncrs/{ncr}', [App\Http\Controllers\Web\InspectionPageController::class, 'showNcr'])->middleware('rbac:inspection.view')->name('inspections.ncrs.show');
+    Route::post('/inspections/{inspection}/ncrs/{ncr}/status', [App\Http\Controllers\Web\InspectionPageController::class, 'updateNcrStatus'])->middleware('rbac:inspection.edit')->name('inspections.ncrs.update-status');
+
+    // Materials
+    Route::get('/materials', [App\Http\Controllers\Web\MaterialPageController::class, 'index'])->middleware('rbac:material.view')->name('materials.index');
+    Route::get('/materials/create', [App\Http\Controllers\Web\MaterialPageController::class, 'create'])->middleware('rbac:material.create')->name('materials.create');
+    Route::post('/materials', [App\Http\Controllers\Web\MaterialPageController::class, 'store'])->middleware('rbac:material.create')->name('materials.store');
+    Route::get('/materials/{id}', [App\Http\Controllers\Web\MaterialPageController::class, 'show'])->middleware('rbac:material.view')->name('materials.show');
 
     // Receipts
     Route::get('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'index'])->name('receipts.index');

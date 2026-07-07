@@ -316,6 +316,40 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::delete('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'destroy'])->middleware('rbac:boq.delete')->name('boqs.line-items.destroy');
         });
 
+        // Material Requests (procurement workflow)
+        Route::group(['prefix' => 'material-requests'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\MaterialRequestController::class, 'index'])->middleware('rbac:material.read')->name('material-requests.index');
+            Route::post('/', [\App\Http\Controllers\Api\MaterialRequestController::class, 'store'])->middleware('rbac:material.request')->name('material-requests.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\MaterialRequestController::class, 'show'])->middleware('rbac:material.read')->name('material-requests.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\MaterialRequestController::class, 'update'])->middleware('rbac:material.request')->name('material-requests.update');
+            Route::get('/{id}/receipts', [\App\Http\Controllers\Api\MaterialRequestController::class, 'receipts'])->middleware('rbac:material.read')->name('material-requests.receipts');
+            Route::post('/{id}/submit', [\App\Http\Controllers\Api\MaterialRequestController::class, 'submit'])->middleware('rbac:material.request')->name('material-requests.submit');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Api\MaterialRequestController::class, 'approve'])->middleware('rbac:material.approve')->name('material-requests.approve');
+            Route::post('/{id}/reject', [\App\Http\Controllers\Api\MaterialRequestController::class, 'reject'])->middleware('rbac:material.approve')->name('material-requests.reject');
+            Route::post('/{id}/fulfill', [\App\Http\Controllers\Api\MaterialRequestController::class, 'fulfill'])->middleware('rbac:material.receive')->name('material-requests.fulfill');
+        });
+
+        // Material Receipts (delivery + acceptance checklist)
+        Route::group(['prefix' => 'material-receipts'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'index'])->middleware('rbac:material-receipt.view')->name('material-receipts.index');
+            Route::post('/', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'store'])->middleware('rbac:material-receipt.create')->name('material-receipts.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'show'])->middleware('rbac:material-receipt.view')->name('material-receipts.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'update'])->middleware('rbac:material-receipt.create')->name('material-receipts.update');
+            Route::get('/{id}/material-request', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'materialRequest'])->middleware('rbac:material-receipt.view')->name('material-receipts.material-request');
+
+            Route::group(['prefix' => '/{receipt}/checklists'], function () {
+                Route::post('/', [\App\Http\Controllers\Api\MaterialReceiptChecklistController::class, 'store'])->middleware('rbac:material-receipt-checklist.create')->name('material-receipts.checklists.store');
+                Route::get('/{checklist}', [\App\Http\Controllers\Api\MaterialReceiptChecklistController::class, 'show'])->middleware('rbac:material-receipt-checklist.view')->name('material-receipts.checklists.show');
+            });
+
+            Route::group(['prefix' => '/{receipt}/lines'], function () {
+                Route::get('/', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'index'])->middleware('rbac:material-receipt-line.view')->name('material-receipts.lines.index');
+                Route::post('/', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'store'])->middleware('rbac:material-receipt-line.create')->name('material-receipts.lines.store');
+                Route::get('/{line}', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'show'])->middleware('rbac:material-receipt-line.view')->name('material-receipts.lines.show');
+                Route::put('/{line}', [\App\Http\Controllers\Api\MaterialReceiptLineController::class, 'update'])->middleware('rbac:material-receipt-line.create')->name('material-receipts.lines.update');
+            });
+        });
+
         // Change Requests routes
         Route::group(['prefix' => 'change-requests'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'index'])->middleware('rbac:change-request.view')->name('change-requests.index');

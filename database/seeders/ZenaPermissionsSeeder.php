@@ -140,6 +140,24 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'boq.update', 'module' => 'boq', 'action' => 'update', 'description' => 'Update canonical BOQs and nested line items'],
         ['code' => 'boq.delete', 'module' => 'boq', 'action' => 'delete', 'description' => 'Delete canonical BOQs and nested line items'],
 
+        // Material requests (procurement workflow)
+        ['code' => 'material.read', 'module' => 'material', 'action' => 'read', 'description' => 'View material requests'],
+        ['code' => 'material.request', 'module' => 'material', 'action' => 'request', 'description' => 'Create and update material requests'],
+        ['code' => 'material.approve', 'module' => 'material', 'action' => 'approve', 'description' => 'Approve or reject material requests'],
+        ['code' => 'material.receive', 'module' => 'material', 'action' => 'receive', 'description' => 'Fulfill/receive approved material requests'],
+
+        // Material receipts (delivery + acceptance)
+        ['code' => 'material-receipt.view', 'module' => 'material-receipt', 'action' => 'view', 'description' => 'View material delivery receipts'],
+        ['code' => 'material-receipt.create', 'module' => 'material-receipt', 'action' => 'create', 'description' => 'Create and update material delivery receipts'],
+
+        // Material receipt checklists (acceptance evidence)
+        ['code' => 'material-receipt-checklist.view', 'module' => 'material-receipt-checklist', 'action' => 'view', 'description' => 'View acceptance checklists for receipts'],
+        ['code' => 'material-receipt-checklist.create', 'module' => 'material-receipt-checklist', 'action' => 'create', 'description' => 'Create acceptance checklists for receipts'],
+
+        // Material receipt lines (line items received)
+        ['code' => 'material-receipt-line.view', 'module' => 'material-receipt-line', 'action' => 'view', 'description' => 'View material receipt line items'],
+        ['code' => 'material-receipt-line.create', 'module' => 'material-receipt-line', 'action' => 'create', 'description' => 'Create and update material receipt line items'],
+
         // Notification management
         ['code' => 'notification.view', 'module' => 'notification', 'action' => 'view', 'description' => 'View notifications'],
         ['code' => 'notification.create', 'module' => 'notification', 'action' => 'create', 'description' => 'Send notifications'],

@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Models\EventRecord;
+use App\Models\Notification;
 use App\Models\Task;
+use App\Models\TaskAssignment;
+use App\Services\ZenaAuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +20,15 @@ use Illuminate\Validation\Rule;
 class TaskController extends BaseApiController
 {
     use ZenaContractResponseTrait;
+
+    private const CAPA_CONTEXT_TAG = 'inspection-ncr-capa';
+    private const ESCALATION_ACTION = 'zena.task.escalate_overdue';
+    private const ESCALATION_EVENT_KEY = 'zena.task.overdue_escalated';
+    private const ESCALATION_NOTIFICATION_TYPE = 'task_overdue_escalated';
+
+    public function __construct(private ZenaAuditLogger $auditLogger)
+    {
+    }
 
     private function tenantId(Request $request): string
     {
@@ -30,6 +43,101 @@ class TaskController extends BaseApiController
     protected function error(string $message, int $statusCode = 400, $data = null): JsonResponse
     {
         return $this->errorResponse($message, $statusCode, $data);
+    }
+
+    private function taskForTenant(Request $request, string $id, array $relations = []): ?Task
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return null;
+        }
+
+        $query = Task::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id);
+
+        if ($relations !== []) {
+            $query->with($relations);
+        }
+
+        return $query->first();
+    }
+
+    private function isInspectionNcrCapaTask(Task $task): bool
+    {
+        return in_array(self::CAPA_CONTEXT_TAG, (array) $task->tags, true);
+    }
+
+    private function hasTerminalStatus(Task $task): bool
+    {
+        return in_array((string) $task->status, [
+            Task::STATUS_COMPLETED,
+            Task::STATUS_CANCELLED,
+            'done',
+        ], true);
+    }
+
+    private function createOverdueEscalationNotification(Task $task, string $recipientUserId): Notification
+    {
+        $title = (string) ($task->title ?? $task->name ?? 'Overdue CAPA task');
+        $dueDate = $task->end_date?->toDateString();
+        $linkUrl = route('api.zena.tasks.show', ['id' => (string) $task->id], false);
+
+        return Notification::create([
+            'tenant_id' => (string) $task->tenant_id,
+            'user_id' => $recipientUserId,
+            'type' => self::ESCALATION_NOTIFICATION_TYPE,
+            'priority' => Notification::PRIORITY_NORMAL,
+            'title' => 'Overdue CAPA escalation',
+            'body' => trim(sprintf(
+                'CAPA task "%s" is overdue%s.',
+                $title,
+                $dueDate ? ' since ' . $dueDate : ''
+            )),
+            'channel' => Notification::CHANNEL_INAPP,
+            'event_key' => self::ESCALATION_EVENT_KEY,
+            'project_id' => $task->project_id,
+            'link_url' => $linkUrl,
+            'data' => [
+                'task_id' => (string) $task->id,
+                'task_status' => (string) $task->status,
+                'overdue_basis' => 'end_date',
+                'context_tag' => self::CAPA_CONTEXT_TAG,
+            ],
+        ]);
+    }
+
+    private function createOverdueEscalationEventRecord(Task $task, Notification $notification, string $actorUserId): EventRecord
+    {
+        return EventRecord::create([
+            'tenant_id' => (string) $task->tenant_id,
+            'project_id' => $task->project_id ? (string) $task->project_id : null,
+            'aggregate_type' => 'task',
+            'aggregate_id' => (string) $task->id,
+            'event_key' => self::ESCALATION_EVENT_KEY,
+            'actor_user_id' => $actorUserId,
+            'occurred_at' => now(),
+            'payload' => [
+                'notification' => [
+                    'type' => self::ESCALATION_NOTIFICATION_TYPE,
+                    'channel' => Notification::CHANNEL_INAPP,
+                    'recipient_user_id' => (string) $notification->user_id,
+                ],
+                'task' => [
+                    'id' => (string) $task->id,
+                    'status' => (string) $task->status,
+                ],
+                'context' => [
+                    'overdue_basis' => 'end_date',
+                    'context_tag' => self::CAPA_CONTEXT_TAG,
+                    'link_url' => (string) $notification->link_url,
+                ],
+                'actor' => [
+                    'user_id' => $actorUserId,
+                    'action' => self::ESCALATION_ACTION,
+                ],
+            ],
+        ]);
     }
 
     /**
@@ -247,6 +355,94 @@ class TaskController extends BaseApiController
         }
 
         return $this->zenaSuccessResponse($task);
+    }
+
+    public function escalateOverdue(Request $request, string $id): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->error('Tenant context missing', 400);
+        }
+
+        $task = $this->taskForTenant($request, $id, ['assignee:id,name,email']);
+
+        if (!$task) {
+            return $this->error('Task not found', 404);
+        }
+
+        if (!$this->isInspectionNcrCapaTask($task)) {
+            return $this->error('Task is not eligible for overdue CAPA escalation', 422, [
+                'task_id' => (string) $task->id,
+                'required_context_tag' => self::CAPA_CONTEXT_TAG,
+            ]);
+        }
+
+        if ($this->hasTerminalStatus($task)) {
+            return $this->error('Completed CAPA task cannot be escalated', 422, [
+                'task_id' => (string) $task->id,
+                'status' => (string) $task->status,
+            ]);
+        }
+
+        if ($task->end_date === null || !$task->end_date->isPast()) {
+            return $this->error('Task is not overdue for escalation', 422, [
+                'task_id' => (string) $task->id,
+                'overdue_basis' => 'end_date',
+                'end_date' => $task->end_date?->toISOString(),
+            ]);
+        }
+
+        if (!$task->assigned_to) {
+            return $this->error('Overdue CAPA task has no assignee for escalation', 422, [
+                'task_id' => (string) $task->id,
+                'recipient_basis' => 'assigned_to',
+            ]);
+        }
+
+        try {
+            $result = DB::transaction(function () use ($task, $user): array {
+                $notification = $this->createOverdueEscalationNotification($task, (string) $task->assigned_to);
+                $eventRecord = $this->createOverdueEscalationEventRecord($task, $notification, (string) $user->id);
+
+                return [
+                    'notification' => $notification,
+                    'event_record' => $eventRecord,
+                ];
+            });
+
+            /** @var Notification $notification */
+            $notification = $result['notification'];
+
+            $this->auditLogger->log(
+                $request,
+                self::ESCALATION_ACTION,
+                'task',
+                (string) $task->id,
+                200,
+                (string) $task->project_id,
+                (string) $task->tenant_id,
+                (string) $user->id
+            );
+
+            return $this->zenaSuccessResponse([
+                'task_id' => (string) $task->id,
+                'notification_id' => (string) $notification->id,
+                'event_record_id' => (string) $result['event_record']->id,
+                'recipient_user_id' => (string) $task->assigned_to,
+                'overdue_basis' => 'end_date',
+                'context_tag' => self::CAPA_CONTEXT_TAG,
+            ], 'Overdue CAPA escalation notification sent successfully');
+        } catch (\Exception $e) {
+            Log::error('Task overdue escalation error: ' . $e->getMessage());
+
+            return $this->error('Failed to escalate overdue CAPA task', 500);
+        }
     }
 
     /**

@@ -286,11 +286,44 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/reject', [\App\Http\Controllers\Api\SubmittalController::class, 'reject'])->middleware('rbac:submittal.reject')->name('submittals.reject');
         });
 
+        Route::group(['prefix' => 'materials'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\MaterialController::class, 'index'])->middleware('rbac:material.view')->name('materials.index');
+            Route::post('/', [\App\Http\Controllers\Api\MaterialController::class, 'store'])->middleware('rbac:material.create')->name('materials.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\MaterialController::class, 'show'])->middleware('rbac:material.view')->name('materials.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\MaterialController::class, 'update'])->middleware('rbac:material.update')->name('materials.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\MaterialController::class, 'destroy'])->middleware('rbac:material.delete')->name('materials.destroy');
+        });
+
+        Route::group(['prefix' => 'vendors'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\VendorController::class, 'index'])->middleware('rbac:vendor.view')->name('vendors.index');
+            Route::post('/', [\App\Http\Controllers\Api\VendorController::class, 'store'])->middleware('rbac:vendor.create')->name('vendors.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\VendorController::class, 'show'])->middleware('rbac:vendor.view')->name('vendors.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\VendorController::class, 'update'])->middleware('rbac:vendor.update')->name('vendors.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\VendorController::class, 'destroy'])->middleware('rbac:vendor.delete')->name('vendors.destroy');
+        });
+
+        Route::group(['prefix' => 'boqs'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\BoqController::class, 'index'])->middleware('rbac:boq.view')->name('boqs.index');
+            Route::post('/', [\App\Http\Controllers\Api\BoqController::class, 'store'])->middleware('rbac:boq.create')->name('boqs.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\BoqController::class, 'show'])->middleware('rbac:boq.view')->name('boqs.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\BoqController::class, 'update'])->middleware('rbac:boq.update')->name('boqs.update');
+            Route::delete('/{id}', [\App\Http\Controllers\Api\BoqController::class, 'destroy'])->middleware('rbac:boq.delete')->name('boqs.destroy');
+
+            Route::get('/{boq}/line-items', [\App\Http\Controllers\Api\BoqLineItemController::class, 'index'])->middleware('rbac:boq.view')->name('boqs.line-items.index');
+            Route::post('/{boq}/line-items', [\App\Http\Controllers\Api\BoqLineItemController::class, 'store'])->middleware('rbac:boq.create')->name('boqs.line-items.store');
+            Route::get('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'show'])->middleware('rbac:boq.view')->name('boqs.line-items.show');
+            Route::put('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'update'])->middleware('rbac:boq.update')->name('boqs.line-items.update');
+            Route::delete('/{boq}/line-items/{lineItem}', [\App\Http\Controllers\Api\BoqLineItemController::class, 'destroy'])->middleware('rbac:boq.delete')->name('boqs.line-items.destroy');
+        });
+
         // Change Requests routes
         Route::group(['prefix' => 'change-requests'], function () {
             Route::get('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'index'])->middleware('rbac:change-request.view')->name('change-requests.index');
             Route::post('/', [\App\Http\Controllers\Api\ChangeRequestController::class, 'store'])->middleware('rbac:change-request.create')->name('change-requests.store');
             Route::get('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'show'])->middleware('rbac:change-request.view')->name('change-requests.show');
+            Route::post('/{id}/links', [\App\Http\Controllers\Api\ChangeRequestController::class, 'attachLink'])->middleware('rbac:change-request.update')->name('change-requests.links.attach');
+            Route::delete('/{id}/links', [\App\Http\Controllers\Api\ChangeRequestController::class, 'detachLink'])->middleware('rbac:change-request.update')->name('change-requests.links.detach');
+            Route::get('/{id}/timeline', [\App\Http\Controllers\Api\ChangeRequestController::class, 'timeline'])->middleware('rbac:change-request.view')->name('change-requests.timeline');
             Route::put('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'update'])->middleware('rbac:change-request.update')->name('change-requests.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\ChangeRequestController::class, 'destroy'])->middleware('rbac:change-request.delete')->name('change-requests.destroy');
             Route::post('/{id}/submit', [\App\Http\Controllers\Api\ChangeRequestController::class, 'submit'])->middleware('rbac:change-request.submit')->name('change-requests.submit');
@@ -309,6 +342,10 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/schedule', [\App\Http\Controllers\Api\InspectionController::class, 'schedule'])->middleware('rbac:inspection.schedule')->name('inspections.schedule');
             Route::post('/{id}/conduct', [\App\Http\Controllers\Api\InspectionController::class, 'conduct'])->middleware('rbac:inspection.conduct')->name('inspections.conduct');
             Route::post('/{id}/complete', [\App\Http\Controllers\Api\InspectionController::class, 'complete'])->middleware('rbac:inspection.complete')->name('inspections.complete');
+            Route::get('/{inspection}/ncrs', [\App\Http\Controllers\Api\InspectionController::class, 'listNcrs'])->middleware('rbac:inspection.view')->name('inspections.ncrs.index');
+            Route::post('/{inspection}/ncrs', [\App\Http\Controllers\Api\InspectionController::class, 'storeNcr'])->middleware('rbac:inspection.create')->name('inspections.ncrs.store');
+            Route::get('/{inspection}/ncrs/{ncr}', [\App\Http\Controllers\Api\InspectionController::class, 'showNcr'])->middleware('rbac:inspection.view')->name('inspections.ncrs.show');
+            Route::patch('/{inspection}/ncrs/{ncr}/status', [\App\Http\Controllers\Api\InspectionController::class, 'updateNcrStatus'])->middleware('rbac:inspection.edit')->name('inspections.ncrs.update-status');
         });
 
         // Safety Incidents routes - DISABLED (Controller not implemented)
@@ -343,6 +380,12 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::get('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'index'])->middleware('rbac:document.view')->name('documents.index');
             Route::post('/', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'store'])->middleware('rbac:document.create')->name('documents.store');
             Route::get('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'show'])->middleware('rbac:document.view')->name('documents.show');
+            Route::post('/{id}/link', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'attachLink'])->middleware('rbac:document.update')->name('documents.link.attach');
+            Route::delete('/{id}/link', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'detachLink'])->middleware('rbac:document.update')->name('documents.link.detach');
+            Route::get('/{id}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'getVersions'])->middleware('rbac:document.view')->name('documents.versions.index');
+            Route::post('/{id}/versions', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'createVersion'])->middleware('rbac:document.update')->name('documents.versions.store');
+            Route::post('/{id}/submit', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'submit'])->middleware('rbac:document.update')->name('documents.submit');
+            Route::post('/{id}/decision', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'decision'])->middleware('rbac:document.update')->name('documents.decision');
             Route::put('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'update'])->middleware('rbac:document.update')->name('documents.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\SimpleDocumentController::class, 'destroy'])->middleware('rbac:document.delete')->name('documents.destroy');
         });

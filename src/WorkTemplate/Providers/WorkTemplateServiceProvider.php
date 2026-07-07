@@ -3,7 +3,6 @@
 namespace Src\WorkTemplate\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Route;
 use Src\WorkTemplate\Services\TemplateService;
 use Src\WorkTemplate\Services\ProjectTaskService;
 use Src\WorkTemplate\Listeners\WorkTemplateEventListener;
@@ -38,20 +37,7 @@ class WorkTemplateServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->loadRoutes();
         $this->registerEventListeners();
-    }
-
-    /**
-     * Load routes cho Work Template module
-     *
-     * @return void
-     */
-    protected function loadRoutes(): void
-    {
-        Route::middleware(['api'])
-            ->prefix('api')
-            ->group(base_path('src/WorkTemplate/routes/api.php'));
     }
 
     /**

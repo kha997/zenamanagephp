@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Event;
 
 /**
  * Model ChangeRequest để quản lý các yêu cầu thay đổi
@@ -41,18 +40,20 @@ class ChangeRequest extends Model
      * Các trạng thái của change request
      */
     public const STATUS_DRAFT = 'draft';
-    public const STATUS_AWAITING_APPROVAL = 'awaiting_approval';
+    public const STATUS_SUBMITTED = 'submitted';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_REJECTED = 'rejected';
+    public const STATUS_IMPLEMENTED = 'implemented';
 
     /**
      * Danh sách các trạng thái hợp lệ
      */
     public const VALID_STATUSES = [
         self::STATUS_DRAFT,
-        self::STATUS_AWAITING_APPROVAL,
+        self::STATUS_SUBMITTED,
         self::STATUS_APPROVED,
         self::STATUS_REJECTED,
+        self::STATUS_IMPLEMENTED,
     ];
 
     /**
@@ -74,10 +75,11 @@ class ChangeRequest extends Model
      * Các trạng thái có thể chuyển đổi
      */
     public const STATUS_TRANSITIONS = [
-        self::STATUS_DRAFT => [self::STATUS_AWAITING_APPROVAL],
-        self::STATUS_AWAITING_APPROVAL => [self::STATUS_APPROVED, self::STATUS_REJECTED, self::STATUS_DRAFT],
-        self::STATUS_APPROVED => [],
-        self::STATUS_REJECTED => [self::STATUS_DRAFT],
+        self::STATUS_DRAFT => [self::STATUS_SUBMITTED],
+        self::STATUS_SUBMITTED => [self::STATUS_APPROVED, self::STATUS_REJECTED],
+        self::STATUS_APPROVED => [self::STATUS_IMPLEMENTED],
+        self::STATUS_REJECTED => [],
+        self::STATUS_IMPLEMENTED => [],
     ];
 
     protected $fillable = [
@@ -240,7 +242,7 @@ class ChangeRequest extends Model
      */
     public function scopePendingApproval(Builder $query): Builder
     {
-        return $query->where('status', self::STATUS_AWAITING_APPROVAL);
+        return $query->where('status', self::STATUS_SUBMITTED);
     }
 
     /**
@@ -268,21 +270,16 @@ class ChangeRequest extends Model
     }
 
     /**
-     * Chuyển sang trạng thái awaiting approval
+     * Chuyển sang trạng thái submitted
      */
     public function submitForApproval(): bool
     {
-        if (!$this->canTransitionTo(self::STATUS_AWAITING_APPROVAL)) {
+        if (!$this->canTransitionTo(self::STATUS_SUBMITTED)) {
             return false;
         }
 
-        $this->status = self::STATUS_AWAITING_APPROVAL;
+        $this->status = self::STATUS_SUBMITTED;
         $result = $this->save();
-
-        // Comment out events for testing
-        // if ($result) {
-        //     Event::dispatch(new ChangeRequestStatusChanged($this, self::STATUS_DRAFT, self::STATUS_AWAITING_APPROVAL));
-        // }
 
         return $result;
     }
@@ -296,19 +293,12 @@ class ChangeRequest extends Model
             return false;
         }
 
-        $oldStatus = $this->status;
         $this->status = self::STATUS_APPROVED;
         $this->approved_by = $approverId;
         $this->approved_at = now();
         $this->approval_notes = $note;
         
         $result = $this->save();
-
-        // Comment out events for testing
-        // if ($result) {
-        //     Event::dispatch(new ChangeRequestApproved($this));
-        //     Event::dispatch(new ChangeRequestStatusChanged($this, $oldStatus, self::STATUS_APPROVED));
-        // }
 
         return $result;
     }
@@ -322,19 +312,12 @@ class ChangeRequest extends Model
             return false;
         }
 
-        $oldStatus = $this->status;
         $this->status = self::STATUS_REJECTED;
         $this->rejected_by = $rejectorId;
         $this->rejected_at = now();
         $this->rejection_reason = $reason;
         
         $result = $this->save();
-
-        // Comment out events for testing
-        // if ($result) {
-        //     Event::dispatch(new ChangeRequestRejected($this));
-        //     Event::dispatch(new ChangeRequestStatusChanged($this, $oldStatus, self::STATUS_REJECTED));
-        // }
 
         return $result;
     }
@@ -344,7 +327,7 @@ class ChangeRequest extends Model
      */
     public function isPending(): bool
     {
-        return $this->status === self::STATUS_AWAITING_APPROVAL;
+        return $this->status === self::STATUS_SUBMITTED;
     }
 
     /**
@@ -353,6 +336,14 @@ class ChangeRequest extends Model
     public function isApproved(): bool
     {
         return $this->status === self::STATUS_APPROVED;
+    }
+
+    /**
+     * Kiểm tra xem CR đã được implement chưa
+     */
+    public function isImplemented(): bool
+    {
+        return $this->status === self::STATUS_IMPLEMENTED;
     }
 
     /**

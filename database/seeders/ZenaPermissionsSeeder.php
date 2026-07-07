@@ -122,6 +122,24 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'document.update', 'module' => 'document', 'action' => 'update', 'description' => 'Update document metadata'],
         ['code' => 'document.delete', 'module' => 'document', 'action' => 'delete', 'description' => 'Delete documents'],
 
+        // Material catalog
+        ['code' => 'material.view', 'module' => 'material', 'action' => 'view', 'description' => 'View canonical material catalog entries'],
+        ['code' => 'material.create', 'module' => 'material', 'action' => 'create', 'description' => 'Create canonical material catalog entries'],
+        ['code' => 'material.update', 'module' => 'material', 'action' => 'update', 'description' => 'Update canonical material catalog entries'],
+        ['code' => 'material.delete', 'module' => 'material', 'action' => 'delete', 'description' => 'Delete canonical material catalog entries'],
+
+        // Vendor master data
+        ['code' => 'vendor.view', 'module' => 'vendor', 'action' => 'view', 'description' => 'View canonical vendor records'],
+        ['code' => 'vendor.create', 'module' => 'vendor', 'action' => 'create', 'description' => 'Create canonical vendor records'],
+        ['code' => 'vendor.update', 'module' => 'vendor', 'action' => 'update', 'description' => 'Update canonical vendor records'],
+        ['code' => 'vendor.delete', 'module' => 'vendor', 'action' => 'delete', 'description' => 'Delete canonical vendor records'],
+
+        // BOQ ownership
+        ['code' => 'boq.view', 'module' => 'boq', 'action' => 'view', 'description' => 'View canonical BOQs and nested line items'],
+        ['code' => 'boq.create', 'module' => 'boq', 'action' => 'create', 'description' => 'Create canonical BOQs and nested line items'],
+        ['code' => 'boq.update', 'module' => 'boq', 'action' => 'update', 'description' => 'Update canonical BOQs and nested line items'],
+        ['code' => 'boq.delete', 'module' => 'boq', 'action' => 'delete', 'description' => 'Delete canonical BOQs and nested line items'],
+
         // Notification management
         ['code' => 'notification.view', 'module' => 'notification', 'action' => 'view', 'description' => 'View notifications'],
         ['code' => 'notification.create', 'module' => 'notification', 'action' => 'create', 'description' => 'Send notifications'],

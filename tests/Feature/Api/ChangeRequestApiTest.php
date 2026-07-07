@@ -2,13 +2,22 @@
 
 namespace Tests\Feature\Api;
 
+use App\Models\AuditLog;
+use App\Models\Baseline;
+use App\Models\Component;
+use App\Models\CrLink;
+use App\Models\Document;
+use App\Models\Task;
 use Tests\TestCase;
+use App\Models\Notification;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\ZenaProject;
 use App\Models\ZenaChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\Traits\RouteNameTrait;
 use Tests\Traits\SchemaAwareChangeRequestAssertions;
 
@@ -134,10 +143,15 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_submit_change_request()
     {
+        $approver = User::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+        ]);
+
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
+            'assigned_to' => $approver->id,
             'status' => 'draft'
         ]);
 
@@ -152,6 +166,13 @@ class ChangeRequestApiTest extends TestCase
             'id' => $changeRequest->id,
             'status' => 'submitted'
         ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => $this->user->tenant_id,
+            'user_id' => $approver->id,
+            'type' => 'change_request_submitted',
+            'channel' => Notification::CHANNEL_INAPP,
+        ]);
     }
 
     /**
@@ -159,11 +180,15 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_approve_change_request()
     {
+        $requester = User::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+        ]);
+
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'requested_by' => $this->user->id,
+            'requested_by' => $requester->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'pending_approval'
+            'status' => 'submitted'
         ]);
 
         $approvalData = [
@@ -183,6 +208,13 @@ class ChangeRequestApiTest extends TestCase
             'status' => 'approved',
             'approved_by' => $this->user->id
         ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => $this->user->tenant_id,
+            'user_id' => $requester->id,
+            'type' => 'change_request_approved',
+            'channel' => Notification::CHANNEL_INAPP,
+        ]);
     }
 
     /**
@@ -190,11 +222,15 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_reject_change_request()
     {
+        $requester = User::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+        ]);
+
         $changeRequest = ZenaChangeRequest::factory()->create([
             'project_id' => $this->project->id,
-            'requested_by' => $this->user->id,
+            'requested_by' => $requester->id,
             'tenant_id' => $this->user->tenant_id,
-            'status' => 'pending_approval'
+            'status' => 'submitted'
         ]);
 
         $rejectionData = [
@@ -213,6 +249,13 @@ class ChangeRequestApiTest extends TestCase
             'id' => $changeRequest->id,
             'status' => 'rejected',
             'rejection_reason' => 'Cost impact too high'
+        ]);
+
+        $this->assertDatabaseHas('notifications', [
+            'tenant_id' => $this->user->tenant_id,
+            'user_id' => $requester->id,
+            'type' => 'change_request_rejected',
+            'channel' => Notification::CHANNEL_INAPP,
         ]);
     }
 
@@ -241,8 +284,175 @@ class ChangeRequestApiTest extends TestCase
 
         $this->assertDatabaseHas('change_requests', [
             'id' => $changeRequest->id,
-            'status' => 'implemented'
+            'status' => 'implemented',
+            'implementation_notes' => $implementationData['implementation_notes'],
         ]);
+
+        $this->assertDatabaseMissing('notifications', [
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $this->project->id,
+            'type' => 'change_request_implemented',
+        ]);
+
+        $task = Task::query()
+            ->where('project_id', $this->project->id)
+            ->where('tenant_id', $this->user->tenant_id)
+            ->where('name', 'CR delta: ' . $changeRequest->title)
+            ->first();
+
+        $this->assertNotNull($task, 'Expected canonical task delta to be created.');
+
+        $this->assertDatabaseHas('cr_links', [
+            'change_request_id' => $changeRequest->id,
+            'linked_type' => CrLink::LINKED_TYPE_TASK,
+            'linked_id' => $task->id,
+        ]);
+
+        $baseline = Baseline::query()
+            ->where('project_id', $this->project->id)
+            ->where('linked_contract_id', $changeRequest->id)
+            ->first();
+
+        $this->assertNotNull($baseline, 'Expected canonical baseline delta to be created.');
+
+        $this->assertDatabaseHas('baseline_history', [
+            'baseline_id' => $baseline->id,
+            'to_version' => $baseline->version,
+        ]);
+    }
+
+    public function test_can_get_change_request_timeline_from_canonical_audit_logs(): void
+    {
+        $changeRequest = ZenaChangeRequest::factory()->create([
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
+        ]);
+
+        $otherChangeRequest = ZenaChangeRequest::factory()->create([
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
+        ]);
+
+        $this->withHeaders($this->getAuthHeaders())
+            ->postJson($this->zena('change-requests.submit', ['id' => $changeRequest->id]))
+            ->assertStatus(200);
+
+        $this->withHeaders($this->getAuthHeaders())
+            ->postJson($this->zena('change-requests.approve', ['id' => $changeRequest->id]), [
+                'approval_comments' => 'Audit-backed approval',
+            ])
+            ->assertStatus(200);
+
+        AuditLog::query()->create([
+            'user_id' => (string) $this->user->id,
+            'tenant_id' => (string) $this->user->tenant_id,
+            'action' => 'zena.change_request.submit',
+            'entity_type' => 'change_request',
+            'entity_id' => (string) $otherChangeRequest->id,
+            'project_id' => (string) $this->project->id,
+            'route' => 'api/zena/change-requests/' . $otherChangeRequest->id . '/submit',
+            'method' => 'POST',
+            'status_code' => 200,
+        ]);
+
+        $response = $this->withHeaders($this->getAuthHeaders())
+            ->getJson($this->zena('change-requests.timeline', ['id' => $changeRequest->id]));
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.action', 'zena.change_request.submit')
+            ->assertJsonPath('data.0.status', 'submitted')
+            ->assertJsonPath('data.0.user_id', (string) $this->user->id)
+            ->assertJsonPath('data.1.action', 'zena.change_request.approve')
+            ->assertJsonPath('data.1.status', 'approved');
+
+        $entityIds = array_column($response->json('data'), 'audit_log_id');
+        $this->assertCount(2, $entityIds);
+        $this->assertSame(
+            [(string) $changeRequest->id, (string) $changeRequest->id],
+            AuditLog::query()
+                ->whereIn('id', $entityIds)
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->pluck('entity_id')
+                ->all()
+        );
+    }
+
+    public function test_show_exposes_minimal_affected_scope_summary_from_canonical_surfaces(): void
+    {
+        $changeRequest = ZenaChangeRequest::factory()->create([
+            'project_id' => $this->project->id,
+            'requested_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
+        ]);
+
+        $task = Task::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'assigned_to' => $this->user->id,
+        ]);
+
+        $component = Component::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+        ]);
+
+        $document = Document::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'uploaded_by' => $this->user->id,
+            'linked_entity_type' => Document::ENTITY_TYPE_CR,
+            'linked_entity_id' => $changeRequest->id,
+            'title' => 'CR owner-surface document',
+        ]);
+
+        $now = now();
+        DB::table('cr_links')->insert([
+            [
+                'id' => (string) Str::ulid(),
+                'change_request_id' => $changeRequest->id,
+                'linked_type' => CrLink::LINKED_TYPE_TASK,
+                'linked_id' => $task->id,
+                'link_description' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => (string) Str::ulid(),
+                'change_request_id' => $changeRequest->id,
+                'linked_type' => CrLink::LINKED_TYPE_COMPONENT,
+                'linked_id' => $component->id,
+                'link_description' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'id' => (string) Str::ulid(),
+                'change_request_id' => $changeRequest->id,
+                'linked_type' => CrLink::LINKED_TYPE_DOCUMENT,
+                'linked_id' => '01HZYIGNOREDDOCLINK0000000002',
+                'link_description' => null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+        ]);
+
+        $this->withHeaders($this->getAuthHeaders())
+            ->getJson($this->zena('change-requests.show', ['id' => $changeRequest->id]))
+            ->assertOk()
+            ->assertJsonPath('data.affected_scope_summary.tasks.0.id', (string) $task->id)
+            ->assertJsonPath('data.affected_scope_summary.components.0.id', (string) $component->id)
+            ->assertJsonPath('data.affected_scope_summary.documents.0.id', (string) $document->id)
+            ->assertJsonCount(1, 'data.affected_scope_summary.documents');
     }
 
     /**

@@ -1037,6 +1037,8 @@ require base_path('src/RBAC/routes/api.php');
 require base_path('src/DocumentManagement/routes/api.php');
 require base_path('src/Compensation/routes/api.php');
 require base_path('src/CoreProject/routes/api.php');
+require base_path('src/Notification/routes/api.php');
+require base_path('src/WorkTemplate/routes/api.php');
 
 // Password reset routes
 Route::prefix('auth')->middleware(['rate.limit:auth'])->group(function () {

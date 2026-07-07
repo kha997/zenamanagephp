@@ -32,12 +32,21 @@ epics:
       - id: S0.1
         title: "Standard module skeleton + route mounting law"
         priority: P0
-        status: todo
+        status: done
+        updated_at: 2026-03-29
         acceptance_criteria:
           - "New module follows src/<Module>/{Controllers,Services,Models,routes/api.php}."
           - "Routes mounted in routes/api.php; no auto-load via provider."
           - "Routes are in correct middleware stack."
           - "composer ssot:lint passes with no NEW violations."
+        evidence:
+          routes: "Compatibility mount kept at /api/v1/work-template* via explicit require in routes/api.php; php artisan route:list --path=api/v1/work-template"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Route (70 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Architecture (21 passed); tests/Unit/WorkTemplateRouteMountingLawTest.php; tests/Feature/Architecture/WorkTemplateRouteInvariantTest.php"
+          lint: "composer ssot:lint; php artisan optimize:clear"
+        notes:
+          - "The Notification compatibility module is the first proved slice for this story: `routes/api.php` explicitly mounts `src/Notification/routes/api.php`, and `src/Notification/Providers/NotificationServiceProvider.php` no longer auto-mounts routes."
+          - "The final active provider-based route-mount offender in the narrowed runtime inventory was `src/WorkTemplate/Providers/WorkTemplateServiceProvider.php`; this slice moved `src/WorkTemplate/routes/api.php` composition into `routes/api.php` and removed provider-side route mounting while preserving the compatibility `/api/v1/work-template*` runtime surface."
+          - "Provider scan for the mounted module inventory now shows disabled or commented route auto-mounts elsewhere and no remaining active `Route::middleware(['api'])->prefix('api')->group(...)` offender under `src/*/Providers`."
       - id: S0.2
         title: "CI reliability hardening (Dusk/Docker/SSOT)"
         priority: P0
@@ -65,19 +74,37 @@ epics:
       - id: S1.1
         title: "WorkTemplate v2 data model (phases/tasks/checklists/docs/roles)"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Template schema supports phases → tasks → checklist items → required docs → roles/approvers → triggers."
           - "CRUD API exists with validation."
           - "RBAC/tenant isolation applied to all endpoints."
+        updated_at: 2026-03-29
+        evidence:
+          routes: "GET /api/zena/work-templates; POST /api/zena/work-templates; GET /api/zena/work-templates/{id}; PUT /api/zena/work-templates/{id}; POST /api/zena/work-templates/{id}/preview; POST /api/zena/work-templates/{id}/publish"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateMvpApiTest.php (23 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateBaselineSeederTest.php (3 passed)"
+          lint: "composer ssot:lint"
+        notes:
+          - "Canonical proof is limited to the persisted WorkTemplate v2 contract on `/api/zena/work-templates`: `content_json`, `work_template_versions`, `work_template_steps`, and `work_template_fields` round-trip `steps`, `fields`, `assignee_rule`, checklist/docs config, `approvals`, and `rules`."
+          - "Canonical `show()` now returns nested `versions.steps.fields`, which closes the runtime gap between persisted template data and the canonical CRUD response surface."
+          - "Preview and apply continue to consume the same persisted contract after canonical create/update/publish; no `/api/v1/*` path is used as proof."
+          - "This story does not claim broader reviewer/approver semantics, workflow decision semantics, notification fan-out, or any WorkTemplate architecture redesign."
       - id: S1.2
         title: "Apply template to Project/Component (generator)"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Apply endpoint creates tasks + checklists + due dates + assignments by role."
           - "Supports scope: Project and Component."
           - "Idempotent behavior is defined (no accidental duplicates)."
+        updated_at: 2026-03-20
+        evidence:
+          routes: "POST /api/zena/projects/{id}/apply-template; POST /api/zena/components/{id}/apply-template"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateMvpApiTest.php (20 passed); tests/Feature/Api/WorkTemplateBaselineSeederTest.php (2 passed)"
+        notes:
+          - "Apply creates tasks, task assignments, due dates, and checklist/required-doc snapshots."
+          - "Supports both project and component scope."
+          - "Fingerprint-based idempotency prevents duplicate applies for the same scope/version."
       - id: S1.3
         title: "Template preview & dry-run"
         priority: P1
@@ -124,31 +151,69 @@ epics:
       - id: S2.1
         title: "Document types + metadata + versioning"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Doc types/metadata (discipline/package/status/revision) stored and searchable."
           - "Versioning retains history."
           - "Permission matrix enforced (role/tenant + scope)."
+        updated_at: 2026-03-29
+        evidence:
+          head: "88f3872c68b590e3e8d309f480a2774f89505114"
+          routes: "GET /api/zena/documents; POST /api/zena/documents; PUT /api/zena/documents/{id}; GET /api/zena/documents/{id}/versions; POST /api/zena/documents/{id}/versions"
+          tests: "php artisan test tests/Feature/Api/DocumentManagementTest.php (19 passed); php artisan test tests/Feature/DocumentVersioningTest.php (8 passed); php artisan test tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
+          lint: "composer ssot:lint"
+        notes:
+          - "Canonical /api/zena/documents now owns metadata store/search/update plus version list/create using SimpleDocumentController."
+          - "Canonical evidence proves metadata fields are stored, searchable, and preserved across canonical create/update and version-create flows."
+          - "Canonical evidence proves tenant-safe document/version access plus permission-split enforcement for version list/view and version create/update paths."
+          - "DocumentApiTest currently has a separate download-path failure and is not used as positive evidence for this story."
       - id: S2.2
         title: "Link docs ↔ Task/Component/CR"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
           - "Attach/detach APIs exist and audited."
           - "Query surfaces related entities both directions."
+        updated_at: 2026-03-29
+        evidence:
+          routes: "GET /api/zena/documents; GET /api/zena/documents/{id}; POST /api/zena/documents/{id}/link; DELETE /api/zena/documents/{id}/link"
+          tests: "php artisan test tests/Feature/Api/DocumentManagementTest.php (25 passed); php artisan test tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
+          lint: "composer ssot:lint"
+        notes:
+          - "Canonical link contract is owned by Document Center through documents.linked_entity_type and documents.linked_entity_id."
+          - "Canonical runtime now proves attach/detach mutations for task, component, and change request targets on /api/zena/documents/{id}/link with same-tenant and same-project validation."
+          - "Canonical reverse lookup is proved through GET /api/zena/documents filters using linked_entity_type and linked_entity_id; no /api/v1/* path is used as proof."
+          - "This slice intentionally avoids creating a second file-owner surface outside Document Center."
       - id: S2.3
-        title: "Workflow Submit → Review → Approve/Reject"
+        title: "Canonical document workflow submit + decision slice"
         priority: P1
-        status: todo
+        status: done
         acceptance_criteria:
-          - "State machine exists with reviewers/approvers."
-          - "Notifications on state changes."
+          - "Canonical `/api/zena/documents` supports `draft -> submitted -> approved|rejected` through `POST /api/zena/documents/{id}/submit` and `POST /api/zena/documents/{id}/decision`."
+          - "Canonical decision is allowed only from `submitted`, remains tenant-safe, and requires management-policy authorization on the document owner path."
+          - "This slice does not claim a separate `review` route, a broad reviewer/approver matrix, or notification semantics."
+        updated_at: 2026-03-29
+        evidence:
+          head: "a5928953c4f41cacf54bc3630ded1b20e8ca0772"
+          routes: "POST /api/zena/documents/{id}/submit; POST /api/zena/documents/{id}/decision"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/DocumentManagementTest.php (12 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
+        notes:
+          - "Canonical runtime proof covers submit and decision only on the Document Center owner path."
+          - "Current evidence proves invalid-transition guards, tenant safety, and management-policy authorization for `decision()`."
+          - "Separate review-matrix semantics, reviewer/approver expansion, and notifications remain UNKNOWN until a later evidence-backed story or proposal defines them."
       - id: S2.4
         title: "Document search & filters"
         priority: P1
-        status: todo
+        status: done
         acceptance_criteria:
           - "Search supports keyword + filters; no cross-tenant leakage."
+        updated_at: 2026-03-20
+        evidence:
+          routes: "GET /api/zena/documents"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/DocumentManagementTest.php (6 passed)"
+        notes:
+          - "Search supports q plus filters for document_type, discipline, package, status, revision, and project_id."
+          - "Cross-tenant leakage is blocked by tenant-scoped document queries and route middleware."
 
   - id: EPIC-3
     name: Change Order (ChangeRequest v2)
@@ -157,31 +222,89 @@ epics:
     dependencies: [EPIC-1, EPIC-2]
     stories:
       - id: S3.1
-        title: "CR links affected scope (components/tasks/docs)"
+        title: "CR affected scope split: task/component via cr_links, documents via Document Center"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
-          - "CR stores affected items and validates same tenant/project."
+          - "Canonical mutation surface is limited to /api/zena/change-requests/{id}/links for task and component affected scope only."
+          - "Canonical affected task/component links use cr_links and validate same tenant and same project."
+          - "Affected documents do not use cr_links; document ownership remains in Document Center through documents.linked_entity_type = 'cr' and documents.linked_entity_id = {changeRequestId}."
+          - "If canonical GET /api/zena/change-requests/{id} includes affected scope summary, document scope is materialized from canonical document query semantics rather than cr_links."
+          - "No /api/v1/* path is used as proof for this story."
+        updated_at: 2026-03-29
+        evidence:
+          head: "1a83a8c408fc53b99adfa216345709b26940989b"
+          routes: "php artisan route:list | grep -E \"change-requests|documents|tasks|components|link\" || true"
+          tests: "php artisan test tests/Feature/ChangeRequestApiTest.php (24 passed); php artisan test tests/Feature/Api/ChangeRequestApiTest.php (13 passed); php artisan test tests/Feature/Api/DocumentManagementTest.php (25 passed)"
+        notes:
+          - "Do not create overlapping canonical ownership between cr_links(document) and documents.linked_entity_*."
+          - "Broader reverse-query shapes and richer document semantics remain deferred until separately evidenced."
+          - "Canonical /api/zena/change-requests/{id}/links now exists for task/component only, with tests proving attach/detach plus same-tenant and same-project enforcement."
+          - "Canonical /api/zena/change-requests/{id} now returns affected_scope_summary with tasks/components from cr_links and documents from Document Center ownership."
+          - "Document rejection on the CR-owned mutation path is explicitly tested; legacy cr_links(document) residue is not used as canonical proof."
       - id: S3.2
-        title: "Approval workflow + audit trail"
+        title: "Canonical approval workflow + audit + minimal direct-recipient notifications"
         priority: P0
-        status: todo
+        status: done
         acceptance_criteria:
-          - "Draft→Awaiting→Approved/Rejected supported with full audit."
-          - "Notify approvers and stakeholders."
-      - id: S3.3
-        title: "Approved CR creates delta tasks + baseline delta"
-        priority: P0
-        status: todo
-        acceptance_criteria:
-          - "Approved CR triggers task delta generation."
-          - "Baseline history updated (snapshot or delta) with evidence."
-      - id: S3.4
-        title: "CR timeline + attachments"
+          - "Draft→Submitted→Approved/Rejected supported with full audit on canonical /api/zena/change-requests."
+          - "Canonical minimal direct-recipient in-app notifications are proved end-to-end on state changes: submit -> one explicit approver fixture via assigned_to; approve/reject -> requester via requested_by."
+          - "This slice does not claim broad approver discovery, stakeholder fan-out, or apply notification semantics."
+        updated_at: 2026-03-29
+        evidence:
+          head: "9bf27efbb2437cd37fa0f7c8cd6f730523bab92a"
+          routes: "php artisan route:list | grep change-requests || true"
+          tests: "php artisan test tests/Feature/Api/ChangeRequestApiTest.php (11 passed); php artisan test tests/Feature/ChangeRequestApiTest.php (18 passed); php artisan test tests/Feature/Zena/ZenaAuditInvariantTest.php --filter=change_request_workflow_mutations_write_audit_logs (1 passed)"
+        notes:
+          - "Locked runtime slice already proves canonical submit/approve/reject/apply guards, direct workflow-status bypass blocking, audit alignment, and the minimal direct-recipient notification contract on /api/zena/change-requests."
+          - "Acceptance is now narrowed to the proved canonical slice, so this story is evidence-complete on the canonical /api/zena/change-requests path."
+          - "Apply notification remains deferred even though apply state transition proof exists."
+          - "Broad stakeholder fan-out remains UNKNOWN on the canonical path and is intentionally carved into follow-up story S3.2a."
+      - id: S3.2a
+        title: "Broader approver/stakeholder notification semantics for canonical change requests"
         priority: P1
         status: todo
         acceptance_criteria:
-          - "Timeline API + attachments via Document Center."
+          - "Canonical approver-discovery and stakeholder recipient semantics are explicitly defined for /api/zena/change-requests using evidence-backed owner fields or routes."
+          - "Any broader notification fan-out beyond the minimal direct-recipient slice is proved end-to-end on the canonical path without touching /api/v1/*."
+          - "Apply notification semantics are either proved in-scope or explicitly deferred again without overclaiming stakeholder behavior."
+        notes:
+          - "This follow-up exists because the canonical path currently proves only one explicit approver fixture on submit and requester-directed notifications on approve/reject."
+          - "Stakeholder semantics remain UNKNOWN until this story defines them from canonical evidence."
+          - "Do not invent broad fan-out rules from compatibility paths or non-canonical notification plumbing."
+      - id: S3.3
+        title: "Approved CR creates delta tasks + baseline delta"
+        priority: P0
+        status: done
+        acceptance_criteria:
+          - "Canonical implementation boundary is `POST /api/zena/change-requests/{id}/apply`; `approve()` remains approval-only and does not own delta-task generation."
+          - "Applying an approved CR generates at least one evidence-backed canonical task delta on the same tenant/project, with change-request link-back recorded on canonical tables."
+          - "Applying an approved CR writes at least one evidence-backed baseline delta artifact linked back to the change request on canonical baseline tables."
+          - "This story does not claim broad baseline architecture cleanup, `/api/v1/*` involvement, or extra semantics not proved from canonical evidence."
+        notes:
+          - "Current runtime truth proves only that `apply()` transitions `approved -> implemented` and calls a log-only baseline snapshot stub."
+          - "Current runtime truth does not yet prove canonical delta-task persistence, baseline-delta persistence, or change-request link-back for those artifacts."
+          - "Use existing canonical tables first (`change_requests`, `cr_links`, `tasks`, `baselines`, `baseline_history`) unless a later evidence-backed proposal explicitly changes the contract."
+      - id: S3.4
+        title: "CR timeline + attachments"
+        priority: P1
+        status: done
+        acceptance_criteria:
+          - "Canonical timeline read surface is defined for /api/zena/change-requests using audit-backed workflow history, without inventing extra semantics not proved from canonical evidence."
+          - "Canonical CR attachments are owned by Document Center and linked via documents.linked_entity_type = 'cr' and documents.linked_entity_id = {changeRequestId}."
+          - "The change_requests.attachments JSON field is not used as canonical proof surface for this story."
+          - "No /api/v1/* route is used as proof for this story."
+        updated_at: 2026-03-29
+        evidence:
+          head: "c9f2b89225aeff3e6b6b0a8b13d8ed8f15f8d765"
+          routes: "php artisan route:list | grep -E \"change-requests|timeline|documents\" || true"
+          tests: "php artisan test tests/Feature/Api/ChangeRequestApiTest.php (12 passed); php artisan test tests/Feature/Api/DocumentManagementTest.php (13 passed); php artisan test tests/Feature/Zena/ZenaAuditInvariantTest.php (4 passed)"
+        notes:
+          - "Canonical runtime now proves a dedicated nested timeline endpoint on /api/zena/change-requests/{id}/timeline backed by audit-log workflow history."
+          - "Canonical runtime now proves CR-linked attachment discovery through /api/zena/documents with linked_entity_type=cr and linked_entity_id={changeRequestId}, keeping ownership in Document Center and avoiding duplicate CR-specific file APIs."
+          - "Evidence comes only from canonical /api/zena/* routes and tests; no /api/v1/* path is used as proof."
+          - "The change_requests.attachments JSON field remains out of scope as a canonical proof surface."
+          - "Timeline ordering, payload schema details, attachment delete/version semantics, and any broad storage/media cleanup remain deferred until a later evidence-backed runtime round."
 
   - id: EPIC-4
     name: Procurement & Materials
@@ -192,22 +315,46 @@ epics:
       - id: S4.1
         title: "Material catalog + vendor list"
         priority: P1
-        status: todo
+        status: done
+        updated_at: 2026-03-29
         acceptance_criteria:
-          - "CRUD material catalog + vendor records with RBAC/tenant."
+          - "Canonical owner surface is limited to `/api/zena/materials` and `/api/zena/vendors`."
+          - "First slice is tenant-safe CRUD only for material catalog + vendor records with RBAC/tenant isolation."
+          - "Do not use `/api/zena/site-engineer/material-requests` or `/api/zena/submittals` as proof of canonical material/vendor ownership."
+        evidence:
+          routes: "GET /api/zena/materials; POST /api/zena/materials; GET /api/zena/materials/{id}; PUT /api/zena/materials/{id}; DELETE /api/zena/materials/{id}; GET /api/zena/vendors; POST /api/zena/vendors; GET /api/zena/vendors/{id}; PUT /api/zena/vendors/{id}; DELETE /api/zena/vendors/{id}"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Material (3 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Vendor (3 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php (2 passed)"
+          lint: "composer ssot:lint; php artisan optimize:clear"
+        notes:
+          - "Canonical proof is limited to master-data CRUD on `/api/zena/materials` and `/api/zena/vendors` with tenant-safe anti-enumeration and permission-split RBAC."
+          - "`MaterialRequest` remains explicitly out of owner scope for S4.1 and is not used as proof of material/vendor ownership."
+          - "BOQ, submittals, delivery/receipt, approvals, notifications, and compensation linkage are explicitly deferred outside S4.1."
       - id: S4.2
         title: "BOQ line items linked to Project/Component"
         priority: P1
-        status: todo
+        status: done
+        updated_at: 2026-03-29
         acceptance_criteria:
-          - "BOQ CRUD + line items; each can link component/task."
+          - "Canonical owner surface is limited to `/api/zena/boqs`."
+          - "First slice proves tenant-safe BOQ CRUD plus nested line-item CRUD on the BOQ owner path."
+          - "Every BOQ belongs to one project; each line item may optionally link one component in the same project."
+          - "Do not use `MaterialRequest`, `/api/zena/submittals`, or `/api/v1/*` as proof of canonical BOQ ownership."
+        evidence:
+          routes: "GET /api/zena/boqs; POST /api/zena/boqs; GET /api/zena/boqs/{id}; PUT /api/zena/boqs/{id}; DELETE /api/zena/boqs/{id}; GET /api/zena/boqs/{boq}/line-items; POST /api/zena/boqs/{boq}/line-items; GET /api/zena/boqs/{boq}/line-items/{lineItem}; PUT /api/zena/boqs/{boq}/line-items/{lineItem}; DELETE /api/zena/boqs/{boq}/line-items/{lineItem}"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Boq (4 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Project (35 passed)"
+          lint: "composer ssot:lint; php artisan optimize:clear"
+        notes:
+          - "This first slice is limited to BOQ + line-item ownership and project/component linkage only."
+          - "Task linkage, pricing rollups, approvals, notifications, delivery/receipt, compensation, and submittal semantics are deferred outside S4.2 until separately evidenced."
       - id: S4.3
         title: "Material submittal package (docs + approvals)"
         priority: P1
         status: todo
         acceptance_criteria:
-          - "Submittal package uses Document Center workflow."
-          - "Notify on review/approval."
+          - "Canonical package owner surface is limited to `/api/zena/submittals`; Document Center remains the canonical file owner surface."
+          - "First slice proves `draft -> submitted -> approved|rejected` on `/api/zena/submittals`; `review` is optional/intermediate or `UNKNOWN` unless separately evidenced."
+          - "Document linkage must use Document Center query/link semantics; do not use `submittals.attachments` or `file_url` as canonical file ownership proof."
+          - "Notification claims are limited to direct-recipient proof only if runtime evidence appears; otherwise notifications stay deferred."
       - id: S4.4
         title: "Delivery/Receipt + acceptance checklist"
         priority: P2
@@ -230,16 +377,40 @@ epics:
       - id: S5.1
         title: "Inspection checklist templates (reuse WorkTemplate)"
         priority: P1
-        status: todo
+        status: done
         acceptance_criteria:
           - "Checklist template + instances generated via engine."
+        updated_at: 2026-03-29
+        evidence:
+          head: "692aff0f5ff06d9fcc6d83934ea88dd91cb59544"
+          routes: "POST /api/zena/projects/{id}/apply-template; POST /api/zena/work-templates/{id}/preview; POST /api/zena/inspections; POST /api/zena/inspections/{id}/conduct; POST /api/zena/inspections/{id}/complete"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/WorkTemplateBaselineSeederTest.php (3 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/Api/InspectionTemplateRuntimeTest.php (3 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Inspection (11 passed)"
+          lint: "composer ssot:lint"
+        notes:
+          - "Canonical proof uses the published baseline template `WT-BL-INSPECTION` and reuses the existing WorkTemplate engine without touching `/api/v1/*`."
+          - "Preview/apply prove an `inspection` step generates checklist snapshot artifacts under `work_instance_steps` ownership."
+          - "Canonical `/api/zena/inspections` now links to a generated inspection step through `qc_inspections.work_instance_step_id`, returns generated checklist metadata, and syncs checklist execution back into `work_instance_field_values`."
+          - "Foreign-tenant linkage is denied in runtime proof; exact validation-vs-authorization status-code semantics remain `UNKNOWN` and are not part of this slice."
       - id: S5.2
         title: "NCR + CAPA tasks lifecycle"
         priority: P1
-        status: todo
+        status: done
+        updated_at: 2026-03-29
         acceptance_criteria:
-          - "NCR CRUD with evidence docs."
-          - "CAPA tasks created/assigned; NCR states managed."
+          - "First canonical NCR owner surface is limited to `/api/zena/inspections/{inspection}/ncrs`; this story does not yet claim a separate `/api/zena/ncrs` owner family."
+          - "First canonical NCR lifecycle proof is limited to `open -> in_progress -> resolved -> closed` on the canonical owner path."
+          - "CAPA execution reuses the existing canonical `/api/zena/tasks` surface for create/assign/status; this story does not introduce a separate `/api/zena/capa*` API."
+        evidence:
+          head: "4607e0ea56ce61f5c1ff6721e2d2f47ef67e4c30"
+          routes: "GET /api/zena/inspections/{inspection}/ncrs; POST /api/zena/inspections/{inspection}/ncrs; GET /api/zena/inspections/{inspection}/ncrs/{ncr}; PATCH /api/zena/inspections/{inspection}/ncrs/{ncr}/status; POST /api/zena/tasks"
+          tests: "php -d pcov.enabled=0 ./vendor/bin/phpunit tests/Feature/InspectionNcrWorkflowTest.php (3 passed); php -d pcov.enabled=0 ./vendor/bin/phpunit --filter=Task (135 passed)"
+          lint: "composer ssot:lint; php artisan optimize:clear"
+        notes:
+          - "Canonical NCR ownership is now proved only on the nested inspection owner path; no standalone `/api/zena/ncrs/*` family was introduced."
+          - "Runtime proof covers create, list/show, and the narrow transition chain `open -> in_progress -> resolved -> closed` only."
+          - "Minimal CAPA proof is a task handoff payload exposed from the nested NCR resource and executed on the existing `/api/zena/tasks` owner surface; task lifecycle remains owned by `TaskController`."
+          - "The schema still allows `under_review` and nullable `inspection_id`, but this story does not claim those semantics because runtime proof does not require them."
+          - "Canonical persistent NCR-to-task reverse-link storage remains UNKNOWN; dashboards, escalation rules, and notification semantics remain deferred."
       - id: S5.3
         title: "Escalation rules + notifications"
         priority: P2

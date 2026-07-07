@@ -138,6 +138,86 @@ class ZenaAuditInvariantTest extends TestCase
         $this->assertSame((string) $rfiId, $deleteLog->entity_id);
     }
 
+    public function test_change_request_workflow_mutations_write_audit_logs(): void
+    {
+        [$tenant, $user, $password] = $this->createTenantWithUser();
+        $project = Project::factory()->create(['tenant_id' => $tenant->id]);
+        $token = $this->loginAndReturnToken($tenant, $user->email, $password);
+
+        foreach (['change-request.submit', 'change-request.approve', 'change-request.reject', 'change-request.apply'] as $permission) {
+            $this->grantPermissionToUser($user, $permission);
+        }
+
+        $submitted = \App\Models\ChangeRequest::factory()->create([
+            'tenant_id' => $tenant->id,
+            'project_id' => $project->id,
+            'requested_by' => $user->id,
+            'status' => 'draft',
+        ]);
+
+        $this->zenaPost('api/zena/change-requests/' . $submitted->id . '/submit', $tenant, [], $token)
+            ->assertStatus(200);
+
+        $submitLog = AuditLog::where('action', 'zena.change_request.submit')->firstOrFail();
+        $this->assertStringEndsWith('/submit', $submitLog->route);
+        $this->assertSame('POST', $submitLog->method);
+        $this->assertSame(200, $submitLog->status_code);
+        $this->assertSame((string) $tenant->id, $submitLog->tenant_id);
+        $this->assertSame((string) $user->id, $submitLog->user_id);
+        $this->assertSame('change_request', $submitLog->entity_type);
+        $this->assertSame((string) $project->id, $submitLog->project_id);
+        $this->assertSame((string) $submitted->id, $submitLog->entity_id);
+
+        $approved = \App\Models\ChangeRequest::factory()->create([
+            'tenant_id' => $tenant->id,
+            'project_id' => $project->id,
+            'requested_by' => $user->id,
+            'status' => 'submitted',
+        ]);
+
+        $this->zenaPost('api/zena/change-requests/' . $approved->id . '/approve', $tenant, [
+            'approval_comments' => 'Approved for audit invariant',
+        ], $token)->assertStatus(200);
+
+        $approveLog = AuditLog::where('action', 'zena.change_request.approve')
+            ->where('entity_id', (string) $approved->id)
+            ->firstOrFail();
+        $this->assertStringEndsWith('/approve', $approveLog->route);
+
+        $rejected = \App\Models\ChangeRequest::factory()->create([
+            'tenant_id' => $tenant->id,
+            'project_id' => $project->id,
+            'requested_by' => $user->id,
+            'status' => 'submitted',
+        ]);
+
+        $this->zenaPost('api/zena/change-requests/' . $rejected->id . '/reject', $tenant, [
+            'rejection_reason' => 'Rejected for audit invariant',
+        ], $token)->assertStatus(200);
+
+        $rejectLog = AuditLog::where('action', 'zena.change_request.reject')
+            ->where('entity_id', (string) $rejected->id)
+            ->firstOrFail();
+        $this->assertStringEndsWith('/reject', $rejectLog->route);
+
+        $implemented = \App\Models\ChangeRequest::factory()->create([
+            'tenant_id' => $tenant->id,
+            'project_id' => $project->id,
+            'requested_by' => $user->id,
+            'status' => 'approved',
+        ]);
+
+        $this->zenaPost('api/zena/change-requests/' . $implemented->id . '/apply', $tenant, [], $token)
+            ->assertStatus(200);
+
+        $applyLog = AuditLog::where('action', 'zena.change_request.apply')
+            ->where('entity_id', (string) $implemented->id)
+            ->firstOrFail();
+        $this->assertStringEndsWith('/apply', $applyLog->route);
+        $this->assertSame('change_request', $applyLog->entity_type);
+        $this->assertSame((string) $project->id, $applyLog->project_id);
+    }
+
     private function zenaPost(string $uri, Tenant $tenant, array $payload = [], ?string $token = null): TestResponse
     {
         return $this->withHeaders($this->withTenantHeader($tenant, $token))->postJson($uri, $payload);

@@ -150,6 +150,54 @@ class WorkTemplateBaselineSeederTest extends TestCase
         $this->assertSame(11, TaskAssignment::query()->count());
     }
 
+    public function test_seeded_inspection_template_exposes_inspection_artifacts_on_preview_and_apply(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+
+        $tenant = Tenant::query()->orderBy('created_at')->firstOrFail();
+        $actor = $this->createActorWithPermissions($tenant, ['template.view', 'template.apply', 'work.view']);
+        $project = Project::factory()->create([
+            'tenant_id' => (string) $tenant->id,
+            'created_by' => (string) $actor->id,
+            'pm_id' => (string) $actor->id,
+        ]);
+
+        $template = WorkTemplate::query()
+            ->where('tenant_id', (string) $tenant->id)
+            ->where('code', 'WT-BL-INSPECTION')
+            ->firstOrFail();
+
+        $preview = $this->postJson($this->workTemplatePreviewRoute((string) $template->id), [
+            'project_id' => (string) $project->id,
+        ], $this->authHeaders($actor));
+
+        $preview->assertOk()
+            ->assertJsonPath('data.summary.tasks', 3)
+            ->assertJsonPath('data.summary.checklists', 6)
+            ->assertJsonPath('data.summary.docs', 5);
+
+        $inspectionTask = collect($preview->json('data.planned_tasks', []))
+            ->firstWhere('step_key', 'perform-inspection');
+
+        $this->assertIsArray($inspectionTask);
+        $this->assertSame('inspection', $inspectionTask['type'] ?? null);
+        $this->assertSame('capture_measurements', $inspectionTask['checklists'][0]['item_key'] ?? null);
+
+        $apply = $this->postJson($this->projectApplyTemplateRoute((string) $project->id), [
+            'work_template_id' => (string) $template->id,
+        ], $this->authHeaders($actor));
+
+        $apply->assertCreated();
+
+        $instance = WorkInstance::query()->with('steps')->findOrFail((string) $apply->json('data.id'));
+        $inspectionStep = $instance->steps->firstWhere('step_key', 'perform-inspection');
+
+        $this->assertNotNull($inspectionStep);
+        $this->assertSame('inspection', $inspectionStep->type);
+        $this->assertTrue(collect($inspectionStep->snapshot_fields_json ?? [])->pluck('field_key')->contains('checklist:capture_measurements'));
+        $this->assertTrue(collect($inspectionStep->snapshot_fields_json ?? [])->pluck('field_key')->contains('checklist:record_nonconformances'));
+    }
+
     private function authHeaders(User $user): array
     {
         $token = $user->createToken('baseline-template-test')->plainTextToken;

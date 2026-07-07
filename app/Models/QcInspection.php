@@ -25,6 +25,7 @@ class QcInspection extends Model
         'status',
         'inspection_date',
         'inspector_id',
+        'work_instance_step_id',
         'findings',
         'recommendations',
         'checklist_results',
@@ -60,6 +61,12 @@ class QcInspection extends Model
     {
         return $this->belongsTo(User::class, 'inspector_id');
     }
+
+    public function workInstanceStep(): BelongsTo
+    {
+        return $this->belongsTo(WorkInstanceStep::class, 'work_instance_step_id');
+    }
+
     /**
      * Provide a pseudo project_id attribute derived from the plan.
      */

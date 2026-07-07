@@ -59,11 +59,20 @@ epics:
       - id: S0.3
         title: "Event → Audit → Notification minimal pipeline"
         priority: P1
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Create Task/CR/Doc emits event, writes audit entry, triggers notification rule."
           - "At least one channel (in-app or email) works end-to-end."
           - "Has verify steps/tests for one event path."
+        evidence:
+          routes: "POST /api/zena/tasks (TaskController::store)"
+          tests: "php artisan test tests/Feature/Api/TaskCreatedPipelineTest.php (5 passed)"
+        notes:
+          - "Pipeline wired in TaskController::emitTaskCreatedPipeline(): ZenaAuditLogger writes to audit_logs (action=zena.task.created), Notification created for assignee via CHANNEL_INAPP (type=task_assigned, event_key=zena.task.created), EventRecord written to event_records outbox."
+          - "Notification only created when assignee_id is present; unassigned task creation writes audit + event record only."
+          - "Pipeline runs synchronously post-commit; errors are caught and logged without failing the HTTP response."
+          - "Proven event path: POST /api/zena/tasks → audit_log + event_record + inapp notification (5 tests, all canonical /api/zena/* paths)."
 
   - id: EPIC-1
     name: Process Template Engine (WorkTemplate v2)

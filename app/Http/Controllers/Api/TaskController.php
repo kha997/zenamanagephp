@@ -140,6 +140,63 @@ class TaskController extends BaseApiController
         ]);
     }
 
+    private function emitTaskCreatedPipeline(Request $request, Task $task, string $actorUserId): void
+    {
+        try {
+            $this->auditLogger->log(
+                $request,
+                'zena.task.created',
+                'task',
+                (string) $task->id,
+                201,
+                $task->project_id ? (string) $task->project_id : null,
+                (string) $task->tenant_id,
+            );
+
+            $assigneeId = $task->assigned_to ? (string) $task->assigned_to : null;
+            if ($assigneeId !== null) {
+                Notification::create([
+                    'tenant_id' => (string) $task->tenant_id,
+                    'user_id' => $assigneeId,
+                    'type' => 'task_assigned',
+                    'priority' => Notification::PRIORITY_NORMAL,
+                    'title' => 'New task assigned to you',
+                    'body' => sprintf('You have been assigned task "%s".', (string) ($task->title ?? $task->name)),
+                    'channel' => Notification::CHANNEL_INAPP,
+                    'event_key' => 'zena.task.created',
+                    'project_id' => $task->project_id ? (string) $task->project_id : null,
+                    'link_url' => route('api.zena.tasks.show', ['id' => (string) $task->id], false),
+                    'data' => [
+                        'task_id' => (string) $task->id,
+                        'assigned_by' => $actorUserId,
+                    ],
+                ]);
+            }
+
+            EventRecord::create([
+                'tenant_id' => (string) $task->tenant_id,
+                'project_id' => $task->project_id ? (string) $task->project_id : null,
+                'aggregate_type' => 'task',
+                'aggregate_id' => (string) $task->id,
+                'event_key' => 'zena.task.created',
+                'actor_user_id' => $actorUserId,
+                'occurred_at' => now(),
+                'payload' => [
+                    'task' => [
+                        'id' => (string) $task->id,
+                        'name' => (string) $task->name,
+                        'status' => (string) $task->status,
+                        'priority' => (string) $task->priority,
+                        'assigned_to' => $assigneeId,
+                    ],
+                    'actor' => ['user_id' => $actorUserId],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Task created pipeline error: ' . $e->getMessage(), ['task_id' => (string) $task->id]);
+        }
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -298,6 +355,8 @@ class TaskController extends BaseApiController
             }
 
             DB::commit();
+
+            $this->emitTaskCreatedPipeline($request, $task, (string) $user->id);
 
             return $this->zenaSuccessResponse(
                 $task->load(['project', 'assignee', 'creator', 'tenant']),

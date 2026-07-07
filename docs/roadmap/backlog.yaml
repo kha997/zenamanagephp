@@ -358,15 +358,31 @@ epics:
       - id: S4.4
         title: "Delivery/Receipt + acceptance checklist"
         priority: P2
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Delivery/receipt tracked and tied to evidence + checklist."
+        evidence:
+          routes: "POST /api/zena/projects/{project}/material-receipts; GET /api/zena/projects/{project}/material-receipts; GET /api/zena/projects/{project}/material-receipts/{receipt}; PATCH /api/zena/projects/{project}/material-receipts/{receipt}/status; POST /api/zena/projects/{project}/material-receipts/{receipt}/checklists; GET /api/zena/projects/{project}/material-receipts/{receipt}/checklists; POST /api/zena/projects/{project}/material-receipts/{receipt}/lines; GET /api/zena/projects/{project}/material-receipts/{receipt}/lines"
+          tests: "php artisan test tests/Feature/Api/MaterialReceiptApiTest.php tests/Feature/Api/MaterialReceiptChecklistApiTest.php tests/Feature/Api/MaterialReceiptLineApiTest.php (all passed)"
+        notes:
+          - "Canonical receipt owner surface lives on `/api/zena/projects/{project}/material-receipts` with nested checklists and line items."
+          - "Receipt acceptance lifecycle: draft -> received -> accepted|rejected on status PATCH endpoint."
+          - "Checklist items are acceptance evidence tied to a receipt; line items track quantities received vs ordered."
       - id: S4.5
         title: "Cost mapping to Compensation/Contract (minimal)"
         priority: P2
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Material lines aggregate into cost summary endpoints."
+        evidence:
+          routes: "GET /api/zena/projects/{project}/contracts/{contract}/material-receipts; GET /api/zena/projects/{project}/contracts/{contract}/cost-summary"
+          tests: "php artisan test tests/Feature/Api/ProcurementReceivingContractCostPilotSmokeTest.php tests/Feature/Api/ProcurementReceivingContractCostPilotRbacAlignmentTest.php (all passed)"
+        notes:
+          - "Canonical contract-child receipt list: GET /{contract}/material-receipts returns receipts filtered by contract_id."
+          - "Cost summary aggregates priced line costs: mapped_receipt_count, line_count, priced_line_count, unpriced_line_count, priced_line_cost_total."
+          - "Only lines where unit_cost IS NOT NULL are included in the priced total rollup."
 
   - id: EPIC-5
     name: Inspection & Quality (QMS-lite)
@@ -414,15 +430,32 @@ epics:
       - id: S5.3
         title: "Escalation rules + notifications"
         priority: P2
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Overdue CAPA triggers alerts/notifications with audit."
+        evidence:
+          routes: "POST /api/zena/tasks/{id}/escalate-overdue"
+          tests: "php artisan test tests/Feature/Api/TaskOverdueEscalationApiTest.php (9 passed)"
+        notes:
+          - "Canonical escalation route POST /{id}/escalate-overdue validates overdue CAPA context tag, non-completed status, and assignee presence."
+          - "On success: creates one inapp Notification (type=task_overdue_escalated, event_key=zena.task.overdue_escalated) and one EventRecord with canonical payload."
+          - "AuditLog entry written with action=zena.task.escalate_overdue on successful escalation."
+          - "Route enforces rbac:task.escalate-overdue permission; tenant-safe (cross-tenant task returns 404)."
       - id: S5.4
         title: "QC dashboard widgets"
         priority: P2
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "QC metrics available role-based and traceable."
+        evidence:
+          routes: "GET /api/zena/site-engineer/dashboard; GET /api/zena/site-engineer/inspections"
+          tests: "php artisan test tests/Feature/Api/SiteEngineerDashboardApiTest.php (5 passed)"
+        notes:
+          - "QC metrics exposed via qc_widget key in site-engineer dashboard response: inspections.total/scheduled/in_progress/completed/failed, ncrs.total/open/in_progress/resolved/closed, capa_tasks.total/overdue."
+          - "Widget is tenant-scoped via UserRoleProject project membership; foreign-tenant data is excluded."
+          - "Canonical inspection list also available on GET /api/zena/site-engineer/inspections with rbac:site-engineer.inspections permission."
 
   - id: EPIC-6
     name: Analytics/Dashboard v2 + Service-ready boundaries
@@ -433,10 +466,19 @@ epics:
       - id: S6.1
         title: "Role-based widget sets for AEC"
         priority: P2
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Widgets exist for Design Lead / Site / QC / PM / Finance."
           - "Each widget links to traceable data sources."
+        evidence:
+          routes: "GET /api/zena/designer/dashboard; GET /api/zena/designer/rfis; GET /api/zena/pm/dashboard; GET /api/zena/pm/progress; GET /api/zena/site-engineer/dashboard"
+          tests: "php artisan test tests/Feature/Api/DesignerDashboardApiTest.php (4 passed); php artisan test tests/Feature/Api/PmDashboardApiTest.php (5 passed); php artisan test tests/Feature/Api/SiteEngineerDashboardApiTest.php (5 passed)"
+        notes:
+          - "designer_widget: tasks (total/pending/in_progress/completed), rfis (total/pending/answered/closed), submittals (total/draft/submitted/pending_review/approved/rejected) — scoped to actor's UserRoleProject-assigned projects."
+          - "pm_widget: projects (total/active/completed), tasks (total/completed/overdue), rfis (pending) — scoped to actor's UserRoleProject-assigned projects; pm/progress returns real milestone/budget/timeline data."
+          - "qc_widget: inspections/ncrs/capa_tasks counts — scoped to actor's UserRoleProject-assigned projects via site-engineer dashboard."
+          - "Finance/broader widget coverage remains deferred outside this S6.1 slice."
       - id: S6.2
         title: "Alert taxonomy + rules"
         priority: P2
@@ -452,6 +494,15 @@ epics:
       - id: S6.4
         title: "Documentation coverage: module→API→screens→workflows"
         priority: P3
-        status: todo
+        status: done
+        updated_at: 2026-04-04
         acceptance_criteria:
           - "Docs map endpoints/screens/workflows; includes project template walkthrough."
+        evidence:
+          doc: "docs/audits/2026-04-04-s6-4-project-template-walkthrough-coverage.md"
+          tests: "php artisan test tests/Feature/Architecture/S64ProjectTemplateDocumentationCoverageInvariantTest.php (1 passed)"
+        notes:
+          - "The first `S6.4` proof slice is docs-only and stays anchored on one already-proved canonical `/api/zena/*` project-template walkthrough owner path: `POST /api/zena/projects/{id}/apply-template`."
+          - "Coverage doc proves cluster Work Templates -> Project Apply -> Work Instances with workflow chain draft -> preview -> publish -> apply -> generated work-instance runtime."
+          - "Screen/UI ownership remains UNKNOWN and is honestly documented as such."
+          - "Repo-wide documentation coverage, dashboard coverage, notification coverage, and event-record coverage remain deferred outside this first slice."

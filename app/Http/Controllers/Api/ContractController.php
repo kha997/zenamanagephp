@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Contract;
+use App\Models\MaterialReceipt;
+use App\Models\MaterialReceiptLine;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -231,5 +233,73 @@ class ContractController extends BaseApiController
         $contractModel->delete();
 
         return $this->successResponse(null, 'Contract deleted successfully');
+    }
+
+    public function materialReceipts(Request $request, string $project, string $contract): JsonResponse
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        try {
+            $contractModel = $this->findContractOrFail($tenantId, $project, $contract);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Contract not found');
+        }
+
+        $this->authorize('view', $contractModel);
+
+        $receipts = MaterialReceipt::query()
+            ->where('tenant_id', $tenantId)
+            ->where('project_id', $project)
+            ->where('contract_id', $contractModel->id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return $this->successResponse($receipts, 'Mapped receipts retrieved successfully');
+    }
+
+    public function costSummary(Request $request, string $project, string $contract): JsonResponse
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        try {
+            $contractModel = $this->findContractOrFail($tenantId, $project, $contract);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Contract not found');
+        }
+
+        $this->authorize('view', $contractModel);
+
+        $receiptIds = MaterialReceipt::query()
+            ->where('tenant_id', $tenantId)
+            ->where('project_id', $project)
+            ->where('contract_id', $contractModel->id)
+            ->pluck('id');
+
+        $lines = MaterialReceiptLine::query()
+            ->whereIn('material_receipt_id', $receiptIds)
+            ->get();
+
+        $pricedLines = $lines->filter(fn ($l) => $l->unit_cost !== null);
+        $unpricedLines = $lines->filter(fn ($l) => $l->unit_cost === null);
+
+        $pricedTotal = $pricedLines->sum(fn ($l) => (float) $l->quantity_received * (float) $l->unit_cost);
+
+        return $this->successResponse([
+            'project_id' => $project,
+            'contract_id' => (string) $contractModel->id,
+            'summary' => [
+                'mapped_receipt_count' => $receiptIds->count(),
+                'line_count' => $lines->count(),
+                'priced_line_count' => $pricedLines->count(),
+                'unpriced_line_count' => $unpricedLines->count(),
+                'priced_line_cost_total' => round($pricedTotal, 2),
+            ],
+        ], 'Cost summary retrieved successfully');
     }
 }

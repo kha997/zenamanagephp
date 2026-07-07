@@ -220,6 +220,16 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::put('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'update'])->middleware('rbac:project.update')->name('projects.update');
             Route::delete('/{id}', [\App\Http\Controllers\Api\ProjectController::class, 'destroy'])->middleware('rbac:project.delete')->name('projects.destroy');
             Route::post('/{id}/apply-template', [\App\Http\Controllers\Api\WorkTemplateController::class, 'applyToProject'])->middleware('rbac:template.apply')->name('projects.apply-template');
+
+            Route::group(['prefix' => '/{project}/contracts', 'as' => 'projects.contracts.'], function () {
+                Route::get('/', [\App\Http\Controllers\Api\ContractController::class, 'index'])->middleware('rbac:contract.view')->name('index');
+                Route::post('/', [\App\Http\Controllers\Api\ContractController::class, 'store'])->middleware('rbac:contract.create')->name('store');
+                Route::get('/{contract}', [\App\Http\Controllers\Api\ContractController::class, 'show'])->middleware('rbac:contract.view')->name('show');
+                Route::put('/{contract}', [\App\Http\Controllers\Api\ContractController::class, 'update'])->middleware('rbac:contract.update')->name('update');
+                Route::delete('/{contract}', [\App\Http\Controllers\Api\ContractController::class, 'destroy'])->middleware('rbac:contract.delete')->name('destroy');
+                Route::get('/{contract}/material-receipts', [\App\Http\Controllers\Api\ContractController::class, 'materialReceipts'])->middleware('rbac:contract.view')->name('material-receipts.index');
+                Route::get('/{contract}/cost-summary', [\App\Http\Controllers\Api\ContractController::class, 'costSummary'])->middleware('rbac:contract.view')->name('cost-summary.show');
+            });
         });
 
         Route::group(['prefix' => 'components'], function () {

@@ -22,15 +22,18 @@ class DashboardAlert extends Model
         'project_id',
         'message',
         'type',
+        'category',
         'severity',
         'is_read',
         'triggered_at',
+        'expires_at',
         'context',
     ];
 
     protected $casts = [
         'is_read' => 'boolean',
         'triggered_at' => 'datetime',
+        'expires_at' => 'datetime',
         'context' => 'array',
     ];
 
@@ -105,6 +108,18 @@ class DashboardAlert extends Model
     public function scopeBySeverity($query, string $severity)
     {
         return $query->where('severity', $severity);
+    }
+
+    public function scopeByCategory($query, string $category)
+    {
+        return $query->where('category', $category);
+    }
+
+    public function scopeNotExpired($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+        });
     }
 
     public function scopeUnread($query)

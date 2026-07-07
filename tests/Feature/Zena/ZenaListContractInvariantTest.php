@@ -75,6 +75,12 @@ class ZenaListContractInvariantTest extends TestCase
             return false;
         }
 
+        // Parameterized index routes (e.g. boqs/{boq}/line-items) cannot be
+        // probed with a literal URI — they 404 by design without a real parent.
+        if (str_contains($route->uri(), '{')) {
+            return false;
+        }
+
         $action = $route->getActionName();
         if ($action === 'Closure' || !Str::endsWith($action, '@index')) {
             return false;

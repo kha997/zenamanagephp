@@ -244,35 +244,33 @@ if (app()->environment(['local', 'testing'])) {
     })->name('calendar-complete');
 }
 
-// Tailwind CSS Test Route
-Route::get('/test-tailwind', function() {
-    return view('test-tailwind');
-})->name('test-tailwind');
+// Test/demo view routes — local and testing environments only
+if (app()->environment(['local', 'testing'])) {
+    Route::get('/test-tailwind', function() {
+        return view('test-tailwind');
+    })->name('test-tailwind');
+
+    Route::get('/test-css-inline', function() {
+        return view('test-css-inline');
+    })->name('test-css-inline');
+
+    Route::get('/admin-layout-system', function() {
+        return view('admin.dashboard-layout-system-standalone');
+    })->name('admin-layout-system');
+}
 
 // Enhanced Admin Dashboard Route
 Route::get('/admin-dashboard-enhanced', function() {
     return view('admin.dashboard-enhanced');
-})->name('admin-dashboard-enhanced');
+})->middleware(['auth', 'tenant.isolation', 'rbac:admin'])->name('admin-dashboard-enhanced');
 
 // Enhanced Projects Management Route
 Route::get('/projects-enhanced', function() {
     return view('app.projects-enhanced');
-})->name('projects-enhanced');
+})->middleware(['auth', 'tenant.isolation'])->name('projects-enhanced');
 
-// CSS Inline Test Route
-Route::get('/test-css-inline', function() {
-    return view('test-css-inline');
-})->name('test-css-inline');
-
-// Layout System Test Route
-Route::get('/admin-layout-system', function() {
-    return view('admin.dashboard-layout-system-standalone');
-})->name('admin-layout-system');
-
-// Admin Users Management Route
-Route::get('/admin/users', function() {
-    return view('admin.users');
-})->name('admin-users');
+// REMOVED: unauthenticated standalone /admin/users — protected equivalent
+// exists in the admin group below (route name admin-users)
 
 // MOVED: Debug Login Route moved to /_debug namespace
 
@@ -852,11 +850,13 @@ Route::permanentRedirect('/performance/clear-caches', '/api/v1/admin/perf/clear-
 //     Route::get('/api/dashboard/metrics', [DashboardController::class, 'metrics'])->name('dashboard.metrics');
 // });
 
-Route::post('/api/upload', [UploadController::class, 'store']);
-Route::get('/api/websocket/auth', [WebSocketAuthController::class, 'authenticate']);
-Route::post('/api/widgets', [WidgetController::class, 'store'])->name('api.legacy.widgets.store');
-Route::put('/api/widgets/{widget}', [WidgetController::class, 'update'])->name('api.legacy.widgets.update');
-Route::delete('/api/widgets/{widget}', [WidgetController::class, 'destroy'])->name('api.legacy.widgets.destroy');
+Route::post('/api/upload', [UploadController::class, 'store'])->middleware(['auth']);
+Route::get('/api/websocket/auth', [WebSocketAuthController::class, 'authenticate'])->middleware(['auth']);
+Route::middleware(['auth'])->group(function () {
+    Route::post('/api/widgets', [WidgetController::class, 'store'])->name('api.legacy.widgets.store');
+    Route::put('/api/widgets/{widget}', [WidgetController::class, 'update'])->name('api.legacy.widgets.update');
+    Route::delete('/api/widgets/{widget}', [WidgetController::class, 'destroy'])->name('api.legacy.widgets.destroy');
+});
 
 // Operator (Procurement) Routes — canonical web UI for procurement zone
 Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolation'])->group(function () {

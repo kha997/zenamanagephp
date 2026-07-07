@@ -5,16 +5,23 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\MaterialRequest;
+use App\Models\Ncr;
 use App\Models\Project;
 use App\Models\QcInspection;
 use App\Models\Rfi;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class SiteEngineerDashboardController extends Controller
 {
     use ZenaContractResponseTrait;
+
+    private const QC_WIDGET_KEY = 'qc_summary';
+    private const CAPA_CONTEXT_TAG = 'inspection-ncr-capa';
 
     /**
      * Get Site Engineer dashboard overview.
@@ -33,18 +40,18 @@ class SiteEngineerDashboardController extends Controller
         $projectId = $request->input('project_id');
         
         // Get Site Engineer's projects
-        $projects = Project::whereHas('users', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
-        });
+        $projects = $this->accessibleProjectsQuery((string) $user->id, (string) $user->tenant_id);
 
         if ($projectId) {
             $projects->where('id', $projectId);
         }
 
         $projects = $projects->get();
+        $projectIds = $projects->pluck('id')->filter()->values();
+        $qcWidget = $this->buildQcSummaryWidget((string) $user->tenant_id, $projectIds);
 
         $overview = [
-            'projects' => $projects->map(function ($project) {
+            'projects' => $projects->map(function ($project) use ($user) {
                 return [
                     'id' => $project->id,
                     'name' => $project->name,
@@ -55,23 +62,126 @@ class SiteEngineerDashboardController extends Controller
             }),
             'summary' => [
                 'assigned_projects' => $projects->count(),
-                'site_tasks' => Task::whereIn('project_id', $projects->pluck('id'))
+                'site_tasks' => Task::whereIn('project_id', $projectIds)
+                    ->where('tenant_id', $user->tenant_id)
                     ->where('assigned_to', $user->id)
                     ->where('type', 'site')->count(),
-                'completed_site_tasks' => Task::whereIn('project_id', $projects->pluck('id'))
+                'completed_site_tasks' => Task::whereIn('project_id', $projectIds)
+                    ->where('tenant_id', $user->tenant_id)
                     ->where('assigned_to', $user->id)
                     ->where('type', 'site')
                     ->where('status', 'completed')->count(),
-                'material_requests' => MaterialRequest::whereIn('project_id', $projects->pluck('id'))
-                    ->where('status', 'pending')->count(),
-                'qc_inspections' => QcInspection::whereIn('project_id', $projects->pluck('id'))
-                    ->where('status', 'pending')->count(),
+                'material_requests' => Schema::hasTable('zena_material_requests')
+                    ? MaterialRequest::whereIn('project_id', $projectIds)
+                        ->where('status', 'pending')->count()
+                    : 0,
+                'qc_inspections' => $qcWidget['inspections']['total'],
             ],
-            'recent_activities' => $this->getRecentActivities($projects->pluck('id')->toArray()),
-            'site_conditions' => $this->getSiteConditions($projects->pluck('id')->toArray()),
+            'qc_widget' => $qcWidget,
+            'recent_activities' => $this->getRecentActivities($projectIds->all()),
+            'site_conditions' => $this->getSiteConditions($projectIds->all()),
         ];
 
         return $this->zenaSuccessResponse($overview);
+    }
+
+    private function accessibleProjectsQuery(string $userId, string $tenantId)
+    {
+        return Project::query()
+            ->where('tenant_id', $tenantId)
+            ->whereHas('projectUsers', function ($q) use ($userId) {
+                $q->where('user_id', $userId);
+            });
+    }
+
+    private function buildQcSummaryWidget(string $tenantId, Collection $projectIds): array
+    {
+        if ($projectIds->isEmpty()) {
+            return [
+                'widget_key' => self::QC_WIDGET_KEY,
+                'inspections' => $this->emptyInspectionCounts(),
+                'ncrs' => $this->emptyNcrCounts(),
+                'overdue_capa_tasks' => [
+                    'total' => 0,
+                ],
+            ];
+        }
+
+        $inspectionStatusCounts = QcInspection::query()
+            ->where('tenant_id', $tenantId)
+            ->whereHas('qcPlan', function ($query) use ($projectIds) {
+                $query->whereIn('project_id', $projectIds->all());
+            })
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $ncrStatusCounts = Ncr::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('project_id', $projectIds->all())
+            ->whereNotNull('inspection_id')
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $overdueCapaTasks = Task::query()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('project_id', $projectIds->all())
+            ->whereNotIn('status', [
+                Task::STATUS_COMPLETED,
+                Task::STATUS_CANCELLED,
+                'done',
+            ])
+            ->whereNotNull('end_date')
+            ->where('end_date', '<', now())
+            ->get()
+            ->filter(function (Task $task): bool {
+                return in_array(self::CAPA_CONTEXT_TAG, (array) $task->tags, true);
+            })
+            ->count();
+
+        return [
+            'widget_key' => self::QC_WIDGET_KEY,
+            'inspections' => [
+                'total' => (int) $inspectionStatusCounts->sum(),
+                'scheduled' => (int) ($inspectionStatusCounts['scheduled'] ?? 0),
+                'in_progress' => (int) ($inspectionStatusCounts['in_progress'] ?? 0),
+                'completed' => (int) ($inspectionStatusCounts['completed'] ?? 0),
+                'failed' => (int) ($inspectionStatusCounts['failed'] ?? 0),
+            ],
+            'ncrs' => [
+                'total' => (int) $ncrStatusCounts->sum(),
+                'open' => (int) ($ncrStatusCounts['open'] ?? 0),
+                'in_progress' => (int) ($ncrStatusCounts['in_progress'] ?? 0),
+                'resolved' => (int) ($ncrStatusCounts['resolved'] ?? 0),
+                'closed' => (int) ($ncrStatusCounts['closed'] ?? 0),
+            ],
+            'overdue_capa_tasks' => [
+                'total' => $overdueCapaTasks,
+            ],
+        ];
+    }
+
+    private function emptyInspectionCounts(): array
+    {
+        return [
+            'total' => 0,
+            'scheduled' => 0,
+            'in_progress' => 0,
+            'completed' => 0,
+            'failed' => 0,
+        ];
+    }
+
+    private function emptyNcrCounts(): array
+    {
+        return [
+            'total' => 0,
+            'open' => 0,
+            'in_progress' => 0,
+            'resolved' => 0,
+            'closed' => 0,
+        ];
     }
 
     /**
@@ -256,26 +366,28 @@ class SiteEngineerDashboardController extends Controller
 
         $projectId = $request->input('project_id');
         $status = $request->input('status');
-        
-        $query = QcInspection::query();
 
-        if ($projectId) {
-            $query->where('project_id', $projectId);
-        } else {
-            // Get inspections from site engineer's projects
-            $projectIds = Project::whereHas('users', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            })->pluck('id');
-            
-            $query->whereIn('project_id', $projectIds);
-        }
+        $projectIds = $this->accessibleProjectsQuery((string) $user->id, (string) $user->tenant_id)
+            ->pluck('id');
+
+        $query = QcInspection::query()
+            ->where('tenant_id', (string) $user->tenant_id)
+            ->whereHas('qcPlan', function ($q) use ($projectIds, $projectId) {
+                if ($projectId) {
+                    $q->where('project_id', $projectId);
+
+                    return;
+                }
+
+                $q->whereIn('project_id', $projectIds);
+            });
 
         if ($status) {
             $query->where('status', $status);
         }
 
-        $inspections = $query->with(['project:id,name', 'inspector:id,name'])
-            ->orderBy('scheduled_date', 'asc')
+        $inspections = $query->with(['qcPlan.project:id,name', 'inspector:id,name'])
+            ->orderBy('inspection_date', 'asc')
             ->get()
             ->map(function ($inspection) {
                 return [
@@ -284,8 +396,11 @@ class SiteEngineerDashboardController extends Controller
                     'description' => $inspection->description,
                     'inspection_type' => $inspection->inspection_type,
                     'status' => $inspection->status,
-                    'scheduled_date' => $inspection->scheduled_date,
-                    'project' => $inspection->project,
+                    'scheduled_date' => $inspection->inspection_date,
+                    'project' => $inspection->qcPlan?->project ? [
+                        'id' => $inspection->qcPlan->project->id,
+                        'name' => $inspection->qcPlan->project->name,
+                    ] : null,
                     'inspector' => $inspection->inspector,
                     'created_at' => $inspection->created_at,
                 ];

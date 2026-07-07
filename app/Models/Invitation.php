@@ -206,7 +206,7 @@ class Invitation extends Model
 
     public function getDaysUntilExpiryAttribute(): int
     {
-        return $this->expires_at?->diffInDays(now()) ?? 0;
+        return (int) round($this->expires_at?->diffInDays(now()) ?? 0);
     }
 
     public function markAsAccepted(?string $userId = null): void

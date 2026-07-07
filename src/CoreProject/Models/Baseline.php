@@ -149,7 +149,7 @@ class Baseline extends Model
      */
     public function getDurationInDays(): int
     {
-        return $this->start_date->diffInDays($this->end_date) + 1;
+        return (int) round($this->start_date->diffInDays($this->end_date)) + 1;
     }
 
     /**

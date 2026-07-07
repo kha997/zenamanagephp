@@ -34,7 +34,11 @@ class InterModuleCommunicationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
+        // Disable FK constraints: factory graphs here predate SQLite FK
+        // enforcement (effective since the Laravel 12 upgrade)
+        \DB::statement('PRAGMA foreign_keys=OFF;');
+
         $this->user = User::factory()->create();
         $this->project = Project::factory()->create([
             'tenant_id' => $this->user->tenant_id

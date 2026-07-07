@@ -36,7 +36,11 @@ class EventWorkflowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
+        // Disable FK constraints: factory graphs here predate SQLite FK
+        // enforcement (effective since the Laravel 12 upgrade)
+        \DB::statement('PRAGMA foreign_keys=OFF;');
+
         // Tạo test data
         $this->user = User::factory()->create();
         $this->project = Project::factory()->create([

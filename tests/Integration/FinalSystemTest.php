@@ -32,6 +32,10 @@ class FinalSystemTest extends TestCase
     {
         parent::setUp();
 
+        // Disable FK constraints: factory graphs here predate SQLite FK
+        // enforcement (effective since the Laravel 12 upgrade)
+        \DB::statement('PRAGMA foreign_keys=OFF;');
+
         // Create tenant and user via shared test auth helpers
         $this->tenant = \App\Models\Tenant::factory()->create();
         $this->user = $this->createTenantUser(

@@ -29,7 +29,12 @@ return new class extends Migration
             $table->json('watchers')->nullable()->after('updated_by');
             
             // Add foreign key constraints
-            $table->foreign('component_id')->references('id')->on('zena_components')->onDelete('set null');
+            // NOTE: the legacy FK component_id → zena_components was removed.
+            // On fresh databases zena_components exists but stays EMPTY (the
+            // rename to `components` is skipped because create_components_table
+            // runs first), so the stale FK made SQLite reject every task insert
+            // with a component_id. The canonical FK to `components` is added by
+            // 2025_09_20_071838_optimize_database_relationships.
             $table->foreign('assigned_to')->references('id')->on('users')->onDelete('set null');
             $table->foreign('parent_id')->references('id')->on('tasks')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');

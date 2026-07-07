@@ -327,14 +327,15 @@ class DashboardCustomizationService
      */
     public function applyLayoutTemplate(User $user, string $templateId): array
     {
+        // Resolve before the try block: the catch calls DB::rollBack(), which
+        // must never run for exceptions thrown before beginTransaction() —
+        // an unbalanced rollback pops the caller's (or test wrapper's) transaction.
+        $template = $this->getLayoutTemplate($templateId);
+        if (!$template) {
+            throw new \Exception('Layout template not found');
+        }
+
         try {
-            $template = $this->getLayoutTemplate($templateId);
-            if (!$template) {
-                throw new \Exception('Layout template not found');
-            }
-
-            // Validate user can 
-
             DB::beginTransaction();
 
             $dashboard = UserDashboard::where('user_id', $user->id)

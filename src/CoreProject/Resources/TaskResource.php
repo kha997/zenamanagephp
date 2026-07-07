@@ -105,7 +105,8 @@ class TaskResource extends BaseApiResource
             return null;
         }
         
-        return $this->start_date->diffInDays($this->end_date);
+        // Carbon 3: diffInDays() returns float
+        return (int) round($this->start_date->diffInDays($this->end_date));
     }
     
     /**

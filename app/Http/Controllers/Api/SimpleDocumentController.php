@@ -9,6 +9,7 @@ use App\Models\Component;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Models\Project;
+use App\Models\Submittal;
 use App\Models\Task;
 use App\Services\ErrorEnvelopeService;
 use App\Services\ZenaAuditLogger;
@@ -39,6 +40,7 @@ class SimpleDocumentController extends Controller
         Document::ENTITY_TYPE_TASK => Task::class,
         Document::ENTITY_TYPE_COMPONENT => Component::class,
         Document::ENTITY_TYPE_CR => ChangeRequest::class,
+        Document::ENTITY_TYPE_SUBMITTAL => Submittal::class,
     ];
 
     public function index(Request $request)
@@ -217,6 +219,8 @@ class SimpleDocumentController extends Controller
             return ErrorEnvelopeService::notFoundError('Document');
         }
 
+        $this->authorize('view', $document);
+
         return $this->zenaSuccessResponse($document);
     }
 
@@ -371,6 +375,8 @@ class SimpleDocumentController extends Controller
         if (!$document) {
             return ErrorEnvelopeService::notFoundError('Document');
         }
+
+        $this->authorize('download', $document);
 
         $disk = config('filesystems.default', 'local');
         $path = $document->file_path;
@@ -611,8 +617,12 @@ class SimpleDocumentController extends Controller
 
     private function findDocument(string $id): ?Document
     {
+        $user = Auth::user();
+        $tenantId = (string) (app()->bound('current_tenant_id') ? app('current_tenant_id') : ($user?->tenant_id ?? ''));
+
         return Document::query()
             ->with('currentVersion')
+            ->where('tenant_id', $tenantId)
             ->find($id);
     }
 

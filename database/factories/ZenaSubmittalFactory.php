@@ -34,7 +34,7 @@ class ZenaSubmittalFactory extends SubmittalFactory
         $filtered['status'] = $this->faker->randomElement([
             'draft',
             'submitted',
-            'under_review',
+            'pending_review',
             'approved',
             'rejected',
         ]);

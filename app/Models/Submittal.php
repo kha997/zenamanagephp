@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Document;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Traits\TenantScope;
 use Illuminate\Support\Str;
 
@@ -55,6 +57,27 @@ class Submittal extends Model
         'created_by',
         'attachments',
     ];
+
+    public const STATUS_DRAFT = 'draft';
+    public const STATUS_SUBMITTED = 'submitted';
+    public const STATUS_PENDING_REVIEW = 'pending_review';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
+    public const STATUS_REVISED = 'revised';
+
+    public const STATUS_TRANSITIONS = [
+        self::STATUS_DRAFT         => [self::STATUS_SUBMITTED],
+        self::STATUS_SUBMITTED     => [self::STATUS_PENDING_REVIEW, self::STATUS_APPROVED, self::STATUS_REJECTED, self::STATUS_REVISED],
+        self::STATUS_PENDING_REVIEW => [self::STATUS_APPROVED, self::STATUS_REJECTED],
+        self::STATUS_APPROVED      => [],
+        self::STATUS_REJECTED      => [],
+        self::STATUS_REVISED       => [self::STATUS_SUBMITTED],
+    ];
+
+    public function canTransitionTo(string $newStatus): bool
+    {
+        return in_array($newStatus, self::STATUS_TRANSITIONS[$this->status] ?? [], true);
+    }
 
     protected $casts = [
         'due_date' => 'date',
@@ -152,5 +175,11 @@ class Submittal extends Model
     public function scopeSubmittedBy($query, $userId)
     {
         return $query->where('submitted_by', $userId);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class, 'linked_entity_id')
+            ->where('linked_entity_type', Document::ENTITY_TYPE_SUBMITTAL);
     }
 }

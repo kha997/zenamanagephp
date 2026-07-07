@@ -225,7 +225,7 @@ class SubmittalController extends ApiBaseController
                 'due_date' => 'nullable|date',
                 'contractor' => 'nullable|string|max:255',
                 'manufacturer' => 'nullable|string|max:255',
-                'status' => 'sometimes|in:draft,submitted,pending_review,approved,rejected,revised',
+                'status' => 'prohibited',
             ]);
 
             if ($validator->fails()) {
@@ -349,6 +349,10 @@ class SubmittalController extends ApiBaseController
 
             $submittal = $this->submittalForTenant($id);
 
+            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
+                return $this->errorResponse('Only submitted or pending_review submittals can be reviewed', 400);
+            }
+
             $reviewStatus = $request->input('review_status') ?? $request->input('status');
             $reviewComments = $request->input('review_comments') ?? $request->input('review_notes');
 
@@ -408,6 +412,10 @@ class SubmittalController extends ApiBaseController
 
             $submittal = $this->submittalForTenant($id);
 
+            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
+                return $this->errorResponse('Only submitted or pending_review submittals can be approved', 400);
+            }
+
             $validator = Validator::make($request->all(), [
                 'approval_comments' => 'nullable|string',
             ]);
@@ -456,6 +464,10 @@ class SubmittalController extends ApiBaseController
             }
 
             $submittal = $this->submittalForTenant($id);
+
+            if (!in_array($submittal->status, [\App\Models\Submittal::STATUS_SUBMITTED, \App\Models\Submittal::STATUS_PENDING_REVIEW], true)) {
+                return $this->errorResponse('Only submitted or pending_review submittals can be rejected', 400);
+            }
 
             $validator = Validator::make($request->all(), [
                 'rejection_reason' => 'required|string',

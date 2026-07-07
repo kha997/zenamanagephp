@@ -322,6 +322,96 @@ class SubmittalApiTest extends TestCase
         }
     }
 
+    public function test_cannot_submit_already_submitted_submittal(): void
+    {
+        $submittal = ZenaSubmittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'status' => 'submitted',
+        ]);
+
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.submit', ['id' => $submittal->id]));
+
+        $response->assertStatus(400);
+    }
+
+    public function test_cannot_approve_draft_submittal(): void
+    {
+        $submittal = ZenaSubmittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.approve', ['id' => $submittal->id]), [
+            'approval_comments' => 'Should not work',
+        ]);
+
+        $response->assertStatus(400);
+        $this->assertDatabaseHas('submittals', ['id' => $submittal->id, 'status' => 'draft']);
+    }
+
+    public function test_cannot_reject_draft_submittal(): void
+    {
+        $submittal = ZenaSubmittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withZenaAuth()->postJson($this->zena('submittals.reject', ['id' => $submittal->id]), [
+            'rejection_reason' => 'Should not work',
+        ]);
+
+        $response->assertStatus(400);
+        $this->assertDatabaseHas('submittals', ['id' => $submittal->id, 'status' => 'draft']);
+    }
+
+    public function test_cannot_mutate_status_via_update(): void
+    {
+        $submittal = ZenaSubmittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'status' => 'draft',
+        ]);
+
+        $response = $this->withZenaAuth()->putJson($this->zena('submittals.update', ['id' => $submittal->id]), [
+            'status' => 'approved',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('submittals', ['id' => $submittal->id, 'status' => 'draft']);
+    }
+
+    public function test_document_can_be_linked_to_submittal(): void
+    {
+        $submittal = ZenaSubmittal::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->user->id,
+            'tenant_id' => $this->user->tenant_id,
+            'status' => 'draft',
+        ]);
+
+        $documents = \App\Models\Document::where('linked_entity_type', 'submittal')
+            ->where('linked_entity_id', $submittal->id)
+            ->get();
+
+        $this->assertCount(0, $documents);
+
+        \App\Models\Document::factory()->create([
+            'tenant_id' => $this->user->tenant_id,
+            'project_id' => $submittal->project_id,
+            'linked_entity_type' => \App\Models\Document::ENTITY_TYPE_SUBMITTAL,
+            'linked_entity_id' => $submittal->id,
+        ]);
+
+        $linked = \App\Models\Document::where('linked_entity_type', 'submittal')
+            ->where('linked_entity_id', $submittal->id)
+            ->get();
+
+        $this->assertCount(1, $linked);
+    }
+
     /**
      * Test unauthorized access.
      */

@@ -349,12 +349,21 @@ epics:
       - id: S4.3
         title: "Material submittal package (docs + approvals)"
         priority: P1
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Canonical package owner surface is limited to `/api/zena/submittals`; Document Center remains the canonical file owner surface."
           - "First slice proves `draft -> submitted -> approved|rejected` on `/api/zena/submittals`; `review` is optional/intermediate or `UNKNOWN` unless separately evidenced."
           - "Document linkage must use Document Center query/link semantics; do not use `submittals.attachments` or `file_url` as canonical file ownership proof."
           - "Notification claims are limited to direct-recipient proof only if runtime evidence appears; otherwise notifications stay deferred."
+        evidence:
+          routes: "GET /api/zena/submittals; POST /api/zena/submittals; GET /api/zena/submittals/{id}; PUT /api/zena/submittals/{id}; DELETE /api/zena/submittals/{id}; POST /api/zena/submittals/{id}/submit; POST /api/zena/submittals/{id}/review; POST /api/zena/submittals/{id}/approve; POST /api/zena/submittals/{id}/reject"
+          tests: "php artisan test tests/Feature/Api/SubmittalApiTest.php (15 passed); php artisan test tests/Feature/Api/SubmittalShowApiTest.php (1 passed); php artisan test tests/Feature/Architecture/SubmittalShowRouteInvariantTest.php (1 passed)"
+        notes:
+          - "Canonical workflow: draft → submitted → approved|rejected. review() bridges optional pending_review intermediate state."
+          - "Document Center linkage via Submittal.documents() HasMany through Document.linked_entity_type='submittal'. JSON attachments field is a secondary payload cast, not canonical file ownership proof."
+          - "Notifications deferred — no runtime evidence of notification fan-out; submittal.view/create/edit/delete/submit/review/approve/reject permissions all seeded."
+          - "Fixed: show() method was erroneously passing 'attachments' as eager-load relation (JSON cast, not relationship); corrected to 'documents'."
       - id: S4.4
         title: "Delivery/Receipt + acceptance checklist"
         priority: P2

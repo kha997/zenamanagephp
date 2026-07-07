@@ -192,7 +192,7 @@ class SubmittalController extends ApiBaseController
                 'project:id,name',
                 'submittedBy:id,name',
                 'reviewedBy:id,name',
-                'attachments',
+                'documents',
             ]);
 
             return $this->successResponse($submittal, 'Submittal retrieved successfully');

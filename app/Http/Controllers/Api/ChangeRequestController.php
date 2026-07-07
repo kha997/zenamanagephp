@@ -713,6 +713,20 @@ class ChangeRequestController extends BaseApiController
                 );
             }
 
+            // Notify project PM as a broader stakeholder when different from requester
+            $project = $changeRequest->project ?? Project::find($changeRequest->project_id);
+            $pmId = $project?->pm_id ? (string) $project->pm_id : null;
+            if ($pmId !== null && $pmId !== (string) ($changeRequest->requested_by ?? '')) {
+                $this->createWorkflowNotification(
+                    $changeRequest,
+                    $pmId,
+                    'change_request_approved_pm',
+                    'Change request approved (project update)',
+                    $changeRequest->title,
+                    'change_request.approved'
+                );
+            }
+
             DB::commit();
 
             $changeRequest->load(['project:id,name', 'requestedBy:id,name', 'approvedBy:id,name']);

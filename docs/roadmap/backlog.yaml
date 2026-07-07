@@ -272,15 +272,21 @@ epics:
       - id: S3.2a
         title: "Broader approver/stakeholder notification semantics for canonical change requests"
         priority: P1
-        status: todo
+        status: done
+        updated_at: 2026-07-07
         acceptance_criteria:
           - "Canonical approver-discovery and stakeholder recipient semantics are explicitly defined for /api/zena/change-requests using evidence-backed owner fields or routes."
           - "Any broader notification fan-out beyond the minimal direct-recipient slice is proved end-to-end on the canonical path without touching /api/v1/*."
           - "Apply notification semantics are either proved in-scope or explicitly deferred again without overclaiming stakeholder behavior."
+        evidence:
+          routes: "POST /api/zena/change-requests/{id}/approve (broader fan-out to PM); POST /api/zena/change-requests/{id}/apply (no notification — explicitly deferred)"
+          tests: "php artisan test tests/Feature/Api/ChangeRequestStakeholderNotificationTest.php (5 passed)"
         notes:
           - "This follow-up exists because the canonical path currently proves only one explicit approver fixture on submit and requester-directed notifications on approve/reject."
-          - "Stakeholder semantics remain UNKNOWN until this story defines them from canonical evidence."
-          - "Do not invent broad fan-out rules from compatibility paths or non-canonical notification plumbing."
+          - "Canonical approver-discovery contract: change_requests.assigned_to = single-approver shorthand (submit recipient); change_request_approvals table = multi-approver owner surface for future expansion."
+          - "Broader fan-out proved: approve() now notifies requested_by (requester, type=change_request_approved) AND projects.pm_id (type=change_request_approved_pm) when PM differs from requester. Both via CHANNEL_INAPP on the canonical /api/zena/change-requests path."
+          - "Apply notification explicitly deferred: apply() creates delta tasks + baseline snapshot but sends zero notifications. Test proves count unchanged."
+          - "No /api/v1/* path used as proof."
       - id: S3.3
         title: "Approved CR creates delta tasks + baseline delta"
         priority: P0

@@ -142,7 +142,7 @@ class Permission {
      * @return array Mảng chứa permissions và override rules
      */
     private static function getRolePermissions(string $roleId): array {
-        $role = \Src\RBAC\Models\Role::with('permissions')->find($roleId);
+        $role = \App\Models\Role::with('permissions')->find($roleId);
 
         if (!$role) {
             return [

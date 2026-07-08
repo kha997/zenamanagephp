@@ -61,3 +61,4 @@ ts-build.log
 
 # tooling caches
 .php-cs-fixer.cache
+.deptrac.cache

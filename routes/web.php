@@ -206,17 +206,9 @@ if (app()->environment(['local', 'testing'])) {
         return view('admin.dashboard');
     })->name('admin-dashboard-complete');
 
-    Route::get('/projects-complete', function () {
-        return view('app.projects');
-    })->name('projects-complete');
-
-    Route::get('/tasks-complete', function () {
-        return view('app.tasks');
-    })->name('tasks-complete');
-
-    Route::get('/calendar-complete', function () {
-        return view('app.calendar');
-    })->name('calendar-complete');
+    Route::get('/projects-complete', fn () => redirect()->route('app.projects'))->name('projects-complete');
+    Route::get('/tasks-complete', fn () => redirect()->route('app.tasks'))->name('tasks-complete');
+    Route::get('/calendar-complete', fn () => redirect()->route('app.calendar'))->name('calendar-complete');
 }
 
 // Test/demo view routes — local and testing environments only
@@ -389,9 +381,7 @@ Route::get('/projects-enhanced', function() {
     })->name('projects.construction');
     
     // Calendar
-    Route::get('/calendar', function () {
-        return view('app.calendar');
-    })->name('calendar');
+    Route::get('/calendar', [App\Http\Controllers\Web\AppController::class, 'calendar'])->name('calendar');
 
     // Tasks Routes
     Route::get('/tasks', [App\Http\Controllers\Web\AppController::class, 'tasks'])->name('tasks');
@@ -419,7 +409,12 @@ Route::get('/projects-enhanced', function() {
     
         // Team Routes
         Route::get('/team', function () {
-            return view('team.index');
+            return view('app.team', [
+                'users' => App\Models\User::query()
+                    ->where('tenant_id', (string) auth()->user()?->tenant_id)
+                    ->orderBy('name')
+                    ->get(['id', 'tenant_id', 'name', 'email', 'role', 'is_active', 'created_at']),
+            ]);
         })->middleware('can:viewAny,' . Team::class)->name('team.index');
     Route::get('/team/users', [App\Http\Controllers\App\TeamUsersController::class, 'index'])->name('team.users.index');
     Route::get('/team/invite', function () {
@@ -428,7 +423,12 @@ Route::get('/projects-enhanced', function() {
     
     // Templates Routes
     Route::get('/templates', function () {
-        return view('templates.index');
+        return view('templates.index', [
+            'templates' => App\Models\Template::query()
+                ->orderByDesc('updated_at')
+                ->limit(100)
+                ->get(),
+        ]);
     })->name('templates');
     Route::get('/templates/builder', function () {
         return view('templates.builder');
@@ -462,7 +462,7 @@ Route::get('/projects-enhanced', function() {
     
     // Profile Routes
     Route::get('/profile', function () {
-        return view('profile.index');
+        return view('app.profile');
     })->name('profile');
 });
 

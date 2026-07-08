@@ -125,7 +125,9 @@ class TaskController extends Controller
     public function show(string $taskId): View|RedirectResponse
     {
         try {
-            $task = Task::with(['project'])->findOrFail($taskId);
+            $task = Task::with(['project'])
+                ->where('tenant_id', (string) \Auth::user()?->tenant_id)
+                ->findOrFail($taskId);
             
             return view('tasks.show', compact('task'));
         } catch (\Exception $e) {
@@ -146,9 +148,10 @@ class TaskController extends Controller
     public function edit(string $taskId): View
     {
         try {
-            $task = Task::findOrFail($taskId);
-            $projects = Project::select('id', 'name')->get();
-            
+            $tenantId = (string) \Auth::user()?->tenant_id;
+            $task = Task::query()->where('tenant_id', $tenantId)->findOrFail($taskId);
+            $projects = Project::query()->where('tenant_id', $tenantId)->select('id', 'name')->get();
+
             return view('tasks.edit', compact('task', 'projects'));
         } catch (\Exception $e) {
             return view('tasks.edit', [

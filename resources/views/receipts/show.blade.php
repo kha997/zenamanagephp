@@ -89,12 +89,12 @@
 
                     <div class="operator-field">
                         <label for="quantity_received">Số lượng nhận</label>
-                        <input id="quantity_received" name="quantity_received" type="number" step="0.001" min="0.001" class="operator-input" value="{{ old('quantity_received') }}" required>
+                        <input id="quantity_received" name="quantity_received" type="text" inputmode="decimal" data-money class="operator-input" value="{{ old('quantity_received') }}" required>
                     </div>
 
                     <div class="operator-field">
                         <label for="unit_cost">Đơn giá</label>
-                        <input id="unit_cost" name="unit_cost" type="number" step="0.01" min="0" class="operator-input" value="{{ old('unit_cost') }}">
+                        <input id="unit_cost" name="unit_cost" type="text" inputmode="decimal" data-money class="operator-input" value="{{ old('unit_cost') }}" placeholder="vd: 185.000">
                     </div>
                 </div>
 

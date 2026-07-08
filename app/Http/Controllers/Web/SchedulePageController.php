@@ -2,15 +2,21 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Http\Controllers\Api\TaskController as ApiTaskController;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Project;
 use App\Models\Task;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Throwable;
 
 class SchedulePageController extends Controller
 {
+    use DelegatesToApiControllers;
     public function index(Request $request): View
     {
         $tenantId = (string) auth()->user()?->tenant_id;
@@ -91,6 +97,77 @@ class SchedulePageController extends Controller
             'selectedProjectId' => $selectedProjectId,
             'timeline' => $timeline,
             'taskCount' => $tasks->count(),
+            'tasks' => $tasks,
         ]);
+    }
+
+    public function storeTask(Request $request, ApiTaskController $apiController): RedirectResponse
+    {
+        $validated = $request->validate([
+            'project_id' => ['required', 'string'],
+            'name' => ['required', 'string', 'max:255'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            'status' => ['nullable', 'string'],
+        ]);
+
+        try {
+            $response = $apiController->store($this->buildApiRequest($request, $validated));
+        } catch (AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->withInput()->with('error', 'Không thể xử lý yêu cầu.');
+        }
+
+        return $this->handleMutationResponse(
+            $response,
+            route('operator.schedule.index', ['project_id' => $validated['project_id']]),
+            'Đã thêm công việc'
+        );
+    }
+
+    public function updateTask(Request $request, string $id, ApiTaskController $apiController): RedirectResponse
+    {
+        $validated = $request->validate([
+            'project_id' => ['required', 'string'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date'],
+            'status' => ['nullable', 'string'],
+            'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        $payload = collect($validated)->except('project_id')->filter(fn ($value) => $value !== null)->all();
+
+        try {
+            $response = $apiController->update($this->buildApiRequest($request, $payload), $id);
+        } catch (AuthorizationException) {
+            return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->with('error', 'Không thể xử lý yêu cầu.');
+        }
+
+        return $this->handleMutationResponse(
+            $response,
+            route('operator.schedule.index', ['project_id' => $validated['project_id']]),
+            'Đã cập nhật công việc'
+        );
+    }
+
+    public function destroyTask(Request $request, string $id, ApiTaskController $apiController): RedirectResponse
+    {
+        try {
+            $response = $apiController->destroy($this->buildApiRequest($request), $id);
+        } catch (AuthorizationException) {
+            return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->with('error', 'Không thể xử lý yêu cầu.');
+        }
+
+        return $this->handleMutationResponse(
+            $response,
+            route('operator.schedule.index', ['project_id' => (string) $request->input('project_id')]),
+            'Đã xóa công việc'
+        );
     }
 }

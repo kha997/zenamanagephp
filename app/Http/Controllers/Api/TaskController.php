@@ -520,7 +520,8 @@ class TaskController extends BaseApiController
             'status' => 'sometimes|required|in:todo,in_progress,done,pending',
             'priority' => 'sometimes|required|in:low,medium,high,urgent',
             'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date|after:start_date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'progress_percent' => 'nullable|integer|min:0|max:100',
             'estimated_hours' => 'nullable|numeric|min:0',
             'actual_hours' => 'nullable|numeric|min:0',
             'dependencies' => 'nullable|array',
@@ -534,7 +535,7 @@ class TaskController extends BaseApiController
         try {
             $updateData = $request->only([
                 'name', 'description', 'status', 'priority', 'start_date', 'end_date',
-                'estimated_hours', 'actual_hours', 'dependencies'
+                'progress_percent', 'estimated_hours', 'actual_hours', 'dependencies'
             ]);
             $requestedDependencies = $updateData['dependencies'] ?? null;
 

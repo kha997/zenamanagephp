@@ -25,6 +25,40 @@
         </form>
     </x-ui.card>
 
+    @if ($errors->any())
+        <x-ui.card>
+            <div class="operator-error-list">
+                <ul class="space-y-1 text-sm">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </x-ui.card>
+    @endif
+
+    @if ($selectedProjectId !== '')
+        <x-ui.card title="Thêm công việc">
+            <form method="POST" action="{{ route('operator.schedule.tasks.store') }}" class="flex flex-wrap items-end gap-3">
+                @csrf
+                <input type="hidden" name="project_id" value="{{ $selectedProjectId }}">
+                <div class="operator-field flex-1 min-w-56">
+                    <label for="new_name">Tên công việc</label>
+                    <input id="new_name" name="name" type="text" class="operator-input" value="{{ old('name') }}" required>
+                </div>
+                <div class="operator-field">
+                    <label for="new_start">Bắt đầu</label>
+                    <input id="new_start" name="start_date" type="date" class="operator-input" value="{{ old('start_date') }}" required>
+                </div>
+                <div class="operator-field">
+                    <label for="new_end">Kết thúc</label>
+                    <input id="new_end" name="end_date" type="date" class="operator-input" value="{{ old('end_date') }}" required>
+                </div>
+                <button type="submit" class="operator-button operator-button-primary">Thêm</button>
+            </form>
+        </x-ui.card>
+    @endif
+
     @if ($projects->isEmpty())
         <x-ui.empty-state title="Chưa có dự án" description="Tạo dự án trước khi xem tiến độ." />
     @elseif ($timeline === null)
@@ -64,6 +98,53 @@
                     </div>
                 @endforeach
             </div>
+        </x-ui.card>
+
+        <x-ui.card title="Quản lý công việc">
+            <x-ui.data-table :headers="['Tên', 'Bắt đầu', 'Kết thúc', 'Trạng thái', 'Tiến độ (%)', 'Thao tác']">
+                @foreach ($tasks as $task)
+                    <tr>
+                        <td class="font-medium text-slate-900">
+                            <input form="task-edit-{{ $task->id }}" name="name" type="text" class="operator-input" value="{{ $task->name ?? $task->title }}" required>
+                        </td>
+                        <td>
+                            <input form="task-edit-{{ $task->id }}" name="start_date" type="date" class="operator-input"
+                                   value="{{ substr((string) $task->start_date, 0, 10) }}">
+                        </td>
+                        <td>
+                            <input form="task-edit-{{ $task->id }}" name="end_date" type="date" class="operator-input"
+                                   value="{{ substr((string) $task->end_date, 0, 10) }}">
+                        </td>
+                        <td>
+                            <select form="task-edit-{{ $task->id }}" name="status" class="operator-select">
+                                @foreach (['todo' => 'Chưa làm', 'pending' => 'Chờ', 'in_progress' => 'Đang làm', 'done' => 'Hoàn thành'] as $value => $label)
+                                    <option value="{{ $value }}" @selected($task->status === $value)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </td>
+                        <td>
+                            <input form="task-edit-{{ $task->id }}" name="progress_percent" type="number" min="0" max="100" class="operator-input" style="width:5.5rem;"
+                                   value="{{ (int) $task->progress_percent }}">
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <form id="task-edit-{{ $task->id }}" method="POST" action="{{ route('operator.schedule.tasks.update', $task->id) }}">
+                                    @csrf
+                                    <input type="hidden" name="project_id" value="{{ $selectedProjectId }}">
+                                    <button type="submit" class="operator-button operator-button-primary">Lưu</button>
+                                </form>
+                                <form method="POST" action="{{ route('operator.schedule.tasks.destroy', $task->id) }}"
+                                      onsubmit="return confirm('Xóa công việc này?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <input type="hidden" name="project_id" value="{{ $selectedProjectId }}">
+                                    <button type="submit" class="operator-button">Xóa</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                @endforeach
+            </x-ui.data-table>
         </x-ui.card>
     @endif
 @endsection

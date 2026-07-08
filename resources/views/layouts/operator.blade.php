@@ -7,7 +7,7 @@
     <title>@yield('title', config('app.name', 'ZenaManage'))</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
-    @vite(['resources/css/operator.css'])
+    @vite(['resources/css/operator.css', 'resources/js/money-format.js'])
     @stack('styles')
 </head>
 <body>

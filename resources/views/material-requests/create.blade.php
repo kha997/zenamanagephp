@@ -45,7 +45,7 @@
 
                 <div class="operator-field">
                     <label for="estimated_cost">Chi phí dự kiến</label>
-                    <input id="estimated_cost" name="estimated_cost" type="number" step="0.01" min="0" class="operator-input" value="{{ old('estimated_cost') }}">
+                    <input id="estimated_cost" name="estimated_cost" type="text" inputmode="decimal" data-money class="operator-input" value="{{ old('estimated_cost') }}" placeholder="vd: 1.500.000">
                 </div>
             </div>
 

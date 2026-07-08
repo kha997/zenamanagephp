@@ -37,6 +37,9 @@ class OperatorPlatformUiTest extends TestCase
             ['admin'],
             [
                 'task.view',
+                'task.create',
+                'task.update',
+                'task.delete',
                 'report.view',
                 'report.export',
                 'webhook.view',
@@ -81,6 +84,57 @@ class OperatorPlatformUiTest extends TestCase
             ->get(route('operator.schedule.index'), $headers)
             ->assertOk()
             ->assertSee('Chưa có công việc có ngày bắt đầu/kết thúc');
+    }
+
+    public function test_schedule_page_supports_task_crud(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        // Prime session for CSRF
+        $this->actingAs($this->user)
+            ->get(route('operator.schedule.index'), $headers)
+            ->assertOk();
+
+        // Create
+        $this->actingAs($this->user)
+            ->withHeaders($headers)
+            ->post(route('operator.schedule.tasks.store'), [
+                'project_id' => (string) $this->project->id,
+                'name' => 'Lắp kính mặt dựng',
+                'start_date' => '2026-08-01',
+                'end_date' => '2026-08-15',
+            ])
+            ->assertRedirect(route('operator.schedule.index', ['project_id' => (string) $this->project->id]));
+
+        $task = Task::query()->where('name', 'Lắp kính mặt dựng')->first();
+        $this->assertNotNull($task);
+
+        // Update progress + status
+        $this->actingAs($this->user)
+            ->withHeaders($headers)
+            ->post(route('operator.schedule.tasks.update', (string) $task->id), [
+                'project_id' => (string) $this->project->id,
+                'name' => 'Lắp kính mặt dựng',
+                'start_date' => '2026-08-01',
+                'end_date' => '2026-08-15',
+                'status' => 'in_progress',
+                'progress_percent' => 60,
+            ])
+            ->assertRedirect(route('operator.schedule.index', ['project_id' => (string) $this->project->id]));
+
+        $task->refresh();
+        $this->assertSame('in_progress', (string) $task->status);
+        $this->assertSame(60, (int) $task->progress_percent);
+
+        // Delete
+        $this->actingAs($this->user)
+            ->withHeaders($headers)
+            ->delete(route('operator.schedule.tasks.destroy', (string) $task->id), [
+                'project_id' => (string) $this->project->id,
+            ])
+            ->assertRedirect(route('operator.schedule.index', ['project_id' => (string) $this->project->id]));
+
+        $this->assertNull(Task::query()->find($task->id));
     }
 
     public function test_report_export_streams_tenant_scoped_csv(): void

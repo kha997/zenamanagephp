@@ -918,6 +918,9 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
 
     // Schedule / Gantt (tiến độ dự án)
     Route::get('/schedule', [App\Http\Controllers\Web\SchedulePageController::class, 'index'])->middleware('rbac:task.view')->name('schedule.index');
+    Route::post('/schedule/tasks', [App\Http\Controllers\Web\SchedulePageController::class, 'storeTask'])->middleware('rbac:task.create')->name('schedule.tasks.store');
+    Route::post('/schedule/tasks/{id}', [App\Http\Controllers\Web\SchedulePageController::class, 'updateTask'])->middleware('rbac:task.update')->name('schedule.tasks.update');
+    Route::delete('/schedule/tasks/{id}', [App\Http\Controllers\Web\SchedulePageController::class, 'destroyTask'])->middleware('rbac:task.delete')->name('schedule.tasks.destroy');
 
     // Reports (xuất báo cáo)
     Route::get('/reports', [App\Http\Controllers\Web\ReportPageController::class, 'index'])->middleware('rbac:report.view')->name('reports.index');

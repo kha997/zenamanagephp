@@ -1,0 +1,83 @@
+# Deptrac — ranh giới kiến trúc thực thi được (executable architecture graph)
+#
+# Quy ước phân lớp theo docs/architecture/module-ownership-ssot.md:
+#   WebControllers  → delegate sang ApiControllers (pattern DelegatesToApiControllers)
+#   ApiControllers  → Models + Services (KHÔNG được gọi ngược Web)
+#   Services        → Models + Jobs
+#   Observers       → Jobs + Models
+#   Jobs / Policies → Models
+#   Models          → không phụ thuộc lớp nào phía trên
+#
+# Chạy: composer deptrac  (vi phạm mới ngoài baseline sẽ fail)
+deptrac:
+  # Baseline nợ kỹ thuật đã biết — không thêm mục mới vào đây;
+  # sửa tận gốc rồi xóa dòng tương ứng.
+  skip_violations:
+    App\Models\Task:
+      - App\Services\TaskDependencyService
+    App\Models\ZenaTask:
+      - App\Services\TaskDependencyService
+
+  paths:
+    - ./app
+
+  exclude_files:
+    - '#.*Test\.php$#'
+
+  layers:
+    - name: WebControllers
+      collectors:
+        - type: classLike
+          value: App\\Http\\Controllers\\Web\\.*
+    - name: ApiControllers
+      collectors:
+        - type: classLike
+          value: App\\Http\\Controllers\\Api\\.*
+    - name: Services
+      collectors:
+        - type: classLike
+          value: App\\Services\\.*
+    - name: Jobs
+      collectors:
+        - type: classLike
+          value: App\\Jobs\\.*
+    - name: Observers
+      collectors:
+        - type: classLike
+          value: App\\Observers\\.*
+    - name: Policies
+      collectors:
+        - type: classLike
+          value: App\\Policies\\.*
+    - name: Models
+      collectors:
+        - type: classLike
+          value: App\\Models\\.*
+
+  ruleset:
+    WebControllers:
+      - ApiControllers
+      - Models
+      - Services
+      - Jobs
+    ApiControllers:
+      - Models
+      - Services
+      - Jobs
+    Services:
+      - Models
+      - Jobs
+    Observers:
+      - Jobs
+      - Models
+    Jobs:
+      - Models
+      - Services
+    Policies:
+      - Models
+    Models: []
+
+  analyser:
+    types:
+      - class
+      - use

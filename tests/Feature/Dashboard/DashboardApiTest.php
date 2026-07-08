@@ -894,7 +894,7 @@ class DashboardApiTest extends TestCase
         $response = $this->postJson('/api/v1/dashboard/customization/widgets', [
             'widget_id' => $widget->id
         ]);
-        $response->assertStatus(500)
+        $response->assertStatus(404)
                 ->assertJsonStructure([
                     'success',
                     'message'

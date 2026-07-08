@@ -58,12 +58,24 @@ class ReportPageController extends Controller
             fwrite($handle, "\xEF\xBB\xBF");
             fputcsv($handle, $headers);
             foreach ($rows as $row) {
-                fputcsv($handle, $row);
+                fputcsv($handle, array_map(self::escapeCsvFormula(...), $row));
             }
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    /**
+     * Neutralize spreadsheet formula injection (=, +, -, @ prefixes).
+     */
+    private static function escapeCsvFormula(mixed $value): mixed
+    {
+        if (is_string($value) && $value !== '' && in_array($value[0], ['=', '+', '-', '@'], true)) {
+            return "'" . $value;
+        }
+
+        return $value;
     }
 
     /**

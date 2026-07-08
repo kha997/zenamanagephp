@@ -23,7 +23,8 @@ class ActivityFeedPageController extends Controller
         }
 
         if ($request->filled('event_key')) {
-            $query->where('event_key', 'like', '%' . (string) $request->query('event_key') . '%');
+            $escaped = str_replace(['%', '_'], ['\%', '\_'], (string) $request->query('event_key'));
+            $query->where('event_key', 'like', '%' . $escaped . '%');
         }
 
         if ($request->filled('date_from')) {

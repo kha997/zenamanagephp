@@ -177,23 +177,35 @@ class SiteDiaryController extends BaseApiController
             ]);
         }
 
-        $siteDiary = SiteDiary::query()->create([
-            'tenant_id' => $tenantId,
-            'project_id' => (string) $request->input('project_id'),
-            'diary_number' => 'SD-' . Str::upper((string) Str::ulid()),
-            'diary_date' => (string) $request->input('diary_date'),
-            'weather' => $request->input('weather'),
-            'temperature' => $request->input('temperature'),
-            'manpower_count' => (int) $request->input('manpower_count', 0),
-            'work_performed' => (string) $request->input('work_performed'),
-            'equipment_used' => $request->input('equipment_used'),
-            'materials_delivered' => $request->input('materials_delivered'),
-            'safety_notes' => $request->input('safety_notes'),
-            'visitors' => $request->input('visitors'),
-            'delays_issues' => $request->input('delays_issues'),
-            'status' => SiteDiary::STATUS_DRAFT,
-            'created_by' => (string) $user->id,
-        ]);
+        try {
+            $siteDiary = SiteDiary::query()->create([
+                'tenant_id' => $tenantId,
+                'project_id' => (string) $request->input('project_id'),
+                'diary_number' => 'SD-' . Str::upper((string) Str::ulid()),
+                'diary_date' => (string) $request->input('diary_date'),
+                'weather' => $request->input('weather'),
+                'temperature' => $request->input('temperature'),
+                'manpower_count' => (int) $request->input('manpower_count', 0),
+                'work_performed' => (string) $request->input('work_performed'),
+                'equipment_used' => $request->input('equipment_used'),
+                'materials_delivered' => $request->input('materials_delivered'),
+                'safety_notes' => $request->input('safety_notes'),
+                'visitors' => $request->input('visitors'),
+                'delays_issues' => $request->input('delays_issues'),
+                'status' => SiteDiary::STATUS_DRAFT,
+                'created_by' => (string) $user->id,
+            ]);
+        } catch (\Illuminate\Database\QueryException $exception) {
+            // Concurrent create raced past the pre-check; the DB unique
+            // constraint (project_id, diary_date) is the source of truth.
+            if ((string) $exception->getCode() === '23000') {
+                return $this->validationError([
+                    'diary_date' => ['A site diary already exists for this project on this date.'],
+                ]);
+            }
+
+            throw $exception;
+        }
 
         return $this->zenaSuccessResponse(
             $this->serialize($siteDiary->fresh() ?? $siteDiary),

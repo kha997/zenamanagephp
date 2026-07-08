@@ -32,7 +32,16 @@ class WebhookPageController extends Controller
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'url' => ['required', 'url', 'starts_with:https://,http://localhost'],
+            'url' => [
+                'required',
+                'url',
+                'starts_with:https://',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (\App\Jobs\DeliverWebhook::resolvesToBlockedAddress((string) $value)) {
+                        $fail('URL webhook không được trỏ tới địa chỉ nội bộ (loopback/private/link-local).');
+                    }
+                },
+            ],
             'event_keys' => ['nullable', 'string', 'max:500'],
         ]);
 

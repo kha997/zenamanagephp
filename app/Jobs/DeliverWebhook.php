@@ -35,6 +35,18 @@ class DeliverWebhook implements ShouldQueue
             return;
         }
 
+        // SSRF guard: never deliver to loopback/private/link-local targets
+        // (checked at delivery time to also cover DNS rebinding after creation)
+        if (self::resolvesToBlockedAddress($endpoint->url)) {
+            Log::warning('Webhook delivery blocked: target resolves to a private address', [
+                'endpoint_id' => (string) $endpoint->id,
+                'url' => $endpoint->url,
+            ]);
+            $endpoint->increment('failure_count');
+
+            return;
+        }
+
         $body = json_encode($this->payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         $signature = hash_hmac('sha256', (string) $body, (string) $endpoint->secret);
 
@@ -58,7 +70,10 @@ class DeliverWebhook implements ShouldQueue
             }
 
             $endpoint->increment('failure_count');
-            $this->release($this->backoff[min($this->attempts() - 1, count($this->backoff) - 1)]);
+
+            if ($this->attempts() < $this->tries) {
+                $this->release($this->backoff[min($this->attempts() - 1, count($this->backoff) - 1)]);
+            }
         } catch (\Throwable $exception) {
             $endpoint->increment('failure_count');
 
@@ -72,5 +87,28 @@ class DeliverWebhook implements ShouldQueue
                 $this->release($this->backoff[min($this->attempts() - 1, count($this->backoff) - 1)]);
             }
         }
+    }
+
+    public static function resolvesToBlockedAddress(string $url): bool
+    {
+        $host = (string) parse_url($url, PHP_URL_HOST);
+
+        if ($host === '') {
+            return true;
+        }
+
+        $ips = filter_var($host, FILTER_VALIDATE_IP) !== false
+            ? [$host]
+            : (array) (gethostbynamel($host) ?: []);
+
+        // Unresolvable hostnames are allowed through: DNS may legitimately be
+        // unavailable here and the actual connection will simply fail.
+        foreach ($ips as $ip) {
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

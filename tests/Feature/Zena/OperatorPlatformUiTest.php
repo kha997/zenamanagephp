@@ -201,6 +201,48 @@ class OperatorPlatformUiTest extends TestCase
         );
     }
 
+    public function test_webhook_store_rejects_private_and_loopback_urls(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        // Prime session (CSRF token is only appended once a session exists)
+        $this->actingAs($this->user)->get(route('operator.webhooks.index'), $headers)->assertOk();
+
+        foreach (['https://192.168.1.10/hook', 'https://10.0.0.5/hook', 'https://127.0.0.1/hook', 'https://169.254.169.254/latest/meta-data'] as $url) {
+            $this->actingAs($this->user)
+                ->withHeaders($headers)
+                ->from(route('operator.webhooks.index'))
+                ->post(route('operator.webhooks.store'), [
+                    'name' => 'Bad target',
+                    'url' => $url,
+                ])
+                ->assertRedirect(route('operator.webhooks.index'))
+                ->assertSessionHasErrors('url');
+        }
+
+        $this->assertSame(0, WebhookEndpoint::query()->count());
+    }
+
+    public function test_deliver_webhook_job_blocks_private_targets_at_delivery_time(): void
+    {
+        \Illuminate\Support\Facades\Http::fake();
+
+        $endpoint = WebhookEndpoint::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'name' => 'Rebound',
+            'url' => 'https://169.254.169.254/latest/meta-data',
+            'secret' => 'secret',
+            'event_keys' => ['*'],
+            'is_active' => true,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        (new DeliverWebhook((string) $endpoint->id, ['event_key' => 'task.created']))->handle();
+
+        \Illuminate\Support\Facades\Http::assertNothingSent();
+        $this->assertSame(1, $endpoint->fresh()->failure_count);
+    }
+
     public function test_deliver_webhook_job_posts_signed_payload_and_records_delivery(): void
     {
         \Illuminate\Support\Facades\Http::fake([

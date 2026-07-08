@@ -931,7 +931,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
 
     // API tokens (Sanctum personal tokens — user manages own tokens)
     Route::get('/api-tokens', [App\Http\Controllers\Web\ApiTokenPageController::class, 'index'])->name('api-tokens.index');
-    Route::post('/api-tokens', [App\Http\Controllers\Web\ApiTokenPageController::class, 'store'])->name('api-tokens.store');
+    Route::post('/api-tokens', [App\Http\Controllers\Web\ApiTokenPageController::class, 'store'])->middleware('throttle:6,1')->name('api-tokens.store');
     Route::delete('/api-tokens/{id}', [App\Http\Controllers\Web\ApiTokenPageController::class, 'destroy'])->name('api-tokens.destroy');
 
     // Global Search (tìm kiếm xuyên module)

@@ -89,7 +89,7 @@ class ReportPageController extends Controller
                 Project::query()
                     ->where('tenant_id', $tenantId)
                     ->orderBy('name')
-                    ->get()
+                    ->lazy()
                     ->map(fn (Project $project): array => [
                         $project->code,
                         $project->name,
@@ -108,7 +108,7 @@ class ReportPageController extends Controller
                     ->when($projectId !== '', fn ($q) => $q->where('project_id', $projectId))
                     ->with('project:id,name')
                     ->orderBy('start_date')
-                    ->get()
+                    ->lazy()
                     ->map(fn (Task $task): array => [
                         $task->name ?? $task->title,
                         $task->project?->name,
@@ -126,7 +126,7 @@ class ReportPageController extends Controller
                     ->when($projectId !== '', fn ($q) => $q->where('project_id', $projectId))
                     ->with('project:id,name')
                     ->orderByDesc('created_at')
-                    ->get()
+                    ->lazy()
                     ->map(fn (Rfi $rfi): array => [
                         $rfi->rfi_number,
                         $rfi->title ?? $rfi->subject,
@@ -143,7 +143,7 @@ class ReportPageController extends Controller
                     ->when($projectId !== '', fn ($q) => $q->where('project_id', $projectId))
                     ->with('project:id,tenant_id,name')
                     ->orderByDesc('created_at')
-                    ->get()
+                    ->lazy()
                     ->map(fn (MaterialRequest $materialRequest): array => [
                         $materialRequest->request_number,
                         $materialRequest->project?->name,
@@ -161,7 +161,7 @@ class ReportPageController extends Controller
                     ->when($projectId !== '', fn ($q) => $q->where('project_id', $projectId))
                     ->with('project:id,name')
                     ->orderByDesc('diary_date')
-                    ->get()
+                    ->lazy()
                     ->map(fn (SiteDiary $siteDiary): array => [
                         $siteDiary->diary_number,
                         optional($siteDiary->diary_date)->format('Y-m-d'),
@@ -179,7 +179,7 @@ class ReportPageController extends Controller
                     ->when($projectId !== '', fn ($q) => $q->where('project_id', $projectId))
                     ->with('project:id,name')
                     ->orderByDesc('created_at')
-                    ->get()
+                    ->lazy()
                     ->map(fn (Ncr $ncr): array => [
                         $ncr->ncr_number,
                         $ncr->title,

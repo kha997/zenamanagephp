@@ -27,7 +27,8 @@ class ApiTokenPageController extends Controller
         $token = $request->user()->createToken($validated['name']);
 
         return redirect(route('operator.api-tokens.index'))
-            ->with('success', 'Đã tạo API token (lưu ngay, chỉ hiện một lần): ' . $token->plainTextToken);
+            ->with('success', 'Đã tạo API token.')
+            ->with('one_time_secret', $token->plainTextToken);
     }
 
     public function destroy(Request $request, string $id): RedirectResponse

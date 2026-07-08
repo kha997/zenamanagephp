@@ -27,7 +27,13 @@ class GlobalSearchPageController extends Controller
         $results = [];
 
         if ($term !== '' && mb_strlen($term) >= 2) {
-            $results = $this->search($term, $tenantId);
+            try {
+                $results = $this->search($term, $tenantId);
+            } catch (\Illuminate\Database\QueryException $exception) {
+                // Degrade gracefully during partial installs/migrations
+                report($exception);
+                $results = [];
+            }
         }
 
         return view('search.index', [

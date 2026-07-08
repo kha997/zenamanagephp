@@ -9,6 +9,13 @@
         description="Token cá nhân (Sanctum) để tích hợp API. Token chỉ hiển thị một lần khi tạo."
     />
 
+    @if (session('one_time_secret'))
+        <x-ui.card title="API token — chỉ hiển thị một lần">
+            <p class="text-sm text-slate-600 mb-2">Lưu token này ngay. Sau khi rời trang sẽ không xem lại được.</p>
+            <code class="block rounded-lg bg-slate-900 px-4 py-3 text-sm text-teal-300 break-all">{{ session('one_time_secret') }}</code>
+        </x-ui.card>
+    @endif
+
     <x-ui.card title="Tạo token mới">
         @if ($errors->any())
             <div class="operator-error-list">

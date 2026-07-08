@@ -68,7 +68,8 @@ class WebhookPageController extends Controller
         ]);
 
         return redirect(route('operator.webhooks.index'))
-            ->with('success', 'Đã tạo webhook. Secret ký HMAC (lưu ngay, chỉ hiện một lần): ' . $secret);
+            ->with('success', 'Đã tạo webhook.')
+            ->with('one_time_secret', $secret);
     }
 
     public function toggle(string $id): RedirectResponse

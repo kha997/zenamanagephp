@@ -38,13 +38,17 @@ class SchedulePageController extends Controller
                 ->get(['id', 'tenant_id', 'project_id', 'name', 'title', 'status', 'start_date', 'end_date', 'progress_percent']);
 
             if ($tasks->isNotEmpty()) {
-                $rangeStart = CarbonImmutable::parse($tasks->min('start_date'))->startOfDay();
-                $rangeEnd = CarbonImmutable::parse($tasks->max('end_date'))->endOfDay();
+                // Compare date-only values: mixed datetime strings across
+                // timezones would otherwise shift bars by a day
+                $dateOnly = static fn (mixed $value): CarbonImmutable => CarbonImmutable::parse(substr((string) $value, 0, 10));
+
+                $rangeStart = $dateOnly($tasks->min('start_date'))->startOfDay();
+                $rangeEnd = $dateOnly($tasks->max('end_date'))->endOfDay();
                 $totalDays = max(1, (int) ceil($rangeStart->diffInDays($rangeEnd)));
 
-                $bars = $tasks->map(function (Task $task) use ($rangeStart, $totalDays): array {
-                    $start = CarbonImmutable::parse($task->start_date)->startOfDay();
-                    $end = CarbonImmutable::parse($task->end_date)->endOfDay();
+                $bars = $tasks->map(function (Task $task) use ($rangeStart, $totalDays, $dateOnly): array {
+                    $start = $dateOnly($task->start_date)->startOfDay();
+                    $end = $dateOnly($task->end_date)->endOfDay();
                     $offsetDays = max(0, (int) floor($rangeStart->diffInDays($start)));
                     $durationDays = max(1, (int) ceil($start->diffInDays($end)));
 

@@ -5,7 +5,7 @@
             <span class="text-white text-2xl font-semibold">JD</span>
         </div>
         <div>
-            <h3 class="text-2xl font-semibold text-gray-900">John Doe</h3>
+            <h3 class="text-2xl font-semibold text-gray-900">—</h3>
             <p class="text-gray-600">Project Manager</p>
             <p class="text-sm text-gray-500">john.doe@example.com</p>
         </div>
@@ -17,7 +17,7 @@
             <div class="space-y-3">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Full Name</label>
-                    <p class="text-sm text-gray-900">John Doe</p>
+                    <p class="text-sm text-gray-900">—</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Email</label>

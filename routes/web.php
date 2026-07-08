@@ -184,18 +184,8 @@ Route::prefix('api/v1/final-integration')->middleware(['auth', 'tenant.isolation
     Route::get('/launch-report', [App\Http\Controllers\FinalIntegrationController::class, 'generateLaunchReport'])->name('api.final-integration.launch-report');
 });
 
-// App Routes (Tenant-scoped with auth + tenant.isolation middleware)
-Route::get('/app/projects', function() {
-    return view('app.projects');
-})->middleware(['auth', 'tenant.isolation'])->name('app.projects');
-
-Route::get('/app/tasks', function() {
-    return view('app.tasks');
-})->middleware(['auth', 'tenant.isolation'])->name('app.tasks');
-
-Route::get('/app/calendar', function() {
-    return view('app.calendar');
-})->middleware(['auth', 'tenant.isolation'])->name('app.calendar');
+// App routes are defined once in the canonical `Route::prefix('app')` group
+// further below — earlier duplicate closure definitions were removed.
 
 // Admin Routes (System-wide with auth + rbac:admin middleware)
 Route::get('/admin/dashboard', function() {
@@ -398,6 +388,11 @@ Route::get('/projects-enhanced', function() {
         return view('projects.construction-project', compact('project'));
     })->name('projects.construction');
     
+    // Calendar
+    Route::get('/calendar', function () {
+        return view('app.calendar');
+    })->name('calendar');
+
     // Tasks Routes
     Route::get('/tasks', [App\Http\Controllers\Web\AppController::class, 'tasks'])->name('tasks');
     Route::get('/tasks/create', [App\Http\Controllers\Web\TaskController::class, 'create'])->name('tasks.create');

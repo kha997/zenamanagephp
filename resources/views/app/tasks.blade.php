@@ -458,8 +458,8 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Assignee</label>
                             <select x-model="newTask.assignee" 
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent">
-                                <option value="John Doe">John Doe</option>
-                                <option value="Jane Smith">Jane Smith</option>
+                                <option value="—">—</option>
+                                <option value="—">—</option>
                                 <option value="Mike Johnson">Mike Johnson</option>
                             </select>
                         </div>
@@ -565,7 +565,7 @@
                     title: '',
                     description: '',
                     status: 'todo',
-                    assignee: 'John Doe',
+                    assignee: '—',
                     priority: 'medium',
                     dueDate: '',
                     project: 'Website Redesign'
@@ -587,7 +587,7 @@
                         description: 'Create modern homepage layout with responsive design',
                         status: 'todo',
                         priority: 'high',
-                        assignee: { name: 'John Doe', avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff' },
+                        assignee: { name: '—', avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff' },
                         dueDate: '2025-09-30',
                         project: 'Website Redesign',
                         createdDate: '2025-09-20'
@@ -598,7 +598,7 @@
                         description: 'Add login and registration functionality',
                         status: 'in-progress',
                         priority: 'high',
-                        assignee: { name: 'Jane Smith', avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff' },
+                        assignee: { name: '—', avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff' },
                         dueDate: '2025-10-05',
                         project: 'Website Redesign',
                         createdDate: '2025-09-18'
@@ -643,7 +643,7 @@
                         description: 'Conduct performance testing on new features',
                         status: 'overdue',
                         priority: 'high',
-                        assignee: { name: 'John Doe', avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff' },
+                        assignee: { name: '—', avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff' },
                         dueDate: '2025-09-20',
                         project: 'Website Redesign',
                         createdDate: '2025-09-15'
@@ -663,7 +663,7 @@
                     
                     // Filter by status
                     if (this.currentFilter === 'my-tasks') {
-                        filtered = filtered.filter(task => task.assignee.name === 'John Doe');
+                        filtered = filtered.filter(task => task.assignee.name === '—');
                     } else if (this.currentFilter !== 'all') {
                         filtered = filtered.filter(task => task.status === this.currentFilter);
                     }
@@ -717,7 +717,7 @@
                         title: '',
                         description: '',
                         status: 'todo',
-                        assignee: 'John Doe',
+                        assignee: '—',
                         priority: 'medium',
                         dueDate: '',
                         project: 'Website Redesign'

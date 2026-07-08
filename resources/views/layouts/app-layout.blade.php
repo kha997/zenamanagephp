@@ -4,13 +4,6 @@
 
 @section('content')
 <div x-data="{{ request()->routeIs('app.dashboard') ? 'appSPA()' : '{}' }}" class="min-h-screen bg-gray-50">
-    <!-- SECURITY WARNING BANNER -->
-    @if(!app()->environment('production'))
-    <div class="bg-red-600 text-white px-4 py-2 text-center text-sm font-semibold">
-        🚨 AUTH DISABLED (DEV ONLY) - Dashboard routes moved to /_debug namespace for security
-    </div>
-    @endif
-    
     <!-- Include App Header Component -->
     @include('components.header')
     
@@ -270,7 +263,7 @@
             },
             
             // User and UI State
-            userName: 'John Doe',
+            userName: @json(auth()->user()?->name ?? 'User'),
             // mobileMenuOpen removed - no longer needed
 
             init() {
@@ -389,7 +382,7 @@
                         name: 'Sample Project',
                         status: column.status,
                         progress: 75,
-                        pm_name: 'John Doe',
+                        pm_name: '—',
                         client_name: 'ABC Corp',
                         due_date: '2024-02-15'
                     }
@@ -625,7 +618,7 @@
                             id: 1,
                             type: 'task',
                             description: 'Task "Design Review" completed',
-                            user: 'John Doe',
+                            user: '—',
                             created_at: new Date().toISOString(),
                             metadata: {}
                         },
@@ -896,7 +889,7 @@
                             name: 'Website Redesign',
                             status: 'active',
                             progress: 75,
-                            pm_name: 'John Doe',
+                            pm_name: '—',
                             client_name: 'ABC Corp',
                             due_date: '2024-02-15'
                         }
@@ -1054,7 +1047,7 @@
             isAdminPage: false,
             notifications: [],
             user: {
-                name: 'John Doe',
+                name: '—',
                 role: 'Project Manager',
                 avatar: 'JD'
             },
@@ -1144,7 +1137,7 @@
             selectedProject: null,
             
             // User and UI State
-            userName: 'John Doe',
+            userName: @json(auth()->user()?->name ?? 'User'),
             // mobileMenuOpen removed - no longer needed
             
             // Utility functions
@@ -1191,7 +1184,7 @@
                         name: 'Sample Project',
                         status: column.status,
                         progress: 75,
-                        pm_name: 'John Doe',
+                        pm_name: '—',
                         client_name: 'ABC Corp',
                         due_date: '2024-02-15'
                     }
@@ -1512,7 +1505,7 @@
             isAdminPage: false,
             notifications: [],
             user: {
-                name: 'John Doe',
+                name: '—',
                 email: 'john.doe@company.com',
                 role: 'Project Manager',
                 avatar: 'JD'

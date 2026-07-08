@@ -424,8 +424,8 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Project Manager</label>
                             <select x-model="newProject.manager" 
                                     class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                                <option value="John Doe">John Doe</option>
-                                <option value="Jane Smith">Jane Smith</option>
+                                <option value="—">—</option>
+                                <option value="—">—</option>
                                 <option value="Mike Johnson">Mike Johnson</option>
                             </select>
                         </div>
@@ -469,7 +469,7 @@
                     status: 'planning',
                     startDate: '',
                     endDate: '',
-                    manager: 'John Doe',
+                    manager: '—',
                     priority: 'medium'
                 },
 
@@ -490,14 +490,14 @@
                         progress: 75,
                         startDate: '2025-01-15',
                         endDate: '2025-03-15',
-                        manager: 'John Doe',
+                        manager: '—',
                         managerAvatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff',
                         tasksCompleted: 15,
                         totalTasks: 20,
                         priority: 'high',
                         team: [
-                            { id: 1, name: 'John Doe', avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff' },
-                            { id: 2, name: 'Jane Smith', avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff' },
+                            { id: 1, name: '—', avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=3b82f6&color=ffffff' },
+                            { id: 2, name: '—', avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff' },
                             { id: 3, name: 'Mike Johnson', avatar: 'https://ui-avatars.com/api/?name=Mike+Johnson&background=8b5cf6&color=ffffff' }
                         ]
                     },
@@ -509,13 +509,13 @@
                         progress: 45,
                         startDate: '2025-02-01',
                         endDate: '2025-05-01',
-                        manager: 'Jane Smith',
+                        manager: '—',
                         managerAvatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff',
                         tasksCompleted: 9,
                         totalTasks: 20,
                         priority: 'medium',
                         team: [
-                            { id: 1, name: 'Jane Smith', avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff' },
+                            { id: 1, name: '—', avatar: 'https://ui-avatars.com/api/?name=Jane+Smith&background=10b981&color=ffffff' },
                             { id: 2, name: 'Sarah Wilson', avatar: 'https://ui-avatars.com/api/?name=Sarah+Wilson&background=f59e0b&color=ffffff' }
                         ]
                     },
@@ -621,7 +621,7 @@
                         status: 'planning',
                         startDate: '',
                         endDate: '',
-                        manager: 'John Doe',
+                        manager: '—',
                         priority: 'medium'
                     };
                 },

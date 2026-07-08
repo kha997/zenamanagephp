@@ -10,7 +10,7 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-                    <p class="text-gray-600 mt-1">Welcome back, John Doe! Here's what's happening with your projects.</p>
+                    <p class="text-gray-600 mt-1">Welcome back, —! Here's what's happening with your projects.</p>
                 </div>
                 <div class="flex items-center space-x-4">
                     <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">

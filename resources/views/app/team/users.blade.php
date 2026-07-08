@@ -56,7 +56,7 @@
                                     </div>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">John Doe</div>
+                                    <div class="text-sm font-medium text-gray-900">—</div>
                                 </div>
                             </div>
                         </td>
@@ -82,7 +82,7 @@
                                     </div>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">Jane Smith</div>
+                                    <div class="text-sm font-medium text-gray-900">—</div>
                                 </div>
                             </div>
                         </td>

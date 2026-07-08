@@ -931,6 +931,24 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/materials', [App\Http\Controllers\Web\MaterialPageController::class, 'store'])->middleware('rbac:material.create')->name('materials.store');
     Route::get('/materials/{id}', [App\Http\Controllers\Web\MaterialPageController::class, 'show'])->middleware('rbac:material.view')->name('materials.show');
 
+    // Schedule / Gantt (tiến độ dự án)
+    Route::get('/schedule', [App\Http\Controllers\Web\SchedulePageController::class, 'index'])->middleware('rbac:task.view')->name('schedule.index');
+
+    // Reports (xuất báo cáo)
+    Route::get('/reports', [App\Http\Controllers\Web\ReportPageController::class, 'index'])->middleware('rbac:report.view')->name('reports.index');
+    Route::post('/reports/export', [App\Http\Controllers\Web\ReportPageController::class, 'export'])->middleware('rbac:report.export')->name('reports.export');
+
+    // Webhooks (tích hợp hệ thống ngoài)
+    Route::get('/webhooks', [App\Http\Controllers\Web\WebhookPageController::class, 'index'])->middleware('rbac:webhook.view')->name('webhooks.index');
+    Route::post('/webhooks', [App\Http\Controllers\Web\WebhookPageController::class, 'store'])->middleware('rbac:webhook.manage')->name('webhooks.store');
+    Route::post('/webhooks/{id}/toggle', [App\Http\Controllers\Web\WebhookPageController::class, 'toggle'])->middleware('rbac:webhook.manage')->name('webhooks.toggle');
+    Route::delete('/webhooks/{id}', [App\Http\Controllers\Web\WebhookPageController::class, 'destroy'])->middleware('rbac:webhook.manage')->name('webhooks.destroy');
+
+    // API tokens (Sanctum personal tokens — user manages own tokens)
+    Route::get('/api-tokens', [App\Http\Controllers\Web\ApiTokenPageController::class, 'index'])->name('api-tokens.index');
+    Route::post('/api-tokens', [App\Http\Controllers\Web\ApiTokenPageController::class, 'store'])->name('api-tokens.store');
+    Route::delete('/api-tokens/{id}', [App\Http\Controllers\Web\ApiTokenPageController::class, 'destroy'])->name('api-tokens.destroy');
+
     // Global Search (tìm kiếm xuyên module)
     Route::get('/search', [App\Http\Controllers\Web\GlobalSearchPageController::class, 'index'])->name('search.index');
 

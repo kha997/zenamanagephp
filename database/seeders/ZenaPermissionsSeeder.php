@@ -164,6 +164,14 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'site_diary.create', 'module' => 'site_diary', 'action' => 'create', 'description' => 'Create, update and submit daily site diaries'],
         ['code' => 'site_diary.approve', 'module' => 'site_diary', 'action' => 'approve', 'description' => 'Approve submitted site diaries'],
 
+        // Reports
+        ['code' => 'report.view', 'module' => 'report', 'action' => 'view', 'description' => 'View report export page'],
+        ['code' => 'report.export', 'module' => 'report', 'action' => 'export', 'description' => 'Export tenant data to CSV reports'],
+
+        // Webhooks (external integrations)
+        ['code' => 'webhook.view', 'module' => 'webhook', 'action' => 'view', 'description' => 'View webhook endpoints'],
+        ['code' => 'webhook.manage', 'module' => 'webhook', 'action' => 'manage', 'description' => 'Create, toggle and delete webhook endpoints'],
+
         // Notification management
         ['code' => 'notification.view', 'module' => 'notification', 'action' => 'view', 'description' => 'View notifications'],
         ['code' => 'notification.create', 'module' => 'notification', 'action' => 'create', 'description' => 'Send notifications'],

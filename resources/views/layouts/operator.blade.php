@@ -30,6 +30,11 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <span>Nhật ký hoạt động</span>
                 </a>
+                <a href="{{ route('operator.schedule.index') }}"
+                   class="operator-nav-link {{ request()->routeIs('operator.schedule.*') ? 'is-active' : '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>
+                    <span>Tiến độ dự án</span>
+                </a>
 
                 <span class="operator-nav-section">Mua sắm</span>
                 <a href="{{ route('operator.material-requests.index') }}"
@@ -94,6 +99,23 @@
                    class="operator-nav-link {{ request()->routeIs('operator.change-requests.*') ? 'is-active' : '' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     <span>Change Requests</span>
+                </a>
+
+                <span class="operator-nav-section">Hệ thống</span>
+                <a href="{{ route('operator.reports.index') }}"
+                   class="operator-nav-link {{ request()->routeIs('operator.reports.*') ? 'is-active' : '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span>Xuất báo cáo</span>
+                </a>
+                <a href="{{ route('operator.webhooks.index') }}"
+                   class="operator-nav-link {{ request()->routeIs('operator.webhooks.*') ? 'is-active' : '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                    <span>Webhooks</span>
+                </a>
+                <a href="{{ route('operator.api-tokens.index') }}"
+                   class="operator-nav-link {{ request()->routeIs('operator.api-tokens.*') ? 'is-active' : '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                    <span>API Tokens</span>
                 </a>
             </nav>
         </aside>

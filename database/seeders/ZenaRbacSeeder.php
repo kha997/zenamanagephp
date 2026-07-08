@@ -77,6 +77,8 @@ class ZenaRbacSeeder extends Seeder
             'material-receipt-checklist.view', 'material-receipt-checklist.create',
             // Site diaries (daily site logs)
             'site_diary.view', 'site_diary.create', 'site_diary.approve',
+            // Webhooks (external integrations)
+            'webhook.view', 'webhook.manage',
             // Alert taxonomy (S6.2)
             'alert.view', 'alert.read',
             // Event record outbox (S6.3)
@@ -139,6 +141,7 @@ class ZenaRbacSeeder extends Seeder
                     'invoice.create', 'invoice.approve', 'invoice.pay', 'invoice.read',
                     'timesheet.submit', 'timesheet.approve', 'timesheet.read',
                     'report.view', 'report.export',
+                    'webhook.view', 'webhook.manage',
                     'admin.user.manage', 'admin.role.manage',
                 ],
             ],

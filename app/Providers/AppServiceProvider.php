@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Auth\CustomSanctumGuard;
+use App\Models\EventRecord;
+use App\Observers\EventRecordObserver;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +42,8 @@ class AppServiceProvider extends ServiceProvider
                 report($e);
             }
         }
+
+        EventRecord::observe(EventRecordObserver::class);
 
         Auth::resolved(function ($auth) {
             $auth->extend('sanctum', function ($app, $name, array $config) use ($auth) {

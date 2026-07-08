@@ -340,6 +340,16 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/fulfill', [\App\Http\Controllers\Api\MaterialRequestController::class, 'fulfill'])->middleware('rbac:material.receive')->name('material-requests.fulfill');
         });
 
+        // Site Diaries (daily site logs)
+        Route::group(['prefix' => 'site-diaries'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\SiteDiaryController::class, 'index'])->middleware('rbac:site_diary.view')->name('site-diaries.index');
+            Route::post('/', [\App\Http\Controllers\Api\SiteDiaryController::class, 'store'])->middleware('rbac:site_diary.create')->name('site-diaries.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\SiteDiaryController::class, 'show'])->middleware('rbac:site_diary.view')->name('site-diaries.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\SiteDiaryController::class, 'update'])->middleware('rbac:site_diary.create')->name('site-diaries.update');
+            Route::post('/{id}/submit', [\App\Http\Controllers\Api\SiteDiaryController::class, 'submit'])->middleware('rbac:site_diary.create')->name('site-diaries.submit');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Api\SiteDiaryController::class, 'approve'])->middleware('rbac:site_diary.approve')->name('site-diaries.approve');
+        });
+
         // Material Receipts (delivery + acceptance checklist)
         Route::group(['prefix' => 'material-receipts'], function () {
             Route::get('/', [\App\Http\Controllers\Api\MaterialReceiptController::class, 'index'])->middleware('rbac:material-receipt.view')->name('material-receipts.index');

@@ -931,6 +931,20 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/materials', [App\Http\Controllers\Web\MaterialPageController::class, 'store'])->middleware('rbac:material.create')->name('materials.store');
     Route::get('/materials/{id}', [App\Http\Controllers\Web\MaterialPageController::class, 'show'])->middleware('rbac:material.view')->name('materials.show');
 
+    // Global Search (tìm kiếm xuyên module)
+    Route::get('/search', [App\Http\Controllers\Web\GlobalSearchPageController::class, 'index'])->name('search.index');
+
+    // Activity Feed (nhật ký hoạt động)
+    Route::get('/activity-feed', [App\Http\Controllers\Web\ActivityFeedPageController::class, 'index'])->middleware('rbac:event-record.view')->name('activity-feed.index');
+
+    // Site Diaries (nhật ký công trường)
+    Route::get('/site-diaries', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'index'])->middleware('rbac:site_diary.view')->name('site-diaries.index');
+    Route::get('/site-diaries/create', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'create'])->middleware('rbac:site_diary.create')->name('site-diaries.create');
+    Route::post('/site-diaries', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'store'])->middleware('rbac:site_diary.create')->name('site-diaries.store');
+    Route::get('/site-diaries/{id}', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'show'])->middleware('rbac:site_diary.view')->name('site-diaries.show');
+    Route::post('/site-diaries/{id}/submit', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'submit'])->middleware('rbac:site_diary.create')->name('site-diaries.submit');
+    Route::post('/site-diaries/{id}/approve', [App\Http\Controllers\Web\SiteDiaryPageController::class, 'approve'])->middleware('rbac:site_diary.approve')->name('site-diaries.approve');
+
     // Receipts
     Route::get('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'index'])->name('receipts.index');
     Route::get('/receipts/create', [App\Http\Controllers\Web\ReceiptPageController::class, 'create'])->name('receipts.create');

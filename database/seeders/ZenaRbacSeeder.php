@@ -75,6 +75,8 @@ class ZenaRbacSeeder extends Seeder
             'material-receipt.view', 'material-receipt.create',
             'material-receipt-line.view', 'material-receipt-line.create',
             'material-receipt-checklist.view', 'material-receipt-checklist.create',
+            // Site diaries (daily site logs)
+            'site_diary.view', 'site_diary.create', 'site_diary.approve',
             // Alert taxonomy (S6.2)
             'alert.view', 'alert.read',
             // Event record outbox (S6.3)
@@ -154,6 +156,7 @@ class ZenaRbacSeeder extends Seeder
                     'qc.read',
                     'ncr.read',
                     'material.read',
+                    'site_diary.view', 'site_diary.approve',
                     'po.read',
                     'invoice.read',
                     'timesheet.read',
@@ -188,6 +191,7 @@ class ZenaRbacSeeder extends Seeder
                     'qc.read',
                     'ncr.read',
                     'material.request', 'material.read',
+                    'site_diary.view', 'site_diary.create',
                     'timesheet.submit', 'timesheet.read',
                 ],
             ],

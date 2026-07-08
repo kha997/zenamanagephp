@@ -25,6 +25,11 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
                     <span>Bảng điều hành</span>
                 </a>
+                <a href="{{ route('operator.activity-feed.index') }}"
+                   class="operator-nav-link {{ request()->routeIs('operator.activity-feed.*') ? 'is-active' : '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span>Nhật ký hoạt động</span>
+                </a>
 
                 <span class="operator-nav-section">Mua sắm</span>
                 <a href="{{ route('operator.material-requests.index') }}"
@@ -60,6 +65,13 @@
                     <span>Hợp đồng</span>
                 </a>
 
+                <span class="operator-nav-section">Công trường</span>
+                <a href="{{ route('operator.site-diaries.index') }}"
+                   class="operator-nav-link {{ request()->routeIs('operator.site-diaries.*') ? 'is-active' : '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <span>Nhật ký công trường</span>
+                </a>
+
                 <span class="operator-nav-section">Chất lượng</span>
                 <a href="{{ route('operator.inspections.index') }}"
                    class="operator-nav-link {{ request()->routeIs('operator.inspections.*') ? 'is-active' : '' }}">
@@ -92,6 +104,10 @@
                     <div class="operator-topbar-meta">Z.E.N.A — Procurement operator surface</div>
                     <div style="font-size:1.125rem;font-weight:600;color:#0f172a;">@yield('page_title', 'Operator Dashboard')</div>
                 </div>
+                <form method="GET" action="{{ route('operator.search.index') }}" style="flex:1;max-width:420px;margin:0 1.5rem;">
+                    <input type="search" name="q" value="{{ request()->routeIs('operator.search.*') ? request('q') : '' }}"
+                           class="operator-input" placeholder="Tìm kiếm dự án, RFI, hợp đồng, vật tư..." aria-label="Tìm kiếm toàn hệ thống">
+                </form>
                 <div class="operator-topbar-user">
                     {{ auth()->user()?->name ?? 'Operator' }}
                 </div>

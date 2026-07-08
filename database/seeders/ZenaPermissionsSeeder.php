@@ -159,6 +159,11 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'material-receipt-line.view', 'module' => 'material-receipt-line', 'action' => 'view', 'description' => 'View material receipt line items'],
         ['code' => 'material-receipt-line.create', 'module' => 'material-receipt-line', 'action' => 'create', 'description' => 'Create and update material receipt line items'],
 
+        // Site diaries (daily site logs)
+        ['code' => 'site_diary.view', 'module' => 'site_diary', 'action' => 'view', 'description' => 'View daily site diaries'],
+        ['code' => 'site_diary.create', 'module' => 'site_diary', 'action' => 'create', 'description' => 'Create, update and submit daily site diaries'],
+        ['code' => 'site_diary.approve', 'module' => 'site_diary', 'action' => 'approve', 'description' => 'Approve submitted site diaries'],
+
         // Notification management
         ['code' => 'notification.view', 'module' => 'notification', 'action' => 'view', 'description' => 'View notifications'],
         ['code' => 'notification.create', 'module' => 'notification', 'action' => 'create', 'description' => 'Send notifications'],

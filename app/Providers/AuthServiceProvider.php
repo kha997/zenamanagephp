@@ -36,6 +36,7 @@ class AuthServiceProvider extends ServiceProvider
         'App\Models\MaterialReceipt' => 'App\Policies\MaterialReceiptPolicy',
         'App\Models\MaterialReceiptChecklist' => 'App\Policies\MaterialReceiptChecklistPolicy',
         'App\Models\MaterialReceiptLine' => 'App\Policies\MaterialReceiptLinePolicy',
+        'App\Models\SiteDiary' => 'App\Policies\SiteDiaryPolicy',
     ];
 
     /**

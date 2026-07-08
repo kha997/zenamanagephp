@@ -48,6 +48,9 @@
                             </option>
                         @endforeach
                     </select>
+                    @if ($vendors->isEmpty())
+                        <p class="mt-1 text-xs text-slate-500">Chưa có nhà cung cấp — <a href="{{ route('operator.vendors.create') }}" class="operator-link">tạo mới</a>.</p>
+                    @endif
                 </div>
 
                 <div class="operator-field">
@@ -60,6 +63,9 @@
                             </option>
                         @endforeach
                     </select>
+                    @if ($contracts->isEmpty())
+                        <p class="mt-1 text-xs text-slate-500">Chưa có hợp đồng — <a href="{{ route('operator.contracts.create') }}" class="operator-link">tạo mới</a>.</p>
+                    @endif
                 </div>
 
                 <div class="operator-field">
@@ -72,11 +78,14 @@
                             </option>
                         @endforeach
                     </select>
+                    @if ($materialRequests->isEmpty())
+                        <p class="mt-1 text-xs text-slate-500">Chưa có yêu cầu vật tư — <a href="{{ route('operator.material-requests.create') }}" class="operator-link">tạo mới</a>.</p>
+                    @endif
                 </div>
 
                 <div class="operator-field">
                     <label for="receipt_number">Mã phiếu nhập</label>
-                    <input id="receipt_number" name="receipt_number" type="text" class="operator-input" value="{{ old('receipt_number') }}" required>
+                    <input id="receipt_number" name="receipt_number" type="text" class="operator-input" value="{{ old('receipt_number', 'GRN-' . now()->format('Ymd') . '-' . strtoupper(Str::random(4))) }}" required>
                 </div>
 
                 <div class="operator-field">

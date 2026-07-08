@@ -116,14 +116,9 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
     });
     
     // Smart Tools Routes
-    // Search Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::post('/search', [App\Http\Controllers\SearchController::class, 'search'])->name('api.search.index');
-        Route::get('/search/suggestions', [App\Http\Controllers\SearchController::class, 'suggestions'])->name('api.search.suggestions');
-        Route::get('/search/recent', [App\Http\Controllers\SearchController::class, 'recent'])->name('api.search.recent');
-        Route::post('/search/recent', [App\Http\Controllers\SearchController::class, 'saveRecent'])->name('api.search.save-recent');
-    });
-    
+    // Search: dùng operator search thật tại route operator.search.index
+    // (mock SearchService/SearchController đã xóa)
+
     // Filter Routes
     Route::middleware($universalFrameHardeningStack)->group(function () {
         Route::get('/filters/presets', [App\Http\Controllers\FilterController::class, 'presets'])->name('api.filters.presets');
@@ -143,18 +138,8 @@ Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function ()
         Route::get('/analysis/{context}/insights', [App\Http\Controllers\AnalysisController::class, 'insights'])->name('api.analysis.insights');
     });
     
-    // Export Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::post('/export', [App\Http\Controllers\ExportController::class, 'index'])->name('api.export.index');
-        Route::post('/export/projects', [App\Http\Controllers\ExportController::class, 'projects'])->name('api.export.projects');
-        Route::post('/export/tasks', [App\Http\Controllers\ExportController::class, 'tasks'])->name('api.export.tasks');
-        Route::post('/export/documents', [App\Http\Controllers\ExportController::class, 'documents'])->name('api.export.documents');
-        Route::post('/export/users', [App\Http\Controllers\ExportController::class, 'users'])->name('api.export.users');
-        Route::post('/export/tenants', [App\Http\Controllers\ExportController::class, 'tenants'])->name('api.export.tenants');
-        Route::get('/export/history', [App\Http\Controllers\ExportController::class, 'history'])->name('api.export.history');
-        Route::delete('/export/{filename}', [App\Http\Controllers\ExportController::class, 'delete'])->name('api.export.delete');
-        Route::post('/export/clean-old', [App\Http\Controllers\ExportController::class, 'cleanOld'])->name('api.export.clean-old');
-    });
+    // Export: dùng operator report export thật tại route operator.reports.export
+    // (mock ExportService/ExportController đã xóa)
 });
 
     // Accessibility API Routes (moved to /api/v1/accessibility)

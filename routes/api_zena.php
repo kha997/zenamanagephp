@@ -340,6 +340,26 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/fulfill', [\App\Http\Controllers\Api\MaterialRequestController::class, 'fulfill'])->middleware('rbac:material.receive')->name('material-requests.fulfill');
         });
 
+        // CRM (lead inbox → account/opportunity → project; spec crm-zena)
+        Route::group(['prefix' => 'crm'], function () {
+            Route::get('/leads', [\App\Http\Controllers\Api\LeadController::class, 'index'])->middleware('rbac:crm.view')->name('crm.leads.index');
+            Route::post('/leads', [\App\Http\Controllers\Api\LeadController::class, 'store'])->middleware('rbac:crm.manage')->name('crm.leads.store');
+            Route::post('/leads/{id}/convert', [\App\Http\Controllers\Api\LeadController::class, 'convert'])->middleware('rbac:crm.manage')->name('crm.leads.convert');
+            Route::post('/leads/{id}/discard', [\App\Http\Controllers\Api\LeadController::class, 'discard'])->middleware('rbac:crm.manage')->name('crm.leads.discard');
+
+            Route::get('/accounts', [\App\Http\Controllers\Api\AccountController::class, 'index'])->middleware('rbac:crm.view')->name('crm.accounts.index');
+            Route::post('/accounts', [\App\Http\Controllers\Api\AccountController::class, 'store'])->middleware('rbac:crm.manage')->name('crm.accounts.store');
+            Route::get('/accounts/{id}', [\App\Http\Controllers\Api\AccountController::class, 'show'])->middleware('rbac:crm.view')->name('crm.accounts.show');
+            Route::put('/accounts/{id}', [\App\Http\Controllers\Api\AccountController::class, 'update'])->middleware('rbac:crm.manage')->name('crm.accounts.update');
+
+            Route::get('/opportunities', [\App\Http\Controllers\Api\OpportunityController::class, 'index'])->middleware('rbac:crm.view')->name('crm.opportunities.index');
+            Route::post('/opportunities', [\App\Http\Controllers\Api\OpportunityController::class, 'store'])->middleware('rbac:crm.manage')->name('crm.opportunities.store');
+            Route::get('/opportunities/{id}', [\App\Http\Controllers\Api\OpportunityController::class, 'show'])->middleware('rbac:crm.view')->name('crm.opportunities.show');
+            Route::put('/opportunities/{id}', [\App\Http\Controllers\Api\OpportunityController::class, 'update'])->middleware('rbac:crm.manage')->name('crm.opportunities.update');
+            Route::post('/opportunities/{id}/stage', [\App\Http\Controllers\Api\OpportunityController::class, 'updateStage'])->middleware('rbac:crm.manage')->name('crm.opportunities.stage');
+            Route::post('/opportunities/{id}/convert', [\App\Http\Controllers\Api\OpportunityController::class, 'convert'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
+        });
+
         // Site Diaries (daily site logs)
         Route::group(['prefix' => 'site-diaries'], function () {
             Route::get('/', [\App\Http\Controllers\Api\SiteDiaryController::class, 'index'])->middleware('rbac:site_diary.view')->name('site-diaries.index');

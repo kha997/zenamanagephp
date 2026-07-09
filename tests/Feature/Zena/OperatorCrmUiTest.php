@@ -1,0 +1,200 @@
+<?php declare(strict_types=1);
+
+namespace Tests\Feature\Zena;
+
+use App\Http\Middleware\RoleBasedAccessControlMiddleware;
+use App\Models\Account;
+use App\Models\Lead;
+use App\Models\Opportunity;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+use Tests\Traits\TenantUserFactoryTrait;
+
+class OperatorCrmUiTest extends TestCase
+{
+    use RefreshDatabase;
+    use TenantUserFactoryTrait;
+
+    private Tenant $tenant;
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->app['router']->aliasMiddleware('rbac', RoleBasedAccessControlMiddleware::class);
+
+        $this->tenant = Tenant::factory()->create();
+        $this->user = $this->createTenantUser(
+            $this->tenant,
+            [],
+            ['admin'],
+            ['crm.view', 'crm.manage', 'crm.convert']
+        );
+    }
+
+    public function test_crm_ui_full_flow_lead_to_project(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.index'), $headers)
+            ->assertOk()
+            ->assertSee('Pipeline kinh doanh')
+            ->assertSee('Hộp lead');
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.leads'), $headers)
+            ->assertOk()
+            ->assertSee('Ghi nhận lead mới');
+
+        $capture = $this->actingAs($this->user)
+            ->post(route('operator.crm.leads.store'), [
+                'contact_hint' => 'Anh Tuan - 090xxxxxxx',
+                'project_description' => 'Nha pho 4 tang',
+                'source' => 'hotline',
+            ], $headers);
+
+        $lead = Lead::query()->firstOrFail();
+        $capture->assertRedirect(route('operator.crm.leads'));
+        $capture->assertSessionHas('success', 'Đã ghi nhận lead');
+        $this->assertSame(Lead::STATUS_NEW, (string) $lead->status);
+
+        $convert = $this->actingAs($this->user)
+            ->post(route('operator.crm.leads.convert', $lead->id), [
+                'account_name' => 'Anh Tuan',
+                'opportunity_name' => 'Nha pho Anh Tuan',
+                'service_category' => 'architecture',
+                'estimated_fee' => 80000000,
+            ], $headers);
+
+        $convert->assertRedirect(route('operator.crm.index'));
+        $convert->assertSessionHas('success', 'Đã chuyển lead thành cơ hội');
+
+        $lead->refresh();
+        $this->assertSame(Lead::STATUS_CONVERTED, (string) $lead->status);
+        $opportunity = Opportunity::query()->firstOrFail();
+        $this->assertSame((string) $opportunity->id, (string) $lead->converted_opportunity_id);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertSee('Nha pho Anh Tuan');
+
+        $stage = $this->actingAs($this->user)
+            ->post(route('operator.crm.opportunities.stage', $opportunity->id), [
+                'pipeline_stage' => Opportunity::STAGE_WON,
+            ], $headers);
+
+        $stage->assertRedirect();
+        $opportunity->refresh();
+        $this->assertSame(Opportunity::STAGE_WON, (string) $opportunity->pipeline_stage);
+
+        $convertProject = $this->actingAs($this->user)
+            ->post(route('operator.crm.opportunities.convert', $opportunity->id), [
+                'project_name' => 'Du an Anh Tuan',
+            ], $headers);
+
+        $convertProject->assertRedirect(route('operator.crm.index'));
+        $convertProject->assertSessionHas('success', 'Đã tạo dự án từ cơ hội');
+
+        $opportunity->refresh();
+        $this->assertNotNull($opportunity->converted_project_id);
+    }
+
+    public function test_lead_discard_and_account_creation(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $lead = Lead::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contact_hint' => 'Spam contact',
+            'source' => 'other',
+            'status' => Lead::STATUS_NEW,
+            'captured_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.leads'), $headers)
+            ->assertOk();
+
+        $discard = $this->actingAs($this->user)
+            ->post(route('operator.crm.leads.discard', $lead->id), [], $headers);
+
+        $discard->assertRedirect(route('operator.crm.leads'));
+        $lead->refresh();
+        $this->assertSame(Lead::STATUS_DISCARDED, (string) $lead->status);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.accounts'), $headers)
+            ->assertOk();
+
+        $createAccount = $this->actingAs($this->user)
+            ->post(route('operator.crm.accounts.store'), [
+                'display_name' => 'Cong ty XYZ',
+                'account_type' => Account::TYPE_COMPANY,
+            ], $headers);
+
+        $createAccount->assertRedirect(route('operator.crm.accounts'));
+        $this->assertDatabaseHas('accounts', ['display_name' => 'Cong ty XYZ']);
+    }
+
+    public function test_crm_pages_require_authentication(): void
+    {
+        $this->get(route('operator.crm.index'))->assertRedirect();
+    }
+
+    public function test_crm_actions_denied_without_manage_permission(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $viewer = $this->createTenantUser($this->tenant, [], ['crm_viewer'], ['crm.view']);
+
+        $this->actingAs($viewer)
+            ->get(route('operator.crm.leads'), $headers)
+            ->assertOk();
+
+        $this->actingAs($viewer)
+            ->post(route('operator.crm.leads.store'), [
+                'contact_hint' => 'Should be denied',
+            ], $headers)
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('leads', ['contact_hint' => 'Should be denied']);
+    }
+
+    public function test_opportunity_convert_denied_without_convert_permission(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+        $salesUser = $this->createTenantUser($this->tenant, [], ['sales'], ['crm.view', 'crm.manage']);
+
+        $account = Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang won',
+            'status' => Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi da thang',
+            'service_category' => 'architecture',
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $salesUser->id,
+            'created_by' => (string) $salesUser->id,
+        ]);
+
+        $this->actingAs($salesUser)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk();
+
+        $this->actingAs($salesUser)
+            ->post(route('operator.crm.opportunities.convert', $opportunity->id), [], $headers)
+            ->assertForbidden();
+
+        $opportunity->refresh();
+        $this->assertNull($opportunity->converted_project_id);
+    }
+}

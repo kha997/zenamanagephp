@@ -954,6 +954,18 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/receipts', [App\Http\Controllers\Web\ReceiptPageController::class, 'store'])->name('receipts.store');
     Route::get('/receipts/{receipt}', [App\Http\Controllers\Web\ReceiptPageController::class, 'show'])->name('receipts.show');
     Route::post('/receipts/{receipt}/lines', [App\Http\Controllers\Web\ReceiptPageController::class, 'storeLine'])->name('receipts.lines.store');
+
+    // CRM (lead inbox → account/opportunity → project; spec crm-zena)
+    Route::get('/crm', [App\Http\Controllers\Web\CrmPageController::class, 'index'])->middleware('rbac:crm.view')->name('crm.index');
+    Route::get('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'leads'])->middleware('rbac:crm.view')->name('crm.leads');
+    Route::post('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'storeLead'])->middleware('rbac:crm.manage')->name('crm.leads.store');
+    Route::post('/crm/leads/{id}/convert', [App\Http\Controllers\Web\CrmPageController::class, 'convertLead'])->middleware('rbac:crm.manage')->name('crm.leads.convert');
+    Route::post('/crm/leads/{id}/discard', [App\Http\Controllers\Web\CrmPageController::class, 'discardLead'])->middleware('rbac:crm.manage')->name('crm.leads.discard');
+    Route::get('/crm/accounts', [App\Http\Controllers\Web\CrmPageController::class, 'accounts'])->middleware('rbac:crm.view')->name('crm.accounts');
+    Route::post('/crm/accounts', [App\Http\Controllers\Web\CrmPageController::class, 'storeAccount'])->middleware('rbac:crm.manage')->name('crm.accounts.store');
+    Route::get('/crm/opportunities/{id}', [App\Http\Controllers\Web\CrmPageController::class, 'showOpportunity'])->middleware('rbac:crm.view')->name('crm.opportunities.show');
+    Route::post('/crm/opportunities/{id}/stage', [App\Http\Controllers\Web\CrmPageController::class, 'updateStage'])->middleware('rbac:crm.manage')->name('crm.opportunities.stage');
+    Route::post('/crm/opportunities/{id}/convert', [App\Http\Controllers\Web\CrmPageController::class, 'convertOpportunity'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
 });
 
 Route::middleware(['web', 'auth:sanctum', 'tenant.isolation', 'rbac'])->prefix('api')->as('api.legacy.')->group(function () {

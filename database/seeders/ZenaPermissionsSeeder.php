@@ -164,6 +164,11 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'site_diary.create', 'module' => 'site_diary', 'action' => 'create', 'description' => 'Create, update and submit daily site diaries'],
         ['code' => 'site_diary.approve', 'module' => 'site_diary', 'action' => 'approve', 'description' => 'Approve submitted site diaries'],
 
+        // CRM (lead inbox, accounts, opportunities — spec crm-zena)
+        ['code' => 'crm.view', 'module' => 'crm', 'action' => 'view', 'description' => 'View CRM leads, accounts and opportunities'],
+        ['code' => 'crm.manage', 'module' => 'crm', 'action' => 'manage', 'description' => 'Create/update leads, accounts, opportunities and move pipeline stages'],
+        ['code' => 'crm.convert', 'module' => 'crm', 'action' => 'convert', 'description' => 'Convert won opportunities into projects'],
+
         // Reports
         ['code' => 'report.view', 'module' => 'report', 'action' => 'view', 'description' => 'View report export page'],
         ['code' => 'report.export', 'module' => 'report', 'action' => 'export', 'description' => 'Export tenant data to CSV reports'],

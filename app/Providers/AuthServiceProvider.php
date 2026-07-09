@@ -38,6 +38,9 @@ class AuthServiceProvider extends ServiceProvider
         'App\Models\MaterialReceiptLine' => 'App\Policies\MaterialReceiptLinePolicy',
         'App\Models\SiteDiary' => 'App\Policies\SiteDiaryPolicy',
         'App\Models\WebhookEndpoint' => 'App\Policies\WebhookEndpointPolicy',
+        'App\Models\Lead' => 'App\Policies\LeadPolicy',
+        'App\Models\Account' => 'App\Policies\AccountPolicy',
+        'App\Models\Opportunity' => 'App\Policies\OpportunityPolicy',
     ];
 
     /**

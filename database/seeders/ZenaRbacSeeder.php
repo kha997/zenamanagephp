@@ -79,6 +79,8 @@ class ZenaRbacSeeder extends Seeder
             'site_diary.view', 'site_diary.create', 'site_diary.approve',
             // Webhooks (external integrations)
             'webhook.view', 'webhook.manage',
+            // CRM
+            'crm.view', 'crm.manage', 'crm.convert',
             // Alert taxonomy (S6.2)
             'alert.view', 'alert.read',
             // Event record outbox (S6.3)

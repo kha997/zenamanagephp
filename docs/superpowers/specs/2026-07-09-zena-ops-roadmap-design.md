@@ -1,6 +1,6 @@
 # ZENA Ops Roadmap — Design Spec
 
-Date: 2026-07-09
+Date: 2026-07-09 (revised after adversarial review pass — see §5)
 Status: approved by user (Phan), ready for implementation planning
 Author: Claude (brainstorming session), decision owner: Phan (khafibo@gmail.com)
 
@@ -36,6 +36,10 @@ Phase 7: AI có kiểm soát                      -> depends on all of the above
 ```
 
 Phases 0 and 1 have no dependencies and can start immediately / in parallel. Phase 2 is the pivot point for the commercial chain (3→4→5). Phase 6 and 7 are terminal — do not start them before their dependencies are demonstrably working (real data flowing, not stubs).
+
+**Rough sizing** (order-of-magnitude only, for sequencing/staffing — not a commitment): Phase 0 — XS (hours). Phase 1 — M (new model + API + kanban UI + 2 test files, similar scope to the CRM slice already shipped). Phase 2 — M-L on the ZenaManage side, **plus an untracked, externally-owned dependency** on `zena-boq-core` work of unknown size (see §5, finding I7). Phase 3 — XS. Phase 4 — S. Phase 5 — S (pure additive KPI cards on existing infra). Phase 6 — M, but cannot start sizing seriously until its own brainstorm resolves auth + visibility scope. Phase 7 — S per use case, ship one at a time rather than all three together.
+
+**Branching/PR strategy:** each phase gets its own branch off `main` (or off the prior phase's branch if started before that phase merged) and its own PR, merged sequentially in dependency order. Do not build Phase 3+ code against an unmerged Phase 2 branch without explicitly rebasing — the phases are sequenced by data dependency, not just by convenience, so drift between branches is a real risk here (Phase 2 changes the `Opportunity` schema that 3/4/5 read from).
 
 ---
 
@@ -78,15 +82,31 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 
 **File attachments:** reuse `Document`/`DocumentVersion`. Add `Document::ENTITY_TYPE_DESIGN_ITEM` to the existing polymorphic enum (`linked_entity_type`/`linked_entity_id`). Do not use `WorkInstanceStepAttachment` (no versioning support).
 
-**API (new `Api/DesignItemController`):** `index`, `store`, `show`, `update`, `updateStatus` (validates allowed transitions; `revision_requested`/`sent_to_client` require `client_feedback_notes` or `due_to_client_at` context as appropriate — exact validation rules are an implementation-plan decision, not fixed here).
+**Authority rule when `work_instance_step_id` is set (mandatory, do not skip):** `WorkInstanceStep`'s own status/`approveStep` flow keeps meaning exactly what it means today — internal checklist/QC-style step completion, unrelated to client review. `DesignItem.review_status` is a **separate, independent state machine** and is the *only* thing that drives the kanban and the client-facing cycle. Implementations must **never** auto-write `DesignItem.review_status` changes back onto the linked `WorkInstanceStep`'s status, and must never read `WorkInstanceStep`'s status to infer or gate `DesignItem.review_status`. The FK is for traceability/reporting cross-reference only ("this design item corresponds to template step X"), not a sync channel. If a future need for syncing them emerges, that's a new decision, not an assumed default.
+
+**State machine (explicit, supersedes any implied linear reading):** `review_status` transitions allowed are:
+- `draft` → `internal_review`
+- `internal_review` → `draft` (sent back for rework) | `sent_to_client`
+- `sent_to_client` → `revision_requested` | `approved`
+- `revision_requested` → `internal_review` (loop back — this is the common case, not an edge case)
+- `approved` → `final` | `revision_requested` (**late change requests after approval are expected and must be supported** — do not model `approved` as a dead end)
+- `final` is terminal; no further transitions (a genuinely new revision after `final` is a new `DesignItem`, not a status change, to preserve history)
+
+All other transitions are invalid and must be rejected by `updateStatus` with a 422. `revision_requested` requires non-empty `client_feedback_notes`. `sent_to_client` requires `due_to_client_at` to already be set (set it earlier in `draft`/`internal_review`, not as part of the transition).
+
+**Audit trail (mandatory):** every `review_status` change must write an `EventRecord` (`aggregate_type = 'design_item'`), following the exact pattern already established for `Lead`/`Opportunity` in the CRM slice (`crm.lead.captured`, `crm.opportunity.stage_changed`, etc. — use `design_item.status_changed` with `from`/`to` payload). This is not optional: client revision history is exactly the kind of record that gets referenced in disputes, and the CRM slice already proved this pattern works and is tested.
+
+**API (new `Api/DesignItemController`):** `index`, `store`, `show`, `update`, `updateStatus` (enforces the transition graph above; returns 422 on invalid transitions with a message naming the invalid `from`/`to` pair).
 
 **Web (new `Web/DesignItemPageController` + views under `resources/views/design-items/`, mounted under `/operator/design-items/*` following the same convention as `CrmPageController`):** kanban board grouping `DesignItem` by `review_status`, same pattern as `CrmPageController::BOARD_GROUPS`. Nav entry under a new or existing "Dự án"/"Kinh doanh" section — decide placement when implementing, based on how it reads next to existing nav groups.
 
 **Permissions:** new `design-item.view`, `design-item.manage` (mirror the `crm.*` pattern from the CRM slice: seeder entries in `ZenaPermissionsSeeder` + `ZenaRbacSeeder`, policy class `DesignItemPolicy`).
 
 **Acceptance criteria:**
-- Create a `DesignItem` linked to an existing `WorkInstanceStep` and one with `work_instance_step_id = null` (ad-hoc) — both work identically through the kanban.
-- Move an item through all `review_status` values via the API and via the kanban UI.
+- Create a `DesignItem` linked to an existing `WorkInstanceStep` and one with `work_instance_step_id = null` (ad-hoc) — both work identically through the kanban; changing one's `review_status` never touches the linked `WorkInstanceStep`'s own status (assert this explicitly in a test — it's the exact bug the authority rule above exists to prevent).
+- Walk a `DesignItem` through the full loop at least once: `draft → internal_review → sent_to_client → revision_requested → internal_review → sent_to_client → approved → revision_requested (late change) → internal_review → sent_to_client → approved → final` — proving the loop-back paths work, not just the forward chain.
+- Attempt an invalid transition (e.g. `draft → approved` directly) and assert 422.
+- Each status change produces an `EventRecord` with correct `from`/`to` payload — assert the full history is queryable in order.
 - Attach a file, upload a second version, see both versions listed.
 - RBAC: user without `design-item.manage` cannot change status or upload; user without `design-item.view` gets 403 on index.
 - Feature test (`tests/Feature/Api/DesignItemApiTest.php`) + operator UI test (`tests/Feature/Zena/OperatorDesignItemUiTest.php`), mirroring `CrmApiTest`/`OperatorCrmUiTest` conventions (tenant isolation test, permission-denied test, full-flow test).
@@ -99,12 +119,16 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 
 **Goal:** let a ZenaManage `Opportunity` reference a `zena-boq-core` project/quote and display its current totals/status without ZenaManage owning any pricing logic.
 
+**Multi-tenancy gate (mandatory, critical):** `zena-boq-core` has no tenant concept — it is Phan's single-company tool. ZenaManage is explicitly multi-tenant (see `docs/product-purpose-ssot.md`). As designed, this integration would let **any** tenant in ZenaManage type in an arbitrary `zena-boq-core` project code and pull back Z.E.N.A's commercial quote data — a cross-tenant data leak the moment a second tenant exists. This integration must be **hard-restricted to one specific, config-defined tenant ID** (the Z.E.N.A tenant): the sync button, the webhook receiver, and the `external_boq_project_code` field must all check `tenant_id === config('zena_boq.integration_tenant_id')` (or equivalent) and refuse (403/no-op) for every other tenant. This is not deferrable to a later hardening pass — it must ship in Phase 2's first version, because there is currently nothing else preventing the leak.
+
 **Cross-repo work (in `zena-boq-core`, tracked as a separate task there, not in this repo):**
 - Add a minimal authenticated read API:
   - `GET /api/external/projects/:code` → `{ id, code, name, client, status, rateBookVersion }`
   - `GET /api/external/quotes/latest?projectCode=:code` (or `/api/external/quotes/:id`) → `{ id, projectId, revision, status, calibration, subtotal, vatAmount, total, issuedAt }`
   - Auth: `Authorization: Bearer <shared-secret>`, secret stored as env var, matching the one ZenaManage holds.
   - Optional (defer if it slows Phase 2 down): webhook POST to a ZenaManage URL on `quote.issued` / `quote.accepted`, signed with the same shared secret.
+
+**Coordination note — do not let ZenaManage-side work block on this:** the `zena-boq-core` read API above does not exist yet as of this spec, and there is no tracked mechanism in this repo for knowing when it lands (it's a separate repo, separate backlog). ZenaManage-side implementation must be built and fully tested against a **mocked HTTP client** (fake responses matching the shapes above) from day one — do not wait for the real endpoint to exist to make progress. Full end-to-end verification (a real sync against a live `zena-boq-core` project) is a separate, later checkpoint once both sides are ready, not a blocker for merging the ZenaManage-side PR.
 
 **ZenaManage-side work:**
 - Migration: add nullable columns to `opportunities`: `external_boq_project_code`, `external_quote_id`, `external_quote_snapshot` (json: `subtotal`, `vat_amount`, `total`, `status`, `calibration`, `issued_at`), `external_quote_synced_at`.
@@ -117,6 +141,8 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 - Clicking "Đồng bộ báo giá" populates `external_quote_snapshot` with real data from a test `zena-boq-core` project (or a mocked HTTP response in tests).
 - The webhook endpoint updates the same fields when called directly (test with a signed payload), independent of the manual sync path.
 - `zena-boq-core` being unreachable degrades gracefully (existing cached data stays visible with a "last synced" timestamp; no 500s bubble to the user).
+- **Tenant-gate test (required):** an Opportunity belonging to a non-Z.E.N.A tenant cannot trigger a sync and cannot be updated by the webhook, even with a syntactically valid `external_boq_project_code` and a correctly signed payload — assert this explicitly, it is the fix for the critical finding above.
+- Webhook idempotency note (informational, not extra work): `external_quote_snapshot` is a read-model cache keyed by the latest data, not a ledger — a duplicated/retried webhook call simply overwrites with the same values, which is already safe. No additional de-duplication machinery is needed; don't build any.
 
 **Out of scope:** any UI for creating/editing quotes (that stays in `zena-boq-core`); user-level SSO between the two systems.
 
@@ -126,7 +152,7 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 
 **Goal:** surface the synced quote data from Phase 2 directly on the Opportunity page.
 
-**Work:** add a "Báo giá" card to `resources/views/crm/opportunity-show.blade.php`: subtotal/VAT/total, status badge (`ISSUED`/`ACCEPTED`/...), a visually distinct `UNCALIBRATED`/`CALIBRATED` badge (must not be able to be mistaken for each other — this is a hard requirement carried over from `zena-boq-core`'s own governance rules), and an external link (`target="_blank"`) to open the real quote on `zena-boq.vercel.app`. No embedding/iframe — link out only, since the source of truth's UI lives there.
+**Work:** add a "Báo giá" card to `resources/views/crm/opportunity-show.blade.php`: subtotal/VAT/total, status badge (`ISSUED`/`ACCEPTED`/...), a visually distinct `UNCALIBRATED`/`CALIBRATED` badge (must not be able to be mistaken for each other — this is a hard requirement carried over from `zena-boq-core`'s own governance rules), a "đồng bộ lần cuối: X" relative-time label sourced from `external_quote_synced_at` (flag visually — e.g. muted/warning color — when older than a few days, so staff don't act on stale numbers without realizing it), and an external link (`target="_blank"`) to open the real quote on `zena-boq.vercel.app`. No embedding/iframe — link out only, since the source of truth's UI lives there.
 
 **Acceptance criteria:** an Opportunity with a synced quote shows the card; one without a linked `zena-boq-core` project shows a "Chưa liên kết báo giá" empty state with a way to trigger the linking flow from Phase 2.
 
@@ -140,10 +166,12 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 
 **Work:**
 - New action on the Opportunity page: "Tạo hợp đồng" (visible only when `pipeline_stage = won` and `external_quote_snapshot.status = ACCEPTED`).
-- Creates a `Contract` record: `total_value = external_quote_snapshot.total`, `client_name` from the linked `Account`, `status = draft`.
+- Creates a `Contract` record: `total_value = external_quote_snapshot.total`, `client_name` from the linked `Account`, `status = draft`. **Pin the exact source revision**: store `external_quote_snapshot.id` (the `zena-boq-core` quote id) and its `revision` number on the `Contract` record at creation time (new columns, e.g. `source_quote_id`, `source_quote_revision`) — this is what "no manual re-entry of the number" actually depends on being traceable to.
+- **Quote-drift guard:** once a `Contract` has been generated, if a later "Đồng bộ báo giá" (Phase 2) pulls a *different* `external_quote_id`/`revision` or a changed `total` than what's pinned on an existing draft `Contract`, show a visible warning on both the Opportunity and the Contract page ("Báo giá đã đổi kể từ khi tạo hợp đồng — số tiền hợp đồng có thể không còn khớp") rather than silently letting the two drift apart unnoticed.
+- **Duplicate-contract guard:** if a `Contract` already exists for this Opportunity, "Tạo hợp đồng" must not silently create a second one — either disable the button and link to the existing Contract, or require an explicit confirm naming the existing one.
 - Generates a PDF from a contract template — reuse the existing `DeliverableTemplate`/`DeliverableTemplateVersion` + `DeliverablePdfExportService` pattern (template with merge fields) rather than building new PDF infrastructure.
 
-**Acceptance criteria:** one action from a WON Opportunity with an ACCEPTED quote produces a `Contract` row and a PDF whose total matches the quote total exactly (no manual re-entry of the number).
+**Acceptance criteria:** one action from a WON Opportunity with an ACCEPTED quote produces a `Contract` row (with `source_quote_id`/`source_quote_revision` pinned) and a PDF whose total matches the quote total exactly; a second click does not create a duplicate Contract; a subsequent quote re-sync that changes the total surfaces the drift warning instead of silently updating or silently doing nothing.
 
 **Dependency:** Phase 3 (needs the synced quote data and status visible/queryable).
 
@@ -170,7 +198,11 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 
 **Goal:** let a client see their project's progress, delivered documents, quote/contract summary, and outstanding balance, without staff RBAC/roles.
 
-**This phase needs its own brainstorming session before implementation** — the client auth mechanism (magic-link tied to `Account.email` vs. staff-provisioned login) is a security-sensitive decision this spec deliberately does not lock in. Do not start coding Phase 6 without that follow-up design conversation.
+**This phase needs its own brainstorming session before implementation** — two security-sensitive decisions this spec deliberately does not lock in:
+1. The client auth mechanism (magic-link tied to `Account.email` vs. staff-provisioned login).
+2. **Visibility scope per `Account`**: one `Account` can have multiple `Opportunity`/`Project` records, and potentially multiple client-side stakeholders (chủ đầu tư vs. người giám sát công trình) who may need different views of the same Account's data. The follow-up brainstorm must explicitly define what a logged-in client identity can see — all Projects under their Account, or scoped further — before any portal query code is written; this is not a detail to leave implicit.
+
+Do not start coding Phase 6 without that follow-up design conversation covering both points.
 
 **What is already decided:**
 - Read-only surface, separate auth scope from staff RBAC (no `rbac:*` middleware reuse — needs its own guard).
@@ -191,7 +223,9 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 
 **Hard rule, non-negotiable:** AI never originates pricing, unit rates, or legal/contractual language — those values only ever come from `zena-boq-core`'s calibrated data or existing approved templates. Every AI output is labeled as a suggestion in the UI and requires an explicit accept action to become real data.
 
-**Technical approach:** new `App\Services\AiAssistService` wrapping the Anthropic Messages API (see the `claude-api` skill reference for current model IDs/params), gated behind a new `ai.suggest` permission.
+**Data-minimization rule, equally non-negotiable:** "AI có kiểm soát" controls *both* directions, not just the write-back. Before any use case ships, name exactly which fields are sent in the prompt (e.g., use case 1 sends only `Lead.project_description`, never sends `contact_hint`/phone/name or any other tenant's data) and confirm that's the minimum needed for the suggestion to be useful. Do not send full model dumps ("just serialize the Lead") to the API by default. This applies per-tenant: a tenant's data must never appear in another tenant's AI request context.
+
+**Technical approach:** new `App\Services\AiAssistService` wrapping the Anthropic Messages API (see the `claude-api` skill reference for current model IDs/params), gated behind a new `ai.suggest` permission. Ship the three use cases one at a time (not as one PR) — each gets its own field-minimization review before it ships.
 
 **Dependency:** all prior phases — AI needs stable CRM/quote/design data to have anything meaningful to work with.
 
@@ -200,3 +234,25 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 ## 4. Spec-lite scope note
 
 Each phase above is deliberately specced at "enough to hand to another agent" depth (goal, data model sketch, API/route shape, dependencies, acceptance criteria) — not full TDD-level implementation detail. Per the standard process, **each phase should get its own short brainstorming pass (if anything here turns out ambiguous once someone is actually implementing it) and its own `writing-plans` implementation plan** before code starts on it. This spec is the shared reference so that plan stays consistent with the others.
+
+## 5. Adversarial review — findings applied
+
+A strict self-review pass was run against the original v1 of this spec before implementation planning began. All findings below were fixed inline in the sections above; listed here for traceability so later readers know why certain rules exist.
+
+**Critical (fixed):**
+- C1 — Phase 2 had no tenant restriction; any ZenaManage tenant could pull Z.E.N.A's commercial data via an arbitrary project code. → tenant-gate requirement added, with a required test.
+- C2 — Phase 1's optional link to `WorkInstanceStep` created two overlapping, undefined status authorities for the same "step". → explicit authority rule added (DesignItem.review_status is sole authority for the client cycle; no auto-sync either direction).
+- C3 — Phase 4 generated a Contract from a quote total with no pinning to a specific quote revision, and no handling for the quote changing afterward. → revision pinning + drift-warning requirement added.
+
+**Important (fixed):**
+- I4 — Phase 1's `review_status` chain read as linear; real design work needs loop-backs (especially `approved → revision_requested` for late change requests). → explicit transition graph added.
+- I5 — Phase 1 had no audit-trail requirement despite the CRM slice already establishing `EventRecord` for exactly this kind of history. → made mandatory, matching the CRM precedent.
+- I6 — Phase 7 only controlled the write-back direction ("human approves before saving"), not what tenant/customer data gets sent to a third-party API. → data-minimization rule added, per-field, per-tenant.
+- I7 — Phase 2's cross-repo dependency had no coordination mechanism, risking ZenaManage-side work sitting blocked on an untracked external task. → explicit "build against a mock, don't wait" note added.
+
+**Minor (fixed):**
+- M8 — no effort sizing anywhere. → rough S/M/L sizing added to §3.
+- M9 — no branching/PR strategy stated. → added to §3.
+- M10 — Phase 4 had no guard against double-clicking "Tạo hợp đồng" creating duplicates. → duplicate-contract guard added.
+- M11 — Phase 6's deferred brainstorm named only the auth mechanism, not account-level visibility scope (multi-stakeholder, multi-project-per-Account). → sharpened to name both.
+- M12 — Phase 3 had no UI signal for stale synced data. → staleness label added to the quote card.

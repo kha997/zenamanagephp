@@ -344,6 +344,8 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
         Route::group(['prefix' => 'design-items'], function () {
             Route::get('/', [\App\Http\Controllers\Api\DesignItemController::class, 'index'])->middleware('rbac:design-item.view')->name('design-items.index');
             Route::post('/', [\App\Http\Controllers\Api\DesignItemController::class, 'store'])->middleware('rbac:design-item.manage')->name('design-items.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\DesignItemController::class, 'show'])->middleware('rbac:design-item.view')->name('design-items.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\DesignItemController::class, 'update'])->middleware('rbac:design-item.manage')->name('design-items.update');
         });
 
         // CRM (lead inbox → account/opportunity → project; spec crm-zena)

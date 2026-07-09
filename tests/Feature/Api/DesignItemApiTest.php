@@ -118,6 +118,61 @@ class DesignItemApiTest extends TestCase
         $response->assertStatus(200)->assertJsonCount(0, 'data');
     }
 
+    public function test_can_show_and_update_design_item(): void
+    {
+        $create = $this->postJson($this->route('store'), [
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Ban ve ky thuat tang 1',
+        ], $this->headersFor($this->userA));
+
+        $itemId = $create->json('data.id');
+
+        $show = $this->getJson($this->route('show', ['id' => $itemId]), $this->headersFor($this->userA));
+        $show->assertStatus(200)->assertJsonPath('data.name', 'Ban ve ky thuat tang 1');
+
+        $update = $this->putJson($this->route('update', ['id' => $itemId]), [
+            'name' => 'Ban ve ky thuat tang 1 (revised)',
+            'item_type' => 'technical',
+        ], $this->headersFor($this->userA));
+
+        $update->assertStatus(200)->assertJsonPath('data.item_type', 'technical');
+    }
+
+    public function test_show_from_other_tenant_is_not_found(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Tenant A only',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+
+        $response = $this->getJson($this->route('show', ['id' => $item->id]), $this->headersFor($this->userB));
+
+        $response->assertStatus(404);
+    }
+
+    public function test_update_does_not_accept_review_status(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Should not skip state machine',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+
+        $this->putJson($this->route('update', ['id' => $item->id]), [
+            'review_status' => DesignItem::STATUS_APPROVED,
+        ], $this->headersFor($this->userA))->assertStatus(200);
+
+        $item->refresh();
+        $this->assertSame(DesignItem::STATUS_DRAFT, (string) $item->review_status);
+    }
+
     private function route(string $name, array $parameters = []): string
     {
         return route('api.zena.design-items.' . $name, $parameters, false);

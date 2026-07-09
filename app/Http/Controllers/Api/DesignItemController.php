@@ -155,4 +155,65 @@ class DesignItemController extends BaseApiController
             201
         );
     }
+
+    public function show(Request $request, string $id): JsonResponse
+    {
+        if (!Auth::check()) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $item = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$item instanceof DesignItem) {
+            return $this->notFound('Design item not found');
+        }
+
+        $this->authorize('view', $item);
+
+        return $this->zenaSuccessResponse($this->serialize($item), 'Design item retrieved successfully');
+    }
+
+    public function update(Request $request, string $id): JsonResponse
+    {
+        if (!Auth::check()) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $item = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$item instanceof DesignItem) {
+            return $this->notFound('Design item not found');
+        }
+
+        $this->authorize('update', $item);
+
+        $rules = $this->rules($tenantId);
+        $rules['project_id'] = ['sometimes'] + $rules['project_id'];
+        $rules['name'] = ['sometimes', 'required', 'string', 'max:255'];
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        // review_status is deliberately excluded here — it is only ever changed via updateStatus(),
+        // which enforces the transition graph and its side-effect rules. Silently ignore it if sent.
+        $item->fill($request->only([
+            'project_id', 'work_instance_step_id', 'name', 'item_type', 'assigned_to', 'due_to_client_at',
+        ]));
+        $item->save();
+
+        return $this->zenaSuccessResponse($this->serialize($item->fresh() ?? $item), 'Design item updated successfully');
+    }
 }

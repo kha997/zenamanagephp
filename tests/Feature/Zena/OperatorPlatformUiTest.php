@@ -334,6 +334,44 @@ class OperatorPlatformUiTest extends TestCase
         $this->assertSame(0, $endpoint->failure_count);
     }
 
+    public function test_app_write_routes_reject_users_without_permission(): void
+    {
+        $viewer = $this->createTenantUser($this->tenant, [
+            'role' => 'viewer',
+        ], ['viewer'], ['task.view', 'project.read']);
+
+        // createTenantUser tự gắn project.write mặc định — viewer không được có
+        $writePermission = \App\Models\Permission::query()->where('name', 'project.write')->first();
+        if ($writePermission) {
+            \App\Models\Role::query()->where('name', 'viewer')->first()
+                ?->permissions()->detach($writePermission->id);
+        }
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        // Prime session for CSRF
+        $this->actingAs($viewer)->get('/app/tasks', $headers)->assertOk();
+
+        $this->actingAs($viewer)
+            ->withHeaders($headers)
+            ->post('/app/tasks', [
+                'project_id' => (string) $this->project->id,
+                'name' => 'Viewer must not create this',
+            ])
+            ->assertStatus(403);
+
+        $this->actingAs($viewer)
+            ->withHeaders($headers)
+            ->post('/app/projects', [
+                'name' => 'Viewer project',
+                'start_date' => '2026-08-01',
+                'end_date' => '2026-09-01',
+            ])
+            ->assertStatus(403);
+
+        $this->assertSame(0, Task::query()->where('name', 'Viewer must not create this')->count());
+    }
+
     public function test_api_token_create_and_revoke(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

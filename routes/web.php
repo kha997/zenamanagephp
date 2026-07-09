@@ -364,10 +364,10 @@ Route::get('/projects-enhanced', function() {
         Route::get('/projects', [App\Http\Controllers\Web\AppController::class, 'projects'])->name('projects');
         Route::get('/projects/create', [App\Http\Controllers\Web\ProjectController::class, 'create'])->name('projects.create');
         // Web store/update delegate sang Api\ProjectController (business logic ở API)
-        Route::post('/projects', [App\Http\Controllers\Web\ProjectController::class, 'store'])->name('projects.store');
+        Route::post('/projects', [App\Http\Controllers\Web\ProjectController::class, 'store'])->middleware('rbac:project.write')->name('projects.store');
         Route::get('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'show'])->name('projects.show');
         Route::get('/projects/{project}/edit', [App\Http\Controllers\Web\ProjectController::class, 'edit'])->name('projects.edit');
-        Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->name('projects.update');
+        Route::put('/projects/{project}', [App\Http\Controllers\Web\ProjectController::class, 'update'])->middleware('rbac:project.write')->name('projects.update');
         // DELETE /projects/{project} - MOVED TO API: /api/v1/projects/{project}
     
     // Project sub-resources
@@ -387,10 +387,10 @@ Route::get('/projects-enhanced', function() {
     Route::get('/tasks', [App\Http\Controllers\Web\AppController::class, 'tasks'])->name('tasks');
     Route::get('/tasks/create', [App\Http\Controllers\Web\TaskController::class, 'create'])->name('tasks.create');
     // Web store/update delegate sang Api\TaskController (business logic ở API)
-    Route::post('/tasks', [App\Http\Controllers\Web\TaskController::class, 'store'])->name('tasks.store');
+    Route::post('/tasks', [App\Http\Controllers\Web\TaskController::class, 'store'])->middleware('rbac:task.create')->name('tasks.store');
     Route::get('/tasks/{task}', [App\Http\Controllers\Web\TaskController::class, 'show'])->name('tasks.show');
     Route::get('/tasks/{task}/edit', [App\Http\Controllers\Web\TaskController::class, 'edit'])->name('tasks.edit');
-    Route::put('/tasks/{task}', [App\Http\Controllers\Web\TaskController::class, 'update'])->name('tasks.update');
+    Route::put('/tasks/{task}', [App\Http\Controllers\Web\TaskController::class, 'update'])->middleware('rbac:task.update')->name('tasks.update');
     // DELETE /tasks/{task} - MOVED TO API: /api/v1/tasks/{task}
     
     // Task actions (PATCH for state changes)
@@ -406,7 +406,7 @@ Route::get('/projects-enhanced', function() {
     // Documents Routes
     Route::get('/documents', [App\Http\Controllers\Web\DocumentController::class, 'index'])->name('documents');
     Route::get('/documents/create', [App\Http\Controllers\Web\DocumentController::class, 'create'])->name('documents.create');
-    Route::post('/documents', [App\Http\Controllers\Web\DocumentController::class, 'store'])->name('documents.store');
+    Route::post('/documents', [App\Http\Controllers\Web\DocumentController::class, 'store'])->middleware('rbac:document.create')->name('documents.store');
     Route::get('/documents/approvals', [App\Http\Controllers\Web\DocumentController::class, 'approvals'])->name('documents.approvals');
     
         // Team Routes

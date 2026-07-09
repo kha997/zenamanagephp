@@ -56,6 +56,68 @@ class DesignItemApiTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_can_create_and_list_design_items(): void
+    {
+        $response = $this->postJson($this->route('store'), [
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Phoi canh mat tien phuong an 2',
+            'item_type' => 'concept',
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.review_status', DesignItem::STATUS_DRAFT)
+            ->assertJsonPath('data.item_type', 'concept');
+
+        $this->assertDatabaseHas('design_items', [
+            'name' => 'Phoi canh mat tien phuong an 2',
+            'tenant_id' => (string) $this->tenantA->id,
+        ]);
+
+        $index = $this->getJson($this->route('index'), $this->headersFor($this->userA));
+        $index->assertStatus(200)->assertJsonCount(1, 'data');
+    }
+
+    public function test_create_requires_manage_permission(): void
+    {
+        $viewOnly = $this->createTenantUser($this->tenantA, [], ['viewer'], ['design-item.view']);
+
+        $response = $this->postJson($this->route('store'), [
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Should be denied',
+        ], $this->headersFor($viewOnly));
+
+        $response->assertStatus(403);
+        $this->assertDatabaseMissing('design_items', ['name' => 'Should be denied']);
+    }
+
+    public function test_create_rejects_project_from_another_tenant(): void
+    {
+        $projectB = Project::factory()->create(['tenant_id' => (string) $this->tenantB->id]);
+
+        $response = $this->postJson($this->route('store'), [
+            'project_id' => (string) $projectB->id,
+            'name' => 'Cross tenant project',
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(422);
+    }
+
+    public function test_design_items_are_tenant_isolated(): void
+    {
+        DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Tenant A item',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+
+        $response = $this->getJson($this->route('index'), $this->headersFor($this->userB));
+
+        $response->assertStatus(200)->assertJsonCount(0, 'data');
+    }
+
     private function route(string $name, array $parameters = []): string
     {
         return route('api.zena.design-items.' . $name, $parameters, false);

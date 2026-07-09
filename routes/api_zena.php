@@ -340,6 +340,12 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/fulfill', [\App\Http\Controllers\Api\MaterialRequestController::class, 'fulfill'])->middleware('rbac:material.receive')->name('material-requests.fulfill');
         });
 
+        // Design Item (design-item kanban — spec zena-ops-roadmap Phase 1)
+        Route::group(['prefix' => 'design-items'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\DesignItemController::class, 'index'])->middleware('rbac:design-item.view')->name('design-items.index');
+            Route::post('/', [\App\Http\Controllers\Api\DesignItemController::class, 'store'])->middleware('rbac:design-item.manage')->name('design-items.store');
+        });
+
         // CRM (lead inbox → account/opportunity → project; spec crm-zena)
         Route::group(['prefix' => 'crm'], function () {
             Route::get('/leads', [\App\Http\Controllers\Api\LeadController::class, 'index'])->middleware('rbac:crm.view')->name('crm.leads.index');

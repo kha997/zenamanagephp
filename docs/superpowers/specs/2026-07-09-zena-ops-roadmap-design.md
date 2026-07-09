@@ -146,6 +146,13 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 
 **Out of scope:** any UI for creating/editing quotes (that stays in `zena-boq-core`); user-level SSO between the two systems.
 
+**Non-Z.E.N.A tenants — deferred fallback, trigger-gated (decision made 2026-07-09):** the multi-tenancy gate above means every tenant other than Z.E.N.A gets no "Báo giá" card and keeps using `Opportunity.estimated_fee` as a single manual number — the same as today, not worse. This is a deliberate choice, not an oversight: as of this spec Z.E.N.A is the only real tenant, so building a second quotation path now would be speculative work for a hypothetical customer (YAGNI). The decision is **not** "ignore it forever" — it's "documented and ready to build the moment it's actually needed," so a future agent doesn't have to re-derive this from scratch:
+
+- **Trigger:** the moment a second real tenant is onboarded and needs structured quotation (not before).
+- **What to build then:** a lightweight, tenant-scoped internal quotation module inside ZenaManage — a simple `Quote`/`QuoteLine` model (line items + unit price + quantity + subtotal), following the same tenant-isolation/RBAC conventions as every other ZenaManage module. Deliberately **do not** carry over `zena-boq-core`'s calibration/backtest/rate-book-versioning governance — that complexity exists specifically for Z.E.N.A's own historical-pricing-accuracy problem and would be pure overhead for a new tenant starting fresh.
+- **Where it plugs in:** the same "Báo giá" card slot on the Opportunity page (Phase 3) should be able to render from *either* an external `zena-boq-core`-style snapshot (Z.E.N.A) *or* this internal `Quote` (other tenants) — when Phase 3 is implemented, keep the card's data shape (subtotal/vat/total/status) source-agnostic for exactly this reason, even though only the external source is wired up now.
+- This item is intentionally not a numbered phase (0-7) — it has no scheduled start date. Re-open it as its own brainstorming session when the trigger condition above actually occurs.
+
 ---
 
 ## Phase 3 — Hiển thị báo giá trong CRM
@@ -155,6 +162,8 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 **Work:** add a "Báo giá" card to `resources/views/crm/opportunity-show.blade.php`: subtotal/VAT/total, status badge (`ISSUED`/`ACCEPTED`/...), a visually distinct `UNCALIBRATED`/`CALIBRATED` badge (must not be able to be mistaken for each other — this is a hard requirement carried over from `zena-boq-core`'s own governance rules), a "đồng bộ lần cuối: X" relative-time label sourced from `external_quote_synced_at` (flag visually — e.g. muted/warning color — when older than a few days, so staff don't act on stale numbers without realizing it), and an external link (`target="_blank"`) to open the real quote on `zena-boq.vercel.app`. No embedding/iframe — link out only, since the source of truth's UI lives there.
 
 **Acceptance criteria:** an Opportunity with a synced quote shows the card; one without a linked `zena-boq-core` project shows a "Chưa liên kết báo giá" empty state with a way to trigger the linking flow from Phase 2.
+
+**Forward-compat note:** build the card's view data as a small, source-agnostic shape (`subtotal`, `vat_amount`, `total`, `status`, `calibration|null`, `synced_at|null`, `external_url|null`) assembled by the controller from `external_quote_snapshot`, rather than reading `external_quote_snapshot` fields directly in the Blade template. This is what lets the deferred internal-quotation fallback (see Phase 2's "Non-Z.E.N.A tenants" note) reuse the same card later without a rewrite — even though only the `zena-boq-core` source exists today.
 
 **Dependency:** requires Phase 2's cached snapshot fields to exist and be populated.
 

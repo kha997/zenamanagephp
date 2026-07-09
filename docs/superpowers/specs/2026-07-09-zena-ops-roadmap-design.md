@@ -1,6 +1,6 @@
 # ZENA Ops Roadmap — Design Spec
 
-Date: 2026-07-09 (revised after adversarial review pass — see §5)
+Date: 2026-07-09 (revised after two adversarial review passes — see §5 and §6)
 Status: approved by user (Phan), ready for implementation planning
 Author: Claude (brainstorming session), decision owner: Phan (khafibo@gmail.com)
 
@@ -19,7 +19,7 @@ ZenaManage (this repo, Laravel/PHP/Blade, multi-tenant, RBAC) and `zena-boq-core
 - `zena-boq-core` owns: work-item library (priced catalog: resources → work items → assemblies → versioned rate books), BOQ line items, immutable Quote revisions (PDF/Excel export), backtest/calibration workflow. All rates are `UNCALIBRATED` until the project's own Gate 0 governance process passes — ZenaManage must display this flag verbatim, never suppress or "clean" it.
 - ZenaManage owns: CRM (Lead/Account/Opportunity), project/task/document/contract operations, RBAC, tenant isolation, dashboards.
 - Integration is read-only from ZenaManage's side: ZenaManage pulls/receives quote totals and status: it never writes pricing data into `zena-boq-core`.
-- Auth between systems: a static bearer API key (service-to-service secret), stored as env var on both sides. No user-level SSO in this phase.
+- Auth between systems: static bearer API keys (service-to-service secrets) — one per direction (see Phase 2 for naming), stored as env vars. No user-level SSO in this phase.
 - Goal #3 from the original 10-goal vision ("thư viện công tác chuẩn hóa") is considered satisfied by `zena-boq-core`'s existing `/library` and is **out of scope for ZenaManage** — any gaps in package coverage (pháp lý, phá dỡ, ép cọc, PCCC, BIM) are a `zena-boq-core` backlog item, tracked there, not here.
 
 ## 3. Phase map
@@ -32,10 +32,12 @@ Phase 3: Hiển thị báo giá trong CRM          -> depends on Phase 2
 Phase 4: Tự động hoá hợp đồng                 -> depends on Phase 3
 Phase 5: BI Dashboard điều hành               -> depends on Phase 1, 2, 3, 4
 Phase 6: Cổng khách hàng                      -> depends on Phase 1, 3, 4, 5
-Phase 7: AI có kiểm soát                      -> depends on all of the above
+Phase 7: AI có kiểm soát                      -> sequenced last by choice, not by hard technical dependency (see note below)
 ```
 
-Phases 0 and 1 have no dependencies and can start immediately / in parallel. Phase 2 is the pivot point for the commercial chain (3→4→5). Phase 6 and 7 are terminal — do not start them before their dependencies are demonstrably working (real data flowing, not stubs).
+Phases 0 and 1 have no dependencies and can start immediately / in parallel. Phase 2 is the pivot point for the commercial chain (3→4→5). Phase 6 is terminal on its dependencies (real data flowing, not stubs) — do not start it early.
+
+**Phase 7 is a deliberate sequencing choice, not a technical blocker.** At least two of its three v1 use cases (suggesting `service_category` from `Lead.project_description`; flagging missing `Document`s against a `WorkTemplate` checklist) only need data that already existed *before* this roadmap (the CRM slice, `Document`/`WorkTemplate`) — they do not technically require Phases 2-6 to exist. "AI last" is the user's explicit risk-management choice (build on stable data first), not a dependency graph fact. Do not treat this as a hard blocker if there's ever a reason to fast-track one narrow AI use case ahead of the rest — re-confirm with the user first, since the ordering was their call, but don't assume the codebase itself forbids it.
 
 **Rough sizing** (order-of-magnitude only, for sequencing/staffing — not a commitment): Phase 0 — XS (hours). Phase 1 — M (new model + API + kanban UI + 2 test files, similar scope to the CRM slice already shipped). Phase 2 — M-L on the ZenaManage side, **plus an untracked, externally-owned dependency** on `zena-boq-core` work of unknown size (see §5, finding I7). Phase 3 — XS. Phase 4 — S. Phase 5 — S (pure additive KPI cards on existing infra). Phase 6 — M, but cannot start sizing seriously until its own brainstorm resolves auth + visibility scope. Phase 7 — S per use case, ship one at a time rather than all three together.
 
@@ -77,6 +79,7 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 | `assigned_to` | ulid, nullable | FK `users` |
 | `due_to_client_at` | date, nullable | |
 | `client_feedback_notes` | text, nullable | |
+| `approval_evidence` | string, nullable | how the `approved` transition was confirmed — e.g. `phone`, `email`, `zalo`, `client_portal` (once Phase 6 exists); required when transitioning to `approved`, see below |
 | `created_by` | ulid | FK `users` |
 | timestamps | | |
 
@@ -92,7 +95,7 @@ Phases 0 and 1 have no dependencies and can start immediately / in parallel. Pha
 - `approved` → `final` | `revision_requested` (**late change requests after approval are expected and must be supported** — do not model `approved` as a dead end)
 - `final` is terminal; no further transitions (a genuinely new revision after `final` is a new `DesignItem`, not a status change, to preserve history)
 
-All other transitions are invalid and must be rejected by `updateStatus` with a 422. `revision_requested` requires non-empty `client_feedback_notes`. `sent_to_client` requires `due_to_client_at` to already be set (set it earlier in `draft`/`internal_review`, not as part of the transition).
+All other transitions are invalid and must be rejected by `updateStatus` with a 422. `revision_requested` requires non-empty `client_feedback_notes`. `sent_to_client` requires `due_to_client_at` to already be set (set it earlier in `draft`/`internal_review`, not as part of the transition) **and requires at least one attached `Document` to already exist for this `DesignItem`** — nothing should be markable as "sent to client" with zero files attached; reject with 422 otherwise. `approved` requires `approval_evidence` to be set (non-empty) — this is a staff attestation of how client agreement was confirmed (phone/email/Zalo today; the client portal in Phase 6 becomes another valid value once it exists), not optional metadata: it's exactly the kind of record `product-purpose-ssot.md` already calls for ("evidence-bearing... flows") and the kind most likely to be referenced in a client dispute later.
 
 **Audit trail (mandatory):** every `review_status` change must write an `EventRecord` (`aggregate_type = 'design_item'`), following the exact pattern already established for `Lead`/`Opportunity` in the CRM slice (`crm.lead.captured`, `crm.opportunity.stage_changed`, etc. — use `design_item.status_changed` with `from`/`to` payload). This is not optional: client revision history is exactly the kind of record that gets referenced in disputes, and the CRM slice already proved this pattern works and is tested.
 
@@ -106,6 +109,7 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 - Create a `DesignItem` linked to an existing `WorkInstanceStep` and one with `work_instance_step_id = null` (ad-hoc) — both work identically through the kanban; changing one's `review_status` never touches the linked `WorkInstanceStep`'s own status (assert this explicitly in a test — it's the exact bug the authority rule above exists to prevent).
 - Walk a `DesignItem` through the full loop at least once: `draft → internal_review → sent_to_client → revision_requested → internal_review → sent_to_client → approved → revision_requested (late change) → internal_review → sent_to_client → approved → final` — proving the loop-back paths work, not just the forward chain.
 - Attempt an invalid transition (e.g. `draft → approved` directly) and assert 422.
+- Attempt `sent_to_client` with zero attached `Document`s and assert 422; attempt `approved` without `approval_evidence` and assert 422.
 - Each status change produces an `EventRecord` with correct `from`/`to` payload — assert the full history is queryable in order.
 - Attach a file, upload a second version, see both versions listed.
 - RBAC: user without `design-item.manage` cannot change status or upload; user without `design-item.view` gets 403 on index.
@@ -121,19 +125,23 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 
 **Multi-tenancy gate (mandatory, critical):** `zena-boq-core` has no tenant concept — it is Phan's single-company tool. ZenaManage is explicitly multi-tenant (see `docs/product-purpose-ssot.md`). As designed, this integration would let **any** tenant in ZenaManage type in an arbitrary `zena-boq-core` project code and pull back Z.E.N.A's commercial quote data — a cross-tenant data leak the moment a second tenant exists. This integration must be **hard-restricted to one specific, config-defined tenant ID** (the Z.E.N.A tenant): the sync button, the webhook receiver, and the `external_boq_project_code` field must all check `tenant_id === config('zena_boq.integration_tenant_id')` (or equivalent) and refuse (403/no-op) for every other tenant. This is not deferrable to a later hardening pass — it must ship in Phase 2's first version, because there is currently nothing else preventing the leak.
 
+**Fail-closed requirement (mandatory — this is what makes the gate above actually safe):** if `config('zena_boq.integration_tenant_id')` is unset, null, or empty at runtime (e.g. missing env var in a fresh deployment), the check must treat this as **"no tenant is authorized"**, not "compare against an empty value." A naive `$tenant->id === config(...)` where both sides can independently end up empty/null is exactly the kind of bug that silently defeats this fix. Write the guard as an explicit `if (empty($configuredTenantId) || $tenant->id !== $configuredTenantId) { deny(); }`, and add a test that asserts denial when the config is unset — this is the single most important test in this phase, since it's verifying the fix for the roadmap's original critical finding actually holds.
+
+**Two separate secrets, not one (mandatory):** the outbound direction (ZenaManage → `zena-boq-core` read API) and the inbound direction (`zena-boq-core` → ZenaManage webhook) must use **two independent secrets** — `ZENA_BOQ_READ_API_SECRET` and `ZENA_BOQ_WEBHOOK_SECRET` — not one shared value reused both ways. A single shared secret means a leak on either side compromises both channels; separate secrets keep the blast radius contained to one direction.
+
 **Cross-repo work (in `zena-boq-core`, tracked as a separate task there, not in this repo):**
 - Add a minimal authenticated read API:
   - `GET /api/external/projects/:code` → `{ id, code, name, client, status, rateBookVersion }`
   - `GET /api/external/quotes/latest?projectCode=:code` (or `/api/external/quotes/:id`) → `{ id, projectId, revision, status, calibration, subtotal, vatAmount, total, issuedAt }`
-  - Auth: `Authorization: Bearer <shared-secret>`, secret stored as env var, matching the one ZenaManage holds.
-  - Optional (defer if it slows Phase 2 down): webhook POST to a ZenaManage URL on `quote.issued` / `quote.accepted`, signed with the same shared secret.
+  - Auth: `Authorization: Bearer <ZENA_BOQ_READ_API_SECRET>`.
+  - Optional (defer if it slows Phase 2 down): webhook POST to a ZenaManage URL on `quote.issued` / `quote.accepted`, signed with `ZENA_BOQ_WEBHOOK_SECRET`.
 
 **Coordination note — do not let ZenaManage-side work block on this:** the `zena-boq-core` read API above does not exist yet as of this spec, and there is no tracked mechanism in this repo for knowing when it lands (it's a separate repo, separate backlog). ZenaManage-side implementation must be built and fully tested against a **mocked HTTP client** (fake responses matching the shapes above) from day one — do not wait for the real endpoint to exist to make progress. Full end-to-end verification (a real sync against a live `zena-boq-core` project) is a separate, later checkpoint once both sides are ready, not a blocker for merging the ZenaManage-side PR.
 
 **ZenaManage-side work:**
 - Migration: add nullable columns to `opportunities`: `external_boq_project_code`, `external_quote_id`, `external_quote_snapshot` (json: `subtotal`, `vat_amount`, `total`, `status`, `calibration`, `issued_at`), `external_quote_synced_at`.
 - New service `App\Services\ZenaBoqIntegrationService`: wraps the outbound HTTP call to `zena-boq-core`'s read API (base URL + bearer secret from config/env), with a clear timeout and error-envelope-consistent failure handling (don't let a `zena-boq-core` outage break the Opportunity page — degrade to "last synced at X" state).
-- New inbound webhook route: `POST /api/zena/integrations/zena-boq/webhook`, HMAC or shared-secret validated, updates the matching Opportunity's cached snapshot fields by `external_boq_project_code`.
+- New inbound webhook route: `POST /api/zena/integrations/zena-boq/webhook`, validated against `ZENA_BOQ_WEBHOOK_SECRET`, updates the matching Opportunity's cached snapshot fields by `external_boq_project_code`. **This route is necessarily public** (unauthenticated by session — `zena-boq-core` on Vercel must be able to reach it) and must carry `throttle` middleware, matching this codebase's existing convention for other public-facing sensitive endpoints (e.g. `throttle:zena-login` on login, `throttle:6,1` on API token creation) — an unthrottled public endpoint guarded only by a shared secret is a brute-force/DoS surface.
 - Manual "Đồng bộ báo giá" button on the Opportunity page (`Api/OpportunityController@syncExternalQuote` or similar), calling `ZenaBoqIntegrationService` synchronously — this is the fallback that must work even if the webhook is never wired up on the `zena-boq-core` side, so Phase 2 does not hard-depend on cross-repo webhook work landing first.
 
 **Acceptance criteria:**
@@ -142,6 +150,7 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 - The webhook endpoint updates the same fields when called directly (test with a signed payload), independent of the manual sync path.
 - `zena-boq-core` being unreachable degrades gracefully (existing cached data stays visible with a "last synced" timestamp; no 500s bubble to the user).
 - **Tenant-gate test (required):** an Opportunity belonging to a non-Z.E.N.A tenant cannot trigger a sync and cannot be updated by the webhook, even with a syntactically valid `external_boq_project_code` and a correctly signed payload — assert this explicitly, it is the fix for the critical finding above.
+- **Fail-closed test (required):** with `zena_boq.integration_tenant_id` config unset/empty, no tenant — including what would otherwise be the Z.E.N.A tenant — can sync or be updated by the webhook. This proves the gate denies by default rather than accidentally matching on empty values.
 - Webhook idempotency note (informational, not extra work): `external_quote_snapshot` is a read-model cache keyed by the latest data, not a ledger — a duplicated/retried webhook call simply overwrites with the same values, which is already safe. No additional de-duplication machinery is needed; don't build any.
 
 **Out of scope:** any UI for creating/editing quotes (that stays in `zena-boq-core`); user-level SSO between the two systems.
@@ -161,7 +170,7 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 
 **Work:** add a "Báo giá" card to `resources/views/crm/opportunity-show.blade.php`: subtotal/VAT/total, status badge (`ISSUED`/`ACCEPTED`/...), a visually distinct `UNCALIBRATED`/`CALIBRATED` badge (must not be able to be mistaken for each other — this is a hard requirement carried over from `zena-boq-core`'s own governance rules), a "đồng bộ lần cuối: X" relative-time label sourced from `external_quote_synced_at` (flag visually — e.g. muted/warning color — when older than a few days, so staff don't act on stale numbers without realizing it), and an external link (`target="_blank"`) to open the real quote on `zena-boq.vercel.app`. No embedding/iframe — link out only, since the source of truth's UI lives there.
 
-**Acceptance criteria:** an Opportunity with a synced quote shows the card; one without a linked `zena-boq-core` project shows a "Chưa liên kết báo giá" empty state with a way to trigger the linking flow from Phase 2.
+**Acceptance criteria:** an Opportunity with a synced quote shows the card; one without a linked `zena-boq-core` project shows a "Chưa liên kết báo giá" empty state. The action to trigger the Phase 2 linking flow from that empty state requires `crm.manage` (same as every other CRM mutation) — a `crm.view`-only user sees the empty state with no action button, not a disabled/broken one.
 
 **Forward-compat note:** build the card's view data as a small, source-agnostic shape (`subtotal`, `vat_amount`, `total`, `status`, `calibration|null`, `synced_at|null`, `external_url|null`) assembled by the controller from `external_quote_snapshot`, rather than reading `external_quote_snapshot` fields directly in the Blade template. This is what lets the deferred internal-quotation fallback (see Phase 2's "Non-Z.E.N.A tenants" note) reuse the same card later without a rewrite — even though only the `zena-boq-core` source exists today.
 
@@ -176,7 +185,7 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 **Work:**
 - New action on the Opportunity page: "Tạo hợp đồng" (visible only when `pipeline_stage = won` and `external_quote_snapshot.status = ACCEPTED`).
 - Creates a `Contract` record: `total_value = external_quote_snapshot.total`, `client_name` from the linked `Account`, `status = draft`. **Pin the exact source revision**: store `external_quote_snapshot.id` (the `zena-boq-core` quote id) and its `revision` number on the `Contract` record at creation time (new columns, e.g. `source_quote_id`, `source_quote_revision`) — this is what "no manual re-entry of the number" actually depends on being traceable to.
-- **Quote-drift guard:** once a `Contract` has been generated, if a later "Đồng bộ báo giá" (Phase 2) pulls a *different* `external_quote_id`/`revision` or a changed `total` than what's pinned on an existing draft `Contract`, show a visible warning on both the Opportunity and the Contract page ("Báo giá đã đổi kể từ khi tạo hợp đồng — số tiền hợp đồng có thể không còn khớp") rather than silently letting the two drift apart unnoticed.
+- **Quote-drift guard:** once a `Contract` has been generated, if a later "Đồng bộ báo giá" (Phase 2) pulls a *different* `external_quote_id`/`revision` or a changed `total` than what's pinned on an existing draft `Contract`, show a visible warning on both the Opportunity and the Contract page ("Báo giá đã đổi kể từ khi tạo hợp đồng — số tiền hợp đồng có thể không còn khớp") rather than silently letting the two drift apart unnoticed. **`Contract.total_value` and the pinned `source_quote_id`/`source_quote_revision` must never be auto-updated by a re-sync, ever** — a `Contract` is treated as a point-in-time commercial document once created (it may already be reflected in an issued PDF), so silently rewriting its total on drift detection would be worse than the drift itself. The warning is informational only; resolving it (regenerating a new Contract, manually amending, or explicitly dismissing) is always a deliberate human action, never automatic.
 - **Duplicate-contract guard:** if a `Contract` already exists for this Opportunity, "Tạo hợp đồng" must not silently create a second one — either disable the button and link to the existing Contract, or require an explicit confirm naming the existing one.
 - Generates a PDF from a contract template — reuse the existing `DeliverableTemplate`/`DeliverableTemplateVersion` + `DeliverablePdfExportService` pattern (template with merge fields) rather than building new PDF infrastructure.
 
@@ -197,6 +206,8 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 - Hiệu quả sale (win-rate per `sales_owner_id`: won / (won + lost + no_bid)).
 - Hiệu quả gói dịch vụ (win-rate and average fee per `service_category`).
 
+All five must follow `KpiService`'s existing `Cache::remember($cacheKey, 60, ...)` convention — these are new cards on existing infrastructure, not a reason to add uncached heavy aggregate queries alongside it.
+
 **Acceptance criteria:** dashboard renders all five cards with real tenant data (not placeholder/demo values), respecting existing tenant-isolation and RBAC patterns on the dashboard endpoints.
 
 **Dependency:** needs Phase 1 (design throughput as an optional KPI candidate), Phase 2-4 (quote/contract data) to have real numbers to show — building this against empty CRM data would produce a dashboard nobody trusts.
@@ -210,8 +221,9 @@ All other transitions are invalid and must be rejected by `updateStatus` with a 
 **This phase needs its own brainstorming session before implementation** — two security-sensitive decisions this spec deliberately does not lock in:
 1. The client auth mechanism (magic-link tied to `Account.email` vs. staff-provisioned login).
 2. **Visibility scope per `Account`**: one `Account` can have multiple `Opportunity`/`Project` records, and potentially multiple client-side stakeholders (chủ đầu tư vs. người giám sát công trình) who may need different views of the same Account's data. The follow-up brainstorm must explicitly define what a logged-in client identity can see — all Projects under their Account, or scoped further — before any portal query code is written; this is not a detail to leave implicit.
+3. **Data retention/deletion for client accounts**: once clients can log in and see their own data, questions of how long it's kept and whether a client can request deletion/export become real (Vietnam's Personal Data Protection Decree applies to any system holding customer personal data, regardless of company size). This does not need to be solved now, but the follow-up brainstorm must at least decide whether it's in scope for Phase 6 v1 or explicitly deferred — not silently ignored.
 
-Do not start coding Phase 6 without that follow-up design conversation covering both points.
+Do not start coding Phase 6 without that follow-up design conversation covering all three points.
 
 **What is already decided:**
 - Read-only surface, separate auth scope from staff RBAC (no `rbac:*` middleware reuse — needs its own guard).
@@ -265,3 +277,21 @@ A strict self-review pass was run against the original v1 of this spec before im
 - M10 — Phase 4 had no guard against double-clicking "Tạo hợp đồng" creating duplicates. → duplicate-contract guard added.
 - M11 — Phase 6's deferred brainstorm named only the auth mechanism, not account-level visibility scope (multi-stakeholder, multi-project-per-Account). → sharpened to name both.
 - M12 — Phase 3 had no UI signal for stale synced data. → staleness label added to the quote card.
+
+## 6. Second adversarial review pass — findings applied
+
+A second strict review pass was run against the revised (§5) version of this spec, specifically looking for issues introduced *by* the first round of fixes, not just issues missed the first time. Two of the four "important" findings below (A, B) are exactly that: the first pass's own fixes for C1 and C3 were incomplete on their own.
+
+**Important (fixed):**
+- A — Phase 4's drift-guard (from C3) said to show a warning on quote drift but never said whether `Contract.total_value` auto-updates. → made explicit: never auto-updates, ever; resolution is always a manual human action.
+- B — Phase 2's tenant-gate (from C1) didn't specify fail-closed behavior; an unset/empty config could accidentally compare empty-to-empty and defeat the entire fix. → fail-closed requirement added, with its own required test — this is now called out as the single most important test in the phase, since it's verifying the roadmap's original critical fix actually holds.
+- C — Phase 2 used one shared secret for two different call directions (outbound read, inbound webhook), so a leak on either side would compromise both. → split into `ZENA_BOQ_READ_API_SECRET` and `ZENA_BOQ_WEBHOOK_SECRET`.
+- D — Phase 2's new inbound webhook route is necessarily public (no session auth) and had no rate-limiting, unlike other public-facing sensitive endpoints already in this codebase. → `throttle` middleware requirement added, matching existing convention.
+- E — Phase 7 claimed to depend on "all prior phases," but at least two of its three use cases only need data that predates this entire roadmap. → corrected: "AI last" is documented as the user's deliberate risk-sequencing choice, not a technical blocker, so a future reader doesn't mistake it for a hard dependency.
+
+**Minor (fixed):**
+- F — Phase 1's `approved` transition had no record of how/by whom client agreement was actually confirmed, despite the product's own stated bias toward evidence-bearing records. → added a required `approval_evidence` field.
+- G — Phase 1's `sent_to_client` transition didn't require any file to actually be attached. → added a required-attachment validation.
+- H — Phase 5 didn't say to reuse `KpiService`'s existing cache convention. → added explicitly.
+- I — Phase 6's deferred brainstorm didn't mention data retention/deletion for client accounts. → added as a third point that brainstorm must at least explicitly decide on (in-scope or deferred), not silently skip.
+- J — Phase 3 didn't say which permission gates triggering the BOQ-linking action from the empty state. → clarified as `crm.manage`, consistent with every other CRM mutation.

@@ -5,13 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\DesignItem;
 use App\Models\Document;
+use App\Models\DocumentVersion;
 use App\Models\EventRecord;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -314,5 +318,120 @@ class DesignItemController extends BaseApiController
             $this->serialize($item->fresh() ?? $item),
             'Design item status updated successfully'
         );
+    }
+
+    public function uploadDocument(Request $request, string $id): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $item = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$item instanceof DesignItem) {
+            return $this->notFound('Design item not found');
+        }
+
+        $this->authorize('update', $item);
+
+        $validator = Validator::make($request->all(), [
+            'file' => ['required', 'file', 'max:10240'],
+            'comment' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        /** @var UploadedFile $file */
+        $file = $request->file('file');
+
+        $directory = sprintf('design-items/%s', $item->id);
+        $storedFilename = (string) Str::ulid() . '.' . $file->getClientOriginalExtension();
+        $storedPath = Storage::disk('local')->putFileAs($directory, $file, $storedFilename);
+
+        if ($storedPath === false) {
+            return $this->serverError('Failed to store file');
+        }
+
+        $document = Document::query()
+            ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
+            ->first();
+
+        if (!$document instanceof Document) {
+            $document = Document::query()->create([
+                'tenant_id' => $tenantId,
+                'project_id' => (string) $item->project_id,
+                'uploaded_by' => (string) $user->id,
+                'created_by' => (string) $user->id,
+                'name' => (string) $file->getClientOriginalName(),
+                'original_name' => (string) $file->getClientOriginalName(),
+                'title' => (string) $item->name,
+                'file_path' => $storedPath,
+                'file_type' => (string) $file->getClientOriginalExtension(),
+                'mime_type' => (string) $file->getMimeType(),
+                'file_size' => (int) $file->getSize(),
+                'file_hash' => (string) (hash_file('sha256', $file->getRealPath()) ?: Str::random(32)),
+                'linked_entity_type' => Document::ENTITY_TYPE_DESIGN_ITEM,
+                'linked_entity_id' => (string) $item->id,
+                'status' => 'active',
+                'visibility' => Document::VISIBILITY_INTERNAL,
+            ]);
+        }
+
+        $version = $document->createNewVersion([
+            'file_path' => $storedPath,
+            'storage_driver' => DocumentVersion::STORAGE_LOCAL,
+            'comment' => $request->input('comment'),
+            'metadata' => [
+                'original_filename' => (string) $file->getClientOriginalName(),
+                'mime_type' => (string) $file->getMimeType(),
+                'size' => (int) $file->getSize(),
+            ],
+            'created_by' => (string) $user->id,
+        ]);
+
+        return $this->zenaSuccessResponse([
+            'document_id' => (string) $document->id,
+            'version_id' => (string) $version->id,
+            'version_number' => $version->version_number,
+        ], 'File uploaded successfully', 201);
+    }
+
+    public function listDocuments(Request $request, string $id): JsonResponse
+    {
+        if (!Auth::check()) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $item = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$item instanceof DesignItem) {
+            return $this->notFound('Design item not found');
+        }
+
+        $this->authorize('view', $item);
+
+        $document = Document::query()
+            ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
+            ->first();
+
+        $versions = $document
+            ? $document->versions()->get(['id', 'document_id', 'version_number', 'comment', 'created_by', 'created_at'])
+            : collect();
+
+        return $this->zenaSuccessResponse($versions, 'Document versions retrieved successfully');
     }
 }

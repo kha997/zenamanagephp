@@ -340,6 +340,56 @@ class DesignItemApiTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_can_upload_and_list_document_versions(): void
+    {
+        $create = $this->postJson($this->route('store'), [
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Upload target',
+        ], $this->headersFor($this->userA));
+        $itemId = $create->json('data.id');
+
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $file = \Illuminate\Http\UploadedFile::fake()->create('concept-v1.pdf', 50, 'application/pdf');
+
+        $upload1 = $this->post($this->route('documents.store', ['id' => $itemId]), [
+            'file' => $file,
+        ], $this->headersFor($this->userA));
+
+        $upload1->assertStatus(201)->assertJsonPath('data.version_number', 1);
+
+        $file2 = \Illuminate\Http\UploadedFile::fake()->create('concept-v2.pdf', 60, 'application/pdf');
+
+        $upload2 = $this->post($this->route('documents.store', ['id' => $itemId]), [
+            'file' => $file2,
+            'comment' => 'Cap nhat theo phan hoi khach',
+        ], $this->headersFor($this->userA));
+
+        $upload2->assertStatus(201)->assertJsonPath('data.version_number', 2);
+
+        $list = $this->getJson($this->route('documents.index', ['id' => $itemId]), $this->headersFor($this->userA));
+        $list->assertStatus(200)->assertJsonCount(2, 'data');
+    }
+
+    public function test_upload_requires_manage_permission(): void
+    {
+        $viewOnly = $this->createTenantUser($this->tenantA, [], ['viewer'], ['design-item.view']);
+
+        $create = $this->postJson($this->route('store'), [
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'RBAC upload target',
+        ], $this->headersFor($this->userA));
+        $itemId = $create->json('data.id');
+
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $file = \Illuminate\Http\UploadedFile::fake()->create('blocked.pdf', 10, 'application/pdf');
+
+        $response = $this->post($this->route('documents.store', ['id' => $itemId]), [
+            'file' => $file,
+        ], $this->headersFor($viewOnly));
+
+        $response->assertStatus(403);
+    }
+
     private function route(string $name, array $parameters = []): string
     {
         return route('api.zena.design-items.' . $name, $parameters, false);

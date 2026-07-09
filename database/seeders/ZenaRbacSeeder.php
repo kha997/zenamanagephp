@@ -81,6 +81,8 @@ class ZenaRbacSeeder extends Seeder
             'webhook.view', 'webhook.manage',
             // CRM
             'crm.view', 'crm.manage', 'crm.convert',
+            // Design work management
+            'design-item.view', 'design-item.manage',
             // Alert taxonomy (S6.2)
             'alert.view', 'alert.read',
             // Event record outbox (S6.3)

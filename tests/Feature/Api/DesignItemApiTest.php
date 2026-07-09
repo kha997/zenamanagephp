@@ -131,7 +131,7 @@ class DesignItemApiTest extends TestCase
         $show->assertStatus(200)->assertJsonPath('data.name', 'Ban ve ky thuat tang 1');
 
         $update = $this->putJson($this->route('update', ['id' => $itemId]), [
-            'name' => 'Ban ve ky thuat tang 1 (revised)',
+            'name' => 'Ban ve ky thuat tang 1 revised',
             'item_type' => 'technical',
         ], $this->headersFor($this->userA));
 

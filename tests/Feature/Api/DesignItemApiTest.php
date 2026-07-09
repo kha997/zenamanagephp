@@ -374,16 +374,19 @@ class DesignItemApiTest extends TestCase
     {
         $viewOnly = $this->createTenantUser($this->tenantA, [], ['viewer'], ['design-item.view']);
 
-        $create = $this->postJson($this->route('store'), [
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
             'project_id' => (string) $this->projectA->id,
             'name' => 'RBAC upload target',
-        ], $this->headersFor($this->userA));
-        $itemId = $create->json('data.id');
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
 
         \Illuminate\Support\Facades\Storage::fake('local');
         $file = \Illuminate\Http\UploadedFile::fake()->create('blocked.pdf', 10, 'application/pdf');
 
-        $response = $this->post($this->route('documents.store', ['id' => $itemId]), [
+        $response = $this->post($this->route('documents.store', ['id' => $item->id]), [
             'file' => $file,
         ], $this->headersFor($viewOnly));
 

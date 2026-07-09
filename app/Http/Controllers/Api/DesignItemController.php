@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\DesignItem;
+use App\Models\Document;
+use App\Models\EventRecord;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -215,5 +217,102 @@ class DesignItemController extends BaseApiController
         $item->save();
 
         return $this->zenaSuccessResponse($this->serialize($item->fresh() ?? $item), 'Design item updated successfully');
+    }
+
+    public function updateStatus(Request $request, string $id): JsonResponse
+    {
+        if (!Auth::check()) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $item = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$item instanceof DesignItem) {
+            return $this->notFound('Design item not found');
+        }
+
+        $this->authorize('update', $item);
+
+        $validator = Validator::make($request->all(), [
+            'review_status' => ['required', Rule::in(DesignItem::VALID_STATUSES)],
+            'client_feedback_notes' => ['nullable', 'string', 'max:2000'],
+            'approval_evidence' => ['nullable', Rule::in(DesignItem::VALID_APPROVAL_EVIDENCE)],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        $from = (string) $item->review_status;
+        $to = (string) $request->input('review_status');
+
+        if (!DesignItem::canTransition($from, $to)) {
+            return $this->validationError([
+                'review_status' => ["Cannot transition from {$from} to {$to}."],
+            ]);
+        }
+
+        if ($to === DesignItem::STATUS_REVISION_REQUESTED && !$request->filled('client_feedback_notes')) {
+            return $this->validationError([
+                'client_feedback_notes' => ['Required when requesting a revision.'],
+            ]);
+        }
+
+        if ($to === DesignItem::STATUS_SENT_TO_CLIENT) {
+            if (!$item->due_to_client_at) {
+                return $this->validationError([
+                    'due_to_client_at' => ['Must be set before sending to client.'],
+                ]);
+            }
+
+            $hasAttachment = Document::query()
+                ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
+                ->exists();
+
+            if (!$hasAttachment) {
+                return $this->validationError([
+                    'review_status' => ['At least one attached document is required before sending to client.'],
+                ]);
+            }
+        }
+
+        if ($to === DesignItem::STATUS_APPROVED && !$request->filled('approval_evidence')) {
+            return $this->validationError([
+                'approval_evidence' => ['Required when approving — record how the client confirmed (phone/email/zalo/client_portal).'],
+            ]);
+        }
+
+        $item->review_status = $to;
+
+        if ($to === DesignItem::STATUS_REVISION_REQUESTED) {
+            $item->client_feedback_notes = (string) $request->input('client_feedback_notes');
+        }
+
+        if ($to === DesignItem::STATUS_APPROVED) {
+            $item->approval_evidence = (string) $request->input('approval_evidence');
+        }
+
+        $item->save();
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'project_id' => (string) $item->project_id,
+            'aggregate_type' => 'design_item',
+            'aggregate_id' => (string) $item->id,
+            'event_key' => 'design_item.status_changed',
+            'actor_user_id' => (string) Auth::id(),
+            'payload' => ['from' => $from, 'to' => $to],
+            'occurred_at' => now(),
+        ]);
+
+        return $this->zenaSuccessResponse(
+            $this->serialize($item->fresh() ?? $item),
+            'Design item status updated successfully'
+        );
     }
 }

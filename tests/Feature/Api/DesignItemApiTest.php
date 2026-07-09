@@ -173,6 +173,173 @@ class DesignItemApiTest extends TestCase
         $this->assertSame(DesignItem::STATUS_DRAFT, (string) $item->review_status);
     }
 
+    public function test_full_status_loop_including_late_revision_after_approval(): void
+    {
+        $create = $this->postJson($this->route('store'), [
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Full loop item',
+        ], $this->headersFor($this->userA));
+        $itemId = $create->json('data.id');
+
+        $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_INTERNAL_REVIEW,
+        ], $this->headersFor($this->userA))->assertStatus(200);
+
+        // sent_to_client requires due_to_client_at + an attached document first — set the date via update,
+        // attach a document via a direct factory-less DB write (upload endpoint is tested in Task 6).
+        DesignItem::query()->whereKey($itemId)->update(['due_to_client_at' => now()->addDays(3)->toDateString()]);
+        \App\Models\Document::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'uploaded_by' => (string) $this->userA->id,
+            'name' => 'concept.pdf',
+            'original_name' => 'concept.pdf',
+            'file_path' => 'design-items/test/concept.pdf',
+            'file_type' => 'pdf',
+            'mime_type' => 'application/pdf',
+            'file_size' => 100,
+            'file_hash' => 'test-hash',
+            'linked_entity_type' => \App\Models\Document::ENTITY_TYPE_DESIGN_ITEM,
+            'linked_entity_id' => (string) $itemId,
+        ]);
+
+        $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_SENT_TO_CLIENT,
+        ], $this->headersFor($this->userA))->assertStatus(200);
+
+        $revision = $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_REVISION_REQUESTED,
+            'client_feedback_notes' => 'Doi mau tuong ngoai that',
+        ], $this->headersFor($this->userA));
+        $revision->assertStatus(200)->assertJsonPath('data.client_feedback_notes', 'Doi mau tuong ngoai that');
+
+        $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_INTERNAL_REVIEW,
+        ], $this->headersFor($this->userA))->assertStatus(200);
+
+        $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_SENT_TO_CLIENT,
+        ], $this->headersFor($this->userA))->assertStatus(200);
+
+        $approve = $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_APPROVED,
+            'approval_evidence' => 'zalo',
+        ], $this->headersFor($this->userA));
+        $approve->assertStatus(200)->assertJsonPath('data.approval_evidence', 'zalo');
+
+        // Late change request after approval — must be allowed, not a dead end.
+        $lateRevision = $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_REVISION_REQUESTED,
+            'client_feedback_notes' => 'Khach doi lai sau khi da duyet',
+        ], $this->headersFor($this->userA));
+        $lateRevision->assertStatus(200);
+
+        $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_INTERNAL_REVIEW,
+        ], $this->headersFor($this->userA))->assertStatus(200);
+        $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_SENT_TO_CLIENT,
+        ], $this->headersFor($this->userA))->assertStatus(200);
+        $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_APPROVED,
+            'approval_evidence' => 'email',
+        ], $this->headersFor($this->userA))->assertStatus(200);
+
+        $final = $this->postJson($this->route('status', ['id' => $itemId]), [
+            'review_status' => DesignItem::STATUS_FINAL,
+        ], $this->headersFor($this->userA));
+        $final->assertStatus(200)->assertJsonPath('data.review_status', DesignItem::STATUS_FINAL);
+
+        $events = \App\Models\EventRecord::query()
+            ->where('aggregate_type', 'design_item')
+            ->where('aggregate_id', $itemId)
+            ->orderBy('occurred_at')
+            ->get();
+
+        $this->assertGreaterThanOrEqual(9, $events->count(), 'every status change must produce an EventRecord');
+        $this->assertSame(DesignItem::STATUS_DRAFT, $events->first()->payload['from']);
+    }
+
+    public function test_invalid_transition_is_rejected(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Invalid transition target',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_DRAFT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+
+        $response = $this->postJson($this->route('status', ['id' => $item->id]), [
+            'review_status' => DesignItem::STATUS_APPROVED,
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(422);
+        $item->refresh();
+        $this->assertSame(DesignItem::STATUS_DRAFT, (string) $item->review_status);
+    }
+
+    public function test_sent_to_client_requires_due_date_and_attachment(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'Missing prerequisites',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_INTERNAL_REVIEW,
+            'created_by' => (string) $this->userA->id,
+        ]);
+
+        // No due_to_client_at, no attachment yet.
+        $this->postJson($this->route('status', ['id' => $item->id]), [
+            'review_status' => DesignItem::STATUS_SENT_TO_CLIENT,
+        ], $this->headersFor($this->userA))->assertStatus(422);
+
+        $item->update(['due_to_client_at' => now()->addDay()->toDateString()]);
+
+        // Due date set, but still no attachment.
+        $this->postJson($this->route('status', ['id' => $item->id]), [
+            'review_status' => DesignItem::STATUS_SENT_TO_CLIENT,
+        ], $this->headersFor($this->userA))->assertStatus(422);
+    }
+
+    public function test_revision_requested_requires_feedback_notes(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'No feedback provided',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_SENT_TO_CLIENT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+
+        $response = $this->postJson($this->route('status', ['id' => $item->id]), [
+            'review_status' => DesignItem::STATUS_REVISION_REQUESTED,
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(422);
+    }
+
+    public function test_approved_requires_evidence(): void
+    {
+        $item = DesignItem::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'project_id' => (string) $this->projectA->id,
+            'name' => 'No evidence provided',
+            'item_type' => DesignItem::TYPE_OTHER,
+            'review_status' => DesignItem::STATUS_SENT_TO_CLIENT,
+            'created_by' => (string) $this->userA->id,
+        ]);
+
+        $response = $this->postJson($this->route('status', ['id' => $item->id]), [
+            'review_status' => DesignItem::STATUS_APPROVED,
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(422);
+    }
+
     private function route(string $name, array $parameters = []): string
     {
         return route('api.zena.design-items.' . $name, $parameters, false);

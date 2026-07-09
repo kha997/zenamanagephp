@@ -20,6 +20,8 @@ use Src\RBAC\Middleware\RBACMiddleware;
  */
 class ProjectController extends Controller // Thêm extends Controller
 {
+    use \App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
+
     // Xóa constructor middleware
     // public function __construct()
     // {
@@ -56,6 +58,10 @@ class ProjectController extends Controller // Thêm extends Controller
             'currentRoute' => 'projects',
             'user' => $user,
             'tenant' => $user?->tenant,
+            'users' => User::query()
+                ->where('tenant_id', $user?->tenant_id)
+                ->orderBy('name')
+                ->get(['id', 'name']),
         ]);
     }
 
@@ -81,40 +87,39 @@ class ProjectController extends Controller // Thêm extends Controller
         ]);
     }
 
-    /**
-     * Tạo project mới
-     *
-     * @param StoreProjectRequest $request
-     * @return JsonResponse
-     */
-    public function store(StoreProjectRequest $request): JsonResponse
-    {
+    public function store(
+        Request $request,
+        \App\Http\Controllers\Api\ProjectController $apiController
+    ): \Illuminate\Http\RedirectResponse {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+            'status' => ['nullable', 'string'],
+            'priority' => ['nullable', 'string'],
+            'budget_planned' => ['nullable', 'numeric', 'min:0'],
+            'pm_id' => ['nullable', 'string'],
+            'client_id' => ['nullable', 'string'],
+        ]);
+
         try {
-            $projectData = $request->validated();
-            $projectData['tenant_id'] = $request->user('api')->tenant_id ?? 1; // Thêm 'api' guard
-            
-            // Tạo project từ template nếu có
-            if (isset($projectData['work_template_id'])) {
-                $templateId = $projectData['work_template_id'];
-                unset($projectData['work_template_id']);
-                
-                $project = Project::createFromTemplate($templateId, $projectData);
-            } else {
-                $project = Project::create($projectData);
-            }
-            
-            $project->load(['rootComponents', 'tasks']);
+            $apiRequest = \App\Http\Requests\ProjectFormRequest::createFrom(
+                $this->buildApiRequest($request, array_filter($validated, fn ($value) => $value !== null))
+            );
+            $apiRequest->setContainer(app())->setRedirector(app('redirect'));
+            $apiRequest->validateResolved();
 
-            // Dispatch event
-            event(new \Src\CoreProject\Events\ProjectCreated($project));
-
-            return JSendResponse::success([
-                'project' => new ProjectResource($project),
-                'message' => 'Dự án đã được tạo thành công.'
-            ], 201);
-        } catch (\Exception $e) {
-            return JSendResponse::error('Không thể tạo dự án: ' . $e->getMessage(), 500);
+            $response = $apiController->store($apiRequest);
+        } catch (\Illuminate\Auth\Access\AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return back()->withErrors($exception->errors())->withInput();
+        } catch (\Throwable) {
+            return back()->withInput()->with('error', 'Không thể xử lý yêu cầu.');
         }
+
+        return $this->handleMutationResponse($response, route('app.projects'), 'Đã tạo dự án');
     }
 
     /**
@@ -145,41 +150,44 @@ class ProjectController extends Controller // Thêm extends Controller
         }
     }
 
-    /**
-     * Cập nhật thông tin project
-     *
-     * @param UpdateProjectRequest $request
-     * @param int $projectId
-     * @return JsonResponse
-     */
-    public function update(UpdateProjectRequest $request, string $projectId): JsonResponse // Đổi từ int thành string
-    {
+    public function update(
+        Request $request,
+        string $projectId,
+        \App\Http\Controllers\Api\ProjectController $apiController
+    ): \Illuminate\Http\RedirectResponse {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['required', 'date', 'after:start_date'],
+            'status' => ['nullable', 'string'],
+            'priority' => ['nullable', 'string'],
+            'budget_planned' => ['nullable', 'numeric', 'min:0'],
+            'pm_id' => ['nullable', 'string'],
+            'client_id' => ['nullable', 'string'],
+        ]);
+
         try {
-            $project = Project::findOrFail($projectId);
-            $oldData = $project->toArray();
-            
-            $project->update($request->validated());
-            $project->load(['rootComponents', 'tasks']);
+            $apiRequest = \App\Http\Requests\ProjectFormRequest::createFrom(
+                $this->buildApiRequest($request, array_filter($validated, fn ($value) => $value !== null))
+            );
+            $apiRequest->setContainer(app())->setRedirector(app('redirect'));
+            $apiRequest->validateResolved();
 
-            // Dispatch event nếu có thay đổi về progress hoặc cost
-            $changedFields = array_keys($request->validated());
-            if (array_intersect($changedFields, ['progress', 'actual_cost', 'status'])) {
-                event(new \Src\CoreProject\Events\ProjectUpdated(
-                    $project,
-                    $oldData,
-                    $changedFields
-                ));
-            }
-
-            return JSendResponse::success([
-                'project' => new ProjectResource($project),
-                'message' => 'Dự án đã được cập nhật thành công.'
-            ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return JSendResponse::error('Dự án không tồn tại.', 404);
-        } catch (\Exception $e) {
-            return JSendResponse::error('Không thể cập nhật dự án: ' . $e->getMessage(), 500);
+            $response = $apiController->update($apiRequest, $projectId);
+        } catch (\Illuminate\Auth\Access\AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return back()->withErrors($exception->errors())->withInput();
+        } catch (\Throwable) {
+            return back()->withInput()->with('error', 'Không thể xử lý yêu cầu.');
         }
+
+        return $this->handleMutationResponse(
+            $response,
+            '/app/projects/' . $projectId,
+            'Đã cập nhật dự án'
+        );
     }
 
     /**

@@ -33,7 +33,7 @@ class DocumentController extends Controller
         $tenantId = (string) Auth::user()?->tenant_id;
 
         $query = Document::query()
-            ->with(['project:id,tenant_id,name,code', 'uploadedBy:id,name'])
+            ->with(['project:id,tenant_id,name,code', 'uploader:id,name'])
             ->whereHas('project', fn ($projectQuery) => $projectQuery->where('tenant_id', $tenantId));
 
         if ($request->filled('project_id')) {
@@ -78,45 +78,46 @@ class DocumentController extends Controller
     /**
      * Store a newly uploaded document.
      */
-    public function store(Request $request): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        \App\Http\Controllers\Api\SimpleDocumentController $apiController
+    ): RedirectResponse {
         $request->validate([
-            'file' => 'required|file|max:10240', // 10MB max
-            'project_id' => 'nullable|exists:projects,id',
-            'description' => 'nullable|string|max:1000',
+            'title' => ['required', 'string', 'max:255'],
+            'project_id' => ['required', 'string'],
+            'document_type' => ['required', 'string', 'max:100'],
+            'file' => ['required', 'file', 'max:10240'],
         ]);
 
+        // Multipart: dựng request thủ công để giữ uploaded files
+        $apiRequest = Request::create(
+            $request->fullUrl(),
+            'POST',
+            $request->only(['title', 'project_id', 'document_type', 'description']),
+            $request->cookies->all(),
+            $request->files->all(),
+            $request->server->all()
+        );
+        $apiRequest->headers->replace($request->headers->all());
+        $apiRequest->setLaravelSession($request->session());
+        $apiRequest->setUserResolver(static fn () => $request->user());
+
         try {
-            $file = $request->file('file');
-            $projectId = $request->input('project_id');
-            $description = $request->input('description');
-            
-            $metadata = [
-                'description' => $description,
-                'uploaded_at' => now()->toISOString(),
-            ];
-            
-            if ($projectId) {
-                $metadata['project_id'] = $projectId;
+            $response = $apiController->store($apiRequest);
+
+            $status = $response->getStatusCode();
+            if ($status >= 200 && $status < 300) {
+                return redirect('/app/documents')->with('success', 'Đã tải tài liệu lên');
             }
-            
-            $result = $this->uploadService->uploadFile(
-                $file,
-                Auth::id(),
-                'default', // tenant_id
-                $metadata
-            );
-            
-            if ($result['success']) {
-                return redirect()
-                    ->route('documents.index')
-                    ->with('success', 'Document đã được upload thành công!');
-            } else {
-                return redirect()
-                    ->back()
-                    ->withInput()
-                    ->withErrors(['error' => $result['message']]);
-            }
+
+            $payload = $response->getData(true);
+
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', (string) ($payload['message'] ?? 'Không thể tải tài liệu lên.'));
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return redirect()->back()->withErrors($exception->errors())->withInput();
         } catch (\Exception $e) {
             return redirect()
                 ->back()
@@ -131,7 +132,9 @@ class DocumentController extends Controller
     public function show(string $documentId): View
     {
         try {
-            $document = Document::with(['project', 'uploadedBy'])->findOrFail($documentId);
+            $document = Document::with(['project', 'uploader'])
+                ->whereHas('project', fn ($projectQuery) => $projectQuery->where('tenant_id', (string) Auth::user()?->tenant_id))
+                ->findOrFail($documentId);
             
             return view('documents.show', compact('document'));
         } catch (\Exception $e) {
@@ -173,7 +176,7 @@ class DocumentController extends Controller
         try {
             $tenantId = (string) Auth::user()?->tenant_id;
 
-            $query = Document::with(['project', 'uploadedBy'])
+            $query = Document::with(['project', 'uploader'])
                 ->where('is_active', true)
                 ->whereHas('project', fn ($projectQuery) => $projectQuery->where('tenant_id', $tenantId));
 

@@ -117,7 +117,7 @@
                         </td>
                         <td>
                             <select form="task-edit-{{ $task->id }}" name="status" class="operator-select">
-                                @foreach (['todo' => 'Chưa làm', 'pending' => 'Chờ', 'in_progress' => 'Đang làm', 'done' => 'Hoàn thành'] as $value => $label)
+                                @foreach (['pending' => 'Chờ xử lý', 'in_progress' => 'Đang làm', 'completed' => 'Hoàn thành', 'on_hold' => 'Tạm dừng', 'cancelled' => 'Hủy'] as $value => $label)
                                     <option value="{{ $value }}" @selected($task->status === $value)>{{ $label }}</option>
                                 @endforeach
                             </select>

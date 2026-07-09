@@ -517,7 +517,8 @@ class TaskController extends BaseApiController
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'sometimes|required|in:todo,in_progress,done,pending',
+            // Chấp nhận cả bộ canonical (VALID_STATUSES) lẫn alias cũ todo/done
+            'status' => ['sometimes', 'required', Rule::in(array_unique(array_merge(Task::VALID_STATUSES, ['todo', 'done'])))],
             'priority' => 'sometimes|required|in:low,medium,high,urgent',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',

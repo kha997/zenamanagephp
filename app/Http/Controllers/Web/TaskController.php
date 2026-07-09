@@ -20,6 +20,8 @@ use Src\CoreProject\Models\Task;
  */
 class TaskController extends Controller
 {
+    use \App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
+
     /**
      * TaskController constructor.
      *
@@ -86,9 +88,12 @@ class TaskController extends Controller
     public function create(Request $request): View
     {
         try {
-            $projects = Project::select('id', 'name')->get();
+            $projects = Project::query()
+                ->where('tenant_id', (string) \Auth::user()?->tenant_id)
+                ->select('id', 'name')
+                ->get();
             $projectId = $request->get('project_id');
-            
+
             return view('tasks.create', compact('projects', 'projectId'));
         } catch (\Exception $e) {
             return view('tasks.create', [
@@ -102,21 +107,31 @@ class TaskController extends Controller
     /**
      * Store a newly created task.
      */
-    public function store(TaskFormRequest $request): RedirectResponse
-    {
+    public function store(
+        Request $request,
+        \App\Http\Controllers\Api\TaskController $apiController
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'project_id' => ['required', 'string'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'status' => ['nullable', 'string'],
+            'priority' => ['nullable', 'string'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+        ]);
+
         try {
-            $taskData = $request->validated();
-            $task = $this->taskService->createTask($taskData);
-            
-            return redirect()
-                ->route('tasks.index')
-                ->with('success', 'Task đã được tạo thành công!');
-        } catch (\Exception $e) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->withErrors(['error' => 'Không thể tạo task: ' . $e->getMessage()]);
+            $response = $apiController->store(
+                $this->buildApiRequest($request, array_filter($validated, fn ($value) => $value !== null))
+            );
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return redirect()->back()->withErrors($exception->errors())->withInput();
+        } catch (\Throwable $e) {
+            return redirect()->back()->withInput()->with('error', 'Không thể tạo công việc.');
         }
+
+        return $this->handleMutationResponse($response, route('app.tasks'), 'Đã tạo công việc');
     }
 
     /**
@@ -203,48 +218,33 @@ class TaskController extends Controller
     /**
      * Update the specified task.
      */
-    public function update(TaskFormRequest $request, string $taskId): RedirectResponse
-    {
+    public function update(
+        Request $request,
+        string $taskId,
+        \App\Http\Controllers\Api\TaskController $apiController
+    ): RedirectResponse {
+        $validated = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'status' => ['nullable', 'string'],
+            'priority' => ['nullable', 'string'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date'],
+            'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+        ]);
+
         try {
-            // Debug: Log request data
-            \Log::info('Task Update Request', [
-                'task_id' => $taskId,
-                'request_data' => $request->all()
-            ]);
-            
-            // Use all() instead of validated() to avoid null issues
-            $taskData = $request->all();
-            
-            // Debug: Log task data being passed to service
-            \Log::info('Task data being passed to service', [
-                'task_id' => $taskId,
-                'task_data' => $taskData
-            ]);
-            
-            $task = $this->taskService->updateTask($taskId, $taskData);
-            
-            if (!$task) {
-                \Log::error('Task not found for update', ['task_id' => $taskId]);
-                return redirect()
-                    ->back()
-                    ->withErrors(['error' => 'Task không tồn tại.']);
-            }
-            
-            \Log::info('Task updated successfully', ['task_id' => $taskId]);
-            return redirect()
-                ->route('tasks.index')
-                ->with('success', 'Task đã được cập nhật thành công!');
-        } catch (\Exception $e) {
-            \Log::error('Task update failed', [
-                'task_id' => $taskId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()
-                ->back()
-                ->withInput()
-                ->withErrors(['error' => 'Không thể cập nhật task: ' . $e->getMessage()]);
+            $response = $apiController->update(
+                $this->buildApiRequest($request, array_filter($validated, fn ($value) => $value !== null)),
+                $taskId
+            );
+        } catch (\Illuminate\Validation\ValidationException $exception) {
+            return redirect()->back()->withErrors($exception->errors())->withInput();
+        } catch (\Throwable $e) {
+            return redirect()->back()->withInput()->with('error', 'Không thể cập nhật công việc.');
         }
+
+        return $this->handleMutationResponse($response, '/app/tasks/' . $taskId, 'Đã cập nhật công việc');
     }
 
     /**

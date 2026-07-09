@@ -56,7 +56,7 @@
                         </td>
                         <td class="text-sm text-slate-600">{{ $document->project?->name ?? '—' }}</td>
                         <td><x-ui.status-badge :status="$document->status ?? 'pending'" /></td>
-                        <td class="text-sm text-slate-600">{{ $document->uploadedBy?->name ?? '—' }}</td>
+                        <td class="text-sm text-slate-600">{{ $document->uploader?->name ?? '—' }}</td>
                         <td class="text-sm text-slate-600">{{ optional($document->created_at)->format('d/m/Y H:i') }}</td>
                     </tr>
                 @endforeach

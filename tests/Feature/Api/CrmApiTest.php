@@ -346,6 +346,7 @@ class CrmApiTest extends TestCase
             'https://zena-boq.example/api/external/projects/*' => \Illuminate\Support\Facades\Http::response(['id' => 'proj_1'], 200),
             'https://zena-boq.example/api/external/quotes/latest*' => \Illuminate\Support\Facades\Http::response([
                 'id' => 'quote_1',
+                'revision' => 3,
                 'subtotal' => 100000000,
                 'vatAmount' => 8000000,
                 'total' => 108000000,
@@ -366,6 +367,7 @@ class CrmApiTest extends TestCase
         $opportunity->refresh();
         $this->assertNotNull($opportunity->external_quote_synced_at);
         $this->assertSame('quote_1', $opportunity->external_quote_id);
+        $this->assertSame(3, $opportunity->external_quote_snapshot['revision']);
     }
 
     public function test_sync_degrades_gracefully_when_zena_boq_unreachable(): void

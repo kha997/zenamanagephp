@@ -500,6 +500,7 @@ class OpportunityController extends BaseApiController
         if ($quote !== null) {
             $opportunity->external_quote_id = $quote['id'];
             $opportunity->external_quote_snapshot = [
+                'revision' => $quote['revision'],
                 'subtotal' => $quote['subtotal'],
                 'vat_amount' => $quote['vat_amount'],
                 'total' => $quote['total'],

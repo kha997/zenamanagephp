@@ -1,0 +1,117 @@
+@extends('layouts.operator')
+
+@section('title', $item->name . ' — Công việc thiết kế')
+@section('page_title', 'Chi tiết công việc thiết kế')
+
+@php
+    $statusLabels = [
+        'draft' => 'Nháp', 'internal_review' => 'Đang duyệt nội bộ', 'sent_to_client' => 'Đã gửi khách',
+        'revision_requested' => 'Khách yêu cầu sửa', 'approved' => 'Đã duyệt', 'final' => 'Hoàn tất',
+    ];
+    $evidenceLabels = ['phone' => 'Điện thoại', 'email' => 'Email', 'zalo' => 'Zalo', 'client_portal' => 'Cổng khách hàng'];
+@endphp
+
+@section('content')
+    <x-ui.page-header title="{{ $item->name }}" description="Dự án: {{ $item->project?->name ?? '—' }}">
+        <x-ui.button-link :href="route('operator.design-items.index')" variant="secondary">Bảng công việc</x-ui.button-link>
+    </x-ui.page-header>
+
+    @if ($errors->any())
+        <x-ui.card>
+            <div class="operator-error-list">
+                <ul class="space-y-1 text-sm">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </x-ui.card>
+    @endif
+
+    <x-ui.card title="Thông tin">
+        <div class="operator-form-grid">
+            <x-ui.field-value label="Trạng thái">
+                <x-ui.status-badge :status="$item->review_status" />
+                <span class="ml-1 text-sm text-slate-600">{{ $statusLabels[$item->review_status] ?? '' }}</span>
+            </x-ui.field-value>
+            <x-ui.field-value label="Loại" :value="$item->item_type" />
+            <x-ui.field-value label="Người phụ trách" :value="$item->assignee?->name ?? '—'" />
+            <x-ui.field-value label="Hạn giao khách" :value="optional($item->due_to_client_at)->format('d/m/Y') ?? '—'" />
+            @if ($item->client_feedback_notes)
+                <x-ui.field-value label="Phản hồi khách" :value="$item->client_feedback_notes" />
+            @endif
+            @if ($item->approval_evidence)
+                <x-ui.field-value label="Bằng chứng duyệt" :value="$evidenceLabels[$item->approval_evidence] ?? $item->approval_evidence" />
+            @endif
+        </div>
+    </x-ui.card>
+
+    @unless ($item->review_status === 'final')
+        <x-ui.card title="Chuyển trạng thái">
+            <form method="POST" action="{{ route('operator.design-items.status', $item->id) }}" class="flex flex-wrap items-end gap-3">
+                @csrf
+                <div class="operator-field flex-1 min-w-64">
+                    <label for="review_status">Trạng thái mới</label>
+                    <select id="review_status" name="review_status" class="operator-select">
+                        @foreach ($statusLabels as $value => $label)
+                            <option value="{{ $value }}" @selected($item->review_status === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="operator-field flex-1 min-w-64">
+                    <label for="client_feedback_notes">Phản hồi khách (bắt buộc nếu yêu cầu sửa)</label>
+                    <input id="client_feedback_notes" name="client_feedback_notes" type="text" class="operator-input" value="{{ old('client_feedback_notes') }}">
+                </div>
+                <div class="operator-field flex-1 min-w-64">
+                    <label for="approval_evidence">Bằng chứng duyệt (bắt buộc nếu duyệt)</label>
+                    <select id="approval_evidence" name="approval_evidence" class="operator-select">
+                        <option value="">--</option>
+                        @foreach ($evidenceLabels as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button type="submit" class="operator-button operator-button-primary">Chuyển</button>
+            </form>
+        </x-ui.card>
+    @endunless
+
+    <x-ui.card title="File đính kèm">
+        <form method="POST" action="{{ route('operator.design-items.documents.store', $item->id) }}" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3">
+            @csrf
+            <div class="operator-field flex-1 min-w-64">
+                <label for="file">Chọn file</label>
+                <input id="file" name="file" type="file" class="operator-input" required>
+            </div>
+            <button type="submit" class="operator-button operator-button-primary">Tải lên</button>
+        </form>
+
+        @if ($versions->isEmpty())
+            <p class="mt-3 text-sm text-slate-400">Chưa có file nào.</p>
+        @else
+            <ul class="mt-3 space-y-1">
+                @foreach ($versions as $version)
+                    <li class="text-sm">Version {{ $version->version_number }} — {{ $version->creator?->name ?? '—' }} · {{ optional($version->created_at)->format('d/m/Y H:i') }}</li>
+                @endforeach
+            </ul>
+        @endif
+    </x-ui.card>
+
+    <x-ui.card title="Lịch sử">
+        @if ($events->isEmpty())
+            <p class="text-sm text-slate-500">Chưa có sự kiện.</p>
+        @else
+            <ul class="space-y-2">
+                @foreach ($events as $event)
+                    <li class="text-sm">
+                        <span class="font-medium text-slate-900">{{ $event->event_key }}</span>
+                        <span class="text-slate-500">— {{ $event->actor?->name ?? 'Hệ thống' }} · {{ optional($event->occurred_at)->format('d/m/Y H:i') }}</span>
+                        @if (($event->payload['from'] ?? null) && ($event->payload['to'] ?? null))
+                            <span class="text-slate-500">({{ $statusLabels[$event->payload['from']] ?? $event->payload['from'] }} → {{ $statusLabels[$event->payload['to']] ?? $event->payload['to'] }})</span>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+        @endif
+    </x-ui.card>
+@endsection

@@ -955,6 +955,14 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/receipts/{receipt}', [App\Http\Controllers\Web\ReceiptPageController::class, 'show'])->name('receipts.show');
     Route::post('/receipts/{receipt}/lines', [App\Http\Controllers\Web\ReceiptPageController::class, 'storeLine'])->name('receipts.lines.store');
 
+    // Design Item (design-item kanban — spec zena-ops-roadmap Phase 1)
+    Route::get('/design-items', [App\Http\Controllers\Web\DesignItemPageController::class, 'index'])->middleware('rbac:design-item.view')->name('design-items.index');
+    Route::get('/design-items/create', [App\Http\Controllers\Web\DesignItemPageController::class, 'create'])->middleware('rbac:design-item.manage')->name('design-items.create');
+    Route::post('/design-items', [App\Http\Controllers\Web\DesignItemPageController::class, 'store'])->middleware('rbac:design-item.manage')->name('design-items.store');
+    Route::get('/design-items/{id}', [App\Http\Controllers\Web\DesignItemPageController::class, 'show'])->middleware('rbac:design-item.view')->name('design-items.show');
+    Route::post('/design-items/{id}/status', [App\Http\Controllers\Web\DesignItemPageController::class, 'updateStatus'])->middleware('rbac:design-item.manage')->name('design-items.status');
+    Route::post('/design-items/{id}/documents', [App\Http\Controllers\Web\DesignItemPageController::class, 'uploadDocument'])->middleware('rbac:design-item.manage')->name('design-items.documents.store');
+
     // CRM (lead inbox → account/opportunity → project; spec crm-zena)
     Route::get('/crm', [App\Http\Controllers\Web\CrmPageController::class, 'index'])->middleware('rbac:crm.view')->name('crm.index');
     Route::get('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'leads'])->middleware('rbac:crm.view')->name('crm.leads');

@@ -197,4 +197,97 @@ class OperatorCrmUiTest extends TestCase
         $opportunity->refresh();
         $this->assertNull($opportunity->converted_project_id);
     }
+
+    public function test_boq_link_and_sync_ui_flow_for_authorized_tenant(): void
+    {
+        $this->tenant->update(['name' => 'Z.E.N.A']);
+        config([
+            'zena_boq.integration_tenant_name' => 'Z.E.N.A',
+            'zena_boq.base_url' => 'https://zena-boq.example',
+            'zena_boq.read_api_secret' => 'test-secret',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://zena-boq.example/api/external/projects/*' => \Illuminate\Support\Facades\Http::response(['id' => 'proj_1'], 200),
+            'https://zena-boq.example/api/external/quotes/latest*' => \Illuminate\Support\Facades\Http::response([
+                'id' => 'quote_1', 'subtotal' => 100000000, 'vatAmount' => 8000000, 'total' => 108000000,
+                'status' => 'ISSUED', 'calibration' => 'UNCALIBRATED', 'issuedAt' => '2026-07-10T00:00:00Z',
+            ], 200),
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang tich hop BOQ',
+            'status' => \App\Models\Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = \App\Models\Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi tich hop BOQ',
+            'service_category' => 'architecture',
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk();
+
+        $link = $this->actingAs($this->user)
+            ->post(route('operator.crm.opportunities.boq-link', $opportunity->id), [
+                'external_boq_project_code' => 'PRJ-001',
+            ], $headers);
+        $link->assertRedirect(route('operator.crm.opportunities.show', $opportunity->id));
+
+        $opportunity->refresh();
+        $this->assertSame('PRJ-001', $opportunity->external_boq_project_code);
+
+        $sync = $this->actingAs($this->user)
+            ->post(route('operator.crm.opportunities.boq-sync', $opportunity->id), [], $headers);
+        $sync->assertRedirect(route('operator.crm.opportunities.show', $opportunity->id));
+
+        $opportunity->refresh();
+        $this->assertSame(108000000.0, (float) $opportunity->external_quote_snapshot['total']);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertSee('PRJ-001');
+    }
+
+    public function test_boq_card_is_hidden_for_non_authorized_tenant(): void
+    {
+        // Deliberately no Z.E.N.A tenant configured to match $this->tenant.
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang khong tich hop',
+            'status' => \App\Models\Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = \App\Models\Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi khong co BOQ',
+            'service_category' => 'architecture',
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertDontSee('external_boq_project_code')
+            ->assertDontSee('Đồng bộ báo giá');
+    }
 }

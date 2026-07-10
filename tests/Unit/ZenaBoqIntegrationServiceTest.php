@@ -107,4 +107,48 @@ class ZenaBoqIntegrationServiceTest extends TestCase
 
         $this->assertNull((new ZenaBoqIntegrationService())->fetchLatestQuote('PRJ-001'));
     }
+
+    public function test_fetch_latest_quote_returns_null_on_malformed_200_body(): void
+    {
+        config(['zena_boq.base_url' => 'https://zena-boq.example', 'zena_boq.read_api_secret' => 'test-secret']);
+
+        Http::fake([
+            'https://zena-boq.example/api/external/projects/*' => Http::response(['id' => 'proj_1'], 200),
+            'https://zena-boq.example/api/external/quotes/latest*' => Http::response(['id' => '', 'total' => null], 200),
+        ]);
+
+        $this->assertNull((new ZenaBoqIntegrationService())->fetchLatestQuote('PRJ-001'));
+    }
+
+    public function test_fetch_latest_quote_returns_null_when_total_key_entirely_absent(): void
+    {
+        config(['zena_boq.base_url' => 'https://zena-boq.example', 'zena_boq.read_api_secret' => 'test-secret']);
+
+        Http::fake([
+            'https://zena-boq.example/api/external/projects/*' => Http::response(['id' => 'proj_1'], 200),
+            'https://zena-boq.example/api/external/quotes/latest*' => Http::response(['id' => 'quote_1'], 200),
+        ]);
+
+        $this->assertNull((new ZenaBoqIntegrationService())->fetchLatestQuote('PRJ-001'));
+    }
+
+    public function test_fetch_latest_quote_accepts_zero_total_with_valid_id(): void
+    {
+        config(['zena_boq.base_url' => 'https://zena-boq.example', 'zena_boq.read_api_secret' => 'test-secret']);
+
+        Http::fake([
+            'https://zena-boq.example/api/external/projects/*' => Http::response(['id' => 'proj_1'], 200),
+            'https://zena-boq.example/api/external/quotes/latest*' => Http::response([
+                'id' => 'quote_1',
+                'total' => 0,
+                'status' => 'DRAFT',
+            ], 200),
+        ]);
+
+        $result = (new ZenaBoqIntegrationService())->fetchLatestQuote('PRJ-001');
+
+        $this->assertNotNull($result);
+        $this->assertSame('quote_1', $result['id']);
+        $this->assertSame(0.0, $result['total']);
+    }
 }

@@ -208,6 +208,23 @@ class CrmApiTest extends TestCase
         $stage->assertStatus(200)->assertJsonPath('data.pipeline_stage', Opportunity::STAGE_QUALIFIED);
     }
 
+    public function test_generic_update_cannot_overwrite_external_boq_fields(): void
+    {
+        $opportunity = $this->createOpportunity(['external_boq_project_code' => 'PRJ-EXISTING']);
+
+        $response = $this->putJson($this->route('opportunities.update', ['id' => $opportunity->id]), [
+            'opportunity_name' => 'Biệt thự cập nhật',
+            'external_boq_project_code' => 'PRJ-HACKED',
+            'external_quote_snapshot' => ['total' => 999999],
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(200)->assertJsonPath('data.opportunity_name', 'Biệt thự cập nhật');
+
+        $opportunity->refresh();
+        $this->assertSame('PRJ-EXISTING', $opportunity->external_boq_project_code);
+        $this->assertNull($opportunity->external_quote_snapshot);
+    }
+
     public function test_lost_stage_requires_reason(): void
     {
         $opportunity = $this->createOpportunity();
@@ -366,8 +383,10 @@ class CrmApiTest extends TestCase
 
         $opportunity = $this->createOpportunity([
             'external_boq_project_code' => 'PRJ-001',
+            'external_quote_id' => 'quote_old',
             'external_quote_snapshot' => ['total' => 999, 'status' => 'ISSUED'],
         ]);
+        $previousSyncedAt = $opportunity->external_quote_synced_at;
 
         $response = $this->postJson($this->route('opportunities.boq-sync', ['id' => $opportunity->id]), [], $this->headersFor($this->userA));
 
@@ -375,6 +394,39 @@ class CrmApiTest extends TestCase
         $response->assertStatus(200);
         $opportunity->refresh();
         $this->assertSame(999.0, (float) $opportunity->external_quote_snapshot['total']);
+        $this->assertSame('quote_old', $opportunity->external_quote_id);
+        $this->assertEquals($previousSyncedAt, $opportunity->external_quote_synced_at);
+    }
+
+    public function test_sync_degrades_gracefully_on_malformed_200_response(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config([
+            'zena_boq.integration_tenant_name' => 'Z.E.N.A',
+            'zena_boq.base_url' => 'https://zena-boq.example',
+            'zena_boq.read_api_secret' => 'test-secret',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://zena-boq.example/api/external/projects/*' => \Illuminate\Support\Facades\Http::response(['id' => 'proj_1'], 200),
+            'https://zena-boq.example/api/external/quotes/latest*' => \Illuminate\Support\Facades\Http::response(['id' => '', 'total' => null], 200),
+        ]);
+
+        $opportunity = $this->createOpportunity([
+            'external_boq_project_code' => 'PRJ-001',
+            'external_quote_id' => 'quote_old',
+            'external_quote_snapshot' => ['total' => 999, 'status' => 'ISSUED'],
+        ]);
+        $previousSyncedAt = $opportunity->external_quote_synced_at;
+
+        $response = $this->postJson($this->route('opportunities.boq-sync', ['id' => $opportunity->id]), [], $this->headersFor($this->userA));
+
+        // Must not 500; must not wipe out the existing cached snapshot with placeholder garbage.
+        $response->assertStatus(200);
+        $opportunity->refresh();
+        $this->assertSame(999.0, (float) $opportunity->external_quote_snapshot['total']);
+        $this->assertSame('quote_old', $opportunity->external_quote_id);
+        $this->assertEquals($previousSyncedAt, $opportunity->external_quote_synced_at);
     }
 
     public function test_sync_requires_project_code_to_be_linked_first(): void

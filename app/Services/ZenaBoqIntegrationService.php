@@ -77,6 +77,14 @@ class ZenaBoqIntegrationService
 
             $quote = $quoteResponse->json();
 
+            if (!is_array($quote) || empty($quote['id'] ?? null) || !array_key_exists('total', $quote)) {
+                Log::warning('zena_boq.quote_fetch_malformed', [
+                    'project_code' => $projectCode,
+                ]);
+
+                return null;
+            }
+
             return [
                 'id' => (string) ($quote['id'] ?? ''),
                 'subtotal' => (float) ($quote['subtotal'] ?? 0),

@@ -544,7 +544,7 @@ Append to `tests/Feature/Api/CrmApiTest.php` (inside the class):
 ```php
     public function test_can_link_opportunity_to_boq_project_when_tenant_authorized(): void
     {
-        \App\Models\Tenant::factory()->create(['name' => 'Z.E.N.A', 'id' => (string) $this->tenantA->id]);
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
         config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
 
         $opportunity = $this->createOpportunity();
@@ -580,7 +580,7 @@ Append to `tests/Feature/Api/CrmApiTest.php` (inside the class):
 
     public function test_link_fails_closed_when_config_unset(): void
     {
-        \App\Models\Tenant::factory()->create(['name' => 'Z.E.N.A', 'id' => (string) $this->tenantA->id]);
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
         config(['zena_boq.integration_tenant_name' => null]);
 
         $opportunity = $this->createOpportunity();
@@ -757,7 +757,7 @@ Append to `tests/Feature/Api/CrmApiTest.php`:
 ```php
     public function test_sync_populates_snapshot_on_success(): void
     {
-        \App\Models\Tenant::factory()->create(['name' => 'Z.E.N.A', 'id' => (string) $this->tenantA->id]);
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
         config([
             'zena_boq.integration_tenant_name' => 'Z.E.N.A',
             'zena_boq.base_url' => 'https://zena-boq.example',
@@ -792,7 +792,7 @@ Append to `tests/Feature/Api/CrmApiTest.php`:
 
     public function test_sync_degrades_gracefully_when_zena_boq_unreachable(): void
     {
-        \App\Models\Tenant::factory()->create(['name' => 'Z.E.N.A', 'id' => (string) $this->tenantA->id]);
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
         config([
             'zena_boq.integration_tenant_name' => 'Z.E.N.A',
             'zena_boq.base_url' => 'https://zena-boq.example',
@@ -818,7 +818,7 @@ Append to `tests/Feature/Api/CrmApiTest.php`:
 
     public function test_sync_requires_project_code_to_be_linked_first(): void
     {
-        \App\Models\Tenant::factory()->create(['name' => 'Z.E.N.A', 'id' => (string) $this->tenantA->id]);
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
         config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
 
         $opportunity = $this->createOpportunity();
@@ -958,7 +958,7 @@ Append to `tests/Feature/Zena/OperatorCrmUiTest.php` (inside the class):
 ```php
     public function test_boq_link_and_sync_ui_flow_for_authorized_tenant(): void
     {
-        \App\Models\Tenant::factory()->create(['name' => 'Z.E.N.A', 'id' => (string) $this->tenant->id]);
+        $this->tenant->update(['name' => 'Z.E.N.A']);
         config([
             'zena_boq.integration_tenant_name' => 'Z.E.N.A',
             'zena_boq.base_url' => 'https://zena-boq.example',

@@ -465,4 +465,63 @@ class OpportunityController extends BaseApiController
             'Opportunity linked to zena-boq-core project successfully'
         );
     }
+
+    public function syncExternalQuote(Request $request, string $id, ZenaBoqIntegrationService $boqService): JsonResponse
+    {
+        if (!Auth::check()) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        if (!$boqService->isTenantAuthorized($tenantId)) {
+            return $this->forbidden('This tenant is not authorized for the zena-boq-core integration');
+        }
+
+        $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$opportunity instanceof Opportunity) {
+            return $this->notFound('Opportunity not found');
+        }
+
+        $this->authorize('update', $opportunity);
+
+        if (!$opportunity->external_boq_project_code) {
+            return $this->validationError([
+                'external_boq_project_code' => ['Link this opportunity to a zena-boq-core project before syncing.'],
+            ]);
+        }
+
+        $quote = $boqService->fetchLatestQuote((string) $opportunity->external_boq_project_code);
+
+        if ($quote !== null) {
+            $opportunity->external_quote_id = $quote['id'];
+            $opportunity->external_quote_snapshot = [
+                'subtotal' => $quote['subtotal'],
+                'vat_amount' => $quote['vat_amount'],
+                'total' => $quote['total'],
+                'status' => $quote['status'],
+                'calibration' => $quote['calibration'],
+                'issued_at' => $quote['issued_at'],
+            ];
+            $opportunity->external_quote_synced_at = now();
+            $opportunity->save();
+
+            $this->recordEvent($opportunity, 'crm.opportunity.boq_synced', [
+                'external_quote_id' => $quote['id'],
+                'total' => $quote['total'],
+            ]);
+        }
+        // $quote === null: zena-boq-core unreachable or returned an error. Degrade gracefully —
+        // keep whatever was already cached and do not overwrite external_quote_synced_at, so the
+        // UI can keep showing "last synced at X" instead of silently going blank. Never a 500 here.
+
+        return $this->zenaSuccessResponse(
+            $this->serialize($opportunity->fresh() ?? $opportunity),
+            $quote !== null ? 'Quote synced successfully' : 'Could not reach zena-boq-core — showing last synced data'
+        );
+    }
 }

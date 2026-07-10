@@ -316,6 +316,90 @@ class CrmApiTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_sync_populates_snapshot_on_success(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config([
+            'zena_boq.integration_tenant_name' => 'Z.E.N.A',
+            'zena_boq.base_url' => 'https://zena-boq.example',
+            'zena_boq.read_api_secret' => 'test-secret',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://zena-boq.example/api/external/projects/*' => \Illuminate\Support\Facades\Http::response(['id' => 'proj_1'], 200),
+            'https://zena-boq.example/api/external/quotes/latest*' => \Illuminate\Support\Facades\Http::response([
+                'id' => 'quote_1',
+                'subtotal' => 100000000,
+                'vatAmount' => 8000000,
+                'total' => 108000000,
+                'status' => 'ISSUED',
+                'calibration' => 'UNCALIBRATED',
+                'issuedAt' => '2026-07-10T00:00:00Z',
+            ], 200),
+        ]);
+
+        $opportunity = $this->createOpportunity(['external_boq_project_code' => 'PRJ-001']);
+
+        $response = $this->postJson($this->route('opportunities.boq-sync', ['id' => $opportunity->id]), [], $this->headersFor($this->userA));
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.external_quote_snapshot.total', 108000000)
+            ->assertJsonPath('data.external_quote_snapshot.calibration', 'UNCALIBRATED');
+
+        $opportunity->refresh();
+        $this->assertNotNull($opportunity->external_quote_synced_at);
+        $this->assertSame('quote_1', $opportunity->external_quote_id);
+    }
+
+    public function test_sync_degrades_gracefully_when_zena_boq_unreachable(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config([
+            'zena_boq.integration_tenant_name' => 'Z.E.N.A',
+            'zena_boq.base_url' => 'https://zena-boq.example',
+            'zena_boq.read_api_secret' => 'test-secret',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://zena-boq.example/*' => \Illuminate\Support\Facades\Http::response(null, 500),
+        ]);
+
+        $opportunity = $this->createOpportunity([
+            'external_boq_project_code' => 'PRJ-001',
+            'external_quote_snapshot' => ['total' => 999, 'status' => 'ISSUED'],
+        ]);
+
+        $response = $this->postJson($this->route('opportunities.boq-sync', ['id' => $opportunity->id]), [], $this->headersFor($this->userA));
+
+        // Must not 500; must not wipe out the existing cached snapshot.
+        $response->assertStatus(200);
+        $opportunity->refresh();
+        $this->assertSame(999.0, (float) $opportunity->external_quote_snapshot['total']);
+    }
+
+    public function test_sync_requires_project_code_to_be_linked_first(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $opportunity = $this->createOpportunity();
+
+        $response = $this->postJson($this->route('opportunities.boq-sync', ['id' => $opportunity->id]), [], $this->headersFor($this->userA));
+
+        $response->assertStatus(422);
+    }
+
+    public function test_sync_denied_for_non_authorized_tenant(): void
+    {
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $opportunity = $this->createOpportunity(['external_boq_project_code' => 'PRJ-001']);
+
+        $response = $this->postJson($this->route('opportunities.boq-sync', ['id' => $opportunity->id]), [], $this->headersFor($this->userA));
+
+        $response->assertStatus(403);
+    }
+
     public function test_unauthenticated_request_is_rejected(): void
     {
         $response = $this->getJson($this->route('leads.index'), [

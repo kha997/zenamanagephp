@@ -895,6 +895,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/contracts/create', [App\Http\Controllers\Web\ContractPageController::class, 'create'])->middleware('rbac:contract.create')->name('contracts.create');
     Route::post('/contracts', [App\Http\Controllers\Web\ContractPageController::class, 'store'])->middleware('rbac:contract.create')->name('contracts.store');
     Route::get('/contracts/{id}', [App\Http\Controllers\Web\ContractPageController::class, 'show'])->middleware('rbac:contract.view')->name('contracts.show');
+    Route::get('/contracts/{id}/pdf', [App\Http\Controllers\Web\ContractPageController::class, 'downloadPdf'])->middleware('rbac:contract.view')->name('contracts.pdf');
 
     // Inspections
     Route::get('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'index'])->middleware('rbac:inspection.view')->name('inspections.index');

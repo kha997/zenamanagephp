@@ -8,8 +8,15 @@
         :title="'Hợp đồng ' . $contract->code"
         :description="$contract->title"
     >
+        <x-ui.button-link :href="route('operator.contracts.pdf', $contract->id)" variant="secondary">Tải PDF</x-ui.button-link>
         <x-ui.button-link :href="route('operator.contracts.index')" variant="secondary">Quay lại</x-ui.button-link>
     </x-ui.page-header>
+
+    @if ($hasQuoteDrift)
+        <p class="mb-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+            Báo giá đã đổi kể từ khi tạo hợp đồng — số tiền hợp đồng có thể không còn khớp.
+        </p>
+    @endif
 
     <div class="space-y-6">
         <x-ui.card title="Thông tin hợp đồng">

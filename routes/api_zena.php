@@ -229,6 +229,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                 Route::delete('/{contract}', [\App\Http\Controllers\Api\ContractController::class, 'destroy'])->middleware('rbac:contract.delete')->name('destroy');
                 Route::get('/{contract}/material-receipts', [\App\Http\Controllers\Api\ContractController::class, 'materialReceipts'])->middleware('rbac:contract.view')->name('material-receipts.index');
                 Route::get('/{contract}/cost-summary', [\App\Http\Controllers\Api\ContractController::class, 'costSummary'])->middleware('rbac:contract.view')->name('cost-summary.show');
+                Route::get('/{contract}/pdf', [\App\Http\Controllers\Api\ContractController::class, 'pdf'])->middleware('rbac:contract.view')->name('pdf');
             });
         });
 

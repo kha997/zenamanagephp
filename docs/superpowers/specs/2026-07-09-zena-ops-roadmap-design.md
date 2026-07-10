@@ -225,20 +225,27 @@ Scope this narrowly — this is a tenant record to anchor the integration gate, 
 
 ## Phase 5 — BI Dashboard điều hành
 
-**Goal:** add ZENA-specific business KPIs to the existing dashboard/widget infrastructure — no new dashboard framework.
+**Goal:** add ZENA-specific business KPIs, on real tenant data, with real caching.
 
-**Work:** extend `KpiService`/`DashboardController` with new KPI cards:
-- Doanh số theo tháng (sum of `Opportunity.estimated_fee` or synced quote totals, where `pipeline_stage = won`, grouped by month).
-- Pipeline value theo stage (sum of `estimated_fee` grouped by `pipeline_stage`, mirroring the CRM board groups).
-- Công nợ (outstanding `ContractPayment` amounts, overdue flagged).
-- Hiệu quả sale (win-rate per `sales_owner_id`: won / (won + lost + no_bid)).
-- Hiệu quả gói dịch vụ (win-rate and average fee per `service_category`).
+**Confirmed real facts (checked directly against this codebase, 2026-07-11):**
+- `App\Services\KpiService` (the class this section originally said to "extend") is **entirely mock data** — every method returns a hardcoded literal (e.g. `return 1247; // Mock data`), not a database query. Its only consumer, `KpiController`, is routed at `/api/v1/universal-frame/kpis` behind `rbac:admin`, and nothing in any current Blade view or JS file calls it — it is dead code from before this app's operator-first consolidation, not the live dashboard.
+- The real, live, tenant-scoped dashboard every user actually sees is `Web\AppController::dashboard()` → `resources/views/app/dashboard.blade.php` ("Bảng điều hành dự án") — plain direct Eloquent queries per request, no caching at all today.
+- `ContractPayment` already has a `STATUS_OVERDUE` enum value, but no job/command in this codebase ever transitions a payment into it — "overdue" must be computed live (`due_date < now()`), not read from that stored status.
+- `Opportunity` has no dedicated "won at"/"closed at" timestamp — only `expected_close_date` (a forecast field) and `updated_at`. Monthly revenue grouping uses `updated_at`'s month as the closest available signal; adding a new timestamp column purely for this KPI would be over-engineering for what's needed.
 
-All five must follow `KpiService`'s existing `Cache::remember($cacheKey, 60, ...)` convention — these are new cards on existing infrastructure, not a reason to add uncached heavy aggregate queries alongside it.
+**Work:** this phase does **not** touch `KpiService`/`KpiController` (left alone, genuinely dead, out of scope) and does **not** add cards to the existing operational dashboard. Instead:
+- New service `App\Services\BusinessKpiService` — tenant-scoped, each of the five KPIs independently wrapped in `Cache::remember("business_kpi_{$key}_{$tenantId}", 60, ...)` (this is where the spec's original caching intent actually lands, on new code, since the old service's convention was never real to begin with).
+- New dedicated page, not mixed into the operational dashboard: `Web\BusinessReportController::index()` at `/operator/reports/business` (route name `operator.reports.business`), gated by the existing `crm.view` permission (no new permission — CRM viewers are exactly who should see CRM data rolled up), with a new nav entry under the existing "Kinh doanh" section in `layouts/operator.blade.php`.
+- Five KPIs:
+  - **Doanh số theo tháng**: WON opportunities grouped by month of `updated_at`; revenue per opportunity = `external_quote_snapshot.total` when present (from Phase 2/3, only for BOQ-integrated tenants), else `estimated_fee` — works correctly for both integrated and non-integrated tenants.
+  - **Pipeline value theo stage**: `sum(estimated_fee)` grouped by `pipeline_stage`.
+  - **Công nợ**: `ContractPayment` where `status != paid`, summed; a separate overdue sub-total computed live as `due_date < now()`.
+  - **Hiệu quả sale**: grouped by `sales_owner_id`, `won / (won + lost + no_bid)`.
+  - **Hiệu quả gói dịch vụ**: grouped by `service_category`, win-rate + average fee (same quote-total-else-estimated_fee rule as the first KPI).
 
-**Acceptance criteria:** dashboard renders all five cards with real tenant data (not placeholder/demo values), respecting existing tenant-isolation and RBAC patterns on the dashboard endpoints.
+**Acceptance criteria:** the new page renders all five KPIs with real tenant data (not placeholder/demo values), respecting tenant isolation and the `crm.view` RBAC gate; a second page load within 60 seconds does not re-run the aggregate queries (cache hit).
 
-**Dependency:** needs Phase 1 (design throughput as an optional KPI candidate), Phase 2-4 (quote/contract data) to have real numbers to show — building this against empty CRM data would produce a dashboard nobody trusts.
+**Dependency:** needs Phase 1 (design throughput as an optional KPI candidate — not built in this pass, the five KPIs above are the full scope), Phase 2-4 (quote/contract data) to have real numbers to show — building this against empty CRM data would produce a dashboard nobody trusts.
 
 ---
 
@@ -348,3 +355,11 @@ Before writing Phase 4's implementation plan, exploring this codebase's actual `
 - R — The spec's "reuse the existing `DeliverableTemplate`/`DeliverableTemplateVersion` + `DeliverablePdfExportService` pattern" conflated a generic, reusable piece (`DeliverablePdfExportService`, pure HTML→PDF conversion) with a domain-specific piece (`DeliverableTemplate`/`Version`, an editable-template-with-merge-fields system tied to the WorkInstance/deliverable domain via its own `WorkInstanceExportBundleService`) that isn't actually a drop-in generic contract-templating system. Building an equivalent editable/versioned template system for contracts was a real, much heavier option on the table. → resolved with the user: use a fixed Blade view for the contract PDF content (not editable via UI), reusing only the genuinely generic `DeliverablePdfExportService` for the HTML→PDF conversion step — matching this codebase's YAGNI conventions, since nothing in the goal requires tenants to customize contract wording.
 - S (gap-filling, not re-litigated with the user — a natural consequence of the codebase facts above, not a competing design) — the original spec said to pin `source_quote_id`/`source_quote_revision` on the `Contract` but never specified how the duplicate-guard or drift-guard would find "the contract this Opportunity's action created," since `Contract` only otherwise links to a `Project` (which can have multiple contracts for unrelated reasons — the model already supports amendments via `version`/`scopeLatestVersion`). → added a third new column, `source_opportunity_id`, so both guards have a direct, unambiguous lookup path.
 - T (gap-filling, found while reading the actual authorization code, not re-litigated with the user) — the brainstorm's "gate the whole action by `crm.manage`" answer was a reasonable first cut, but reading `OpportunityPolicy::convert()` and `ContractPolicy::create()` directly showed both `crm.convert` and `contract.create` are pre-existing, distinct permission checks this codebase already enforces for the two operations (project conversion, contract creation) that this one action performs internally. Gating only by `crm.manage` would let a user without `crm.convert` or `contract.create` trigger both through this new endpoint — a real permission-escalation gap, not a hypothetical one. → the endpoint must call `$this->authorize('convert', $opportunity)` before auto-converting and `$this->authorize('create', Contract::class)` before creating the `Contract`, in addition to the `crm.manage` gate on the button/action itself — see the updated Phase 4 "Permission layering" note above.
+
+## 10. Phase 5 brainstorm (2026-07-11) — decisions applied
+
+Before writing Phase 5's implementation plan, exploring the actual `KpiService`/dashboard code (rather than trusting the original spec text's assumption that it was live, working infrastructure) surfaced that the thing this section said to "extend" is dead mock code, and two placement/data-source questions were resolved directly with the user:
+
+- U (verification, not a user decision — but the single most consequential finding in this section) — `App\Services\KpiService` is entirely hardcoded mock data with no real consumer in the live UI (`KpiController`'s only route sits behind `rbac:admin` at a legacy `/api/v1/universal-frame/` prefix nothing currently calls). The actual live dashboard (`Web\AppController::dashboard()`) is a completely separate code path with no caching at all. Continuing to say "extend KpiService" would have sent an implementer down a dead-end path building real logic into unreachable code. → resolved: this phase ignores `KpiService`/`KpiController` entirely (left untouched, not deleted — out of scope) and builds a new `BusinessKpiService` + new dedicated page instead.
+- V — the spec didn't say whether the five new KPIs belong on the existing operational dashboard or a separate page. → resolved with the user: a separate new "Báo cáo kinh doanh" page (`/operator/reports/business`), not mixed into the task/project-focused operational dashboard — keeps the two concerns visually and architecturally distinct, matching the phase's own "BI Dashboard điều hành" framing as a distinct area.
+- W — the spec's "sum of `Opportunity.estimated_fee` or synced quote totals" for monthly revenue left an unresolved "or." → resolved with the user: prefer the synced quote's real total when available (`external_quote_snapshot.total`, from Phase 2/3 — only populated for BOQ-integrated tenants), falling back to `estimated_fee` otherwise — this is the only choice that produces correct numbers for both integrated and non-integrated tenants, since quote totals alone would leave the KPI empty for every tenant without the zena-boq-core integration.

@@ -162,6 +162,28 @@
         </x-ui.card>
     @endif
 
+    @if ($contractCard !== null)
+        <x-ui.card title="Hợp đồng">
+            @if ($contractCard['has_drift'])
+                <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+                    Báo giá đã đổi kể từ khi tạo hợp đồng — số tiền hợp đồng có thể không còn khớp.
+                </p>
+            @endif
+
+            @if ($contractCard['contract'])
+                <div class="operator-form-grid">
+                    <x-ui.field-value label="Mã hợp đồng" :value="$contractCard['contract']['code']" />
+                </div>
+                <a href="{{ route('operator.contracts.show', $contractCard['contract']['id']) }}" class="operator-link mt-3 inline-block">Xem hợp đồng</a>
+            @elseif ($contractCard['eligible'] && $canManageBoq)
+                <form method="POST" action="{{ route('operator.crm.opportunities.create-contract', $opportunity->id) }}">
+                    @csrf
+                    <button type="submit" class="operator-button operator-button-primary">Tạo hợp đồng</button>
+                </form>
+            @endif
+        </x-ui.card>
+    @endif
+
     <x-ui.card title="Lịch sử">
         @if ($events->isEmpty())
             <p class="text-sm text-slate-500">Chưa có sự kiện.</p>

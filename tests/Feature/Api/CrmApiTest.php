@@ -31,8 +31,8 @@ class CrmApiTest extends TestCase
         $this->tenantA = Tenant::factory()->create();
         $this->tenantB = Tenant::factory()->create();
 
-        $this->userA = $this->createTenantUser($this->tenantA, [], ['admin'], ['crm.view', 'crm.manage', 'crm.convert']);
-        $this->userB = $this->createTenantUser($this->tenantB, [], ['admin'], ['crm.view', 'crm.manage', 'crm.convert']);
+        $this->userA = $this->createTenantUser($this->tenantA, [], ['admin'], ['crm.view', 'crm.manage', 'crm.convert', 'contract.create']);
+        $this->userB = $this->createTenantUser($this->tenantB, [], ['admin'], ['crm.view', 'crm.manage', 'crm.convert', 'contract.create']);
     }
 
     // -- Leads ---------------------------------------------------------
@@ -452,6 +452,162 @@ class CrmApiTest extends TestCase
         $response = $this->postJson($this->route('opportunities.boq-sync', ['id' => $opportunity->id]), [], $this->headersFor($this->userA));
 
         $response->assertStatus(403);
+    }
+
+    public function test_create_contract_auto_converts_and_creates_contract_pinned_to_quote(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $opportunity = $this->createOpportunity([
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_WON,
+            'external_boq_project_code' => 'PRJ-004',
+            'external_quote_id' => 'quote_won_1',
+            'external_quote_snapshot' => [
+                'revision' => 2,
+                'total' => 250000000,
+                'status' => 'ACCEPTED',
+                'calibration' => 'CALIBRATED',
+            ],
+        ]);
+
+        $this->assertNull($opportunity->converted_project_id);
+
+        $response = $this->postJson(
+            $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
+            [],
+            $this->headersFor($this->userA)
+        );
+
+        $response->assertStatus(201);
+
+        $opportunity->refresh();
+        $this->assertNotNull($opportunity->converted_project_id);
+
+        $contract = \App\Models\Contract::query()->where('source_opportunity_id', $opportunity->id)->first();
+        $this->assertNotNull($contract);
+        $this->assertSame((string) $opportunity->converted_project_id, (string) $contract->project_id);
+        $this->assertSame('quote_won_1', $contract->source_quote_id);
+        $this->assertSame(2, $contract->source_quote_revision);
+        $this->assertSame(250000000.0, (float) $contract->total_value);
+        $this->assertSame('VND', $contract->currency);
+        $this->assertSame('draft', $contract->status);
+    }
+
+    public function test_create_contract_reuses_project_when_already_converted(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $project = \App\Models\Project::query()->create([
+            'tenant_id' => (string) $this->tenantA->id,
+            'name' => 'Du an da convert',
+            'code' => 'PRJ-ALREADY1',
+            'status' => 'planning',
+        ]);
+
+        $opportunity = $this->createOpportunity([
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_WON,
+            'converted_project_id' => (string) $project->id,
+            'external_boq_project_code' => 'PRJ-005',
+            'external_quote_id' => 'quote_won_2',
+            'external_quote_snapshot' => ['revision' => 1, 'total' => 100000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        $response = $this->postJson(
+            $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
+            [],
+            $this->headersFor($this->userA)
+        );
+
+        $response->assertStatus(201);
+
+        $contract = \App\Models\Contract::query()->where('source_opportunity_id', $opportunity->id)->first();
+        $this->assertNotNull($contract);
+        $this->assertSame((string) $project->id, (string) $contract->project_id);
+    }
+
+    public function test_create_contract_does_not_duplicate_on_second_call(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $opportunity = $this->createOpportunity([
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_WON,
+            'external_boq_project_code' => 'PRJ-006',
+            'external_quote_id' => 'quote_won_3',
+            'external_quote_snapshot' => ['revision' => 1, 'total' => 50000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        $first = $this->postJson(
+            $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
+            [],
+            $this->headersFor($this->userA)
+        );
+        $first->assertStatus(201);
+
+        $second = $this->postJson(
+            $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
+            [],
+            $this->headersFor($this->userA)
+        );
+        $second->assertStatus(200);
+
+        $this->assertSame(
+            1,
+            \App\Models\Contract::query()->where('source_opportunity_id', $opportunity->id)->count()
+        );
+    }
+
+    public function test_create_contract_requires_won_stage_and_accepted_quote(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $opportunity = $this->createOpportunity([
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_QUALIFIED,
+            'external_boq_project_code' => 'PRJ-007',
+            'external_quote_id' => 'quote_won_4',
+            'external_quote_snapshot' => ['revision' => 1, 'total' => 50000000, 'status' => 'ISSUED'],
+        ]);
+
+        $response = $this->postJson(
+            $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
+            [],
+            $this->headersFor($this->userA)
+        );
+
+        $response->assertStatus(422);
+    }
+
+    public function test_create_contract_requires_contract_create_permission(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $noContractCreate = $this->createTenantUser($this->tenantA, [], ['sales'], ['crm.view', 'crm.manage', 'crm.convert']);
+
+        $opportunity = $this->createOpportunity([
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'external_boq_project_code' => 'PRJ-PERM1',
+            'external_quote_snapshot' => ['revision' => 1, 'total' => 50000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        $response = $this->postJson(
+            $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
+            [],
+            $this->headersFor($noContractCreate)
+        );
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseMissing('contracts', ['source_opportunity_id' => (string) $opportunity->id]);
+
+        // The auto-convert step (guarded by 'crm.convert', which this user does have) runs
+        // BEFORE the 'contract.create' authorization check in createContract(), so the
+        // opportunity IS converted even though contract creation is blocked afterward.
+        $opportunity->refresh();
+        $this->assertNotNull($opportunity->converted_project_id);
     }
 
     public function test_unauthenticated_request_is_rejected(): void

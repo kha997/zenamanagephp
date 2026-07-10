@@ -186,6 +186,7 @@ class CrmPageController extends Controller
             'boqIntegrationEnabled' => $boqService->isTenantAuthorized($tenantId),
             'boqCard' => $this->buildBoqCardViewModel($opportunity),
             'canManageBoq' => (bool) auth()->user()?->hasPermission('crm.manage'),
+            'contractCard' => $this->buildContractCardViewModel($opportunity),
             'users' => User::query()
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
@@ -224,6 +225,44 @@ class CrmPageController extends Controller
             'synced_at' => $syncedAt,
             'is_stale' => $syncedAt !== null && $syncedAt->diffInDays(now()) > 14,
             'external_url' => $opportunity->external_quote_id ? "{$baseUrl}/quotes/{$opportunity->external_quote_id}" : null,
+        ];
+    }
+
+    /**
+     * @return array{eligible: bool, contract: array{id: string, code: string}|null, has_drift: bool}|null
+     */
+    private function buildContractCardViewModel(Opportunity $opportunity): ?array
+    {
+        $snapshot = $opportunity->external_quote_snapshot ?? [];
+        $eligible = (string) $opportunity->pipeline_stage === Opportunity::STAGE_WON
+            && ($snapshot['status'] ?? null) === 'ACCEPTED';
+
+        $existingContract = \App\Models\Contract::query()
+            ->where('tenant_id', (string) $opportunity->tenant_id)
+            ->where('source_opportunity_id', $opportunity->id)
+            ->first();
+
+        if (!$eligible && !$existingContract instanceof \App\Models\Contract) {
+            return null;
+        }
+
+        $hasDrift = false;
+        $contractData = null;
+
+        if ($existingContract instanceof \App\Models\Contract) {
+            $hasDrift = $existingContract->source_quote_id !== $opportunity->external_quote_id
+                || $existingContract->source_quote_revision !== ($snapshot['revision'] ?? null);
+
+            $contractData = [
+                'id' => (string) $existingContract->id,
+                'code' => (string) $existingContract->code,
+            ];
+        }
+
+        return [
+            'eligible' => $eligible,
+            'contract' => $contractData,
+            'has_drift' => $hasDrift,
         ];
     }
 
@@ -292,5 +331,18 @@ class CrmPageController extends Controller
         }
 
         return $this->handleMutationResponse($response, route('operator.crm.opportunities.show', $id), 'Đã đồng bộ báo giá');
+    }
+
+    public function createContract(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse
+    {
+        try {
+            $response = $apiController->createContract($this->buildApiRequest($request), $id);
+        } catch (AuthorizationException) {
+            return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->with('error', 'Không thể xử lý yêu cầu.');
+        }
+
+        return $this->handleMutationResponse($response, route('operator.crm.opportunities.show', $id), 'Đã tạo hợp đồng');
     }
 }

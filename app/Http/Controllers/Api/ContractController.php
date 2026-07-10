@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Models\Contract;
 use App\Models\MaterialReceipt;
 use App\Models\MaterialReceiptLine;
 use App\Models\Project;
+use App\Services\DeliverablePdfExportService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -301,5 +304,36 @@ class ContractController extends BaseApiController
                 'priced_line_cost_total' => round($pricedTotal, 2),
             ],
         ], 'Cost summary retrieved successfully');
+    }
+
+    public function pdf(Request $request, string $project, string $contract, DeliverablePdfExportService $pdfService): JsonResponse|Response
+    {
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        try {
+            $contractModel = $this->findContractOrFail($tenantId, $project, $contract);
+        } catch (ModelNotFoundException) {
+            return $this->notFound('Contract not found');
+        }
+
+        $this->authorize('view', $contractModel);
+
+        $html = view('contracts.pdf', ['contract' => $contractModel])->render();
+
+        try {
+            $pdf = $pdfService->render($html, [], [
+                'generated_at' => now()->toIso8601String(),
+            ]);
+        } catch (DeliverablePdfExportUnavailableException $exception) {
+            return $this->errorResponse($exception->getMessage(), 501);
+        }
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="hop-dong-' . $contractModel->code . '.pdf"',
+        ]);
     }
 }

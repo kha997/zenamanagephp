@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
+use App\Models\Contract;
 use App\Models\EventRecord;
 use App\Models\Opportunity;
 use App\Models\Project;
@@ -424,6 +425,132 @@ class OpportunityController extends BaseApiController
             'Opportunity converted to project successfully',
             201
         );
+    }
+
+    public function createContract(Request $request, string $id): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$opportunity instanceof Opportunity) {
+            return $this->notFound('Opportunity not found');
+        }
+
+        $existingContract = Contract::query()
+            ->where('tenant_id', $tenantId)
+            ->where('source_opportunity_id', $opportunity->id)
+            ->first();
+
+        if ($existingContract instanceof Contract) {
+            return $this->zenaSuccessResponse(
+                [
+                    'contract_id' => (string) $existingContract->id,
+                    'project_id' => (string) $existingContract->project_id,
+                ],
+                'A contract already exists for this opportunity'
+            );
+        }
+
+        if ((string) $opportunity->pipeline_stage !== Opportunity::STAGE_WON) {
+            return $this->validationError([
+                'pipeline_stage' => ['Only won opportunities can generate a contract.'],
+            ]);
+        }
+
+        $snapshot = $opportunity->external_quote_snapshot ?? [];
+        if (($snapshot['status'] ?? null) !== 'ACCEPTED') {
+            return $this->validationError([
+                'external_quote_snapshot' => ['The linked quote must be ACCEPTED before generating a contract.'],
+            ]);
+        }
+
+        $projectId = $opportunity->converted_project_id;
+
+        if (!$projectId) {
+            $this->authorize('convert', $opportunity);
+
+            $project = DB::transaction(function () use ($opportunity, $user, $tenantId): Project {
+                $project = Project::query()->create([
+                    'tenant_id' => $tenantId,
+                    'name' => (string) $opportunity->opportunity_name,
+                    'code' => 'PRJ-' . Str::upper(Str::random(8)),
+                    'description' => $opportunity->service_scope_summary,
+                    'status' => 'planning',
+                    'progress' => 0,
+                    'budget_total' => $opportunity->estimated_project_value ?? ($opportunity->estimated_fee ?? 0),
+                    'pm_id' => $opportunity->technical_owner_id ?? $opportunity->sales_owner_id,
+                    'created_by' => (string) $user->id,
+                ]);
+
+                $opportunity->converted_project_id = (string) $project->id;
+                $opportunity->save();
+
+                return $project;
+            });
+
+            $this->recordEvent($opportunity, 'crm.opportunity.converted', [
+                'project_id' => (string) $project->id,
+                'project_name' => (string) $project->name,
+            ]);
+
+            $projectId = (string) $project->id;
+        }
+
+        $this->authorize('create', Contract::class);
+
+        $account = $opportunity->account;
+        $clientName = $account?->display_name ?? '';
+
+        $contract = Contract::query()->create([
+            'tenant_id' => $tenantId,
+            'project_id' => $projectId,
+            'source_opportunity_id' => (string) $opportunity->id,
+            'source_quote_id' => $opportunity->external_quote_id,
+            'source_quote_revision' => $snapshot['revision'] ?? null,
+            'code' => $this->generateContractCode(),
+            'title' => 'Hợp đồng dịch vụ - ' . $clientName,
+            'client_name' => $clientName,
+            'total_value' => (float) ($snapshot['total'] ?? 0),
+            'currency' => 'VND',
+            'created_by' => (string) $user->id,
+        ]);
+
+        $this->recordEvent($opportunity, 'crm.opportunity.contract_created', [
+            'contract_id' => (string) $contract->id,
+            'project_id' => $projectId,
+            'total_value' => (float) $contract->total_value,
+        ]);
+
+        return $this->zenaSuccessResponse(
+            [
+                'contract_id' => (string) $contract->id,
+                'project_id' => $projectId,
+            ],
+            'Contract created successfully',
+            201
+        );
+    }
+
+    private function generateContractCode(): string
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $candidate = 'CTR-' . Str::upper(Str::random(8));
+            if (!Contract::query()->where('code', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return 'CTR-' . Str::upper((string) Str::ulid());
     }
 
     public function linkExternalBoqProject(Request $request, string $id, ZenaBoqIntegrationService $boqService): JsonResponse

@@ -7,10 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Contract;
 use App\Models\Project;
+use App\Services\DeliverablePdfExportService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class ContractPageController extends Controller
@@ -122,10 +125,52 @@ class ContractPageController extends Controller
             $summaryUnavailableMessage = 'Không thể tải tổng hợp chi phí hợp đồng vào lúc này.';
         }
 
+        $hasDrift = false;
+        if ($contract->source_opportunity_id) {
+            $sourceOpportunity = \App\Models\Opportunity::query()
+                ->where('tenant_id', $tenantId)
+                ->find($contract->source_opportunity_id);
+
+            if ($sourceOpportunity) {
+                $snapshot = $sourceOpportunity->external_quote_snapshot ?? [];
+                $hasDrift = $contract->source_quote_id !== $sourceOpportunity->external_quote_id
+                    || $contract->source_quote_revision !== ($snapshot['revision'] ?? null);
+            }
+        }
+
         return view('contracts.show', [
             'contract' => $contract,
             'summary' => $summary,
             'summaryUnavailableMessage' => $summaryUnavailableMessage,
+            'hasQuoteDrift' => $hasDrift,
         ]);
+    }
+
+    public function downloadPdf(Request $request, string $id, ApiContractController $apiController, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $contract = Contract::query()
+            ->where('tenant_id', $tenantId)
+            ->findOrFail($id);
+
+        try {
+            $response = $apiController->pdf(
+                $this->buildApiRequest($request),
+                (string) $contract->project_id,
+                (string) $contract->id,
+                $pdfService
+            );
+        } catch (AuthorizationException) {
+            return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->with('error', 'Không thể tạo PDF hợp đồng vào lúc này.');
+        }
+
+        if ($response instanceof JsonResponse) {
+            return $this->handleErrorResponse($response);
+        }
+
+        return $response;
     }
 }

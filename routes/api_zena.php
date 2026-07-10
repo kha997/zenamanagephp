@@ -229,6 +229,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
                 Route::delete('/{contract}', [\App\Http\Controllers\Api\ContractController::class, 'destroy'])->middleware('rbac:contract.delete')->name('destroy');
                 Route::get('/{contract}/material-receipts', [\App\Http\Controllers\Api\ContractController::class, 'materialReceipts'])->middleware('rbac:contract.view')->name('material-receipts.index');
                 Route::get('/{contract}/cost-summary', [\App\Http\Controllers\Api\ContractController::class, 'costSummary'])->middleware('rbac:contract.view')->name('cost-summary.show');
+                Route::get('/{contract}/pdf', [\App\Http\Controllers\Api\ContractController::class, 'pdf'])->middleware('rbac:contract.view')->name('pdf');
             });
         });
 
@@ -360,6 +361,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/opportunities/{id}/convert', [\App\Http\Controllers\Api\OpportunityController::class, 'convert'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
             Route::post('/opportunities/{id}/boq-link', [\App\Http\Controllers\Api\OpportunityController::class, 'linkExternalBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
             Route::post('/opportunities/{id}/boq-sync', [\App\Http\Controllers\Api\OpportunityController::class, 'syncExternalQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-sync');
+            Route::post('/opportunities/{id}/create-contract', [\App\Http\Controllers\Api\OpportunityController::class, 'createContract'])->middleware('rbac:crm.manage')->name('crm.opportunities.create-contract');
         });
 
         // Site Diaries (daily site logs)

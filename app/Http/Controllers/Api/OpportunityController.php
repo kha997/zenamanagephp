@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\EventRecord;
 use App\Models\Opportunity;
 use App\Models\Project;
+use App\Services\ZenaBoqIntegrationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,10 @@ class OpportunityController extends BaseApiController
         'lost_reason',
         'converted_project_id',
         'created_by',
+        'external_boq_project_code',
+        'external_quote_id',
+        'external_quote_snapshot',
+        'external_quote_synced_at',
         'created_at',
         'updated_at',
     ];
@@ -418,6 +423,46 @@ class OpportunityController extends BaseApiController
             ],
             'Opportunity converted to project successfully',
             201
+        );
+    }
+
+    public function linkExternalBoqProject(Request $request, string $id, ZenaBoqIntegrationService $boqService): JsonResponse
+    {
+        if (!Auth::check()) {
+            return $this->unauthorized('Authentication required');
+        }
+
+        $tenantId = $this->tenantId($request);
+        if ($tenantId === '') {
+            return $this->errorResponse('Tenant context missing', 400);
+        }
+
+        if (!$boqService->isTenantAuthorized($tenantId)) {
+            return $this->forbidden('This tenant is not authorized for the zena-boq-core integration');
+        }
+
+        $opportunity = $this->scopedQuery($tenantId)->whereKey($id)->first();
+
+        if (!$opportunity instanceof Opportunity) {
+            return $this->notFound('Opportunity not found');
+        }
+
+        $this->authorize('update', $opportunity);
+
+        $validator = Validator::make($request->all(), [
+            'external_boq_project_code' => ['required', 'string', 'max:100'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        $opportunity->external_boq_project_code = (string) $request->input('external_boq_project_code');
+        $opportunity->save();
+
+        return $this->zenaSuccessResponse(
+            $this->serialize($opportunity->fresh() ?? $opportunity),
+            'Opportunity linked to zena-boq-core project successfully'
         );
     }
 }

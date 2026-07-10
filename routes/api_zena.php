@@ -358,6 +358,7 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::put('/opportunities/{id}', [\App\Http\Controllers\Api\OpportunityController::class, 'update'])->middleware('rbac:crm.manage')->name('crm.opportunities.update');
             Route::post('/opportunities/{id}/stage', [\App\Http\Controllers\Api\OpportunityController::class, 'updateStage'])->middleware('rbac:crm.manage')->name('crm.opportunities.stage');
             Route::post('/opportunities/{id}/convert', [\App\Http\Controllers\Api\OpportunityController::class, 'convert'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
+            Route::post('/opportunities/{id}/boq-link', [\App\Http\Controllers\Api\OpportunityController::class, 'linkExternalBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
         });
 
         // Site Diaries (daily site logs)

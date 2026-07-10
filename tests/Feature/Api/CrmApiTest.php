@@ -266,6 +266,56 @@ class CrmApiTest extends TestCase
         $response->assertStatus(403);
     }
 
+    public function test_can_link_opportunity_to_boq_project_when_tenant_authorized(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $opportunity = $this->createOpportunity();
+
+        $response = $this->postJson($this->route('opportunities.boq-link', ['id' => $opportunity->id]), [
+            'external_boq_project_code' => 'PRJ-001',
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(200)->assertJsonPath('data.external_boq_project_code', 'PRJ-001');
+        $this->assertDatabaseHas('opportunities', [
+            'id' => (string) $opportunity->id,
+            'external_boq_project_code' => 'PRJ-001',
+        ]);
+    }
+
+    public function test_link_denied_for_non_authorized_tenant(): void
+    {
+        // Deliberately do not create/configure a Z.E.N.A tenant matching $this->tenantA.
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $opportunity = $this->createOpportunity();
+
+        $response = $this->postJson($this->route('opportunities.boq-link', ['id' => $opportunity->id]), [
+            'external_boq_project_code' => 'PRJ-001',
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('opportunities', [
+            'id' => (string) $opportunity->id,
+            'external_boq_project_code' => null,
+        ]);
+    }
+
+    public function test_link_fails_closed_when_config_unset(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => null]);
+
+        $opportunity = $this->createOpportunity();
+
+        $response = $this->postJson($this->route('opportunities.boq-link', ['id' => $opportunity->id]), [
+            'external_boq_project_code' => 'PRJ-001',
+        ], $this->headersFor($this->userA));
+
+        $response->assertStatus(403);
+    }
+
     public function test_unauthenticated_request_is_rejected(): void
     {
         $response = $this->getJson($this->route('leads.index'), [

@@ -210,7 +210,7 @@ class OperatorCrmUiTest extends TestCase
         \Illuminate\Support\Facades\Http::fake([
             'https://zena-boq.example/api/external/projects/*' => \Illuminate\Support\Facades\Http::response(['id' => 'proj_1'], 200),
             'https://zena-boq.example/api/external/quotes/latest*' => \Illuminate\Support\Facades\Http::response([
-                'id' => 'quote_1', 'subtotal' => 100000000, 'vatAmount' => 8000000, 'total' => 108000000,
+                'id' => 'quote_1', 'revision' => 3, 'subtotal' => 100000000, 'vatAmount' => 8000000, 'total' => 108000000,
                 'status' => 'ISSUED', 'calibration' => 'UNCALIBRATED', 'issuedAt' => '2026-07-10T00:00:00Z',
             ], 200),
         ]);
@@ -257,7 +257,112 @@ class OperatorCrmUiTest extends TestCase
         $this->actingAs($this->user)
             ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
             ->assertOk()
-            ->assertSee('PRJ-001');
+            ->assertSee('PRJ-001')
+            ->assertSee('Đã phát hành')
+            ->assertSee('⚠ Chưa hiệu chỉnh')
+            ->assertSee('https://zena-boq.example/quotes/quote_1', false);
+    }
+
+    public function test_boq_card_hides_mutation_actions_for_view_only_user(): void
+    {
+        $this->tenant->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $viewOnlyUser = $this->createTenantUser($this->tenant, [], ['staff'], ['crm.view']);
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang xem thoi',
+            'status' => \App\Models\Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = \App\Models\Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi chi xem',
+            'service_category' => 'architecture',
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($viewOnlyUser)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertSee('Chưa liên kết báo giá')
+            ->assertDontSee('Liên kết')
+            ->assertDontSee('Đồng bộ báo giá');
+    }
+
+    public function test_boq_card_flags_synced_quote_older_than_14_days_as_stale(): void
+    {
+        $this->tenant->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A', 'zena_boq.base_url' => 'https://zena-boq.example']);
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang bao gia cu',
+            'status' => \App\Models\Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = \App\Models\Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi bao gia cu',
+            'service_category' => 'architecture',
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+            'external_boq_project_code' => 'PRJ-002',
+            'external_quote_id' => 'quote_old',
+            'external_quote_snapshot' => ['total' => 50000000, 'status' => 'ISSUED', 'calibration' => 'CALIBRATED'],
+            'external_quote_synced_at' => now()->subDays(20),
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertSee('text-amber-600', false);
+    }
+
+    public function test_boq_card_does_not_flag_recently_synced_quote_as_stale(): void
+    {
+        $this->tenant->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A', 'zena_boq.base_url' => 'https://zena-boq.example']);
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang bao gia moi',
+            'status' => \App\Models\Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = \App\Models\Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi bao gia moi',
+            'service_category' => 'architecture',
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_NEW_LEAD,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+            'external_boq_project_code' => 'PRJ-003',
+            'external_quote_id' => 'quote_new',
+            'external_quote_snapshot' => ['total' => 50000000, 'status' => 'ISSUED', 'calibration' => 'CALIBRATED'],
+            'external_quote_synced_at' => now()->subDays(2),
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertDontSee('text-amber-600', false);
     }
 
     public function test_boq_card_is_hidden_for_non_authorized_tenant(): void

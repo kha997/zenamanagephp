@@ -184,6 +184,8 @@ class CrmPageController extends Controller
         return view('crm.opportunity-show', [
             'opportunity' => $opportunity,
             'boqIntegrationEnabled' => $boqService->isTenantAuthorized($tenantId),
+            'boqCard' => $this->buildBoqCardViewModel($opportunity),
+            'canManageBoq' => (bool) auth()->user()?->hasPermission('crm.manage'),
             'users' => User::query()
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
@@ -197,6 +199,32 @@ class CrmPageController extends Controller
                 ->limit(20)
                 ->get(),
         ]);
+    }
+
+    /**
+     * @return array{project_code: string, subtotal: ?float, vat_amount: ?float, total: ?float, status: ?string, calibration: ?string, synced_at: ?\Illuminate\Support\Carbon, is_stale: bool, external_url: ?string}|null
+     */
+    private function buildBoqCardViewModel(Opportunity $opportunity): ?array
+    {
+        if (!$opportunity->external_boq_project_code) {
+            return null;
+        }
+
+        $snapshot = $opportunity->external_quote_snapshot ?? [];
+        $syncedAt = $opportunity->external_quote_synced_at;
+        $baseUrl = rtrim((string) config('zena_boq.base_url'), '/');
+
+        return [
+            'project_code' => (string) $opportunity->external_boq_project_code,
+            'subtotal' => isset($snapshot['subtotal']) ? (float) $snapshot['subtotal'] : null,
+            'vat_amount' => isset($snapshot['vat_amount']) ? (float) $snapshot['vat_amount'] : null,
+            'total' => isset($snapshot['total']) ? (float) $snapshot['total'] : null,
+            'status' => $snapshot['status'] ?? null,
+            'calibration' => $snapshot['calibration'] ?? null,
+            'synced_at' => $syncedAt,
+            'is_stale' => $syncedAt !== null && $syncedAt->diffInDays(now()) > 14,
+            'external_url' => $opportunity->external_quote_id ? "{$baseUrl}/quotes/{$opportunity->external_quote_id}" : null,
+        ];
     }
 
     public function updateStage(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse

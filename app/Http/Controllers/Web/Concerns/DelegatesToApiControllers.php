@@ -8,14 +8,14 @@ use Illuminate\Http\Request;
 
 trait DelegatesToApiControllers
 {
-    private function buildApiRequest(Request $request, array $payload = []): Request
+    private function buildApiRequest(Request $request, array $payload = [], array $files = []): Request
     {
         $apiRequest = Request::create(
             $request->fullUrl(),
             $request->method(),
             $payload,
             $request->cookies->all(),
-            [],
+            $files,
             $request->server->all()
         );
 

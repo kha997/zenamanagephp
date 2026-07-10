@@ -35,7 +35,7 @@ class ZenaBoqIntegrationService
     }
 
     /**
-     * @return array{id: string, subtotal: float, vat_amount: float, total: float, status: string, calibration: string, issued_at: ?string}|null
+     * @return array{id: string, revision: int, subtotal: float, vat_amount: float, total: float, status: string, calibration: string, issued_at: ?string}|null
      */
     public function fetchLatestQuote(string $projectCode): ?array
     {
@@ -87,6 +87,7 @@ class ZenaBoqIntegrationService
 
             return [
                 'id' => (string) ($quote['id'] ?? ''),
+                'revision' => (int) ($quote['revision'] ?? 0),
                 'subtotal' => (float) ($quote['subtotal'] ?? 0),
                 'vat_amount' => (float) ($quote['vatAmount'] ?? 0),
                 'total' => (float) ($quote['total'] ?? 0),

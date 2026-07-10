@@ -62,6 +62,7 @@ class ZenaBoqIntegrationServiceTest extends TestCase
             'https://zena-boq.example/api/external/projects/*' => Http::response(['id' => 'proj_1', 'code' => 'PRJ-001'], 200),
             'https://zena-boq.example/api/external/quotes/latest*' => Http::response([
                 'id' => 'quote_1',
+                'revision' => 3,
                 'subtotal' => 100000000,
                 'vatAmount' => 8000000,
                 'total' => 108000000,
@@ -75,6 +76,7 @@ class ZenaBoqIntegrationServiceTest extends TestCase
 
         $this->assertNotNull($result);
         $this->assertSame('quote_1', $result['id']);
+        $this->assertSame(3, $result['revision']);
         $this->assertSame(108000000.0, $result['total']);
         $this->assertSame('UNCALIBRATED', $result['calibration']);
     }

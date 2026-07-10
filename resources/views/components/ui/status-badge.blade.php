@@ -4,10 +4,10 @@
     $value = strtolower((string) $status);
     $classes = match ($value) {
         'draft' => 'bg-slate-100 text-slate-700',
-        'submitted', 'open', 'pending_review' => 'bg-amber-100 text-amber-800',
-        'approved', 'fulfilled', 'answered', 'applied' => 'bg-emerald-100 text-emerald-800',
+        'submitted', 'open', 'pending_review', 'issued' => 'bg-amber-100 text-amber-800',
+        'approved', 'fulfilled', 'answered', 'applied', 'accepted' => 'bg-emerald-100 text-emerald-800',
         'rejected', 'escalated' => 'bg-rose-100 text-rose-800',
-        'closed' => 'bg-slate-200 text-slate-600',
+        'closed', 'superseded' => 'bg-slate-200 text-slate-600',
         default => 'bg-slate-100 text-slate-700',
     };
     $label = match ($value) {
@@ -22,6 +22,9 @@
         'escalated' => 'Đã chuyển cấp',
         'pending_review' => 'Đang xét',
         'applied' => 'Đã áp dụng',
+        'issued' => 'Đã phát hành',
+        'accepted' => 'Đã chấp nhận',
+        'superseded' => 'Đã thay thế',
         default => (string) $status,
     };
 @endphp

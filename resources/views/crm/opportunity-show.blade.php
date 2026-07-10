@@ -108,28 +108,56 @@
 
     @if ($boqIntegrationEnabled)
         <x-ui.card title="Báo giá — zena-boq-core">
-            @if ($opportunity->external_boq_project_code)
+            @if ($boqCard === null)
+                <p class="text-sm text-slate-500">Chưa liên kết báo giá.</p>
+                @if ($canManageBoq)
+                    <form method="POST" action="{{ route('operator.crm.opportunities.boq-link', $opportunity->id) }}" class="mt-3 flex flex-wrap items-end gap-3">
+                        @csrf
+                        <div class="operator-field flex-1 min-w-64">
+                            <label for="external_boq_project_code">Mã dự án zena-boq-core</label>
+                            <input id="external_boq_project_code" name="external_boq_project_code" type="text" class="operator-input" value="{{ old('external_boq_project_code') }}" required placeholder="vd: PRJ-001">
+                        </div>
+                        <button type="submit" class="operator-button operator-button-primary">Liên kết</button>
+                    </form>
+                @endif
+            @else
                 <div class="operator-form-grid">
-                    <x-ui.field-value label="Mã dự án" :value="$opportunity->external_boq_project_code" />
-                    <x-ui.field-value label="Trạng thái" :value="$opportunity->external_quote_snapshot['status'] ?? '—'" />
-                    <x-ui.field-value label="Hiệu chỉnh giá" :value="$opportunity->external_quote_snapshot['calibration'] ?? '—'" />
-                    <x-ui.field-value label="Tổng tiền" :value="isset($opportunity->external_quote_snapshot['total']) ? number_format((float) $opportunity->external_quote_snapshot['total'], 0, ',', '.') . '₫' : '—'" />
-                    <x-ui.field-value label="Đồng bộ lần cuối" :value="optional($opportunity->external_quote_synced_at)->format('d/m/Y H:i') ?? 'Chưa đồng bộ'" />
+                    <x-ui.field-value label="Mã dự án" :value="$boqCard['project_code']" />
+                    <x-ui.field-value label="Trạng thái">
+                        @if ($boqCard['status'])
+                            <x-ui.status-badge :status="$boqCard['status']" />
+                        @else
+                            —
+                        @endif
+                    </x-ui.field-value>
+                    <x-ui.field-value label="Hiệu chỉnh giá">
+                        @if ($boqCard['calibration'])
+                            <x-ui.calibration-badge :status="$boqCard['calibration']" />
+                        @else
+                            —
+                        @endif
+                    </x-ui.field-value>
+                    <x-ui.field-value label="Tổng tiền" :value="$boqCard['total'] !== null ? number_format($boqCard['total'], 0, ',', '.') . '₫' : '—'" />
+                    <x-ui.field-value label="Đồng bộ lần cuối">
+                        @if ($boqCard['synced_at'])
+                            <span class="{{ $boqCard['is_stale'] ? 'text-amber-600 font-semibold' : '' }}">{{ $boqCard['synced_at']->diffForHumans() }}</span>
+                        @else
+                            Chưa đồng bộ
+                        @endif
+                    </x-ui.field-value>
+                    @if ($boqCard['external_url'])
+                        <x-ui.field-value label="Xem trên zena-boq-core">
+                            <a href="{{ $boqCard['external_url'] }}" target="_blank" rel="noopener" class="operator-link">Mở báo giá ↗</a>
+                        </x-ui.field-value>
+                    @endif
                 </div>
 
-                <form method="POST" action="{{ route('operator.crm.opportunities.boq-sync', $opportunity->id) }}" class="mt-3">
-                    @csrf
-                    <button type="submit" class="operator-button operator-button-primary">Đồng bộ báo giá</button>
-                </form>
-            @else
-                <form method="POST" action="{{ route('operator.crm.opportunities.boq-link', $opportunity->id) }}" class="flex flex-wrap items-end gap-3">
-                    @csrf
-                    <div class="operator-field flex-1 min-w-64">
-                        <label for="external_boq_project_code">Mã dự án zena-boq-core</label>
-                        <input id="external_boq_project_code" name="external_boq_project_code" type="text" class="operator-input" value="{{ old('external_boq_project_code') }}" required placeholder="vd: PRJ-001">
-                    </div>
-                    <button type="submit" class="operator-button operator-button-primary">Liên kết</button>
-                </form>
+                @if ($canManageBoq)
+                    <form method="POST" action="{{ route('operator.crm.opportunities.boq-sync', $opportunity->id) }}" class="mt-3">
+                        @csrf
+                        <button type="submit" class="operator-button operator-button-primary">Đồng bộ báo giá</button>
+                    </form>
+                @endif
             @endif
         </x-ui.card>
     @endif

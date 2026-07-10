@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Exceptions\DeliverablePdfExportUnavailableException;
 use App\Models\Contract;
 use App\Models\Project;
 use App\Models\Tenant;
@@ -55,5 +56,46 @@ class ContractPdfExportTest extends TestCase
         $response->assertOk();
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
         $this->assertStringContainsString('fake-contract-pdf-bytes', $response->getContent());
+    }
+
+    public function test_web_contract_pdf_route_redirects_with_flash_error_when_export_unavailable(): void
+    {
+        $this->app->bind(DeliverablePdfExportService::class, function () {
+            return new class extends DeliverablePdfExportService {
+                public function render(string $html, array $options = [], array $documentMeta = []): string
+                {
+                    throw new DeliverablePdfExportUnavailableException();
+                }
+            };
+        });
+
+        $tenant = Tenant::factory()->create();
+        $user = $this->createTenantUser($tenant, [], ['admin'], ['contract.view']);
+
+        $project = Project::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'name' => 'Du an pdf web',
+            'code' => 'PRJ-PDFTEST2',
+            'status' => 'planning',
+        ]);
+
+        $contract = Contract::query()->create([
+            'tenant_id' => (string) $tenant->id,
+            'project_id' => (string) $project->id,
+            'code' => 'CTR-PDFTEST2',
+            'title' => 'Hop dong pdf web test',
+            'client_name' => 'Khach hang pdf web',
+            'total_value' => 123000000,
+            'currency' => 'VND',
+        ]);
+
+        $response = $this->actingAs($user)->get(
+            route('operator.contracts.pdf', $contract->id),
+            ['X-Tenant-ID' => (string) $tenant->id]
+        );
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error');
+        $this->assertStringNotContainsString('application/pdf', (string) $response->headers->get('Content-Type'));
     }
 }

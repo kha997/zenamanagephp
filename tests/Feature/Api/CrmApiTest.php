@@ -580,6 +580,36 @@ class CrmApiTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function test_create_contract_requires_contract_create_permission(): void
+    {
+        $this->tenantA->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $noContractCreate = $this->createTenantUser($this->tenantA, [], ['sales'], ['crm.view', 'crm.manage', 'crm.convert']);
+
+        $opportunity = $this->createOpportunity([
+            'pipeline_stage' => Opportunity::STAGE_WON,
+            'external_boq_project_code' => 'PRJ-PERM1',
+            'external_quote_snapshot' => ['revision' => 1, 'total' => 50000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        $response = $this->postJson(
+            $this->route('opportunities.create-contract', ['id' => $opportunity->id]),
+            [],
+            $this->headersFor($noContractCreate)
+        );
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseMissing('contracts', ['source_opportunity_id' => (string) $opportunity->id]);
+
+        // The auto-convert step (guarded by 'crm.convert', which this user does have) runs
+        // BEFORE the 'contract.create' authorization check in createContract(), so the
+        // opportunity IS converted even though contract creation is blocked afterward.
+        $opportunity->refresh();
+        $this->assertNotNull($opportunity->converted_project_id);
+    }
+
     public function test_unauthenticated_request_is_rejected(): void
     {
         $response = $this->getJson($this->route('leads.index'), [

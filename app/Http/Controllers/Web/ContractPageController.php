@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Services\DeliverablePdfExportService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -154,7 +155,7 @@ class ContractPageController extends Controller
             ->findOrFail($id);
 
         try {
-            return $apiController->pdf(
+            $response = $apiController->pdf(
                 $this->buildApiRequest($request),
                 (string) $contract->project_id,
                 (string) $contract->id,
@@ -165,5 +166,11 @@ class ContractPageController extends Controller
         } catch (Throwable) {
             return back()->with('error', 'Không thể tạo PDF hợp đồng vào lúc này.');
         }
+
+        if ($response instanceof JsonResponse) {
+            return $this->handleErrorResponse($response);
+        }
+
+        return $response;
     }
 }

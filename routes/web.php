@@ -968,6 +968,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/crm/opportunities/{id}/convert', [App\Http\Controllers\Web\CrmPageController::class, 'convertOpportunity'])->middleware('rbac:crm.convert')->name('crm.opportunities.convert');
     Route::post('/crm/opportunities/{id}/boq-link', [App\Http\Controllers\Web\CrmPageController::class, 'linkBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
     Route::post('/crm/opportunities/{id}/boq-sync', [App\Http\Controllers\Web\CrmPageController::class, 'syncBoqQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-sync');
+    Route::post('/crm/opportunities/{id}/create-contract', [App\Http\Controllers\Web\CrmPageController::class, 'createContract'])->middleware('rbac:crm.manage')->name('crm.opportunities.create-contract');
 });
 
 Route::middleware(['web', 'auth:sanctum', 'tenant.isolation', 'rbac'])->prefix('api')->as('api.legacy.')->group(function () {

@@ -31,7 +31,7 @@ class OperatorCrmUiTest extends TestCase
             $this->tenant,
             [],
             ['admin'],
-            ['crm.view', 'crm.manage', 'crm.convert']
+            ['crm.view', 'crm.manage', 'crm.convert', 'contract.create']
         );
     }
 
@@ -363,6 +363,127 @@ class OperatorCrmUiTest extends TestCase
             ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
             ->assertOk()
             ->assertDontSee('text-amber-600', false);
+    }
+
+    public function test_contract_action_appears_for_won_opportunity_with_accepted_quote(): void
+    {
+        $this->tenant->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang won',
+            'status' => \App\Models\Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = \App\Models\Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi da thang',
+            'service_category' => 'architecture',
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+            'external_boq_project_code' => 'PRJ-008',
+            'external_quote_id' => 'quote_ui_1',
+            'external_quote_snapshot' => ['revision' => 1, 'total' => 75000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertSee('Tạo hợp đồng');
+
+        $create = $this->actingAs($this->user)
+            ->post(route('operator.crm.opportunities.create-contract', $opportunity->id), [], $headers);
+        $create->assertRedirect(route('operator.crm.opportunities.show', $opportunity->id));
+
+        $opportunity->refresh();
+        $this->assertNotNull($opportunity->converted_project_id);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertDontSee('Tạo hợp đồng')
+            ->assertSee('CTR-');
+    }
+
+    public function test_contract_action_hidden_for_non_won_opportunity(): void
+    {
+        $this->tenant->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang chua thang',
+            'status' => \App\Models\Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = \App\Models\Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi dang xu ly',
+            'service_category' => 'architecture',
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_QUALIFIED,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertDontSee('Tạo hợp đồng');
+    }
+
+    public function test_contract_card_shows_drift_warning_when_quote_changed_after_creation(): void
+    {
+        $this->tenant->update(['name' => 'Z.E.N.A']);
+        config(['zena_boq.integration_tenant_name' => 'Z.E.N.A']);
+
+        $account = \App\Models\Account::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_type' => \App\Models\Account::TYPE_INDIVIDUAL,
+            'display_name' => 'Khach hang drift',
+            'status' => \App\Models\Account::STATUS_ACTIVE,
+        ]);
+
+        $opportunity = \App\Models\Opportunity::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'account_id' => (string) $account->id,
+            'opportunity_name' => 'Co hoi bi drift',
+            'service_category' => 'architecture',
+            'pipeline_stage' => \App\Models\Opportunity::STAGE_WON,
+            'sales_owner_id' => (string) $this->user->id,
+            'created_by' => (string) $this->user->id,
+            'external_boq_project_code' => 'PRJ-009',
+            'external_quote_id' => 'quote_ui_2',
+            'external_quote_snapshot' => ['revision' => 1, 'total' => 90000000, 'status' => 'ACCEPTED'],
+        ]);
+
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk();
+
+        $this->actingAs($this->user)
+            ->post(route('operator.crm.opportunities.create-contract', $opportunity->id), [], $headers);
+
+        // Simulate a later re-sync that pulled a different revision.
+        $opportunity->refresh();
+        $opportunity->external_quote_snapshot = ['revision' => 2, 'total' => 120000000, 'status' => 'ACCEPTED'];
+        $opportunity->save();
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.opportunities.show', $opportunity->id), $headers)
+            ->assertOk()
+            ->assertSee('Báo giá đã đổi kể từ khi tạo hợp đồng');
     }
 
     public function test_boq_card_is_hidden_for_non_authorized_tenant(): void

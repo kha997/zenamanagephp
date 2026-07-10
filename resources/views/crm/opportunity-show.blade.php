@@ -106,6 +106,34 @@
         </x-ui.card>
     @endif
 
+    @if ($boqIntegrationEnabled)
+        <x-ui.card title="Báo giá — zena-boq-core">
+            @if ($opportunity->external_boq_project_code)
+                <div class="operator-form-grid">
+                    <x-ui.field-value label="Mã dự án" :value="$opportunity->external_boq_project_code" />
+                    <x-ui.field-value label="Trạng thái" :value="$opportunity->external_quote_snapshot['status'] ?? '—'" />
+                    <x-ui.field-value label="Hiệu chỉnh giá" :value="$opportunity->external_quote_snapshot['calibration'] ?? '—'" />
+                    <x-ui.field-value label="Tổng tiền" :value="isset($opportunity->external_quote_snapshot['total']) ? number_format((float) $opportunity->external_quote_snapshot['total'], 0, ',', '.') . '₫' : '—'" />
+                    <x-ui.field-value label="Đồng bộ lần cuối" :value="optional($opportunity->external_quote_synced_at)->format('d/m/Y H:i') ?? 'Chưa đồng bộ'" />
+                </div>
+
+                <form method="POST" action="{{ route('operator.crm.opportunities.boq-sync', $opportunity->id) }}" class="mt-3">
+                    @csrf
+                    <button type="submit" class="operator-button operator-button-primary">Đồng bộ báo giá</button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('operator.crm.opportunities.boq-link', $opportunity->id) }}" class="flex flex-wrap items-end gap-3">
+                    @csrf
+                    <div class="operator-field flex-1 min-w-64">
+                        <label for="external_boq_project_code">Mã dự án zena-boq-core</label>
+                        <input id="external_boq_project_code" name="external_boq_project_code" type="text" class="operator-input" value="{{ old('external_boq_project_code') }}" required placeholder="vd: PRJ-001">
+                    </div>
+                    <button type="submit" class="operator-button operator-button-primary">Liên kết</button>
+                </form>
+            @endif
+        </x-ui.card>
+    @endif
+
     <x-ui.card title="Lịch sử">
         @if ($events->isEmpty())
             <p class="text-sm text-slate-500">Chưa có sự kiện.</p>

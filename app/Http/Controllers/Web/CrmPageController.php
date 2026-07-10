@@ -11,6 +11,7 @@ use App\Models\Account;
 use App\Models\Lead;
 use App\Models\Opportunity;
 use App\Models\User;
+use App\Services\ZenaBoqIntegrationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -169,7 +170,7 @@ class CrmPageController extends Controller
         return $this->handleMutationResponse($response, route('operator.crm.accounts'), 'Đã tạo khách hàng');
     }
 
-    public function showOpportunity(string $id): View
+    public function showOpportunity(string $id, ZenaBoqIntegrationService $boqService): View
     {
         $tenantId = (string) auth()->user()?->tenant_id;
 
@@ -182,6 +183,7 @@ class CrmPageController extends Controller
 
         return view('crm.opportunity-show', [
             'opportunity' => $opportunity,
+            'boqIntegrationEnabled' => $boqService->isTenantAuthorized($tenantId),
             'users' => User::query()
                 ->where('tenant_id', $tenantId)
                 ->orderBy('name')
@@ -232,5 +234,35 @@ class CrmPageController extends Controller
         }
 
         return $this->handleMutationResponse($response, route('operator.crm.index'), 'Đã tạo dự án từ cơ hội');
+    }
+
+    public function linkBoqProject(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse
+    {
+        $validated = $request->validate([
+            'external_boq_project_code' => ['required', 'string', 'max:100'],
+        ]);
+
+        try {
+            $response = $apiController->linkExternalBoqProject($this->buildApiRequest($request, $validated), $id, app(\App\Services\ZenaBoqIntegrationService::class));
+        } catch (AuthorizationException) {
+            return back()->withInput()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->withInput()->with('error', 'Không thể xử lý yêu cầu.');
+        }
+
+        return $this->handleMutationResponse($response, route('operator.crm.opportunities.show', $id), 'Đã liên kết dự án zena-boq-core');
+    }
+
+    public function syncBoqQuote(Request $request, string $id, ApiOpportunityController $apiController): RedirectResponse
+    {
+        try {
+            $response = $apiController->syncExternalQuote($this->buildApiRequest($request), $id, app(\App\Services\ZenaBoqIntegrationService::class));
+        } catch (AuthorizationException) {
+            return back()->with('error', 'Bạn không có quyền thực hiện thao tác này.');
+        } catch (Throwable) {
+            return back()->with('error', 'Không thể xử lý yêu cầu.');
+        }
+
+        return $this->handleMutationResponse($response, route('operator.crm.opportunities.show', $id), 'Đã đồng bộ báo giá');
     }
 }

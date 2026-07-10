@@ -95,6 +95,10 @@ class Opportunity extends Model
         'lost_reason',
         'converted_project_id',
         'created_by',
+        'external_boq_project_code',
+        'external_quote_id',
+        'external_quote_snapshot',
+        'external_quote_synced_at',
     ];
 
     protected $casts = [
@@ -102,6 +106,8 @@ class Opportunity extends Model
         'estimated_project_value' => 'decimal:0',
         'probability' => 'integer',
         'expected_close_date' => 'date',
+        'external_quote_snapshot' => 'array',
+        'external_quote_synced_at' => 'datetime',
     ];
 
     public function account(): BelongsTo

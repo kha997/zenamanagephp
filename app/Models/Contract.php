@@ -41,6 +41,9 @@ class Contract extends Model
     protected $fillable = [
         'tenant_id',
         'project_id',
+        'source_opportunity_id',
+        'source_quote_id',
+        'source_quote_revision',
         'code',
         'contract_number',
         'title',
@@ -63,6 +66,9 @@ class Contract extends Model
     protected $casts = [
         'tenant_id' => 'string',
         'project_id' => 'string',
+        'source_opportunity_id' => 'string',
+        'source_quote_id' => 'string',
+        'source_quote_revision' => 'integer',
         'code' => 'string',
         'status' => 'string',
         'currency' => 'string',

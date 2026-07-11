@@ -55,6 +55,7 @@ class Kernel extends HttpKernel
         'auth.session' => \App\Http\Middleware\SessionManagementMiddleware::class,
         'tenant.isolation' => \App\Http\Middleware\TenantIsolationMiddleware::class,
         'rbac' => \App\Http\Middleware\RoleBasedAccessControlMiddleware::class,
+        'portal.auth' => \App\Http\Middleware\EnsurePortalAccountAuthenticated::class,
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'rate.limit' => \App\Http\Middleware\EnhancedRateLimitMiddleware::class,

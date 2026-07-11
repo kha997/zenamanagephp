@@ -981,6 +981,17 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/crm/reports', [App\Http\Controllers\Web\CrmReportController::class, 'index'])->middleware('rbac:crm.view')->name('crm.reports');
 });
 
+Route::prefix('portal/{tenantSlug}')->as('portal.')->middleware(['web'])->group(function () {
+    Route::get('/login', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'sendLoginLink'])->middleware('throttle:6,1')->name('login.send');
+    Route::get('/login/{token}', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'verify'])->middleware('throttle:10,1')->name('login.verify');
+    Route::post('/logout', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'logout'])->name('logout');
+
+    Route::middleware(['portal.auth'])->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Web\Portal\PortalDashboardController::class, 'index'])->name('dashboard');
+    });
+});
+
 Route::middleware(['web', 'auth:sanctum', 'tenant.isolation', 'rbac'])->prefix('api')->as('api.legacy.')->group(function () {
     Route::get('/dashboards', [DashboardResourceController::class, 'index'])->middleware('throttle:dashboards')->name('dashboards.index');
     Route::get('/dashboards/{dashboard}', [DashboardResourceController::class, 'show'])->name('dashboards.show');

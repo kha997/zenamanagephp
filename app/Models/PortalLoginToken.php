@@ -28,6 +28,10 @@ class PortalLoginToken extends Model
         'used_at' => 'datetime',
     ];
 
+    protected $hidden = [
+        'token_hash',
+    ];
+
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

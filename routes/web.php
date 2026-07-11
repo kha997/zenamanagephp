@@ -984,7 +984,14 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
 Route::prefix('portal/{tenantSlug}')->as('portal.')->middleware(['web'])->group(function () {
     Route::get('/login', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'showLoginForm'])->name('login');
     Route::post('/login', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'sendLoginLink'])->middleware('throttle:6,1')->name('login.send');
-    Route::get('/login/{token}', fn () => abort(404))->name('login.verify');
+    Route::get('/login/{token}', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'verify'])->middleware('throttle:10,1')->name('login.verify');
+    Route::post('/logout', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'logout'])->name('logout');
+
+    Route::middleware(['portal.auth'])->group(function () {
+        Route::get('/dashboard', function () {
+            return 'placeholder — replaced by Task 4';
+        })->name('dashboard');
+    });
 });
 
 Route::middleware(['web', 'auth:sanctum', 'tenant.isolation', 'rbac'])->prefix('api')->as('api.legacy.')->group(function () {

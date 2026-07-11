@@ -341,6 +341,17 @@ Route::group(['prefix' => 'zena', 'as' => 'api.zena.'], function () {
             Route::post('/{id}/fulfill', [\App\Http\Controllers\Api\MaterialRequestController::class, 'fulfill'])->middleware('rbac:material.receive')->name('material-requests.fulfill');
         });
 
+        // Design Item (design-item kanban — spec zena-ops-roadmap Phase 1)
+        Route::group(['prefix' => 'design-items'], function () {
+            Route::get('/', [\App\Http\Controllers\Api\DesignItemController::class, 'index'])->middleware('rbac:design-item.view')->name('design-items.index');
+            Route::post('/', [\App\Http\Controllers\Api\DesignItemController::class, 'store'])->middleware('rbac:design-item.manage')->name('design-items.store');
+            Route::get('/{id}', [\App\Http\Controllers\Api\DesignItemController::class, 'show'])->middleware('rbac:design-item.view')->name('design-items.show');
+            Route::put('/{id}', [\App\Http\Controllers\Api\DesignItemController::class, 'update'])->middleware('rbac:design-item.manage')->name('design-items.update');
+            Route::post('/{id}/status', [\App\Http\Controllers\Api\DesignItemController::class, 'updateStatus'])->middleware('rbac:design-item.manage')->name('design-items.status');
+            Route::post('/{id}/documents', [\App\Http\Controllers\Api\DesignItemController::class, 'uploadDocument'])->middleware('rbac:design-item.manage')->name('design-items.documents.store');
+            Route::get('/{id}/documents', [\App\Http\Controllers\Api\DesignItemController::class, 'listDocuments'])->middleware('rbac:design-item.view')->name('design-items.documents.index');
+        });
+
         // CRM (lead inbox → account/opportunity → project; spec crm-zena)
         Route::group(['prefix' => 'crm'], function () {
             Route::get('/leads', [\App\Http\Controllers\Api\LeadController::class, 'index'])->middleware('rbac:crm.view')->name('crm.leads.index');

@@ -41,7 +41,7 @@
 namespace Tests\Unit;
 
 use App\Models\DesignItem;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class DesignItemStateMachineTest extends TestCase
 {
@@ -1574,7 +1574,7 @@ namespace Tests\Unit;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use PHPUnit\Framework\TestCase;
+use Tests\TestCase;
 
 class DelegatesToApiControllersFileForwardingTest extends TestCase
 {

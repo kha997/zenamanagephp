@@ -57,6 +57,7 @@ class Document extends Model
     public const ENTITY_TYPE_DIARY = 'diary';
     public const ENTITY_TYPE_CR = 'cr';
     public const ENTITY_TYPE_SUBMITTAL = 'submittal';
+    public const ENTITY_TYPE_DESIGN_ITEM = 'design_item';
 
     /**
      * Danh sách các loại entity hợp lệ
@@ -67,6 +68,7 @@ class Document extends Model
         self::ENTITY_TYPE_DIARY,
         self::ENTITY_TYPE_CR,
         self::ENTITY_TYPE_SUBMITTAL,
+        self::ENTITY_TYPE_DESIGN_ITEM,
     ];
 
     /**

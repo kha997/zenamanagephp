@@ -169,6 +169,10 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'crm.manage', 'module' => 'crm', 'action' => 'manage', 'description' => 'Create/update leads, accounts, opportunities and move pipeline stages'],
         ['code' => 'crm.convert', 'module' => 'crm', 'action' => 'convert', 'description' => 'Convert won opportunities into projects'],
 
+        // Design work management (design-item kanban — spec zena-ops-roadmap Phase 1)
+        ['code' => 'design-item.view', 'module' => 'design-item', 'action' => 'view', 'description' => 'View design items and their review status'],
+        ['code' => 'design-item.manage', 'module' => 'design-item', 'action' => 'manage', 'description' => 'Create/update design items, change review status, upload files'],
+
         // Reports
         ['code' => 'report.view', 'module' => 'report', 'action' => 'view', 'description' => 'View report export page'],
         ['code' => 'report.export', 'module' => 'report', 'action' => 'export', 'description' => 'Export tenant data to CSV reports'],

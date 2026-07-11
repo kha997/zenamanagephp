@@ -988,9 +988,7 @@ Route::prefix('portal/{tenantSlug}')->as('portal.')->middleware(['web'])->group(
     Route::post('/logout', [App\Http\Controllers\Web\Portal\PortalAuthController::class, 'logout'])->name('logout');
 
     Route::middleware(['portal.auth'])->group(function () {
-        Route::get('/dashboard', function () {
-            return 'placeholder — replaced by Task 4';
-        })->name('dashboard');
+        Route::get('/dashboard', [App\Http\Controllers\Web\Portal\PortalDashboardController::class, 'index'])->name('dashboard');
     });
 });
 

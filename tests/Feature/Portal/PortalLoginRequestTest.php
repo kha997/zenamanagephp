@@ -57,7 +57,10 @@ class PortalLoginRequestTest extends TestCase
         $response->assertSessionHas('status');
 
         $this->assertSame(1, PortalLoginToken::query()->where('account_id', (string) $this->account->id)->count());
-        Mail::assertSent(\App\Mail\PortalLoginLinkEmail::class, 1);
+        // PortalLoginLinkEmail implements ShouldQueue (required to avoid a mail-send-timing
+        // enumeration side-channel), so a matched request queues the mailable rather than
+        // sending it inline — assert against the queued bucket, not the sent one.
+        Mail::assertQueued(\App\Mail\PortalLoginLinkEmail::class, 1);
     }
 
     public function test_sending_login_link_for_unknown_email_shows_same_generic_message_without_sending_mail(): void
@@ -74,7 +77,9 @@ class PortalLoginRequestTest extends TestCase
         $response->assertSessionHas('status');
 
         $this->assertSame(0, PortalLoginToken::query()->count());
-        Mail::assertNothingSent();
+        // assertNothingOutgoing() covers both the sent and queued buckets — for an
+        // unmatched/cross-tenant email, no PortalLoginLinkEmail should exist in either.
+        Mail::assertNothingOutgoing();
     }
 
     public function test_sending_login_link_for_an_email_registered_under_a_different_tenant_does_not_match(): void
@@ -97,6 +102,8 @@ class PortalLoginRequestTest extends TestCase
         ]);
 
         $this->assertSame(0, PortalLoginToken::query()->count());
-        Mail::assertNothingSent();
+        // assertNothingOutgoing() covers both the sent and queued buckets — for an
+        // unmatched/cross-tenant email, no PortalLoginLinkEmail should exist in either.
+        Mail::assertNothingOutgoing();
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Authenticatable;
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,10 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Account — khách hàng (cá nhân hoặc công ty). Port từ spec crm-zena.
+ * Also implements Authenticatable so it can be used directly as the
+ * identity for the `client` portal auth guard (Phase 6) — no password,
+ * no remember-token columns needed; the trait's defaults handle this.
  */
-class Account extends Model
+class Account extends Model implements AuthenticatableContract
 {
     use HasUlids;
+    use Authenticatable;
 
     public const TYPE_INDIVIDUAL = 'individual';
     public const TYPE_COMPANY = 'company';

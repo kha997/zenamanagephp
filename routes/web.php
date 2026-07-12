@@ -841,7 +841,14 @@ Route::middleware(['auth'])->group(function () {
 Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolation'])->group(function () {
     Route::get('/', App\Http\Controllers\Web\ProcurementDashboardController::class)->name('dashboard');
 
-    // Material Requests
+    // Material Requests — deliberately no rbac:* route middleware: every action is
+    // gated by App\Policies\MaterialRequestPolicy (index/store authorize() directly
+    // in this controller; submit/approve via the delegated Api\MaterialRequestController
+    // call, caught here as AuthorizationException for a friendly redirect+flash message
+    // instead of a raw JSON 403). Verified 2026-07-12: adding rbac:* middleware here
+    // would short-circuit before that catch block and replace the friendly UX with a
+    // raw JSON 403 body — confirmed by a real regression against
+    // OperatorProcurementUiTest::test_operator_actions_fail_safely_for_authenticated_users_without_required_permission.
     Route::get('/material-requests', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'index'])->name('material-requests.index');
     Route::get('/material-requests/create', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'create'])->name('material-requests.create');
     Route::post('/material-requests', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'store'])->name('material-requests.store');

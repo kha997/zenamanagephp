@@ -108,6 +108,7 @@ class CrmPageController extends Controller
             'account_name' => ['nullable', 'string', 'max:255'],
             'opportunity_name' => ['required', 'string', 'max:255'],
             'service_category' => ['nullable', 'string'],
+            'service_scope_summary' => ['nullable', 'string', 'max:2000'],
             'estimated_fee' => ['nullable', 'numeric', 'min:0'],
         ]);
 

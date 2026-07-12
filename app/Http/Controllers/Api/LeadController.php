@@ -219,6 +219,7 @@ class LeadController extends BaseApiController
             'account_type' => ['nullable', Rule::in(Account::VALID_TYPES)],
             'opportunity_name' => ['required', 'string', 'max:255'],
             'service_category' => ['nullable', Rule::in(Opportunity::VALID_SERVICE_CATEGORIES)],
+            'service_scope_summary' => ['nullable', 'string', 'max:2000'],
             'estimated_fee' => ['nullable', 'numeric', 'min:0'],
         ]);
 
@@ -243,7 +244,7 @@ class LeadController extends BaseApiController
                 'account_id' => (string) $account->id,
                 'opportunity_name' => (string) $request->input('opportunity_name'),
                 'service_category' => (string) $request->input('service_category', 'architecture'),
-                'service_scope_summary' => $lead->project_description,
+                'service_scope_summary' => $request->input('service_scope_summary', $lead->project_description),
                 'pipeline_stage' => Opportunity::STAGE_NEW_LEAD,
                 'estimated_fee' => $request->input('estimated_fee'),
                 'sales_owner_id' => (string) $user->id,

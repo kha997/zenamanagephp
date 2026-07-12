@@ -831,6 +831,11 @@ Route::permanentRedirect('/performance/clear-caches', '/api/v1/admin/perf/clear-
 
 Route::post('/api/upload', [UploadController::class, 'store'])->middleware(['auth']);
 Route::get('/api/websocket/auth', [WebSocketAuthController::class, 'authenticate'])->middleware(['auth']);
+// No tenant.isolation/rbac:* middleware here — verified 2026-07-12 this is NOT an
+// IDOR: WidgetController checks $widget->user_id === $user->id (and, for store,
+// $dashboard->user_id === $user->id) directly in the controller body, independent
+// of tenant middleware. See tests/Feature/LegacyWidgetOwnershipTest.php for the
+// regression coverage proving cross-user/cross-tenant access is denied.
 Route::middleware(['auth'])->group(function () {
     Route::post('/api/widgets', [WidgetController::class, 'store'])->name('api.legacy.widgets.store');
     Route::put('/api/widgets/{widget}', [WidgetController::class, 'update'])->name('api.legacy.widgets.update');

@@ -113,6 +113,7 @@ class DesignItemPageController extends Controller
             'work_instance_step_id' => ['nullable', 'string'],
             'name' => ['required', 'string', 'max:255'],
             'item_type' => ['nullable', 'string'],
+            'description' => ['nullable', 'string', 'max:2000'],
             'assigned_to' => ['nullable', 'string'],
             'due_to_client_at' => ['nullable', 'date'],
         ]);

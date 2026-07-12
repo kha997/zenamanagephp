@@ -34,6 +34,7 @@ class DesignItemController extends BaseApiController
         'work_instance_step_id',
         'name',
         'item_type',
+        'description',
         'review_status',
         'assigned_to',
         'due_to_client_at',
@@ -81,6 +82,7 @@ class DesignItemController extends BaseApiController
             ],
             'name' => ['required', 'string', 'max:255'],
             'item_type' => ['nullable', Rule::in(DesignItem::VALID_TYPES)],
+            'description' => ['nullable', 'string', 'max:2000'],
             'assigned_to' => [
                 'nullable',
                 'string',
@@ -149,6 +151,7 @@ class DesignItemController extends BaseApiController
             'work_instance_step_id' => $request->input('work_instance_step_id'),
             'name' => (string) $request->input('name'),
             'item_type' => (string) $request->input('item_type', DesignItem::TYPE_OTHER),
+            'description' => $request->input('description'),
             'review_status' => DesignItem::STATUS_DRAFT,
             'assigned_to' => $request->input('assigned_to'),
             'due_to_client_at' => $request->input('due_to_client_at'),
@@ -216,7 +219,7 @@ class DesignItemController extends BaseApiController
         // review_status is deliberately excluded here — it is only ever changed via updateStatus(),
         // which enforces the transition graph and its side-effect rules. Silently ignore it if sent.
         $item->fill($request->only([
-            'project_id', 'work_instance_step_id', 'name', 'item_type', 'assigned_to', 'due_to_client_at',
+            'project_id', 'work_instance_step_id', 'name', 'item_type', 'description', 'assigned_to', 'due_to_client_at',
         ]));
         $item->save();
 

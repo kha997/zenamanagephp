@@ -19,7 +19,7 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('operator.design-items.store') }}" class="space-y-4">
+        <form method="POST" action="{{ route('operator.design-items.store') }}" class="space-y-4" data-ai-design-item-suggest-form>
             @csrf
             <div class="operator-form-grid">
                 <div class="operator-field">
@@ -43,6 +43,12 @@
             <div class="operator-field">
                 <label for="name">Tên công việc <span class="text-rose-600">*</span></label>
                 <input id="name" name="name" type="text" class="operator-input" value="{{ old('name') }}" required placeholder="vd: Phối cảnh mặt tiền phương án 2">
+            </div>
+            <div class="operator-field">
+                <label for="description">Mô tả</label>
+                <textarea id="description" name="description" class="operator-textarea" data-ai-field="description" placeholder="Mô tả công việc thiết kế (có thể để trống, hoặc dùng Gợi ý AI)">{{ old('description') }}</textarea>
+                <button type="button" class="operator-button operator-button-secondary" data-ai-suggest-trigger>Gợi ý AI</button>
+                <span class="text-xs text-slate-500" data-ai-suggest-status></span>
             </div>
             <button type="submit" class="operator-button operator-button-primary">Tạo</button>
         </form>

@@ -90,6 +90,58 @@ class OperatorDesignItemUiTest extends TestCase
         $this->assertSame(DesignItem::STATUS_SENT_TO_CLIENT, (string) $item->review_status);
     }
 
+    public function test_design_item_creation_accepts_description(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.design-items.create'), $headers)
+            ->assertOk();
+
+        $create = $this->actingAs($this->user)
+            ->post(route('operator.design-items.store'), [
+                'project_id' => (string) $this->project->id,
+                'name' => 'Phoi canh san vuon',
+                'item_type' => 'concept',
+                'description' => 'Mo ta duoc nhap thu cong hoac tu AI.',
+            ], $headers);
+
+        $item = DesignItem::query()->where('name', 'Phoi canh san vuon')->firstOrFail();
+        $create->assertRedirect(route('operator.design-items.show', $item->id));
+        $this->assertSame('Mo ta duoc nhap thu cong hoac tu AI.', $item->description);
+    }
+
+    public function test_design_item_creation_allows_blank_description(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.design-items.create'), $headers)
+            ->assertOk();
+
+        $create = $this->actingAs($this->user)
+            ->post(route('operator.design-items.store'), [
+                'project_id' => (string) $this->project->id,
+                'name' => 'Khong co mo ta',
+                'item_type' => 'concept',
+            ], $headers);
+
+        $item = DesignItem::query()->where('name', 'Khong co mo ta')->firstOrFail();
+        $create->assertRedirect(route('operator.design-items.show', $item->id));
+        $this->assertNull($item->description);
+    }
+
+    public function test_design_items_create_page_shows_ai_suggest_button(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $this->actingAs($this->user)
+            ->get(route('operator.design-items.create'), $headers)
+            ->assertOk()
+            ->assertSee('Gợi ý AI')
+            ->assertSee('description', false);
+    }
+
     public function test_design_item_pages_require_authentication(): void
     {
         $this->get(route('operator.design-items.index'))->assertRedirect();

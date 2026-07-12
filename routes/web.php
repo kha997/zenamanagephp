@@ -89,14 +89,11 @@ if (app()->environment(['local', 'testing'])) {
 Route::prefix('api/v1/universal-frame')->middleware(['auth'])->group(function () {
     $universalFrameHardeningStack = ['tenant.isolation', 'rbac:admin', 'input.sanitization', 'error.envelope'];
 
-    // KPI Routes
-    Route::middleware($universalFrameHardeningStack)->group(function () {
-        Route::get('/kpis', [App\Http\Controllers\KpiController::class, 'index'])->name('api.kpis.index');
-        Route::get('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'preferences'])->name('api.kpis.preferences');
-        Route::post('/kpis/preferences', [App\Http\Controllers\KpiController::class, 'savePreferences'])->name('api.kpis.save-preferences');
-        Route::post('/kpis/refresh', [App\Http\Controllers\KpiController::class, 'refresh'])->name('api.kpis.refresh');
-        Route::get('/kpis/stats', [App\Http\Controllers\KpiController::class, 'stats'])->name('api.kpis.stats');
-    });
+    // KPI routes removed 2026-07-12: KpiController/KpiService served 100% hardcoded
+    // mock values behind a real RBAC gate. Real KPI data now lives at
+    // App\Services\BusinessKpiService, consumed by operator.crm.reports
+    // (Web\CrmReportController). The dead classes remain on disk (unrouted,
+    // no consumer) pending a cleanup pass with file-delete permission.
     
     // Alert Routes
     Route::middleware($universalFrameHardeningStack)->group(function () {
@@ -834,6 +831,11 @@ Route::permanentRedirect('/performance/clear-caches', '/api/v1/admin/perf/clear-
 
 Route::post('/api/upload', [UploadController::class, 'store'])->middleware(['auth']);
 Route::get('/api/websocket/auth', [WebSocketAuthController::class, 'authenticate'])->middleware(['auth']);
+// No tenant.isolation/rbac:* middleware here — verified 2026-07-12 this is NOT an
+// IDOR: WidgetController checks $widget->user_id === $user->id (and, for store,
+// $dashboard->user_id === $user->id) directly in the controller body, independent
+// of tenant middleware. See tests/Feature/LegacyWidgetOwnershipTest.php for the
+// regression coverage proving cross-user/cross-tenant access is denied.
 Route::middleware(['auth'])->group(function () {
     Route::post('/api/widgets', [WidgetController::class, 'store'])->name('api.legacy.widgets.store');
     Route::put('/api/widgets/{widget}', [WidgetController::class, 'update'])->name('api.legacy.widgets.update');
@@ -844,7 +846,14 @@ Route::middleware(['auth'])->group(function () {
 Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolation'])->group(function () {
     Route::get('/', App\Http\Controllers\Web\ProcurementDashboardController::class)->name('dashboard');
 
-    // Material Requests
+    // Material Requests — deliberately no rbac:* route middleware: every action is
+    // gated by App\Policies\MaterialRequestPolicy (index/store authorize() directly
+    // in this controller; submit/approve via the delegated Api\MaterialRequestController
+    // call, caught here as AuthorizationException for a friendly redirect+flash message
+    // instead of a raw JSON 403). Verified 2026-07-12: adding rbac:* middleware here
+    // would short-circuit before that catch block and replace the friendly UX with a
+    // raw JSON 403 body — confirmed by a real regression against
+    // OperatorProcurementUiTest::test_operator_actions_fail_safely_for_authenticated_users_without_required_permission.
     Route::get('/material-requests', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'index'])->name('material-requests.index');
     Route::get('/material-requests/create', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'create'])->name('material-requests.create');
     Route::post('/material-requests', [App\Http\Controllers\Web\MaterialRequestPageController::class, 'store'])->name('material-requests.store');

@@ -274,9 +274,50 @@ class OperatorProcurementUiTest extends TestCase
 
         $submit->assertRedirect(route('operator.material-requests.index'));
         $submit->assertSessionHas('error', 'Bạn không có quyền thực hiện thao tác này.');
+    }
+
+    /**
+     * Regression test for a system-audit finding: the material-requests.approve
+     * route has no rbac:* middleware. Confirms this is NOT an open door — approval
+     * is still gated by App\Policies\MaterialRequestPolicy::approve() (requires
+     * material.approve specifically), reached via the delegated
+     * Api\MaterialRequestController::approve() call inside
+     * Web\MaterialRequestPageController::approve()'s try/catch(AuthorizationException).
+     */
+    public function test_approve_action_denied_for_user_with_request_but_not_approve_permission(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $requesterOnlyUser = $this->createTenantUser(
+            $this->tenant,
+            [],
+            ['requester'],
+            ['material.read', 'material.request']
+        );
+
+        $materialRequest = MaterialRequest::query()->create([
+            'project_id' => (string) $this->project->id,
+            'request_number' => 'MR-LOCK-002',
+            'description' => 'Approve permission restricted request',
+            'status' => 'submitted',
+            'estimated_cost' => 100,
+            'required_date' => '2026-04-22',
+            'requested_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($requesterOnlyUser)
+            ->get(route('operator.material-requests.index'), $headers)
+            ->assertOk();
+
+        $approve = $this->actingAs($requesterOnlyUser)
+            ->from(route('operator.material-requests.index'))
+            ->post(route('operator.material-requests.approve', $materialRequest->id), [], $headers);
+
+        $approve->assertRedirect(route('operator.material-requests.index'));
+        $approve->assertSessionHas('error', 'Bạn không có quyền thực hiện thao tác này.');
 
         $materialRequest->refresh();
-        $this->assertSame('draft', (string) $materialRequest->status);
+        $this->assertSame('submitted', (string) $materialRequest->status);
     }
 
     public function test_operator_views_only_render_current_tenant_reference_data(): void

@@ -358,7 +358,7 @@ class LaunchChecklistService
 
     private function checkApiIntegration(): bool
     {
-        return file_exists(app_path('Http/Controllers/KpiController.php'));
+        return file_exists(app_path('Services/BusinessKpiService.php'));
     }
 
     private function runFinalTesting(): bool

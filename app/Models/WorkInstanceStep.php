@@ -50,6 +50,11 @@ class WorkInstanceStep extends Model
         return $this->belongsTo(WorkInstance::class);
     }
 
+    public function templateStep(): BelongsTo
+    {
+        return $this->belongsTo(WorkTemplateStep::class, 'work_template_step_id');
+    }
+
     public function values(): HasMany
     {
         return $this->hasMany(WorkInstanceFieldValue::class, 'work_instance_step_id');

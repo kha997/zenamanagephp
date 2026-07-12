@@ -77,6 +77,22 @@ class Document extends Model
     public const VISIBILITY_INTERNAL = 'internal';
     public const VISIBILITY_CLIENT = 'client';
 
+    public const DOCUMENT_TYPE_DRAWING = 'drawing';
+    public const DOCUMENT_TYPE_SPECIFICATION = 'specification';
+    public const DOCUMENT_TYPE_CONTRACT = 'contract';
+    public const DOCUMENT_TYPE_REPORT = 'report';
+    public const DOCUMENT_TYPE_PHOTO = 'photo';
+    public const DOCUMENT_TYPE_OTHER = 'other';
+
+    public const VALID_DOCUMENT_TYPES = [
+        self::DOCUMENT_TYPE_DRAWING,
+        self::DOCUMENT_TYPE_SPECIFICATION,
+        self::DOCUMENT_TYPE_CONTRACT,
+        self::DOCUMENT_TYPE_REPORT,
+        self::DOCUMENT_TYPE_PHOTO,
+        self::DOCUMENT_TYPE_OTHER,
+    ];
+
     protected $fillable = [
         'project_id',
         'tenant_id',

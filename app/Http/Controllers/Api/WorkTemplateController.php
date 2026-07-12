@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Component;
+use App\Models\Document;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class WorkTemplateController extends BaseApiController
 {
@@ -82,6 +84,8 @@ class WorkTemplateController extends BaseApiController
             'steps.*.fields.*.validation' => 'nullable|array',
             'steps.*.fields.*.enum_options' => 'nullable|array',
             'steps.*.fields.*.visibility_rule' => 'nullable|array',
+            'steps.*.required_document_types' => 'nullable|array',
+            'steps.*.required_document_types.*' => ['string', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'approvals' => 'nullable|array',
             'rules' => 'nullable|array',
         ]);
@@ -160,6 +164,8 @@ class WorkTemplateController extends BaseApiController
             'steps.*.assignee_rule' => 'nullable|array',
             'steps.*.sla_hours' => 'nullable|integer|min:0',
             'steps.*.fields' => 'nullable|array',
+            'steps.*.required_document_types' => 'nullable|array',
+            'steps.*.required_document_types.*' => ['string', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'approvals' => 'nullable|array',
             'rules' => 'nullable|array',
         ]);
@@ -1563,6 +1569,7 @@ class WorkTemplateController extends BaseApiController
                 'assignee_rule_json' => $stepData['assignee_rule'] ?? null,
                 'sla_hours' => isset($stepData['sla_hours']) ? (int) $stepData['sla_hours'] : null,
                 'config_json' => $stepData['config'] ?? null,
+                'required_document_types' => $stepData['required_document_types'] ?? null,
             ]);
 
             foreach (($stepData['fields'] ?? []) as $fieldData) {

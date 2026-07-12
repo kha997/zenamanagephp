@@ -18,11 +18,11 @@ Full current list: see `storage/app/architecture/project-model-references.md`
 (regenerate via the dump script; not reproduced here since it changes as
 the canonical model's adoption grows, unlike the frozen classes below).
 
-## `App\Models\ZenaProject` (frozen thin alias — 13 files)
+## `App\Models\ZenaProject` (frozen thin alias — 14 files)
 
 Empty subclass of `App\Models\Project`, kept per SSOT policy only because
 tests/factories reference it. Do not add behavior; do not delete without
-first confirming none of these 13 still need it:
+first confirming none of these 14 still need it:
 
 - `app/Models/ZenaProject.php` (the class itself)
 - `database/factories/ZenaProjectFactory.php`
@@ -39,7 +39,7 @@ first confirming none of these 13 still need it:
 - `tests/Feature/Api/TaskApiTest.php`
 - `tests/Feature/Api/TaskDependenciesTest.php`
 
-All 13 references are in tests/factories/seeders/a historical migration —
+All 14 references are in tests/factories/seeders/a historical migration —
 none are production request-handling code. No reachability tracing needed
 beyond this; this list is exhaustive as of 2026-07-12.
 
@@ -83,7 +83,7 @@ design spec's revision note).
 - `src/CoreProject/Listeners/ProjectProgressListener.php` — not registered anywhere (do not confuse with the separately-registered `UpdateProjectProgressListener`)
 - `src/CoreProject/Listeners/NotificationListener.php` — not registered anywhere
 
-### Not yet traced (39 files — no reachability verdict, do not assume either way)
+### Not yet traced (40 files — no reachability verdict, do not assume either way)
 
 - `app/Console/Commands/CleanMockData.php`
 - `app/Http/Controllers/Api/AnalyticsController.php`
@@ -126,7 +126,7 @@ design spec's revision note).
 - `src/WorkTemplate/Requests/ApplyTemplateRequest.php`
 - `src/WorkTemplate/Services/TemplateService.php`
 
-## Methodology note for whoever traces the remaining 39 files
+## Methodology note for whoever traces the remaining 40 files
 
 A file is only safe to call "dead" after checking ALL of:
 1. `Route::` call sites in `routes/*.php` for the file's controller (if it is one).

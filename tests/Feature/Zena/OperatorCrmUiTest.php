@@ -104,6 +104,85 @@ class OperatorCrmUiTest extends TestCase
         $this->assertNotNull($opportunity->converted_project_id);
     }
 
+    public function test_lead_conversion_accepts_custom_scope_summary(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $lead = Lead::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contact_hint' => 'Chi Mai',
+            'project_description' => 'Mo ta goc tu Lead',
+            'source' => 'zalo',
+            'status' => Lead::STATUS_NEW,
+            'captured_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.leads'), $headers)
+            ->assertOk();
+
+        $convert = $this->actingAs($this->user)
+            ->post(route('operator.crm.leads.convert', $lead->id), [
+                'account_name' => 'Chi Mai',
+                'opportunity_name' => 'Nha Chi Mai',
+                'service_category' => 'interior',
+                'service_scope_summary' => 'Tom tat da chinh sua boi sale, khac voi mo ta goc.',
+            ], $headers);
+
+        $convert->assertRedirect(route('operator.crm.index'));
+
+        $opportunity = Opportunity::query()->where('opportunity_name', 'Nha Chi Mai')->firstOrFail();
+        $this->assertSame('Tom tat da chinh sua boi sale, khac voi mo ta goc.', $opportunity->service_scope_summary);
+    }
+
+    public function test_lead_conversion_falls_back_to_project_description_without_scope_summary(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        $lead = Lead::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contact_hint' => 'Anh Nam',
+            'project_description' => 'Mo ta goc khong bi ghi de',
+            'source' => 'zalo',
+            'status' => Lead::STATUS_NEW,
+            'captured_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.leads'), $headers)
+            ->assertOk();
+
+        $this->actingAs($this->user)
+            ->post(route('operator.crm.leads.convert', $lead->id), [
+                'account_name' => 'Anh Nam',
+                'opportunity_name' => 'Nha Anh Nam',
+                'service_category' => 'architecture',
+            ], $headers);
+
+        $opportunity = Opportunity::query()->where('opportunity_name', 'Nha Anh Nam')->firstOrFail();
+        $this->assertSame('Mo ta goc khong bi ghi de', $opportunity->service_scope_summary);
+    }
+
+    public function test_leads_page_shows_ai_suggest_button(): void
+    {
+        $headers = ['X-Tenant-ID' => (string) $this->tenant->id];
+
+        Lead::query()->create([
+            'tenant_id' => (string) $this->tenant->id,
+            'contact_hint' => 'Anh Duc',
+            'project_description' => 'Nha xuong 200m2',
+            'source' => 'hotline',
+            'status' => Lead::STATUS_NEW,
+            'captured_by' => (string) $this->user->id,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get(route('operator.crm.leads'), $headers)
+            ->assertOk()
+            ->assertSee('Gợi ý AI')
+            ->assertSee('service_scope_summary', false);
+    }
+
     public function test_lead_discard_and_account_creation(): void
     {
         $headers = ['X-Tenant-ID' => (string) $this->tenant->id];

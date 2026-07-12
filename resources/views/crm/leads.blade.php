@@ -62,7 +62,7 @@
                             @if ($lead->status === 'new')
                                 <details>
                                     <summary class="operator-link cursor-pointer text-sm">Chuyển thành cơ hội</summary>
-                                    <form method="POST" action="{{ route('operator.crm.leads.convert', $lead->id) }}" class="mt-2 space-y-2">
+                                    <form method="POST" action="{{ route('operator.crm.leads.convert', $lead->id) }}" class="mt-2 space-y-2" data-ai-lead-suggest-form data-lead-id="{{ $lead->id }}">
                                         @csrf
                                         <select name="account_id" class="operator-select">
                                             <option value="">Tạo khách hàng mới từ lead</option>
@@ -72,6 +72,15 @@
                                         </select>
                                         <input name="account_name" type="text" class="operator-input" placeholder="Tên khách hàng (nếu tạo mới)" value="{{ $lead->contact_hint }}">
                                         <input name="opportunity_name" type="text" class="operator-input" placeholder="Tên cơ hội *" required>
+                                        <select name="service_category" class="operator-select" data-ai-field="service_category">
+                                            <option value="">Loại dịch vụ</option>
+                                            @foreach (['architecture' => 'Kiến trúc', 'interior' => 'Nội thất', 'landscape' => 'Cảnh quan', 'structure' => 'Kết cấu', 'mep' => 'Cơ điện (MEP)', 'construction' => 'Thi công', 'inspection' => 'Giám sát', 'consulting' => 'Tư vấn', 'combined_package' => 'Trọn gói'] as $value => $label)
+                                                <option value="{{ $value }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                        <textarea name="service_scope_summary" class="operator-textarea" placeholder="Tóm tắt phạm vi (mặc định lấy từ mô tả lead)" data-ai-field="scope_summary"></textarea>
+                                        <button type="button" class="operator-button operator-button-secondary" data-ai-suggest-trigger>Gợi ý AI</button>
+                                        <span class="text-xs text-slate-500" data-ai-suggest-status></span>
                                         <button type="submit" class="operator-button operator-button-primary">Chuyển</button>
                                     </form>
                                 </details>

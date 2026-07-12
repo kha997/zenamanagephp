@@ -970,6 +970,7 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'storeLead'])->middleware('rbac:crm.manage')->name('crm.leads.store');
     Route::post('/crm/leads/{id}/convert', [App\Http\Controllers\Web\CrmPageController::class, 'convertLead'])->middleware('rbac:crm.manage')->name('crm.leads.convert');
     Route::post('/crm/leads/{id}/discard', [App\Http\Controllers\Web\CrmPageController::class, 'discardLead'])->middleware('rbac:crm.manage')->name('crm.leads.discard');
+    Route::post('/crm/leads/{id}/suggest-conversion', [App\Http\Controllers\Web\CrmPageController::class, 'suggestLeadConversion'])->middleware(['rbac:crm.manage', 'rbac:ai.suggest'])->name('crm.leads.suggest-conversion');
     Route::get('/crm/accounts', [App\Http\Controllers\Web\CrmPageController::class, 'accounts'])->middleware('rbac:crm.view')->name('crm.accounts');
     Route::post('/crm/accounts', [App\Http\Controllers\Web\CrmPageController::class, 'storeAccount'])->middleware('rbac:crm.manage')->name('crm.accounts.store');
     Route::get('/crm/opportunities/{id}', [App\Http\Controllers\Web\CrmPageController::class, 'showOpportunity'])->middleware('rbac:crm.view')->name('crm.opportunities.show');

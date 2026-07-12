@@ -91,6 +91,7 @@ class DesignItemPageController extends Controller
         $itemType = (string) $request->input('item_type');
 
         $serviceCategory = Opportunity::query()
+            ->where('tenant_id', $tenantId)
             ->where('converted_project_id', $projectId)
             ->value('service_category');
 

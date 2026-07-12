@@ -11,9 +11,11 @@ use App\Models\Account;
 use App\Models\Lead;
 use App\Models\Opportunity;
 use App\Models\User;
+use App\Services\AiAssistService;
 use App\Services\ZenaBoqIntegrationService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Throwable;
@@ -131,6 +133,28 @@ class CrmPageController extends Controller
         }
 
         return $this->handleMutationResponse($response, route('operator.crm.leads'), 'Đã loại lead');
+    }
+
+    public function suggestLeadConversion(Request $request, string $id, AiAssistService $aiAssistService): JsonResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $lead = Lead::query()->forTenant($tenantId)->whereKey($id)->first();
+
+        if (!$lead instanceof Lead) {
+            return response()->json(['success' => false, 'message' => 'Lead not found'], 404);
+        }
+
+        $suggestion = $aiAssistService->suggestLeadConversion((string) $lead->project_description);
+
+        if ($suggestion === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tạo gợi ý lúc này.',
+            ], 503);
+        }
+
+        return response()->json(['success' => true, 'data' => $suggestion]);
     }
 
     public function accounts(): View

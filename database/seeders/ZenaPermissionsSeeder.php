@@ -168,6 +168,7 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'crm.view', 'module' => 'crm', 'action' => 'view', 'description' => 'View CRM leads, accounts and opportunities'],
         ['code' => 'crm.manage', 'module' => 'crm', 'action' => 'manage', 'description' => 'Create/update leads, accounts, opportunities and move pipeline stages'],
         ['code' => 'crm.convert', 'module' => 'crm', 'action' => 'convert', 'description' => 'Convert won opportunities into projects'],
+        ['code' => 'ai.suggest', 'module' => 'ai', 'action' => 'suggest', 'description' => 'Request AI-generated suggestions (e.g. lead-conversion service category and scope summary)'],
 
         // Design work management (design-item kanban — spec zena-ops-roadmap Phase 1)
         ['code' => 'design-item.view', 'module' => 'design-item', 'action' => 'view', 'description' => 'View design items and their review status'],

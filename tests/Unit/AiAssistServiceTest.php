@@ -170,4 +170,114 @@ class AiAssistServiceTest extends TestCase
             return true;
         });
     }
+
+    public function test_suggests_design_item_description_with_service_category(): void
+    {
+        Http::fake([
+            self::ENDPOINT => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'suggest_design_item_description',
+                    'input' => ['description' => 'Bản vẽ phối cảnh mặt tiền theo phong cách hiện đại.'],
+                ]],
+            ], 200),
+        ]);
+
+        $result = (new AiAssistService())->suggestDesignItemDescription('concept', 'architecture');
+
+        $this->assertSame(['description' => 'Bản vẽ phối cảnh mặt tiền theo phong cách hiện đại.'], $result);
+    }
+
+    public function test_suggests_design_item_description_without_service_category(): void
+    {
+        Http::fake([
+            self::ENDPOINT => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'suggest_design_item_description',
+                    'input' => ['description' => 'Mô tả kỹ thuật cho hạng mục.'],
+                ]],
+            ], 200),
+        ]);
+
+        $result = (new AiAssistService())->suggestDesignItemDescription('technical', null);
+
+        $this->assertSame(['description' => 'Mô tả kỹ thuật cho hạng mục.'], $result);
+    }
+
+    public function test_design_item_suggestion_sends_only_item_type_and_service_category(): void
+    {
+        Http::fake([
+            self::ENDPOINT => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'suggest_design_item_description',
+                    'input' => ['description' => 'Tóm tắt.'],
+                ]],
+            ], 200),
+        ]);
+
+        (new AiAssistService())->suggestDesignItemDescription('mep', 'construction');
+
+        Http::assertSent(function ($request) {
+            $content = $request->data()['messages'][0]['content'];
+            $this->assertStringContainsString('mep', $content);
+            $this->assertStringContainsString('construction', $content);
+
+            $encoded = json_encode($request->data());
+            $this->assertStringNotContainsString('project_id', (string) $encoded);
+            $this->assertStringNotContainsString('tenant', strtolower((string) $encoded));
+
+            return true;
+        });
+    }
+
+    public function test_returns_null_when_design_item_api_key_missing(): void
+    {
+        config(['ai.anthropic_api_key' => null]);
+
+        $result = (new AiAssistService())->suggestDesignItemDescription('concept', 'architecture');
+
+        $this->assertNull($result);
+        Http::assertNothingSent();
+    }
+
+    public function test_returns_null_when_item_type_blank(): void
+    {
+        $result = (new AiAssistService())->suggestDesignItemDescription('   ', 'architecture');
+
+        $this->assertNull($result);
+        Http::assertNothingSent();
+    }
+
+    public function test_returns_null_when_design_item_response_not_successful(): void
+    {
+        Http::fake([self::ENDPOINT => Http::response(['error' => 'rate limited'], 429)]);
+
+        $this->assertNull((new AiAssistService())->suggestDesignItemDescription('concept', 'architecture'));
+    }
+
+    public function test_returns_null_when_design_item_description_empty(): void
+    {
+        Http::fake([
+            self::ENDPOINT => Http::response([
+                'content' => [[
+                    'type' => 'tool_use',
+                    'name' => 'suggest_design_item_description',
+                    'input' => ['description' => ''],
+                ]],
+            ], 200),
+        ]);
+
+        $this->assertNull((new AiAssistService())->suggestDesignItemDescription('concept', 'architecture'));
+    }
+
+    public function test_returns_null_when_design_item_connection_fails(): void
+    {
+        Http::fake(function () {
+            throw new \Illuminate\Http\Client\ConnectionException('Connection refused');
+        });
+
+        $this->assertNull((new AiAssistService())->suggestDesignItemDescription('concept', 'architecture'));
+    }
 }

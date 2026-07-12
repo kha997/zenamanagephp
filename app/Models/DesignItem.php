@@ -81,6 +81,7 @@ class DesignItem extends Model
         'work_instance_step_id',
         'name',
         'item_type',
+        'description',
         'review_status',
         'assigned_to',
         'due_to_client_at',

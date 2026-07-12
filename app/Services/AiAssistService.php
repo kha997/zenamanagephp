@@ -17,6 +17,7 @@ class AiAssistService
 {
     private const ENDPOINT = 'https://api.anthropic.com/v1/messages';
     private const TOOL_NAME = 'suggest_lead_conversion';
+    private const DESIGN_ITEM_TOOL_NAME = 'suggest_design_item_description';
 
     /**
      * @return array{service_category: string, scope_summary: string}|null
@@ -79,25 +80,93 @@ class AiAssistService
     }
 
     /**
+     * @return array{description: string}|null
+     */
+    public function suggestDesignItemDescription(string $itemType, ?string $serviceCategory): ?array
+    {
+        $apiKey = (string) config('ai.anthropic_api_key');
+
+        if ($apiKey === '' || trim($itemType) === '') {
+            return null;
+        }
+
+        $context = ($serviceCategory !== null && trim($serviceCategory) !== '')
+            ? "Design item type: {$itemType}. Project service category: {$serviceCategory}."
+            : "Design item type: {$itemType}.";
+
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'x-api-key' => $apiKey,
+                    'anthropic-version' => '2023-06-01',
+                    'content-type' => 'application/json',
+                ])
+                ->post(self::ENDPOINT, [
+                    'model' => (string) config('ai.model', 'claude-haiku-4-5-20251001'),
+                    'max_tokens' => 512,
+                    'tools' => [[
+                        'name' => self::DESIGN_ITEM_TOOL_NAME,
+                        'description' => 'Suggest a short Vietnamese description for a design work item, given its type and, when known, the project service category.',
+                        'input_schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'description' => [
+                                    'type' => 'string',
+                                    'description' => 'A short (1-2 sentence) Vietnamese description of the design work item, suitable to save on the record.',
+                                ],
+                            ],
+                            'required' => ['description'],
+                        ],
+                    ]],
+                    'tool_choice' => ['type' => 'tool', 'name' => self::DESIGN_ITEM_TOOL_NAME],
+                    'messages' => [[
+                        'role' => 'user',
+                        'content' => $context,
+                    ]],
+                ]);
+
+            if (!$response->successful()) {
+                Log::warning('ai_assist.design_item_suggestion_failed', ['status' => $response->status()]);
+
+                return null;
+            }
+
+            $input = $this->extractToolUseInput($response->json('content', []), self::DESIGN_ITEM_TOOL_NAME);
+
+            if ($input === null) {
+                return null;
+            }
+
+            $description = trim((string) ($input['description'] ?? ''));
+
+            if ($description === '') {
+                Log::warning('ai_assist.design_item_suggestion_invalid_output');
+
+                return null;
+            }
+
+            return ['description' => $description];
+        } catch (Throwable $e) {
+            Log::error('ai_assist.design_item_suggestion_exception', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
      * @param array<int, mixed> $contentBlocks
      * @return array{service_category: string, scope_summary: string}|null
      */
     private function extractSuggestion(array $contentBlocks): ?array
     {
-        $toolUse = null;
-        foreach ($contentBlocks as $block) {
-            if (is_array($block) && ($block['type'] ?? null) === 'tool_use') {
-                $toolUse = $block;
-                break;
-            }
-        }
+        $input = $this->extractToolUseInput($contentBlocks, self::TOOL_NAME);
 
-        if ($toolUse === null || !isset($toolUse['input']) || !is_array($toolUse['input'])) {
+        if ($input === null) {
             return null;
         }
 
-        $category = (string) ($toolUse['input']['service_category'] ?? '');
-        $summary = trim((string) ($toolUse['input']['scope_summary'] ?? ''));
+        $category = (string) ($input['service_category'] ?? '');
+        $summary = trim((string) ($input['scope_summary'] ?? ''));
 
         if (!in_array($category, Opportunity::VALID_SERVICE_CATEGORIES, true) || $summary === '') {
             Log::warning('ai_assist.lead_suggestion_invalid_output', ['service_category' => $category]);
@@ -106,5 +175,22 @@ class AiAssistService
         }
 
         return ['service_category' => $category, 'scope_summary' => $summary];
+    }
+
+    /**
+     * @param array<int, mixed> $contentBlocks
+     * @return array<string, mixed>|null
+     */
+    private function extractToolUseInput(array $contentBlocks, string $toolName): ?array
+    {
+        foreach ($contentBlocks as $block) {
+            if (is_array($block) && ($block['type'] ?? null) === 'tool_use' && ($block['name'] ?? null) === $toolName) {
+                $input = $block['input'] ?? null;
+
+                return is_array($input) ? $input : null;
+            }
+        }
+
+        return null;
     }
 }

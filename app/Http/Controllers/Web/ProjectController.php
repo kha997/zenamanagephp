@@ -8,6 +8,7 @@ use Illuminate\View\View;
 
 use App\Http\Controllers\Controller; // Thêm import này
 use App\Models\User;
+use App\Services\DocumentChecklistService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Src\CoreProject\Models\Project;
@@ -142,8 +143,13 @@ class ProjectController extends Controller // Thêm extends Controller
                 ->where('tenant_id', $user?->tenant_id)
                 ->findOrFail($projectId);
 
+            $documentChecklist = $user?->hasPermission('work.view')
+                ? (new DocumentChecklistService())->buildReport($project)
+                : null;
+
             return view('projects.show', [
                 'project' => $project,
+                'documentChecklist' => $documentChecklist,
             ]);
         } catch (\Throwable $e) {
             abort(404, 'Dự án không tồn tại.');

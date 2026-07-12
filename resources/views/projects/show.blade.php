@@ -54,6 +54,30 @@
         @endif
     </x-ui.card>
 
+    @if ($documentChecklist !== null)
+        <x-ui.card title="Checklist tài liệu">
+            @if (empty($documentChecklist))
+                <p class="text-sm text-slate-500">Không có yêu cầu tài liệu nào cho dự án này.</p>
+            @else
+                <x-ui.data-table :headers="['Bước', 'Yêu cầu', 'Còn thiếu']">
+                    @foreach ($documentChecklist as $row)
+                        <tr>
+                            <td class="font-medium text-slate-900">{{ $row['step_name'] }}</td>
+                            <td class="text-sm text-slate-600">{{ implode(', ', $row['required']) }}</td>
+                            <td class="text-sm">
+                                @if (empty($row['missing']))
+                                    <span class="text-emerald-600">Đủ</span>
+                                @else
+                                    <span class="text-amber-600">{{ implode(', ', $row['missing']) }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </x-ui.data-table>
+            @endif
+        </x-ui.card>
+    @endif
+
     <div class="flex flex-wrap gap-3">
         <x-ui.button-link href="/app/projects/{{ $project->id }}/documents" variant="secondary">Tài liệu dự án</x-ui.button-link>
         <x-ui.button-link href="/app/projects/{{ $project->id }}/history" variant="secondary">Lịch sử</x-ui.button-link>

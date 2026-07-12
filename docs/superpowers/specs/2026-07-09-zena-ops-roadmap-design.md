@@ -32,7 +32,8 @@ Phase 3: Hiển thị báo giá trong CRM          -> depends on Phase 2
 Phase 4: Tự động hoá hợp đồng                 -> depends on Phase 3
 Phase 5: BI Dashboard điều hành               -> depends on Phase 1, 2, 3, 4
 Phase 6: Cổng khách hàng                      -> depends on Phase 1, 3, 4, 5
-Phase 7: AI có kiểm soát                      -> sequenced last by choice, not by hard technical dependency (see note below)
+Phase 7: AI có kiểm soát (Use Case 1)         -> sequenced last by choice, not by hard technical dependency (see note below)
+Phase 8: AI Use Case 2 (mô tả DesignItem)     -> depends on Phase 1, 7 (uses AiAssistService + ai.suggest permission); Phase 3 optional enrichment
 ```
 
 Phases 0 and 1 have no dependencies and can start immediately / in parallel. Phase 2 is the pivot point for the commercial chain (3→4→5). Phase 6 is terminal on its dependencies (real data flowing, not stubs) — do not start it early.
@@ -309,6 +310,30 @@ Scope this narrowly — this is a tenant record to anchor the integration gate, 
 
 ---
 
+## Phase 8 — AI Use Case 2: gợi ý mô tả DesignItem
+
+**Goal:** the second of Phase 7's three deferred AI use cases, built to its own brainstorm+plan cycle per the "ship one at a time" rule. A manual "Gợi ý AI" button on the DesignItem creation form drafts a `description` from the item's type and (when resolvable) the originating project's service category — same accept-before-save pattern as Use Case 1, never auto-applied.
+
+**Confirmed real facts (checked directly against this codebase, 2026-07-12):**
+- `design_items` has no `description` column at all today (`database/migrations/2026_07_10_090000_create_design_items_table.php`) — this use case adds one, it does not merely wire AI onto an existing field.
+- `Project` has no "project type"/category concept anywhere (`app/Models/Project.php`'s `$fillable` has no such field). The nearest existing concept is `Opportunity.service_category` (the CRM enum from Phase 3+), reachable only by reverse lookup (`Opportunity::where('converted_project_id', $projectId)->value('service_category')`) — and only when the Project was created via the CRM conversion flow. Projects created directly (not through CRM) have no such value.
+- Only the DesignItem **create** form (`resources/views/design-items/create.blade.php`, route `operator.design-items.store`) is wired to the web UI. `Api\DesignItemController::update()` exists but has no corresponding web route or edit form today — so this use case's UI surface is create-only; there is nothing to extend on an edit screen because no edit screen exists.
+- Because the DesignItem does not yet exist when the suggestion button is clicked (unlike Use Case 1, where the Lead row already existed before conversion), the suggestion endpoint cannot look anything up by a saved record's ID. It must accept the form's current in-progress selections (`project_id`, `item_type`) as request parameters, tenant-validate `project_id` the same way `DesignItemController::rules()` already does, then resolve the service category server-side from that validated project.
+
+**Use Case 2 — decisions applied (resolved with the user, 2026-07-12):**
+- **Project-type source**: resolved from `Opportunity.service_category` via the reverse `converted_project_id` lookup when available; `null`/absent when the Project has no CRM origin — the suggestion still works with `item_type` alone in that case, just with less context. No new schema added to `Project`.
+- **Data sent to Anthropic**: `item_type` (enum) and, when resolvable, `service_category` (enum) — both closed-vocabulary values, never free text, never the project's name, client name, or any other field.
+- **Data returned and validated**: a single `description` string (plain text). Unlike Use Case 1 there is no enum to check the output against — the validation here is structural (non-empty, reasonable length) rather than membership-in-an-enum, since a free-text description has no fixed vocabulary to compare against.
+- **UI**: a new `description` textarea on the create form only, empty/editable regardless of AI availability, pre-filled by the button but freely editable before submit; nothing persisted until the existing explicit "Tạo" submit action.
+- **Graceful degradation**: identical contract to Use Case 1 — any API failure returns `null` from the service, the button surfaces a plain failure message, and the create form remains fully usable with a manually-typed description exactly as it works today (empty field).
+- **Permission**: reuses the existing `ai.suggest` permission from Phase 7 — no new permission needed, since this is the same class of action ("invoke a paid AI suggestion call") already gated by that permission.
+
+**Technical approach:** extend `App\Services\AiAssistService` with a second public method, `suggestDesignItemDescription(string $itemType, ?string $serviceCategory): ?array`, following the exact same internal pattern as `suggestLeadConversion()` (forced tool-use, fail-closed to `null`, no exceptions escape the service). New migration adds `description` (`text`, nullable) to `design_items`. New endpoint on `Web\DesignItemPageController` (mirroring `CrmPageController::suggestLeadConversion()`), gated by `rbac:design-item.manage` + `rbac:ai.suggest` (dual-permission layering, same rationale as Phase 7: separates "can create design items" from "can invoke paid AI calls"). New JS module `resources/js/ai-design-item-suggest.js`, same vanilla-IIFE + `data-*` attribute convention as `ai-lead-suggest.js`, reading the form's currently-selected `project_id`/`item_type` values client-side at click time (not server-rendered into a data attribute, since neither is fixed until the user picks them).
+
+**Dependency:** Phase 1 (`DesignItem` itself), Phase 7 (`AiAssistService`, `ai.suggest` permission, established data-minimization/graceful-degradation pattern). Phase 3 (`Opportunity.service_category`) for the optional project-type enrichment, though the feature degrades gracefully without it.
+
+---
+
 ## 4. Spec-lite scope note
 
 Each phase above is deliberately specced at "enough to hand to another agent" depth (goal, data model sketch, API/route shape, dependencies, acceptance criteria) — not full TDD-level implementation detail. Per the standard process, **each phase should get its own short brainstorming pass (if anything here turns out ambiguous once someone is actually implementing it) and its own `writing-plans` implementation plan** before code starts on it. This spec is the shared reference so that plan stays consistent with the others.
@@ -406,3 +431,13 @@ Before writing Phase 7's implementation plan, checking the actual `WorkTemplate`
 - FF (verification, not a user decision) — the original spec described Use Case 1 as adding "a suggestion banner on the lead-conversion form," which reads as if the form already has the fields the suggestion would fill. Checked directly against `resources/views/crm/leads.blade.php` and `Api\LeadController::convert()`: the conversion form has no `service_category` or editable scope-summary input at all today — `service_scope_summary` is currently hardcoded server-side to a verbatim copy of `Lead.project_description`. → this means Use Case 1's actual scope includes adding these two fields to the form for the first time, not merely layering a suggestion onto fields that already exist.
 - GG — model choice for the classify-and-summarize task. → resolved with the user: Claude Haiku 4.5 (`claude-haiku-4-5-20251001`), the fast/cheap tier — this task requires no complex reasoning, and Phase 7's own "narrow, low-risk" framing argues against defaulting to a heavier model without a demonstrated quality need.
 - HH — automatic AI-suggestion fetch on form-open vs. a manual trigger. → resolved with the user: a manual "Gợi ý AI" button, not automatic — avoids an API call (and its cost) every time staff merely opens the conversion form without intending to use the suggestion.
+
+## 13. Phase 8 brainstorm (2026-07-12) — decisions applied
+
+Before writing Phase 8's implementation plan, checked the actual `DesignItem`/`Project` schema and the DesignItem web routes (rather than assuming Use Case 2's premise — "project type + item_type" — mapped cleanly onto existing fields, the same mistake Use Case 1's premise made in finding FF above):
+
+- II (verification, not a user decision) — `design_items` has no `description` column today; confirmed by reading the table migration directly. Use Case 2's scope therefore includes adding this column, not just wiring AI onto an existing field — the same shape of gap as FF.
+- JJ (verification, not a user decision) — `Project` has no "project type"/category field anywhere; the only close-enough existing concept is `Opportunity.service_category`, reachable only via a reverse `converted_project_id` lookup and only for Projects that originated from a CRM conversion.
+- KK — how to source "project type" given it doesn't exist on `Project`. → resolved with the user (recommended option chosen): derive it from `Opportunity.service_category` via the reverse lookup when available, degrade to `item_type`-only context when not (e.g., a Project created outside the CRM flow) — explicitly rejected adding a new `project_type` column to `Project` (would expand scope beyond this use case and touch the existing Project create/edit form) and rejected dropping project-type context entirely (loses useful signal for CRM-originated projects, the common case).
+- LL (verification, not a user decision) — only the DesignItem **create** form is wired to the web UI (`operator.design-items.store`); `Api\DesignItemController::update()` has no web route or edit form. This use case's UI surface is therefore create-only by necessity, not by choice — there is nothing to extend on an edit screen because none exists. A consequence follows: the suggestion endpoint must accept the form's in-progress, not-yet-persisted `project_id`/`item_type` selections as request parameters (tenant-validated the same way `DesignItemController::rules()` already validates `project_id`), unlike Use Case 1's endpoint, which read everything from an already-persisted `Lead` row addressed by path ID.
+- Permission and model choice were not re-litigated — reuses `ai.suggest` (Phase 7) and Claude Haiku 4.5, both already justified in §12 and unchanged by this use case's different data shape.

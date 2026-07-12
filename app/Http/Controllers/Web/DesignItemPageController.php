@@ -8,12 +8,17 @@ use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Document;
 use App\Models\DesignItem;
 use App\Models\EventRecord;
+use App\Models\Opportunity;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\AiAssistService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class DesignItemPageController extends Controller
@@ -65,6 +70,43 @@ class DesignItemPageController extends Controller
         ]);
     }
 
+    public function suggestDescription(Request $request, AiAssistService $aiAssistService): JsonResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $validator = Validator::make($request->all(), [
+            'project_id' => [
+                'required',
+                'string',
+                Rule::exists('projects', 'id')->where('tenant_id', $tenantId),
+            ],
+            'item_type' => ['required', Rule::in(DesignItem::VALID_TYPES)],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => 'Dữ liệu không hợp lệ.'], 422);
+        }
+
+        $projectId = (string) $request->input('project_id');
+        $itemType = (string) $request->input('item_type');
+
+        $serviceCategory = Opportunity::query()
+            ->where('tenant_id', $tenantId)
+            ->where('converted_project_id', $projectId)
+            ->value('service_category');
+
+        $suggestion = $aiAssistService->suggestDesignItemDescription($itemType, $serviceCategory);
+
+        if ($suggestion === null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tạo gợi ý lúc này.',
+            ], 503);
+        }
+
+        return response()->json(['success' => true, 'data' => $suggestion]);
+    }
+
     public function store(Request $request, ApiDesignItemController $apiController): RedirectResponse
     {
         $validated = $request->validate([
@@ -72,6 +114,7 @@ class DesignItemPageController extends Controller
             'work_instance_step_id' => ['nullable', 'string'],
             'name' => ['required', 'string', 'max:255'],
             'item_type' => ['nullable', 'string'],
+            'description' => ['nullable', 'string', 'max:2000'],
             'assigned_to' => ['nullable', 'string'],
             'due_to_client_at' => ['nullable', 'date'],
         ]);

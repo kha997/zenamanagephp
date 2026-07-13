@@ -179,12 +179,20 @@ class ProjectController extends Controller // Thêm extends Controller
                 ->sortByDesc('blocked_at')
                 ->values();
 
+            $contracts = \App\Models\Contract::query()
+                ->where('project_id', (string) $project->id)
+                ->withSum(['payments as paid_total' => fn ($q) => $q->where('status', \App\Models\ContractPayment::STATUS_PAID)], 'amount')
+                ->withSum('expenses as expense_total', 'amount')
+                ->orderBy('created_at')
+                ->get();
+
             return view('projects.show', [
                 'project' => $project,
                 'documentChecklist' => $documentChecklist,
                 'designItems' => $designItems,
                 'blockedItems' => $blockedItems,
                 'sectionTasks' => $sectionTasks,
+                'contracts' => $contracts,
             ]);
         } catch (\Throwable $e) {
             abort(404, 'Dự án không tồn tại.');

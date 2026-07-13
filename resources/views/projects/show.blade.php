@@ -80,6 +80,29 @@
 
     @include('projects._design-progress', ['designItems' => $designItems, 'blockedItems' => $blockedItems, 'tasks' => $sectionTasks])
 
+    <x-ui.card title="Hợp đồng & tài chính">
+        @forelse ($contracts as $contract)
+            <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 py-2 text-sm">
+                <a href="{{ route('operator.contracts.show', $contract->id) }}" class="font-medium">{{ $contract->code }}</a>
+                <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{{ $contract->typeLabel() }}</span>
+                <x-ui.status-badge :status="$contract->status" />
+                <span>Giá trị: {{ number_format((float) $contract->total_value) }}</span>
+                <span class="text-emerald-700">Đã thu: {{ number_format((float) ($contract->paid_total ?? 0)) }}</span>
+                <span class="text-red-700">Đã chi: {{ number_format((float) ($contract->expense_total ?? 0)) }}</span>
+                <span class="text-slate-500">Còn phải thu: {{ number_format((float) $contract->total_value - (float) ($contract->paid_total ?? 0)) }}</span>
+            </div>
+        @empty
+            <p class="text-sm text-slate-500">Chưa có hợp đồng.</p>
+        @endforelse
+        @if ($contracts->isNotEmpty())
+            <div class="mt-2 border-t border-slate-200 pt-2 text-sm font-medium">
+                Tổng: {{ number_format((float) $contracts->sum('total_value')) }}
+                · Đã thu {{ number_format((float) $contracts->sum('paid_total')) }}
+                · Đã chi {{ number_format((float) $contracts->sum('expense_total')) }}
+            </div>
+        @endif
+    </x-ui.card>
+
     <div class="flex flex-wrap gap-3">
         <x-ui.button-link href="/app/projects/{{ $project->id }}/documents" variant="secondary">Tài liệu dự án</x-ui.button-link>
         <x-ui.button-link href="/app/projects/{{ $project->id }}/history" variant="secondary">Lịch sử</x-ui.button-link>

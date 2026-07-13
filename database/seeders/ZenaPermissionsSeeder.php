@@ -105,6 +105,9 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'contract.payment.create', 'module' => 'contract', 'action' => 'payment.create', 'description' => 'Create contract payments'],
         ['code' => 'contract.payment.update', 'module' => 'contract', 'action' => 'payment.update', 'description' => 'Update contract payments'],
         ['code' => 'contract.payment.delete', 'module' => 'contract', 'action' => 'payment.delete', 'description' => 'Delete contract payments'],
+        ['code' => 'contract.expense.view', 'module' => 'contract', 'action' => 'expense.view', 'description' => 'View contract expenses'],
+        ['code' => 'contract.expense.create', 'module' => 'contract', 'action' => 'expense.create', 'description' => 'Create contract expenses'],
+        ['code' => 'contract.expense.delete', 'module' => 'contract', 'action' => 'expense.delete', 'description' => 'Delete contract expenses'],
 
         // Task management
         ['code' => 'task.view', 'module' => 'task', 'action' => 'view', 'description' => 'View tasks'],

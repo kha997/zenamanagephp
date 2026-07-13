@@ -141,6 +141,11 @@ class Contract extends Model
         return $this->hasMany(ContractPayment::class, 'contract_id');
     }
 
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(ContractExpense::class, 'contract_id');
+    }
+
     public function getContractNumberAttribute(): ?string
     {
         return $this->attributes['contract_number'] ?? $this->attributes['code'] ?? null;

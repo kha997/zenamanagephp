@@ -27,7 +27,12 @@
                             <a href="{{ route('app.tasks.show', $task->id) }}" class="operator-link font-medium">{{ $task->name ?? $task->title }}</a>
                         </td>
                         <td class="text-sm text-slate-600">{{ $task->project?->name ?? '—' }}</td>
-                        <td><x-ui.status-badge :status="$task->status" /></td>
+                        <td>
+                            <x-ui.status-badge :status="$task->status" />
+                            @if ($task->blocked_at)
+                                <span class="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-800 ml-1">Vướng</span>
+                            @endif
+                        </td>
                         <td class="text-sm text-slate-600">{{ $task->priority ?? '—' }}</td>
                         <td class="text-sm text-slate-600">{{ (int) $task->progress_percent }}%</td>
                         <td class="text-sm text-slate-600">{{ $task->end_date ? \Illuminate\Support\Carbon::parse($task->end_date)->format('d/m/Y') : '—' }}</td>

@@ -191,4 +191,30 @@ class BlockerUiTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('Vướng');
     }
+
+    /** Task index shows "Vướng" badge for blocked tasks. */
+    public function test_task_index_shows_blocker_badge(): void
+    {
+        $this->task->forceFill([
+            'blocked_at' => now(),
+            'blocker_note' => 'Chờ vật tư',
+            'blocked_by' => (string) $this->user->id,
+        ])->save();
+
+        $response = $this->actingAs($this->user)
+            ->get(route('app.tasks'));
+
+        $response->assertOk();
+        $response->assertSee('Vướng');
+    }
+
+    /** Task index does NOT show "Vướng" badge when no tasks are blocked. */
+    public function test_task_index_hides_blocker_badge_when_not_blocked(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->get(route('app.tasks'));
+
+        $response->assertOk();
+        $response->assertDontSee('Vướng');
+    }
 }

@@ -8,9 +8,11 @@
 
 ## Summary
 
-10 files in `app/` and `src/` import `Src\CoreProject\Models\Project` but have no live consumers. Each was re-verified independently on 2026-07-13 using the 5-step methodology from `docs/architecture/project-model-reference-inventory.md`.
+11 files in `app/` and `src/` import `Src\CoreProject\Models\Project` but have no live consumers. Each was re-verified independently on 2026-07-13 using the 5-step methodology from `docs/architecture/project-model-reference-inventory.md`.
 
-**All 10 files confirmed DEAD.** No corrections needed to the inventory.
+The inventory's original "10 DEAD" count from batch tracing excluded `RecalculateProjectRollupJob` from the DEAD tally because it was in a different batch grouping, but the file was traced as DEAD in batch 3 of the inventory (dispatched only by a commented-out listener). All 11 files confirmed DEAD — no corrections needed to the inventory.
+
+**All 11 files confirmed DEAD.**
 
 ---
 
@@ -30,7 +32,7 @@
 
 | # | File | Evidence | Risk |
 |---|------|----------|------|
-| 6 | `app/Services/BaselineService.php` | Only consumed by `app/Http/Controllers/BaselineController.php` (line 22, constructor DI). That controller is NOT routed — no `Route::` entry found, not in `routes/api.php` or `app/routes/api_zena.php`. The routed `Src\CoreProject\Controllers\BaselineController` uses `Src\CoreProject\Services\BaselineService`. | Low — unrouted consumer |
+| 6 | `app/Services/BaselineService.php` | Only consumed by `app/Http/Controllers/BaselineController.php` (line 22, constructor DI). That controller is NOT routed — no `Route::` entry found, not in `routes/api.php` or `routes/api_zena.php`. The routed `Src\CoreProject\Controllers\BaselineController` uses `Src\CoreProject\Services\BaselineService`. | Low — unrouted consumer |
 | 7 | `app/Services/CompensationService.php` | Only consumed by `app/Http/Controllers/CompensationController.php` (line 30, constructor DI). That controller is NOT routed. The routed `Src\Compensation\Controllers\CompensationController` uses `Src\Compensation\Services\CompensationService`. | Low — unrouted consumer |
 | 8 | `app/Services/InteractionLogService.php` | Only consumed by `app/Http/Controllers/InteractionLogController.php` (line 18, constructor DI). That controller is NOT routed. The routed `Src\InteractionLogs\Controllers\InteractionLogController` uses `Src\InteractionLogs\Services\InteractionLogService`. | Low — unrouted consumer |
 | 9 | `app/Services/TemplateService.php` | Only consumed by `app/Http/Controllers/TemplateController.php` (line 22, constructor DI). That controller is NOT routed. The routed `Src\WorkTemplate\Controllers\TemplateController` uses `Src\WorkTemplate\Services\TemplateService`. | Low — unrouted consumer |
@@ -90,7 +92,7 @@ php artisan route:list                          # verify no broken routes
 - 1 form request: never type-hinted by any controller
 - 1 job: dispatched only by a fully commented-out listener
 
-**Potential risk:** If any `app/Http/Controllers/*` file (BaselineController, CompensationController, InteractionLogController, TemplateController) is somehow routed via a mechanism not visible in `routes/api.php` or `app/routes/api_zena.php`, removing the service would cause a runtime error. However, grep of all route files confirms no such routing exists.
+**Potential risk:** If any `app/Http/Controllers/*` file (BaselineController, CompensationController, InteractionLogController, TemplateController) is somehow routed via a mechanism not visible in `routes/api.php` or `routes/api_zena.php`, removing the service would cause a runtime error. However, grep of all route files confirms no such routing exists.
 
 ---
 

@@ -238,3 +238,7 @@ These include:
 2. Execute deletions and moves per implementation plan
 3. Run full test suite to verify no breakage
 4. Commit and push
+
+---
+
+**DECISION (2026-07-13): User APPROVED this cleanup.** Execute per `docs/superpowers/plans/2026-07-13-opencode-handoff-4.md` Task M: one commit per category, re-grep references before every `git rm`/`git mv`, run route:list + architecture tests between commits, full suite + PHPStan at the end.

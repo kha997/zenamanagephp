@@ -5,7 +5,6 @@ namespace Tests\Feature\Api;
 use Tests\TestCase;
 use App\Models\Project;
 use App\Models\User;
-use App\Models\ZenaProject;
 use App\Models\ZenaTask;
 use App\Models\ZenaRfi;
 use App\Models\ZenaSubmittal;
@@ -24,7 +23,7 @@ class IntegrationTest extends TestCase
     use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     protected User $user;
-    protected ZenaProject $project;
+    protected Project $project;
     protected Project $appProject;
 
     protected function setUp(): void
@@ -33,7 +32,7 @@ class IntegrationTest extends TestCase
 
         $this->apiActingAsTenantAdmin();
         $this->user = $this->apiFeatureUser;
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);
@@ -428,7 +427,7 @@ class IntegrationTest extends TestCase
     public function test_cross_module_data_consistency()
     {
         // Create project
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);

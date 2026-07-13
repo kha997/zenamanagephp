@@ -12,7 +12,7 @@ use Tests\TestCase;
 use App\Models\Notification;
 use App\Models\User;
 use App\Models\Role;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use App\Models\ZenaChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -36,7 +36,7 @@ class ChangeRequestApiTest extends TestCase
         parent::setUp();
         
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);

@@ -5,7 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Laravel\Sanctum\Sanctum;
@@ -22,7 +22,7 @@ class SecurityTest extends TestCase
 
     protected User $user;
 
-    protected ZenaProject $project;
+    protected Project $project;
 
     protected string $token;
 
@@ -35,7 +35,7 @@ class SecurityTest extends TestCase
         $this->apiActingAsTenantAdmin();
         $this->user = $this->apiFeatureUser;
         $this->tenantId = $this->apiFeatureTenant->id;
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->tenantId,
         ]);
@@ -208,7 +208,7 @@ class SecurityTest extends TestCase
     public function test_user_can_only_access_own_data()
     {
         $otherUser = User::factory()->create();
-        $otherProject = ZenaProject::factory()->create([
+        $otherProject = Project::factory()->create([
             'created_by' => $otherUser->id,
         ]);
 
@@ -229,12 +229,12 @@ class SecurityTest extends TestCase
         $tenant1User = User::factory()->create(['tenant_id' => 1]);
         $tenant2User = User::factory()->create(['tenant_id' => 2]);
 
-        $tenant1Project = ZenaProject::factory()->create([
+        $tenant1Project = Project::factory()->create([
             'created_by' => $tenant1User->id,
             'tenant_id' => 1,
         ]);
 
-        $tenant2Project = ZenaProject::factory()->create([
+        $tenant2Project = Project::factory()->create([
             'created_by' => $tenant2User->id,
             'tenant_id' => 2,
         ]);
@@ -293,7 +293,7 @@ class SecurityTest extends TestCase
      */
     public function test_ulid_security()
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'created_by' => $this->user->id,
         ]);
 

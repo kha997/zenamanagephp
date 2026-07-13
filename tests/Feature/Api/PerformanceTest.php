@@ -6,7 +6,7 @@ use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\User;
 use App\Models\ZenaChangeRequest;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use App\Models\ZenaRfi;
 use App\Models\ZenaSubmittal;
 use App\Models\ZenaTask;
@@ -44,7 +44,7 @@ class PerformanceTest extends TestCase
 
     protected Tenant $tenant;
     protected User $user;
-    protected ZenaProject $project;
+    protected Project $project;
 
     protected function setUp(): void
     {
@@ -64,7 +64,7 @@ class PerformanceTest extends TestCase
         $this->tenant = $this->apiFeatureTenant;
         $this->user = $this->apiFeatureUser;
 
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'created_by' => $this->user->id,
             'pm_id' => $this->user->id,
@@ -88,7 +88,7 @@ class PerformanceTest extends TestCase
 
     public function test_project_listing_performance(): void
     {
-        ZenaProject::factory()->count(self::PROJECT_LISTING_COUNT)->create([
+        Project::factory()->count(self::PROJECT_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'created_by' => $this->user->id,
             'pm_id' => $this->user->id,

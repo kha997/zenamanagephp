@@ -3,7 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Models\Tenant;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use App\Models\ZenaTask;
 use App\Models\User;
 use Tests\TestCase;
@@ -37,7 +37,7 @@ class TaskApiTest extends TestCase
      */
     public function test_can_get_tasks_for_project(): void
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenantId
         ]);
         
@@ -74,7 +74,7 @@ class TaskApiTest extends TestCase
      */
     public function test_can_create_task_with_dependencies(): void
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenantId
         ]);
         
@@ -111,7 +111,7 @@ class TaskApiTest extends TestCase
      */
     public function test_can_update_task_status(): void
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenantId
         ]);
         
@@ -143,7 +143,7 @@ class TaskApiTest extends TestCase
 
     public function test_cross_tenant_task_show_returns_not_found(): void
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenantId,
         ]);
 
@@ -167,7 +167,7 @@ class TaskApiTest extends TestCase
 
     public function test_cross_tenant_task_update_returns_not_found(): void
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenantId,
         ]);
 
@@ -193,7 +193,7 @@ class TaskApiTest extends TestCase
 
     public function test_cross_tenant_task_destroy_returns_not_found(): void
     {
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'tenant_id' => $this->tenantId,
         ]);
 

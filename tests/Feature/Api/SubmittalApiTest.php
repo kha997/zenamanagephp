@@ -4,7 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Role;
 use App\Models\User;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use App\Models\ZenaSubmittal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -31,7 +31,7 @@ class SubmittalApiTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);
@@ -469,7 +469,7 @@ class SubmittalApiTest extends TestCase
         $user->roles()->syncWithoutDetaching($role->id);
     }
 
-    private function syncZenaProjectRecord(ZenaProject $project): void
+    private function syncZenaProjectRecord(Project $project): void
     {
         DB::table('zena_projects')->updateOrInsert(
             ['id' => $project->id],

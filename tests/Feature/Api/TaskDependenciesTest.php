@@ -8,7 +8,7 @@ use App\Models\Tenant;
 use App\Models\Task;
 use App\Models\TaskDependency;
 use App\Models\User;
-use App\Models\ZenaProject;
+use App\Models\Project;
 use App\Models\ZenaTask;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -19,7 +19,7 @@ class TaskDependenciesTest extends TestCase
     use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     protected User $user;
-    protected ZenaProject $project;
+    protected Project $project;
 
     protected function setUp(): void
     {
@@ -27,7 +27,7 @@ class TaskDependenciesTest extends TestCase
 
         $this->apiActingAsTenantAdmin();
         $this->user = $this->apiFeatureUser;
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->apiFeatureTenant->id,
         ]);

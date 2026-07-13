@@ -139,6 +139,113 @@
                     <p class="text-sm text-slate-500">Chưa có công việc.</p>
                 @endforelse
             </x-ui.card>
+
+            {{-- BOQ Card --}}
+            @php $boqLocked = $certificates->contains('status', \App\Models\PaymentCertificate::STATUS_APPROVED); @endphp
+            <x-ui.card title="Bảng khối lượng HĐ">
+                @if ($boq && $boqLines->isNotEmpty())
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-left text-xs font-medium uppercase text-slate-500">
+                                    <th class="px-2 py-2">Mã</th>
+                                    <th class="px-2 py-2">Tên</th>
+                                    <th class="px-2 py-2">ĐVT</th>
+                                    <th class="px-2 py-2 text-right">KL HĐ</th>
+                                    <th class="px-2 py-2 text-right">Đơn giá</th>
+                                    <th class="px-2 py-2 text-right">Thành tiền</th>
+                                    @if (!$boqLocked && auth()->user()?->hasPermission('contract.update'))
+                                        <th class="px-2 py-2"></th>
+                                    @endif
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($boqLines as $item)
+                                    <tr class="border-b border-slate-100">
+                                        <td class="px-2 py-2 font-medium">{{ $item->code }}</td>
+                                        <td class="px-2 py-2">{{ $item->name }}</td>
+                                        <td class="px-2 py-2">{{ $item->unit }}</td>
+                                        <td class="px-2 py-2 text-right">{{ number_format($item->quantity, 0, ',', '.') }}</td>
+                                        <td class="px-2 py-2 text-right">{{ $item->unit_price !== null ? number_format($item->unit_price, 0, ',', '.') : '—' }}</td>
+                                        <td class="px-2 py-2 text-right font-medium">{{ $item->unit_price !== null ? number_format($item->quantity * $item->unit_price, 0, ',', '.') : '—' }}</td>
+                                        @if (!$boqLocked && auth()->user()?->hasPermission('contract.update'))
+                                            <td class="px-2 py-2 text-right">
+                                                <form method="POST" action="{{ route('operator.contracts.boq-lines.delete', [$contract->id, $item->id]) }}" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="text-xs text-rose-600 hover:underline" onclick="return confirm('Xóa dòng này?')">Xóa</button>
+                                                </form>
+                                            </td>
+                                        @endif
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <p class="text-sm text-slate-500">Chưa có bảng khối lượng.</p>
+                @endif
+
+                @if ($boqLocked)
+                    <p class="mt-2 text-xs text-amber-600">Bảng khối lượng đã khóa (đã có chứng chỉ được duyệt).</p>
+                @endif
+
+                @if (auth()->user()?->hasPermission('contract.update'))
+                    <form method="POST" action="{{ route('operator.contracts.boq-lines.store', $contract->id) }}" class="mt-3 flex flex-wrap items-end gap-2" @if($boqLocked) style="display:none" @endif>
+                        @csrf
+                        <div class="operator-field">
+                            <label for="boq_code" class="text-xs">Mã</label>
+                            <input id="boq_code" name="code" type="text" class="operator-input" value="{{ old('boq_code') }}" maxlength="100" required>
+                        </div>
+                        <div class="operator-field">
+                            <label for="boq_name" class="text-xs">Tên</label>
+                            <input id="boq_name" name="name" type="text" class="operator-input" value="{{ old('boq_name') }}" maxlength="255" required>
+                        </div>
+                        <div class="operator-field">
+                            <label for="boq_unit" class="text-xs">ĐVT</label>
+                            <input id="boq_unit" name="unit" type="text" class="operator-input" value="{{ old('boq_unit') }}" maxlength="50" required>
+                        </div>
+                        <div class="operator-field">
+                            <label for="boq_quantity" class="text-xs">KL</label>
+                            <input id="boq_quantity" name="quantity" type="number" min="0.01" step="any" class="operator-input" value="{{ old('boq_quantity') }}" required>
+                        </div>
+                        <div class="operator-field">
+                            <label for="boq_unit_price" class="text-xs">Đơn giá</label>
+                            <input id="boq_unit_price" name="unit_price" type="number" min="0" step="any" class="operator-input" value="{{ old('boq_unit_price') }}">
+                        </div>
+                        <button type="submit" class="operator-button operator-button-primary">Thêm dòng</button>
+                    </form>
+                @endif
+            </x-ui.card>
+
+            {{-- Certificates Card --}}
+            <x-ui.card title="Nghiệm thu khối lượng">
+                @forelse ($certificates as $cert)
+                    <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 py-2 text-sm">
+                        <span class="font-medium">Kỳ {{ $cert->period_no }}</span>
+                        <span class="text-slate-500">{{ $cert->period_from->format('d/m/Y') }} → {{ $cert->period_to->format('d/m/Y') }}</span>
+                        <span>{{ number_format($cert->total_this_period) }}</span>
+                        <x-ui.status-badge :status="$cert->status" />
+                        <a href="{{ route('operator.contracts.certificates.show', [$contract->id, $cert->id]) }}" class="text-xs text-blue-600 hover:underline">Chi tiết</a>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">Chưa có chứng chỉ nghiệm thu.</p>
+                @endforelse
+
+                @if (auth()->user()?->hasPermission('payment_certificate.create'))
+                    <form method="POST" action="{{ route('operator.contracts.certificates.store', $contract->id) }}" class="mt-3 flex flex-wrap items-end gap-2">
+                        @csrf
+                        <div class="operator-field">
+                            <label for="cert_period_from" class="text-xs">Từ ngày</label>
+                            <input id="cert_period_from" name="period_from" type="date" class="operator-input" value="{{ old('period_from') }}" required>
+                        </div>
+                        <div class="operator-field">
+                            <label for="cert_period_to" class="text-xs">Đến ngày</label>
+                            <input id="cert_period_to" name="period_to" type="date" class="operator-input" value="{{ old('period_to') }}" required>
+                        </div>
+                        <button type="submit" class="operator-button operator-button-primary">Tạo chứng chỉ</button>
+                    </form>
+                @endif
+            </x-ui.card>
         @else
             <x-ui.card title="Tiến độ">
                 <p class="text-sm text-slate-500">Hợp đồng chưa phân loại — chọn loại hợp đồng để xem tiến độ tương ứng.</p>

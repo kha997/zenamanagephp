@@ -239,6 +239,23 @@ class ContractPageController extends Controller
                 ->count();
         }
 
+        // Load BOQ + certificates for construction contracts
+        $boq = null;
+        $boqLines = collect();
+        $certificates = collect();
+
+        if ($contract->contract_type === Contract::TYPE_CONSTRUCTION) {
+            $boq = $contract->boq;
+            if ($boq) {
+                $boqLines = $boq->lineItems()->get();
+            }
+            $certificates = \App\Models\PaymentCertificate::query()
+                ->where('tenant_id', $tenantId)
+                ->where('contract_id', (string) $contract->id)
+                ->orderBy('period_no')
+                ->get();
+        }
+
         return view('contracts.show', [
             'contract' => $contract,
             'summary' => $summary,
@@ -248,6 +265,9 @@ class ContractPageController extends Controller
             'expenses' => $expenses,
             'finance' => $finance,
             'progress' => $progress,
+            'boq' => $boq,
+            'boqLines' => $boqLines,
+            'certificates' => $certificates,
         ]);
     }
 
@@ -441,10 +461,14 @@ class ContractPageController extends Controller
 
         $boqLines = $contract->boq ? $contract->boq->lineItems()->get() : collect();
 
+        $summaryService = new \App\Services\PaymentCertificateSummaryService();
+        $lineSummaries = $summaryService->lineSummaries($cert);
+
         return view('contracts.certificate-show', [
             'contract' => $contract,
             'certificate' => $cert,
             'boqLines' => $boqLines,
+            'lineSummaries' => $lineSummaries,
         ]);
     }
 

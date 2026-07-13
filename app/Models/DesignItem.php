@@ -6,6 +6,7 @@ use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * DesignItem — theo dõi công việc thiết kế qua vòng duyệt nội bộ và phản hồi khách hàng.
@@ -114,6 +115,11 @@ class DesignItem extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(DesignItemRevision::class)->orderBy('revision_no');
     }
 
     public function scopeForTenant($query, string $tenantId)

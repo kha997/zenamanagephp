@@ -83,48 +83,66 @@ design spec's revision note).
 - `src/CoreProject/Listeners/ProjectProgressListener.php` — not registered anywhere (do not confuse with the separately-registered `UpdateProjectProgressListener`)
 - `src/CoreProject/Listeners/NotificationListener.php` — not registered anywhere
 
-### Not yet traced (40 files — no reachability verdict, do not assume either way)
+### Traced batch 1 (2026-07-13) — 8 LIVE, 2 DEAD
 
-- `app/Console/Commands/CleanMockData.php`
-- `app/Http/Controllers/Api/AnalyticsController.php`
-- `app/Http/Controllers/Api/ExportController.php`
-- `app/Http/Controllers/TaskController.php`
-- `app/Http/Controllers/Web/DocumentController.php`
-- `app/Http/Controllers/Web/ProjectController.php`
-- `app/Http/Controllers/Web/TaskController.php`
-- `app/Http/Controllers/WorkTemplateController.php`
-- `app/Http/Middleware/ProjectAccessMiddleware.php`
-- `app/Http/Middleware/ProjectOwnershipMiddleware.php`
-- `app/Http/Requests/UpdateProjectRequest.php`
-- `app/Models/InteractionLog.php`
-- `app/Models/NotificationRule.php`
-- `app/Models/UserRoleProject.php`
-- `app/Services/BaselineService.php`
-- `app/Services/CompensationService.php`
-- `app/Services/ConditionalTagService.php`
-- `app/Services/InteractionLogService.php`
-- `app/Services/TemplateService.php`
-- `src/ChangeRequest/Listeners/ChangeRequestEventListener.php`
-- `src/ChangeRequest/Models/ChangeRequest.php`
-- `src/Compensation/Models/Contract.php`
-- `src/Compensation/Services/CompensationService.php`
-- `src/CoreProject/Events/ProjectCreated.php`
-- `src/CoreProject/Jobs/RecalculateProjectRollupJob.php`
-- `src/CoreProject/Middleware/ProjectAccessMiddleware.php`
-- `src/CoreProject/Middleware/ProjectOwnershipMiddleware.php`
-- `src/CoreProject/Middleware/ProjectStatusMiddleware.php`
-- `src/CoreProject/Requests/StoreProjectRequest.php`
-- `src/CoreProject/Requests/UpdateProjectRequest.php`
-- `src/DocumentManagement/Models/Document.php`
-- `src/InteractionLogs/Models/InteractionLog.php`
-- `src/InteractionLogs/Services/InteractionLogService.php`
-- `src/Notification/Models/NotificationRule.php`
-- `src/RBAC/Models/UserRoleProject.php`
-- `src/WorkTemplate/Events/TaskConditionalToggled.php`
-- `src/WorkTemplate/Events/TemplateApplied.php`
-- `src/WorkTemplate/Models/ProjectTask.php`
-- `src/WorkTemplate/Requests/ApplyTemplateRequest.php`
-- `src/WorkTemplate/Services/TemplateService.php`
+- `app/Console/Commands/CleanMockData.php` — **LIVE** — Artisan command, auto-registered by Laravel console kernel. Imports `Src\CoreProject\Models\Project` at line 6.
+- `app/Http/Controllers/Api/AnalyticsController.php` — **LIVE** — Routed at `routes/api.php:1052-1054` (`/analytics/tasks`, `/analytics/projects`, `/analytics/dashboard`). Imports `Src\CoreProject\Models\Project` at line 8.
+- `app/Http/Controllers/Api/ExportController.php` — **LIVE** — Routed at `routes/api.php:1020-1021` (`/tasks/bulk/export`, `/projects/bulk/export`). Imports `Src\CoreProject\Models\Project` at line 8.
+- `app/Http/Controllers/TaskController.php` — **LIVE** — Routed at `routes/api.php:126` (`/tasks`), `:462` (in api group), `:590` (`apiResource('tasks')`). Uses `Src\CoreProject\Models\Project` inline at line 348.
+- `app/Http/Controllers/Web/DocumentController.php` — **LIVE** — Routed at `routes/web.php:406-409, 550` (`/documents/*`). Imports `Src\CoreProject\Models\Project` at line 13.
+- `app/Http/Controllers/Web/ProjectController.php` — **LIVE** — Routed at `routes/web.php:362-372` (`/projects/*`). Imports `Src\CoreProject\Models\Project` at line 14.
+- `app/Http/Controllers/Web/TaskController.php` — **LIVE** — Routed at `routes/web.php:385-403` (`/tasks/*`). Imports `Src\CoreProject\Models\Project` at line 13.
+- `app/Http/Controllers/WorkTemplateController.php` — **LIVE** — Routed via `routes/api_zena.php:222-247, 513-514` (loaded at `routes/api.php:1016`). Uses `Src\CoreProject\Models\Project` inline at line 251.
+- `app/Http/Middleware/ProjectAccessMiddleware.php` — **DEAD** — Middleware alias registration commented out in `CoreProjectServiceProvider::registerMiddleware()` (line 68-77). Not used in any route definition. No consumers found.
+- `app/Http/Middleware/ProjectOwnershipMiddleware.php` — **DEAD** — Same as above: registration commented out, no route usage, no consumers.
+
+### Traced batch 2 (2026-07-13) — 5 LIVE, 5 DEAD
+
+- `app/Http/Requests/UpdateProjectRequest.php` — **DEAD** — No controller type-hints this Form Request; zero references outside its own file.
+- `app/Models/InteractionLog.php` — **LIVE** — Used by `App\Services\ComponentService` (line 10) and `App\Services\AuditService` (line 7). Imports `Src\CoreProject\Models\Project` at line 11.
+- `app/Models/NotificationRule.php` — **LIVE** — Relationship from `App\Models\User` (line 269: `$this->hasMany(NotificationRule::class)`). Imports `Src\CoreProject\Models\Project` at line 12.
+- `app/Models/UserRoleProject.php` — **LIVE** — Used by `DesignerDashboardController`, `PmDashboardController`, `WorkTemplateController` (all routed). Imports `Src\CoreProject\Models\Project` at line 54.
+- `app/Services/BaselineService.php` — **DEAD** — Only consumed by unrouted `App\Http\Controllers\BaselineController`; the routed `Src\CoreProject\Controllers\BaselineController` uses `Src\CoreProject\Services\BaselineService` instead.
+- `app/Services/CompensationService.php` — **DEAD** — Only consumed by unrouted `App\Http\Controllers\CompensationController`; the routed `Src\Compensation\Controllers\CompensationController` uses `Src\Compensation\Services\CompensationService`.
+- `app/Services/ConditionalTagService.php` — **LIVE** — Constructor-injected into routed `App\Http\Controllers\TaskController` (line 26).
+- `app/Services/InteractionLogService.php` — **DEAD** — Only consumed by unrouted `App\Http\Controllers\InteractionLogController`; routes use `Src\InteractionLogs\Controllers\InteractionLogController`.
+- `app/Services/TemplateService.php` — **DEAD** — Only consumed by unrouted `App\Http\Controllers\TemplateController`; routes use `Src\WorkTemplate\Controllers\TemplateController`.
+- `src/ChangeRequest/Listeners/ChangeRequestEventListener.php` — **LIVE** — Registered in `ChangeRequestServiceProvider` (line 50: `$this->app['events']->subscribe(...)`); provider loaded in `config/app.php`. Imports `Src\CoreProject\Models\Project` at line 24.
+
+### Traced batch 3 (2026-07-13) — 7 LIVE, 3 DEAD
+
+- `src/ChangeRequest/Models/ChangeRequest.php` — **LIVE** — Used by `ChangeRequestEventListener`, `ChangeRequestResource`, `ChangeRequestService` — all within routed ChangeRequest module. Imports `Src\CoreProject\Models\Project` at line 12.
+- `src/Compensation/Models/Contract.php` — **LIVE** — Used by `TaskCompensation` (belongsTo), `ContractResource`, `CompensationService` — all within routed Compensation module. Imports `Src\CoreProject\Models\Project` at line 10.
+- `src/Compensation/Services/CompensationService.php` — **LIVE** — Registered in `CompensationServiceProvider` (loaded in `config/app.php`); consumed by routed `Src\Compensation\Controllers\CompensationController`. Imports `Src\CoreProject\Models\Project` at line 11.
+- `src/CoreProject/Events/ProjectCreated.php` — **LIVE** — Dispatched by live `Src\CoreProject\Controllers\ProjectController::store()` (line 134); listened by `EventBusServiceProvider` and `EventServiceProvider` (both loaded in `config/app.php`).
+- `src/CoreProject/Jobs/RecalculateProjectRollupJob.php` — **DEAD** — Dispatched only by `UpdateProjectProgressListener`, which is fully commented out in `CoreProject/Providers/EventServiceProvider.php` (lines 16-20). Not registered anywhere.
+- `src/CoreProject/Middleware/ProjectAccessMiddleware.php` — **DEAD** — Middleware alias registration commented out in `CoreProjectServiceProvider::registerMiddleware()` (lines 68-77). Not used in any route definition.
+- `src/CoreProject/Middleware/ProjectOwnershipMiddleware.php` — **DEAD** — Same as above.
+- `src/CoreProject/Middleware/ProjectStatusMiddleware.php` — **DEAD** — Same — registration commented out, not used in any route.
+- `src/CoreProject/Requests/StoreProjectRequest.php` — **LIVE** — Used by live `Src\CoreProject\Controllers\ProjectController::store()` (line 115).
+- `src/CoreProject/Requests/UpdateProjectRequest.php` — **LIVE** — Used by live `Src\CoreProject\Controllers\ProjectController::update()` (line 188).
+
+### Traced batch 4 (2026-07-13) — 10 LIVE, 0 DEAD
+
+- `src/DocumentManagement/Models/Document.php` — **LIVE** — Used throughout `DocumentManagement` module (routed via `require base_path('src/DocumentManagement/routes/api.php')` at `routes/api.php:1037`). Imports `Src\CoreProject\Models\Project` at line 13.
+- `src/InteractionLogs/Models/InteractionLog.php` — **LIVE** — Used by `InteractionLogService`, `InteractionLogController`; routed via `InteractionLogServiceProvider` (loaded in `config/app.php`). Imports `Src\CoreProject\Models\Project` at line 10.
+- `src/InteractionLogs/Services/InteractionLogService.php` — **LIVE** — Registered in `InteractionLogServiceProvider` (loaded in `config/app.php`). Imports `Src\CoreProject\Models\Project` at line 8.
+- `src/Notification/Models/NotificationRule.php` — **LIVE** — Used by `NotificationRuleService`, `NotificationRuleController`; routed via `NotificationServiceProvider` (loaded in `config/app.php`). Imports `Src\CoreProject\Models\Project` at line 12.
+- `src/RBAC/Models/UserRoleProject.php` — **LIVE** — Used by RBAC module; routed via `RBACServiceProvider` (loaded in `config/app.php`). Imports `Src\CoreProject\Models\Project` at line 56.
+- `src/WorkTemplate/Events/TaskConditionalToggled.php` — **LIVE** — Dispatched by `ProjectTaskService` (line 80); listened by `WorkTemplateEventListener` (registered in `WorkTemplateServiceProvider`, loaded in `config/app.php`). Imports `Src\CoreProject\Models\Project` at line 8.
+- `src/WorkTemplate/Events/TemplateApplied.php` — **LIVE** — Listened by `WorkTemplateEventListener` (same registration as above). Imports `Src\CoreProject\Models\Project` at line 8.
+- `src/WorkTemplate/Models/ProjectTask.php` — **LIVE** — Used by `ProjectTaskService`, `ProjectTaskController`, `TemplateService`, `TaskConditionalToggled`, `UpdateTaskRequest` — all within routed WorkTemplate module. Imports `Src\CoreProject\Models\Project` at line 12.
+- `src/WorkTemplate/Requests/ApplyTemplateRequest.php` — **LIVE** — Used by `Src\WorkTemplate\Controllers\TemplateController::apply()` (line 215), itself routed via `require base_path('src/WorkTemplate/routes/api.php')` at `routes/api.php:1041`. Imports `Src\CoreProject\Models\Project` at line 7.
+- `src/WorkTemplate/Services/TemplateService.php` — **LIVE** — Registered in `WorkTemplateServiceProvider` (line 25); consumed by routed controllers. Imports `Src\CoreProject\Models\Project` at line 10.
+
+### Summary
+
+| Category | Count |
+|----------|-------|
+| Traced LIVE (part of tested runtime) | 30 |
+| Traced DEAD (no reachable consumers) | 10 |
+| **Total traced** | **40** |
+| Not yet traced | **0** |
 
 ## Methodology note for whoever traces the remaining 40 files
 

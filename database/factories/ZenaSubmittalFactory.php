@@ -46,7 +46,7 @@ class ZenaSubmittalFactory extends SubmittalFactory
     {
         return $this->afterMaking(function (ZenaSubmittal $submittal) {
             if (!empty($submittal->project_id)) {
-                $project = Project::find($submittal->project_id);
+                $project = Project::query()->find($submittal->project_id);
                 if ($project && $project->tenant_id) {
                     $submittal->tenant_id = $project->tenant_id;
                 }

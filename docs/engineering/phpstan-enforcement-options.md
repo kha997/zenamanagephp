@@ -2,6 +2,7 @@
 
 **Date:** 2026-07-13
 **Context:** PHPStan runs at level 6 in CI with `continue-on-error: true` — errors never block deployment. This document presents 3 neutral options for the team to choose from.
+**DECISION (2026-07-13): User chose Option A** — regenerate the baseline to freeze the 2,154 current errors, then flip `continue-on-error: false` so any NEW error blocks CI. Execute per `docs/superpowers/plans/2026-07-13-opencode-handoff-3.md` Task K2.
 
 ---
 

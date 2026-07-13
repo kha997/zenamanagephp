@@ -94,4 +94,4 @@ php artisan route:list                          # verify no broken routes
 
 ---
 
-**Chưa xóa file nào — chờ user duyệt.**
+**DECISION (2026-07-13): User APPROVED removal of all 11 files.** Execute in 2 batches per `docs/superpowers/plans/2026-07-13-opencode-handoff-3.md` Task K1: batch 1 = the 7 `app/` files, full suite green, then batch 2 = the 4 `src/CoreProject/{Middleware,Jobs}` files, full suite green again. Any red test → revert that batch immediately.

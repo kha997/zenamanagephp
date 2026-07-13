@@ -31,17 +31,89 @@
             </div>
         </x-ui.card>
 
-        <x-ui.card title="Tổng hợp chi phí">
-            @if ($summary)
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <x-ui.field-value label="Giá trị hợp đồng" :value="number_format((float) data_get($summary, 'contract_total_value', 0))" />
-                    <x-ui.field-value label="Đã nhập kho" :value="number_format((float) data_get($summary, 'receipt_total', data_get($summary, 'received_total', 0)))" />
-                    <x-ui.field-value label="Đã thanh toán" :value="number_format((float) data_get($summary, 'paid_total', data_get($summary, 'payment_total', 0)))" />
-                    <x-ui.field-value label="Còn lại" :value="number_format((float) data_get($summary, 'remaining', data_get($summary, 'remaining_value', 0)))" />
+        <x-ui.card title="Tài chính hợp đồng">
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <x-ui.field-value label="Tổng giá trị HĐ" :value="number_format($finance['total_value']) . ' ' . $contract->currency" />
+                <x-ui.field-value label="Đã thu" :value="number_format($finance['paid_total']) . ' ' . $contract->currency" />
+                <x-ui.field-value label="Còn phải thu" :value="number_format($finance['remaining']) . ' ' . $contract->currency" />
+                <x-ui.field-value label="Quá hạn" :value="$finance['overdue_count'] . ' đợt'" />
+            </div>
+
+            <h3 class="mb-2 mt-5 text-sm font-semibold text-slate-700">Các đợt thu</h3>
+            @forelse ($payments as $payment)
+                <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 py-2 text-sm">
+                    <span class="font-medium">{{ $payment->name }}</span>
+                    <span>{{ number_format((float) $payment->amount) }}</span>
+                    <span class="text-slate-500">hạn {{ optional($payment->due_date)->format('d/m/Y') ?? '—' }}</span>
+                    <x-ui.status-badge :status="$payment->status" />
+                    @if ($payment->paid_at)
+                        <span class="text-emerald-600">thu ngày {{ $payment->paid_at->format('d/m/Y') }}</span>
+                    @endif
                 </div>
-            @else
-                <div class="py-4 text-sm text-slate-500">{{ $summaryUnavailableMessage ?? 'Chưa có dữ liệu chi phí.' }}</div>
+            @empty
+                <p class="text-sm text-slate-500">Chưa có đợt thu.</p>
+            @endforelse
+
+            <h3 class="mb-2 mt-5 text-sm font-semibold text-slate-700">Các khoản chi (ghi tay)</h3>
+            @forelse ($expenses as $expense)
+                <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 py-2 text-sm">
+                    <span class="text-slate-500">{{ $expense->expense_date->format('d/m/Y') }}</span>
+                    <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{{ $expense->categoryLabel() }}</span>
+                    <span class="font-medium">{{ $expense->description }}</span>
+                    <span>{{ number_format((float) $expense->amount) }}</span>
+                    @if (auth()->user()?->hasPermission('contract.expense.delete'))
+                        <form method="POST" action="{{ route('operator.contracts.expenses.delete', [$contract->id, $expense->id]) }}">
+                            @csrf
+                            <button type="submit" class="text-xs text-rose-600 hover:underline">Xóa</button>
+                        </form>
+                    @endif
+                </div>
+            @empty
+                <p class="text-sm text-slate-500">Chưa có khoản chi ghi tay.</p>
+            @endforelse
+            <div class="mt-2 text-sm font-medium">Tổng chi ghi tay: {{ number_format($finance['manual_expense_total']) }} {{ $contract->currency }}</div>
+
+            @if (auth()->user()?->hasPermission('contract.expense.create'))
+                <form method="POST" action="{{ route('operator.contracts.expenses.store', $contract->id) }}" class="mt-3 flex flex-wrap items-end gap-2">
+                    @csrf
+                    <div class="operator-field">
+                        <label for="expense_date" class="text-xs">Ngày</label>
+                        <input id="expense_date" name="expense_date" type="date" class="operator-input" value="{{ old('expense_date') }}" required>
+                    </div>
+                    <div class="operator-field">
+                        <label for="category" class="text-xs">Nhóm</label>
+                        <select id="category" name="category" class="operator-select" required>
+                            <option value="labor">Nhân công</option>
+                            <option value="subcontractor">Thầu phụ</option>
+                            <option value="design_outsource">Thuê ngoài thiết kế</option>
+                            <option value="misc">Khác</option>
+                        </select>
+                    </div>
+                    <div class="operator-field">
+                        <label for="description" class="text-xs">Diễn giải</label>
+                        <input id="description" name="description" type="text" class="operator-input" value="{{ old('description') }}" maxlength="1000" required>
+                    </div>
+                    <div class="operator-field">
+                        <label for="amount" class="text-xs">Số tiền</label>
+                        <input id="amount" name="amount" type="number" min="1" step="any" class="operator-input" value="{{ old('amount') }}" required>
+                    </div>
+                    <button type="submit" class="operator-button operator-button-primary">Ghi chi</button>
+                </form>
+                @error('amount')<div class="text-sm text-rose-600">{{ $message }}</div>@enderror
+                @error('category')<div class="text-sm text-rose-600">{{ $message }}</div>@enderror
+                @error('description')<div class="text-sm text-rose-600">{{ $message }}</div>@enderror
+                @error('expense_date')<div class="text-sm text-rose-600">{{ $message }}</div>@enderror
             @endif
+
+            <div class="mt-4 border-t border-slate-200 pt-3 text-sm">
+                @if ($finance['material_cost_total'] !== null)
+                    <div>Chi vật tư theo phiếu nhận (tự động): {{ number_format($finance['material_cost_total']) }} {{ $contract->currency }}</div>
+                @else
+                    <div class="text-slate-500">Chi vật tư tự động: không tải được — chưa tính vào tổng chi. {{ $summaryUnavailableMessage ?? '' }}</div>
+                @endif
+                <div class="mt-1 font-medium">Tổng chi: {{ number_format($finance['expense_total']) }} {{ $contract->currency }}</div>
+                <div class="mt-1 text-base font-semibold">Đã thu − đã chi: {{ number_format($finance['balance']) }} {{ $contract->currency }}</div>
+            </div>
         </x-ui.card>
     </div>
 @endsection

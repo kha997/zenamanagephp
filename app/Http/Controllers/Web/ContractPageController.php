@@ -178,11 +178,35 @@ class ContractPageController extends Controller
             }
         }
 
+        $payments = $contract->payments()->orderBy('due_date')->get();
+        $expenses = $contract->expenses()->orderBy('expense_date')->get();
+
+        $paidTotal = (float) $payments->where('status', \App\Models\ContractPayment::STATUS_PAID)->sum('amount');
+        $manualExpenseTotal = (float) $expenses->sum('amount');
+        $materialCostTotal = $summary !== null ? (float) data_get($summary, 'priced_line_cost_total', 0) : null;
+
+        $finance = [
+            'total_value' => (float) $contract->total_value,
+            'paid_total' => $paidTotal,
+            'remaining' => (float) $contract->total_value - $paidTotal,
+            'overdue_count' => $payments
+                ->where('status', '!=', \App\Models\ContractPayment::STATUS_PAID)
+                ->filter(fn ($p) => $p->due_date !== null && $p->due_date->isPast())
+                ->count(),
+            'manual_expense_total' => $manualExpenseTotal,
+            'material_cost_total' => $materialCostTotal,
+            'expense_total' => $manualExpenseTotal + ($materialCostTotal ?? 0.0),
+            'balance' => $paidTotal - ($manualExpenseTotal + ($materialCostTotal ?? 0.0)),
+        ];
+
         return view('contracts.show', [
             'contract' => $contract,
             'summary' => $summary,
             'summaryUnavailableMessage' => $summaryUnavailableMessage,
             'hasQuoteDrift' => $hasDrift,
+            'payments' => $payments,
+            'expenses' => $expenses,
+            'finance' => $finance,
         ]);
     }
 

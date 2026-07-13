@@ -18,6 +18,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\Traits\AuthenticationTrait;
 
+/**
+ * @group performance
+ */
 class FinalSystemTest extends TestCase
 {
     use RefreshDatabase, AuthenticationTrait;

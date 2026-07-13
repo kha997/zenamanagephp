@@ -18,6 +18,7 @@ use Tests\Traits\TenantUserFactoryTrait;
 /**
  * Test tải với concurrent users
  *
+ * @group performance
  * @group slow
  * @group load
  */

@@ -16,6 +16,8 @@ use Illuminate\Support\Str;
  * Test Realtime Sync & WebSocket Events (Simplified)
  * 
  * Kịch bản: Test real-time notifications, WebSocket events, và data synchronization
+ *
+ * @group performance
  */
 class RealtimeSyncWebSocketSimpleTest extends TestCase
 {

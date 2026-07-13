@@ -7,7 +7,7 @@ use App\Models\Project;
 use App\Models\User;
 use App\Models\Task;
 use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
+use App\Models\Submittal;
 use App\Models\ZenaChangeRequest;
 use App\Models\ZenaDocument;
 use App\Models\ZenaNotification;
@@ -229,7 +229,7 @@ class IntegrationTest extends TestCase
     public function test_submittal_workflow_integration()
     {
         // Create Submittal
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'draft'
@@ -445,7 +445,7 @@ class IntegrationTest extends TestCase
             'created_by' => $this->user->id
         ]);
 
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id

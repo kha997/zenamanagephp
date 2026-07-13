@@ -5,7 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Project;
-use App\Models\ZenaSubmittal;
+use App\Models\Submittal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -50,7 +50,7 @@ class SubmittalShowApiTest extends TestCase
             ],
         ];
 
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id,

@@ -9,7 +9,7 @@ use App\Models\ZenaPermission;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
+use App\Models\Submittal;
 use App\Models\ZenaChangeRequest;
 use App\Models\ZenaMaterialRequest;
 use App\Models\ZenaPurchaseOrder;
@@ -554,7 +554,7 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($submittals as $submittalData) {
-            ZenaSubmittal::create($submittalData);
+            Submittal::query()->create($submittalData);
         }
     }
 

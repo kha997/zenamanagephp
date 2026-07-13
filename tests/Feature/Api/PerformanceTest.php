@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\ZenaChangeRequest;
 use App\Models\Project;
 use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
+use App\Models\Submittal;
 use App\Models\Task;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -137,7 +137,7 @@ class PerformanceTest extends TestCase
 
     public function test_submittal_listing_performance(): void
     {
-        ZenaSubmittal::factory()->count(self::SUBMITTAL_LISTING_COUNT)->create([
+        Submittal::factory()->count(self::SUBMITTAL_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'submitted_by' => $this->user->id,

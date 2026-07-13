@@ -5,7 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Project;
-use App\Models\ZenaSubmittal;
+use App\Models\Submittal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +47,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_get_submittal_list()
     {
-        ZenaSubmittal::factory()->count(3)->create([
+        Submittal::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
         ]);
@@ -153,7 +153,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_review_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'submitted',
@@ -188,7 +188,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_approve_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending_review',
@@ -223,7 +223,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_reject_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending_review',
@@ -260,7 +260,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_update_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
         ]);
@@ -293,7 +293,7 @@ class SubmittalApiTest extends TestCase
      */
     public function test_can_delete_submittal()
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
         ]);
@@ -324,7 +324,7 @@ class SubmittalApiTest extends TestCase
 
     public function test_cannot_submit_already_submitted_submittal(): void
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'submitted',
@@ -337,7 +337,7 @@ class SubmittalApiTest extends TestCase
 
     public function test_cannot_approve_draft_submittal(): void
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'draft',
@@ -353,7 +353,7 @@ class SubmittalApiTest extends TestCase
 
     public function test_cannot_reject_draft_submittal(): void
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'draft',
@@ -369,7 +369,7 @@ class SubmittalApiTest extends TestCase
 
     public function test_cannot_mutate_status_via_update(): void
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'draft',
@@ -385,7 +385,7 @@ class SubmittalApiTest extends TestCase
 
     public function test_document_can_be_linked_to_submittal(): void
     {
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,

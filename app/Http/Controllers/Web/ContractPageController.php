@@ -199,6 +199,46 @@ class ContractPageController extends Controller
             'balance' => $paidTotal - ($manualExpenseTotal + ($materialCostTotal ?? 0.0)),
         ];
 
+        $progress = ['type' => (string) $contract->contract_type];
+
+        if ($contract->contract_type === Contract::TYPE_DESIGN) {
+            $designItems = \App\Models\DesignItem::query()
+                ->where('project_id', (string) $contract->project_id)
+                ->with('assignee:id,name')
+                ->orderBy('created_at')
+                ->get();
+
+            $progress['designItems'] = $designItems;
+            $progress['blockedItems'] = $designItems->whereNotNull('blocked_at')->map(fn ($i) => [
+                'type' => 'Hạng mục thiết kế',
+                'name' => $i->name,
+                'note' => $i->blocker_note,
+                'blocked_at' => $i->blocked_at,
+            ])->values();
+        }
+
+        if ($contract->contract_type === Contract::TYPE_CONSTRUCTION) {
+            $progress['tasks'] = \App\Models\Task::query()
+                ->where('tenant_id', $tenantId)
+                ->where('project_id', (string) $contract->project_id)
+                ->with('assignee:id,name')
+                ->orderBy('created_at')
+                ->get();
+            $progress['inspectionCount'] = \App\Models\QcInspection::query()
+                ->where('tenant_id', $tenantId)
+                ->where('project_id', (string) $contract->project_id)
+                ->count();
+            $progress['openNcrCount'] = \App\Models\Ncr::query()
+                ->where('tenant_id', $tenantId)
+                ->where('project_id', (string) $contract->project_id)
+                ->where('status', '!=', 'closed')
+                ->count();
+            $progress['receiptCount'] = \App\Models\MaterialReceipt::query()
+                ->where('tenant_id', $tenantId)
+                ->where('contract_id', (string) $contract->id)
+                ->count();
+        }
+
         return view('contracts.show', [
             'contract' => $contract,
             'summary' => $summary,
@@ -207,6 +247,7 @@ class ContractPageController extends Controller
             'payments' => $payments,
             'expenses' => $expenses,
             'finance' => $finance,
+            'progress' => $progress,
         ]);
     }
 

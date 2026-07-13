@@ -115,5 +115,34 @@
                 <div class="mt-1 text-base font-semibold">Đã thu − đã chi: {{ number_format($finance['balance']) }} {{ $contract->currency }}</div>
             </div>
         </x-ui.card>
+
+        @if ($progress['type'] === 'design')
+            @include('projects._design-progress', ['designItems' => $progress['designItems'], 'blockedItems' => $progress['blockedItems'], 'tasks' => null])
+        @elseif ($progress['type'] === 'construction')
+            <x-ui.card title="Tiến độ thi công">
+                <div class="mb-3 flex flex-wrap gap-4 text-sm text-slate-600">
+                    <span>Nghiệm thu: {{ $progress['inspectionCount'] }}</span>
+                    <span>NCR đang mở: {{ $progress['openNcrCount'] }}</span>
+                    <span>Phiếu nhận vật tư: {{ $progress['receiptCount'] }}</span>
+                </div>
+                @forelse ($progress['tasks'] as $task)
+                    <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 py-2 text-sm">
+                        <span class="font-medium">{{ $task->title ?? $task->name }}</span>
+                        <x-ui.status-badge :status="$task->status" />
+                        @if ($task->blocked_at)
+                            <span class="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-800">Vướng</span>
+                        @endif
+                        <span class="text-slate-500">{{ $task->assignee?->name ?? 'Chưa giao' }}</span>
+                        <span class="text-slate-400">{{ (int) $task->progress_percent }}%</span>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">Chưa có công việc.</p>
+                @endforelse
+            </x-ui.card>
+        @else
+            <x-ui.card title="Tiến độ">
+                <p class="text-sm text-slate-500">Hợp đồng chưa phân loại — chọn loại hợp đồng để xem tiến độ tương ứng.</p>
+            </x-ui.card>
+        @endif
     </div>
 @endsection

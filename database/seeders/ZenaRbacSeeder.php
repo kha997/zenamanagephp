@@ -8,7 +8,7 @@ use App\Models\ZenaRole;
 use App\Models\ZenaPermission;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\ZenaRfi;
+use App\Models\Rfi;
 use App\Models\Submittal;
 use App\Models\ZenaChangeRequest;
 use App\Models\ZenaMaterialRequest;
@@ -519,7 +519,7 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($rfis as $rfiData) {
-            ZenaRfi::create($rfiData);
+            Rfi::query()->create($rfiData);
         }
     }
 

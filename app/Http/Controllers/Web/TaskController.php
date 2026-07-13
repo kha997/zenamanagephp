@@ -272,6 +272,38 @@ class TaskController extends Controller
     }
 
     /**
+     * Đánh dấu công việc đang vướng (blocker) — dùng App\Models\Task
+     * (model canonical) thay vì alias Src\CoreProject của file này.
+     */
+    public function block(Request $request, string $taskId): RedirectResponse
+    {
+        $request->validate(['blocker_note' => ['required', 'string', 'max:1000']]);
+
+        $task = \App\Models\Task::query()
+            ->where('tenant_id', (string) auth()->user()?->tenant_id)
+            ->findOrFail($taskId);
+
+        $task->forceFill([
+            'blocked_at' => now(),
+            'blocker_note' => (string) $request->string('blocker_note'),
+            'blocked_by' => (string) auth()->id(),
+        ])->save();
+
+        return back()->with('success', 'Đã đánh dấu công việc đang vướng.');
+    }
+
+    public function unblock(string $taskId): RedirectResponse
+    {
+        $task = \App\Models\Task::query()
+            ->where('tenant_id', (string) auth()->user()?->tenant_id)
+            ->findOrFail($taskId);
+
+        $task->forceFill(['blocked_at' => null, 'blocker_note' => null, 'blocked_by' => null])->save();
+
+        return back()->with('success', 'Đã gỡ trạng thái vướng.');
+    }
+
+    /**
      * Update task status via AJAX
      */
     public function updateStatus(Request $request, string $taskId): JsonResponse

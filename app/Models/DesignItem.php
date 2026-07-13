@@ -91,9 +91,13 @@ class DesignItem extends Model
         'client_feedback_notes',
         'approval_evidence',
         'created_by',
+        'blocked_at',
+        'blocker_note',
+        'blocked_by',
     ];
 
     protected $casts = [
+        'blocked_at' => 'datetime',
         'due_to_client_at' => 'date',
     ];
 

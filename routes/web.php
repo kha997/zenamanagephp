@@ -388,6 +388,8 @@ Route::get('/projects-enhanced', function() {
     Route::get('/tasks/{task}', [App\Http\Controllers\Web\TaskController::class, 'show'])->name('tasks.show');
     Route::get('/tasks/{task}/edit', [App\Http\Controllers\Web\TaskController::class, 'edit'])->name('tasks.edit');
     Route::put('/tasks/{task}', [App\Http\Controllers\Web\TaskController::class, 'update'])->middleware('rbac:task.update')->name('tasks.update');
+    Route::post('/tasks/{task}/block', [App\Http\Controllers\Web\TaskController::class, 'block'])->middleware('rbac:task.update')->name('tasks.block');
+    Route::post('/tasks/{task}/unblock', [App\Http\Controllers\Web\TaskController::class, 'unblock'])->middleware('rbac:task.update')->name('tasks.unblock');
     // DELETE /tasks/{task} - MOVED TO API: /api/v1/tasks/{task}
     
     // Task actions (PATCH for state changes)
@@ -972,6 +974,8 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::get('/design-items/{id}', [App\Http\Controllers\Web\DesignItemPageController::class, 'show'])->middleware('rbac:design-item.view')->name('design-items.show');
     Route::post('/design-items/{id}/status', [App\Http\Controllers\Web\DesignItemPageController::class, 'updateStatus'])->middleware('rbac:design-item.manage')->name('design-items.status');
     Route::post('/design-items/{id}/documents', [App\Http\Controllers\Web\DesignItemPageController::class, 'uploadDocument'])->middleware('rbac:design-item.manage')->name('design-items.documents.store');
+    Route::post('/design-items/{id}/block', [App\Http\Controllers\Web\DesignItemPageController::class, 'block'])->middleware('rbac:design-item.manage')->name('design-items.block');
+    Route::post('/design-items/{id}/unblock', [App\Http\Controllers\Web\DesignItemPageController::class, 'unblock'])->middleware('rbac:design-item.manage')->name('design-items.unblock');
     Route::post('/design-items/suggest-description', [App\Http\Controllers\Web\DesignItemPageController::class, 'suggestDescription'])->middleware(['rbac:design-item.manage', 'rbac:ai.suggest', 'throttle:ai-suggest'])->name('design-items.suggest-description');
 
     // CRM (lead inbox → account/opportunity → project; spec crm-zena)

@@ -217,7 +217,10 @@ class TaskTest extends TestCase
             'assignee_id',
             'assigned_to',
             'watchers',
-            'created_by'
+            'created_by',
+            'blocked_at',
+            'blocker_note',
+            'blocked_by'
         ];
 
         $this->assertEquals($fillable, $this->task->getFillable());

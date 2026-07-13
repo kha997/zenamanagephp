@@ -7,6 +7,15 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id ULID primary key
+ * @property string $tenant_id Tenant ULID
+ * @property string $payment_certificate_id Certificate ULID
+ * @property string $boq_line_item_id BOQ line item ULID
+ * @property float $qty_this_period Quantity this period
+ * @property float $unit_price_snapshot Unit price at entry time
+ * @property float $amount_this_period Amount this period (qty × snapshot)
+ */
 class PaymentCertificateLine extends Model
 {
     use HasUlids;

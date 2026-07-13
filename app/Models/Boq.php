@@ -9,6 +9,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string $id ULID primary key
+ * @property string $tenant_id Tenant ULID
+ * @property string $project_id Project ULID
+ * @property string|null $contract_id Contract ULID
+ * @property string $code BOQ code
+ * @property string $name BOQ name
+ * @property string|null $description BOQ description
+ */
 class Boq extends Model
 {
     use HasUlids, HasFactory, TenantScope;

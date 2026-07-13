@@ -8,6 +8,22 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property string $id ULID primary key
+ * @property string $tenant_id Tenant ULID
+ * @property string $contract_id Contract ULID
+ * @property int $period_no Period number
+ * @property \Carbon\Carbon $period_from Period start date
+ * @property \Carbon\Carbon $period_to Period end date
+ * @property string $status Certificate status (draft|submitted|approved)
+ * @property float $total_this_period Total for this period
+ * @property string|null $submitted_by User ULID who submitted
+ * @property \Carbon\Carbon|null $submitted_at Submission timestamp
+ * @property string|null $approved_by User ULID who approved
+ * @property \Carbon\Carbon|null $approved_at Approval timestamp
+ * @property \App\Models\Contract $contract Related contract
+ * @property \Illuminate\Database\Eloquent\Collection<int, \App\Models\PaymentCertificateLine> $lines Certificate lines
+ */
 class PaymentCertificate extends Model
 {
     use HasUlids;

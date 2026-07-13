@@ -27,6 +27,8 @@ use App\Models\Project;
  * @property array|null $terms Điều khoản hợp đồng
  * @property string|null $client_name Tên khách hàng
  * @property string|null $notes Ghi chú
+ * @property string $code Mã hợp đồng
+ * @property \App\Models\Boq|null $boq BOQ attached to this contract
  */
 class Contract extends Model
 {

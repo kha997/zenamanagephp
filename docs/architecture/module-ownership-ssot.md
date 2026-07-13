@@ -114,6 +114,15 @@ Do not treat these as product ownership surfaces:
 - `routes/legacy/api_v1.php`
 - unmounted/stale demo or public artifacts
 
+## Invitation — Documented TenantScope Exclusion
+
+`App\Models\Invitation` is intentionally **NOT** decorated with `TenantScope`:
+
+- **Cross-tenant lookup**: Invitation tokens are consumed by users who may not yet belong to the inviting tenant. The accept flow resolves invitations via `TeamInvitationService::resolveByToken($tenantId, ...)` which manually scopes by tenant (`->where('tenant_id', $tenantId)` at `app/Services/TeamInvitationService.php:23-24`).
+- **Token-based access**: `Invitation::findByToken()` is used in decline routes (`routes/web.php:480`) without tenant middleware — a global scope would break these unauthenticated flows.
+- **Artisan commands**: `BackfillInvitationTokenHash` queries all invitations across tenants.
+- **Test coverage**: `tests/Feature/Invitation/InvitationCrossTenantTest.php` proves cross-tenant accept returns 404 and same-tenant accept succeeds. A static guard test asserts Invitation does NOT use the trait.
+
 ## Unknowns
 
 - The current physical creation path for the `submittals` table remains `UNKNOWN`; runtime evidence proves active use of `submittals`, but migration provenance still points back to `zena_submittals` history.

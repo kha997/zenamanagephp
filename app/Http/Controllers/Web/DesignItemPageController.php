@@ -145,7 +145,7 @@ class DesignItemPageController extends Controller
 
         $item = DesignItem::query()
             ->forTenant($tenantId)
-            ->with('project:id,tenant_id,name', 'assignee:id,name')
+            ->with('project:id,tenant_id,name', 'assignee:id,name', 'revisions.requester:id,name')
             ->findOrFail($id);
 
         $this->authorize('view', $item);

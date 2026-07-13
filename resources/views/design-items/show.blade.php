@@ -46,6 +46,28 @@
         </div>
     </x-ui.card>
 
+    @if ($item->revisions->isNotEmpty())
+        <x-ui.card title="Lịch sử chỉnh sửa ({{ $item->revision_count }} lần)">
+            <ol class="space-y-3">
+                @foreach ($item->revisions as $revision)
+                    <li class="border-l-2 border-slate-200 pl-3">
+                        <div class="text-sm font-medium">
+                            Sửa lần {{ $revision->revision_no }}
+                            — yêu cầu {{ $revision->requested_at->format('d/m/Y') }}
+                            @if ($revision->requester) bởi {{ $revision->requester->name }} @endif
+                            @if ($revision->resolved_at)
+                                <span class="text-emerald-600">· đã xử lý {{ $revision->resolved_at->format('d/m/Y') }}</span>
+                            @else
+                                <span class="text-amber-600">· đang xử lý</span>
+                            @endif
+                        </div>
+                        <div class="text-sm text-slate-600">{{ $revision->client_feedback }}</div>
+                    </li>
+                @endforeach
+            </ol>
+        </x-ui.card>
+    @endif
+
     @unless ($item->review_status === 'final')
         <x-ui.card title="Chuyển trạng thái">
             <form method="POST" action="{{ route('operator.design-items.status', $item->id) }}" class="flex flex-wrap items-end gap-3">

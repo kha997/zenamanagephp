@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\DesignItem;
+use App\Models\DesignItemRevision;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Models\EventRecord;
@@ -13,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -40,6 +42,7 @@ class DesignItemController extends BaseApiController
         'due_to_client_at',
         'client_feedback_notes',
         'approval_evidence',
+        'revision_count',
         'created_by',
         'created_at',
         'updated_at',
@@ -304,7 +307,31 @@ class DesignItemController extends BaseApiController
             $item->approval_evidence = (string) $request->input('approval_evidence');
         }
 
-        $item->save();
+        DB::transaction(function () use ($item, $tenantId, $from, $to): void {
+            $item->save();
+
+            if ($to === DesignItem::STATUS_REVISION_REQUESTED) {
+                $revisionNo = ((int) $item->revision_count) + 1;
+
+                DesignItemRevision::query()->create([
+                    'tenant_id' => $tenantId,
+                    'design_item_id' => (string) $item->id,
+                    'revision_no' => $revisionNo,
+                    'client_feedback' => (string) $item->client_feedback_notes,
+                    'requested_by' => (string) Auth::id(),
+                    'requested_at' => now(),
+                ]);
+
+                $item->forceFill(['revision_count' => $revisionNo])->save();
+            }
+
+            if ($from === DesignItem::STATUS_REVISION_REQUESTED) {
+                $item->revisions()
+                    ->whereNull('resolved_at')
+                    ->latest('revision_no')
+                    ->first()?->update(['resolved_at' => now()]);
+            }
+        });
 
         EventRecord::query()->create([
             'tenant_id' => $tenantId,

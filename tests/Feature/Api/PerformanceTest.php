@@ -5,7 +5,7 @@ namespace Tests\Feature\Api;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\User;
-use App\Models\ZenaChangeRequest;
+use App\Models\ChangeRequest;
 use App\Models\Project;
 use App\Models\Rfi;
 use App\Models\Submittal;
@@ -154,7 +154,7 @@ class PerformanceTest extends TestCase
 
     public function test_change_request_listing_performance(): void
     {
-        ZenaChangeRequest::factory()->count(self::CHANGE_REQUEST_LISTING_COUNT)->create([
+        ChangeRequest::factory()->count(self::CHANGE_REQUEST_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,

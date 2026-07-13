@@ -8,7 +8,7 @@ use App\Models\User;
 use App\Models\Task;
 use App\Models\Rfi;
 use App\Models\Submittal;
-use App\Models\ZenaChangeRequest;
+use App\Models\ChangeRequest;
 use App\Models\ZenaDocument;
 use App\Models\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -263,7 +263,7 @@ class IntegrationTest extends TestCase
     public function test_change_request_workflow_integration()
     {
         // Create Change Request
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
@@ -451,7 +451,7 @@ class IntegrationTest extends TestCase
             'created_by' => $this->user->id
         ]);
 
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
             'requested_by' => $this->user->id

@@ -13,7 +13,7 @@ use App\Models\Notification;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\Project;
-use App\Models\ZenaChangeRequest;
+use App\Models\ChangeRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\DB;
@@ -67,7 +67,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_get_change_request_list()
     {
-        ZenaChangeRequest::factory()->count(3)->create([
+        ChangeRequest::factory()->count(3)->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
@@ -147,7 +147,7 @@ class ChangeRequestApiTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
         ]);
 
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
@@ -184,7 +184,7 @@ class ChangeRequestApiTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
         ]);
 
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $requester->id,
             'tenant_id' => $this->user->tenant_id,
@@ -226,7 +226,7 @@ class ChangeRequestApiTest extends TestCase
             'tenant_id' => $this->user->tenant_id,
         ]);
 
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $requester->id,
             'tenant_id' => $this->user->tenant_id,
@@ -264,7 +264,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_implement_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
@@ -323,14 +323,14 @@ class ChangeRequestApiTest extends TestCase
 
     public function test_can_get_change_request_timeline_from_canonical_audit_logs(): void
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
             'status' => 'draft',
         ]);
 
-        $otherChangeRequest = ZenaChangeRequest::factory()->create([
+        $otherChangeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
@@ -385,7 +385,7 @@ class ChangeRequestApiTest extends TestCase
 
     public function test_show_exposes_minimal_affected_scope_summary_from_canonical_surfaces(): void
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
@@ -460,7 +460,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_update_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id
@@ -497,7 +497,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_can_delete_change_request()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id
@@ -534,7 +534,7 @@ class ChangeRequestApiTest extends TestCase
      */
     public function test_change_request_impact_level_calculation()
     {
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,

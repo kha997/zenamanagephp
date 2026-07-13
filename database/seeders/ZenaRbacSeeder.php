@@ -10,7 +10,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Rfi;
 use App\Models\Submittal;
-use App\Models\ZenaChangeRequest;
+use App\Models\ChangeRequest;
 use App\Models\ZenaMaterialRequest;
 use App\Models\ZenaPurchaseOrder;
 use App\Models\ZenaInvoice;
@@ -591,7 +591,7 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($changeRequests as $crData) {
-            ZenaChangeRequest::create($crData);
+            ChangeRequest::query()->create($crData);
         }
     }
 

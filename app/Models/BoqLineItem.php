@@ -27,6 +27,7 @@ class BoqLineItem extends Model
         'description',
         'quantity',
         'unit',
+        'unit_price',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class BoqLineItem extends Model
         'description' => 'string',
         'quantity' => 'float',
         'unit' => 'string',
+        'unit_price' => 'float',
     ];
 
     public function boq(): BelongsTo

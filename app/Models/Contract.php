@@ -146,6 +146,12 @@ class Contract extends Model
         return $this->hasMany(ContractExpense::class, 'contract_id');
     }
 
+    /** @return \Illuminate\Database\Eloquent\Relations\HasOne<Boq, $this> */
+    public function boq(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Boq::class, 'contract_id');
+    }
+
     public function getContractNumberAttribute(): ?string
     {
         return $this->attributes['contract_number'] ?? $this->attributes['code'] ?? null;

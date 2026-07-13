@@ -4,7 +4,7 @@ namespace Tests\Feature\Api;
 
 use App\Models\Tenant;
 use App\Models\Project;
-use App\Models\ZenaTask;
+use App\Models\Task;
 use App\Models\User;
 use Tests\TestCase;
 use Tests\Traits\AuthenticationTestTrait;
@@ -42,7 +42,7 @@ class TaskApiTest extends TestCase
         ]);
         
         // Tạo tasks cho project
-        ZenaTask::factory()->count(5)->create([
+        Task::factory()->count(5)->create([
             'project_id' => $project->id,
             'tenant_id' => $this->tenantId
         ]);
@@ -79,8 +79,8 @@ class TaskApiTest extends TestCase
         ]);
         
         // Tạo prerequisite tasks
-        $task1 = ZenaTask::factory()->create(['project_id' => $project->id, 'tenant_id' => $this->tenantId]);
-        $task2 = ZenaTask::factory()->create(['project_id' => $project->id, 'tenant_id' => $this->tenantId]);
+        $task1 = Task::factory()->create(['project_id' => $project->id, 'tenant_id' => $this->tenantId]);
+        $task2 = Task::factory()->create(['project_id' => $project->id, 'tenant_id' => $this->tenantId]);
         
         $taskData = [
             'name' => 'Dependent Task',
@@ -115,7 +115,7 @@ class TaskApiTest extends TestCase
             'tenant_id' => $this->tenantId
         ]);
         
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $project->id,
             'status' => 'pending',
             'tenant_id' => $this->tenantId
@@ -147,7 +147,7 @@ class TaskApiTest extends TestCase
             'tenant_id' => $this->tenantId,
         ]);
 
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->tenantId,
         ]);
@@ -171,7 +171,7 @@ class TaskApiTest extends TestCase
             'tenant_id' => $this->tenantId,
         ]);
 
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->tenantId,
         ]);
@@ -197,7 +197,7 @@ class TaskApiTest extends TestCase
             'tenant_id' => $this->tenantId,
         ]);
 
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->tenantId,
         ]);

@@ -9,7 +9,7 @@ use App\Models\Task;
 use App\Models\TaskDependency;
 use App\Models\User;
 use App\Models\Project;
-use App\Models\ZenaTask;
+use App\Models\Task;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Tests\Traits\RouteNameTrait;
@@ -38,13 +38,13 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_can_add_task_dependency()
     {
-        $task1 = ZenaTask::factory()->create([
+        $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $task2 = ZenaTask::factory()->create([
+        $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
@@ -77,13 +77,13 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_can_remove_task_dependency()
     {
-        $task1 = ZenaTask::factory()->create([
+        $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $task2 = ZenaTask::factory()->create([
+        $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
@@ -118,13 +118,13 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_prevents_circular_dependency()
     {
-        $task1 = ZenaTask::factory()->create([
+        $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $task2 = ZenaTask::factory()->create([
+        $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
@@ -147,7 +147,7 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_prevents_self_dependency()
     {
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
@@ -167,19 +167,19 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_prevents_complex_circular_dependency()
     {
-        $task1 = ZenaTask::factory()->create([
+        $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $task2 = ZenaTask::factory()->create([
+        $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $task3 = ZenaTask::factory()->create([
+        $task3 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
@@ -203,14 +203,14 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_task_status_update_with_dependencies()
     {
-        $task1 = ZenaTask::factory()->create([
+        $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'todo',
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $task2 = ZenaTask::factory()->create([
+        $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'todo',
@@ -249,19 +249,19 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_can_get_task_dependencies()
     {
-        $task1 = ZenaTask::factory()->create([
+        $task1 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $task2 = ZenaTask::factory()->create([
+        $task2 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
         ]);
 
-        $task3 = ZenaTask::factory()->create([
+        $task3 = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
@@ -291,7 +291,7 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_dependency_validation()
     {
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id
@@ -311,7 +311,7 @@ class TaskDependenciesTest extends TestCase
      */
     public function test_unauthorized_access_returns_401()
     {
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id
         ]);
@@ -325,13 +325,13 @@ class TaskDependenciesTest extends TestCase
 
     public function test_cross_tenant_add_dependency_returns_not_found(): void
     {
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,
         ]);
 
-        $dependency = ZenaTask::factory()->create([
+        $dependency = Task::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'tenant_id' => $this->project->tenant_id,

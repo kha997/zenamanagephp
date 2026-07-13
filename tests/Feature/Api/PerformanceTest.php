@@ -9,7 +9,7 @@ use App\Models\ZenaChangeRequest;
 use App\Models\Project;
 use App\Models\ZenaRfi;
 use App\Models\ZenaSubmittal;
-use App\Models\ZenaTask;
+use App\Models\Task;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Testing\TestResponse;
@@ -104,7 +104,7 @@ class PerformanceTest extends TestCase
 
     public function test_task_listing_performance(): void
     {
-        ZenaTask::factory()->count(self::TASK_LISTING_COUNT)->create([
+        Task::factory()->count(self::TASK_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -171,14 +171,14 @@ class PerformanceTest extends TestCase
 
     public function test_search_performance(): void
     {
-        ZenaTask::factory()->count(self::TASK_SEARCH_COUNT - self::SEARCHABLE_TASK_COUNT)->create([
+        Task::factory()->count(self::TASK_SEARCH_COUNT - self::SEARCHABLE_TASK_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
         ]);
 
         foreach (range(1, self::SEARCHABLE_TASK_COUNT) as $index) {
-            ZenaTask::factory()->create([
+            Task::factory()->create([
                 'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
                 'created_by' => $this->user->id,
@@ -200,7 +200,7 @@ class PerformanceTest extends TestCase
         $statusCount = count(self::STATUS_OPTIONS);
 
         for ($i = 0; $i < self::TASK_STATUS_COUNT; $i++) {
-            ZenaTask::factory()->create([
+            Task::factory()->create([
                 'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
                 'created_by' => $this->user->id,
@@ -220,7 +220,7 @@ class PerformanceTest extends TestCase
 
     public function test_pagination_performance(): void
     {
-        ZenaTask::factory()->count(self::PAGINATION_TASK_COUNT)->create([
+        Task::factory()->count(self::PAGINATION_TASK_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -240,7 +240,7 @@ class PerformanceTest extends TestCase
 
     public function test_complex_query_performance(): void
     {
-        $tasks = ZenaTask::factory()->count(self::COMPLEX_DEPENDENCY_COUNT)->create([
+        $tasks = Task::factory()->count(self::COMPLEX_DEPENDENCY_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -262,7 +262,7 @@ class PerformanceTest extends TestCase
 
     public function test_concurrent_request_performance(): void
     {
-        ZenaTask::factory()->count(self::TASK_LISTING_COUNT)->create([
+        Task::factory()->count(self::TASK_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -277,7 +277,7 @@ class PerformanceTest extends TestCase
     {
         $initialMemory = memory_get_usage();
 
-        ZenaTask::factory()->count(self::MEMORY_TASK_COUNT)->create([
+        Task::factory()->count(self::MEMORY_TASK_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -293,7 +293,7 @@ class PerformanceTest extends TestCase
 
     public function test_database_query_count(): void
     {
-        ZenaTask::factory()->count(self::QUERY_COUNT_TASKS)->create([
+        Task::factory()->count(self::QUERY_COUNT_TASKS)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,

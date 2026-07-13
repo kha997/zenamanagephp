@@ -5,7 +5,7 @@ namespace Tests\Feature\Api;
 use Tests\TestCase;
 use App\Models\Project;
 use App\Models\User;
-use App\Models\ZenaTask;
+use App\Models\Task;
 use App\Models\ZenaRfi;
 use App\Models\ZenaSubmittal;
 use App\Models\ZenaChangeRequest;
@@ -310,14 +310,14 @@ class IntegrationTest extends TestCase
     public function test_task_dependencies_integration()
     {
         // Create tasks
-        $task1 = ZenaTask::factory()->create([
+        $task1 = Task::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending'
         ]);
 
-        $task2 = ZenaTask::factory()->create([
+        $task2 = Task::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -433,7 +433,7 @@ class IntegrationTest extends TestCase
         ]);
 
         // Create related entities
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id

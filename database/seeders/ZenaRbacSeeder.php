@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\ZenaRole;
 use App\Models\ZenaPermission;
 use App\Models\Project;
-use App\Models\ZenaTask;
+use App\Models\Task;
 use App\Models\ZenaRfi;
 use App\Models\ZenaSubmittal;
 use App\Models\ZenaChangeRequest;
@@ -484,7 +484,7 @@ class ZenaRbacSeeder extends Seeder
         ];
 
         foreach ($tasks as $taskData) {
-            ZenaTask::create($taskData);
+            Task::query()->create($taskData);
         }
     }
 

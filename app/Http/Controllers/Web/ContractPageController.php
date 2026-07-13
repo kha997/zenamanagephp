@@ -64,6 +64,7 @@ class ContractPageController extends Controller
             'project_id' => ['required', 'string'],
             'code' => ['required', 'string', 'max:100'],
             'title' => ['required', 'string', 'max:255'],
+            'contract_type' => ['nullable', 'in:design,construction,other'],
             'status' => ['nullable', 'in:draft,active,closed,cancelled'],
             'currency' => ['nullable', 'string', 'size:3'],
             'total_value' => ['nullable', 'numeric', 'min:0'],

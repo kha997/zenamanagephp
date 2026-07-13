@@ -47,6 +47,7 @@ class Contract extends Model
         'code',
         'contract_number',
         'title',
+        'contract_type',
         'status',
         'currency',
         'total_value',
@@ -99,6 +100,25 @@ class Contract extends Model
         self::STATUS_CLOSED,
         self::STATUS_CANCELLED,
     ];
+
+    public const TYPE_DESIGN = 'design';
+    public const TYPE_CONSTRUCTION = 'construction';
+    public const TYPE_OTHER = 'other';
+
+    public const VALID_TYPES = [
+        self::TYPE_DESIGN,
+        self::TYPE_CONSTRUCTION,
+        self::TYPE_OTHER,
+    ];
+
+    public function typeLabel(): string
+    {
+        return match ($this->contract_type) {
+            self::TYPE_DESIGN => 'Thiết kế',
+            self::TYPE_CONSTRUCTION => 'Thi công',
+            default => 'Khác',
+        };
+    }
 
     /**
      * Relationship: Contract thuộc về project

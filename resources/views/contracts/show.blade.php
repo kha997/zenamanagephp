@@ -22,6 +22,7 @@
         <x-ui.card title="Thông tin hợp đồng">
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <x-ui.field-value label="Mã" :value="$contract->code" />
+                <x-ui.field-value label="Loại hợp đồng" :value="$contract->typeLabel()" />
                 <x-ui.field-value label="Dự án" :value="($contract->project?->name ?? '—') . ($contract->project?->code ? ' (' . $contract->project->code . ')' : '')" />
                 <x-ui.field-value label="Trạng thái" :value="match($contract->status) { 'active' => 'Đang hiệu lực', 'draft' => 'Nháp', 'closed' => 'Đã đóng', 'cancelled' => 'Đã hủy', default => $contract->status }" />
                 <x-ui.field-value label="Giá trị" :value="$contract->total_value !== null ? number_format((float) $contract->total_value) . ' ' . $contract->currency : null" />

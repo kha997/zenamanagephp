@@ -369,6 +369,7 @@ class CriticalUserFlowsE2ETest extends TestCase
     /**
      * Test complete performance flow
      */
+    /** @group performance */
     public function test_complete_performance_flow()
     {
         $this->actingAs($this->user);

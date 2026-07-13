@@ -10,7 +10,7 @@ use App\Models\Rfi;
 use App\Models\Submittal;
 use App\Models\ZenaChangeRequest;
 use App\Models\ZenaDocument;
-use App\Models\ZenaNotification;
+use App\Models\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
@@ -402,7 +402,7 @@ class IntegrationTest extends TestCase
     public function test_notification_integration()
     {
         // Create notification
-        $notification = ZenaNotification::factory()->create([
+        $notification = Notification::factory()->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);

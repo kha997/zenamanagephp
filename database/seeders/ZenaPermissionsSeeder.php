@@ -109,6 +109,11 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'contract.expense.create', 'module' => 'contract', 'action' => 'expense.create', 'description' => 'Create contract expenses'],
         ['code' => 'contract.expense.delete', 'module' => 'contract', 'action' => 'expense.delete', 'description' => 'Delete contract expenses'],
 
+        // Payment certificates (IPC)
+        ['code' => 'payment_certificate.view', 'module' => 'payment_certificate', 'action' => 'view', 'description' => 'View payment certificates'],
+        ['code' => 'payment_certificate.create', 'module' => 'payment_certificate', 'action' => 'create', 'description' => 'Create and edit payment certificates'],
+        ['code' => 'payment_certificate.approve', 'module' => 'payment_certificate', 'action' => 'approve', 'description' => 'Approve payment certificates'],
+
         // Task management
         ['code' => 'task.view', 'module' => 'task', 'action' => 'view', 'description' => 'View tasks'],
         ['code' => 'task.create', 'module' => 'task', 'action' => 'create', 'description' => 'Create tasks'],

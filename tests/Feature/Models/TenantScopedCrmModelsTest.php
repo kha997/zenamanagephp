@@ -8,6 +8,8 @@ use App\Models\ContractExpense;
 use App\Models\DesignItemRevision;
 use App\Models\Lead;
 use App\Models\Opportunity;
+use App\Models\PaymentCertificate;
+use App\Models\PaymentCertificateLine;
 use App\Models\Tenant;
 use App\Traits\TenantScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,7 +27,7 @@ class TenantScopedCrmModelsTest extends TestCase
      */
     public function test_tenant_owned_crm_models_use_the_tenant_scope_trait(): void
     {
-        foreach ([Lead::class, Account::class, Opportunity::class, DesignItem::class, DesignItemRevision::class, ContractExpense::class] as $model) {
+        foreach ([Lead::class, Account::class, Opportunity::class, DesignItem::class, DesignItemRevision::class, ContractExpense::class, PaymentCertificate::class, PaymentCertificateLine::class] as $model) {
             $this->assertContains(
                 TenantScope::class,
                 class_uses_recursive($model),

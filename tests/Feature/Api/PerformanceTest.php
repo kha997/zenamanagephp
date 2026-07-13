@@ -19,6 +19,7 @@ use Tests\Traits\RouteNameTrait;
 use Tests\TestCase;
 
 /**
+ * @group performance
  * @group slow
  */
 class PerformanceTest extends TestCase

@@ -15,6 +15,9 @@ use Illuminate\Support\Str;
 use Tests\Support\SSOT\FixtureFactory;
 use Tests\Traits\AuthenticationTrait;
 
+/**
+ * @group performance
+ */
 class PerformanceMonitoringTest extends TestCase
 {
     use RefreshDatabase, FixtureFactory, AuthenticationTrait;

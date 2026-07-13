@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Cache;
 use Tests\Traits\AuthenticationTrait;
 use Tests\Traits\RouteNameTrait;
 
+/**
+ * @group performance
+ */
 class PerformanceTest extends TestCase
 {
     use RefreshDatabase, WithFaker, AuthenticationTrait, RouteNameTrait;

@@ -98,6 +98,45 @@ class ContractPageController extends Controller
         return $this->handleErrorResponse($response);
     }
 
+    public function storeExpense(Request $request, string $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'expense_date' => ['required', 'date'],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'category' => ['required', \Illuminate\Validation\Rule::in(\App\Models\ContractExpense::VALID_CATEGORIES)],
+            'description' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        \App\Models\ContractExpense::query()->create([
+            'tenant_id' => $tenantId,
+            'contract_id' => (string) $contract->id,
+            'expense_date' => $validated['expense_date'],
+            'amount' => (float) $validated['amount'],
+            'category' => $validated['category'],
+            'description' => $validated['description'],
+            'recorded_by' => (string) auth()->id(),
+        ]);
+
+        return back()->with('success', 'Đã ghi khoản chi.');
+    }
+
+    public function deleteExpense(string $id, string $expense): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        \App\Models\ContractExpense::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->findOrFail($expense)
+            ->delete();
+
+        return back()->with('success', 'Đã xóa khoản chi.');
+    }
+
     public function show(Request $request, string $id, ApiContractController $apiController): View
     {
         $tenantId = (string) auth()->user()?->tenant_id;

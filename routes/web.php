@@ -910,6 +910,18 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/contracts/{id}/expenses', [App\Http\Controllers\Web\ContractPageController::class, 'storeExpense'])->middleware('rbac:contract.expense.create')->name('contracts.expenses.store');
     Route::post('/contracts/{id}/expenses/{expense}/delete', [App\Http\Controllers\Web\ContractPageController::class, 'deleteExpense'])->middleware('rbac:contract.expense.delete')->name('contracts.expenses.delete');
 
+    // BOQ lines (contract-scoped)
+    Route::post('/contracts/{id}/boq-lines', [App\Http\Controllers\Web\ContractPageController::class, 'storeBoqLine'])->middleware('rbac:contract.update')->name('contracts.boq-lines.store');
+    Route::post('/contracts/{id}/boq-lines/{line}/update', [App\Http\Controllers\Web\ContractPageController::class, 'updateBoqLine'])->middleware('rbac:contract.update')->name('contracts.boq-lines.update');
+    Route::post('/contracts/{id}/boq-lines/{line}/delete', [App\Http\Controllers\Web\ContractPageController::class, 'deleteBoqLine'])->middleware('rbac:contract.update')->name('contracts.boq-lines.delete');
+
+    // Payment certificates
+    Route::post('/contracts/{id}/certificates', [App\Http\Controllers\Web\ContractPageController::class, 'storeCertificate'])->middleware('rbac:payment_certificate.create')->name('contracts.certificates.store');
+    Route::get('/contracts/{id}/certificates/{certificate}', [App\Http\Controllers\Web\ContractPageController::class, 'showCertificate'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.show');
+    Route::post('/contracts/{id}/certificates/{certificate}/lines', [App\Http\Controllers\Web\ContractPageController::class, 'saveCertificateLines'])->middleware('rbac:payment_certificate.create')->name('contracts.certificates.lines.save');
+    Route::post('/contracts/{id}/certificates/{certificate}/submit', [App\Http\Controllers\Web\ContractPageController::class, 'submitCertificate'])->middleware('rbac:payment_certificate.create')->name('contracts.certificates.submit');
+    Route::post('/contracts/{id}/certificates/{certificate}/approve', [App\Http\Controllers\Web\ContractPageController::class, 'approveCertificate'])->middleware('rbac:payment_certificate.approve')->name('contracts.certificates.approve');
+
     // Inspections
     Route::get('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'index'])->middleware('rbac:inspection.view')->name('inspections.index');
     Route::get('/inspections/create', [App\Http\Controllers\Web\InspectionPageController::class, 'create'])->middleware('rbac:inspection.create')->name('inspections.create');

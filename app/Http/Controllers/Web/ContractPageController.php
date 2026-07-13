@@ -278,4 +278,313 @@ class ContractPageController extends Controller
 
         return $response;
     }
+
+    // ─── BOQ Lines (contract-scoped) ────────────────────────────────
+
+    private function assertBoqUnlocked(Contract $contract): ?RedirectResponse
+    {
+        $hasApproved = \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', (string) auth()->user()?->tenant_id)
+            ->where('contract_id', (string) $contract->id)
+            ->where('status', \App\Models\PaymentCertificate::STATUS_APPROVED)
+            ->exists();
+
+        if ($hasApproved) {
+            return back()->withErrors(['boq' => 'Bảng khối lượng đã khóa (đã có chứng chỉ được duyệt).']);
+        }
+
+        return null;
+    }
+
+    private function ensureContractBoq(Contract $contract, string $tenantId): \App\Models\Boq
+    {
+        return \App\Models\Boq::query()->firstOrCreate(
+            ['tenant_id' => $tenantId, 'contract_id' => (string) $contract->id],
+            ['project_id' => (string) $contract->project_id, 'code' => 'BOQ-' . $contract->code, 'name' => 'Bảng khối lượng ' . $contract->code]
+        );
+    }
+
+    public function storeBoqLine(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        if ($redirect = $this->assertBoqUnlocked($contract)) {
+            return $redirect;
+        }
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:255'],
+            'unit' => ['required', 'string', 'max:50'],
+            'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit_price' => ['nullable', 'numeric', 'gte:0'],
+        ]);
+
+        $boq = $this->ensureContractBoq($contract, $tenantId);
+
+        \App\Models\BoqLineItem::query()->create([
+            'tenant_id' => $tenantId,
+            'boq_id' => (string) $boq->id,
+            'code' => $validated['code'],
+            'name' => $validated['name'],
+            'unit' => $validated['unit'],
+            'quantity' => (float) $validated['quantity'],
+            'unit_price' => isset($validated['unit_price']) ? (float) $validated['unit_price'] : null,
+        ]);
+
+        return back()->with('success', 'Đã thêm dòng BOQ.');
+    }
+
+    public function updateBoqLine(Request $request, string $id, string $line): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        if ($redirect = $this->assertBoqUnlocked($contract)) {
+            return $redirect;
+        }
+
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:255'],
+            'unit' => ['required', 'string', 'max:50'],
+            'quantity' => ['required', 'numeric', 'gt:0'],
+            'unit_price' => ['nullable', 'numeric', 'gte:0'],
+        ]);
+
+        $boq = $contract->boq;
+        if (! $boq) {
+            abort(404);
+        }
+
+        \App\Models\BoqLineItem::query()
+            ->where('tenant_id', $tenantId)
+            ->where('boq_id', (string) $boq->id)
+            ->findOrFail($line)
+            ->update([
+                'code' => $validated['code'],
+                'name' => $validated['name'],
+                'unit' => $validated['unit'],
+                'quantity' => (float) $validated['quantity'],
+                'unit_price' => isset($validated['unit_price']) ? (float) $validated['unit_price'] : null,
+            ]);
+
+        return back()->with('success', 'Đã cập nhật dòng BOQ.');
+    }
+
+    public function deleteBoqLine(string $id, string $line): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        if ($redirect = $this->assertBoqUnlocked($contract)) {
+            return $redirect;
+        }
+
+        if (\App\Models\PaymentCertificateLine::query()->where('boq_line_item_id', $line)->exists()) {
+            abort(422, 'Dòng BOQ đã dùng trong chứng chỉ.');
+        }
+
+        $boq = $contract->boq;
+        if (! $boq) {
+            abort(404);
+        }
+
+        \App\Models\BoqLineItem::query()
+            ->where('tenant_id', $tenantId)
+            ->where('boq_id', (string) $boq->id)
+            ->findOrFail($line)
+            ->delete();
+
+        return back()->with('success', 'Đã xóa dòng BOQ.');
+    }
+
+    // ─── Payment Certificates ───────────────────────────────────────
+
+    public function storeCertificate(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $validated = $request->validate([
+            'period_from' => ['required', 'date'],
+            'period_to' => ['required', 'date', 'after_or_equal:period_from'],
+        ]);
+
+        $maxPeriod = \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->max('period_no') ?? 0;
+
+        $cert = \App\Models\PaymentCertificate::query()->create([
+            'tenant_id' => $tenantId,
+            'contract_id' => (string) $contract->id,
+            'period_no' => (int) $maxPeriod + 1,
+            'period_from' => $validated['period_from'],
+            'period_to' => $validated['period_to'],
+            'status' => \App\Models\PaymentCertificate::STATUS_DRAFT,
+        ]);
+
+        return redirect()->route('operator.contracts.certificates.show', [(string) $contract->id, (string) $cert->id]);
+    }
+
+    public function showCertificate(string $id, string $certificate): View
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $cert = \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->findOrFail($certificate);
+
+        $boqLines = $contract->boq ? $contract->boq->lineItems()->get() : collect();
+
+        return view('contracts.certificate-show', [
+            'contract' => $contract,
+            'certificate' => $cert,
+            'boqLines' => $boqLines,
+        ]);
+    }
+
+    public function saveCertificateLines(Request $request, string $id, string $certificate): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $cert = \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->findOrFail($certificate);
+
+        if ($cert->status !== \App\Models\PaymentCertificate::STATUS_DRAFT) {
+            return back()->withErrors(['status' => 'Chỉ chứng chỉ nháp mới được chỉnh sửa dòng.']);
+        }
+
+        $lines = $request->input('lines', []);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($tenantId, $cert, $lines): void {
+            // Delete existing lines for this cert
+            \App\Models\PaymentCertificateLine::query()
+                ->where('tenant_id', $tenantId)
+                ->where('payment_certificate_id', (string) $cert->id)
+                ->delete();
+
+            $total = 0.0;
+
+            foreach ($lines as $boqLineItemId => $qty) {
+                $qty = (float) $qty;
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $boqLine = \App\Models\BoqLineItem::query()
+                    ->where('tenant_id', $tenantId)
+                    ->find($boqLineItemId);
+
+                if (!$boqLine) {
+                    continue;
+                }
+
+                $unitPrice = (float) ($boqLine->unit_price ?? 0);
+                $amount = $qty * $unitPrice;
+
+                \App\Models\PaymentCertificateLine::query()->create([
+                    'tenant_id' => $tenantId,
+                    'payment_certificate_id' => (string) $cert->id,
+                    'boq_line_item_id' => (string) $boqLineItemId,
+                    'qty_this_period' => $qty,
+                    'unit_price_snapshot' => $unitPrice,
+                    'amount_this_period' => $amount,
+                ]);
+
+                $total += $amount;
+            }
+
+            $cert->update(['total_this_period' => $total]);
+        });
+
+        return back()->with('success', 'Đã lưu chứng chỉ.');
+    }
+
+    public function submitCertificate(string $id, string $certificate): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $cert = \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->findOrFail($certificate);
+
+        if (!\App\Models\PaymentCertificate::canTransition($cert->status, \App\Models\PaymentCertificate::STATUS_SUBMITTED)) {
+            return back()->withErrors(['status' => 'Không thể chuyển trạng thái từ ' . $cert->status . ' sang submitted.']);
+        }
+
+        $cert->update([
+            'status' => \App\Models\PaymentCertificate::STATUS_SUBMITTED,
+            'submitted_by' => (string) auth()->id(),
+            'submitted_at' => now(),
+        ]);
+
+        return back()->with('success', 'Đã gửi chứng chỉ.');
+    }
+
+    public function approveCertificate(string $id, string $certificate): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $cert = \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->findOrFail($certificate);
+
+        if (!\App\Models\PaymentCertificate::canTransition($cert->status, \App\Models\PaymentCertificate::STATUS_APPROVED)) {
+            return back()->withErrors(['status' => 'Không thể chuyển trạng thái từ ' . $cert->status . ' sang approved.']);
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($tenantId, $contract, $cert): void {
+            // Recompute total from lines
+            $total = \App\Models\PaymentCertificateLine::query()
+                ->where('tenant_id', $tenantId)
+                ->where('payment_certificate_id', (string) $cert->id)
+                ->sum('amount_this_period');
+
+            $cert->update([
+                'status' => \App\Models\PaymentCertificate::STATUS_APPROVED,
+                'total_this_period' => (float) $total,
+                'approved_by' => (string) auth()->id(),
+                'approved_at' => now(),
+            ]);
+
+            // Create ContractPayment
+            \App\Models\ContractPayment::query()->create([
+                'tenant_id' => $tenantId,
+                'contract_id' => (string) $contract->id,
+                'name' => 'Nghiệm thu KL kỳ ' . $cert->period_no,
+                'amount' => (float) $total,
+                'status' => \App\Models\ContractPayment::STATUS_PLANNED,
+                'due_date' => now()->addDays(14),
+            ]);
+
+            // Write EventRecord
+            \App\Models\EventRecord::query()->create([
+                'tenant_id' => $tenantId,
+                'project_id' => (string) $contract->project_id,
+                'aggregate_type' => 'payment_certificate',
+                'aggregate_id' => (string) $cert->id,
+                'event_key' => 'payment_certificate.approved',
+                'actor_user_id' => (string) auth()->id(),
+                'occurred_at' => now(),
+                'payload' => [
+                    'period_no' => $cert->period_no,
+                    'total' => (float) $total,
+                ],
+            ]);
+        });
+
+        return back()->with('success', 'Đã duyệt chứng chỉ.');
+    }
 }

@@ -1019,6 +1019,10 @@ Route::prefix('portal/{tenantSlug}')->as('portal.')->middleware(['web'])->group(
 
     Route::middleware(['portal.auth'])->group(function () {
         Route::get('/dashboard', [App\Http\Controllers\Web\Portal\PortalDashboardController::class, 'index'])->name('dashboard');
+
+        Route::get('/design-items/{id}', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'show'])->name('design-items.show');
+        Route::post('/design-items/{id}/approve', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'approve'])->middleware('throttle:portal-actions')->name('design-items.approve');
+        Route::post('/design-items/{id}/request-revision', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'requestRevision'])->middleware('throttle:portal-actions')->name('design-items.request-revision');
     });
 });
 

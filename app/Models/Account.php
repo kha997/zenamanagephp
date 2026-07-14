@@ -15,6 +15,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Also implements Authenticatable so it can be used directly as the
  * identity for the `client` portal auth guard (Phase 6) — no password,
  * no remember-token columns needed; the trait's defaults handle this.
+ *
+ * @property string $id
+ * @property string $tenant_id
  */
 class Account extends Model implements AuthenticatableContract
 {

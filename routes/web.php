@@ -369,6 +369,7 @@ Route::get('/projects-enhanced', function() {
     
     // Project sub-resources
     Route::get('/projects/{project}/documents', [App\Http\Controllers\Web\ProjectController::class, 'documents'])->name('projects.documents');
+    Route::get('/projects/{project}/documents/{template}', [App\Http\Controllers\Web\ProjectController::class, 'renderProjectDocument'])->middleware('rbac:project.view')->name('projects.documents.render');
     Route::get('/projects/{project}/history', [App\Http\Controllers\Web\ProjectController::class, 'history'])->name('projects.history');
     Route::get('/projects/{project}/design', function ($project) {
         return view('projects.design-project', compact('project'));
@@ -923,9 +924,13 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/contracts/{id}/certificates/{certificate}/submit', [App\Http\Controllers\Web\ContractPageController::class, 'submitCertificate'])->middleware('rbac:payment_certificate.create')->name('contracts.certificates.submit');
     Route::post('/contracts/{id}/certificates/{certificate}/approve', [App\Http\Controllers\Web\ContractPageController::class, 'approveCertificate'])->middleware('rbac:payment_certificate.approve')->name('contracts.certificates.approve');
     Route::get('/contracts/{id}/certificates/{certificate}/pdf', [App\Http\Controllers\Web\ContractPageController::class, 'certificatePdf'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.pdf');
+    Route::get('/contracts/{id}/certificates/{certificate}/documents/{template}', [App\Http\Controllers\Web\ContractPageController::class, 'renderCertificateDocument'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.documents.render');
 
     // BOQ PDF
     Route::get('/contracts/{id}/boq-pdf', [App\Http\Controllers\Web\ContractPageController::class, 'boqPdf'])->middleware('rbac:contract.view')->name('contracts.boq.pdf');
+
+    // Document template render
+    Route::get('/contracts/{id}/documents/{template}', [App\Http\Controllers\Web\ContractPageController::class, 'renderContractDocument'])->middleware('rbac:contract.view')->name('contracts.documents.render');
 
     // Inspections
     Route::get('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'index'])->middleware('rbac:inspection.view')->name('inspections.index');

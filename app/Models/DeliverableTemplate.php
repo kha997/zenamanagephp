@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $context
  * @property string|null $created_by
  * @property string|null $updated_by
+ * @property-read \App\Models\DeliverableTemplateVersion|null $latestPublishedVersion
  * @method static \App\Models\DeliverableTemplate create(array<string, mixed> $attributes = [])
  */
 class DeliverableTemplate extends Model

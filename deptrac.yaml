@@ -15,8 +15,6 @@ deptrac:
   skip_violations:
     App\Models\Task:
       - App\Services\TaskDependencyService
-    App\Models\ZenaTask:
-      - App\Services\TaskDependencyService
 
   paths:
     - ./app

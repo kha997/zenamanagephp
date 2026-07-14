@@ -4,17 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
 use App\Models\DesignItem;
-use App\Models\DesignItemRevision;
 use App\Models\Document;
 use App\Models\DocumentVersion;
-use App\Models\EventRecord;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -219,8 +216,9 @@ class DesignItemController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        // review_status is deliberately excluded here — it is only ever changed via updateStatus(),
-        // which enforces the transition graph and its side-effect rules. Silently ignore it if sent.
+        // review_status is deliberately excluded here — it is only ever changed via
+        // DesignItemStatusService, which enforces the transition graph and its side-effect rules.
+        // Silently ignore it if sent.
         $item->fill($request->only([
             'project_id', 'work_instance_step_id', 'name', 'item_type', 'description', 'assigned_to', 'due_to_client_at',
         ]));
@@ -258,94 +256,20 @@ class DesignItemController extends BaseApiController
             return $this->validationError($validator->errors());
         }
 
-        $from = (string) $item->review_status;
         $to = (string) $request->input('review_status');
 
-        if (!DesignItem::canTransition($from, $to)) {
-            return $this->validationError([
-                'review_status' => ["Cannot transition from {$from} to {$to}."],
+        try {
+            $item = app(\App\Services\DesignItemStatusService::class)->transition($item, $to, [
+                'client_feedback_notes' => $request->input('client_feedback_notes'),
+                'approval_evidence' => $request->input('approval_evidence'),
+                'actor_user_id' => (string) Auth::id(),
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationError($e->errors());
         }
-
-        if ($to === DesignItem::STATUS_REVISION_REQUESTED && !$request->filled('client_feedback_notes')) {
-            return $this->validationError([
-                'client_feedback_notes' => ['Required when requesting a revision.'],
-            ]);
-        }
-
-        if ($to === DesignItem::STATUS_SENT_TO_CLIENT) {
-            if (!$item->due_to_client_at) {
-                return $this->validationError([
-                    'due_to_client_at' => ['Must be set before sending to client.'],
-                ]);
-            }
-
-            $hasAttachment = Document::query()
-                ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
-                ->exists();
-
-            if (!$hasAttachment) {
-                return $this->validationError([
-                    'review_status' => ['At least one attached document is required before sending to client.'],
-                ]);
-            }
-        }
-
-        if ($to === DesignItem::STATUS_APPROVED && !$request->filled('approval_evidence')) {
-            return $this->validationError([
-                'approval_evidence' => ['Required when approving — record how the client confirmed (phone/email/zalo/client_portal).'],
-            ]);
-        }
-
-        $item->review_status = $to;
-
-        if ($to === DesignItem::STATUS_REVISION_REQUESTED) {
-            $item->client_feedback_notes = (string) $request->input('client_feedback_notes');
-        }
-
-        if ($to === DesignItem::STATUS_APPROVED) {
-            $item->approval_evidence = (string) $request->input('approval_evidence');
-        }
-
-        DB::transaction(function () use ($item, $tenantId, $from, $to): void {
-            $item->save();
-
-            if ($to === DesignItem::STATUS_REVISION_REQUESTED) {
-                $revisionNo = ((int) $item->revision_count) + 1;
-
-                DesignItemRevision::query()->create([
-                    'tenant_id' => $tenantId,
-                    'design_item_id' => (string) $item->id,
-                    'revision_no' => $revisionNo,
-                    'client_feedback' => (string) $item->client_feedback_notes,
-                    'requested_by' => (string) Auth::id(),
-                    'requested_at' => now(),
-                ]);
-
-                $item->forceFill(['revision_count' => $revisionNo])->save();
-            }
-
-            if ($from === DesignItem::STATUS_REVISION_REQUESTED) {
-                $item->revisions()
-                    ->whereNull('resolved_at')
-                    ->latest('revision_no')
-                    ->first()?->update(['resolved_at' => now()]);
-            }
-        });
-
-        EventRecord::query()->create([
-            'tenant_id' => $tenantId,
-            'project_id' => (string) $item->project_id,
-            'aggregate_type' => 'design_item',
-            'aggregate_id' => (string) $item->id,
-            'event_key' => 'design_item.status_changed',
-            'actor_user_id' => (string) Auth::id(),
-            'payload' => ['from' => $from, 'to' => $to],
-            'occurred_at' => now(),
-        ]);
 
         return $this->zenaSuccessResponse(
-            $this->serialize($item->fresh() ?? $item),
+            $this->serialize($item),
             'Design item status updated successfully'
         );
     }

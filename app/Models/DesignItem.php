@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * review_status is the sole authority for the client cycle — never synced with
  * WorkInstanceStep's own internal checklist status, even when work_instance_step_id is set.
+ * Only ever changed via DesignItemStatusService.
  */
 class DesignItem extends Model
 {

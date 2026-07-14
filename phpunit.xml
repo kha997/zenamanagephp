@@ -11,12 +11,9 @@
     <testsuite name="Integration">
       <directory>tests/Integration</directory>
     </testsuite>
-    <testsuite name="Final Testing">
-      <file>tests/Feature/FinalSystemTest.php</file>
-      <file>tests/Feature/PerformanceTest.php</file>
-      <file>tests/Feature/SecurityTest.php</file>
-      <file>tests/Feature/QualityAssuranceTest.php</file>
-    </testsuite>
+    <!-- "Final Testing" suite removed 2026-07-14: it re-listed 4 files already in
+         the Feature suite, and PHPUnit 11 exits 1 on the resulting duplicate-file
+         runner warning even when all tests pass (broke Routes Guardrails CI). -->
   </testsuites>
   <groups>
     <exclude>

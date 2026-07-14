@@ -28,6 +28,9 @@ use App\Models\Project;
  * @property string|null $client_name Tên khách hàng
  * @property string|null $notes Ghi chú
  * @property string $code Mã hợp đồng
+ * @property float $retention_percent Tỷ lệ giữ lại (%)
+ * @property float $advance_amount Số tiền tạm ứng
+ * @property float $advance_recovery_percent Tỷ lệ thu hồi tạm ứng (%)
  * @property \App\Models\Boq|null $boq BOQ attached to this contract
  */
 class Contract extends Model
@@ -63,7 +66,10 @@ class Contract extends Model
         'terms',
         'client_name',
         'notes',
-        'updated_by'
+        'updated_by',
+        'retention_percent',
+        'advance_amount',
+        'advance_recovery_percent',
     ];
 
     protected $casts = [
@@ -81,7 +87,10 @@ class Contract extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'signed_date' => 'date',
-        'terms' => 'array'
+        'terms' => 'array',
+        'retention_percent' => 'float',
+        'advance_amount' => 'float',
+        'advance_recovery_percent' => 'float',
     ];
 
     protected $attributes = [

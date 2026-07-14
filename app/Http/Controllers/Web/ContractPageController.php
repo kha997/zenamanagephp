@@ -21,6 +21,8 @@ class ContractPageController extends Controller
 {
     use DelegatesToApiControllers;
 
+    private const ADVANCE_PAYMENT_NAME = 'Tạm ứng theo hợp đồng';
+
     public function index(Request $request): View
     {
         $tenantId = (string) auth()->user()?->tenant_id;
@@ -301,6 +303,47 @@ class ContractPageController extends Controller
     }
 
     // ─── BOQ Lines (contract-scoped) ────────────────────────────────
+
+    public function updateFinanceSettings(Request $request, string $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'retention_percent' => ['required', 'numeric', 'min:0', 'max:100'],
+            'advance_amount' => ['required', 'numeric', 'min:0'],
+            'advance_recovery_percent' => ['required', 'numeric', 'min:0', 'max:100'],
+        ]);
+
+        $tenantId = $this->currentTenantId();
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($contract, $tenantId, $validated): void {
+            $contract->forceFill($validated)->save();
+
+            $advance = (float) $validated['advance_amount'];
+            if ($advance > 0) {
+                $payment = \App\Models\ContractPayment::query()
+                    ->where('tenant_id', $tenantId)
+                    ->where('contract_id', (string) $contract->id)
+                    ->where('name', self::ADVANCE_PAYMENT_NAME)
+                    ->first();
+
+                if ($payment === null) {
+                    \App\Models\ContractPayment::query()->create([
+                        'tenant_id' => $tenantId,
+                        'contract_id' => (string) $contract->id,
+                        'name' => self::ADVANCE_PAYMENT_NAME,
+                        'amount' => $advance,
+                        'status' => \App\Models\ContractPayment::STATUS_PLANNED,
+                        'due_date' => now()->addDays(7),
+                    ]);
+                } elseif ($payment->status === \App\Models\ContractPayment::STATUS_PLANNED) {
+                    $payment->forceFill(['amount' => $advance])->save();
+                }
+                // đã paid: không đụng — UI hiển thị ghi chú lệch.
+            }
+        });
+
+        return back()->with('success', 'Đã lưu thiết lập tài chính hợp đồng.');
+    }
 
     /**
      * Get tenant_id from authenticated user via Auth facade (avoids auth() helper baseline inflation).

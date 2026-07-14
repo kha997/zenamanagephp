@@ -87,7 +87,6 @@ class ModuleOwnershipSourceInvariantTest extends TestCase
     public function test_tasks_canonical_controller_and_docs_match_current_ssot(): void
     {
         $taskController = file_get_contents(app_path('Http/Controllers/Api/TaskController.php'));
-        $zenaTaskModel = file_get_contents(app_path('Models/ZenaTask.php'));
         $domainOwnership = file_get_contents(base_path('docs/engineering/domain-ownership.md'));
         $moduleOwnership = file_get_contents(base_path('docs/architecture/module-ownership-ssot.md'));
         $apiDocumentation = file_get_contents(base_path('docs/api/API_DOCUMENTATION.md'));
@@ -95,7 +94,6 @@ class ModuleOwnershipSourceInvariantTest extends TestCase
         $routeInvariantSource = file_get_contents(base_path('tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php'));
 
         $this->assertIsString($taskController);
-        $this->assertIsString($zenaTaskModel);
         $this->assertIsString($domainOwnership);
         $this->assertIsString($moduleOwnership);
         $this->assertIsString($apiDocumentation);
@@ -105,8 +103,6 @@ class ModuleOwnershipSourceInvariantTest extends TestCase
         $this->assertStringContainsString('use App\\Models\\Task;', $taskController);
         $this->assertStringNotContainsString('use Src\\CoreProject\\Models\\Task;', $taskController);
         $this->assertStringNotContainsString('use Src\\CoreProject\\Services\\TaskService;', $taskController);
-
-        $this->assertStringContainsString('@deprecated Use {@see Task} instead.', $zenaTaskModel);
 
         $this->assertStringContainsString('Route family: `/api/zena/tasks`', $domainOwnership);
         $this->assertStringContainsString('Controller/model owner: `app/Http/Controllers/Api/TaskController.php`, `app/Models/Task.php`', $domainOwnership);

@@ -68,6 +68,14 @@ abstract class TestCase extends BaseTestCase
         $token = csrf_token();
 
         if (!$token) {
+            $session = app('session.store');
+            if (!$session->isStarted()) {
+                $session->start();
+            }
+            $token = csrf_token();
+        }
+
+        if (!$token) {
             return $parameters;
         }
 

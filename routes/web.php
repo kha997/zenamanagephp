@@ -997,6 +997,15 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/design-items/{id}/unblock', [App\Http\Controllers\Web\DesignItemPageController::class, 'unblock'])->middleware('rbac:design-item.manage')->name('design-items.unblock');
     Route::post('/design-items/suggest-description', [App\Http\Controllers\Web\DesignItemPageController::class, 'suggestDescription'])->middleware(['rbac:design-item.manage', 'rbac:ai.suggest', 'throttle:ai-suggest'])->name('design-items.suggest-description');
 
+    // Document Templates (Thư viện biểu mẫu)
+    Route::get('/document-templates', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'index'])->middleware('rbac:document_template.view')->name('document-templates.index');
+    Route::get('/document-templates/create', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'create'])->middleware('rbac:document_template.manage')->name('document-templates.create');
+    Route::post('/document-templates', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'store'])->middleware('rbac:document_template.manage')->name('document-templates.store');
+    Route::get('/document-templates/{id}/edit', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'edit'])->middleware('rbac:document_template.manage')->name('document-templates.edit');
+    Route::post('/document-templates/{id}', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'update'])->middleware('rbac:document_template.manage')->name('document-templates.update');
+    Route::post('/document-templates/{id}/preview', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'preview'])->middleware('rbac:document_template.view')->name('document-templates.preview');
+    Route::post('/document-templates/{id}/publish', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'publish'])->middleware('rbac:document_template.manage')->name('document-templates.publish');
+
     // CRM (lead inbox → account/opportunity → project; spec crm-zena)
     Route::get('/crm', [App\Http\Controllers\Web\CrmPageController::class, 'index'])->middleware('rbac:crm.view')->name('crm.index');
     Route::get('/crm/leads', [App\Http\Controllers\Web\CrmPageController::class, 'leads'])->middleware('rbac:crm.view')->name('crm.leads');

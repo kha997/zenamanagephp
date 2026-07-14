@@ -8,6 +8,23 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property string $id
+ * @property string $tenant_id
+ * @property string $deliverable_template_id
+ * @property string $version
+ * @property string $semver
+ * @property string $storage_path
+ * @property string $checksum_sha256
+ * @property string $mime
+ * @property int $size
+ * @property array<string, mixed> $placeholders_spec_json
+ * @property \Illuminate\Support\Carbon|null $published_at
+ * @property string|null $published_by
+ * @property string|null $created_by
+ * @property string|null $updated_by
+ * @method static \App\Models\DeliverableTemplateVersion create(array<string, mixed> $attributes = [])
+ */
 class DeliverableTemplateVersion extends Model
 {
     use HasUlids, HasFactory, TenantScope;
@@ -16,6 +33,7 @@ class DeliverableTemplateVersion extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
+    /** @var list<string> */
     protected $fillable = [
         'tenant_id',
         'deliverable_template_id',
@@ -32,6 +50,7 @@ class DeliverableTemplateVersion extends Model
         'updated_by',
     ];
 
+    /** @var array<string, string> */
     protected $casts = [
         'placeholders_spec_json' => 'array',
         'size' => 'integer',

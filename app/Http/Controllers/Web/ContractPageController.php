@@ -346,6 +346,52 @@ class ContractPageController extends Controller
     }
 
     /**
+     * Tính và gán retention_amount / advance_deduction / net_payable trên chứng chỉ (chưa save).
+     *
+     * @param  float|null  $override  giá trị nhập tay từ request (null = dùng gợi ý tự động).
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    private function applyDeductions(Contract $contract, \App\Models\PaymentCertificate $cert, ?float $override): void
+    {
+        $total = (float) $cert->total_this_period;
+        $retentionPercent = (float) $contract->retention_percent;
+        $advanceAmount = (float) $contract->advance_amount;
+        $recoveryPercent = (float) $contract->advance_recovery_percent;
+
+        $retentionAmount = round($retentionPercent / 100 * $total, 2);
+
+        // Advance remaining = advance_amount − Σ advance_deduction của certs APPROVED (loại trừ cert hiện tại)
+        $advanceRemaining = $advanceAmount - (float) \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', $this->currentTenantId())
+            ->where('contract_id', (string) $contract->id)
+            ->where('status', \App\Models\PaymentCertificate::STATUS_APPROVED)
+            ->where('id', '!=', (string) $cert->id)
+            ->sum('advance_deduction');
+
+        $suggested = min(round($recoveryPercent / 100 * $total, 2), max($advanceRemaining, 0.0));
+        $deduction = $override !== null ? $override : $suggested;
+
+        // Validate
+        if ($deduction < 0 || $deduction > max($advanceRemaining, 0.0)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'advance_deduction' => "Thu hồi tạm ứng phải từ 0 đến {$advanceRemaining}.",
+            ]);
+        }
+
+        if ($retentionAmount + $deduction > $total) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'advance_deduction' => 'Tổng giữ lại và thu hồi tạm ứng vượt giá trị kỳ này.',
+            ]);
+        }
+
+        $netPayable = round($total - $retentionAmount - $deduction, 2);
+
+        $cert->retention_amount = $retentionAmount;
+        $cert->advance_deduction = $deduction;
+        $cert->net_payable = $netPayable;
+    }
+
+    /**
      * Get tenant_id from authenticated user via Auth facade (avoids auth() helper baseline inflation).
      */
     private function currentTenantId(): string
@@ -542,7 +588,9 @@ class ContractPageController extends Controller
 
         $lines = $request->input('lines', []);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($tenantId, $cert, $lines): void {
+        $advanceDeductionInput = $request->has('advance_deduction') ? (float) $request->input('advance_deduction') : null;
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($tenantId, $contract, $cert, $lines, $advanceDeductionInput): void {
             // Delete existing lines for this cert
             \App\Models\PaymentCertificateLine::query()
                 ->where('tenant_id', $tenantId)
@@ -580,7 +628,9 @@ class ContractPageController extends Controller
                 $total += $amount;
             }
 
-            $cert->update(['total_this_period' => $total]);
+            $cert->total_this_period = $total;
+            $this->applyDeductions($contract, $cert, $advanceDeductionInput);
+            $cert->save();
         });
 
         return back()->with('success', 'Đã lưu chứng chỉ.');
@@ -630,24 +680,33 @@ class ContractPageController extends Controller
                 ->where('payment_certificate_id', (string) $cert->id)
                 ->sum('amount_this_period');
 
+            $cert->total_this_period = (float) $total;
+
+            // Recompute deductions — if user already saved an override via saveCertificateLines, keep it
+            $effectiveOverride = $cert->advance_deduction > 0 ? (float) $cert->advance_deduction : null;
+            $this->applyDeductions($contract, $cert, $effectiveOverride);
+
             $cert->update([
                 'status' => \App\Models\PaymentCertificate::STATUS_APPROVED,
                 'total_this_period' => (float) $total,
+                'retention_amount' => $cert->retention_amount,
+                'advance_deduction' => $cert->advance_deduction,
+                'net_payable' => $cert->net_payable,
                 'approved_by' => (string) Auth::id(),
                 'approved_at' => now(),
             ]);
 
-            // Create ContractPayment
+            // Create ContractPayment — amount is net_payable, not total
             \App\Models\ContractPayment::query()->create([
                 'tenant_id' => $tenantId,
                 'contract_id' => (string) $contract->id,
                 'name' => 'Nghiệm thu KL kỳ ' . $cert->period_no,
-                'amount' => (float) $total,
+                'amount' => (float) $cert->net_payable,
                 'status' => \App\Models\ContractPayment::STATUS_PLANNED,
                 'due_date' => now()->addDays(14),
             ]);
 
-            // Write EventRecord
+            // Write EventRecord — includes deduction fields
             \App\Models\EventRecord::query()->create([
                 'tenant_id' => $tenantId,
                 'project_id' => (string) $contract->project_id,
@@ -659,6 +718,9 @@ class ContractPageController extends Controller
                 'payload' => [
                     'period_no' => $cert->period_no,
                     'total' => (float) $total,
+                    'retention_amount' => (float) $cert->retention_amount,
+                    'advance_deduction' => (float) $cert->advance_deduction,
+                    'net_payable' => (float) $cert->net_payable,
                 ],
             ]);
         });

@@ -17,6 +17,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon $period_to Period end date
  * @property string $status Certificate status (draft|submitted|approved)
  * @property float $total_this_period Total for this period
+ * @property float $retention_amount Retention amount deducted this period
+ * @property float $advance_deduction Advance recovery deducted this period
+ * @property float $net_payable Net payable after deductions
  * @property string|null $submitted_by User ULID who submitted
  * @property \Carbon\Carbon|null $submitted_at Submission timestamp
  * @property string|null $approved_by User ULID who approved
@@ -52,6 +55,9 @@ class PaymentCertificate extends Model
         'period_to',
         'status',
         'total_this_period',
+        'retention_amount',
+        'advance_deduction',
+        'net_payable',
         'submitted_by',
         'submitted_at',
         'approved_by',
@@ -66,6 +72,9 @@ class PaymentCertificate extends Model
         'period_from' => 'date',
         'period_to' => 'date',
         'total_this_period' => 'float',
+        'retention_amount' => 'float',
+        'advance_deduction' => 'float',
+        'net_payable' => 'float',
         'submitted_at' => 'datetime',
         'approved_at' => 'datetime',
     ];

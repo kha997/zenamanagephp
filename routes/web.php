@@ -924,6 +924,9 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/contracts/{id}/certificates/{certificate}/approve', [App\Http\Controllers\Web\ContractPageController::class, 'approveCertificate'])->middleware('rbac:payment_certificate.approve')->name('contracts.certificates.approve');
     Route::get('/contracts/{id}/certificates/{certificate}/pdf', [App\Http\Controllers\Web\ContractPageController::class, 'certificatePdf'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.pdf');
 
+    // BOQ PDF
+    Route::get('/contracts/{id}/boq-pdf', [App\Http\Controllers\Web\ContractPageController::class, 'boqPdf'])->middleware('rbac:contract.view')->name('contracts.boq.pdf');
+
     // Inspections
     Route::get('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'index'])->middleware('rbac:inspection.view')->name('inspections.index');
     Route::get('/inspections/create', [App\Http\Controllers\Web\InspectionPageController::class, 'create'])->middleware('rbac:inspection.create')->name('inspections.create');

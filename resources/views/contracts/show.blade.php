@@ -209,6 +209,10 @@
                     <p class="mt-2 text-xs text-amber-600">Bảng khối lượng đã khóa (đã có chứng chỉ được duyệt).</p>
                 @endif
 
+                @if ($boq && $boqLines->isNotEmpty() && auth()->user()?->hasPermission('contract.view'))
+                    <a href="{{ route('operator.contracts.boq.pdf', $contract->id) }}" class="inline-block mt-2 rounded bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700">Xuất phụ lục</a>
+                @endif
+
                 @if (auth()->user()?->hasPermission('contract.update'))
                     <form method="POST" action="{{ route('operator.contracts.boq-lines.store', $contract->id) }}" class="mt-3 flex flex-wrap items-end gap-2" @if($boqLocked) style="display:none" @endif>
                         @csrf

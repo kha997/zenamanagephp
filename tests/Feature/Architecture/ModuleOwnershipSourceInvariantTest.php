@@ -113,7 +113,6 @@ class ModuleOwnershipSourceInvariantTest extends TestCase
         $this->assertStringContainsString('| Tasks | `/api/zena/tasks` | `App\\Http\\Controllers\\Api\\TaskController` | `App\\Models\\Task` |', $moduleOwnership);
         $this->assertStringContainsString('/api/v1/tasks` -> `Src\\CoreProject\\Controllers\\TaskController`', $moduleOwnership);
         $this->assertStringContainsString('/api/v1/work-template/projects/*/tasks` -> `Src\\WorkTemplate\\Controllers\\ProjectTaskController` projection routes', $moduleOwnership);
-        $this->assertStringContainsString('`App\\Models\\ZenaTask` alias', $moduleOwnership);
 
         $this->assertStringContainsString('Canonical business API: `/api/zena/tasks`', $apiDocumentation);
         $this->assertStringContainsString('Compatibility runtime still mounted: `/api/v1/tasks` in `Src\\CoreProject\\Controllers\\TaskController`', $apiDocumentation);

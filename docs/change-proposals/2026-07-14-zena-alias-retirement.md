@@ -2,7 +2,24 @@
 
 **Date:** 2026-07-14
 **Branch:** `worktree-zena-project-model-consolidation` (PR #163)
-**Status:** PROPOSAL — no files deleted yet. Awaiting user approval.
+**Status:** EXECUTED — all 6 safe aliases deleted, 2 retained.
+
+---
+
+## Execution Log
+
+| Alias | Commit | Verdict |
+|-------|--------|---------|
+| `ZenaTask` | `666c542a` | DELETED |
+| `ZenaSubmittal` | `86eff560` | DELETED |
+| `ZenaRfi` | `9eca48e9` | DELETED |
+| `ZenaNotification` | `bd9022c4` | DELETED |
+| `ZenaChangeRequest` | `e94b4376` | DELETED |
+| `ZenaProject` | `184ed803` | DELETED |
+| `ZenaPermission` | — | RETAINED (active seeders + tests) |
+| `ZenaRole` | — | RETAINED (migration + seeder + tests) |
+
+Verification between each commit: 29 architecture tests / 897 feature tests / PHPStan 0 errors. Zero test failures.
 
 ---
 

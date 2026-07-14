@@ -224,3 +224,5 @@ After execution, update `docs/architecture/module-ownership-ssot.md`:
 ---
 
 **Conclusion: Chưa xóa gì — chờ user duyệt.**
+
+**DECISION (2026-07-14): User APPROVED deleting the 6 safe aliases (the 2 migration-referenced aliases stay).** Execute on the current PR #163 branch: one commit per alias (class + factory + any test-edit for that alias), full checklist (architecture / feature suite / phpstan, no baseline count increase) between commits; any red test → revert that alias's commit and mark it RETAIN with the reason.

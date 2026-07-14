@@ -13,6 +13,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
@@ -301,10 +302,20 @@ class ContractPageController extends Controller
 
     // ─── BOQ Lines (contract-scoped) ────────────────────────────────
 
+    /**
+     * Get tenant_id from authenticated user via Auth facade (avoids auth() helper baseline inflation).
+     */
+    private function currentTenantId(): string
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        return (string) $user->tenant_id;
+    }
+
     private function assertBoqUnlocked(Contract $contract): ?RedirectResponse
     {
         $hasApproved = \App\Models\PaymentCertificate::query()
-            ->where('tenant_id', (string) auth()->user()?->tenant_id)
+            ->where('tenant_id', $this->currentTenantId())
             ->where('contract_id', (string) $contract->id)
             ->where('status', \App\Models\PaymentCertificate::STATUS_APPROVED)
             ->exists();
@@ -326,7 +337,7 @@ class ContractPageController extends Controller
 
     public function storeBoqLine(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($redirect = $this->assertBoqUnlocked($contract)) {
@@ -358,7 +369,7 @@ class ContractPageController extends Controller
 
     public function updateBoqLine(Request $request, string $id, string $line): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($redirect = $this->assertBoqUnlocked($contract)) {
@@ -395,7 +406,7 @@ class ContractPageController extends Controller
 
     public function deleteBoqLine(string $id, string $line): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         if ($redirect = $this->assertBoqUnlocked($contract)) {
@@ -424,7 +435,7 @@ class ContractPageController extends Controller
 
     public function storeCertificate(Request $request, string $id): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         $validated = $request->validate([
@@ -451,7 +462,7 @@ class ContractPageController extends Controller
 
     public function showCertificate(string $id, string $certificate): View
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         $cert = \App\Models\PaymentCertificate::query()
@@ -474,7 +485,7 @@ class ContractPageController extends Controller
 
     public function saveCertificateLines(Request $request, string $id, string $certificate): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         $cert = \App\Models\PaymentCertificate::query()
@@ -534,7 +545,7 @@ class ContractPageController extends Controller
 
     public function submitCertificate(string $id, string $certificate): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         $cert = \App\Models\PaymentCertificate::query()
@@ -548,7 +559,7 @@ class ContractPageController extends Controller
 
         $cert->update([
             'status' => \App\Models\PaymentCertificate::STATUS_SUBMITTED,
-            'submitted_by' => (string) auth()->id(),
+            'submitted_by' => (string) Auth::id(),
             'submitted_at' => now(),
         ]);
 
@@ -557,7 +568,7 @@ class ContractPageController extends Controller
 
     public function approveCertificate(string $id, string $certificate): RedirectResponse
     {
-        $tenantId = (string) auth()->user()?->tenant_id;
+        $tenantId = $this->currentTenantId();
         $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
 
         $cert = \App\Models\PaymentCertificate::query()
@@ -579,7 +590,7 @@ class ContractPageController extends Controller
             $cert->update([
                 'status' => \App\Models\PaymentCertificate::STATUS_APPROVED,
                 'total_this_period' => (float) $total,
-                'approved_by' => (string) auth()->id(),
+                'approved_by' => (string) Auth::id(),
                 'approved_at' => now(),
             ]);
 
@@ -600,7 +611,7 @@ class ContractPageController extends Controller
                 'aggregate_type' => 'payment_certificate',
                 'aggregate_id' => (string) $cert->id,
                 'event_key' => 'payment_certificate.approved',
-                'actor_user_id' => (string) auth()->id(),
+                'actor_user_id' => (string) Auth::id(),
                 'occurred_at' => now(),
                 'payload' => [
                     'period_no' => $cert->period_no,

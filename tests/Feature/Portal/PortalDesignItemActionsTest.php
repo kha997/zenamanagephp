@@ -77,6 +77,15 @@ class PortalDesignItemActionsTest extends TestCase
 
     public function test_approve_happy_path(): void
     {
+        // Check show page has approve button when sent_to_client
+        $showPage = $this->get(route('portal.design-items.show', [
+            'tenantSlug' => 'zena-portal-actions',
+            'id' => $this->item->id,
+        ]));
+        $showPage->assertOk();
+        $showPage->assertSee('Duyệt phương án');
+        $showPage->assertSee('chỉnh sửa');
+
         $response = $this->post(route('portal.design-items.approve', [
             'tenantSlug' => 'zena-portal-actions',
             'id' => $this->item->id,
@@ -99,6 +108,15 @@ class PortalDesignItemActionsTest extends TestCase
             ->first();
         $this->assertNotNull($notification);
         $this->assertStringContainsString('Phoi canh mat tien', $notification->title);
+
+        // After approval, show page should NOT have approve button
+        $showPageAfter = $this->get(route('portal.design-items.show', [
+            'tenantSlug' => 'zena-portal-actions',
+            'id' => $this->item->id,
+        ]));
+        $showPageAfter->assertOk();
+        $showPageAfter->assertDontSee('Duyệt phương án');
+        $showPageAfter->assertSee('Bạn đã duyệt phương án này');
     }
 
     public function test_request_revision_happy_path(): void
@@ -125,6 +143,15 @@ class PortalDesignItemActionsTest extends TestCase
         $this->assertNotNull($revision);
         $this->assertEquals($feedback, $revision->client_feedback);
         $this->assertNull($revision->requested_by); // actor is account, not user
+
+        // Show page should display revision history
+        $showPage = $this->get(route('portal.design-items.show', [
+            'tenantSlug' => 'zena-portal-actions',
+            'id' => $this->item->id,
+        ]));
+        $showPage->assertOk();
+        $showPage->assertSee('Sửa lần 1');
+        $showPage->assertSee($feedback);
     }
 
     public function test_approve_wrong_status_returns_error(): void
@@ -218,5 +245,13 @@ class PortalDesignItemActionsTest extends TestCase
         $this->assertEquals(DesignItem::STATUS_APPROVED, $this->item->review_status);
 
         $this->assertDatabaseCount('notifications', 0);
+    }
+
+    public function test_dashboard_shows_pending_badge_for_sent_to_client_items(): void
+    {
+        $dashboard = $this->get(route('portal.dashboard', ['tenantSlug' => 'zena-portal-actions']));
+        $dashboard->assertOk();
+        $dashboard->assertSee('Chờ bạn phản hồi');
+        $dashboard->assertSee('Phoi canh mat tien');
     }
 }

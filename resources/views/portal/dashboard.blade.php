@@ -27,7 +27,13 @@
             @else
                 <ul class="space-y-2">
                     @foreach ($designItems as $item)
-                        <li class="text-sm"><span class="font-medium text-slate-900">{{ $item->name }}</span> — {{ $item->review_status }}</li>
+                        <li class="text-sm">
+                            <a href="{{ route('portal.design-items.show', ['tenantSlug' => $tenant->slug, 'id' => $item->id]) }}" class="font-medium text-slate-900 hover:underline">{{ $item->name }}</a>
+                            — {{ $item->review_status }}
+                            @if ($item->review_status === 'sent_to_client')
+                                <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Chờ bạn phản hồi</span>
+                            @endif
+                        </li>
                     @endforeach
                 </ul>
             @endif

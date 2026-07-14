@@ -2,7 +2,7 @@
 
 **Date**: 2026-07-13
 **Branch**: `worktree-zena-project-model-consolidation` (PR #163)
-**Status**: PROPOSAL — no files moved or deleted yet
+**Status**: EXECUTED — PHP scripts removed in `a3079be0`, shell scripts in `345b2306`, temp files in `62085860`, reports archived in `b293f9eb` (all 2026-07-13).
 
 ---
 

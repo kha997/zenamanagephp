@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-13
 **Branch:** `worktree-zena-project-model-consolidation` (PR #163)
-**Status:** Awaiting user approval — NO files deleted yet.
+**Status:** EXECUTED — all 11 files removed in commit `272ba5fe` (2026-07-13).
 
 ---
 

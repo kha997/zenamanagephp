@@ -1,6 +1,6 @@
 # Module Ownership SSOT
 
-Last updated: 2026-03-19
+Last updated: 2026-07-14
 Status: canonical runtime ownership map for active business modules
 
 ## Purpose
@@ -45,7 +45,7 @@ Out of scope:
 
 | Module | Canonical route family | Canonical controller owner | Canonical model owner | Compatibility aliases still mounted | Evidence | Decision | Risk |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Projects | `/api/zena/projects` | `App\Http\Controllers\Api\ProjectController` | `App\Models\Project` | `/api/v1/projects` -> `Src\CoreProject\Controllers\ProjectController`; canonical app controller injects `App\Services\ProjectService` directly; `App\Models\ZenaProject` alias remains in tests | `routes/api_zena.php:215-222`; `app/Http/Controllers/Api/ProjectController.php`; `app/Services/ProjectService.php`; `routes/api.php:268-281`; `Src/CoreProject/routes/api.php:15-20`; `app/Models/ZenaProject.php`; `tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php` | `converge` | Canonical route/controller/model/service owner is explicit in `App/*`; `/api/v1/projects` remains the only mounted compatibility runtime; `LegacyProjectServiceAdapter` is removed and must not be reintroduced |
+| Projects | `/api/zena/projects` | `App\Http\Controllers\Api\ProjectController` | `App\Models\Project` | `/api/v1/projects` -> `Src\CoreProject\Controllers\ProjectController`; canonical app controller injects `App\Services\ProjectService` directly; `App\Models\ZenaProject` alias frozen (self + factory + migration + 2 test files only) | `routes/api_zena.php:215-222`; `app/Http/Controllers/Api/ProjectController.php`; `app/Services/ProjectService.php`; `routes/api.php:268-281`; `Src/CoreProject/routes/api.php:15-20`; `app/Models/ZenaProject.php` | `converge` | Canonical route/controller/model/service owner is explicit in `App/*`; `/api/v1/projects` remains the only mounted compatibility runtime; `LegacyProjectServiceAdapter` is removed and must not be reintroduced |
 | Tasks | `/api/zena/tasks` | `App\Http\Controllers\Api\TaskController` | `App\Models\Task` | `/api/v1/tasks` -> `Src\CoreProject\Controllers\TaskController`; `/api/v1/work-template/projects/*/tasks` -> `Src\WorkTemplate\Controllers\ProjectTaskController` projection routes; `App\Models\ZenaTask` alias | `routes/api_zena.php:250-260`; `app/Http/Controllers/Api/TaskController.php`; `routes/api.php:590-605`; `Src/CoreProject/routes/api.php:93-98`; `Src/WorkTemplate/routes/api.php:67-121`; `app/Models/ZenaTask.php` | `converge` | Forward task ownership is app/zena; `/api/v1/tasks` stays mounted as compatibility runtime and work-template task routes stay frozen as adjacent projections, not competing canonical ownership |
 | Documents | `/api/zena/documents` | `App\Http\Controllers\Api\SimpleDocumentController` | `App\Models\Document` | `/api/v1/documents` still mounted on the same app controller; canonical app controller no longer imports `Src\DocumentManagement\Models\LegacyDocumentAdapter`; `Src\DocumentManagement\Controllers\DocumentController` exists in code but is not the active mounted owner | `routes/api_zena.php:341-348`; `routes/api.php:496-505`; `Src/DocumentManagement/routes/api.php`; `app/Http/Controllers/Api/SimpleDocumentController.php`; `Src/DocumentManagement/Models/LegacyDocumentAdapter.php`; `tests/Feature/Zena/ZenaApiContractPhase2InvariantTest.php`; `tests/Feature/Api/DocumentManagementTest.php`; `tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php` | `converge` | Forward route/controller/model owner is now explicit in `App/*`; v1 stays mounted as compatibility/business surface and dead src controller code remains frozen debt |
 | Change Requests | `/api/zena/change-requests` | `App\Http\Controllers\Api\ChangeRequestController` | `App\Models\ChangeRequest` | `/api/v1/change-requests` -> `Src\ChangeRequest\Controllers\ChangeRequestController`; `Src\ChangeRequest\Models\ChangeRequest`; `App\Models\ZenaChangeRequest` alias; route/controller split is explicitly frozen because parity evidence is insufficient to remount v1 safely in this round | `routes/api_zena.php:289-299`; `app/Http/Controllers/Api/ChangeRequestController.php`; `routes/api.php:650-661`; `Src/ChangeRequest/routes/api.php`; `Src/ChangeRequest/Controllers/ChangeRequestController.php`; `tests/Feature/Api/ChangeRequestApiTest.php`; `tests/Feature/Architecture/ModuleOwnershipRouteInvariantTest.php`; `tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php` | `converge` | Canonical zena stack is clear, but `/api/v1` remains a real compatibility stack with its own controller/model semantics and RBAC naming drift; keep frozen until contract parity is proven |
@@ -75,14 +75,16 @@ Out of scope:
 - `/api/v1/documents`
   - Reason: compatibility/business surface still routed to the hardened app document controller.
 
-### Freeze thin model aliases
+### Freeze thin model aliases (updated 2026-07-14)
 
-- `App\Models\ZenaTask`
-- `App\Models\ZenaNotification`
-- `App\Models\ZenaRfi`
-- `App\Models\ZenaSubmittal`
-- `App\Models\ZenaProject`
-- `App\Models\ZenaChangeRequest`
+Each alias is now only referenced by: the class itself, its factory, and at most one architecture invariant test or historical migration. No production request-handling code uses any alias.
+
+- `App\Models\ZenaTask` — refs: self, `ZenaTaskFactory`, `ModuleOwnershipSourceInvariantTest`
+- `App\Models\ZenaNotification` — refs: self, `ZenaNotificationFactory`
+- `App\Models\ZenaRfi` — refs: self, `ZenaRfiFactory`
+- `App\Models\ZenaSubmittal` — refs: self, `ZenaSubmittalFactory`
+- `App\Models\ZenaProject` — refs: self, `ZenaProjectFactory`, `DocumentFactory`, historical migration, 2 test files
+- `App\Models\ZenaChangeRequest` — refs: self, `ZenaChangeRequestFactory`
 
 Policy:
 

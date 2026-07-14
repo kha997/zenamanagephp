@@ -18,30 +18,22 @@ Full current list: see `storage/app/architecture/project-model-references.md`
 (regenerate via the dump script; not reproduced here since it changes as
 the canonical model's adoption grows, unlike the frozen classes below).
 
-## `App\Models\ZenaProject` (frozen thin alias — 14 files)
+## `App\Models\ZenaProject` (frozen thin alias — 6 files, updated 2026-07-14)
 
 Empty subclass of `App\Models\Project`, kept per SSOT policy only because
 tests/factories reference it. Do not add behavior; do not delete without
-first confirming none of these 14 still need it:
+first confirming none of these 6 still need it:
 
 - `app/Models/ZenaProject.php` (the class itself)
+- `database/factories/DocumentFactory.php` (imports ZenaProject)
 - `database/factories/ZenaProjectFactory.php`
-- `database/factories/ZenaSubmittalFactory.php`
-- `database/migrations/2025_09_15_144442_unify_projects_table_schema.php`
-- `database/seeders/ZenaRbacSeeder.php`
-- `tests/Feature/Api/ChangeRequestApiTest.php`
-- `tests/Feature/Api/IntegrationTest.php`
-- `tests/Feature/Api/PerformanceTest.php`
-- `tests/Feature/Api/RfiApiTest.php`
-- `tests/Feature/Api/SecurityTest.php`
+- `database/migrations/2025_09_15_144442_unify_projects_table_schema.php` (historical migration — must not be edited)
 - `tests/Feature/Api/SubmittalApiTest.php`
 - `tests/Feature/Api/SubmittalShowApiTest.php`
-- `tests/Feature/Api/TaskApiTest.php`
-- `tests/Feature/Api/TaskDependenciesTest.php`
 
-All 14 references are in tests/factories/seeders/a historical migration —
-none are production request-handling code. No reachability tracing needed
-beyond this; this list is exhaustive as of 2026-07-12.
+Original list had 14 files; 8 were removed during batches 4-5 cleanup
+(`ZenaRbacSeeder.php`, 6 test files, `ZenaSubmittalFactory.php` no longer
+imports ZenaProject). None are production request-handling code.
 
 ## `Src\CoreProject\Models\LegacyProjectAdapter` (7 files — resolved by Task 1 of this plan)
 
@@ -52,6 +44,13 @@ beyond this; this list is exhaustive as of 2026-07-12.
 - `app/Http/Controllers/Api/ProjectTemplateController.php` — migrated to `App\Models\Project` (Task 1)
 - `app/Http/Controllers/Web/DocumentManagementController.php` — migrated to `App\Models\Project` (Task 1)
 - `app/Http/Controllers/Web/ProjectBulkController.php` — migrated to `App\Models\Project` (Task 1)
+
+## Dead file removal (executed 2026-07-13, commit `272ba5fe`)
+
+11 files previously listed as DEAD in the `Src\CoreProject\Models\Project`
+traced batches below have been removed. See
+`docs/change-proposals/2026-07-13-dead-project-model-files-removal.md`
+(status: EXECUTED) for the full list and evidence.
 
 ## `Src\CoreProject\Models\Project` (compatibility/debt — 54 files, NOT to be migrated without a future slice)
 

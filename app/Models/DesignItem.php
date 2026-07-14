@@ -15,6 +15,24 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * review_status is the sole authority for the client cycle — never synced with
  * WorkInstanceStep's own internal checklist status, even when work_instance_step_id is set.
  * Only ever changed via DesignItemStatusService.
+ *
+ * @property string $id
+ * @property string $tenant_id
+ * @property string $project_id
+ * @property string|null $work_instance_step_id
+ * @property string $name
+ * @property string $item_type
+ * @property string|null $description
+ * @property string $review_status
+ * @property string|null $assigned_to
+ * @property \Carbon\Carbon|null $due_to_client_at
+ * @property string|null $client_feedback_notes
+ * @property string|null $approval_evidence
+ * @property int $revision_count
+ * @property string|null $created_by
+ * @property \Carbon\Carbon|null $blocked_at
+ * @property string|null $blocker_note
+ * @property string|null $blocked_by
  */
 class DesignItem extends Model
 {

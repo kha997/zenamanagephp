@@ -49,7 +49,8 @@ final class DesignItemStatusService
             }
 
             $hasAttachment = Document::query()
-                ->forEntity(Document::ENTITY_TYPE_DESIGN_ITEM, (string) $item->id)
+                ->where('linked_entity_type', Document::ENTITY_TYPE_DESIGN_ITEM)
+                ->where('linked_entity_id', (string) $item->id)
                 ->exists();
 
             if (!$hasAttachment) {
@@ -97,10 +98,12 @@ final class DesignItemStatusService
             }
 
             if ($from === DesignItem::STATUS_REVISION_REQUESTED) {
-                $item->revisions()
+                /** @var DesignItemRevision|null $latestRevision */
+                $latestRevision = $item->revisions()
                     ->whereNull('resolved_at')
                     ->latest('revision_no')
-                    ->first()?->update(['resolved_at' => now()]);
+                    ->first();
+                $latestRevision?->update(['resolved_at' => now()]);
             }
         });
 

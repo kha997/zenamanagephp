@@ -5365,24 +5365,6 @@ parameters:
 			path: app/Http/Controllers/Api/DeliverableTemplateController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Http/Controllers/Api/DesignItemController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/DesignItemController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$project_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Api/DesignItemController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\DocumentVersion\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -14551,12 +14533,6 @@ parameters:
 			path: app/Http/Controllers/Web/Portal/PortalAuthController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Account\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/Portal/PortalAuthController.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Guard\:\:logout\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -14581,70 +14557,10 @@ parameters:
 			path: app/Http/Controllers/Web/Portal/PortalAuthController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Account\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/Portal/PortalDashboardController.php
-
-		-
 			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:where\(\)\.$#'
 			identifier: staticMethod.notFound
 			count: 1
 			path: app/Http/Controllers/Web/Portal/PortalDashboardController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Account\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$assigned_to\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$review_status\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
-
-		-
-			message: '#^Call to an undefined static method App\\Models\\Tenant\:\:where\(\)\.$#'
-			identifier: staticMethod.notFound
-			count: 3
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
-
-		-
-			message: '#^Method App\\Http\\Controllers\\Web\\Portal\\PortalDesignItemController\:\:accountProjectIds\(\) return type with generic class Illuminate\\Support\\Collection does not specify its types\: TKey, TValue$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Http/Controllers/Web/Portal/PortalDesignItemController.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
@@ -16139,12 +16055,6 @@ parameters:
 			identifier: booleanAnd.rightAlwaysTrue
 			count: 1
 			path: app/Http/Middleware/EnhancedRateLimitMiddleware.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Account\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Middleware/EnsurePortalAccountAuthenticated.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Guard\:\:logout\(\)\.$#'
@@ -29137,12 +29047,6 @@ parameters:
 			path: app/Observers/EventRecordObserver.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\Account\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Policies/AccountPolicy.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\ChangeRequest\:\:\$tenant_id\.$#'
 			identifier: property.notFound
 			count: 8
@@ -29273,12 +29177,6 @@ parameters:
 			identifier: missingType.return
 			count: 1
 			path: app/Policies/ComponentPolicy.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Policies/DesignItemPolicy.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Document\:\:\$tenant_id\.$#'
@@ -30089,12 +29987,6 @@ parameters:
 			identifier: method.protected
 			count: 1
 			path: app/Providers/AppServiceProvider.php
-
-		-
-			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Providers/RouteServiceProvider.php
 
 		-
 			message: '#^Method App\\Repositories\\ChangeRequestRepository\:\:bulkDelete\(\) has parameter \$ids with no value type specified in iterable type array\.$#'
@@ -36809,66 +36701,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Services/DeliverableTemplateVersionService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$approval_evidence\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$client_feedback_notes\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$due_to_client_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$project_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$review_status\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$revision_count\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\DesignItem\:\:\$tenant_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<App\\Models\\Document\>\:\:forEntity\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/DesignItemStatusService.php
-
-		-
-			message: '#^Cannot call method update\(\) on stdClass\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/DesignItemStatusService.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Query\\Builder\:\:with\(\)\.$#'

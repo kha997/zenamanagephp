@@ -9,14 +9,17 @@ use App\Models\Notification;
 use App\Models\Opportunity;
 use App\Models\Tenant;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class PortalDesignItemController extends Controller
 {
-    private function accountProjectIds(string $tenantId, string $accountId): \Illuminate\Support\Collection
+    /** @return Collection<int, string> */
+    private function accountProjectIds(string $tenantId, string $accountId): Collection
     {
         return Opportunity::query()
             ->where('tenant_id', $tenantId)
@@ -27,16 +30,18 @@ class PortalDesignItemController extends Controller
 
     private function findOwnedItem(string $tenantId, string $accountId, string $id): DesignItem
     {
-        return DesignItem::query()
-            ->where('tenant_id', $tenantId)
-            ->whereIn('project_id', $this->accountProjectIds($tenantId, $accountId))
+        /** @var Builder<DesignItem> $query */
+        $query = DesignItem::query()
             ->with('revisions', 'project:id,tenant_id,name')
-            ->findOrFail($id); // mọi nhánh từ chối đều 404 đồng nhất
+            ->where('tenant_id', $tenantId)
+            ->whereIn('project_id', $this->accountProjectIds($tenantId, $accountId));
+
+        return $query->findOrFail($id); // mọi nhánh từ chối đều 404 đồng nhất
     }
 
     public function show(string $tenantSlug, string $id): View
     {
-        $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
+        $tenant = Tenant::query()->where('slug', $tenantSlug)->firstOrFail();
 
         /** @var Account $account */
         $account = Auth::guard('client')->user();
@@ -51,7 +56,7 @@ class PortalDesignItemController extends Controller
 
     public function approve(string $tenantSlug, string $id): RedirectResponse
     {
-        $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
+        $tenant = Tenant::query()->where('slug', $tenantSlug)->firstOrFail();
 
         /** @var Account $account */
         $account = Auth::guard('client')->user();
@@ -82,7 +87,7 @@ class PortalDesignItemController extends Controller
 
     public function requestRevision(Request $request, string $tenantSlug, string $id): RedirectResponse
     {
-        $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
+        $tenant = Tenant::query()->where('slug', $tenantSlug)->firstOrFail();
 
         /** @var Account $account */
         $account = Auth::guard('client')->user();

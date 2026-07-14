@@ -42,7 +42,8 @@ return new class extends Migration
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
             $table->foreign('payment_certificate_id')->references('id')->on('payment_certificates')->cascadeOnDelete();
             $table->foreign('boq_line_item_id')->references('id')->on('boq_line_items')->cascadeOnDelete();
-            $table->unique(['payment_certificate_id', 'boq_line_item_id']);
+            // Tên tường minh: tên tự sinh dài 72 ký tự, vượt giới hạn 64 của MySQL (lỗi 1059).
+            $table->unique(['payment_certificate_id', 'boq_line_item_id'], 'pc_lines_certificate_boq_line_unique');
             $table->index(['tenant_id', 'payment_certificate_id']);
         });
     }

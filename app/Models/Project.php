@@ -245,6 +245,16 @@ class Project extends Model
     }
 
     /**
+     * Relationship: Project có nhiều design items
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\DesignItem, $this>
+     */
+    public function designItems(): HasMany
+    {
+        return $this->hasMany(DesignItem::class);
+    }
+
+    /**
      * Relationship: Project có nhiều user roles
      */
     public function userRoles(): HasMany

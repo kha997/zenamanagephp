@@ -170,5 +170,9 @@
                 <button type="submit" class="operator-button operator-button-primary">Duyệt nghiệm thu</button>
             </form>
         @endif
+
+        @if ($certificate->status === 'approved' && auth()->user()?->hasPermission('payment_certificate.view'))
+            <a href="{{ route('operator.contracts.certificates.pdf', [$contract->id, $certificate->id]) }}" class="operator-button operator-button-secondary" target="_blank">Xuất biên bản</a>
+        @endif
     </div>
 @endsection

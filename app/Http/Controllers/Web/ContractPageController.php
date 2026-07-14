@@ -752,4 +752,88 @@ class ContractPageController extends Controller
 
         return back()->with('success', 'Đã duyệt chứng chỉ.');
     }
+
+    public function certificatePdf(string $id, string $certificate, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $tenantId = $this->currentTenantId();
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $cert = \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->findOrFail($certificate);
+
+        if ($cert->status !== \App\Models\PaymentCertificate::STATUS_APPROVED) {
+            return back()->with('error', 'Chỉ chứng chỉ đã duyệt mới có thể xuất PDF.');
+        }
+
+        $boqLines = $contract->boq ? $contract->boq->lineItems()->get() : collect();
+        $boqLinesById = $boqLines->keyBy('id');
+
+        $summaryService = new \App\Services\PaymentCertificateSummaryService();
+        $lineSummaries = $summaryService->lineSummaries($cert);
+
+        $html = view('contracts.certificate-pdf', [
+            'contract' => $contract,
+            'certificate' => $cert,
+            'boqLinesById' => $boqLinesById,
+            'lineSummaries' => $lineSummaries,
+            'tenantName' => $contract->tenant->name ?? '',
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $cert->net_payable),
+        ])->render();
+
+        try {
+            $pdfBytes = $pdfService->render($html);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF hợp đồng vào lúc này.');
+        }
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="bien-ban-nghiem-thu-' . $cert->period_no . '.pdf"',
+        ]);
+    }
+
+    public function boqPdf(string $id, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $tenantId = $this->currentTenantId();
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $boq = $contract->boq;
+        if (! $boq) {
+            return back()->with('error', 'Hợp đồng chưa có bảng khối lượng.');
+        }
+
+        $lineItems = $boq->lineItems()->get();
+        if ($lineItems->isEmpty()) {
+            return back()->with('error', 'Hợp đồng chưa có bảng khối lượng.');
+        }
+
+        $total = 0.0;
+        /** @var \App\Models\BoqLineItem $item */
+        foreach ($lineItems as $item) {
+            if ($item->unit_price !== null) {
+                $total += (float) $item->quantity * (float) $item->unit_price;
+            }
+        }
+
+        $html = view('contracts.boq-pdf', [
+            'contract' => $contract,
+            'boq' => $boq,
+            'lineItems' => $lineItems,
+            'total' => $total,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords($total),
+        ])->render();
+
+        try {
+            $pdfBytes = $pdfService->render($html);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF hợp đồng vào lúc này.');
+        }
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="phu-luc-khoi-luong-' . $contract->code . '.pdf"',
+        ]);
+    }
 }

@@ -57,6 +57,8 @@ class TestDatabaseSeeder extends Seeder
             'project.create', 'project.view', 'project.update', 'project.delete',
             'contract.view', 'contract.create', 'contract.update', 'contract.delete',
             'contract.payment.view', 'contract.payment.create', 'contract.payment.update', 'contract.payment.delete',
+            'contract.expense.view', 'contract.expense.create', 'contract.expense.delete',
+            'payment_certificate.view', 'payment_certificate.create', 'payment_certificate.approve',
             'component.create', 'component.view', 'component.update', 'component.delete',
             'task.create', 'task.view', 'task.update', 'task.delete', 'task.assign',
             'user.manage', 'role.manage',

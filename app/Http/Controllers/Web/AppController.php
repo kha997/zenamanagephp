@@ -75,7 +75,7 @@ class AppController extends Controller
                 ->with('project:id,tenant_id,name,code')
                 ->orderByDesc('updated_at')
                 ->limit(200)
-                ->get(['id', 'tenant_id', 'project_id', 'name', 'title', 'status', 'priority', 'progress_percent', 'start_date', 'end_date']),
+                ->get(['id', 'tenant_id', 'project_id', 'name', 'title', 'status', 'priority', 'progress_percent', 'start_date', 'end_date', 'blocked_at']),
         ]);
     }
 

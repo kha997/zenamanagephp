@@ -85,7 +85,8 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: ""
           TERM: dumb
-        run: php artisan test --no-interaction --filter RouteHygieneTest -v
+        # PHPUnit 11 removed --no-interaction and -v pass-through options
+        run: php artisan test --filter RouteHygieneTest
 
       - name: Run TenantIsolationProjectsTest
         env:
@@ -97,7 +98,7 @@ jobs:
           DB_USERNAME: root
           DB_PASSWORD: ""
           TERM: dumb
-        run: php artisan test --no-interaction --filter TenantIsolationProjectsTest -v
+        run: php artisan test --filter TenantIsolationProjectsTest
 
       - name: Route guard (no double prefix, no dup METHOD+URI)
         run: |

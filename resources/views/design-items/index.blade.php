@@ -28,6 +28,9 @@
                                 <a href="{{ route('operator.design-items.show', $item->id) }}" class="operator-link font-medium">
                                     {{ $item->name }}
                                 </a>
+                                @if ($item->blocked_at)
+                                    <span class="rounded bg-red-100 px-1.5 py-0.5 text-xs text-red-800">Vướng</span>
+                                @endif
                                 <div class="text-xs text-slate-500">
                                     {{ $item->project?->name ?? '—' }}
                                     · {{ $item->assignee?->name ?? 'Chưa gán' }}

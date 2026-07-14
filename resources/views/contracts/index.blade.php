@@ -45,7 +45,10 @@
                 @foreach ($contracts as $contract)
                     <tr>
                         <td class="font-semibold text-slate-900">{{ $contract->code }}</td>
-                        <td class="font-medium text-slate-900">{{ $contract->title }}</td>
+                        <td class="font-medium text-slate-900">
+                            {{ $contract->title }}
+                            <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{{ $contract->typeLabel() }}</span>
+                        </td>
                         <td>
                             <div class="font-medium text-slate-900">{{ $contract->project?->name ?? '—' }}</div>
                             <div class="text-sm text-slate-500">{{ $contract->project?->code ?? '' }}</div>

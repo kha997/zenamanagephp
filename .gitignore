@@ -19,7 +19,11 @@ yarn-error.log
 /.vscode
 
 /storage/backups/
-/storage/framework/
+# runtime contents of storage/framework are ignored via per-directory
+# .gitignore placeholders; the directory STRUCTURE must stay tracked —
+# a fresh checkout without storage/framework/cache/data makes
+# `php artisan cache:clear` exit 1 (this broke the Routes Guardrails CI
+# check on every branch from 2025-12 until 2026-07-14).
 
 # block accidental machine-local folders
 Users/
@@ -27,9 +31,7 @@ Users/
 # macOS noise
 .DS_Store
 
-# runtime / generated
-storage/framework/sessions/
-storage/framework/views/
+# runtime / generated — contents ignored by per-directory .gitignore files
 
 # local backups (must never be committed)
 storage/backups/
@@ -62,3 +64,7 @@ ts-build.log
 # tooling caches
 .php-cs-fixer.cache
 .deptrac.cache
+
+# temp / debug artifacts (must never be committed)
+cookies*.txt
+test_output_*.txt

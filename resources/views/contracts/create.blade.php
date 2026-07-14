@@ -83,6 +83,16 @@
                 @error('title')<span class="text-sm text-rose-600">{{ $message }}</span>@enderror
             </div>
 
+            <div class="operator-field">
+                <label for="contract_type">Loại hợp đồng</label>
+                <select id="contract_type" name="contract_type" class="operator-select">
+                    <option value="design" @selected(old('contract_type') === 'design')>Thiết kế</option>
+                    <option value="construction" @selected(old('contract_type') === 'construction')>Thi công</option>
+                    <option value="other" @selected(old('contract_type', 'other') === 'other')>Khác</option>
+                </select>
+                @error('contract_type')<span class="text-sm text-rose-600">{{ $message }}</span>@enderror
+            </div>
+
             <button type="submit" class="operator-button operator-button-primary">Tạo hợp đồng</button>
         </form>
     </x-ui.card>

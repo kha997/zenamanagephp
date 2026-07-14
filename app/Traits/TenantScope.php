@@ -54,6 +54,9 @@ trait TenantScope
 
     /**
      * Scope to get models for a specific tenant
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<static>
      */
     public function scopeForTenant(Builder $query, string $tenantId): Builder
     {
@@ -62,6 +65,9 @@ trait TenantScope
 
     /**
      * Scope to get models for current tenant context
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<static>
      */
     public function scopeForCurrentTenant(Builder $query): Builder
     {

@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\Support\SSOT\FixtureFactory;
 use Tests\Traits\AuthenticationTrait;
 
+/**
+ * @group performance
+ */
 class DashboardPerformanceTest extends TestCase
 {
     use RefreshDatabase, FixtureFactory, AuthenticationTrait;

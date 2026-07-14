@@ -4,8 +4,8 @@ namespace Tests\Feature\Api;
 
 use App\Models\Role;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaSubmittal;
+use App\Models\Project;
+use App\Models\Submittal;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -17,7 +17,7 @@ class SubmittalShowApiTest extends TestCase
     use RouteNameTrait;
 
     private User $user;
-    private ZenaProject $project;
+    private Project $project;
     private string $token;
     private array $zenaAuthHeaders = [];
 
@@ -26,7 +26,7 @@ class SubmittalShowApiTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);
@@ -50,7 +50,7 @@ class SubmittalShowApiTest extends TestCase
             ],
         ];
 
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id,
@@ -106,7 +106,7 @@ class SubmittalShowApiTest extends TestCase
         $user->roles()->syncWithoutDetaching($role->id);
     }
 
-    private function syncZenaProjectRecord(ZenaProject $project): void
+    private function syncZenaProjectRecord(Project $project): void
     {
         DB::table('zena_projects')->updateOrInsert(
             ['id' => $project->id],

@@ -147,9 +147,52 @@ class ProjectController extends Controller // Thêm extends Controller
                 ? (new DocumentChecklistService())->buildReport($project)
                 : null;
 
+            $designItems = \App\Models\DesignItem::query()
+                ->where('project_id', (string) $project->id)
+                ->with('assignee:id,name')
+                ->orderBy('created_at')
+                ->get();
+
+            // Load tasks qua model canonical App\Models\Task — relation
+            // $project->tasks() trỏ về Src\CoreProject\Models\Task (legacy,
+            // không có relation assignee) nên không dùng cho khối này.
+            $sectionTasks = \App\Models\Task::query()
+                ->where('tenant_id', (string) $user?->tenant_id)
+                ->where('project_id', (string) $project->id)
+                ->with('assignee:id,name')
+                ->orderBy('created_at')
+                ->get();
+
+            $blockedItems = collect()
+                ->concat($designItems->whereNotNull('blocked_at')->map(fn ($i) => [
+                    'type' => 'Hạng mục thiết kế',
+                    'name' => $i->name,
+                    'note' => $i->blocker_note,
+                    'blocked_at' => $i->blocked_at,
+                ]))
+                ->concat($sectionTasks->whereNotNull('blocked_at')->map(fn ($t) => [
+                    'type' => 'Công việc',
+                    'name' => $t->title ?? $t->name,
+                    'note' => $t->blocker_note,
+                    'blocked_at' => $t->blocked_at,
+                ]))
+                ->sortByDesc('blocked_at')
+                ->values();
+
+            $contracts = \App\Models\Contract::query()
+                ->where('project_id', (string) $project->id)
+                ->withSum(['payments as paid_total' => fn ($q) => $q->where('status', \App\Models\ContractPayment::STATUS_PAID)], 'amount')
+                ->withSum('expenses as expense_total', 'amount')
+                ->orderBy('created_at')
+                ->get();
+
             return view('projects.show', [
                 'project' => $project,
                 'documentChecklist' => $documentChecklist,
+                'designItems' => $designItems,
+                'blockedItems' => $blockedItems,
+                'sectionTasks' => $sectionTasks,
+                'contracts' => $contracts,
             ]);
         } catch (\Throwable $e) {
             abort(404, 'Dự án không tồn tại.');

@@ -145,7 +145,7 @@ class DesignItemPageController extends Controller
 
         $item = DesignItem::query()
             ->forTenant($tenantId)
-            ->with('project:id,tenant_id,name', 'assignee:id,name')
+            ->with('project:id,tenant_id,name', 'assignee:id,name', 'revisions.requester:id,name')
             ->findOrFail($id);
 
         $this->authorize('view', $item);
@@ -167,6 +167,32 @@ class DesignItemPageController extends Controller
                 ->limit(20)
                 ->get(),
         ]);
+    }
+
+    public function block(Request $request, string $id): RedirectResponse
+    {
+        $request->validate(['blocker_note' => ['required', 'string', 'max:1000']]);
+
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $item = DesignItem::query()->forTenant($tenantId)->findOrFail($id);
+
+        $item->forceFill([
+            'blocked_at' => now(),
+            'blocker_note' => (string) $request->string('blocker_note'),
+            'blocked_by' => (string) auth()->id(),
+        ])->save();
+
+        return back()->with('success', 'Đã đánh dấu hạng mục thiết kế đang vướng.');
+    }
+
+    public function unblock(string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+        $item = DesignItem::query()->forTenant($tenantId)->findOrFail($id);
+
+        $item->forceFill(['blocked_at' => null, 'blocker_note' => null, 'blocked_by' => null])->save();
+
+        return back()->with('success', 'Đã gỡ trạng thái vướng.');
     }
 
     public function updateStatus(Request $request, string $id, ApiDesignItemController $apiController): RedirectResponse

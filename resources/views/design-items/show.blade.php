@@ -46,6 +46,59 @@
         </div>
     </x-ui.card>
 
+    {{-- Khối vướng mắc --}}
+    @if (auth()->user()?->hasPermission('design-item.manage'))
+        @if ($item->blocked_at)
+            <div class="rounded border border-red-200 bg-red-50 p-4">
+                <div class="mb-2 font-semibold text-red-700">Đang vướng</div>
+                <p class="mb-2 text-sm text-red-800">{{ $item->blocker_note }}</p>
+                <p class="mb-3 text-xs text-red-500">Ghi nhận lúc {{ optional($item->blocked_at)->format('d/m/Y H:i') }}</p>
+                <form method="POST" action="{{ route('operator.design-items.unblock', $item->id) }}">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">Gỡ vướng</button>
+                </form>
+            </div>
+        @else
+            <x-ui.card title="Báo vướng">
+                <form method="POST" action="{{ route('operator.design-items.block', $item->id) }}" class="flex flex-wrap items-end gap-3">
+                    @csrf
+                    <div class="operator-field flex-1 min-w-64">
+                        <label for="blocker_note">Nội dung vướng mắc</label>
+                        <textarea id="blocker_note" name="blocker_note" rows="2" maxlength="1000" class="operator-input" required placeholder="Mô tả vấn đề đang gặp...">{{ old('blocker_note') }}</textarea>
+                    </div>
+                    <button type="submit" class="operator-button operator-button-primary">Báo vướng</button>
+                </form>
+            </x-ui.card>
+        @endif
+    @elseif ($item->blocked_at)
+        <div class="rounded border border-red-200 bg-red-50 p-4">
+            <div class="mb-1 font-semibold text-red-700">Đang vướng</div>
+            <p class="text-sm text-red-800">{{ $item->blocker_note }}</p>
+        </div>
+    @endif
+
+    @if ($item->revisions->isNotEmpty())
+        <x-ui.card title="Lịch sử chỉnh sửa ({{ $item->revision_count }} lần)">
+            <ol class="space-y-3">
+                @foreach ($item->revisions as $revision)
+                    <li class="border-l-2 border-slate-200 pl-3">
+                        <div class="text-sm font-medium">
+                            Sửa lần {{ $revision->revision_no }}
+                            — yêu cầu {{ $revision->requested_at->format('d/m/Y') }}
+                            @if ($revision->requester) bởi {{ $revision->requester->name }} @endif
+                            @if ($revision->resolved_at)
+                                <span class="text-emerald-600">· đã xử lý {{ $revision->resolved_at->format('d/m/Y') }}</span>
+                            @else
+                                <span class="text-amber-600">· đang xử lý</span>
+                            @endif
+                        </div>
+                        <div class="text-sm text-slate-600">{{ $revision->client_feedback }}</div>
+                    </li>
+                @endforeach
+            </ol>
+        </x-ui.card>
+    @endif
+
     @unless ($item->review_status === 'final')
         <x-ui.card title="Chuyển trạng thái">
             <form method="POST" action="{{ route('operator.design-items.status', $item->id) }}" class="flex flex-wrap items-end gap-3">

@@ -5,13 +5,12 @@ namespace Tests\Feature\Api;
 use Tests\TestCase;
 use App\Models\Project;
 use App\Models\User;
-use App\Models\ZenaProject;
-use App\Models\ZenaTask;
-use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
-use App\Models\ZenaChangeRequest;
+use App\Models\Task;
+use App\Models\Rfi;
+use App\Models\Submittal;
+use App\Models\ChangeRequest;
 use App\Models\ZenaDocument;
-use App\Models\ZenaNotification;
+use App\Models\Notification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Http\UploadedFile;
@@ -24,7 +23,7 @@ class IntegrationTest extends TestCase
     use RefreshDatabase, WithFaker, AuthenticationTestTrait, RouteNameTrait;
 
     protected User $user;
-    protected ZenaProject $project;
+    protected Project $project;
     protected Project $appProject;
 
     protected function setUp(): void
@@ -33,7 +32,7 @@ class IntegrationTest extends TestCase
 
         $this->apiActingAsTenantAdmin();
         $this->user = $this->apiFeatureUser;
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);
@@ -182,7 +181,7 @@ class IntegrationTest extends TestCase
     public function test_rfi_workflow_integration()
     {
         // Create RFI
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -230,7 +229,7 @@ class IntegrationTest extends TestCase
     public function test_submittal_workflow_integration()
     {
         // Create Submittal
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'draft'
@@ -264,7 +263,7 @@ class IntegrationTest extends TestCase
     public function test_change_request_workflow_integration()
     {
         // Create Change Request
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
@@ -311,14 +310,14 @@ class IntegrationTest extends TestCase
     public function test_task_dependencies_integration()
     {
         // Create tasks
-        $task1 = ZenaTask::factory()->create([
+        $task1 = Task::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
             'status' => 'pending'
         ]);
 
-        $task2 = ZenaTask::factory()->create([
+        $task2 = Task::factory()->create([
             'tenant_id' => $this->user->tenant_id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -403,7 +402,7 @@ class IntegrationTest extends TestCase
     public function test_notification_integration()
     {
         // Create notification
-        $notification = ZenaNotification::factory()->create([
+        $notification = Notification::factory()->create([
             'user_id' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);
@@ -428,31 +427,31 @@ class IntegrationTest extends TestCase
     public function test_cross_module_data_consistency()
     {
         // Create project
-        $project = ZenaProject::factory()->create([
+        $project = Project::factory()->create([
             'created_by' => $this->user->id,
             'tenant_id' => $this->user->tenant_id,
         ]);
 
         // Create related entities
-        $task = ZenaTask::factory()->create([
+        $task = Task::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id
         ]);
 
-        $rfi = ZenaRfi::factory()->create([
+        $rfi = Rfi::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id
         ]);
 
-        $submittal = ZenaSubmittal::factory()->create([
+        $submittal = Submittal::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
             'created_by' => $this->user->id
         ]);
 
-        $changeRequest = ZenaChangeRequest::factory()->create([
+        $changeRequest = ChangeRequest::factory()->create([
             'project_id' => $project->id,
             'tenant_id' => $this->user->tenant_id,
             'requested_by' => $this->user->id

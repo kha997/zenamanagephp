@@ -5,11 +5,11 @@ namespace Tests\Feature\Api;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\User;
-use App\Models\ZenaChangeRequest;
-use App\Models\ZenaProject;
-use App\Models\ZenaRfi;
-use App\Models\ZenaSubmittal;
-use App\Models\ZenaTask;
+use App\Models\ChangeRequest;
+use App\Models\Project;
+use App\Models\Rfi;
+use App\Models\Submittal;
+use App\Models\Task;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Testing\TestResponse;
@@ -19,6 +19,7 @@ use Tests\Traits\RouteNameTrait;
 use Tests\TestCase;
 
 /**
+ * @group performance
  * @group slow
  */
 class PerformanceTest extends TestCase
@@ -43,7 +44,7 @@ class PerformanceTest extends TestCase
 
     protected Tenant $tenant;
     protected User $user;
-    protected ZenaProject $project;
+    protected Project $project;
 
     protected function setUp(): void
     {
@@ -63,7 +64,7 @@ class PerformanceTest extends TestCase
         $this->tenant = $this->apiFeatureTenant;
         $this->user = $this->apiFeatureUser;
 
-        $this->project = ZenaProject::factory()->create([
+        $this->project = Project::factory()->create([
             'tenant_id' => $this->tenant->id,
             'created_by' => $this->user->id,
             'pm_id' => $this->user->id,
@@ -87,7 +88,7 @@ class PerformanceTest extends TestCase
 
     public function test_project_listing_performance(): void
     {
-        ZenaProject::factory()->count(self::PROJECT_LISTING_COUNT)->create([
+        Project::factory()->count(self::PROJECT_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'created_by' => $this->user->id,
             'pm_id' => $this->user->id,
@@ -103,7 +104,7 @@ class PerformanceTest extends TestCase
 
     public function test_task_listing_performance(): void
     {
-        ZenaTask::factory()->count(self::TASK_LISTING_COUNT)->create([
+        Task::factory()->count(self::TASK_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -119,7 +120,7 @@ class PerformanceTest extends TestCase
 
     public function test_rfi_listing_performance(): void
     {
-        ZenaRfi::factory()->count(self::RFI_LISTING_COUNT)->create([
+        Rfi::factory()->count(self::RFI_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'asked_by' => $this->user->id,
@@ -136,7 +137,7 @@ class PerformanceTest extends TestCase
 
     public function test_submittal_listing_performance(): void
     {
-        ZenaSubmittal::factory()->count(self::SUBMITTAL_LISTING_COUNT)->create([
+        Submittal::factory()->count(self::SUBMITTAL_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'submitted_by' => $this->user->id,
@@ -153,7 +154,7 @@ class PerformanceTest extends TestCase
 
     public function test_change_request_listing_performance(): void
     {
-        ZenaChangeRequest::factory()->count(self::CHANGE_REQUEST_LISTING_COUNT)->create([
+        ChangeRequest::factory()->count(self::CHANGE_REQUEST_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'requested_by' => $this->user->id,
@@ -170,14 +171,14 @@ class PerformanceTest extends TestCase
 
     public function test_search_performance(): void
     {
-        ZenaTask::factory()->count(self::TASK_SEARCH_COUNT - self::SEARCHABLE_TASK_COUNT)->create([
+        Task::factory()->count(self::TASK_SEARCH_COUNT - self::SEARCHABLE_TASK_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
         ]);
 
         foreach (range(1, self::SEARCHABLE_TASK_COUNT) as $index) {
-            ZenaTask::factory()->create([
+            Task::factory()->create([
                 'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
                 'created_by' => $this->user->id,
@@ -199,7 +200,7 @@ class PerformanceTest extends TestCase
         $statusCount = count(self::STATUS_OPTIONS);
 
         for ($i = 0; $i < self::TASK_STATUS_COUNT; $i++) {
-            ZenaTask::factory()->create([
+            Task::factory()->create([
                 'tenant_id' => $this->tenant->id,
                 'project_id' => $this->project->id,
                 'created_by' => $this->user->id,
@@ -219,7 +220,7 @@ class PerformanceTest extends TestCase
 
     public function test_pagination_performance(): void
     {
-        ZenaTask::factory()->count(self::PAGINATION_TASK_COUNT)->create([
+        Task::factory()->count(self::PAGINATION_TASK_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -239,7 +240,7 @@ class PerformanceTest extends TestCase
 
     public function test_complex_query_performance(): void
     {
-        $tasks = ZenaTask::factory()->count(self::COMPLEX_DEPENDENCY_COUNT)->create([
+        $tasks = Task::factory()->count(self::COMPLEX_DEPENDENCY_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -261,7 +262,7 @@ class PerformanceTest extends TestCase
 
     public function test_concurrent_request_performance(): void
     {
-        ZenaTask::factory()->count(self::TASK_LISTING_COUNT)->create([
+        Task::factory()->count(self::TASK_LISTING_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -276,7 +277,7 @@ class PerformanceTest extends TestCase
     {
         $initialMemory = memory_get_usage();
 
-        ZenaTask::factory()->count(self::MEMORY_TASK_COUNT)->create([
+        Task::factory()->count(self::MEMORY_TASK_COUNT)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,
@@ -292,7 +293,7 @@ class PerformanceTest extends TestCase
 
     public function test_database_query_count(): void
     {
-        ZenaTask::factory()->count(self::QUERY_COUNT_TASKS)->create([
+        Task::factory()->count(self::QUERY_COUNT_TASKS)->create([
             'tenant_id' => $this->tenant->id,
             'project_id' => $this->project->id,
             'created_by' => $this->user->id,

@@ -13,6 +13,9 @@ use App\Services\SecureAuditService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * @group performance
+ */
 class BulkOperationsNoAuthTest extends TestCase
 {
     use RefreshDatabase;

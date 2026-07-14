@@ -182,6 +182,7 @@ class ServiceUnitTest extends TestCase
     /**
      * Test service performance
      */
+    /** @group performance */
     public function test_service_performance()
     {
         $rateLimitService = new RateLimitService();

@@ -8,7 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
-use Src\DocumentManagement\Models\LegacyDocumentAdapter as Document;
+use Illuminate\Validation\Rule;
+use App\Models\Document;
 use Src\CoreProject\Models\Project;
 
 /**
@@ -85,7 +86,7 @@ class DocumentController extends Controller
         $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'project_id' => ['required', 'string'],
-            'document_type' => ['required', 'string', 'max:100'],
+            'document_type' => ['required', Rule::in(Document::VALID_DOCUMENT_TYPES)],
             'file' => ['required', 'file', 'max:10240'],
         ]);
 

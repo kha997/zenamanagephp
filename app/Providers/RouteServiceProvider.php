@@ -88,5 +88,12 @@ class RouteServiceProvider extends ServiceProvider
 
             return Limit::perMinute(10)->by($key);
         });
+
+        RateLimiter::for('ai-suggest', function (Request $request) {
+            $user = $request->user();
+            $userId = $user ? (string) $user->id : 'guest';
+
+            return Limit::perMinute(10)->by($userId . '|' . $request->ip());
+        });
     }
 }

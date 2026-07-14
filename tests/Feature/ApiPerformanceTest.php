@@ -16,6 +16,8 @@ use Tests\Traits\AuthenticationTrait;
  * Performance tests cho API endpoints
  * 
  * Kiểm tra response time và memory usage với large datasets
+ *
+ * @group performance
  */
 class ApiPerformanceTest extends TestCase
 {

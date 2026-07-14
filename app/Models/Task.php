@@ -74,10 +74,14 @@ class Task extends Model
         'assignee_id',
         'assigned_to',
         'watchers',
-        'created_by'
+        'created_by',
+        'blocked_at',
+        'blocker_note',
+        'blocked_by'
     ];
 
     protected $casts = [
+        'blocked_at' => 'datetime',
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'completed_at' => 'datetime',

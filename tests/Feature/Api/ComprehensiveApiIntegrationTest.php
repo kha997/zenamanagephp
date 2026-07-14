@@ -433,6 +433,7 @@ class ComprehensiveApiIntegrationTest extends TestCase
     /**
      * Test performance across all endpoints
      */
+    /** @group performance */
     public function test_performance_across_endpoints()
     {
         $user = $this->createRbacAdminUser();

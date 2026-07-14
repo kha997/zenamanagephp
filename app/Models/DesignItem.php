@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * DesignItem — theo dõi công việc thiết kế qua vòng duyệt nội bộ và phản hồi khách hàng.
@@ -16,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DesignItem extends Model
 {
     use HasUlids;
+    use TenantScope;
 
     public const TYPE_CONCEPT = 'concept';
     public const TYPE_SCHEMATIC = 'schematic';
@@ -88,9 +91,13 @@ class DesignItem extends Model
         'client_feedback_notes',
         'approval_evidence',
         'created_by',
+        'blocked_at',
+        'blocker_note',
+        'blocked_by',
     ];
 
     protected $casts = [
+        'blocked_at' => 'datetime',
         'due_to_client_at' => 'date',
     ];
 
@@ -112,6 +119,11 @@ class DesignItem extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(DesignItemRevision::class)->orderBy('revision_no');
     }
 
     public function scopeForTenant($query, string $tenantId)

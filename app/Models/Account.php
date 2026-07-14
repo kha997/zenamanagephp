@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\TenantScope;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -19,6 +20,7 @@ class Account extends Model implements AuthenticatableContract
 {
     use HasUlids;
     use Authenticatable;
+    use TenantScope;
 
     public const TYPE_INDIVIDUAL = 'individual';
     public const TYPE_COMPANY = 'company';

@@ -27,6 +27,11 @@ use App\Models\Project;
  * @property array|null $terms Điều khoản hợp đồng
  * @property string|null $client_name Tên khách hàng
  * @property string|null $notes Ghi chú
+ * @property string $code Mã hợp đồng
+ * @property float $retention_percent Tỷ lệ giữ lại (%)
+ * @property float $advance_amount Số tiền tạm ứng
+ * @property float $advance_recovery_percent Tỷ lệ thu hồi tạm ứng (%)
+ * @property \App\Models\Boq|null $boq BOQ attached to this contract
  */
 class Contract extends Model
 {
@@ -47,6 +52,7 @@ class Contract extends Model
         'code',
         'contract_number',
         'title',
+        'contract_type',
         'status',
         'currency',
         'total_value',
@@ -60,7 +66,10 @@ class Contract extends Model
         'terms',
         'client_name',
         'notes',
-        'updated_by'
+        'updated_by',
+        'retention_percent',
+        'advance_amount',
+        'advance_recovery_percent',
     ];
 
     protected $casts = [
@@ -78,7 +87,10 @@ class Contract extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'signed_date' => 'date',
-        'terms' => 'array'
+        'terms' => 'array',
+        'retention_percent' => 'float',
+        'advance_amount' => 'float',
+        'advance_recovery_percent' => 'float',
     ];
 
     protected $attributes = [
@@ -100,6 +112,25 @@ class Contract extends Model
         self::STATUS_CANCELLED,
     ];
 
+    public const TYPE_DESIGN = 'design';
+    public const TYPE_CONSTRUCTION = 'construction';
+    public const TYPE_OTHER = 'other';
+
+    public const VALID_TYPES = [
+        self::TYPE_DESIGN,
+        self::TYPE_CONSTRUCTION,
+        self::TYPE_OTHER,
+    ];
+
+    public function typeLabel(): string
+    {
+        return match ($this->contract_type) {
+            self::TYPE_DESIGN => 'Thiết kế',
+            self::TYPE_CONSTRUCTION => 'Thi công',
+            default => 'Khác',
+        };
+    }
+
     /**
      * Relationship: Contract thuộc về project
      */
@@ -119,6 +150,17 @@ class Contract extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(ContractPayment::class, 'contract_id');
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(ContractExpense::class, 'contract_id');
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\HasOne<Boq, $this> */
+    public function boq(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Boq::class, 'contract_id');
     }
 
     public function getContractNumberAttribute(): ?string

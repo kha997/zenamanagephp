@@ -21,6 +21,9 @@ use Tests\TestCase;
 use Tests\Traits\AuthenticationTrait;
 use Tests\Traits\RouteNameTrait;
 
+/**
+ * @group performance
+ */
 class FinalSystemTest extends TestCase
 {
     use RefreshDatabase;

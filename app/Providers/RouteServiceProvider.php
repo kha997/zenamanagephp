@@ -95,5 +95,11 @@ class RouteServiceProvider extends ServiceProvider
 
             return Limit::perMinute(10)->by($userId . '|' . $request->ip());
         });
+
+        RateLimiter::for('portal-actions', function (Request $request) {
+            $userId = $request->user('client')?->id ?? 'guest';
+
+            return Limit::perMinute(10)->by($userId . '|' . $request->ip());
+        });
     }
 }

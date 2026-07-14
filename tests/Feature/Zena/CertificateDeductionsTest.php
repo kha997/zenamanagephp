@@ -254,4 +254,37 @@ class CertificateDeductionsTest extends TestCase
             'advance_deduction' => 50000000,
         ], $h)->assertSessionHasErrors();
     }
+
+    public function test_certificate_show_renders_net_payable(): void
+    {
+        $h = $this->headers();
+
+        $cert = $this->createAndApproveCert(1, 3000, '2026-07-01', '2026-07-31');
+
+        $response = $this->actingAs($this->user)->get(
+            route('operator.contracts.certificates.show', [$this->contract->id, $cert->id]),
+            $h
+        );
+
+        $response->assertOk();
+        $response->assertSee('Đề nghị thanh toán');
+        $response->assertSee('225.000.000');
+    }
+
+    public function test_contract_show_renders_cumulative_retention(): void
+    {
+        $h = $this->headers();
+
+        // Approve kỳ 1 → retention 15tr
+        $this->createAndApproveCert(1, 3000, '2026-07-01', '2026-07-31');
+
+        $response = $this->actingAs($this->user)->get(
+            route('operator.contracts.show', $this->contract->id),
+            $h
+        );
+
+        $response->assertOk();
+        $response->assertSee('Đang giữ lại');
+        $response->assertSee('15.000.000');
+    }
 }

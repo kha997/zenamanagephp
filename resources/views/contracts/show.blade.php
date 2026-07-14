@@ -39,6 +39,26 @@
                 <x-ui.field-value label="Quá hạn" :value="$finance['overdue_count'] . ' đợt'" />
             </div>
 
+            {{-- Retention / Advance cumulative summary --}}
+            @if ($contract->advance_amount > 0 || $contract->retention_percent > 0)
+                <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="font-medium text-slate-700">Đang giữ lại (retention):</span>
+                        <span class="text-slate-900">{{ number_format($cumulativeRetention, 0, ',', '.') }} {{ $contract->currency }}</span>
+                    </div>
+                    @if ($contract->advance_amount > 0)
+                        <div class="mt-1 flex items-center gap-2">
+                            <span class="font-medium text-slate-700">Tạm ứng đã thu hồi:</span>
+                            <span class="text-slate-900">{{ number_format($cumulativeAdvanceDeduction, 0, ',', '.') }} {{ $contract->currency }}</span>
+                        </div>
+                        <div class="mt-1 flex items-center gap-2">
+                            <span class="font-medium text-slate-700">Tạm ứng còn lại:</span>
+                            <span class="text-slate-900">{{ number_format(max($advanceRemaining, 0), 0, ',', '.') }} {{ $contract->currency }}</span>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             <h3 class="mb-2 mt-5 text-sm font-semibold text-slate-700">Các đợt thu</h3>
             @forelse ($payments as $payment)
                 <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 py-2 text-sm">

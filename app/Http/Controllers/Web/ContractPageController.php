@@ -246,6 +246,9 @@ class ContractPageController extends Controller
         $boq = null;
         $boqLines = collect();
         $certificates = collect();
+        $cumulativeRetention = 0.0;
+        $cumulativeAdvanceDeduction = 0.0;
+        $advanceRemaining = 0.0;
 
         if ($contract->contract_type === Contract::TYPE_CONSTRUCTION) {
             $boq = $contract->boq;
@@ -257,6 +260,10 @@ class ContractPageController extends Controller
                 ->where('contract_id', (string) $contract->id)
                 ->orderBy('period_no')
                 ->get();
+
+            $cumulativeRetention = (float) $certificates->where('status', \App\Models\PaymentCertificate::STATUS_APPROVED)->sum('retention_amount');
+            $cumulativeAdvanceDeduction = (float) $certificates->where('status', \App\Models\PaymentCertificate::STATUS_APPROVED)->sum('advance_deduction');
+            $advanceRemaining = (float) $contract->advance_amount - $cumulativeAdvanceDeduction;
         }
 
         return view('contracts.show', [
@@ -271,6 +278,9 @@ class ContractPageController extends Controller
             'boq' => $boq,
             'boqLines' => $boqLines,
             'certificates' => $certificates,
+            'cumulativeRetention' => $cumulativeRetention,
+            'cumulativeAdvanceDeduction' => $cumulativeAdvanceDeduction,
+            'advanceRemaining' => $advanceRemaining,
         ]);
     }
 
@@ -564,11 +574,26 @@ class ContractPageController extends Controller
         $summaryService = new \App\Services\PaymentCertificateSummaryService();
         $lineSummaries = $summaryService->lineSummaries($cert);
 
+        // Compute advance remaining for this cert
+        $advanceRemaining = (float) $contract->advance_amount - (float) \App\Models\PaymentCertificate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->where('status', \App\Models\PaymentCertificate::STATUS_APPROVED)
+            ->where('id', '!=', (string) $cert->id)
+            ->sum('advance_deduction');
+
+        $suggestedAdvance = min(
+            round((float) $contract->advance_recovery_percent / 100 * (float) $cert->total_this_period, 2),
+            max($advanceRemaining, 0.0)
+        );
+
         return view('contracts.certificate-show', [
             'contract' => $contract,
             'certificate' => $cert,
             'boqLines' => $boqLines,
             'lineSummaries' => $lineSummaries,
+            'advanceRemaining' => $advanceRemaining,
+            'suggestedAdvance' => $suggestedAdvance,
         ]);
     }
 

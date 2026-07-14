@@ -93,6 +93,65 @@
             @endif
         </x-ui.card>
 
+        {{-- Deduction summary --}}
+        @if ($certificate->total_this_period > 0)
+            <x-ui.card title="Tổng kết khấu trừ">
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-600">Giá trị khối lượng kỳ này</span>
+                        <span class="font-medium">{{ number_format($certificate->total_this_period, 0, ',', '.') }} {{ $contract->currency }}</span>
+                    </div>
+
+                    @php $retentionPercent = (float) $contract->retention_percent; @endphp
+                    @if ($retentionPercent > 0)
+                        <div class="flex justify-between">
+                            <span class="text-slate-600">− Giữ lại ({{ $retentionPercent }}%)</span>
+                            <span class="text-rose-600">− {{ number_format($certificate->retention_amount, 0, ',', '.') }} {{ $contract->currency }}</span>
+                        </div>
+                    @endif
+
+                    @if ((float) $contract->advance_amount > 0)
+                        @php $advancePercent = (float) $contract->advance_recovery_percent; @endphp
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">− Thu hồi tạm ứng{{ $advancePercent > 0 ? ' (' . $advancePercent . '%)' : '' }}</span>
+                            @if ($certificate->status === 'draft' && auth()->user()?->hasPermission('payment_certificate.create'))
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-slate-500">gợi ý {{ number_format($suggestedAdvance, 0, ',', '.') }}, còn lại {{ number_format(max($advanceRemaining, 0), 0, ',', '.') }}</span>
+                                    <input type="number" min="0" max="{{ max($advanceRemaining, 0) }}" step="any"
+                                        name="advance_deduction" value="{{ $certificate->advance_deduction }}"
+                                        class="w-32 text-right operator-input"
+                                        hx-trigger="change" hx-include="#advance-deduction-form"
+                                        hx-name="advance_deduction"
+                                        />
+                                </div>
+                            @else
+                                <span class="text-rose-600">− {{ number_format($certificate->advance_deduction, 0, ',', '.') }} {{ $contract->currency }}</span>
+                            @endif
+                        </div>
+
+                        {{-- Hidden form for HTMX advance_deduction submission --}}
+                        @if ($certificate->status === 'draft' && auth()->user()?->hasPermission('payment_certificate.create'))
+                            <form id="advance-deduction-form" method="POST" action="{{ route('operator.contracts.certificates.lines.save', [$contract->id, $certificate->id]) }}" class="hidden">
+                                @csrf
+                                @foreach ($boqLines as $item)
+                                    @php $summary = $lineSummaries[$item->id] ?? null; @endphp
+                                    @if ($summary)
+                                        <input type="hidden" name="lines[{{ $item->id }}]" value="{{ $summary['this_qty'] }}" />
+                                    @endif
+                                @endforeach
+                                <input type="hidden" name="advance_deduction" value="{{ $certificate->advance_deduction }}" />
+                            </form>
+                        @endif
+                    @endif
+
+                    <div class="border-t border-slate-200 pt-2 flex justify-between font-semibold text-base">
+                        <span>= Đề nghị thanh toán</span>
+                        <span>{{ number_format($certificate->net_payable, 0, ',', '.') }} {{ $contract->currency }}</span>
+                    </div>
+                </div>
+            </x-ui.card>
+        @endif
+
         {{-- Action buttons --}}
         @if ($certificate->status === 'draft')
             <div class="flex flex-wrap gap-3">

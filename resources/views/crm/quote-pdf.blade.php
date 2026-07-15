@@ -61,7 +61,9 @@
                     <th class="num">Khối lượng</th>
                     <th class="num">Đơn giá</th>
                     <th class="num">Thành tiền</th>
-                    <th>Ghi chú</th>
+                    @unless($hidePriceNote ?? false)
+                        <th>Ghi chú</th>
+                    @endunless
                 </tr>
             </thead>
             <tbody>
@@ -74,7 +76,9 @@
                         <td class="num">{{ number_format($line->quantity, 3, ',', '.') }}</td>
                         <td class="num">{{ number_format($line->unit_price, 0, ',', '.') }}</td>
                         <td class="num">{{ number_format($line->amount, 0, ',', '.') }}</td>
-                        <td>{{ $line->price_note ?? '—' }}</td>
+                        @unless($hidePriceNote ?? false)
+                            <td>{{ $line->price_note ?? '—' }}</td>
+                        @endunless
                     </tr>
                 @endforeach
             </tbody>
@@ -82,7 +86,9 @@
                 <tr style="font-weight: bold;">
                     <td colspan="6" class="num">TỔNG CỘNG:</td>
                     <td class="num">{{ number_format($quote->subtotal, 0, ',', '.') }} VNĐ</td>
-                    <td></td>
+                    @unless($hidePriceNote ?? false)
+                        <td></td>
+                    @endunless
                 </tr>
             </tfoot>
         </table>

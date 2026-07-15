@@ -202,4 +202,44 @@ class QuotePdfTest extends TestCase
         $response->assertRedirect();
         $response->assertSessionHas('error');
     }
+
+    public function test_operator_pdf_view_still_contains_price_note(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['account' => $account, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+
+        $quote = $this->makeQuoteWithLines($tenant, $opp);
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote,
+            'lines' => $quote->lines()->get(),
+            'account' => $account,
+            'opportunity' => $opp,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->subtotal),
+        ])->render();
+
+        // Operator PDF without hidePriceNote flag still shows price_note column
+        $this->assertStringContainsString('Chau Au', $html);
+        $this->assertStringContainsString('Ghi chú', $html);
+    }
+
+    public function test_portal_pdf_view_hides_price_note(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['account' => $account, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+
+        $quote = $this->makeQuoteWithLines($tenant, $opp);
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote,
+            'lines' => $quote->lines()->get(),
+            'account' => $account,
+            'opportunity' => $opp,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->subtotal),
+            'hidePriceNote' => true,
+        ])->render();
+
+        $this->assertStringNotContainsString('Chau Au', $html);
+        $this->assertStringNotContainsString('Ghi chú', $html);
+    }
 }

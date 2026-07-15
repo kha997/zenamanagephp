@@ -7,6 +7,7 @@ use App\Models\Account;
 use App\Models\Notification;
 use App\Models\Quote;
 use App\Models\Tenant;
+use App\Services\DeliverablePdfExportService;
 use App\Services\QuoteLifecycleService;
 use App\Support\VietnameseMoneyWords;
 use Illuminate\Contracts\View\View;
@@ -14,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class PortalQuoteController extends Controller
 {
@@ -102,6 +104,40 @@ class PortalQuoteController extends Controller
         $this->notifyCreator($quote, 'Khách từ chối báo giá', $note);
 
         return back()->with('success', 'Đã ghi nhận phản hồi của bạn.');
+    }
+
+    public function pdf(string $tenantSlug, string $id, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $tenant = Tenant::query()->where('slug', $tenantSlug)->firstOrFail();
+
+        /** @var Account $account */
+        $account = Auth::guard('client')->user();
+
+        $quote = $this->findOwnedQuote((string) $tenant->id, (string) $account->id, $id);
+        $lines = $quote->lines()->get();
+        $opportunity = $quote->opportunity;
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote,
+            'lines' => $lines,
+            'account' => $account,
+            'opportunity' => $opportunity,
+            'amountInWords' => VietnameseMoneyWords::toWords((float) $quote->subtotal),
+            'hidePriceNote' => true,
+        ])->render();
+
+        try {
+            $pdfBytes = $pdfService->render($html);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF báo giá vào lúc này.');
+        }
+
+        $filename = 'bao-gia-' . $quote->quote_number . '.pdf';
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
     }
 
     private function notifyCreator(Quote $quote, string $actionLabel, ?string $body = null): void

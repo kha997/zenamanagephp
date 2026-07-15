@@ -227,4 +227,24 @@ class PortalQuoteTest extends TestCase
             'id' => $this->sentQuote->id,
         ]))->assertRedirect();
     }
+
+    public function test_pdf_view_hides_price_note(): void
+    {
+        $this->sentQuote->load('lines');
+
+        // Seed price_note on one line
+        $this->sentQuote->lines()->first()->update(['price_note' => 'Gia tri noi bo']);
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $this->sentQuote,
+            'lines' => $this->sentQuote->lines,
+            'account' => $this->account,
+            'opportunity' => $this->sentQuote->opportunity,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $this->sentQuote->subtotal),
+            'hidePriceNote' => true,
+        ])->render();
+
+        $this->assertStringNotContainsString('Gia tri noi bo', $html);
+        $this->assertStringNotContainsString('Ghi chú', $html);
+    }
 }

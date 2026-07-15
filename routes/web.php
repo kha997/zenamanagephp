@@ -1052,6 +1052,7 @@ Route::prefix('portal/{tenantSlug}')->as('portal.')->middleware(['web'])->group(
         Route::post('/design-items/{id}/request-revision', [App\Http\Controllers\Web\Portal\PortalDesignItemController::class, 'requestRevision'])->middleware('throttle:portal-actions')->name('design-items.request-revision');
 
         Route::get('/quotes/{id}', [App\Http\Controllers\Web\Portal\PortalQuoteController::class, 'show'])->name('quotes.show');
+        Route::get('/quotes/{id}/pdf', [App\Http\Controllers\Web\Portal\PortalQuoteController::class, 'pdf'])->name('quotes.pdf');
         Route::post('/quotes/{id}/accept', [App\Http\Controllers\Web\Portal\PortalQuoteController::class, 'accept'])->middleware('throttle:portal-actions')->name('quotes.accept');
         Route::post('/quotes/{id}/reject', [App\Http\Controllers\Web\Portal\PortalQuoteController::class, 'reject'])->middleware('throttle:portal-actions')->name('quotes.reject');
     });

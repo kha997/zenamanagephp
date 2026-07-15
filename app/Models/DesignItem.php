@@ -38,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class DesignItem extends Model
 {
     use HasUlids;
+    /** @use HasFactory<\Database\Factories\DesignItemFactory> */
     use HasFactory;
     use TenantScope;
 

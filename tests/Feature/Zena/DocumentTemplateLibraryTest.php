@@ -21,6 +21,9 @@ class DocumentTemplateLibraryTest extends TestCase
     {
         parent::setUp();
         $this->app['router']->aliasMiddleware('rbac', RoleBasedAccessControlMiddleware::class);
+
+        // Khởi tạo session để TestCase tự chèn được _token CSRF vào các POST form.
+        $this->get('/login');
     }
 
     public function test_index_requires_document_template_view_permission(): void

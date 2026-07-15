@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PaymentCertificate extends Model
 {
     use HasUlids;
+    /** @use HasFactory<\Database\Factories\PaymentCertificateFactory> */
     use HasFactory;
     use TenantScope;
 

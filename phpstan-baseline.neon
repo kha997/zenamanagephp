@@ -22687,12 +22687,6 @@ parameters:
 			path: app/Models/DeliverableTemplateVersion.php
 
 		-
-			message: '#^Class App\\Models\\DesignItem uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/DesignItem.php
-
-		-
 			message: '#^Method App\\Models\\DesignItem\:\:assignee\(\) return type with generic class Illuminate\\Database\\Eloquent\\Relations\\BelongsTo does not specify its types\: TRelatedModel, TDeclaringModel$#'
 			identifier: missingType.generics
 			count: 1
@@ -24575,18 +24569,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: app/Models/Organization.php
-
-		-
-			message: '#^Class App\\Models\\PaymentCertificate uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/PaymentCertificate.php
-
-		-
-			message: '#^Class App\\Models\\PaymentCertificateLine uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types\: TFactory$#'
-			identifier: missingType.generics
-			count: 1
-			path: app/Models/PaymentCertificateLine.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\PerformanceMetric\:\:\$metric_name\.$#'

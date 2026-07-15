@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PaymentCertificateLine extends Model
 {
     use HasUlids;
+    /** @use HasFactory<\Database\Factories\PaymentCertificateLineFactory> */
     use HasFactory;
     use TenantScope;
 

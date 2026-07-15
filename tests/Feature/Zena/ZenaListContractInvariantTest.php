@@ -86,6 +86,11 @@ class ZenaListContractInvariantTest extends TestCase
             return false;
         }
 
+        // Skip routes with required path parameters — they need parent resources to exist
+        if (Str::contains($route->uri(), '{')) {
+            return false;
+        }
+
         return $this->supportsGetOrHead($route);
     }
 

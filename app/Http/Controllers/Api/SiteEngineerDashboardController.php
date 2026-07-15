@@ -64,11 +64,11 @@ class SiteEngineerDashboardController extends Controller
                 'assigned_projects' => $projects->count(),
                 'site_tasks' => Task::whereIn('project_id', $projectIds)
                     ->where('tenant_id', $user->tenant_id)
-                    ->where('assignee_id', $user->id)
+                    ->where('assigned_to', $user->id)
                     ->where('type', 'site')->count(),
                 'completed_site_tasks' => Task::whereIn('project_id', $projectIds)
                     ->where('tenant_id', $user->tenant_id)
-                    ->where('assignee_id', $user->id)
+                    ->where('assigned_to', $user->id)
                     ->where('type', 'site')
                     ->where('status', 'completed')->count(),
                 'material_requests' => Schema::hasTable('zena_material_requests')

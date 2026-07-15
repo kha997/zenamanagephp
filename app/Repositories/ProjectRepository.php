@@ -30,9 +30,21 @@ class ProjectRepository
             'documents',
         ];
 
-        return array_values(array_filter($candidates, function (string $relation): bool {
-            return method_exists($this->model, $relation);
+        $resolved = array_values(array_filter($candidates, function (string $relation): bool {
+            $exists = method_exists($this->model, $relation);
+            if (!$exists) {
+                Log::warning("[DIAG-REPO] defaultWith: relation '{$relation}' NOT found on model " . get_class($this->model));
+            }
+            return $exists;
         }));
+
+        Log::info("[DIAG-REPO] defaultWith RESOLVED", [
+            'candidates' => $candidates,
+            'resolved' => $resolved,
+            'mem' => memory_get_usage(true),
+        ]);
+
+        return $resolved;
     }
 
     /**
@@ -40,7 +52,10 @@ class ProjectRepository
      */
     public function getAll(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
+        Log::info("[DIAG-REPO] getAll() ENTRY", ['filters' => $filters, 'per_page' => $perPage, 'mem' => memory_get_usage(true)]);
+
         $query = $this->model->query();
+        Log::info("[DIAG-REPO] getAll() query() built", ['mem' => memory_get_usage(true)]);
 
         // Apply filters
         if (isset($filters['tenant_id'])) {
@@ -74,7 +89,24 @@ class ProjectRepository
             $query->where('end_date', '<=', $filters['end_date']);
         }
 
-        return $query->with($this->defaultWith())->paginate($perPage);
+        Log::info("[DIAG-REPO] getAll() filters applied, SQL: " . $query->toRawSql(), ['mem' => memory_get_usage(true)]);
+
+        $relations = $this->defaultWith();
+        Log::info("[DIAG-REPO] getAll() defaultWith resolved", ['relations' => $relations, 'mem' => memory_get_usage(true)]);
+
+        $query->with($relations);
+        Log::info("[DIAG-REPO] getAll() with() set, about to paginate", ['mem' => memory_get_usage(true)]);
+
+        $result = $query->paginate($perPage);
+
+        Log::info("[DIAG-REPO] getAll() DONE", [
+            'total' => $result->total(),
+            'count' => $result->count(),
+            'lastPage' => $result->lastPage(),
+            'mem' => memory_get_usage(true),
+        ]);
+
+        return $result;
     }
 
     /**

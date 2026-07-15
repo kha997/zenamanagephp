@@ -43,7 +43,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         // ── DIAG GLOBAL: earliest possible logging, uses error_log() not Laravel ──
-        if (env('SMOKE_DIAG') || env('APP_DEBUG')) {
+        // UNCONDITIONAL: env() is unreliable during boot (caching, CI). error_log() is zero-cost.
+        if (true) {
             $bootId = substr(md5(uniqid('', true)), 0, 12);
             error_log(sprintf(
                 '[DIAG-BOOT %s] uri=%s mem=%s peak=%s time=%.3f',

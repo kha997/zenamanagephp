@@ -29,6 +29,9 @@ class AuthenticationController extends Controller
      */
     public function login(Request $request): JsonResponse
     {
+        // ── DIAG-AUTH: earliest entry point ──
+        error_log(sprintf('[DIAG-AUTH ENTER] uri=%s mem=%s peak=%s', $_SERVER['REQUEST_URI'] ?? '?', memory_get_usage(true), memory_get_peak_usage(true)));
+
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required|string|min:6',
@@ -36,6 +39,7 @@ class AuthenticationController extends Controller
         ]);
         
         if ($validator->fails()) {
+            error_log('[DIAG-AUTH] validation_failed');
             return response()->json([
                 'success' => false,
                 'error' => 'Validation failed',
@@ -44,11 +48,15 @@ class AuthenticationController extends Controller
             ], 422);
         }
         
+        error_log(sprintf('[DIAG-AUTH] calling_authenticate email=%s mem=%s', $request->email ?? '?', memory_get_usage(true)));
+
         $result = $this->authService->authenticate(
             $request->email,
             $request->password,
             $request->boolean('remember', false)
         );
+        
+        error_log(sprintf('[DIAG-AUTH] authenticate_returned success=%s mem=%s', $result['success'] ?? '?', memory_get_usage(true)));
         
         if (!$result['success']) {
             return response()->json($result, 401);
@@ -57,6 +65,8 @@ class AuthenticationController extends Controller
         $userPayload = $result['user'];
         $token = $result['token'];
         $expiresAt = $result['expires_at'];
+
+        error_log(sprintf('[DIAG-AUTH EXIT] mem=%s peak=%s', memory_get_usage(true), memory_get_peak_usage(true)));
 
         return response()->json([
             'success' => true,

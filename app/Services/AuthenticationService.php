@@ -21,10 +21,14 @@ class AuthenticationService
     public function authenticate(string $email, string $password, bool $remember = false): array
     {
         try {
+            error_log(sprintf('[DIAG-SVC ENTER] email=%s mem=%s', $email, memory_get_usage(true)));
+
             // Find user by email
             $user = User::where('email', $email)
                 ->where('is_active', true)
                 ->first();
+            
+            error_log(sprintf('[DIAG-SVC user_query_done] found=%s mem=%s', $user ? 'yes' : 'no', memory_get_usage(true)));
             
             if (!$user) {
                 return [
@@ -35,13 +39,16 @@ class AuthenticationService
             }
             
             // Verify password
+            error_log(sprintf('[DIAG-SVC hash_check_start] mem=%s', memory_get_usage(true)));
             if (!Hash::check($password, $user->password)) {
+                error_log('[DIAG-SVC hash_check_fail]');
                 return [
                     'success' => false,
                     'error' => 'Invalid credentials',
                     'code' => 'INVALID_CREDENTIALS'
                 ];
             }
+            error_log(sprintf('[DIAG-SVC hash_check_pass] mem=%s', memory_get_usage(true)));
             
             // Check if user has tenant access
             if (!$user->tenant_id) {
@@ -57,9 +64,12 @@ class AuthenticationService
                 'last_login_at' => now(),
                 'last_activity_at' => now()
             ]);
+            error_log(sprintf('[DIAG-SVC login_updated] mem=%s', memory_get_usage(true)));
             
             // Generate token
+            error_log(sprintf('[DIAG-SVC token_gen_start] mem=%s', memory_get_usage(true)));
             $token = $this->generateToken($user, $remember);
+            error_log(sprintf('[DIAG-SVC token_gen_done] mem=%s', memory_get_usage(true)));
             
             // Log successful authentication
             Log::info('User authenticated successfully', [
@@ -69,6 +79,8 @@ class AuthenticationService
                 'remember' => $remember
             ]);
             
+            error_log(sprintf('[DIAG-SVC EXIT] mem=%s peak=%s', memory_get_usage(true), memory_get_peak_usage(true)));
+
             return [
                 'success' => true,
                 'user' => [
@@ -84,6 +96,7 @@ class AuthenticationService
             ];
             
         } catch (\Exception $e) {
+            error_log(sprintf('[DIAG-SVC EXCEPTION] type=%s msg=%s mem=%s', get_class($e), $e->getMessage(), memory_get_usage(true)));
             Log::error('Authentication error', [
                 'email' => $email,
                 'error' => $e->getMessage()

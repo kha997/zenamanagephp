@@ -9,6 +9,54 @@
             <button type="submit" class="operator-button operator-button-secondary">Đăng xuất</button>
         </form>
 
+        <x-ui.card title="Báo giá">
+            @if ($quotes->isEmpty())
+                <p class="text-sm text-slate-500">Chưa có báo giá.</p>
+            @else
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200 text-sm">
+                        <thead>
+                            <tr class="text-left text-xs font-medium uppercase text-slate-500">
+                                <th class="px-4 py-2">Số</th>
+                                <th class="px-4 py-2">Tổng cộng</th>
+                                <th class="px-4 py-2">Trạng thái</th>
+                                <th class="px-4 py-2">Ngày gửi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @foreach ($quotes as $quote)
+                                <tr>
+                                    <td class="px-4 py-2">
+                                        <a href="{{ route('portal.quotes.show', ['tenantSlug' => $tenant->slug, 'id' => $quote->id]) }}" class="font-medium text-slate-900 hover:underline">{{ $quote->quote_number }}</a>
+                                    </td>
+                                    <td class="px-4 py-2 text-right text-slate-700">{{ number_format((float) $quote->subtotal, 0, ',', '.') }}₫</td>
+                                    <td class="px-4 py-2">
+                                        @php
+                                            $statusLabels = [
+                                                'sent' => 'Đã gửi',
+                                                'accepted' => 'Đã chấp nhận',
+                                                'rejected' => 'Từ chối',
+                                                'revised' => 'Đã chỉnh sửa',
+                                                'superseded' => 'Đã thay thế',
+                                            ];
+                                        @endphp
+                                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                                            {{ $quote->status === 'sent' ? 'bg-amber-100 text-amber-800' :
+                                               ($quote->status === 'accepted' ? 'bg-green-100 text-green-800' :
+                                               ($quote->status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                               'bg-slate-100 text-slate-800')) }}">
+                                            {{ $statusLabels[$quote->status] ?? $quote->status }}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-2 text-slate-500">{{ $quote->sent_at ? \Carbon\Carbon::parse($quote->sent_at)->format('d/m/Y') : '—' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </x-ui.card>
+
         <x-ui.card title="Dự án">
             @if ($projects->isEmpty())
                 <p class="text-sm text-slate-500">Chưa có dự án nào.</p>

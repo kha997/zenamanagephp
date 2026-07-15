@@ -520,9 +520,10 @@ class CrmPageController extends Controller
             'tenant_id' => $tenantId,
             'aggregate_type' => 'quote',
             'aggregate_id' => (string) $quote->id,
-            'event_type' => 'quote.sent',
-            'actor_id' => (string) auth()->id(),
+            'event_key' => 'quote.sent',
+            'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
             'payload' => ['quote_number' => $quote->quote_number],
+            'occurred_at' => now(),
         ]);
 
         return back()->with('success', 'Đã gửi báo giá.');
@@ -563,9 +564,10 @@ class CrmPageController extends Controller
             'tenant_id' => $tenantId,
             'aggregate_type' => 'quote',
             'aggregate_id' => (string) $quote->id,
-            'event_type' => 'quote.accepted',
-            'actor_id' => (string) auth()->id(),
+            'event_key' => 'quote.accepted',
+            'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
             'payload' => ['quote_number' => $quote->quote_number],
+            'occurred_at' => now(),
         ]);
 
         return back()->with('success', 'Đã chấp nhận báo giá.');
@@ -597,9 +599,10 @@ class CrmPageController extends Controller
             'tenant_id' => $tenantId,
             'aggregate_type' => 'quote',
             'aggregate_id' => (string) $quote->id,
-            'event_type' => 'quote.rejected',
-            'actor_id' => (string) auth()->id(),
+            'event_key' => 'quote.rejected',
+            'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
             'payload' => ['quote_number' => $quote->quote_number],
+            'occurred_at' => now(),
         ]);
 
         return back()->with('success', 'Đã từ chối báo giá.');

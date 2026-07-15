@@ -122,11 +122,19 @@ class QuoteLifecycleTest extends TestCase
             ['name' => 'A', 'unit' => 'pcs', 'quantity' => 1, 'unit_price' => 50000],
         ]);
 
-        $this->post(route('operator.crm.quotes.send', $quote->id));
+        $response = $this->post(route('operator.crm.quotes.send', $quote->id));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
 
         $dbQuote = Quote::find($quote->id);
         $this->assertSame(Quote::STATUS_SENT, $dbQuote->status);
         $this->assertNotNull($dbQuote->sent_at);
+
+        $this->assertSame(1, EventRecord::query()
+            ->where('aggregate_id', (string) $quote->id)
+            ->where('event_key', 'quote.sent')
+            ->count());
     }
 
     public function test_send_with_zero_lines_fails(): void
@@ -159,11 +167,19 @@ class QuoteLifecycleTest extends TestCase
         // Update revision_no manually for quote2 to be different
         Quote::query()->where('id', $quote2->id)->update(['revision_no' => 2]);
 
-        $this->post(route('operator.crm.quotes.accept', $quote1->id));
+        $response = $this->post(route('operator.crm.quotes.accept', $quote1->id));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
 
         $this->assertSame(Quote::STATUS_ACCEPTED, Quote::find($quote1->id)->status);
         $this->assertSame(Quote::STATUS_SUPERSEDED, Quote::find($quote2->id)->status);
         $this->assertNotNull(Quote::find($quote1->id)->decided_at);
+
+        $this->assertSame(1, EventRecord::query()
+            ->where('aggregate_id', (string) $quote1->id)
+            ->where('event_key', 'quote.accepted')
+            ->count());
     }
 
     public function test_reject_transitions(): void
@@ -176,11 +192,19 @@ class QuoteLifecycleTest extends TestCase
             ['name' => 'X', 'unit' => 'm', 'quantity' => 10, 'unit_price' => 10000],
         ]);
 
-        $this->post(route('operator.crm.quotes.reject', $quote->id));
+        $response = $this->post(route('operator.crm.quotes.reject', $quote->id));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
 
         $dbQuote = Quote::find($quote->id);
         $this->assertSame(Quote::STATUS_REJECTED, $dbQuote->status);
         $this->assertNotNull($dbQuote->decided_at);
+
+        $this->assertSame(1, EventRecord::query()
+            ->where('aggregate_id', (string) $quote->id)
+            ->where('event_key', 'quote.rejected')
+            ->count());
     }
 
     public function test_revise_creates_new_draft_with_copied_lines(): void

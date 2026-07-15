@@ -3,14 +3,13 @@
 namespace App\Providers;
 
 use App\Auth\CustomSanctumGuard;
-// DEBUG: Commented out for CI isolation test - testing if these cause crash at projects.index
-// use App\Models\EventRecord;
-// use App\Observers\EventRecordObserver;
-// use App\Services\DocumentContext\ContractContextProvider;
-// use App\Services\DocumentContext\CertificateContextProvider;
-// use App\Services\DocumentContext\DocumentContextRegistry;
-// use App\Services\DocumentContext\ProjectContextProvider;
-// use App\Services\PaymentCertificateSummaryService;
+use App\Models\EventRecord;
+use App\Observers\EventRecordObserver;
+use App\Services\DocumentContext\ContractContextProvider;
+use App\Services\DocumentContext\CertificateContextProvider;
+use App\Services\DocumentContext\DocumentContextRegistry;
+use App\Services\DocumentContext\ProjectContextProvider;
+use App\Services\PaymentCertificateSummaryService;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -25,16 +24,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        // DEBUG: Commented out for CI isolation test
-        // $this->app->singleton(DocumentContextRegistry::class, function ($app) {
-        //     return new DocumentContextRegistry([
-        //         $app->make(ContractContextProvider::class),
-        //         $app->make(CertificateContextProvider::class),
-        //         $app->make(ProjectContextProvider::class),
-        //     ]);
-        // });
-        //
-        // $this->app->singleton(PaymentCertificateSummaryService::class);
+        $this->app->singleton(DocumentContextRegistry::class, function ($app) {
+            return new DocumentContextRegistry([
+                $app->make(ContractContextProvider::class),
+                $app->make(CertificateContextProvider::class),
+                $app->make(ProjectContextProvider::class),
+            ]);
+        });
+
+        $this->app->singleton(PaymentCertificateSummaryService::class);
     }
 
     /**
@@ -58,8 +56,7 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
-        // DEBUG: Commented out for CI isolation test
-        // EventRecord::observe(EventRecordObserver::class);
+        EventRecord::observe(EventRecordObserver::class);
 
         Auth::resolved(function ($auth) {
             $auth->extend('sanctum', function ($app, $name, array $config) use ($auth) {

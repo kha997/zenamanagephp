@@ -1,4 +1,5 @@
 tests/Feature/Api/ContractPdfExportTest.php:52|api/v1/work-template/projects/{$project->id}/contracts/{$contract->id}/pdf
+tests/Feature/Api/ContractPdfExportTest.php:52|api/zena/projects/{$project->id}/contracts/{$contract->id}/pdf
 tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php:114|api/v1/tasks` -> `Src\\CoreProject\\Controllers\\TaskController`
 tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php:115|api/v1/work-template/projects/*/tasks` -> `Src\\WorkTemplate\\Controllers\\ProjectTaskController` projection routes
 tests/Feature/Architecture/ModuleOwnershipSourceInvariantTest.php:50|api/v1/projects` -> `Src\\CoreProject\\Controllers\\ProjectController`
@@ -64,6 +65,8 @@ tests/Feature/Architecture/TasksV1SplitOwnerRouteInventoryInvariantTest.php:56|a
 tests/Feature/Architecture/TasksV1SplitOwnerRouteInventoryInvariantTest.php:57|api/v1/tasks/{task}/watchers
 tests/Feature/Architecture/TasksV1SplitOwnerRouteInventoryInvariantTest.php:58|api/v1/tasks/{task}/watchers
 tests/Feature/Architecture/TasksV1SplitOwnerRouteInventoryInvariantTest.php:59|api/v1/tasks/{task}/watchers
+tests/Feature/MockKpiEndpointRemovedTest.php:36|api/v1/universal-frame/kpis
+tests/Feature/MockKpiEndpointRemovedTest.php:47|api/v1/universal-frame/kpis/stats
 tests/Feature/RouteMiddleware/TenantIsolationV1ContractTest.php:16|api/v1/universal-frame
 tests/Feature/RouteMiddleware/TenantIsolationV1ContractTest.php:17|api/v1/final-integration
 tests/Feature/RouteMiddleware/V1LegacyRouteHardeningContractTest.php:17|api/v1/universal-frame

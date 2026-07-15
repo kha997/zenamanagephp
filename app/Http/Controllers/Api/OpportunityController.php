@@ -3,10 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\ZenaContractResponseTrait;
+use App\Models\Boq;
+use App\Models\BoqLineItem;
 use App\Models\Contract;
 use App\Models\EventRecord;
 use App\Models\Opportunity;
 use App\Models\Project;
+use App\Models\Quote;
+use App\Models\QuoteLineItem;
 use App\Services\ZenaBoqIntegrationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -468,9 +472,18 @@ class OpportunityController extends BaseApiController
         }
 
         $snapshot = $opportunity->external_quote_snapshot ?? [];
-        if (($snapshot['status'] ?? null) !== 'ACCEPTED') {
+        $nativeQuote = Quote::query()
+            ->where('opportunity_id', (string) $opportunity->id)
+            ->where('tenant_id', $tenantId)
+            ->where('status', Quote::STATUS_ACCEPTED)
+            ->first();
+
+        $hasExternalAccepted = ($snapshot['status'] ?? null) === 'ACCEPTED';
+        $hasNativeAccepted = $nativeQuote instanceof Quote;
+
+        if (!$hasNativeAccepted && !$hasExternalAccepted) {
             return $this->validationError([
-                'external_quote_snapshot' => ['The linked quote must be ACCEPTED before generating a contract.'],
+                'quote' => ['Either a native accepted quote or an accepted external quote is required to generate a contract.'],
             ]);
         }
 
@@ -511,19 +524,55 @@ class OpportunityController extends BaseApiController
         $account = $opportunity->account;
         $clientName = $account?->display_name ?? '';
 
-        $contract = Contract::query()->create([
-            'tenant_id' => $tenantId,
-            'project_id' => $projectId,
-            'source_opportunity_id' => (string) $opportunity->id,
-            'source_quote_id' => $opportunity->external_quote_id,
-            'source_quote_revision' => $snapshot['revision'] ?? null,
-            'code' => $this->generateContractCode(),
-            'title' => 'Hợp đồng dịch vụ - ' . $clientName,
-            'client_name' => $clientName,
-            'total_value' => (float) ($snapshot['total'] ?? 0),
-            'currency' => 'VND',
-            'created_by' => (string) $user->id,
-        ]);
+        $contract = DB::transaction(function () use (
+            $tenantId, $projectId, $opportunity, $user, $clientName,
+            $hasNativeAccepted, $nativeQuote, $snapshot
+        ): Contract {
+            $contract = Contract::query()->create([
+                'tenant_id' => $tenantId,
+                'project_id' => $projectId,
+                'source_opportunity_id' => (string) $opportunity->id,
+                'source_quote_id' => $hasNativeAccepted ? (string) $nativeQuote->id : ($opportunity->external_quote_id ?? null),
+                'source_quote_revision' => $hasNativeAccepted ? $nativeQuote->revision_no : ($snapshot['revision'] ?? null),
+                'code' => $this->generateContractCode(),
+                'title' => 'Hợp đồng dịch vụ - ' . $clientName,
+                'client_name' => $clientName,
+                'total_value' => $hasNativeAccepted ? (float) $nativeQuote->subtotal : (float) ($snapshot['total'] ?? 0),
+                'currency' => 'VND',
+                'created_by' => (string) $user->id,
+            ]);
+
+            // When native quote: create BOQ + copy lines
+            if ($hasNativeAccepted) {
+                $boq = Boq::query()->create([
+                    'tenant_id' => $tenantId,
+                    'project_id' => $projectId,
+                    'contract_id' => (string) $contract->id,
+                    'code' => 'BOQ-' . $contract->code,
+                    'name' => $clientName,
+                ]);
+
+                $quoteLines = QuoteLineItem::query()
+                    ->where('quote_id', (string) $nativeQuote->id)
+                    ->where('tenant_id', $tenantId)
+                    ->orderBy('sort_order')
+                    ->get();
+
+                foreach ($quoteLines as $ql) {
+                    BoqLineItem::query()->create([
+                        'tenant_id' => $tenantId,
+                        'boq_id' => (string) $boq->id,
+                        'code' => $ql->code,
+                        'name' => $ql->name,
+                        'quantity' => $ql->quantity,
+                        'unit' => $ql->unit,
+                        'unit_price' => $ql->unit_price,
+                    ]);
+                }
+            }
+
+            return $contract;
+        });
 
         $this->recordEvent($opportunity, 'crm.opportunity.contract_created', [
             'contract_id' => (string) $contract->id,

@@ -31,9 +31,13 @@ class InputSanitizationMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
+        Log::info('DIAG:input_sanitization_entry', ['uri' => $request->path()]);
+
         // Sanitize input data using the service
         $this->sanitizeInput($request);
         
+        Log::info('DIAG:input_sanitization_sanitize_done');
+
         // Check for suspicious patterns
         if ($this->detectSuspiciousInput($request)) {
             Log::warning('Suspicious input detected', [
@@ -51,6 +55,8 @@ class InputSanitizationMiddleware
                 ErrorEnvelopeService::getCurrentRequestId()
             );
         }
+
+        Log::info('DIAG:input_sanitization_about_to_next');
 
         return $next($request);
     }

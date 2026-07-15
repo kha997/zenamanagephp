@@ -27,6 +27,8 @@ class RoleBasedAccessControlMiddleware
      */
     public function handle(Request $request, Closure $next, ?string $roleOrPermission = null, ?string $projectParam = null): Response
     {
+        Log::info('DIAG:rbac_entry', ['permission' => $roleOrPermission, 'uri' => $request->path()]);
+
         $user = Auth::user();
         
         if (!$user) {
@@ -90,6 +92,8 @@ class RoleBasedAccessControlMiddleware
         // Add access context to request
         $request->attributes->set('required_role_permission', $roleOrPermission);
         $request->attributes->set('access_granted', true);
+        
+        Log::info('DIAG:rbac_about_to_next', ['permission' => $roleOrPermission]);
         
         return $next($request);
     }

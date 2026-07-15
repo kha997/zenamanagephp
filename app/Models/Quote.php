@@ -17,6 +17,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $revision_no
  * @property string $status
  * @property float $subtotal
+ * @property float $discount_percent
+ * @property float $vat_percent
+ * @property float $discount_amount
+ * @property float $vat_amount
+ * @property float $total
+ * @property string|null $payment_terms
  * @property string|null $valid_until
  * @property string|null $notes
  * @property \Carbon\Carbon|null $sent_at
@@ -64,6 +70,12 @@ class Quote extends Model
         'revision_no',
         'status',
         'subtotal',
+        'discount_percent',
+        'vat_percent',
+        'discount_amount',
+        'vat_amount',
+        'total',
+        'payment_terms',
         'valid_until',
         'notes',
         'sent_at',
@@ -71,10 +83,15 @@ class Quote extends Model
         'created_by',
     ];
 
-    /** @var array{revision_no: string, subtotal: string, valid_until: string|null, sent_at: string|null, decided_at: string|null} */
+    /** @var array{revision_no: string, subtotal: string, discount_percent: string, vat_percent: string, discount_amount: string, vat_amount: string, total: string, valid_until: string|null, sent_at: string|null, decided_at: string|null} */
     protected $casts = [
         'revision_no' => 'integer',
         'subtotal' => 'float',
+        'discount_percent' => 'float',
+        'vat_percent' => 'float',
+        'discount_amount' => 'float',
+        'vat_amount' => 'float',
+        'total' => 'float',
         'valid_until' => 'date',
         'sent_at' => 'datetime',
         'decided_at' => 'datetime',
@@ -91,6 +108,20 @@ class Quote extends Model
     {
         /** @phpstan-ignore return.type */
         return $this->hasMany(QuoteLineItem::class)->orderBy('sort_order');
+    }
+
+    /** @return array{discount_amount: float, vat_amount: float, total: float} */
+    public static function computeTotals(float $subtotal, float $discountPercent, float $vatPercent): array
+    {
+        $discountAmount = round($subtotal * $discountPercent / 100, 2);
+        $taxable = $subtotal - $discountAmount;
+        $vatAmount = round($taxable * $vatPercent / 100, 2);
+
+        return [
+            'discount_amount' => $discountAmount,
+            'vat_amount' => $vatAmount,
+            'total' => round($taxable + $vatAmount, 2),
+        ];
     }
 
     public static function canTransition(string $from, string $to): bool

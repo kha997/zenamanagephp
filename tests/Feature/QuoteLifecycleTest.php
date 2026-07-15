@@ -180,6 +180,12 @@ class QuoteLifecycleTest extends TestCase
             ->where('aggregate_id', (string) $quote1->id)
             ->where('event_key', 'quote.accepted')
             ->count());
+
+        $event = EventRecord::query()
+            ->where('aggregate_id', (string) $quote1->id)
+            ->where('event_key', 'quote.accepted')
+            ->first();
+        $this->assertSame('operator', $event->payload['source']);
     }
 
     public function test_reject_transitions(): void

@@ -546,29 +546,14 @@ class CrmPageController extends Controller
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
-        DB::transaction(function () use ($quote, $tenantId) {
-            $quote->update([
-                'status' => Quote::STATUS_ACCEPTED,
-                'decided_at' => now(),
+        try {
+            app(\App\Services\QuoteLifecycleService::class)->accept($quote, [
+                'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
+                'source' => 'operator',
             ]);
-
-            Quote::query()
-                ->where('tenant_id', $tenantId)
-                ->where('opportunity_id', $quote->opportunity_id)
-                ->where('id', '!=', $quote->id)
-                ->whereIn('status', [Quote::STATUS_DRAFT, Quote::STATUS_SENT, Quote::STATUS_REJECTED])
-                ->update(['status' => Quote::STATUS_SUPERSEDED]);
-        });
-
-        EventRecord::query()->create([
-            'tenant_id' => $tenantId,
-            'aggregate_type' => 'quote',
-            'aggregate_id' => (string) $quote->id,
-            'event_key' => 'quote.accepted',
-            'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
-            'payload' => ['quote_number' => $quote->quote_number],
-            'occurred_at' => now(),
-        ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Đã chấp nhận báo giá.');
     }
@@ -590,20 +575,14 @@ class CrmPageController extends Controller
             return back()->with('error', 'Không thể chuyển trạng thái.');
         }
 
-        $quote->update([
-            'status' => Quote::STATUS_REJECTED,
-            'decided_at' => now(),
-        ]);
-
-        EventRecord::query()->create([
-            'tenant_id' => $tenantId,
-            'aggregate_type' => 'quote',
-            'aggregate_id' => (string) $quote->id,
-            'event_key' => 'quote.rejected',
-            'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
-            'payload' => ['quote_number' => $quote->quote_number],
-            'occurred_at' => now(),
-        ]);
+        try {
+            app(\App\Services\QuoteLifecycleService::class)->reject($quote, [
+                'actor_user_id' => auth()->id() ? (string) auth()->id() : null,
+                'source' => 'operator',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Đã từ chối báo giá.');
     }

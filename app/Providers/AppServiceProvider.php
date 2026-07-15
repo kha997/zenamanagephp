@@ -42,51 +42,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        // ── DIAG GLOBAL: earliest possible logging, uses error_log() not Laravel ──
-        // UNCONDITIONAL: env() is unreliable during boot (caching, CI). error_log() is zero-cost.
-        if (true) {
-            $bootId = substr(md5(uniqid('', true)), 0, 12);
-            error_log(sprintf(
-                '[DIAG-BOOT %s] uri=%s mem=%s peak=%s time=%.3f',
-                $bootId,
-                $_SERVER['REQUEST_URI'] ?? 'cli',
-                memory_get_usage(true),
-                memory_get_peak_usage(true),
-                microtime(true)
-            ));
-
-            // Fatal-error shutdown handler — writes to error_log (synchronous, survives logger crash)
-            register_shutdown_function(function () use ($bootId) {
-                $error = error_get_last();
-                if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
-                    error_log(sprintf(
-                        '[DIAG-SHUTDOWN %s] FATAL type=%d file=%s line=%d mem=%s peak=%s err=%s',
-                        $bootId,
-                        $error['type'],
-                        $error['file'] ?? 'unknown',
-                        $error['line'] ?? 0,
-                        memory_get_usage(true),
-                        memory_get_peak_usage(true),
-                        $error['message'] ?? 'unknown'
-                    ));
-                }
-            });
-
-            // Catch any uncaught error before Laravel exception handler takes over
-            set_error_handler(function ($severity, $message, $file, $line) use ($bootId) {
-                error_log(sprintf(
-                    '[DIAG-ERROR %s] sev=%d file=%s line=%d msg=%s',
-                    $bootId,
-                    $severity,
-                    $file,
-                    $line,
-                    $message
-                ));
-                return false; // let Laravel handle it too
-            });
-        }
-        // ── END DIAG GLOBAL ──
-
         if (config('database.default') === 'sqlite') {
             try {
                 $connection = DB::connection();

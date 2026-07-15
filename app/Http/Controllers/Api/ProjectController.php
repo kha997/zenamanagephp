@@ -33,25 +33,8 @@ class ProjectController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        // DIAGNOSTIC: register shutdown handler to catch fatal errors
-        $requestId = uniqid('diag_', true);
-        register_shutdown_function(function () use ($requestId) {
-            $error = error_get_last();
-            if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_RECOVERABLE_ERROR], true)) {
-                Log::emergency("[DIAG-{$requestId}] FATAL: {$error['message']} in {$error['file']}:{$error['line']}", [
-                    'type' => $error['type'],
-                    'memory' => memory_get_usage(true),
-                    'peak_memory' => memory_get_peak_usage(true),
-                ]);
-            }
-        });
-
-        Log::info("[DIAG-{$requestId}] index() ENTRY", ['mem' => memory_get_usage(true)]);
-
         try {
             $user = Auth::user();
-            Log::info("[DIAG-{$requestId}] auth OK", ['user_id' => $user?->id, 'tenant_id' => $user?->tenant_id, 'mem' => memory_get_usage(true)]);
-
             $filters = $request->all();
             $perPage = (int)($filters['per_page'] ?? 15);
             unset($filters['per_page']);
@@ -60,30 +43,17 @@ class ProjectController extends Controller
             $filters['tenant_id'] = $user->tenant_id;
             $filters['user_id'] = $user->id; // For access control
             
-            Log::info("[DIAG-{$requestId}] calling getAll()", ['per_page' => $perPage, 'mem' => memory_get_usage(true)]);
-            
             $projects = $this->projectRepository->getAll($filters, $perPage);
             
-            Log::info("[DIAG-{$requestId}] getAll() DONE", [
-                'total' => $projects->total(),
-                'count' => $projects->count(),
-                'mem' => memory_get_usage(true),
-            ]);
-
-            Log::info("[DIAG-{$requestId}] calling zenaSuccessResponse", ['mem' => memory_get_usage(true)]);
-            $response = $this->zenaSuccessResponse($projects);
-            Log::info("[DIAG-{$requestId}] zenaSuccessResponse DONE", ['status' => $response->status(), 'mem' => memory_get_usage(true)]);
-            
-            return $response;
+            return $this->zenaSuccessResponse($projects);
             
         } catch (\Throwable $e) {
-            Log::error("[DIAG-{$requestId}] EXCEPTION in index()", [
+            Log::error("Failed to retrieve projects", [
                 'class' => get_class($e),
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'user_id' => Auth::id(),
-                'mem' => memory_get_usage(true),
             ]);
             
             return response()->json([

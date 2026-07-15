@@ -5,6 +5,11 @@ namespace App\Providers;
 use App\Auth\CustomSanctumGuard;
 use App\Models\EventRecord;
 use App\Observers\EventRecordObserver;
+use App\Services\DocumentContext\ContractContextProvider;
+use App\Services\DocumentContext\CertificateContextProvider;
+use App\Services\DocumentContext\DocumentContextRegistry;
+use App\Services\DocumentContext\ProjectContextProvider;
+use App\Services\PaymentCertificateSummaryService;
 use Illuminate\Auth\RequestGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +24,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        
+        $this->app->singleton(DocumentContextRegistry::class, function ($app) {
+            return new DocumentContextRegistry([
+                $app->make(ContractContextProvider::class),
+                $app->make(CertificateContextProvider::class),
+                $app->make(ProjectContextProvider::class),
+            ]);
+        });
+
+        $this->app->singleton(PaymentCertificateSummaryService::class);
     }
 
     /**

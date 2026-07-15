@@ -65,6 +65,10 @@ abstract class TestCase extends BaseTestCase
             return $parameters;
         }
 
+        // KHÔNG tự khởi động session để "chế" token ở đây: làm vậy khiến mọi
+        // POST test vượt qua CSRF kể cả khi chưa có phiên thật, vô hiệu hóa
+        // các test bảo mật CSRF (hồi quy 2026-07-15). Test cần token hợp lệ
+        // phải tự GET một trang trước (vd `$this->get('/login');` trong setUp).
         $token = csrf_token();
 
         if (!$token) {

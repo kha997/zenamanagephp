@@ -7,10 +7,17 @@ use Illuminate\View\View;
 
 
 use App\Http\Controllers\Controller; // Thêm import này
+use App\Models\DeliverableTemplate;
 use App\Models\User;
+use App\Services\DeliverablePdfExportService;
+use App\Services\DeliverableTemplateVersionService;
 use App\Services\DocumentChecklistService;
+use App\Services\DocumentContext\DocumentContextRegistry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Src\CoreProject\Models\Project;
 use Src\RBAC\Middleware\RBACMiddleware;
 
@@ -186,6 +193,14 @@ class ProjectController extends Controller // Thêm extends Controller
                 ->orderBy('created_at')
                 ->get();
 
+            $projectTemplates = \App\Models\DeliverableTemplate::query()
+                ->where('tenant_id', $user?->tenant_id)
+                ->where('context', 'project')
+                ->with('latestPublishedVersion')
+                ->get()
+                ->filter(fn ($t) => $t->latestPublishedVersion !== null)
+                ->values();
+
             return view('projects.show', [
                 'project' => $project,
                 'documentChecklist' => $documentChecklist,
@@ -193,6 +208,7 @@ class ProjectController extends Controller // Thêm extends Controller
                 'blockedItems' => $blockedItems,
                 'sectionTasks' => $sectionTasks,
                 'contracts' => $contracts,
+                'projectTemplates' => $projectTemplates,
             ]);
         } catch (\Throwable $e) {
             abort(404, 'Dự án không tồn tại.');
@@ -327,5 +343,36 @@ class ProjectController extends Controller // Thêm extends Controller
         } catch (\Exception $e) {
             return JSendResponse::error('Không thể tính toán lại chi phí: ' . $e->getMessage(), 500);
         }
+    }
+
+    public function renderProjectDocument(string $projectId, string $template, DeliverableTemplateVersionService $versionService, DocumentContextRegistry $contextRegistry, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $user = Auth::user();
+        $project = AppProject::query()->where('tenant_id', $user?->tenant_id)->findOrFail($projectId);
+
+        $tpl = DeliverableTemplate::query()
+            ->where('tenant_id', $user?->tenant_id)
+            ->where('context', 'project')
+            ->findOrFail($template);
+
+        $version = $tpl->latestPublishedVersion()->first();
+        if ($version === null) {
+            abort(404);
+        }
+
+        $html = (string) Storage::disk('local')->get($version->storage_path);
+        $context = $contextRegistry->get('project')->build($project);
+        $rendered = $versionService->renderHtml($html, $context);
+
+        try {
+            $pdfBytes = $pdfService->render($rendered);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF vào lúc này.');
+        }
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . Str::slug($tpl->name) . '-' . ($project->code ?? 'du-an') . '.pdf"',
+        ]);
     }
 }

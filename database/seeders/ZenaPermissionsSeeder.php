@@ -90,6 +90,10 @@ class ZenaPermissionsSeeder extends Seeder
         ['code' => 'template.publish', 'module' => 'template', 'action' => 'publish', 'description' => 'Publish immutable template versions'],
         ['code' => 'template.apply', 'module' => 'template', 'action' => 'apply', 'description' => 'Apply a published template version to a project'],
 
+        // Document templates (thư viện biểu mẫu)
+        ['code' => 'document_template.view', 'module' => 'document_template', 'action' => 'view', 'description' => 'View document templates'],
+        ['code' => 'document_template.manage', 'module' => 'document_template', 'action' => 'manage', 'description' => 'Create, edit, publish document templates'],
+
         // Work instances
         ['code' => 'work.view', 'module' => 'work', 'action' => 'view', 'description' => 'View work instances'],
         ['code' => 'work.update', 'module' => 'work', 'action' => 'update', 'description' => 'Update work instance steps and values'],

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\TenantScope;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -13,8 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $tenant_id Tenant ULID
  * @property string $contract_id Contract ULID
  * @property int $period_no Period number
- * @property \Carbon\Carbon $period_from Period start date
- * @property \Carbon\Carbon $period_to Period end date
+ * @property \Carbon\Carbon|null $period_from Period start date
+ * @property \Carbon\Carbon|null $period_to Period end date
  * @property string $status Certificate status (draft|submitted|approved)
  * @property float $total_this_period Total for this period
  * @property float $retention_amount Retention amount deducted this period
@@ -30,6 +31,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PaymentCertificate extends Model
 {
     use HasUlids;
+    /** @use HasFactory<\Database\Factories\PaymentCertificateFactory> */
+    use HasFactory;
     use TenantScope;
 
     public const STATUS_DRAFT = 'draft';

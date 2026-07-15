@@ -369,6 +369,7 @@ Route::get('/projects-enhanced', function() {
     
     // Project sub-resources
     Route::get('/projects/{project}/documents', [App\Http\Controllers\Web\ProjectController::class, 'documents'])->name('projects.documents');
+    Route::get('/projects/{project}/documents/{template}', [App\Http\Controllers\Web\ProjectController::class, 'renderProjectDocument'])->middleware('rbac:project.view')->name('projects.documents.render');
     Route::get('/projects/{project}/history', [App\Http\Controllers\Web\ProjectController::class, 'history'])->name('projects.history');
     Route::get('/projects/{project}/design', function ($project) {
         return view('projects.design-project', compact('project'));
@@ -923,9 +924,13 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/contracts/{id}/certificates/{certificate}/submit', [App\Http\Controllers\Web\ContractPageController::class, 'submitCertificate'])->middleware('rbac:payment_certificate.create')->name('contracts.certificates.submit');
     Route::post('/contracts/{id}/certificates/{certificate}/approve', [App\Http\Controllers\Web\ContractPageController::class, 'approveCertificate'])->middleware('rbac:payment_certificate.approve')->name('contracts.certificates.approve');
     Route::get('/contracts/{id}/certificates/{certificate}/pdf', [App\Http\Controllers\Web\ContractPageController::class, 'certificatePdf'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.pdf');
+    Route::get('/contracts/{id}/certificates/{certificate}/documents/{template}', [App\Http\Controllers\Web\ContractPageController::class, 'renderCertificateDocument'])->middleware('rbac:payment_certificate.view')->name('contracts.certificates.documents.render');
 
     // BOQ PDF
     Route::get('/contracts/{id}/boq-pdf', [App\Http\Controllers\Web\ContractPageController::class, 'boqPdf'])->middleware('rbac:contract.view')->name('contracts.boq.pdf');
+
+    // Document template render
+    Route::get('/contracts/{id}/documents/{template}', [App\Http\Controllers\Web\ContractPageController::class, 'renderContractDocument'])->middleware('rbac:contract.view')->name('contracts.documents.render');
 
     // Inspections
     Route::get('/inspections', [App\Http\Controllers\Web\InspectionPageController::class, 'index'])->middleware('rbac:inspection.view')->name('inspections.index');
@@ -996,6 +1001,15 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/design-items/{id}/block', [App\Http\Controllers\Web\DesignItemPageController::class, 'block'])->middleware('rbac:design-item.manage')->name('design-items.block');
     Route::post('/design-items/{id}/unblock', [App\Http\Controllers\Web\DesignItemPageController::class, 'unblock'])->middleware('rbac:design-item.manage')->name('design-items.unblock');
     Route::post('/design-items/suggest-description', [App\Http\Controllers\Web\DesignItemPageController::class, 'suggestDescription'])->middleware(['rbac:design-item.manage', 'rbac:ai.suggest', 'throttle:ai-suggest'])->name('design-items.suggest-description');
+
+    // Document Templates (Thư viện biểu mẫu)
+    Route::get('/document-templates', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'index'])->middleware('rbac:document_template.view')->name('document-templates.index');
+    Route::get('/document-templates/create', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'create'])->middleware('rbac:document_template.manage')->name('document-templates.create');
+    Route::post('/document-templates', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'store'])->middleware('rbac:document_template.manage')->name('document-templates.store');
+    Route::get('/document-templates/{id}/edit', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'edit'])->middleware('rbac:document_template.manage')->name('document-templates.edit');
+    Route::post('/document-templates/{id}', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'update'])->middleware('rbac:document_template.manage')->name('document-templates.update');
+    Route::post('/document-templates/{id}/preview', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'preview'])->middleware('rbac:document_template.view')->name('document-templates.preview');
+    Route::post('/document-templates/{id}/publish', [App\Http\Controllers\Web\DocumentTemplatePageController::class, 'publish'])->middleware('rbac:document_template.manage')->name('document-templates.publish');
 
     // CRM (lead inbox → account/opportunity → project; spec crm-zena)
     Route::get('/crm', [App\Http\Controllers\Web\CrmPageController::class, 'index'])->middleware('rbac:crm.view')->name('crm.index');

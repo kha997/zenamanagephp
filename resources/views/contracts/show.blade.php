@@ -9,6 +9,16 @@
         :description="$contract->title"
     >
         <x-ui.button-link :href="route('operator.contracts.pdf', $contract->id)" variant="secondary">Tải PDF</x-ui.button-link>
+        @if ($contractTemplates->isNotEmpty())
+            <div x-data="{ open: false }" class="relative inline-block">
+                <button @click="open = !open" type="button" class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Biểu mẫu ▾</button>
+                <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 z-50 mt-1 w-56 rounded-md border border-slate-200 bg-white shadow-lg">
+                    @foreach ($contractTemplates as $tpl)
+                        <a href="{{ route('operator.contracts.documents.render', [$contract->id, $tpl->id]) }}" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">{{ $tpl->name }}</a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
         <x-ui.button-link :href="route('operator.contracts.index')" variant="secondary">Quay lại</x-ui.button-link>
     </x-ui.page-header>
 

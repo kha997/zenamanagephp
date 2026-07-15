@@ -23,6 +23,7 @@ class DeliverableTemplateFactory extends Factory
             'name' => 'Deliverable ' . Str::upper(Str::random(6)),
             'description' => $this->faker->sentence(),
             'status' => 'draft',
+            'context' => 'contract',
             'created_by' => User::factory(),
             'updated_by' => User::factory(),
         ];

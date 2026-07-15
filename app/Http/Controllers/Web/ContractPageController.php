@@ -6,14 +6,20 @@ use App\Http\Controllers\Api\ContractController as ApiContractController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Contract;
+use App\Models\DeliverableTemplate;
+use App\Models\PaymentCertificate;
 use App\Models\Project;
 use App\Services\DeliverablePdfExportService;
+use App\Services\DeliverableTemplateVersionService;
+use App\Services\DocumentContext\DocumentContextRegistry;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
@@ -266,6 +272,14 @@ class ContractPageController extends Controller
             $advanceRemaining = (float) $contract->advance_amount - $cumulativeAdvanceDeduction;
         }
 
+        $contractTemplates = \App\Models\DeliverableTemplate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('context', 'contract')
+            ->with('latestPublishedVersion')
+            ->get()
+            ->filter(fn ($t) => $t->latestPublishedVersion !== null)
+            ->values();
+
         return view('contracts.show', [
             'contract' => $contract,
             'summary' => $summary,
@@ -281,6 +295,7 @@ class ContractPageController extends Controller
             'cumulativeRetention' => $cumulativeRetention,
             'cumulativeAdvanceDeduction' => $cumulativeAdvanceDeduction,
             'advanceRemaining' => $advanceRemaining,
+            'contractTemplates' => $contractTemplates,
         ]);
     }
 
@@ -587,6 +602,14 @@ class ContractPageController extends Controller
             max($advanceRemaining, 0.0)
         );
 
+        $certificateTemplates = \App\Models\DeliverableTemplate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('context', 'certificate')
+            ->with('latestPublishedVersion')
+            ->get()
+            ->filter(fn ($t) => $t->latestPublishedVersion !== null)
+            ->values();
+
         return view('contracts.certificate-show', [
             'contract' => $contract,
             'certificate' => $cert,
@@ -594,6 +617,7 @@ class ContractPageController extends Controller
             'lineSummaries' => $lineSummaries,
             'advanceRemaining' => $advanceRemaining,
             'suggestedAdvance' => $suggestedAdvance,
+            'certificateTemplates' => $certificateTemplates,
         ]);
     }
 
@@ -834,6 +858,71 @@ class ContractPageController extends Controller
         return response($pdfBytes, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="phu-luc-khoi-luong-' . $contract->code . '.pdf"',
+        ]);
+    }
+
+    public function renderContractDocument(string $id, string $template, DeliverableTemplateVersionService $versionService, DocumentContextRegistry $contextRegistry, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $tenantId = $this->currentTenantId();
+        $contract = Contract::query()->where('tenant_id', $tenantId)->with('project:id,tenant_id,name,code')->findOrFail($id);
+
+        $tpl = DeliverableTemplate::query()->where('tenant_id', $tenantId)->where('context', 'contract')->findOrFail($template);
+
+        $version = $tpl->latestPublishedVersion()->first();
+        if ($version === null) {
+            abort(404);
+        }
+
+        $html = (string) Storage::disk('local')->get($version->storage_path);
+        $context = $contextRegistry->get('contract')->build($contract);
+        $rendered = $versionService->renderHtml($html, $context);
+
+        try {
+            $pdfBytes = $pdfService->render($rendered);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF vào lúc này.');
+        }
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . Str::slug($tpl->name) . '-' . $contract->code . '.pdf"',
+        ]);
+    }
+
+    public function renderCertificateDocument(string $id, string $certificate, string $template, DeliverableTemplateVersionService $versionService, DocumentContextRegistry $contextRegistry, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $tenantId = $this->currentTenantId();
+        $contract = Contract::query()->where('tenant_id', $tenantId)->findOrFail($id);
+
+        $cert = PaymentCertificate::query()
+            ->where('tenant_id', $tenantId)
+            ->where('contract_id', (string) $contract->id)
+            ->findOrFail($certificate);
+
+        if ($cert->status !== PaymentCertificate::STATUS_APPROVED) {
+            return back()->with('error', 'Chỉ chứng chỉ đã duyệt mới có thể xuất biểu mẫu.');
+        }
+
+        $tpl = DeliverableTemplate::query()->where('tenant_id', $tenantId)->where('context', 'certificate')->findOrFail($template);
+
+        $version = $tpl->latestPublishedVersion()->first();
+        if ($version === null) {
+            abort(404);
+        }
+
+        $html = (string) Storage::disk('local')->get($version->storage_path);
+        $context = $contextRegistry->get('certificate')->build($cert);
+        $rendered = $versionService->renderHtml($html, $context);
+
+        try {
+            $pdfBytes = $pdfService->render($rendered);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF vào lúc này.');
+        }
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . Str::slug($tpl->name) . '-' . $contract->code . '-ky-' . $cert->period_no . '.pdf"',
         ]);
     }
 }

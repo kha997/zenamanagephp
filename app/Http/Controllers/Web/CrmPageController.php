@@ -16,12 +16,14 @@ use App\Models\QuoteLineItem;
 use App\Models\User;
 use App\Services\AiAssistService;
 use App\Services\ZenaBoqIntegrationService;
+use App\Services\DeliverablePdfExportService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class CrmPageController extends Controller
@@ -656,5 +658,44 @@ class CrmPageController extends Controller
         });
 
         return redirect()->route('operator.crm.quotes.show', $newQuote->id);
+    }
+
+    public function quotePdf(string $id, DeliverablePdfExportService $pdfService): SymfonyResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            abort(404);
+        }
+
+        $lines = $quote->lines()->get();
+        $account = $quote->opportunity?->account;
+        $opportunity = $quote->opportunity;
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote,
+            'lines' => $lines,
+            'account' => $account,
+            'opportunity' => $opportunity,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->subtotal),
+        ])->render();
+
+        try {
+            $pdfBytes = $pdfService->render($html);
+        } catch (\App\Exceptions\DeliverablePdfExportUnavailableException) {
+            return back()->with('error', 'Không thể tạo PDF báo giá vào lúc này.');
+        }
+
+        $filename = 'bao-gia-' . $quote->quote_number . '.pdf';
+
+        return response($pdfBytes, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
     }
 }

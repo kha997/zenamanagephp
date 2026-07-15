@@ -8,7 +8,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -181,7 +180,6 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        Log::info('DIAG:auth_me_entry', ['user_id' => Auth::guard('sanctum')->id()]);
         $user = Auth::guard('sanctum')->user();
         
         if (!$user) {
@@ -191,10 +189,8 @@ class AuthController extends Controller
             ], 401);
         }
         
-        Log::info('DIAG:auth_me_about_to_query_roles');
         // Get user roles and permissions
         $rolesWithPermissions = $user->roles()->with('permissions')->get();
-        Log::info('DIAG:auth_me_roles_queried', ['count' => $rolesWithPermissions->count()]);
         $roles = $rolesWithPermissions->pluck('name')->toArray();
         $permissions = $rolesWithPermissions
             ->pluck('permissions')

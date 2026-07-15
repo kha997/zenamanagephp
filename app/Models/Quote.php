@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Carbon\Carbon|null $sent_at
  * @property \Carbon\Carbon|null $decided_at
  * @property string|null $created_by
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, QuoteLineItem> $lines
+ * @property-read Opportunity|null $opportunity
  */
 class Quote extends Model
 {

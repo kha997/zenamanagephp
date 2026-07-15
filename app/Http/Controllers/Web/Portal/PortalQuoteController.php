@@ -114,6 +114,7 @@ class PortalQuoteController extends Controller
         $account = Auth::guard('client')->user();
 
         $quote = $this->findOwnedQuote((string) $tenant->id, (string) $account->id, $id);
+        $quote->load('opportunity');
         $lines = $quote->lines()->get();
         $opportunity = $quote->opportunity;
 

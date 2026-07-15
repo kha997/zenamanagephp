@@ -473,7 +473,8 @@ class CrmPageController extends Controller
                 ]);
             }
 
-            $quote->update(['subtotal' => $subtotal]);
+            $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
+            $quote->update(array_merge(['subtotal' => $subtotal], $totals));
         });
 
         return back()->with('success', 'Đã lưu dòng báo giá.');
@@ -510,11 +511,12 @@ class CrmPageController extends Controller
             ->where('tenant_id', $tenantId)
             ->sum('amount');
 
+        $totals = Quote::computeTotals($subtotal, (float) $quote->discount_percent, (float) $quote->vat_percent);
         $quote->update([
             'status' => Quote::STATUS_SENT,
             'sent_at' => now(),
             'subtotal' => $subtotal,
-        ]);
+        ] + $totals);
 
         EventRecord::query()->create([
             'tenant_id' => $tenantId,
@@ -609,6 +611,9 @@ class CrmPageController extends Controller
                 'status' => Quote::STATUS_DRAFT,
                 'notes' => $original->notes,
                 'created_by' => (string) auth()->id(),
+                'discount_percent' => $original->discount_percent,
+                'vat_percent' => $original->vat_percent,
+                'payment_terms' => $original->payment_terms,
             ]);
 
             $lines = QuoteLineItem::query()
@@ -632,14 +637,46 @@ class CrmPageController extends Controller
                 ]);
             }
 
-            $newQuote->update([
-                'subtotal' => $lines->sum('amount'),
-            ]);
+            $subtotal = (float) $lines->sum('amount');
+            $totals = Quote::computeTotals($subtotal, (float) $newQuote->discount_percent, (float) $newQuote->vat_percent);
+            $newQuote->update(array_merge(['subtotal' => $subtotal], $totals));
 
             return $newQuote;
         });
 
         return redirect()->route('operator.crm.quotes.show', $newQuote->id);
+    }
+
+    public function saveQuoteCommercial(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        $this->authorize('update', $quote);
+
+        $validated = $request->validate([
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'vat_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'valid_until' => ['nullable', 'date'],
+            'payment_terms' => ['nullable', 'string', 'max:500'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $discountPercent = (float) ($validated['discount_percent'] ?? $quote->discount_percent);
+        $vatPercent = (float) ($validated['vat_percent'] ?? $quote->vat_percent);
+        $totals = Quote::computeTotals((float) $quote->subtotal, $discountPercent, $vatPercent);
+
+        $quote->update(array_merge($validated, $totals));
+
+        return back()->with('success', 'Đã lưu thông tin thương mại.');
     }
 
     public function quotePdf(string $id, DeliverablePdfExportService $pdfService): SymfonyResponse

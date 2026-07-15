@@ -13803,7 +13803,7 @@ parameters:
 		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Auth\\Factory\:\:user\(\)\.$#'
 			identifier: method.notFound
-			count: 14
+			count: 15
 			path: app/Http/Controllers/Web/CrmPageController.php
 
 		-

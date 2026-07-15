@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Illuminate\Validation\Rule;
-use App\Models\Document;
+use Src\DocumentManagement\Models\Document;
 use Src\CoreProject\Models\Project;
 
 /**

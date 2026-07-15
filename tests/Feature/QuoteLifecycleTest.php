@@ -271,4 +271,36 @@ class QuoteLifecycleTest extends TestCase
 
         $this->post(route('operator.crm.opportunities.quotes.store', $opp->id))->assertForbidden();
     }
+
+    public function test_quote_show_view_renders(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+        $this->actingAs($user);
+
+        $quote = $this->makeQuote($tenant, $opp, lines: [
+            ['name' => 'Viet Hoa', 'unit' => 'm2', 'quantity' => 100, 'unit_price' => 250000],
+        ]);
+
+        $response = $this->get(route('operator.crm.quotes.show', $quote->id));
+        $response->assertStatus(200);
+        $response->assertSee($quote->quote_number);
+        $response->assertSee('Viet Hoa');
+    }
+
+    public function test_opportunity_show_view_has_native_quotes_card(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+        $this->actingAs($user);
+
+        $quote = $this->makeQuote($tenant, $opp, lines: [
+            ['name' => 'Keo', 'unit' => 'kg', 'quantity' => 5, 'unit_price' => 1500000],
+        ]);
+
+        $response = $this->get(route('operator.crm.opportunities.show', $opp->id));
+        $response->assertStatus(200);
+        $response->assertSee('Báo giá (native)');
+        $response->assertSee($quote->quote_number);
+    }
 }

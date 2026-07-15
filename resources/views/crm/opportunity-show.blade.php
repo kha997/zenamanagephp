@@ -162,6 +162,58 @@
         </x-ui.card>
     @endif
 
+    {{-- Native Quotes --}}
+    <x-ui.card title="Báo giá (native)">
+        @php
+            $nativeQuotes = \App\Models\Quote::query()
+                ->where('tenant_id', (string) $opportunity->tenant_id)
+                ->where('opportunity_id', $opportunity->id)
+                ->withCount('lines')
+                ->orderByDesc('revision_no')
+                ->get();
+        @endphp
+
+        @if ($nativeQuotes->isEmpty())
+            <p class="text-sm text-slate-500">Chưa có báo giá.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="operator-table text-sm">
+                    <thead>
+                        <tr>
+                            <th>Số</th>
+                            <th>Rev</th>
+                            <th>Tổng</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày gửi</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($nativeQuotes as $q)
+                            <tr>
+                                <td class="font-medium">{{ $q->quote_number }}</td>
+                                <td>{{ $q->revision_no }}</td>
+                                <td>{{ number_format($q->subtotal, 0, ',', '.') }}₫</td>
+                                <td><x-ui.status-badge :status="$q->status" /></td>
+                                <td>{{ $q->sent_at ? $q->sent_at->format('d/m/Y') : '—' }}</td>
+                                <td>
+                                    <a href="{{ route('operator.crm.quotes.show', $q->id) }}" class="operator-link">Xem</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        @if (auth()->user()?->hasPermission('crm.manage'))
+            <form method="POST" action="{{ route('operator.crm.opportunities.quotes.store', $opportunity->id) }}" class="mt-3">
+                @csrf
+                <button type="submit" class="operator-button operator-button-primary">Tạo báo giá</button>
+            </form>
+        @endif
+    </x-ui.card>
+
     @if ($contractCard !== null)
         <x-ui.card title="Hợp đồng">
             @if ($contractCard['has_drift'])

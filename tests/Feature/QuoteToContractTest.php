@@ -95,6 +95,11 @@ class QuoteToContractTest extends TestCase
 
         $quote->update(['subtotal' => $subtotal]);
 
+        // Set total = subtotal when no commercial fields (backward compat)
+        if ((float) $quote->total === 0.0) {
+            $quote->update(['total' => $subtotal]);
+        }
+
         return $quote;
     }
 
@@ -275,5 +280,36 @@ class QuoteToContractTest extends TestCase
 
         $response = $this->createContract($user, (string) $opp->id);
         $response->assertStatus(422);
+    }
+
+    // ─── Contract total_value uses quote total (not subtotal) ──────
+
+    public function test_contract_uses_quote_total_not_subtotal(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+
+        $quote = $this->makeAcceptedQuote($tenant, $opp, [
+            ['code' => 'L001', 'name' => 'Son', 'unit' => 'm2', 'quantity' => 100, 'unit_price' => 200000],
+            ['code' => 'L002', 'name' => 'Keo', 'unit' => 'kg', 'quantity' => 5, 'unit_price' => 1500000],
+        ]);
+
+        // subtotal=27500000, discount 10%, vat 8% → total=26730000
+        $totals = Quote::computeTotals(27500000, 10, 8);
+        $quote->update(array_merge([
+            'discount_percent' => 10,
+            'vat_percent' => 8,
+        ], $totals));
+
+        $response = $this->createContract($user, (string) $opp->id);
+        $response->assertStatus(201);
+
+        $contract = Contract::query()
+            ->where('source_opportunity_id', (string) $opp->id)
+            ->first();
+
+        $this->assertNotNull($contract);
+        // total_value must be 26,730,000 (grand total), NOT 27,500,000 (subtotal)
+        $this->assertEqualsWithDelta(26730000, $contract->total_value, 0.01);
     }
 }

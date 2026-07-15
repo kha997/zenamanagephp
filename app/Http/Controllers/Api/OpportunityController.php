@@ -537,7 +537,7 @@ class OpportunityController extends BaseApiController
                 'code' => $this->generateContractCode(),
                 'title' => 'Hợp đồng dịch vụ - ' . $clientName,
                 'client_name' => $clientName,
-                'total_value' => $hasNativeAccepted ? (float) $nativeQuote->subtotal : (float) ($snapshot['total'] ?? 0),
+                'total_value' => $hasNativeAccepted ? (float) ($nativeQuote->total ?: $nativeQuote->subtotal) : (float) ($snapshot['total'] ?? 0),
                 'currency' => 'VND',
                 'created_by' => (string) $user->id,
             ]);

@@ -242,4 +242,101 @@ class QuotePdfTest extends TestCase
         $this->assertStringNotContainsString('Chau Au', $html);
         $this->assertStringNotContainsString('Ghi chú', $html);
     }
+
+    // ─── Commercial breakdown tests ────────────────────────────────────
+
+    public function test_pdf_with_discount_and_vat_shows_breakdown(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['account' => $account, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+
+        $quote = $this->makeQuoteWithLines($tenant, $opp);
+        // subtotal=27500000, discount=10%, vat=8%
+        // discount_amount=2750000, taxable=24750000, vat_amount=1980000, total=26730000
+        $totals = Quote::computeTotals(27500000, 10, 8);
+        $quote->update(array_merge([
+            'discount_percent' => 10,
+            'vat_percent' => 8,
+        ], $totals));
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote->fresh(),
+            'lines' => $quote->lines()->get(),
+            'account' => $account,
+            'opportunity' => $opp,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->fresh()->total),
+        ])->render();
+
+        $this->assertStringContainsString('TẠM TÍNH', $html);
+        $this->assertStringContainsString('27.500.000', $html);
+        $this->assertStringContainsString('CHIẾT KHẤU', $html);
+        $this->assertStringContainsString('2.750.000', $html);
+        $this->assertStringContainsString('VAT', $html);
+        $this->assertStringContainsString('1.980.000', $html);
+        $this->assertStringContainsString('26.730.000', $html);
+    }
+
+    public function test_pdf_zero_discount_and_vat_shows_no_breakdown(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['account' => $account, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+
+        $quote = $this->makeQuoteWithLines($tenant, $opp);
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote,
+            'lines' => $quote->lines()->get(),
+            'account' => $account,
+            'opportunity' => $opp,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->subtotal),
+        ])->render();
+
+        $this->assertStringNotContainsString('CHIẾT KHẤU', $html);
+        // TẠM TÍNH is always present (subtotal row); only CHIẾT KHẤU and VAT are conditional
+        $this->assertStringContainsString('TẠM TÍNH', $html);
+    }
+
+    public function test_pdf_with_payment_terms_shows_terms(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['account' => $account, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+
+        $quote = $this->makeQuoteWithLines($tenant, $opp);
+        $quote->update(['payment_terms' => 'Net 30']);
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote->fresh(),
+            'lines' => $quote->lines()->get(),
+            'account' => $account,
+            'opportunity' => $opp,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->fresh()->total),
+        ])->render();
+
+        $this->assertStringContainsString('Net 30', $html);
+        $this->assertStringContainsString('Điều khoản thanh toán', $html);
+    }
+
+    public function test_pdf_amount_in_words_uses_total(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['account' => $account, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+
+        $quote = $this->makeQuoteWithLines($tenant, $opp);
+        $totals = Quote::computeTotals(27500000, 10, 8);
+        $quote->update(array_merge([
+            'discount_percent' => 10,
+            'vat_percent' => 8,
+        ], $totals));
+
+        $html = view('crm.quote-pdf', [
+            'quote' => $quote->fresh(),
+            'lines' => $quote->lines()->get(),
+            'account' => $account,
+            'opportunity' => $opp,
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->fresh()->total),
+        ])->render();
+
+        // "Bằng chữ" should be rendered from total (26.730.000), not subtotal (27.500.000)
+        $this->assertStringContainsString('Bằng chữ', $html);
+    }
 }

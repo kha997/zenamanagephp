@@ -333,4 +333,86 @@ class QuoteLifecycleTest extends TestCase
         $response->assertSee('Báo giá (native)');
         $response->assertSee($quote->quote_number);
     }
+
+    // ─── Commercial breakdown view tests ─────────────────────────────
+
+    public function test_quote_show_draft_renders_commercial_form(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+        $this->actingAs($user);
+
+        $quote = $this->makeQuote($tenant, $opp, lines: [
+            ['name' => 'Item A', 'unit' => 'm2', 'quantity' => 10, 'unit_price' => 100000],
+        ]);
+
+        $response = $this->get(route('operator.crm.quotes.show', $quote->id));
+        $response->assertOk();
+        $response->assertSee('Thông tin thương mại');
+        $response->assertSee('Chiết khấu');
+        $response->assertSee('VAT (%)');
+        $response->assertSee('Điều khoản thanh toán');
+    }
+
+    public function test_quote_show_with_discount_and_vat_shows_breakdown(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+        $this->actingAs($user);
+
+        $quote = $this->makeQuote($tenant, $opp, lines: [
+            ['name' => 'Item A', 'unit' => 'm2', 'quantity' => 100, 'unit_price' => 250000],
+        ]);
+
+        // subtotal=25000000, discount 10%, vat 8%
+        $totals = Quote::computeTotals(25000000, 10, 8);
+        $quote->update(array_merge([
+            'discount_percent' => 10,
+            'vat_percent' => 8,
+        ], $totals));
+
+        $response = $this->get(route('operator.crm.quotes.show', $quote->id));
+        $response->assertOk();
+        $response->assertSee('Tạm tính');
+        $response->assertSee('25.000.000');
+        $response->assertSee('Chiết khấu');
+        $response->assertSee('2.500.000');
+        $response->assertSee('VAT');
+        $response->assertSee('1.800.000');
+        $response->assertSee('24.300.000');
+    }
+
+    public function test_quote_show_zero_discount_and_vat_hides_breakdown(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+        $this->actingAs($user);
+
+        $quote = $this->makeQuote($tenant, $opp, lines: [
+            ['name' => 'Item A', 'unit' => 'm2', 'quantity' => 10, 'unit_price' => 100000],
+        ]);
+
+        $response = $this->get(route('operator.crm.quotes.show', $quote->id));
+        $response->assertOk();
+        // No discount/VAT rows when both are 0
+        $this->assertStringNotContainsString('Chiết khấu (0', $response->getContent());
+        $this->assertStringNotContainsString('VAT (0', $response->getContent());
+    }
+
+    public function test_quote_show_with_payment_terms_displays_terms(): void
+    {
+        $tenant = Tenant::factory()->create();
+        ['user' => $user, 'opportunity' => $opp] = $this->makeOpportunity($tenant);
+        $this->actingAs($user);
+
+        $quote = $this->makeQuote($tenant, $opp, lines: [
+            ['name' => 'Item A', 'unit' => 'm2', 'quantity' => 10, 'unit_price' => 100000],
+        ]);
+        $quote->update(['payment_terms' => 'Net 30']);
+
+        $response = $this->get(route('operator.crm.quotes.show', $quote->id));
+        $response->assertOk();
+        $response->assertSee('Điều khoản thanh toán');
+        $response->assertSee('Net 30');
+    }
 }

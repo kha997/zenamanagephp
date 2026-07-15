@@ -701,7 +701,7 @@ class CrmPageController extends Controller
             'lines' => $lines,
             'account' => $account,
             'opportunity' => $opportunity,
-            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->subtotal),
+            'amountInWords' => \App\Support\VietnameseMoneyWords::toWords((float) $quote->total),
         ])->render();
 
         try {

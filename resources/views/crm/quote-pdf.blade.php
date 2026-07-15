@@ -84,8 +84,33 @@
             </tbody>
             <tfoot>
                 <tr style="font-weight: bold;">
-                    <td colspan="6" class="num">TỔNG CỘNG:</td>
+                    <td colspan="6" class="num">TẠM TÍNH:</td>
                     <td class="num">{{ number_format($quote->subtotal, 0, ',', '.') }} VNĐ</td>
+                    @unless($hidePriceNote ?? false)
+                        <td></td>
+                    @endunless
+                </tr>
+                @if ((float) ($quote->discount_amount ?? 0) > 0)
+                    <tr style="color: #dc2626;">
+                        <td colspan="6" class="num">CHIẾT KHẤU ({{ number_format($quote->discount_percent, 2, ',', '.') }}%):</td>
+                        <td class="num">−{{ number_format($quote->discount_amount, 0, ',', '.') }} VNĐ</td>
+                        @unless($hidePriceNote ?? false)
+                            <td></td>
+                        @endunless
+                    </tr>
+                @endif
+                @if ((float) ($quote->vat_amount ?? 0) > 0)
+                    <tr style="color: #2563eb;">
+                        <td colspan="6" class="num">VAT ({{ number_format($quote->vat_percent, 2, ',', '.') }}%):</td>
+                        <td class="num">+{{ number_format($quote->vat_amount, 0, ',', '.') }} VNĐ</td>
+                        @unless($hidePriceNote ?? false)
+                            <td></td>
+                        @endunless
+                    </tr>
+                @endif
+                <tr style="font-weight: bold; border-top: 2px solid #1e293b;">
+                    <td colspan="6" class="num">TỔNG CỘNG:</td>
+                    <td class="num">{{ number_format($quote->total, 0, ',', '.') }} VNĐ</td>
                     @unless($hidePriceNote ?? false)
                         <td></td>
                     @endunless
@@ -100,6 +125,12 @@
                 <td class="label">Bằng chữ:</td>
                 <td>{{ $amountInWords }}</td>
             </tr>
+            @if ($quote->payment_terms)
+                <tr>
+                    <td class="label">Điều khoản thanh toán:</td>
+                    <td>{{ $quote->payment_terms }}</td>
+                </tr>
+            @endif
         </table>
     </div>
 

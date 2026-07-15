@@ -11,7 +11,7 @@
         'rejected' => 'Đã từ chối',
         'superseded' => 'Đã thay thế',
     ];
-    $amountInWords = \App\Support\VietnameseMoneyWords::toWords((float) $quote->subtotal);
+    $amountInWords = \App\Support\VietnameseMoneyWords::toWords((float) $quote->total);
 @endphp
 
 @section('content')
@@ -32,8 +32,18 @@
             <x-ui.field-value label="Trạng thái">
                 <x-ui.status-badge :status="$quote->status" />
             </x-ui.field-value>
-            <x-ui.field-value label="Tổng cộng" :value="number_format($quote->subtotal, 0, ',', '.') . '₫'" />
+            <x-ui.field-value label="Tạm tính" :value="number_format($quote->subtotal, 0, ',', '.') . '₫'" />
+            @if ((float) ($quote->discount_amount ?? 0) > 0)
+                <x-ui.field-value label="Chiết khấu ({{ number_format($quote->discount_percent, 2, ',', '.') }}%)" :value="'−' . number_format($quote->discount_amount, 0, ',', '.') . '₫'" />
+            @endif
+            @if ((float) ($quote->vat_amount ?? 0) > 0)
+                <x-ui.field-value label="VAT ({{ number_format($quote->vat_percent, 2, ',', '.') }}%)" :value="'+' . number_format($quote->vat_amount, 0, ',', '.') . '₫'" />
+            @endif
+            <x-ui.field-value label="Tổng cộng" :value="number_format($quote->total, 0, ',', '.') . '₫'" />
             <x-ui.field-value label="Bằng chữ" :value="$amountInWords" />
+            @if ($quote->payment_terms)
+                <x-ui.field-value label="Điều khoản thanh toán" :value="$quote->payment_terms" />
+            @endif
             @if ($quote->valid_until)
                 <x-ui.field-value label="Hiệu lực đến" :value="$quote->valid_until->format('d/m/Y')" />
             @endif
@@ -88,8 +98,27 @@
                     </tbody>
                     <tfoot>
                         <tr class="font-bold">
-                            <td colspan="6" class="text-right">Tổng cộng</td>
+                            <td colspan="6" class="text-right">Tạm tính</td>
                             <td class="text-right">{{ number_format($quote->subtotal, 0, ',', '.') }}₫</td>
+                            <td></td>
+                        </tr>
+                        @if ((float) ($quote->discount_amount ?? 0) > 0)
+                            <tr class="text-red-600">
+                                <td colspan="6" class="text-right">Chiết khấu ({{ number_format($quote->discount_percent, 2, ',', '.') }}%)</td>
+                                <td class="text-right">−{{ number_format($quote->discount_amount, 0, ',', '.') }}₫</td>
+                                <td></td>
+                            </tr>
+                        @endif
+                        @if ((float) ($quote->vat_amount ?? 0) > 0)
+                            <tr class="text-blue-600">
+                                <td colspan="6" class="text-right">VAT ({{ number_format($quote->vat_percent, 2, ',', '.') }}%)</td>
+                                <td class="text-right">+{{ number_format($quote->vat_amount, 0, ',', '.') }}₫</td>
+                                <td></td>
+                            </tr>
+                        @endif
+                        <tr class="font-bold text-lg border-t-2">
+                            <td colspan="6" class="text-right">Tổng cộng</td>
+                            <td class="text-right">{{ number_format($quote->total, 0, ',', '.') }}₫</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -144,6 +173,34 @@
                 <form method="POST" action="{{ route('operator.crm.quotes.send', $quote->id) }}" class="mt-3" onsubmit="return confirm('Gửi báo giá cho khách hàng?')">
                     @csrf
                     <button type="submit" class="operator-button operator-button-primary">Gửi khách</button>
+                </form>
+            </x-ui.card>
+
+            {{-- Commercial Form --}}
+            <x-ui.card title="Thông tin thương mại">
+                <form method="POST" action="{{ route('operator.crm.quotes.commercial', $quote->id) }}">
+                    @csrf
+                    <div class="operator-form-grid">
+                        <div class="operator-field">
+                            <label for="discount_percent">Chiết khấu (%)</label>
+                            <input type="number" id="discount_percent" name="discount_percent" value="{{ $quote->discount_percent }}" class="operator-input" step="0.01" min="0" max="100">
+                        </div>
+                        <div class="operator-field">
+                            <label for="vat_percent">VAT (%)</label>
+                            <input type="number" id="vat_percent" name="vat_percent" value="{{ $quote->vat_percent }}" class="operator-input" step="0.01" min="0" max="100">
+                        </div>
+                        <div class="operator-field">
+                            <label for="valid_until">Hiệu lực đến</label>
+                            <input type="date" id="valid_until" name="valid_until" value="{{ $quote->valid_until?->format('Y-m-d') }}" class="operator-input">
+                        </div>
+                        <div class="operator-field">
+                            <label for="payment_terms">Điều khoản thanh toán</label>
+                            <input type="text" id="payment_terms" name="payment_terms" value="{{ $quote->payment_terms }}" class="operator-input" placeholder="VD: Net 30">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button type="submit" class="operator-button operator-button-primary">Lưu thông tin thương mại</button>
+                    </div>
                 </form>
             </x-ui.card>
         @elseif ($quote->status === 'sent')

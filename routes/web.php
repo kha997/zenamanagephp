@@ -1026,6 +1026,14 @@ Route::prefix('operator')->name('operator.')->middleware(['auth', 'tenant.isolat
     Route::post('/crm/opportunities/{id}/boq-link', [App\Http\Controllers\Web\CrmPageController::class, 'linkBoqProject'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-link');
     Route::post('/crm/opportunities/{id}/boq-sync', [App\Http\Controllers\Web\CrmPageController::class, 'syncBoqQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.boq-sync');
     Route::post('/crm/opportunities/{id}/create-contract', [App\Http\Controllers\Web\CrmPageController::class, 'createContract'])->middleware('rbac:crm.manage')->name('crm.opportunities.create-contract');
+    // Native quotes
+    Route::get('/crm/quotes/{id}', [App\Http\Controllers\Web\CrmPageController::class, 'showQuote'])->middleware('rbac:crm.view')->name('crm.quotes.show');
+    Route::post('/crm/opportunities/{id}/quotes', [App\Http\Controllers\Web\CrmPageController::class, 'storeQuote'])->middleware('rbac:crm.manage')->name('crm.opportunities.quotes.store');
+    Route::post('/crm/quotes/{id}/lines', [App\Http\Controllers\Web\CrmPageController::class, 'saveQuoteLines'])->middleware('rbac:crm.manage')->name('crm.quotes.lines.save');
+    Route::post('/crm/quotes/{id}/send', [App\Http\Controllers\Web\CrmPageController::class, 'sendQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.send');
+    Route::post('/crm/quotes/{id}/accept', [App\Http\Controllers\Web\CrmPageController::class, 'acceptQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.accept');
+    Route::post('/crm/quotes/{id}/reject', [App\Http\Controllers\Web\CrmPageController::class, 'rejectQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.reject');
+    Route::post('/crm/quotes/{id}/revise', [App\Http\Controllers\Web\CrmPageController::class, 'reviseQuote'])->middleware('rbac:crm.manage')->name('crm.quotes.revise');
     Route::get('/crm/reports', [App\Http\Controllers\Web\CrmReportController::class, 'index'])->middleware('rbac:crm.view')->name('crm.reports');
 });
 

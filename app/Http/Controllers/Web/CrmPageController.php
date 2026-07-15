@@ -8,8 +8,11 @@ use App\Http\Controllers\Api\OpportunityController as ApiOpportunityController;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Web\Concerns\DelegatesToApiControllers;
 use App\Models\Account;
+use App\Models\EventRecord;
 use App\Models\Lead;
 use App\Models\Opportunity;
+use App\Models\Quote;
+use App\Models\QuoteLineItem;
 use App\Models\User;
 use App\Services\AiAssistService;
 use App\Services\ZenaBoqIntegrationService;
@@ -18,6 +21,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class CrmPageController extends Controller
@@ -369,5 +373,288 @@ class CrmPageController extends Controller
         }
 
         return $this->handleMutationResponse($response, route('operator.crm.opportunities.show', $id), 'Đã tạo hợp đồng');
+    }
+
+    // ── Native Quotes ────────────────────────────────────────────────
+
+    public function showQuote(string $id): View
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->join('opportunities', 'opportunities.id', '=', 'quotes.opportunity_id')
+            ->where('quotes.id', $id)
+            ->where('quotes.tenant_id', $tenantId)
+            ->select('quotes.*')
+            ->firstOrFail();
+
+        $this->authorize('view', $quote);
+
+        return view('crm.quote-show', compact('quote'));
+    }
+
+    public function storeQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $opp = Opportunity::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$opp instanceof Opportunity) {
+            return back()->with('error', 'Không tìm thấy cơ hội.');
+        }
+
+        $quote = Quote::query()->create([
+            'tenant_id' => $tenantId,
+            'opportunity_id' => (string) $opp->id,
+            'quote_number' => Quote::nextNumber($tenantId),
+            'revision_no' => Quote::nextRevision((string) $opp->id),
+            'status' => Quote::STATUS_DRAFT,
+            'created_by' => (string) auth()->id(),
+        ]);
+
+        return redirect()->route('operator.crm.quotes.show', $quote->id);
+    }
+
+    public function saveQuoteLines(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        if ($quote->status !== Quote::STATUS_DRAFT) {
+            return back()->with('error', 'Chỉ có thể chỉnh sửa dòng khi ở trạng thái nháp.');
+        }
+
+        $validated = $request->validate([
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.name' => ['required', 'string', 'max:255'],
+            'lines.*.unit' => ['required', 'string', 'max:30'],
+            'lines.*.quantity' => ['required', 'numeric', 'gt:0'],
+            'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
+            'lines.*.price_note' => ['nullable', 'string', 'max:500'],
+            'lines.*.code' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        DB::transaction(function () use ($quote, $validated, $tenantId) {
+            QuoteLineItem::query()
+                ->where('quote_id', $quote->id)
+                ->where('tenant_id', $tenantId)
+                ->delete();
+
+            $subtotal = 0;
+
+            foreach ($validated['lines'] as $index => $line) {
+                $amount = round((float) $line['quantity'] * (float) $line['unit_price'], 2);
+                $subtotal += $amount;
+
+                QuoteLineItem::query()->create([
+                    'tenant_id' => $tenantId,
+                    'quote_id' => (string) $quote->id,
+                    'sort_order' => $index + 1,
+                    'code' => $line['code'] ?? null,
+                    'name' => $line['name'],
+                    'unit' => $line['unit'],
+                    'quantity' => $line['quantity'],
+                    'unit_price' => $line['unit_price'],
+                    'amount' => $amount,
+                    'price_note' => $line['price_note'] ?? null,
+                ]);
+            }
+
+            $quote->update(['subtotal' => $subtotal]);
+        });
+
+        return back()->with('success', 'Đã lưu dòng báo giá.');
+    }
+
+    public function sendQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        if (!Quote::canTransition($quote->status, Quote::STATUS_SENT)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        $hasLines = QuoteLineItem::query()
+            ->where('quote_id', $quote->id)
+            ->where('tenant_id', $tenantId)
+            ->exists();
+
+        if (!$hasLines) {
+            return back()->with('error', 'Cần ít nhất một dòng để gửi báo giá.');
+        }
+
+        $subtotal = QuoteLineItem::query()
+            ->where('quote_id', $quote->id)
+            ->where('tenant_id', $tenantId)
+            ->sum('amount');
+
+        $quote->update([
+            'status' => Quote::STATUS_SENT,
+            'sent_at' => now(),
+            'subtotal' => $subtotal,
+        ]);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'quote',
+            'aggregate_id' => (string) $quote->id,
+            'event_type' => 'quote.sent',
+            'actor_id' => (string) auth()->id(),
+            'payload' => ['quote_number' => $quote->quote_number],
+        ]);
+
+        return back()->with('success', 'Đã gửi báo giá.');
+    }
+
+    public function acceptQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        if (!Quote::canTransition($quote->status, Quote::STATUS_ACCEPTED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        DB::transaction(function () use ($quote, $tenantId) {
+            $quote->update([
+                'status' => Quote::STATUS_ACCEPTED,
+                'decided_at' => now(),
+            ]);
+
+            Quote::query()
+                ->where('tenant_id', $tenantId)
+                ->where('opportunity_id', $quote->opportunity_id)
+                ->where('id', '!=', $quote->id)
+                ->whereIn('status', [Quote::STATUS_DRAFT, Quote::STATUS_SENT, Quote::STATUS_REJECTED])
+                ->update(['status' => Quote::STATUS_SUPERSEDED]);
+        });
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'quote',
+            'aggregate_id' => (string) $quote->id,
+            'event_type' => 'quote.accepted',
+            'actor_id' => (string) auth()->id(),
+            'payload' => ['quote_number' => $quote->quote_number],
+        ]);
+
+        return back()->with('success', 'Đã chấp nhận báo giá.');
+    }
+
+    public function rejectQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $quote = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$quote instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        if (!Quote::canTransition($quote->status, Quote::STATUS_REJECTED)) {
+            return back()->with('error', 'Không thể chuyển trạng thái.');
+        }
+
+        $quote->update([
+            'status' => Quote::STATUS_REJECTED,
+            'decided_at' => now(),
+        ]);
+
+        EventRecord::query()->create([
+            'tenant_id' => $tenantId,
+            'aggregate_type' => 'quote',
+            'aggregate_id' => (string) $quote->id,
+            'event_type' => 'quote.rejected',
+            'actor_id' => (string) auth()->id(),
+            'payload' => ['quote_number' => $quote->quote_number],
+        ]);
+
+        return back()->with('success', 'Đã từ chối báo giá.');
+    }
+
+    public function reviseQuote(Request $request, string $id): RedirectResponse
+    {
+        $tenantId = (string) auth()->user()?->tenant_id;
+
+        $original = Quote::query()
+            ->where('tenant_id', $tenantId)
+            ->whereKey($id)
+            ->first();
+
+        if (!$original instanceof Quote) {
+            return back()->with('error', 'Không tìm thấy báo giá.');
+        }
+
+        $newQuote = DB::transaction(function () use ($original, $tenantId) {
+            $newQuote = Quote::query()->create([
+                'tenant_id' => $tenantId,
+                'opportunity_id' => $original->opportunity_id,
+                'quote_number' => Quote::nextNumber($tenantId),
+                'revision_no' => Quote::nextRevision($original->opportunity_id),
+                'status' => Quote::STATUS_DRAFT,
+                'notes' => $original->notes,
+                'created_by' => (string) auth()->id(),
+            ]);
+
+            $lines = QuoteLineItem::query()
+                ->where('quote_id', $original->id)
+                ->where('tenant_id', $tenantId)
+                ->orderBy('sort_order')
+                ->get();
+
+            foreach ($lines as $line) {
+                QuoteLineItem::query()->create([
+                    'tenant_id' => $tenantId,
+                    'quote_id' => (string) $newQuote->id,
+                    'sort_order' => $line->sort_order,
+                    'code' => $line->code,
+                    'name' => $line->name,
+                    'unit' => $line->unit,
+                    'quantity' => $line->quantity,
+                    'unit_price' => $line->unit_price,
+                    'amount' => $line->amount,
+                    'price_note' => $line->price_note,
+                ]);
+            }
+
+            $newQuote->update([
+                'subtotal' => $lines->sum('amount'),
+            ]);
+
+            return $newQuote;
+        });
+
+        return redirect()->route('operator.crm.quotes.show', $newQuote->id);
     }
 }

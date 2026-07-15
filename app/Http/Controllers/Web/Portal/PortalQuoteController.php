@@ -45,7 +45,7 @@ class PortalQuoteController extends Controller
         return view('portal.quote', [
             'tenant' => $tenant,
             'quote' => $quote,
-            'amountInWords' => VietnameseMoneyWords::toWords((float) $quote->subtotal),
+            'amountInWords' => VietnameseMoneyWords::toWords((float) $quote->total),
         ]);
     }
 
@@ -123,7 +123,7 @@ class PortalQuoteController extends Controller
             'lines' => $lines,
             'account' => $account,
             'opportunity' => $opportunity,
-            'amountInWords' => VietnameseMoneyWords::toWords((float) $quote->subtotal),
+            'amountInWords' => VietnameseMoneyWords::toWords((float) $quote->total),
             'hidePriceNote' => true,
         ])->render();
 

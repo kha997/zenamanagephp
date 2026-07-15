@@ -228,6 +228,58 @@ class PortalQuoteTest extends TestCase
         ]))->assertRedirect();
     }
 
+    // ─── Commercial breakdown tests ────────────────────────────────────
+
+    public function test_show_with_commercial_breakdown_renders_discount_and_vat(): void
+    {
+        // Set commercial fields on the sent quote: subtotal=27500000, discount 10%, vat 8%
+        $totals = Quote::computeTotals(27500000, 10, 8);
+        $this->sentQuote->update(array_merge([
+            'discount_percent' => 10,
+            'vat_percent' => 8,
+        ], $totals));
+
+        $response = $this->get(route('portal.quotes.show', [
+            'tenantSlug' => 'zena-portal-quotes',
+            'id' => $this->sentQuote->id,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Tạm tính');
+        $response->assertSee('27.500.000');
+        $response->assertSee('Chiết khấu');
+        $response->assertSee('2.750.000');
+        $response->assertSee('VAT');
+        $response->assertSee('1.980.000');
+        $response->assertSee('26.730.000');
+    }
+
+    public function test_show_zero_discount_and_vat_hides_breakdown_rows(): void
+    {
+        $response = $this->get(route('portal.quotes.show', [
+            'tenantSlug' => 'zena-portal-quotes',
+            'id' => $this->sentQuote->id,
+        ]));
+
+        $response->assertOk();
+        $this->assertStringNotContainsString('Chiết khấu (0', $response->getContent());
+        $this->assertStringNotContainsString('VAT (0', $response->getContent());
+    }
+
+    public function test_show_with_payment_terms_displays_terms(): void
+    {
+        $this->sentQuote->update(['payment_terms' => 'Net 30']);
+
+        $response = $this->get(route('portal.quotes.show', [
+            'tenantSlug' => 'zena-portal-quotes',
+            'id' => $this->sentQuote->id,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Điều khoản thanh toán');
+        $response->assertSee('Net 30');
+    }
+
     public function test_pdf_view_hides_price_note(): void
     {
         $this->sentQuote->load('lines');

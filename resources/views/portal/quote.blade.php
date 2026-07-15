@@ -86,13 +86,32 @@
                         </tbody>
                         <tfoot>
                             <tr class="border-t-2 border-slate-300 font-semibold">
-                                <td colspan="4" class="px-4 py-2 text-right text-slate-900">Tổng cộng</td>
+                                <td colspan="4" class="px-4 py-2 text-right text-slate-900">Tạm tính</td>
                                 <td class="px-4 py-2 text-right text-slate-900">{{ number_format((float) $quote->subtotal, 0, ',', '.') }}₫</td>
+                            </tr>
+                            @if ((float) ($quote->discount_amount ?? 0) > 0)
+                                <tr class="text-red-600">
+                                    <td colspan="4" class="px-4 py-2 text-right">Chiết khấu ({{ number_format($quote->discount_percent, 2, ',', '.') }}%)</td>
+                                    <td class="px-4 py-2 text-right">−{{ number_format($quote->discount_amount, 0, ',', '.') }}₫</td>
+                                </tr>
+                            @endif
+                            @if ((float) ($quote->vat_amount ?? 0) > 0)
+                                <tr class="text-blue-600">
+                                    <td colspan="4" class="px-4 py-2 text-right">VAT ({{ number_format($quote->vat_percent, 2, ',', '.') }}%)</td>
+                                    <td class="px-4 py-2 text-right">+{{ number_format($quote->vat_amount, 0, ',', '.') }}₫</td>
+                                </tr>
+                            @endif
+                            <tr class="border-t-2 border-slate-300 font-bold">
+                                <td colspan="4" class="px-4 py-2 text-right text-slate-900">Tổng cộng</td>
+                                <td class="px-4 py-2 text-right text-slate-900">{{ number_format((float) $quote->total, 0, ',', '.') }}₫</td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
                 <p class="mt-3 text-sm text-slate-600 italic">Bằng chữ: {{ $amountInWords }}</p>
+                @if ($quote->payment_terms)
+                    <p class="mt-1 text-sm text-slate-600">Điều khoản thanh toán: <span class="font-medium text-slate-900">{{ $quote->payment_terms }}</span></p>
+                @endif
             </x-ui.card>
         @endif
 

@@ -202,6 +202,7 @@ class PortalDashboardTest extends TestCase
             'revision_no' => 1,
             'status' => Quote::STATUS_SENT,
             'subtotal' => 15000000,
+            'total' => 15000000,
             'sent_at' => now(),
             'created_by' => (string) $staffUser->id,
         ]);
@@ -213,6 +214,7 @@ class PortalDashboardTest extends TestCase
             'revision_no' => 2,
             'status' => Quote::STATUS_DRAFT,
             'subtotal' => 5000000,
+            'total' => 5000000,
             'created_by' => (string) $staffUser->id,
         ]);
 

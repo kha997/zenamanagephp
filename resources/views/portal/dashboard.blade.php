@@ -29,7 +29,7 @@
                                     <td class="px-4 py-2">
                                         <a href="{{ route('portal.quotes.show', ['tenantSlug' => $tenant->slug, 'id' => $quote->id]) }}" class="font-medium text-slate-900 hover:underline">{{ $quote->quote_number }}</a>
                                     </td>
-                                    <td class="px-4 py-2 text-right text-slate-700">{{ number_format((float) $quote->subtotal, 0, ',', '.') }}₫</td>
+                                    <td class="px-4 py-2 text-right text-slate-700">{{ number_format((float) $quote->total, 0, ',', '.') }}₫</td>
                                     <td class="px-4 py-2">
                                         @php
                                             $statusLabels = [

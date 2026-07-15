@@ -193,7 +193,7 @@
                             <tr>
                                 <td class="font-medium">{{ $q->quote_number }}</td>
                                 <td>{{ $q->revision_no }}</td>
-                                <td>{{ number_format($q->subtotal, 0, ',', '.') }}₫</td>
+                                <td>{{ number_format($q->total, 0, ',', '.') }}₫</td>
                                 <td><x-ui.status-badge :status="$q->status" /></td>
                                 <td>{{ $q->sent_at ? $q->sent_at->format('d/m/Y') : '—' }}</td>
                                 <td>
